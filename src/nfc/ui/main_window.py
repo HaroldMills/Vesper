@@ -99,6 +99,12 @@ class MainWindow(QMainWindow):
         
         window.show()
         
+        # This appears to be necessary for Anaconda 1.9.2 on Mac OS X
+        # (without it the new clips window does not get keyboard focus,
+        # even though it's the topmost window), but not for Canopy 2.7.6.
+        # Not sure why.
+        window.setFocus()
+        
         
     def _configure_date_chooser(self):
         f = self._query_frame
