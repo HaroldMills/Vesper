@@ -19,9 +19,6 @@ from nfc.util.preferences import preferences as prefs
 # TODO: Perhaps `ClipsWindow` should not know about archives, only about
 # clips.
 
-# TODO: Revisit design of classes in this module, perhaps refactoring
-# to better separate layout.
-
 
 _SPACING_ASPECT_RATIO = 2
 """ratio of vertical clip spacing to minimum horizontal spacing."""
@@ -329,8 +326,6 @@ def _get_classification_command(keyEvent):
         
         modifiers = keyEvent.modifiers()
         
-        # TODO: Decide whether or not to allow use of control modifiers.
-        # If we do allow, perhaps we should warn about potential problems.
 #         if modifiers & Qt.ControlModifier:
 #
 #             # We do not allow classification commands that use the

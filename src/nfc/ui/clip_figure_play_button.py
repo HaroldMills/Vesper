@@ -91,11 +91,6 @@ class ClipFigurePlayButton(object):
         
         
     def _on_figure_enter(self, event):
-        
-        # TODO: This method is sometimes called unexpectedly after
-        # navigation from one page of figures to the next, causing
-        # the play button to be made visible when it shouldn't be,
-        # and causing the clip text to be set incorrectly. Fix this.
         self.visible = True
 #        print('ClipFigurePlayButton._on_figure_enter')
     
