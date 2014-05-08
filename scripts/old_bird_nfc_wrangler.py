@@ -254,9 +254,10 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 'Num clip files in ignored directories: {:d}'.format(
                     self.num_ignored_dir_files))
         
-        self._log_error(
-            'Num absolute clip file names: {:d}'.format(
-                self.num_absolute_file_names))
+        if self.num_absolute_file_names != 0:
+            self._log_error(
+                'Num absolute clip file names: {:d}'.format(
+                    self.num_absolute_file_names))
         
         if self.num_bad_detector_name_file_names != 0:
             self._log_error(
@@ -268,9 +269,10 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 'Num clip file names with bad years: {:d}'.format(
                     self.num_bad_year_file_names))
         
-        self._log_error(
-            'Num relative clip file names: {:d}'.format(
-                self.num_relative_file_names))
+        if self.num_relative_file_names != 0:
+            self._log_error(
+                'Num relative clip file names: {:d}'.format(
+                    self.num_relative_file_names))
         
         if self.num_malformed_file_names != 0:
             self._log_error(
