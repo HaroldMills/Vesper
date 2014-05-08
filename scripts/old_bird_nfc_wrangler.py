@@ -152,7 +152,7 @@ def _parse_args():
             the script does not create an archive, but still processes all
             of the data, logging the same messages.''')
         
-    
+        
     parser.add_argument(
         '-d', '--dry-run', dest='dry_run', action='store_true', default=False,
         help='process data but do not construct archive')
