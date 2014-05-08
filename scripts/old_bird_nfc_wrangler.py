@@ -144,15 +144,22 @@ def _main():
 def _parse_args():
     
     parser = argparse.ArgumentParser(
-        description='Create an NFC archive from Old Bird data.')
+        description='''
+            This script creates an NFC archive from a directory containing
+            Old Bird NFC data. As the data are processed, messages are
+            logged when errors are encountered, and a summary of the
+            data is logged at the end. When run with the -d option,
+            the script does not create an archive, but still processes all
+            of the data, logging the same messages.''')
+        
     
     parser.add_argument(
         '-d', '--dry-run', dest='dry_run', action='store_true', default=False,
-        help='process Old Bird data but do not construct new archive')
+        help='process data but do not construct archive')
     
     parser.add_argument(
         '-v', '--verbosity', type=int, choices=xrange(3), default=0,
-        help='verbosity, either 0, 1, or 2, with 2 most verbose')
+        help='logging verbosity, either 0, 1, or 2, with 2 most verbose')
     
     parser.add_argument(
         'year', metavar='YEAR', type=int, help='four-digit year of data')
