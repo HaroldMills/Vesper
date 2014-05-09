@@ -1,7 +1,7 @@
 NFC
 ===
 
-The NFC project is a collection of open source software tools for studying avian nocturnal flight calls (NFCs).
+The NFC project contains the *NFC Tools*, a collection of open source software tools for studying avian nocturnal flight calls (NFCs).
 
 The short-term goal of the project is to create tools to help Bill Evans of [Old Bird](http://www.oldbird.org) organize and classify the millions of sound clips he has collected from his [Eastern North America acoustic monitoring transect](http://www.oldbird.org/Data/2013/TransNE2013/NETransect-2013.html).
 
