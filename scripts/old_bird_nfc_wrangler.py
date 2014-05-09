@@ -146,8 +146,8 @@ def _parse_args():
     parser = argparse.ArgumentParser(
         description='''
             This script creates an NFC archive from a directory containing
-            Old Bird NFC data. As the Old Bird data are processed, messages
-            are logged as errors are encountered, and a summary of the
+            Old Bird NFC data. As the data are processed, messages are
+            logged as errors are encountered, and a summary of the
             data is logged at the end. When run with the -d option,
             the script does not create an archive, but still processes all
             of the data, logging the same messages.''')
