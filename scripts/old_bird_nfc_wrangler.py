@@ -77,6 +77,10 @@ _MONTH_NAMES = dict((i + 1, s) for (i, s) in enumerate([
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December']))
 
+_DST_END_TIMES = [datetime.datetime(*t) for t in [
+    (2012, 11, 4, 2)
+]]
+
 _LOGGING_LEVELS = [logging.ERROR, logging.INFO, logging.DEBUG]
 
 
@@ -198,6 +202,7 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.num_misplaced_files = 0
         self.num_relative_file_names = 0
         self.num_malformed_file_names = 0
+        self.num_dst_ambiguity_files = 0
         self.num_unreadable_files = 0
         self.num_add_errors = 0
         self.num_duplicate_files = 0
@@ -207,7 +212,10 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.misplaced_file_counts = defaultdict(int)
         self.relative_file_name_dir_paths = set()
         self.malformed_file_name_file_paths = set()
+        self.dst_ambiguity_file_counts = defaultdict(int)
         self.reclassifications = set()
+        
+        self.dst_ambiguity_bounds = self._init_dst_ambiguity_bounds()
         
         self.clip_info = {}
         
@@ -217,6 +225,12 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         return True
         
+        
+    def _init_dst_ambiguity_bounds(self):
+        one_hour = datetime.timedelta(hours=1)
+        return dict((time.year, (time - one_hour, time))
+                    for time in _DST_END_TIMES)
+            
         
     def _count_escaped_files(self, path):
         n = _count_clip_files(path, recursive=False)
@@ -271,6 +285,11 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 'Num malformed clip file names: {:d}'.format(
                     self.num_malformed_file_names))
         
+        if self.num_dst_ambiguity_files != 0:
+            self._log_error(
+                ('Num clip files with ambiguous times near DST end: '
+                 '{:d}').format(self.num_dst_ambiguity_files))
+            
         if self.num_unreadable_files != 0:
             self._log_error(
                 'Num unreadable clip files: {:d}'.format(
@@ -314,12 +333,17 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 'Paths of malformed file names',
                 self.malformed_file_name_file_paths)
             
+        # directories containing files with ambiguous times near DST end
+        if self.num_dst_ambiguity_files != 0:
+            self._log_dst_ambiguity_dir_paths()
+            
+        # files that have two or more incompatible classifications
         if len(self.reclassifications) != 0:
             self._log_path_pairs('Reclassified files:', self.reclassifications)
 
         
     def _log_space(self):
-        for _ in xrange(10):
+        for _ in xrange(5):
             self._log_error('')
             
             
@@ -358,6 +382,20 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                         self._rel(path), num_misplaced_files, total_num_files))
             
             
+    def _log_dst_ambiguity_dir_paths(self):
+
+        self._log_space()
+        
+        self._log_error(
+            'Paths of directories containing clip files with ambiguous '
+            'times near DST end:')
+        
+        pairs = self.dst_ambiguity_file_counts.items()
+        pairs.sort()
+        for path, count in pairs:
+            self._log_error('{:s} ({:d} files)'.format(self._rel(path), count))
+
+
     def _log_path_pairs(self, message, pairs):
         
         self._log_space()
@@ -589,6 +627,11 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
     def _visit_clip_file_aux(
         self, path, station_name, detector_name, time, clip_class_name):
         
+        if self._is_dst_ambiguous(time):
+            self.num_dst_ambiguity_files += 1
+            dir_path = os.path.dirname(path)
+            self.dst_ambiguity_file_counts[dir_path] += 1
+            
         key = (station_name, detector_name, time)
         
         try:
@@ -663,6 +706,18 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             self.num_duplicate_files += 1
         
     
+    def _is_dst_ambiguous(self, time):
+        
+        bounds = self.dst_ambiguity_bounds.get(time.year)
+        
+        if bounds is None:
+            return False
+        
+        else:
+            start_time, end_time = bounds
+            return time >= start_time and time < end_time
+               
+               
     def _log_debug(self, message):
         logging.debug(message)
         
