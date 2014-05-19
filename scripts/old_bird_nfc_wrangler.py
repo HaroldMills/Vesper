@@ -27,7 +27,7 @@ _STATION_NAMES = frozenset([
     'Ajo', 'Alfred', 'ColumbiaLC', 'Danby', 'Derby', 'HSHS', 'Jamestown',
     'LTU', 'Minatitlan', 'NMHS', 'Oneonta', 'Ottawa', 'Skinner', 'WFU'])
 
-_STATION_NAMES = frozenset(['Ajo'])
+#_STATION_NAMES = frozenset(['Ajo'])
 
 _DETECTOR_NAMES = frozenset(['Tseep'])
 
