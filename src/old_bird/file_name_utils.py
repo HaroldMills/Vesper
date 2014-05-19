@@ -6,19 +6,25 @@ import datetime
 import re
 
 
-_FILE_NAME_RE = re.compile((
-    r'^([a-zA-Z]+)_(\d{4})-(\d{2})-(\d{2})_(\d{2})\.(\d{2})\.(\d{2})_(\d{2})'
-    r'\.[a-zA-Z0-9]+$'))
+_WAVE_EXTENSION = '.wav'
 
-_FILE_NAME_RE_ALT = re.compile(
-    r'^([a-zA-Z]+)_(\d{3})\.(\d{2})\.(\d{2})_(\d{2})\.[a-zA-Z0-9]+$')
+_ABSOLUTE_FILE_NAME_RE = re.compile((
+    r'^([a-zA-Z]+)_(\d{4})-(\d{2})-(\d{2})_(\d{2})\.(\d{2})\.(\d{2})_(\d{2})'
+    r'\.wav$'))
+
+_RELATIVE_FILE_NAME_RE = re.compile(
+    r'^([a-zA-Z]+)_(\d{3})\.(\d{2})\.(\d{2})_(\d{2})\.wav+$')
 
 _MIN_YEAR = 1900
 
 
-def parse_clip_file_name(file_name):
+def is_clip_file_name(name):
+    return name.endswith(_WAVE_EXTENSION)
+
+
+def parse_absolute_clip_file_name(file_name):
     
-    m = _FILE_NAME_RE.match(file_name)
+    m = _ABSOLUTE_FILE_NAME_RE.match(file_name)
     
     if m is None:
         _raise_value_error(file_name)
@@ -84,7 +90,7 @@ def _check_range(val, min_val, max_val, name, file_name):
     
 def parse_relative_clip_file_name(file_name):
     
-    m = _FILE_NAME_RE_ALT.match(file_name)
+    m = _RELATIVE_FILE_NAME_RE.match(file_name)
     
     if m is None:
         _raise_value_error(file_name)

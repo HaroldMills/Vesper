@@ -27,7 +27,7 @@ _STATION_NAMES = frozenset([
     'Ajo', 'Alfred', 'ColumbiaLC', 'Danby', 'Derby', 'HSHS', 'Jamestown',
     'LTU', 'Minatitlan', 'NMHS', 'Oneonta', 'Ottawa', 'Skinner', 'WFU'])
 
-#_STATION_NAMES = frozenset(['Ajo'])
+_STATION_NAMES = frozenset(['Ajo'])
 
 _DETECTOR_NAMES = frozenset(['Tseep'])
 
@@ -539,10 +539,8 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 
         for _, subdir_names, file_names in os.walk(path):
             
-            file_names = [n for n in file_names if _is_clip_file_name(n)]
-            
             for file_name in file_names:
-                if _is_clip_file_name(file_name):
+                if file_name_utils.is_clip_file_name(file_name):
                     file_path = os.path.join(path, file_name)
                     self._visit_clip_file(file_path, clip_class_name)
                     
@@ -584,7 +582,7 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         try:
             (detector_name, time) = \
-                file_name_utils.parse_clip_file_name(file_name)
+                file_name_utils.parse_absolute_clip_file_name(file_name)
                 
         except ValueError:
             
@@ -734,15 +732,11 @@ def _count_clip_files(dir_path, recursive=True):
     count = 0
     for dir_path, subdir_names, file_names in os.walk(dir_path):
         for name in file_names:
-            if _is_clip_file_name(name):
+            if file_name_utils.is_clip_file_name(name):
                 count += 1
         if not recursive:
             del subdir_names[:]
     return count
-
-
-def _is_clip_file_name(name):
-    return name.endswith(WAVE_FILE_NAME_EXTENSION)
 
 
 if __name__ == '__main__':
