@@ -1,12 +1,13 @@
 import datetime
 import numpy as np
+import os
 import unittest
 
 from nfc.archive.archive import Archive
 from nfc.util.bunch import Bunch
 
 
-ARCHIVE_DIR_PATH = '/Users/Harold/Desktop/NFC/Clips/Unit Test Archive'
+ARCHIVE_DIR_PATH = ['data', 'Test Archive']
 
 STATION_NAMES = ['A', 'B']
 STATIONS = [Bunch(name=n) for n in STATION_NAMES]
@@ -22,8 +23,10 @@ class ArchiveTests(unittest.TestCase):
     
     
     def setUp(self):
+        parent_dir_path = os.path.dirname(__file__)
+        archive_dir_path = os.path.join(parent_dir_path, *ARCHIVE_DIR_PATH)
         self.archive = Archive.create(
-            ARCHIVE_DIR_PATH, STATIONS, DETECTORS, CLIP_CLASSES)
+            archive_dir_path, STATIONS, DETECTORS, CLIP_CLASSES)
         
         
     def tearDown(self):
