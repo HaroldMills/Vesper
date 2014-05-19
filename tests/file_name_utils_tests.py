@@ -7,7 +7,7 @@ import old_bird.file_name_utils as file_name_utils
 class ClipFileNameUtilsTests(unittest.TestCase):
     
     
-    def test_is_clilp_file(self):
+    def test_is_clip_file(self):
         fnu = file_name_utils
         self.assertTrue(fnu.is_clip_file_name('bobo.wav'))
         self.assertFalse(fnu.is_clip_file_name('bobo.aif'))
