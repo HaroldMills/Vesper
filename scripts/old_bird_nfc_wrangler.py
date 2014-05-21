@@ -27,7 +27,7 @@ _STATION_NAMES = frozenset([
     'Ajo', 'Alfred', 'ColumbiaLC', 'Danby', 'Derby', 'HSHS', 'Jamestown',
     'LTU', 'Minatitlan', 'NMHS', 'Oneonta', 'Ottawa', 'Skinner', 'WFU'])
 
-#_STATION_NAMES = frozenset(['Ajo'])
+#_STATION_NAMES = frozenset(['Alfred'])
 
 _DETECTOR_NAMES = frozenset(['Tseep'])
 
@@ -80,6 +80,12 @@ _MONTH_NAMES = dict((i + 1, s) for (i, s) in enumerate([
 _DST_END_TIMES = [datetime.datetime(*t) for t in [
     (2012, 11, 4, 2)
 ]]
+
+_MONITORING_START_TIMES = {
+    'Alfred': {
+#        datetime.date(2012, 10, 3): datetime.datetime(2012, 10, 3, 19, 0, 0)
+    }
+}
 
 _LOGGING_LEVELS = [logging.ERROR, logging.INFO, logging.DEBUG]
 
@@ -195,27 +201,32 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
     def _start_root_dir_visit(self, path):
         
         self.total_num_files = 0
+        
         self.num_escaped_files = 0
         self.num_ignored_dir_files = 0
+        
         self.num_absolute_file_names = 0
-        self.num_bad_detector_name_file_names = 0
-        self.num_misplaced_files = 0
-        self.num_relative_file_names = 0
+        self.num_resolved_relative_file_names = 0
+        self.num_unresolved_relative_file_names = 0
         self.num_malformed_file_names = 0
-        self.num_dst_ambiguity_files = 0
-        self.num_unreadable_files = 0
-        self.num_add_errors = 0
+        
+        self.num_misplaced_files = 0
+        self.num_bad_detector_name_file_names = 0
+        self.num_ambiguous_time_files = 0
         self.num_duplicate_files = 0
         self.num_reclassified_files = 0
+        self.num_unreadable_files = 0
+        self.num_add_errors = 0
         
-        self.bad_detector_name_dir_paths = set()
-        self.misplaced_file_counts = defaultdict(int)
-        self.relative_file_name_dir_paths = set()
+        self.unresolved_relative_file_name_dir_paths = set()
         self.malformed_file_name_file_paths = set()
-        self.dst_ambiguity_file_counts = defaultdict(int)
+        self.misplaced_file_counts = defaultdict(int)
+        self.bad_detector_name_dir_paths = set()
+        self.ambiguous_time_file_counts = defaultdict(int)
         self.reclassifications = set()
         
-        self.dst_ambiguity_bounds = self._init_dst_ambiguity_bounds()
+        self.ambiguous_time_intervals = self._get_ambiguous_time_intervals()
+        self.monitoring_start_times = self._get_monitoring_start_times()
         
         self.clip_info = {}
         
@@ -226,12 +237,16 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         return True
         
         
-    def _init_dst_ambiguity_bounds(self):
+    def _get_ambiguous_time_intervals(self):
         one_hour = datetime.timedelta(hours=1)
         return dict((time.year, (time - one_hour, time))
                     for time in _DST_END_TIMES)
             
         
+    def _get_monitoring_start_times(self):
+        return _MONITORING_START_TIMES
+    
+    
     def _count_escaped_files(self, path):
         n = _count_clip_files(path, recursive=False)
         if n != 0:
@@ -265,40 +280,37 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 'Num absolute clip file names: {:d}'.format(
                     self.num_absolute_file_names))
         
-        if self.num_bad_detector_name_file_names != 0:
+        if self.num_resolved_relative_file_names != 0:
             self._log_error(
-                'Num clip file names with bad detector names: {:d}'.format(
-                    self.num_bad_detector_name_file_names))
+                'Num resolved relative clip file names: {:d}'.format(
+                    self.num_resolved_relative_file_names))
         
-        if self.num_misplaced_files != 0:
+        if self.num_unresolved_relative_file_names != 0:
             self._log_error(
-                'Num misplaced clip files: {:d}'.format(
-                    self.num_misplaced_files))
-        
-        if self.num_relative_file_names != 0:
-            self._log_error(
-                'Num relative clip file names: {:d}'.format(
-                    self.num_relative_file_names))
+                'Num unresolved relative clip file names: {:d}'.format(
+                    self.num_unresolved_relative_file_names))
         
         if self.num_malformed_file_names != 0:
             self._log_error(
                 'Num malformed clip file names: {:d}'.format(
                     self.num_malformed_file_names))
         
-        if self.num_dst_ambiguity_files != 0:
+        self._log_space()
+        
+        if self.num_misplaced_files != 0:
+            self._log_error(
+                'Num misplaced clip files: {:d}'.format(
+                    self.num_misplaced_files))
+        
+        if self.num_bad_detector_name_file_names != 0:
+            self._log_error(
+                'Num clip file names with bad detector names: {:d}'.format(
+                    self.num_bad_detector_name_file_names))
+        
+        if self.num_ambiguous_time_files != 0:
             self._log_error(
                 ('Num clip files with ambiguous times near DST end: '
-                 '{:d}').format(self.num_dst_ambiguity_files))
-            
-        if self.num_unreadable_files != 0:
-            self._log_error(
-                'Num unreadable clip files: {:d}'.format(
-                    self.num_unreadable_files))
-            
-        if self.num_add_errors != 0:
-            self._log_error(
-                'Num archive add errors: {:d}'.format(
-                    self.num_add_errors))
+                 '{:d}').format(self.num_ambiguous_time_files))
             
         if self.num_duplicate_files != 0:
             self._log_error(
@@ -310,32 +322,42 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 'Num reclassified clip files: {:d}'.format(
                     self.num_reclassified_files))
             
-        # directories containing file names with bad detector names
-        if len(self.bad_detector_name_dir_paths) != 0:
+        if self.num_unreadable_files != 0:
+            self._log_error(
+                'Num unreadable clip files: {:d}'.format(
+                    self.num_unreadable_files))
+            
+        if self.num_add_errors != 0:
+            self._log_error(
+                'Num archive add errors: {:d}'.format(
+                    self.num_add_errors))
+            
+        # directories containing relative file names
+        if len(self.unresolved_relative_file_name_dir_paths) != 0:
             self._log_paths(
-                ('Paths of directories containing file names with bad '
-                 'detector names'),
-                self.bad_detector_name_dir_paths)
+                ('Paths of directories containing unresolved relative '
+                 'file names:'), self.unresolved_relative_file_name_dir_paths)
+        
+        # paths of malformed file names
+        if len(self.malformed_file_name_file_paths) != 0:
+            self._log_paths(
+                'Paths of malformed file names:',
+                self.malformed_file_name_file_paths)
             
         # directories containing misplaced files
         if self.num_misplaced_files != 0:
             self._log_misplaced_file_dir_paths()
             
-        # directories containing relative file names
-        if len(self.relative_file_name_dir_paths) != 0:
+        # directories containing file names with bad detector names
+        if len(self.bad_detector_name_dir_paths) != 0:
             self._log_paths(
-                'Paths of directories containing relative file names',
-                self.relative_file_name_dir_paths)
-        
-        # paths of malformed file names
-        if len(self.malformed_file_name_file_paths) != 0:
-            self._log_paths(
-                'Paths of malformed file names',
-                self.malformed_file_name_file_paths)
+                ('Paths of directories containing file names with bad '
+                 'detector names:'),
+                self.bad_detector_name_dir_paths)
             
         # directories containing files with ambiguous times near DST end
-        if self.num_dst_ambiguity_files != 0:
-            self._log_dst_ambiguity_dir_paths()
+        if self.num_ambiguous_time_files != 0:
+            self._log_ambiguous_time_dir_paths()
             
         # files that have two or more incompatible classifications
         if len(self.reclassifications) != 0:
@@ -382,7 +404,7 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                         self._rel(path), num_misplaced_files, total_num_files))
             
             
-    def _log_dst_ambiguity_dir_paths(self):
+    def _log_ambiguous_time_dir_paths(self):
 
         self._log_space()
         
@@ -390,7 +412,7 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             'Paths of directories containing clip files with ambiguous '
             'times near DST end:')
         
-        pairs = self.dst_ambiguity_file_counts.items()
+        pairs = self.ambiguous_time_file_counts.items()
         pairs.sort()
         for path, count in pairs:
             self._log_error('{:s} ({:d} files)'.format(self._rel(path), count))
@@ -587,7 +609,7 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         except ValueError:
             
             try:
-                (detector_name, time) = \
+                (detector_name, time_delta) = \
                     file_name_utils.parse_relative_clip_file_name(file_name)
                     
             except ValueError:
@@ -596,28 +618,33 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                               
             else:
                 # successfully parsed relative file name
-                self.num_relative_file_names += 1
-                self.relative_file_name_dir_paths.add(dir_path)
+                
+                try:
+                    start_time = self.monitoring_start_times[
+                                     self.station_name][self.night]
+                                    
+                except KeyError:
+                    self.num_unresolved_relative_file_names += 1
+                    self.unresolved_relative_file_name_dir_paths.add(dir_path)
+
+                else:
+                    self.num_resolved_relative_file_names += 1
+                    time = start_time + time_delta
+                    self._visit_clip_file_aux(
+                        path, self.station_name, detector_name, time,
+                        clip_class_name)
                 
         else:
             # successfully parsed absolute file name
             
-            if detector_name not in _DETECTOR_NAMES:
-                self.num_bad_detector_name_file_names += 1
-                self.bad_detector_name_dir_paths.add(dir_path)
-                
-            elif Archive.get_night(time) != self.night:
-                self.num_misplaced_files += 1
-                self.misplaced_file_counts[dir_path] += 1
-                
-            else:
-                # have clip station name, detector name, and time
-                
-                self.num_absolute_file_names += 1
-                
-                self._visit_clip_file_aux(
-                    path, self.station_name, detector_name, time,
-                    clip_class_name)
+            self.num_absolute_file_names += 1
+            
+            if self._is_ambiguous_time(time):
+                self.num_ambiguous_time_files += 1
+                self.ambiguous_time_file_counts[dir_path] += 1
+            
+            self._visit_clip_file_aux(
+                path, self.station_name, detector_name, time, clip_class_name)
             
         self.total_num_files += 1
                     
@@ -625,10 +652,17 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
     def _visit_clip_file_aux(
         self, path, station_name, detector_name, time, clip_class_name):
         
-        if self._is_dst_ambiguous(time):
-            self.num_dst_ambiguity_files += 1
-            dir_path = os.path.dirname(path)
-            self.dst_ambiguity_file_counts[dir_path] += 1
+        dir_path = os.path.dirname(path)
+        
+        if Archive.get_night(time) != self.night:
+            self.num_misplaced_files += 1
+            self.misplaced_file_counts[dir_path] += 1
+            return
+            
+        if detector_name not in _DETECTOR_NAMES:
+            self.num_bad_detector_name_file_names += 1
+            self.bad_detector_name_dir_paths.add(dir_path)
+            return
             
         key = (station_name, detector_name, time)
         
@@ -704,9 +738,9 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             self.num_duplicate_files += 1
         
     
-    def _is_dst_ambiguous(self, time):
+    def _is_ambiguous_time(self, time):
         
-        bounds = self.dst_ambiguity_bounds.get(time.year)
+        bounds = self.ambiguous_time_intervals.get(time.year)
         
         if bounds is None:
             return False

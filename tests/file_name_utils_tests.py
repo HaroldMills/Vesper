@@ -32,26 +32,27 @@ class ClipFileNameUtilsTests(unittest.TestCase):
                  
         ]
         
-        function = file_name_utils.parse_absolute_clip_file_name
+        parse = file_name_utils.parse_absolute_clip_file_name
+        check = self._assert_time
+        self._test_parse_clip_file_name(cases, parse, check)
+        
+        
+    def _test_parse_clip_file_name(self, cases, parse, check):
         for file_name, expected_result in cases:
-            result = function(file_name)
-            self._assert_result(result, expected_result)
+            (detector_name, time) = parse(file_name)
+            self.assertEqual(detector_name, expected_result[0])
+            check(time, expected_result[1:])
             
             
-    def _assert_result(self, result, expected_result):
+    def _assert_time(self, time, expected):
         
-        detector_name, time = result
-        
-        (expected_detector_name, year, month, day, hour, minute,
-         second, num) = expected_result
+        (year, month, day, hour, minute, second, num) = expected
             
         expected_time = datetime.datetime(
             year, month, day, hour, minute, second, num * 100000)
         
-        check = self.assertEqual
-        check(detector_name, expected_detector_name)
-        check(time, expected_time)
-
+        self.assertEqual(time, expected_time)
+        
         
     def test_parse_absolute_clip_file_name_errors(self):
         
@@ -128,15 +129,24 @@ class ClipFileNameUtilsTests(unittest.TestCase):
     def test_parse_relative_clip_file_name(self):
         
         cases = [
-            ('Tseep_012.34.56_07.wav', ('Tseep', 2001, 1, 1, 12, 34, 56, 7)),
+            ('Tseep_123.45.56_05.wav', ('Tseep', 123, 45, 56, 5)),
         ]
         
-        function = file_name_utils.parse_relative_clip_file_name
-        for file_name, expected_result in cases:
-            result = function(file_name)
-            self._assert_result(result, expected_result)
+        parse = file_name_utils.parse_relative_clip_file_name
+        check = self._assert_time_delta
+        self._test_parse_clip_file_name(cases, parse, check)
             
             
+    def _assert_time_delta(self, delta, expected):
+        
+        (hours, minutes, seconds, num) = expected
+            
+        microseconds = (num * 100000) / 1000000.
+        total_seconds = hours * 3600 + minutes * 60 + seconds + microseconds
+        
+        self.assertEqual(delta.total_seconds(), total_seconds)
+        
+        
     def test_parse_relative_clip_file_name_errors(self):
         
         cases = [
@@ -171,13 +181,10 @@ class ClipFileNameUtilsTests(unittest.TestCase):
             # bad extension
             'Tseep_012.34.56_07.aif',
              
-            # hour out of range
-            'Tseep_024.34.56_07.wav',
-             
-            # minute out of range
+            # minutes out of range
             'Tseep_012.60.56_07.wav',
              
-            # second out of range
+            # seconds out of range
             'Tseep_012.34.60_07.wav',
             
         ]
