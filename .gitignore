@@ -54,3 +54,6 @@ docs/_build/
 
 # Mac Desktop Services Store files
 .DS_Store
+
+# Local test files
+ClipDatabase.db
