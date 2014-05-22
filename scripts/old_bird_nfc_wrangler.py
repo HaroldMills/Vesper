@@ -19,10 +19,6 @@ import nfc.util.sound_utils as sound_utils
 import old_bird.file_name_utils as file_name_utils
 
 
-_STATION_NAME_CORRECTIONS = {
-    'AJO': 'Ajo'
-}
-
 _STATION_NAMES = frozenset([
     'Ajo', 'Alfred', 'ColumbiaLC', 'Danby', 'Derby', 'HSHS', 'Jamestown',
     'LTU', 'Minatitlan', 'NMHS', 'Oneonta', 'Ottawa', 'Skinner', 'WFU'])
@@ -62,7 +58,7 @@ _CLIP_CLASS_NAMES = frozenset(
     
 _CLIP_CLASS_NAMES_DICT = dict(
     [(n.split('.')[-1].lower(), n) for n in _CLIP_CLASS_NAMES] +
-    [('classified', 'Call'), ('unclassified', None)])
+    [('classified', 'Call')])
 '''mapping from lower case clip class directory names to clip class names'''
 
 _MONTH_PREFIXES = [
@@ -433,8 +429,6 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
     def _start_station_dir_visit(self, path):
         
         name = os.path.basename(path)
-        
-        name = _STATION_NAME_CORRECTIONS.get(name, name)
         
         if name not in _STATION_NAMES:
             format = 'Ignored unrecognized station directory "{:s}".'
