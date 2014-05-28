@@ -362,14 +362,14 @@ def _check_args(args):
         return False
     
     if not os.path.exists(args.source_dir):
-        format = 'Source directory "{:s}" does not exist.'
-        print(format.format(args.source_dir), file=sys.stderr)
+        f = 'Source directory "{:s}" does not exist.'
+        print(f.format(args.source_dir), file=sys.stderr)
         return False
     
     if not args.dry_run and os.path.exists(args.dest_dir):
-        format = ('Destination directory "{:s}" exists. Please delete or '
-                  'rename it and try again.')
-        print(format.format(args.dest_dir), file=sys.stderr)
+        f = ('Destination directory "{:s}" exists. Please delete or '
+             'rename it and try again.')
+        print(f.format(args.dest_dir), file=sys.stderr)
         return False
     
     return True
@@ -455,8 +455,8 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         n = _count_clip_files(path, recursive=False)
         if n != 0:
             suffix = 's' if n > 1 else ''
-            format = 'Found {:d} escaped clip file{:s} in directory "{:s}"'
-            self._log_error(format.format(n, suffix, self._rel(path)))
+            f = 'Found {:d} escaped clip file{:s} in directory "{:s}"'
+            self._log_error(f.format(n, suffix, self._rel(path)))
         self.num_escaped_files += n
             
             
@@ -645,8 +645,8 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             else:
                 s = 'unrecognized'
                 
-            format = 'Ignored {:s} station directory "{:s}".'
-            self._log_error(format.format(s, self._rel(path)))
+            f = 'Ignored {:s} station directory "{:s}".'
+            self._log_error(f.format(s, self._rel(path)))
             self.num_ignored_dir_files += _count_clip_files(path)
             return False
         
@@ -663,15 +663,15 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         month = _MONTH_NUMS.get(name[:3].lower())
         
         if month is None:
-            format = 'Ignored unrecognized month directory "{:s}".'
-            self._log_error(format.format(self._rel(path)))
+            f = 'Ignored unrecognized month directory "{:s}".'
+            self._log_error(f.format(self._rel(path)))
             self.num_ignored_dir_files += _count_clip_files(path)
             return False
         
         else:
             self.month = month
-            format = '        month "{:s}" {:d}'
-            self._log_info(format.format(name, self.month))
+            f = '        month "{:s}" {:d}'
+            self._log_info(f.format(name, self.month))
             self._count_escaped_files(path)
             return True
         
@@ -707,20 +707,20 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             end_day = int(end_day[:i])
             
         except:
-            format = 'Ignored unrecognized day directory "{:s}".'
-            self._log_error(format.format(rel_path))
+            f = 'Ignored unrecognized day directory "{:s}".'
+            self._log_error(f.format(rel_path))
             self.num_ignored_dir_files += _count_clip_files(path)
             raise
 
         if month != self.month:
-            format = 'Ignored misplaced or misnamed day directory "{:s}".'
-            self._log_error(format.format(rel_path))
+            f = 'Ignored misplaced or misnamed day directory "{:s}".'
+            self._log_error(f.format(rel_path))
             self.num_ignored_dir_files += _count_clip_files(path)
             raise ValueError()
         
         if start_day < 1:
-            format = 'Ignored unrecognized day directory "{:s}".'
-            self._log_error(format.format(rel_path))
+            f = 'Ignored unrecognized day directory "{:s}".'
+            self._log_error(f.format(rel_path))
             self.num_ignored_dir_files += _count_clip_files(path)
             raise ValueError()
         
@@ -731,8 +731,8 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             (_, month_days) = calendar.monthrange(self.year, start_month)
             
             if start_day > month_days:
-                format = 'Ignored day directory with invalid date "{:s}".'
-                self._log_error(format.format(rel_path))
+                f = 'Ignored day directory with invalid date "{:s}".'
+                self._log_error(f.format(rel_path))
                 self.num_ignored_dir_files += _count_clip_files(path)
                 raise ValueError()
             
@@ -746,8 +746,8 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         name = os.path.basename(path)
         
-        format = '            day "{:s}" {:02d}-{:02d}'
-        self._log_debug(format.format(name, self.month, self.day))
+        f = '            day "{:s}" {:02d}-{:02d}'
+        self._log_debug(f.format(name, self.month, self.day))
         
         self._visit_clip_dir(path, [])
         
@@ -763,9 +763,8 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             if class_name is None:
                 class_name = '<None>'
             dir_name = os.path.basename(path)
-            format = '{:s}clip class {:d} "{:s}" {:s}'
-            self._log_debug(
-                format.format(indentation, n, dir_name, class_name))
+            f = '{:s}clip class {:d} "{:s}" {:s}'
+            self._log_debug(f.format(indentation, n, dir_name, class_name))
                 
         for _, subdir_names, file_names in os.walk(path):
             
@@ -797,8 +796,8 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             return _CLIP_CLASS_NAMES_DICT[clip_class_dir_names[-1]]
         
         except KeyError:
-            format = 'Unrecognized clip class directory name at "{:s}".'
-            self._log_error(format.format(self._rel(path)))
+            f = 'Unrecognized clip class directory name at "{:s}".'
+            self._log_error(f.format(self._rel(path)))
             return None
             
             
@@ -897,8 +896,8 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                     sound = sound_utils.read_sound_file(path)
                     
                 except Exception, e:
-                    format = 'Error reading sound file "{:s}": {:s}'
-                    self._log_error(format.format(self._rel(path), str(e)))
+                    f = 'Error reading sound file "{:s}": {:s}'
+                    self._log_error(f.format(self._rel(path), str(e)))
                     self.num_unreadable_files += 1
                 
                 else:
@@ -911,8 +910,8 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
                         clip.path = path
                     
                     except Exception, e:
-                        format = 'Error adding clip from "{:s}": {:s}'
-                        self._log_error(format.format(self._rel(path), str(e)))
+                        f = 'Error adding clip from "{:s}": {:s}'
+                        self._log_error(f.format(self._rel(path), str(e)))
                         self.num_add_errors += 1
                     
                     else:
