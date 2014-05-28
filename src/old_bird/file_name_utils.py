@@ -1,9 +1,10 @@
 """Functions pertaining to sound clip file names."""
 
 
-import calendar
 import datetime
 import re
+
+import nfc.util.time_utils as time_utils
 
 
 _WAVE_EXTENSION = '.wav'
@@ -14,8 +15,6 @@ _ABSOLUTE_FILE_NAME_RE = re.compile((
 
 _RELATIVE_FILE_NAME_RE = re.compile(
     r'^([a-zA-Z]+)_(\d{3})\.(\d{2})\.(\d{2})_(\d{2})\.wav+$')
-
-_MIN_YEAR = 1900
 
 
 def is_clip_file_name(name):
@@ -42,20 +41,28 @@ def parse_absolute_clip_file_name(file_name):
         second = int(second)
         num = int(num)
     
-        _check_year(year, file_name)
-        _check_range(month, 1, 12, 'month', file_name)
-        _check_day(year, month, day, file_name)
-        _check_range(hour, 0, 23, 'hour', file_name)
-        _check_range(minute, 0, 59, 'minute', file_name)
-        _check_range(second, 0, 59, 'second', file_name)
+        tu = time_utils
+        _check(file_name, 'year', tu.check_year, year)
+        _check(file_name, 'month', tu.check_month, month)
+        _check(file_name, 'day', tu.check_day, day, year, month)
+        _check(file_name, 'hour', tu.check_hour, hour)
+        _check(file_name, 'minute', tu.check_minute, minute)
+        _check(file_name, 'second', tu.check_second, second)
         _check_num(num, file_name)
-            
+                    
         time = datetime.datetime(
             year, month, day, hour, minute, second, num * 100000)
         
         return (detector_name, time)
     
     
+def _check(file_name, part_name, check, n, *args):
+    try:
+        check(n, *args)
+    except ValueError:
+        _raise_value_error(file_name, 'Bad {:s} "{:d}"'.format(part_name, n))
+        
+        
 def _raise_value_error(file_name, message=None):
     
     if message is None:
@@ -65,21 +72,6 @@ def _raise_value_error(file_name, message=None):
         
     raise ValueError(message)
         
-
-def _check_year(year, file_name):
-    if year < _MIN_YEAR:
-        _raise_value_error(file_name, 'Bad year "{:d}"'.format(year))
-        
-        
-def _check_range(val, min_val, max_val, name, file_name):
-    if val < min_val or val > max_val:
-        _raise_value_error(file_name, 'Bad {:s} "{:d}"'.format(name, val))
-    
-    
-def _check_day(year, month, day, file_name):
-    max_day = calendar.monthrange(year, month)[1]
-    _check_range(day, 1, max_day, 'day', file_name)
-            
 
 def _check_num(num, file_name):
     if num > 9:
@@ -103,8 +95,9 @@ def parse_relative_clip_file_name(file_name):
         seconds = int(seconds)
         num = int(num)
     
-        _check_range(minutes, 0, 59, 'minutes', file_name)
-        _check_range(seconds, 0, 59, 'seconds', file_name)
+        tu = time_utils
+        _check(file_name, 'minutes', tu.check_minutes, minutes)
+        _check(file_name, 'seconds', tu.check_seconds, seconds)
         _check_num(num, file_name)
             
         time_delta = datetime.timedelta(
