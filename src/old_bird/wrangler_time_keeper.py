@@ -89,6 +89,17 @@ class WranglerTimeKeeper(object):
             return None
         
             
+    def resolve_relative_time(self, station_name, night, time_delta):
+        
+        """Resolves a relative time for the specified station and night."""
+        
+        start_time = self.get_monitoring_start_time(station_name, night)
+        if start_time is None:
+            return None
+        else:
+            return start_time + time_delta
+        
+        
 def _parse_default_dst_intervals(intervals):
     return dict(_parse_default_dst_item(i) for i in intervals.iteritems())
         
@@ -210,11 +221,13 @@ def _parse_monitoring_item(year, times):
 def _parse_monitoring_item_aux(year, station_name, (time, dates)):
     
     time = _parse_time(time)
+    _combine = datetime.datetime.combine
     
     if len(dates) == 0:
         
         # Assign time to each day of year.
-        times = dict((date, time) for date in _get_all_dates(year))
+        times = dict((date, _combine(date, time))
+                     for date in _get_all_dates(year))
         
     else:
         
@@ -239,14 +252,14 @@ def _parse_monitoring_item_aux(year, station_name, (time, dates)):
                 
                 date = start
                 while date != end:
-                    times[date] = time
+                    times[date] = _combine(date, time)
                     date += _ONE_DAY
                     
             else:
                 # item is not a `tuple`, so it should be a date string
                 
                 date = _parse_date(item, year)
-                times[date] = time
+                times[date] = _combine(date, time)
             
     return station_name, times
 

@@ -406,11 +406,11 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         for key in keys:
             
             station_name, night = key
-            start_time, delta_time, time = self.resolved_times[key]
+            delta_time, time = self.resolved_times[key]
             
             self._log_error(
-                station_name + ' ' + str(night) + ': ' + str(start_time) +
-                ' ' + str(delta_time) + ' ' + str(time))
+                station_name + ' ' + str(night) + ': ' + str(delta_time) +
+                ' ' + str(time))
             
             
     def _log_misplaced_file_dir_paths(self):
@@ -654,19 +654,17 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             else:
                 # successfully parsed relative file name
                 
-                start_time = self.time_keeper.get_monitoring_start_time(
-                                 self.station_name, self.night)
+                time = self.time_keeper.resolve_relative_time(
+                           self.station_name, self.night, time_delta)
                 
-                if start_time is None:
+                if time is None:
                     self.num_unresolved_relative_file_names += 1
                     self.unresolved_relative_file_name_dir_paths.add(dir_path)
 
                 else:
                     self.num_resolved_relative_file_names += 1
-                    time = datetime.datetime.combine(self.night, start_time)
-                    time += time_delta
                     self.resolved_times[(self.station_name, self.night)] = \
-                        (start_time, time_delta, time)
+                        (time_delta, time)
                     self._visit_clip_file_aux(
                         path, self.station_name, detector_name, time,
                         clip_class_name)

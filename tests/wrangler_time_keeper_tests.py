@@ -134,12 +134,31 @@ class WranglerTimeKeeperTests(unittest.TestCase):
         
         for station_name, night, expected_result in cases:
             night = _parse_date(night)
-            expected_result = _parse_time(expected_result)
+            if expected_result is not None:
+                time = _parse_time(expected_result)
+                expected_result = _combine(night, time)
             method = self.time_keeper.get_monitoring_start_time
             result = method(station_name, night)
-            self.assertEquals(result, expected_result)
+            self.assertEqual(result, expected_result)
             
+            
+    def test_resolve_relative_time(self):
         
+        cases = [
+            ('B', '2012-08-31', '1:23:45', None),
+            ('B', '2012-09-01', '1:23:45', '2012-09-01 22:23:45'),
+            ('B', '2012-09-01', '4:23:45', '2012-09-02 01:23:45')
+        ]
+        
+        for station_name, night, time_delta, expected_result in cases:
+            night = _parse_date(night)
+            time_delta = _parse_time_delta(time_delta)
+            expected_result = _parse_date_time(expected_result)
+            method = self.time_keeper.resolve_relative_time
+            result = method(station_name, night, time_delta)
+            self.assertEqual(result, expected_result)
+            
+            
     def _assert_raises(self, exception_class, function, *args, **kwargs):
         
         self.assertRaises(exception_class, function, *args, **kwargs)
@@ -151,19 +170,37 @@ class WranglerTimeKeeperTests(unittest.TestCase):
             print str(e)
 
 
+_combine = datetime.datetime.combine
+
+
 def _parse_date_time(time):
-    date, time = time.split()
-    date = _parse_date(date)
-    time = _parse_time(time)
-    return datetime.datetime.combine(date, time)
+    if time is None:
+        return None
+    else:
+        date, time = time.split()
+        date = _parse_date(date)
+        time = _parse_time(time)
+        return _combine(date, time)
 
 
 def _parse_date(date):
-    return datetime.date(*[int(s) for s in date.split('-')])
+    if date is None:
+        return None
+    else:
+        return datetime.date(*[int(s) for s in date.split('-')])
 
 
 def _parse_time(time):
     if time is None:
-        return time
+        return None
     else:
         return datetime.time(*[int(s) for s in time.split(':')])
+
+
+def _parse_time_delta(delta):
+    if delta is None:
+        return None
+    else:
+        hours, minutes, seconds = delta.split(':')
+        return datetime.timedelta(
+            hours=int(hours), minutes=int(minutes), seconds=int(seconds))
