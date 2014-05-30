@@ -89,9 +89,9 @@ class WranglerTimeKeeper(object):
             return None
         
             
-    def resolve_relative_time(self, station_name, night, time_delta):
+    def resolve_elapsed_time(self, station_name, night, time_delta):
         
-        """Resolves a relative time for the specified station and night."""
+        """Resolves an elapsed time for the specified station and night."""
         
         start_time = self.get_monitoring_start_time(station_name, night)
         if start_time is None:

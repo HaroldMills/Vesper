@@ -9,11 +9,11 @@ import nfc.util.time_utils as time_utils
 
 _WAVE_EXTENSION = '.wav'
 
-_ABSOLUTE_FILE_NAME_RE = re.compile((
+_DATE_TIME_FILE_NAME_RE = re.compile((
     r'^([a-zA-Z]+)_(\d{4})-(\d{2})-(\d{2})_(\d{2})\.(\d{2})\.(\d{2})_(\d{2})'
     r'\.wav$'))
 
-_RELATIVE_FILE_NAME_RE = re.compile(
+_ELAPSED_TIME_FILE_NAME_RE = re.compile(
     r'^([a-zA-Z]+)_(\d{3})\.(\d{2})\.(\d{2})_(\d{2})\.wav+$')
 
 
@@ -21,9 +21,9 @@ def is_clip_file_name(name):
     return name.endswith(_WAVE_EXTENSION)
 
 
-def parse_absolute_clip_file_name(file_name):
+def parse_date_time_clip_file_name(file_name):
     
-    m = _ABSOLUTE_FILE_NAME_RE.match(file_name)
+    m = _DATE_TIME_FILE_NAME_RE.match(file_name)
     
     if m is None:
         _raise_value_error(file_name)
@@ -79,9 +79,9 @@ def _check_num(num, file_name):
             file_name, 'Clip number {:d} is too high.'.format(num))
 
 
-def parse_relative_clip_file_name(file_name):
+def parse_elapsed_time_clip_file_name(file_name):
     
-    m = _RELATIVE_FILE_NAME_RE.match(file_name)
+    m = _ELAPSED_TIME_FILE_NAME_RE.match(file_name)
     
     if m is None:
         _raise_value_error(file_name)

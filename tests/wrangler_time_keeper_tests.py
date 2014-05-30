@@ -142,7 +142,7 @@ class WranglerTimeKeeperTests(unittest.TestCase):
             self.assertEqual(result, expected_result)
             
             
-    def test_resolve_relative_time(self):
+    def test_resolve_elapsed_time(self):
         
         cases = [
             ('B', '2012-08-31', '1:23:45', None),
@@ -154,7 +154,7 @@ class WranglerTimeKeeperTests(unittest.TestCase):
             night = _parse_date(night)
             time_delta = _parse_time_delta(time_delta)
             expected_result = _parse_date_time(expected_result)
-            method = self.time_keeper.resolve_relative_time
+            method = self.time_keeper.resolve_elapsed_time
             result = method(station_name, night, time_delta)
             self.assertEqual(result, expected_result)
             

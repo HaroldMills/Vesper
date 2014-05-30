@@ -14,7 +14,7 @@ class ClipFileNameUtilsTests(unittest.TestCase):
         self.assertFalse(fnu.is_clip_file_name('bobo.wavx'))
         
         
-    def test_parse_absolute_clip_file_name(self):
+    def test_parse_date_time_clip_file_name(self):
         
         cases = [
                  
@@ -32,7 +32,7 @@ class ClipFileNameUtilsTests(unittest.TestCase):
                  
         ]
         
-        parse = file_name_utils.parse_absolute_clip_file_name
+        parse = file_name_utils.parse_date_time_clip_file_name
         check = self._assert_time
         self._test_parse_clip_file_name(cases, parse, check)
         
@@ -54,9 +54,7 @@ class ClipFileNameUtilsTests(unittest.TestCase):
         self.assertEqual(time, expected_time)
         
         
-    def test_parse_absolute_clip_file_name_errors(self):
-        
-        next_year = datetime.datetime.now().year + 1
+    def test_parse_date_time_clip_file_name_errors(self):
         
         cases = [
                  
@@ -121,18 +119,18 @@ class ClipFileNameUtilsTests(unittest.TestCase):
             
         ]
         
-        function = file_name_utils.parse_absolute_clip_file_name
+        function = file_name_utils.parse_date_time_clip_file_name
         for file_name in cases:
             self._assert_raises(ValueError, function, file_name)
 
                
-    def test_parse_relative_clip_file_name(self):
+    def test_parse_elapsed_time_clip_file_name(self):
         
         cases = [
             ('Tseep_123.45.56_05.wav', ('Tseep', 123, 45, 56, 5)),
         ]
         
-        parse = file_name_utils.parse_relative_clip_file_name
+        parse = file_name_utils.parse_elapsed_time_clip_file_name
         check = self._assert_time_delta
         self._test_parse_clip_file_name(cases, parse, check)
             
@@ -147,7 +145,7 @@ class ClipFileNameUtilsTests(unittest.TestCase):
         self.assertEqual(delta.total_seconds(), total_seconds)
         
         
-    def test_parse_relative_clip_file_name_errors(self):
+    def test_parse_elapsed_time_clip_file_name_errors(self):
         
         cases = [
                  
@@ -189,7 +187,7 @@ class ClipFileNameUtilsTests(unittest.TestCase):
             
         ]
         
-        function = file_name_utils.parse_relative_clip_file_name
+        function = file_name_utils.parse_elapsed_time_clip_file_name
         for file_name in cases:
             self._assert_raises(ValueError, function, file_name)
 

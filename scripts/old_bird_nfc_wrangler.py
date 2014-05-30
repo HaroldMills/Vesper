@@ -223,9 +223,9 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.num_escaped_files = 0
         self.num_ignored_dir_files = 0
         
-        self.num_absolute_file_names = 0
-        self.num_resolved_relative_file_names = 0
-        self.num_unresolved_relative_file_names = 0
+        self.num_date_time_file_names = 0
+        self.num_resolved_file_names = 0
+        self.num_unresolved_file_names = 0
         self.num_malformed_file_names = 0
         
         self.num_misplaced_files = 0
@@ -236,7 +236,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.num_unreadable_files = 0
         self.num_add_errors = 0
         
-        self.unresolved_relative_file_name_dir_paths = set()
+        self.unresolved_file_name_dir_paths = set()
         self.malformed_file_name_file_paths = set()
         self.misplaced_file_counts = defaultdict(int)
         self.bad_detector_name_dir_paths = set()
@@ -284,20 +284,20 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 'Num clip files in ignored directories: {:d}'.format(
                     self.num_ignored_dir_files))
         
-        if self.num_absolute_file_names != 0:
+        if self.num_date_time_file_names != 0:
             self._log_error(
-                'Num absolute clip file names: {:d}'.format(
-                    self.num_absolute_file_names))
+                'Num date/time clip file names: {:d}'.format(
+                    self.num_date_time_file_names))
         
-        if self.num_resolved_relative_file_names != 0:
+        if self.num_resolved_file_names != 0:
             self._log_error(
-                'Num resolved relative clip file names: {:d}'.format(
-                    self.num_resolved_relative_file_names))
+                'Num resolved elapsed time clip file names: {:d}'.format(
+                    self.num_resolved_file_names))
         
-        if self.num_unresolved_relative_file_names != 0:
+        if self.num_unresolved_file_names != 0:
             self._log_error(
-                'Num unresolved relative clip file names: {:d}'.format(
-                    self.num_unresolved_relative_file_names))
+                'Num unresolved elapsed time clip file names: {:d}'.format(
+                    self.num_unresolved_file_names))
         
         if self.num_malformed_file_names != 0:
             self._log_error(
@@ -341,11 +341,11 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 'Num archive add errors: {:d}'.format(
                     self.num_add_errors))
             
-        # directories containing relative file names
-        if len(self.unresolved_relative_file_name_dir_paths) != 0:
+        # directories containing elapsed time file names
+        if len(self.unresolved_file_name_dir_paths) != 0:
             self._log_paths(
-                ('Paths of directories containing unresolved relative '
-                 'file names:'), self.unresolved_relative_file_name_dir_paths)
+                ('Paths of directories containing unresolved elapsed time '
+                 'file names:'), self.unresolved_file_name_dir_paths)
             
         # revsolved times
         if len(self.resolved_times) != 0:
@@ -639,30 +639,30 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         try:
             (detector_name, time) = \
-                file_name_utils.parse_absolute_clip_file_name(file_name)
+                file_name_utils.parse_date_time_clip_file_name(file_name)
                 
         except ValueError:
             
             try:
-                (detector_name, time_delta) = \
-                    file_name_utils.parse_relative_clip_file_name(file_name)
+                f = file_name_utils.parse_elapsed_time_clip_file_name
+                (detector_name, time_delta) = f(file_name)
                     
             except ValueError:
                 self.num_malformed_file_names += 1
                 self.malformed_file_name_file_paths.add(path)
                               
             else:
-                # successfully parsed relative file name
+                # successfully parsed elapsed time file name
                 
-                time = self.time_keeper.resolve_relative_time(
+                time = self.time_keeper.resolve_elapsed_time(
                            self.station_name, self.night, time_delta)
                 
                 if time is None:
-                    self.num_unresolved_relative_file_names += 1
-                    self.unresolved_relative_file_name_dir_paths.add(dir_path)
+                    self.num_unresolved_file_names += 1
+                    self.unresolved_file_name_dir_paths.add(dir_path)
 
                 else:
-                    self.num_resolved_relative_file_names += 1
+                    self.num_resolved_file_names += 1
                     self.resolved_times[(self.station_name, self.night)] = \
                         (time_delta, time)
                     self._visit_clip_file_aux(
@@ -670,9 +670,9 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                         clip_class_name)
                 
         else:
-            # successfully parsed absolute file name
+            # successfully parsed date/time file name
             
-            self.num_absolute_file_names += 1
+            self.num_date_time_file_names += 1
             
             if self.time_keeper.is_time_ambiguous(time, self.station_name):
                 self.num_ambiguous_time_files += 1
