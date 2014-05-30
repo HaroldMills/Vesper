@@ -9,14 +9,13 @@ import calendar
 import datetime
 import logging
 import os
-import re
 import sys
 
 from nfc.archive.archive import Archive
 from nfc.util.bunch import Bunch
 from nfc.util.directory_visitor import DirectoryVisitor
+from old_bird.wrangler_time_keeper import WranglerTimeKeeper
 import nfc.util.sound_utils as sound_utils
-import nfc.util.time_utils as time_utils
 import old_bird.file_name_utils as file_name_utils
 
 
@@ -29,8 +28,8 @@ _STATIONS = frozenset([
     ('HHSS', 'Harlingen High School South', 'US/Central'),
     ('JAS', 'Jamestown Audubon Society', 'US/Eastern'),
     ('LTU', 'Louisiana Technical University', 'US/Central'),
-    (u'Minatitlan',
-     u'Minatitlan/Coatzacoalcos International Airport', 'MX/Central'),
+    ('Minatitlan',
+     u'Minatitl\u00E1n/Coatzacoalcos International Airport', 'MX/Central'),
     ('NMHS', 'North Manchester High School', 'US/Eastern'),
     ('Oneonta', 'Oneonta Municipal Airport', 'US/Eastern'),
     ('ONWR', 'Ottawa National Wildlife Refuge', 'US/Eastern'),
@@ -40,7 +39,23 @@ _STATIONS = frozenset([
 
 _STATION_NAMES = frozenset(s[0] for s in _STATIONS)
 
-_EXCLUDED_STATION_NAMES = frozenset(['Danby', 'LTU', u'Minatitlan'])
+_EXCLUDED_STATION_NAMES = frozenset(['Danby', 'LTU', 'Minatitlan'])
+
+_DEFAULT_DST_INTERVALS = {2012: ('3-11 2:00:00', '11-4 2:00:00')}
+  
+_DST_INTERVALS = {2012: {'Ajo': None}}
+  
+_MONITORING_START_TIMES = {
+    2012: {
+        'Alfred': ('21:00:00', ['10-3']),
+        'DHBO': ('21:00:00', [('5-11', '5-12'), ('5-28', '6-6')]),
+        'JAS': ('21:00:00', [('8-17', '8-19')]),
+        'Oneonta': ('21:00:00', []),
+        'Ottawa': ('20:00:00', ['9-04', '9-17']),
+        'Skinner': ('21:00:00',
+                    ['8-13', '8-14', ('10-6', '10-12'), ('10-14', '10-25')])
+    }
+}
 
 _DETECTOR_NAMES = frozenset(['Tseep'])
 
@@ -78,8 +93,6 @@ _CLIP_CLASS_NAMES_DICT = dict(
     [('classified', 'Call')])
 '''mapping from lower case clip class directory names to clip class names'''
 
-
-
 _MONTH_PREFIXES = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun',
     'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
@@ -94,212 +107,6 @@ _MONTH_NAMES = dict((i + 1, s) for (i, s) in enumerate([
 
 _LOGGING_LEVELS = [logging.ERROR, logging.INFO, logging.DEBUG]
 
-_ONE_HOUR = datetime.timedelta(hours=1)
-_ONE_DAY = datetime.timedelta(days=1)
-
-
-def _parse_default_dst_intervals(intervals):
-    return dict(_parse_default_dst_item(i) for i in intervals.iteritems())
-        
-
-def _parse_default_dst_item(item):
-    year, (start, end) = item
-    start = _parse_date_time(start, year)
-    end = _parse_date_time(end, year)
-    return (year, (start, end))
-    
-
-def _parse_date_time(s, year):
-    
-    parts = s.split()
-    if len(parts) != 2:
-        raise ValueError('Bad date and time "{:s}".'.format(s))
-    
-    d, t = parts
-    d = _parse_date(d, year)
-    t = _parse_time(t)
-    
-    return datetime.datetime(
-               d.year, d.month, d.day, t.hour, t.minute, t.second)
-    
-    
-_DATE_RE = re.compile(r'(\d\d?)/(\d\d?)')
-
-
-def _parse_date(s, year):
-    
-    m = _DATE_RE.match(s)
-    
-    if m is None:
-        _handle_bad_date(s)
-    
-    else:
-        
-        month, day = m.groups()
-        
-        month = int(month)
-        day = int(day)
-        
-        try:
-            time_utils.check_month(month)
-            time_utils.check_day(day, year, month)
-            
-        except ValueError:
-            _handle_bad_date(s)
-            
-        return datetime.date(year, month, day)
-    
-
-def _handle_bad_date(s):
-    raise ValueError('Bad date "{:s}".'.format(s))
-
-    
-_TIME_RE = re.compile(r'(\d\d?):(\d\d):(\d\d)')
-
-
-def _parse_time(s):
-    
-    m = _TIME_RE.match(s)
-    
-    if m is None:
-        _handle_bad_time(s)
-    
-    else:
-        
-        hour, minute, second = m.groups()
-        
-        hour = int(hour)
-        minute = int(minute)
-        second = int(second)
-        
-        try:
-            time_utils.check_hour(hour)
-            time_utils.check_minute(minute)
-            time_utils.check_second(second)
-            
-        except ValueError:
-            _handle_bad_time(s)
-            
-        return datetime.time(hour, minute, second)
-
-
-def _handle_bad_time(s):
-    raise ValueError('Bad time "{:s}"'.format(s))
-
-
-def _parse_dst_intervals(intervals):
-    return dict(_parse_dst_item(*i) for i in intervals.iteritems())
-        
-
-def _parse_dst_item(year, intervals):
-    return (year, dict(_parse_dst_item_aux(year, *i)
-                       for i in intervals.iteritems()))
-
-
-def _parse_dst_item_aux(year, station_name, times):
-    
-    if times is not None:
-        start, end = times
-        start = _parse_date_time(start, year)
-        end = _parse_date_time(end, year)
-        times = (start, end)
-        
-    return (station_name, times)
-
-
-def _parse_monitoring_start_times(times):
-    return dict(_parse_monitoring_item(*i) for i in times.iteritems())
-
-
-def _parse_monitoring_item(year, times):
-    return (year, dict(_parse_monitoring_item_aux(year, *i)
-                       for i in times.iteritems()))
-    
-    
-def _parse_monitoring_item_aux(year, station_name, (time, dates)):
-    
-    time = _parse_time(time)
-    times = {}
-    
-    for item in dates:
-        
-        if isinstance(item, tuple):
-            
-            start, end = item
-            start = _parse_date(start, year)
-            end = _parse_date(end, year)
-            
-            if start > end:
-                raise ValueError(
-                    ('Start date {:s} follows end date {:s} for monitoring '
-                     'start times specified for station "{:s}" for '
-                     '{:d}.').format(start, end, station_name, year))
-                
-            end += _ONE_DAY
-            
-            date = start
-            while date != end:
-                times[date] = time
-                date += _ONE_DAY
-                
-        else:
-            # item is not a `tuple`, so it should be a date string
-            
-            date = _parse_date(item, year)
-            times[date] = time
-            
-    return station_name, times
-                
-                
-_DEFAULT_DST_INTERVALS = _parse_default_dst_intervals({
-    2012: ('3/11 2:00:00', '11/4 2:00:00')
-})
-
-_DST_INTERVALS = _parse_dst_intervals({
-    2012: {
-        'Ajo': None
-    }
-})
-
-_MONITORING_START_TIMES = _parse_monitoring_start_times({
-    2012: {
-        'Alfred': ('21:00:00', ['10/3']),
-        'DHBO': ('21:00:00', [('5/11', '5/12'), ('5/28', '6/6')]),
-        'Jamestown': ('21:00:00', [('8/17', '8/19')]),
-        'Oneonta': ('21:00:00', []),
-        'Ottawa': ('20:00:00', ['9/4', '9/17']),
-        'Skinner': ('21:00:00',
-                    ['8/13', '8/14', ('10/6', '10/12'), ('10/14', '10/25')])
-    }
-})
-
-
-def _get_dst_interval(year, station_name):
-    
-    intervals = _DST_INTERVALS.get(year)
-    if intervals is None:
-        return _DEFAULT_DST_INTERVALS.get(year)
-    
-    try:
-        return intervals[station_name]
-    except KeyError:
-        return _DEFAULT_DST_INTERVALS.get(year)
-    
-        
-'''
-EDT Eastern Daylight Time -4
-EST Eastern Standard Time -5
-
-CDT Central Daylight Time -5
-CST Central Standard Time -6
-
-MDT Mountain Daylight Time -6
-MST Mountain Standard Time -7
-
-PDT Pacific Daylight Time -7
-PST Pacific Standard Time -9
-'''
-
 
 def _main():
     
@@ -312,7 +119,7 @@ def _main():
         
         archive = _create_archive(args)
         
-        visitor = OldBirdDataDirectoryVisitor()
+        visitor = _OldBirdDataDirectoryVisitor()
         visitor.visit(args.source_dir, archive, args.year)
     
     
@@ -398,7 +205,7 @@ def _create_bunches(names):
     return [Bunch(name=name) for name in names]
 
 
-class OldBirdDataDirectoryVisitor(DirectoryVisitor):
+class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
     
     
     def visit(self, path, archive, year):
@@ -406,7 +213,7 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.archive = archive
         self.year = year
         level_names = ['root', 'station', 'month', 'day']
-        super(OldBirdDataDirectoryVisitor, self).visit(path, level_names)
+        super(_OldBirdDataDirectoryVisitor, self).visit(path, level_names)
         
         
     def _start_root_dir_visit(self, path):
@@ -436,7 +243,9 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.ambiguous_time_file_counts = defaultdict(int)
         self.reclassifications = set()
         
-        self.monitoring_start_times = self._get_monitoring_start_times()
+        self.time_keeper = WranglerTimeKeeper(
+            _DEFAULT_DST_INTERVALS, _DST_INTERVALS, _MONITORING_START_TIMES)
+        self.resolved_times = {}
         
         self.clip_info = {}
         
@@ -447,10 +256,6 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         return True
         
         
-    def _get_monitoring_start_times(self):
-        return _MONITORING_START_TIMES
-    
-    
     def _count_escaped_files(self, path):
         n = _count_clip_files(path, recursive=False)
         if n != 0:
@@ -541,6 +346,10 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             self._log_paths(
                 ('Paths of directories containing unresolved relative '
                  'file names:'), self.unresolved_relative_file_name_dir_paths)
+            
+        # revsolved times
+        if len(self.resolved_times) != 0:
+            self._log_resolved_times()
         
         # paths of malformed file names
         if len(self.malformed_file_name_file_paths) != 0:
@@ -583,6 +392,25 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
         paths.sort()
         for path in paths:
             self._log_error(path)
+            
+            
+    def _log_resolved_times(self):
+        
+        self._log_space()
+        
+        self._log_error('Examples of resolved times:')
+        
+        keys = self.resolved_times.keys()
+        keys.sort()
+        
+        for key in keys:
+            
+            station_name, night = key
+            start_time, delta_time, time = self.resolved_times[key]
+            
+            self._log_error(
+                station_name + ' ' + str(night) + ': ' + str(start_time) +
+                ' ' + str(delta_time) + ' ' + str(time))
             
             
     def _log_misplaced_file_dir_paths(self):
@@ -826,17 +654,19 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             else:
                 # successfully parsed relative file name
                 
-                try:
-                    start_time = self.monitoring_start_times[
-                                     self.station_name][self.night]
-                                    
-                except KeyError:
+                start_time = self.time_keeper.get_monitoring_start_time(
+                                 self.station_name, self.night)
+                
+                if start_time is None:
                     self.num_unresolved_relative_file_names += 1
                     self.unresolved_relative_file_name_dir_paths.add(dir_path)
 
                 else:
                     self.num_resolved_relative_file_names += 1
-                    time = start_time + time_delta
+                    time = datetime.datetime.combine(self.night, start_time)
+                    time += time_delta
+                    self.resolved_times[(self.station_name, self.night)] = \
+                        (start_time, time_delta, time)
                     self._visit_clip_file_aux(
                         path, self.station_name, detector_name, time,
                         clip_class_name)
@@ -846,7 +676,7 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             
             self.num_absolute_file_names += 1
             
-            if self._is_ambiguous_time(time):
+            if self.time_keeper.is_time_ambiguous(time, self.station_name):
                 self.num_ambiguous_time_files += 1
                 self.ambiguous_time_file_counts[dir_path] += 1
             
@@ -945,18 +775,6 @@ class OldBirdDataDirectoryVisitor(DirectoryVisitor):
             self.num_duplicate_files += 1
         
     
-    def _is_ambiguous_time(self, time):
-        
-        interval = _get_dst_interval(time.year, self.station_name)
-        
-        if interval is None:
-            return False
-        
-        else:
-            _, dst_end_time = interval
-            return time >= dst_end_time - _ONE_HOUR and time < dst_end_time
-              
-               
     def _log_debug(self, message):
         logging.debug(message)
         
