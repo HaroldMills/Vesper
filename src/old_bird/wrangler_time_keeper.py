@@ -4,11 +4,22 @@
 import datetime
 import re
 
+import pytz
+
 import nfc.util.time_utils as time_utils
 
 
 _ONE_HOUR = datetime.timedelta(hours=1)
 _ONE_DAY = datetime.timedelta(days=1)
+_ZERO = datetime.timedelta()
+
+
+class NonexistentTimeError(Exception):
+    pass
+
+
+class AmbiguousTimeError(Exception):
+    pass
 
 
 class WranglerTimeKeeper(object):
@@ -16,146 +27,163 @@ class WranglerTimeKeeper(object):
     """
     Auxiliary time-keeping class for the NFC wrangler.
     
-    An instance of this class can be queried for DST start and end times
-    and monitoring start times for the stations of a monitoring network.
+    An instance of this class can convert both naive and elapsed
+    monitoring times to UTC.
     """
     
     
-    def __init__(
-        self, default_dst_intervals, dst_intervals, monitoring_start_times):
-        
-        self._dst_years = frozenset(default_dst_intervals.keys())
-        
-        self._default_dst_intervals = \
-            _parse_default_dst_intervals(default_dst_intervals)
-            
-        self._dst_intervals = _parse_dst_intervals(dst_intervals)
-        
-        self._monitoring_start_times = \
-            _parse_monitoring_start_times(monitoring_start_times)
-        
-        
-    def is_time_ambiguous(self, time, station_name):
+    def __init__(self, stations, time_zone_names, start_times):
         
         """
-        Tests if the specified local time is ambiguous because of its
-        proximity to the end of DST.
+        Mapping from station names to monitoring time zone names.
         
-        A local time in the interval [1:00:00, 2:00:00) on the night that
-        DST ends is ambiguous since both the hour before DST ends and the
-        hour after DST ends map to that interval.
+        :Parameters:
+        
+            stations: mapping
+                Mapping from station names to station objects.
+                
+                Each station object must have `name` and `time_zone_name`
+                attributes. The `time_zone_name` must be a name known to
+                the Olson time zone database, suitable as an argument to
+                the `pytz.timezone` function.
+                
+            time_zone_names : mapping
+                Mapping from station names to monitoring time zone names.
+        
+                The time zone name must be known to the Olson time zone
+                database, suitable as an argument to the `pytz.timezone`
+                function.
+                
+                The monitoring time zone for a station may be different
+                from the station time zone, and in fact it *should* be if
+                the station time zone observes DST, since otherwise the
+                times of some clip files may be ambiguous.
+                
+            start_times : mapping
+                Mapping from years to station names to monitoring start times.
+                
+                The monitoring start times for a particular year and station
+                are expressed as a `(time, dates)` pair. The time of each
+                pair is a string of the form *HH:MM:SS*. The hour field can
+                contain either one or two digits and should be in the range
+                [0, 23]. The minute and second fields must each contain
+                two digits. The dates are a list of items, with each item
+                either a date string of the form *MM-DD*, representing a
+                single date, or a pair of start and end dates, representing
+                a range of dates. The month and day fields of a date string
+                can contain either one or two digits. A monitoring start
+                time should be for the monitoring time zone of the
+                appropriate station, *not* the station time zone (unless
+                the two are the same, which they often should not be to
+                avoid DST ambiguities).
         """
-        
-        self._check_year(time.year)
-        
-        interval = self._get_dst_interval(time.year, station_name)
-        
-        if interval is None:
-            return False
-        
-        else:
-            _, dst_end_time = interval
-            return time >= dst_end_time - _ONE_HOUR and time < dst_end_time
-                  
-                   
-    def _check_year(self, year):
-        if year not in self._dst_years:
-            f = 'DST start and end times not available for year {:d}.'
-            raise ValueError(f.format(year))
+
+        stations = stations.values()
+        self._time_zones = _get_time_zones(stations, time_zone_names)
+        self._start_times = self._parse_start_times(start_times)
         
         
-    def _get_dst_interval(self, year, station_name):
+    def convert_naive_time_to_utc(self, time, station_name):
         
-        intervals = self._dst_intervals.get(year)
-        if intervals is None:
-            return self._default_dst_intervals.get(year)
+        time_zone = self._time_zones[station_name]
         
+        # We must specify `is_dst=None` here for the `localize` method
+        # to raise an exception if the naive time is either nonexistent
+        # or ambiguous. If we omit the `is_dst` argument the method will
+        # *not* raise an exception if the naive time is nonexistent or
+        # ambiguous, but rather yield the specified time with the
+        # standard time (as opposed to daylight time) offset.
         try:
-            return intervals[station_name]
-        except KeyError:
-            return self._default_dst_intervals.get(year)
+            time = time_zone.localize(time, is_dst=None)
+        except pytz.NonExistentTimeError as e:
+            raise NonexistentTimeError(str(e))
+        except pytz.AmbiguousTimeError as e:
+            raise AmbiguousTimeError(str(e))
         
-        
-    def get_monitoring_start_time(self, station_name, night):
-        
-        """
-        Gets the time monitoring started for the specified station and night.
-        """
-        
+        return time.astimezone(pytz.utc)
+    
+    
+    def convert_elapsed_time_to_utc(self, time_delta, station_name, night):
         try:
-            times = self._monitoring_start_times
-            return times[night.year][station_name][night]
+            start_time = self._start_times[night.year][station_name][night]
         except KeyError:
-            return None
-        
-            
-    def resolve_elapsed_time(self, station_name, night, time_delta):
-        
-        """Resolves an elapsed time for the specified station and night."""
-        
-        start_time = self.get_monitoring_start_time(station_name, night)
-        if start_time is None:
             return None
         else:
             return start_time + time_delta
         
-        
-def _parse_default_dst_intervals(intervals):
-    return dict(_parse_default_dst_item(i) for i in intervals.iteritems())
-        
-
-def _parse_default_dst_item(item):
-    year, (start, end) = item
-    start = _parse_date_time(start, year)
-    end = _parse_date_time(end, year)
-    return (year, (start, end))
-    
-
-def _parse_date_time(s, year):
-    
-    parts = s.split()
-    if len(parts) != 2:
-        raise ValueError('Bad date and time "{:s}".'.format(s))
-    
-    d, t = parts
-    d = _parse_date(d, year)
-    t = _parse_time(t)
-    
-    return datetime.datetime(
-               d.year, d.month, d.day, t.hour, t.minute, t.second)
-    
-    
-_DATE_RE = re.compile(r'(\d\d?)-(\d\d?)')
-
-
-def _parse_date(s, year):
-    
-    m = _DATE_RE.match(s)
-    
-    if m is None:
-        _handle_bad_date(s)
-    
-    else:
-        
-        month, day = m.groups()
-        
-        month = int(month)
-        day = int(day)
-        
-        try:
-            time_utils.check_month(month)
-            time_utils.check_day(day, year, month)
             
-        except ValueError:
-            _handle_bad_date(s)
+    def _parse_start_times(self, times):
+        return dict(self._parse_start_times_item(*i)
+                    for i in times.iteritems())
+    
+    
+    def _parse_start_times_item(self, year, times):
+        return (year, dict(self._parse_start_times_item_aux(year, *i)
+                           for i in times.iteritems()))
+        
+        
+    def _parse_start_times_item_aux(self, year, station_name, (time, dates)):
+        
+        self._station_name = station_name
+        time = _parse_time(time)
+        to_utc = self._to_utc
+        
+        if len(dates) == 0:
             
-        return datetime.date(year, month, day)
+            # Assign time to each day of year.
+            times = dict((date, to_utc(date, time))
+                         for date in _get_all_dates(year))
+            
+        else:
+            
+            times = {}
+            
+            for item in dates:
+                
+                if isinstance(item, tuple):
+                    
+                    start, end = item
+                    start = _parse_date(start, year)
+                    end = _parse_date(end, year)
+                    
+                    if start > end:
+                        raise ValueError(
+                            ('Start date {:s} follows end date {:s} for '
+                             'monitoring start times specified for station '
+                             '"{:s}" for {:d}.').format(
+                                 start, end, station_name, year))
+                        
+                    end += _ONE_DAY
+                    
+                    date = start
+                    while date != end:
+                        times[date] = to_utc(date, time)
+                        date += _ONE_DAY
+                        
+                else:
+                    # item is not a `tuple`, so it should be a date string
+                    
+                    date = _parse_date(item, year)
+                    times[date] = to_utc(date, time)
+                
+        return station_name, times
+
+
+    def _to_utc(self, date, time):
+        dt = datetime.datetime.combine(date, time)
+        return self.convert_naive_time_to_utc(dt, self._station_name)
     
 
-def _handle_bad_date(s):
-    raise ValueError('Bad date "{:s}".'.format(s))
+def _get_time_zones(stations, time_zone_names):
+    return dict(_get_time_zone_data(s, time_zone_names) for s in stations)
 
-    
+
+def _get_time_zone_data(station, time_zone_names):
+    time_zone_name = time_zone_names.get(station.name, station.time_zone.zone)
+    time_zone = pytz.timezone(time_zone_name)
+    return (station.name, time_zone)
+
+
 _TIME_RE = re.compile(r'(\d\d?):(\d\d):(\d\d)')
 
 
@@ -189,82 +217,38 @@ def _handle_bad_time(s):
     raise ValueError('Bad time "{:s}"'.format(s))
 
 
-def _parse_dst_intervals(intervals):
-    return dict(_parse_dst_item(*i) for i in intervals.iteritems())
-        
-
-def _parse_dst_item(year, intervals):
-    return (year, dict(_parse_dst_item_aux(year, *i)
-                       for i in intervals.iteritems()))
-
-
-def _parse_dst_item_aux(year, station_name, times):
-    
-    if times is not None:
-        start, end = times
-        start = _parse_date_time(start, year)
-        end = _parse_date_time(end, year)
-        times = (start, end)
-        
-    return (station_name, times)
-
-
-def _parse_monitoring_start_times(times):
-    return dict(_parse_monitoring_item(*i) for i in times.iteritems())
-
-
-def _parse_monitoring_item(year, times):
-    return (year, dict(_parse_monitoring_item_aux(year, *i)
-                       for i in times.iteritems()))
-    
-    
-def _parse_monitoring_item_aux(year, station_name, (time, dates)):
-    
-    time = _parse_time(time)
-    _combine = datetime.datetime.combine
-    
-    if len(dates) == 0:
-        
-        # Assign time to each day of year.
-        times = dict((date, _combine(date, time))
-                     for date in _get_all_dates(year))
-        
-    else:
-        
-        times = {}
-        
-        for item in dates:
-            
-            if isinstance(item, tuple):
-                
-                start, end = item
-                start = _parse_date(start, year)
-                end = _parse_date(end, year)
-                
-                if start > end:
-                    raise ValueError(
-                        ('Start date {:s} follows end date {:s} for '
-                         'monitoring start times specified for station '
-                         '"{:s}" for {:d}.').format(
-                             start, end, station_name, year))
-                    
-                end += _ONE_DAY
-                
-                date = start
-                while date != end:
-                    times[date] = _combine(date, time)
-                    date += _ONE_DAY
-                    
-            else:
-                # item is not a `tuple`, so it should be a date string
-                
-                date = _parse_date(item, year)
-                times[date] = _combine(date, time)
-            
-    return station_name, times
-
-
 def _get_all_dates(year):
     start = datetime.date(year, 1, 1).toordinal()
     end = datetime.date(year + 1, 1, 1).toordinal()
     return [datetime.date.fromordinal(i) for i in xrange(start, end)]
+
+
+_DATE_RE = re.compile(r'(\d\d?)-(\d\d?)')
+ 
+ 
+def _parse_date(s, year):
+     
+    m = _DATE_RE.match(s)
+     
+    if m is None:
+        _handle_bad_date(s)
+     
+    else:
+         
+        month, day = m.groups()
+         
+        month = int(month)
+        day = int(day)
+         
+        try:
+            time_utils.check_month(month)
+            time_utils.check_day(day, year, month)
+             
+        except ValueError:
+            _handle_bad_date(s)
+             
+        return datetime.date(year, month, day)
+     
+ 
+def _handle_bad_date(s):
+    raise ValueError('Bad date "{:s}".'.format(s))

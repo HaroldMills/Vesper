@@ -1,22 +1,28 @@
+from __future__ import print_function
+
 import datetime
 import unittest
 
-from old_bird.wrangler_time_keeper import WranglerTimeKeeper
+import pytz
+
+from nfc.archive.station import Station
+from old_bird.wrangler_time_keeper import (
+    WranglerTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
 
 
-_DEFAULT_DST_INTERVALS = {
-    2012: ('3-11 2:00:00', '11-4 2:00:00'),
-    2013: ('3-10 2:00:00', '11-3 2:00:00')
+_STATIONS = [
+    ('A', 'US/Eastern'),
+    ('B', 'America/Mexico_City'),
+    ('C', 'US/Arizona')
+]
+
+_MONITORING_TIME_ZONES = {
+    'C': 'UTC'
 }
-  
-_DST_INTERVALS = {
-    2012: {'B': None, 'C': ('3-12 2:00:00', '11-3 12:34:56')},
-    2013: {'C': None}
-}
-  
+
 _MONITORING_START_TIMES = {
     2012: {'A': ('12:34:56', ['10-1']), 'B': ('21:00:00', ['9-1', '10-31'])},
-    2013: {'A': ('19:00:00', []), 'B': ('22:00:00', ['8-1', ('9-1', '10-31')])}
+    2013: {'A': ('19:00:00', []), 'B': ('22:00:00', ['8-1', ('9-1', '11-30')])}
 }
 
 
@@ -24,141 +30,127 @@ class WranglerTimeKeeperTests(unittest.TestCase):
     
                
     def setUp(self):
+        stations = self._create_stations(_STATIONS)
         self.time_keeper = WranglerTimeKeeper(
-            _DEFAULT_DST_INTERVALS, _DST_INTERVALS, _MONITORING_START_TIMES)
+            stations, _MONITORING_TIME_ZONES, _MONITORING_START_TIMES)
             
             
-    def test_is_time_ambiguous(self):
+    def _create_stations(self, tuples):
+        return dict(self._create_stations_item(*t) for t in tuples)
+    
+    
+    def _create_stations_item(self, station_name, time_zone_name):
+        station = Station(station_name, station_name, time_zone_name)
+        return (station_name, station)
+                
+        
+    def test_convert_naive_time_to_utc(self):
         
         cases = [
                  
-            # A observes regular DST
-            ('A', '2012-01-01 00:00:00', False),
-            ('A', '2012-03-11 02:00:00', False),    # no such local time
-            ('A', '2012-03-11 03:00:00', False),
-            ('A', '2012-07-01 00:00:00', False),
-            ('A', '2012-11-04 00:59:59', False),
-            ('A', '2012-11-04 01:00:00', True),
-            ('A', '2012-11-04 01:30:00', True),
-            ('A', '2012-11-04 01:59:59', True),
-            ('A', '2012-11-04 02:00:00', False),
-            ('A', '2012-12-31 23:59:59', False),
-            ('A', '2013-11-03 00:59:59', False),
-            ('A', '2013-11-03 01:00:00', True),
-            ('A', '2013-11-03 01:30:00', True),
-            ('A', '2013-11-03 01:59:59', True),
-            ('A', '2013-11-03 02:00:00', False),
-             
-            # B does not observe DST for 2012, but does for 2013
-            ('B', '2012-01-01 00:00:00', False),
-            ('B', '2012-03-11 02:00:00', False),    # no such local time
-            ('B', '2012-03-11 03:00:00', False),
-            ('B', '2012-07-01 00:00:00', False),
-            ('B', '2012-11-04 00:59:59', False),
-            ('B', '2012-11-04 01:00:00', False),
-            ('B', '2012-11-04 01:30:00', False),
-            ('B', '2012-11-04 01:59:59', False),
-            ('B', '2012-11-04 02:00:00', False),
-            ('B', '2012-12-31 23:59:59', False),
-            ('B', '2013-11-03 00:59:59', False),
-            ('B', '2013-11-03 01:00:00', True),
-            ('B', '2013-11-03 01:30:00', True),
-            ('B', '2013-11-03 01:59:59', True),
-            ('B', '2013-11-03 02:00:00', False),
-             
-            # C observes custom DST for 2012, but none for 2013
-            ('C', '2012-01-01 00:00:00', False),
-            ('C', '2012-03-10 02:00:00', False),    # no such local time
-            ('C', '2012-03-10 03:00:00', False),
-            ('C', '2012-07-01 00:00:00', False),
-            ('C', '2012-11-03 11:34:55', False),
-            ('C', '2012-11-03 11:34:56', True),
-            ('C', '2012-11-03 12:04:56', True),
-            ('C', '2012-11-03 12:34:55', True),
-            ('C', '2012-11-03 12:34:56', False),
-            ('C', '2012-12-31 23:59:59', False),
-            ('C', '2013-11-03 00:59:59', False),
-            ('C', '2013-11-03 01:00:00', False),
-            ('C', '2013-11-03 01:30:00', False),
-            ('C', '2013-11-03 01:59:59', False),
-            ('C', '2013-11-03 02:00:00', False),
+            # A is US/Eastern
+            ('A', '2012-01-01 00:00:00', '2012-01-01 05:00:00'),
+            ('A', '2012-03-11 01:59:59', '2012-03-11 06:59:59'),
+            ('A', '2012-03-11 03:00:00', '2012-03-11 07:00:00'),
+            ('A', '2012-07-01 22:00:00', '2012-07-02 02:00:00'),
+            ('A', '2012-11-04 00:59:59', '2012-11-04 04:59:59'),
+            ('A', '2012-11-04 02:00:00', '2012-11-04 07:00:00'),
+            ('A', '2012-12-31 22:00:00', '2013-01-01 03:00:00'),
+            
+            # B is America/Mexico_City
+            ('B', '2013-01-01 00:00:00', '2013-01-01 06:00:00'),
+            ('B', '2013-04-07 01:59:59', '2013-04-07 07:59:59'),
+            ('B', '2013-04-07 03:00:00', '2013-04-07 08:00:00'),
+            ('B', '2013-07-01 22:00:00', '2013-07-02 03:00:00'),
+            ('B', '2013-10-27 00:59:59', '2013-10-27 05:59:59'),
+            ('B', '2013-10-27 02:00:00', '2013-10-27 08:00:00'),
+            ('B', '2013-12-31 22:00:00', '2014-01-01 04:00:00'),
+            
+            # C is UTC
+            ('C', '2014-01-01 00:00:00', '2014-01-01 00:00:00'),
+            ('C', '2014-07-01 00:00:00', '2014-07-01 00:00:00'),
+            ('C', '2014-12-31 00:00:00', '2014-12-31 00:00:00')
             
         ]
+        
+        convert = self.time_keeper.convert_naive_time_to_utc
         
         for station_name, time, expected_result in cases:
-            time = _parse_date_time(time)
-            result = self.time_keeper.is_time_ambiguous(time, station_name)
+            
+            time = _parse_naive_date_time(time)
+            result = convert(time, station_name)
+            
+            expected_result = _parse_naive_date_time(expected_result)
+            expected_result = pytz.utc.localize(expected_result)
+            
             self.assertEqual(result, expected_result)
             
             
-    def test_is_time_ambiguous_errors(self):
-        method = self.time_keeper.is_time_ambiguous
-        for year in [2011, 2014]:
-            time = datetime.datetime(year, 1, 1)
-            self._assert_raises(ValueError, method, time, 'A')
+    def test_convert_naive_time_to_utc_errors(self):
         
+        nonexistent = [
+                       
+            ('A', '2012-03-11 02:00:00'),
+            ('A', '2012-03-11 02:30:00'),
+            ('A', '2012-03-11 02:59:59'),
+            
+            ('B', '2013-04-07 02:00:00'),
+            ('B', '2013-04-07 02:30:00'),
+            ('B', '2013-04-07 02:59:59')
+            
+        ]
         
-    def test_get_monitoring_start_time(self):
+        ambiguous = [
+                     
+            ('A', '2012-11-04 01:00:00'),
+            ('A', '2012-11-04 01:30:00'),
+            ('A', '2012-11-04 01:59:59'),
+            
+            ('B', '2013-10-27 01:00:00'),
+            ('B', '2013-10-27 01:30:00'),
+            ('B', '2013-10-27 01:59:59')
+            
+        ]
+        
+        self._test_convert_naive_time_to_utc_errors(
+            nonexistent, NonexistentTimeError)
+        
+        self._test_convert_naive_time_to_utc_errors(
+            ambiguous, AmbiguousTimeError)
+                
+        
+    def _test_convert_naive_time_to_utc_errors(self, cases, exceptionClass):
+        
+        convert = self.time_keeper.convert_naive_time_to_utc
+        
+        for station_name, time in cases:
+            time = _parse_naive_date_time(time)
+            self._assert_raises(exceptionClass, convert, time, station_name)
+            
+            
+    def test_convert_elapsed_time_to_utc(self):
          
         cases = [
-                 
-            ('A', '2012-09-30', None),
-            ('A', '2012-10-01', '12:34:56'),
-            ('A', '2012-10-02', None),
-            ('A', '2013-01-01', '19:00:00'),
-            ('A', '2013-06-01', '19:00:00'),
-            ('A', '2013-12-31', '19:00:00'),
-            ('A', '2014-09-01', None),
-            
-            ('B', '2012-01-01', None),
-            ('B', '2012-06-01', None),
-            ('B', '2012-08-31', None),
-            ('B', '2012-09-01', '21:00:00'),
-            ('B', '2012-09-02', None),
-            ('B', '2012-10-30', None),
-            ('B', '2012-10-31', '21:00:00'),
-            ('B', '2012-11-01', None),
-            ('B', '2012-12-31', None),
-            ('B', '2013-07-31', None),
-            ('B', '2013-08-01', '22:00:00'),
-            ('B', '2013-08-02', None),
-            ('B', '2013-08-31', None),
-            ('B', '2013-09-01', '22:00:00'),
-            ('B', '2013-10-01', '22:00:00'),
-            ('B', '2013-10-31', '22:00:00'),
-            ('B', '2013-11-01', None),
-            
-            ('C', '2012-09-01', None)
-            
-        ]
-        
-        for station_name, night, expected_result in cases:
-            night = _parse_date(night)
-            if expected_result is not None:
-                time = _parse_time(expected_result)
-                expected_result = _combine(night, time)
-            method = self.time_keeper.get_monitoring_start_time
-            result = method(station_name, night)
-            self.assertEqual(result, expected_result)
-            
-            
-    def test_resolve_elapsed_time(self):
-        
-        cases = [
             ('B', '2012-08-31', '1:23:45', None),
-            ('B', '2012-09-01', '1:23:45', '2012-09-01 22:23:45'),
-            ('B', '2012-09-01', '4:23:45', '2012-09-02 01:23:45')
+            ('B', '2012-09-01', '1:23:45', '2012-09-02 03:23:45'),
+            ('B', '2013-11-15', '4:23:45', '2013-11-16 08:23:45')
         ]
-        
+         
         for station_name, night, time_delta, expected_result in cases:
+            
             night = _parse_date(night)
             time_delta = _parse_time_delta(time_delta)
-            expected_result = _parse_date_time(expected_result)
-            method = self.time_keeper.resolve_elapsed_time
-            result = method(station_name, night, time_delta)
+            
+            if expected_result is not None:
+                expected_result = _parse_naive_date_time(expected_result)
+                expected_result = pytz.utc.localize(expected_result)
+                
+            method = self.time_keeper.convert_elapsed_time_to_utc
+            result = method(time_delta, station_name, night)
+            
             self.assertEqual(result, expected_result)
-            
-            
+             
+             
     def _assert_raises(self, exception_class, function, *args, **kwargs):
         
         self.assertRaises(exception_class, function, *args, **kwargs)
@@ -167,13 +159,13 @@ class WranglerTimeKeeperTests(unittest.TestCase):
             function(*args, **kwargs)
             
         except exception_class, e:
-            print str(e)
+            print(str(e))
 
 
 _combine = datetime.datetime.combine
 
 
-def _parse_date_time(time):
+def _parse_naive_date_time(time):
     if time is None:
         return None
     else:

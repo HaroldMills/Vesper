@@ -12,15 +12,18 @@ import os
 import sys
 
 from nfc.archive.archive import Archive
+from nfc.archive.dummy_archive import DummyArchive
 from nfc.util.bunch import Bunch
 from nfc.util.directory_visitor import DirectoryVisitor
-from old_bird.wrangler_time_keeper import WranglerTimeKeeper
+from old_bird.wrangler_time_keeper import (
+    WranglerTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
+import nfc.archive.archive_utils as archive_utils
 import nfc.util.sound_utils as sound_utils
 import old_bird.file_name_utils as file_name_utils
 
 
-_STATIONS = frozenset([
-    ('Ajo', 'Ajo High School', 'US/Mountain'),
+_STATION_TUPLES = frozenset([
+    ('Ajo', 'Ajo High School', 'US/Arizona'),
     ('Alfred', 'Klingensmith Residence', 'US/Eastern'),
     ('CLC', 'Columbia Land Conservancy', 'US/Eastern'),
     ('Danby', 'Evans Residence', 'US/Eastern'),
@@ -29,7 +32,8 @@ _STATIONS = frozenset([
     ('JAS', 'Jamestown Audubon Society', 'US/Eastern'),
     ('LTU', 'Louisiana Technical University', 'US/Central'),
     ('Minatitlan',
-     u'Minatitl\u00E1n/Coatzacoalcos International Airport', 'MX/Central'),
+     u'Minatitl\u00E1n/Coatzacoalcos International Airport',
+     'America/Mexico_City'),
     ('NMHS', 'North Manchester High School', 'US/Eastern'),
     ('Oneonta', 'Oneonta Municipal Airport', 'US/Eastern'),
     ('ONWR', 'Ottawa National Wildlife Refuge', 'US/Eastern'),
@@ -37,25 +41,30 @@ _STATIONS = frozenset([
     ('WFU', 'Wake Forest University', 'US/Eastern')
 ])
 
-_STATION_NAMES = frozenset(s[0] for s in _STATIONS)
-
 _EXCLUDED_STATION_NAMES = frozenset(['Danby', 'LTU', 'Minatitlan'])
 
-_DEFAULT_DST_INTERVALS = {2012: ('3-11 2:00:00', '11-4 2:00:00')}
-  
-_DST_INTERVALS = {2012: {'Ajo': None}}
-  
+_MONITORING_TIME_ZONE_NAMES = {}
+"""
+See documentation for the `WranglerTimeKeeper` initializer `time_zone_names`
+parameter.
+"""
+
 _MONITORING_START_TIMES = {
     2012: {
         'Alfred': ('21:00:00', ['10-3']),
         'DHBO': ('21:00:00', [('5-11', '5-12'), ('5-28', '6-6')]),
         'JAS': ('21:00:00', [('8-17', '8-19')]),
         'Oneonta': ('21:00:00', []),
-        'Ottawa': ('20:00:00', ['9-04', '9-17']),
+        'ONWR': ('20:00:00', ['9-04', '9-17']),
         'Skinner': ('21:00:00',
                     ['8-13', '8-14', ('10-6', '10-12'), ('10-14', '10-25')])
     }
 }
+"""
+See documentation for the `WranglerTimeKeeper` initializer `start_times`
+parameter.
+"""
+
 
 _DETECTOR_NAMES = frozenset(['Tseep'])
 
@@ -120,7 +129,7 @@ def _main():
         archive = _create_archive(args)
         
         visitor = _OldBirdDataDirectoryVisitor()
-        visitor.visit(args.source_dir, archive, args.year)
+        visitor.visit(args.source_dir, archive, args.year, args.dry_run)
     
     
 def _parse_args():
@@ -183,22 +192,22 @@ def _check_args(args):
     
     
 def _create_archive(args):
+    archive_class = DummyArchive if args.dry_run else Archive
+    stations = _create_stations(_STATION_TUPLES)
+    detectors = _create_bunches(_DETECTOR_NAMES)
+    clip_class_names = _create_bunches(_CLIP_CLASS_NAMES)
+    return archive_class.create(
+               args.dest_dir, stations, detectors, clip_class_names)
+
+
+def _create_stations(tuples):
+    return [_create_station(*t) for t in tuples]
+
+
+def _create_station(name, long_name, time_zone_name):
+    return Bunch(name=name, long_name=long_name, time_zone_name=time_zone_name)
     
-    if args.dry_run:
-        return None
     
-    else:
-        
-        stations = _create_bunches(_STATION_NAMES)
-        detectors = _create_bunches(_DETECTOR_NAMES)
-        clip_class_names = _create_bunches(_CLIP_CLASS_NAMES)
-
-        os.makedirs(args.dest_dir)
-        
-        return Archive.create(
-                   args.dest_dir, stations, detectors, clip_class_names)
-
-
 def _create_bunches(names):
     names = list(names)
     names.sort()
@@ -208,10 +217,14 @@ def _create_bunches(names):
 class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
     
     
-    def visit(self, path, archive, year):
+    def visit(self, path, archive, year, dry_run=False):
+        
         self.root_path = path
         self.archive = archive
+        self.stations = dict((s.name, s) for s in self.archive.get_stations())
         self.year = year
+        self.dry_run = dry_run
+        
         level_names = ['root', 'station', 'month', 'day']
         super(_OldBirdDataDirectoryVisitor, self).visit(path, level_names)
         
@@ -230,6 +243,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         self.num_misplaced_files = 0
         self.num_bad_detector_name_file_names = 0
+        self.num_nonexistent_time_files = 0
         self.num_ambiguous_time_files = 0
         self.num_duplicate_files = 0
         self.num_reclassified_files = 0
@@ -240,11 +254,14 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.malformed_file_name_file_paths = set()
         self.misplaced_file_counts = defaultdict(int)
         self.bad_detector_name_dir_paths = set()
+        self.nonexistent_time_file_counts = defaultdict(int)
         self.ambiguous_time_file_counts = defaultdict(int)
         self.reclassifications = set()
         
         self.time_keeper = WranglerTimeKeeper(
-            _DEFAULT_DST_INTERVALS, _DST_INTERVALS, _MONITORING_START_TIMES)
+            self.stations, _MONITORING_TIME_ZONE_NAMES,
+            _MONITORING_START_TIMES)
+        
         self.resolved_times = {}
         
         self.clip_info = {}
@@ -316,6 +333,11 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 'Num clip file names with bad detector names: {:d}'.format(
                     self.num_bad_detector_name_file_names))
         
+        if self.num_nonexistent_time_files != 0:
+            self._log_error(
+                ('Num clip files with nonexistent times near DST start: '
+                 '{:d}').format(self.num_nonexistent_time_files))
+            
         if self.num_ambiguous_time_files != 0:
             self._log_error(
                 ('Num clip files with ambiguous times near DST end: '
@@ -367,6 +389,10 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 ('Paths of directories containing file names with bad '
                  'detector names:'),
                 self.bad_detector_name_dir_paths)
+            
+        # directories containing files with nonexistent times near DST start
+        if self.num_nonexistent_time_files != 0:
+            self._log_nonexistent_time_dir_paths()
             
         # directories containing files with ambiguous times near DST end
         if self.num_ambiguous_time_files != 0:
@@ -436,18 +462,28 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                         self._rel(path), num_misplaced_files, total_num_files))
             
             
-    def _log_ambiguous_time_dir_paths(self):
+    def _log_nonexistent_time_dir_paths(self):
+        self._log_bad_time_dir_paths('nonexistent', 'start')
 
+
+    def _log_bad_time_dir_paths(self, name, point):
+        
         self._log_space()
         
         self._log_error(
-            'Paths of directories containing clip files with ambiguous '
-            'times near DST end:')
+            ('Paths of directories containing clip files with {:s} '
+             'times near DST {:s}:').format(name, point))
         
-        pairs = self.ambiguous_time_file_counts.items()
+        name = '{:s}_time_file_counts'.format(name)
+        counts = getattr(self, name)
+        pairs = counts.items()
         pairs.sort()
         for path, count in pairs:
             self._log_error('{:s} ({:d} files)'.format(self._rel(path), count))
+
+
+    def _log_ambiguous_time_dir_paths(self):
+        self._log_bad_time_dir_paths('ambiguous', 'end')
 
 
     def _log_path_pairs(self, message, pairs):
@@ -466,7 +502,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         name = os.path.basename(path)
         
-        if name in _EXCLUDED_STATION_NAMES or name not in _STATION_NAMES:
+        if name in _EXCLUDED_STATION_NAMES or name not in self.stations:
             
             if name in _EXCLUDED_STATION_NAMES:
                 s = 'excluded'
@@ -479,8 +515,8 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             return False
         
         else:
-            self.station_name = name
-            self._log_info('    station "{:s}"'.format(self.station_name))
+            self.station = self.stations[name]
+            self._log_info('    station "{:s}"'.format(self.station.name))
             self._count_escaped_files(path)
             return True
         
@@ -564,8 +600,10 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 self.num_ignored_dir_files += _count_clip_files(path)
                 raise ValueError()
             
-        self.night = Archive.get_night(
-            datetime.datetime(self.year, self.month, end_day, 0, 0, 0))
+        # We assume here that day directory names reflect local time,
+        # regardless of the monitoring time zone.
+        midnight = datetime.datetime(self.year, self.month, end_day, 0, 0, 0)
+        self.night = archive_utils.get_night(midnight)
         
         return start_day
         
@@ -654,8 +692,8 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             else:
                 # successfully parsed elapsed time file name
                 
-                time = self.time_keeper.resolve_elapsed_time(
-                           self.station_name, self.night, time_delta)
+                convert = self.time_keeper.convert_elapsed_time_to_utc
+                time = convert(time_delta, self.station.name, self.night)
                 
                 if time is None:
                     self.num_unresolved_file_names += 1
@@ -663,10 +701,10 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
 
                 else:
                     self.num_resolved_file_names += 1
-                    self.resolved_times[(self.station_name, self.night)] = \
+                    self.resolved_times[(self.station.name, self.night)] = \
                         (time_delta, time)
                     self._visit_clip_file_aux(
-                        path, self.station_name, detector_name, time,
+                        path, self.station, detector_name, time,
                         clip_class_name)
                 
         else:
@@ -674,22 +712,30 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             
             self.num_date_time_file_names += 1
             
-            if self.time_keeper.is_time_ambiguous(time, self.station_name):
+            try:
+                convert = self.time_keeper.convert_naive_time_to_utc
+                time = convert(time, self.station.name)
+                
+            except NonexistentTimeError:
+                self.num_nonexistent_time_files += 1
+                self.nonexistent_time_file_counts[dir_path] += 1
+            
+            except AmbiguousTimeError:
                 self.num_ambiguous_time_files += 1
                 self.ambiguous_time_file_counts[dir_path] += 1
-            
+                
             self._visit_clip_file_aux(
-                path, self.station_name, detector_name, time, clip_class_name)
+                path, self.station, detector_name, time, clip_class_name)
             
         self.total_num_files += 1
                     
     
     def _visit_clip_file_aux(
-        self, path, station_name, detector_name, time, clip_class_name):
+        self, path, station, detector_name, time, clip_class_name):
         
         dir_path = os.path.dirname(path)
         
-        if Archive.get_night(time) != self.night:
+        if station.get_night(time) != self.night:
             self.num_misplaced_files += 1
             self.misplaced_file_counts[dir_path] += 1
             return
@@ -699,7 +745,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             self.bad_detector_name_dir_paths.add(dir_path)
             return
             
-        key = (station_name, detector_name, time)
+        key = (station.name, detector_name, time)
         
         try:
             clip = self.clip_info[key]
@@ -707,18 +753,17 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         except KeyError:
             # do not already have clip for this station, detector, and time
             
-            if self.archive is None:
-                # no archive (dry run)
+            if self.dry_run:
                 
                 self.clip_info[key] = Bunch(
-                    station_name=station_name,
-                    detecto_name=detector_name,
+                    station_name=station.name,
+                    detector_name=detector_name,
                     time=time,
                     clip_class_name=clip_class_name,
                     path=path)
                 
             else:
-                # have archive
+                # not dry run
                 
                 try:
                     sound = sound_utils.read_sound_file(path)
@@ -733,7 +778,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 
                     try:
                         clip = self.archive.add_clip(
-                            station_name, detector_name, time, sound,
+                            station.name, detector_name, time, sound,
                             clip_class_name)
                         clip.path = path
                     

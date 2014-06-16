@@ -10,6 +10,7 @@ import os.path
 import numpy as np
 import sqlite3 as sqlite
 
+from nfc.archive.station import Station
 from nfc.util.audio_file_utils import \
     WAVE_FILE_NAME_EXTENSION as _CLIP_FILE_NAME_EXTENSION
 from nfc.util.bunch import Bunch
@@ -39,7 +40,8 @@ _CLIP_CLASS_NAME_WILDCARD = '*'
 _CLIP_DATABASE_FILE_NAME = 'ClipDatabase.db'
     
 # named tuple classes for database tables
-_StationTuple = namedtuple('_StationTuple', ('id', 'name'))
+_StationTuple = namedtuple(
+    '_StationTuple', ('id', 'name', 'long_name', 'time_zone_name'))
 _DetectorTuple = namedtuple('_DetectorTuple', ('id', 'name'))
 _ClipClassTuple = namedtuple('_ClipClassTuple', ('id', 'name'))
 _ClipClassNameComponentTuple = \
@@ -55,6 +57,8 @@ _CREATE_STATION_TABLE_SQL = '''
     create table Stations (
         id integer primary key,
         name text,
+        long_name text,
+        time_zone_name text,
         unique(name) on conflict rollback)'''
         
         
@@ -124,33 +128,6 @@ class Archive(object):
 
 
     @staticmethod
-    def get_night(time):
-        
-        """
-        Gets the starting date of the night that includes the specified time.
-        
-        :Parameters:
-        
-            time : `datetime`
-                the specified time.
-                
-        :Returns:
-            the starting date of the night that includes the specified
-            time, of type `date`.
-            
-            For a time whose hour is at least 12, the night start date
-            is the time's date. For a time whose hour is less than 12,
-            the night start date is that of the day prior to the day
-            that includes the clip time.
-        """
-            
-        if time.hour < 12:
-            time -= datetime.timedelta(hours=12)
-            
-        return time.date()
-    
-
-    @staticmethod
     def get_clip_class_name_components(classes):
         
         components = set()
@@ -165,11 +142,12 @@ class Archive(object):
     @staticmethod
     def create(dir_path, stations, detectors, clip_classes):
         
-        # TODO: Create directory if it does not exist.
-        
         # TODO: Validate arguments, for example to make sure that
         # clip class names do not have more than three components?
         
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+    
         archive = Archive(dir_path)
         archive._drop_tables()
         archive._create_tables(stations, detectors, clip_classes)
@@ -248,7 +226,9 @@ class Archive(object):
     
     
     def _create_station_tuple(self, station):
-        return _StationTuple(id=None, name=station.name)
+        return _StationTuple(
+            id=None, name=station.name, long_name=station.long_name,
+            time_zone_name=station.time_zone_name)
     
     
     def _create_detector_table(self, detectors):
@@ -311,20 +291,23 @@ class Archive(object):
         return (ids_dict, objects_dict)
         
         
+    # TODO: Make attributes for stations, detectors, and clip classes.
+    
+    
     def get_stations(self):
         self._cursor.execute('select * from Stations order by id')
-        return self._create_bunches(_StationTuple, self._cursor.fetchall())
+        return [_Station(*row) for row in self._cursor.fetchall()]
+    
+    
+    def get_detectors(self):
+        self._cursor.execute('select * from Detectors order by id')
+        return self._create_bunches(_DetectorTuple, self._cursor.fetchall())
     
     
     def _create_bunches(self, cls, rows):
         return [Bunch(**dict(zip(cls._fields, r))) for r in rows]
     
 
-    def get_detectors(self):
-        self._cursor.execute('select * from Detectors order by id')
-        return self._create_bunches(_DetectorTuple, self._cursor.fetchall())
-    
-    
     def get_clip_classes(self):
         self._cursor.execute('select * from ClipClasses order by id')
         classes = self._create_bunches(
@@ -392,17 +375,24 @@ class Archive(object):
         """
         
         
+        station_id = self._check_station_name(station_name)
+        detector_id = self._check_detector_name(detector_name)
+        clip_class_id = self._check_clip_class_name(clip_class_name)
+        
+        station = self._stations[station_id]
+        night_date = _date_to_int(station.get_night(time))
+        
         duration = len(sound.samples) / float(sound.sample_rate)
         ids = self._get_clip_class_name_component_ids(clip_class_name)
         
         clip_tuple = _ClipTuple(
             id=None,
-            stationId=self._check_station_name(station_name),
-            detectorId=self._check_detector_name(detector_name),
+            stationId=station_id,
+            detectorId=detector_id,
             time=_format_clip_time(time),
-            nightDate=_date_time_to_night_int(time),
+            nightDate=night_date,
             duration=duration,
-            clipClassId=self._check_clip_class_name(clip_class_name),
+            clipClassId=clip_class_id,
             clipClassNameComponent0Id=ids[0],
             clipClassNameComponent1Id=ids[1],
             clipClassNameComponent2Id=ids[2])
@@ -411,16 +401,19 @@ class Archive(object):
         self._cursor.execute(_INSERT_CLIP_SQL, clip_tuple)
         clip_id = self._cursor.lastrowid
         
-        file_path = self._create_clip_file_path(
-            station_name, detector_name, time, create_dir=True)
+        clip = _Clip(
+            self, clip_id, station, detector_name, time, duration,
+            clip_class_name)
         
-        sound_utils.write_sound_file(file_path, sound)
+        self._create_clip_dir_if_needed(clip.file_path)
         
+        sound_utils.write_sound_file(clip.file_path, sound)
+        
+        # We wait until here to commit since we don't want to commit if
+        # the sound file write fails.
         self._conn.commit()
                     
-        return _Clip(
-            self, clip_id, station_name, detector_name, time,
-            duration, clip_class_name)
+        return clip
 
 
     def _get_clip_class_name_component_ids(self, class_name):
@@ -457,47 +450,6 @@ class Archive(object):
                     'Unrecognized clip class name "{:s}".'.format(name))
         
         
-    def _create_clip_file_path(
-        self, station_name, detector_name, clip_time, create_dir=False):
-        
-        dir_path = self._create_clip_dir_path(station_name, clip_time)
-        
-        if create_dir:
-            
-            if dir_path not in self._clip_dir_paths:
-                # directory either doesn't exist or hasn't yet been
-                # added to `_clip_dir_paths`
-                
-                try:
-                    os.makedirs(dir_path)
-                    
-                except OSError:
-                    
-                    if not (os.path.exists(dir_path) and \
-                            os.path.isdir(dir_path)):
-                        # makedirs did not fail because directory
-                        # already existed
-                        
-                        raise
-                    
-                # If we get here, makedirs either succeeded or failed
-                # because the directory already existed.
-                self._clip_dir_paths.add(dir_path)
-                    
-        file_name = _create_clip_file_name(
-                        station_name, detector_name, clip_time)
-        
-        return os.path.join(dir_path, file_name)
-        
-        
-    def _create_clip_dir_path(self, station_name, clip_time):
-        n = Archive.get_night(clip_time)
-        month_dir_name = _create_month_dir_name(n.year, n.month)
-        day_dir_name = _create_day_dir_name(n.year, n.month, n.day)
-        return os.path.join(
-            self._archive_dir_path, station_name, month_dir_name, day_dir_name)
-    
-    
     def get_clip_counts(
         self, station_name=None, detector_name=None, start_night=None,
         end_night=None, clip_class_name=None):
@@ -664,7 +616,7 @@ class Archive(object):
     
     def _create_clip(self, clip):
         
-        station_name = self._stations[clip.stationId].name
+        station = self._stations[clip.stationId]
         detector_name = self._detectors[clip.detectorId].name
         
         class_id = clip.clipClassId
@@ -676,7 +628,7 @@ class Archive(object):
         time = self._parse_clip_time(clip.time)
         
         return _Clip(
-            self, clip.id, station_name, detector_name, time,
+            self, clip.id, station, detector_name, time,
             clip.duration, clip_class_name)
         
         
@@ -699,11 +651,45 @@ class Archive(object):
         self._conn.close()
     
     
-def _date_time_to_night_int(time):
-    date = Archive.get_night(time)
-    return _date_to_int(date)
-
-
+    def _create_clip_dir_if_needed(self, path):
+        
+        dir_path = os.path.dirname(path)
+        
+        if dir_path not in self._clip_dir_paths:
+            # directory either doesn't exist or hasn't yet been
+            # added to `_clip_dir_paths`
+            
+            try:
+                os.makedirs(dir_path)
+                
+            except OSError:
+                
+                if not (os.path.exists(dir_path) and \
+                        os.path.isdir(dir_path)):
+                    # makedirs did not fail because directory
+                    # already existed
+                    
+                    raise
+                
+            # If we get here, makedirs either succeeded or failed
+            # because the directory already existed.
+            self._clip_dir_paths.add(dir_path)
+                    
+        
+    def _create_clip_file_path(self, station, detector_name, time):
+        dir_path = self._create_clip_dir_path(station, time)
+        file_name = _create_clip_file_name(station.name, detector_name, time)
+        return os.path.join(dir_path, file_name)
+        
+        
+    def _create_clip_dir_path(self, station, time):
+        n = station.get_night(time)
+        month_name = _create_month_dir_name(n.year, n.month)
+        day_name = _create_day_dir_name(n.year, n.month, n.day)
+        return os.path.join(
+            self._archive_dir_path, station.name, month_name, day_name)
+    
+    
 def _date_to_int(date):
     return ((date.year * 100 + date.month) * 100) + date.day
 
@@ -720,6 +706,20 @@ def _format_clip_time(time):
     return time.strftime('%Y-%m-%d %H:%M:%S') + '.{:03d}'.format(millisecond)
 
 
+class _Station(Station):
+    
+    
+    def __init__(self, id_, name, long_name, time_zone_name):
+        super(_Station, self).__init__(name, long_name, time_zone_name)
+        self._id = id_
+        
+        
+    @property
+    def id(self):
+        return self._id
+        
+    
+    
 SPECTROGRAM_PARAMS = Bunch(
     window=np.hanning(100),
     hop_size=25,
@@ -730,28 +730,36 @@ SPECTROGRAM_PARAMS = Bunch(
 class _Clip(object):
     
     
-    # TODO: Should we give a clip a station and a detector rather than
-    # just names?
-    
     def __init__(
-        self, archive, clip_id, station_name, detector_name, time, duration,
+        self, archive, clip_id, station, detector_name, time, duration,
         clip_class_name=None):
         
         self._archive = archive
         self._id = clip_id
-        self.station_name = station_name
+        self.station = station
         self.detector_name = detector_name
         self.time = time
         self.duration = duration
         self._clip_class_name = clip_class_name
         
+        self._file_path = None
         self._sound = None
         self._spectrogram = None
         
         
     @property
+    def file_path(self):
+        
+        if self._file_path is None:
+            self._file_path = self._archive._create_clip_file_path(
+                self.station, self.detector_name, self.time)
+            
+        return self._file_path
+    
+    
+    @property
     def night(self):
-        return Archive.get_night(self.time)
+        return self.station.get_night(self.time)
     
     
     @property
@@ -760,13 +768,7 @@ class _Clip(object):
         if self._sound is None:
             # sound not yet read from file
             
-            station_name = self.station_name
-            detector_name = self.detector_name
-            time = self.time
-            file_path = self._archive._create_clip_file_path(
-                            station_name, detector_name, time)
-            
-            self._sound = sound_utils.read_sound_file(file_path)
+            self._sound = sound_utils.read_sound_file(self.file_path)
             
         return self._sound
     
@@ -794,16 +796,9 @@ class _Clip(object):
 
 
     def play(self):
+        sound_utils.play_sound_file(self.file_path)
         
-        station_name = self.station_name
-        detector_name = self.detector_name
-        time = self.time
-        file_path = self._archive._create_clip_file_path(
-                        station_name, detector_name, time)
-            
-        sound_utils.play_sound_file(file_path)
-    
-    
+
 def _create_month_dir_name(year, month):
     return '{:02d}'.format(month)
 
@@ -812,8 +807,105 @@ def _create_day_dir_name(year, month, day):
     return '{:02d}'.format(day)
 
 
-def _create_clip_file_name(station_name, detector_name, clip_time):
-    ms = int(round(clip_time.microsecond / 1000.))
-    time = clip_time.strftime('%Y-%m-%d_%H.%M.%S') + '.{:03d}'.format(ms)
+def _create_clip_file_name(station_name, detector_name, time):
+    ms = int(round(time.microsecond / 1000.))
+    time = time.strftime('%Y-%m-%d_%H.%M.%S') + '.{:03d}'.format(ms) + '_Z'
     return '{:s}_{:s}_{:s}{:s}'.format(
                station_name, detector_name, time, _CLIP_FILE_NAME_EXTENSION)
+
+
+
+'''
+Design notes:
+
+
+
+Clip counts:
+
+Many interesting questions can be answered from clip counts binned
+by station, time, and class. How much space would this require?
+Suppose our temporal bin size is T minutes, that an archive contains
+data for 120 days, and that we maintain counts through 12 hours
+of each day. Further suppose that each count requires B bytes to
+store, and that we have C clip classes. Then the size of the counts
+we have in an archive for each station is:
+
+    N = 120 * (12 * 60 / T) * C * B
+
+Some possibilities are:
+
+      T        B        C        N         M
+
+      1        1        40       3.5e6     350
+      5        2        40       1.4e6     140
+     10        2        40       6.9e5      69
+     15        2        40       4.6e5      46
+     30        2        40       2.3e5      23
+     60        2        40       1.1e5      11
+
+where the M column records how many megabytes of storage would
+be required for counts for 100 stations over 10 years (with only
+120 days in an archive for a given year).
+
+What bin size would suffice for NFC research? It is possible that
+we could store data for more than one bin size to support different
+types of queries.
+
+
+Data partitioning:
+
+For scalability, I expect to need to partition clips at some
+level and, at the lowest implementation level at least, not permit
+queries across partitions. The clips could be partitioned by
+location, night, and class, and I suspect that given both how
+data are collected and how they are used the two most natural
+partitions would be first by station and then by night.
+
+
+
+Queries:
+
+We would like to support very general queries on archives concerning
+clip counts and clips, and there will be archive methods like
+`get_clip_counts` and `get_clips` to support such queries.
+However, I expect that we will frequently restrict queries to a
+particular station, so it might be good to provide parallel query
+methods on the `Station` class.
+
+
+
+Station class:
+
+Properties:
+
+    name
+    long_name
+    location
+    latitude
+    longitude
+    time_zone
+
+Methods:
+
+    get_night(time)
+
+    get_local_time(time)
+
+    get_utc_time(time)
+
+    set_monitoring_intervals(night, intervals)
+
+    get_monitoring_intervals(start_night=None, end_night=None)
+
+    get_clip_counts(
+        start_night=None, end_night=None,
+        start_time=None, end_time=None,
+        clip_classes=None, bin_size=1)
+
+    add_clip(clip)
+
+    get_clips(
+        start_night=None, end_night=None,
+        start_time=None, end_time=None,
+        clip_classes=None)
+'''

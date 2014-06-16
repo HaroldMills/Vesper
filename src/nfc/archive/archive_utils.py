@@ -1,6 +1,31 @@
 """Utility functions pertaining to clip archives."""
 
 
+import datetime
+
+
+def get_night(time):
+    
+    """
+    Gets the night that includes the specified time.
+    
+    :Parameters:
+        time : `datetime`
+            the specified time.
+            
+    :Returns:
+        the night that includes the specified time, a `date`.
+        
+        The night of a time is the starting date of the 24-hour period
+        starting at noon that contains the time.
+    """
+        
+    if time.hour < 12:
+        time -= datetime.timedelta(hours=12)
+        
+    return time.date()
+    
+
 def get_year_month_pairs(archive):
     
     pair = _get_pair(archive.get_start_night())

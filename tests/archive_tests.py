@@ -9,8 +9,12 @@ from nfc.util.bunch import Bunch
 
 ARCHIVE_DIR_PATH = ['data', 'Test Archive']
 
-STATION_NAMES = ['A', 'B']
-STATIONS = [Bunch(name=n) for n in STATION_NAMES]
+STATION_TUPLES = [
+    ('A', 'Station A', 'US/Eastern'),
+    ('B', 'Station B', 'America/Mexico_City')
+]
+STATIONS = [Bunch(name=n, long_name=ln, time_zone_name=tzn)
+            for n, ln, tzn in STATION_TUPLES]
 
 DETECTOR_NAMES = ['Tseep', 'Thrush']
 DETECTORS = [Bunch(name=n) for n in DETECTOR_NAMES]
@@ -76,22 +80,22 @@ class ArchiveTests(unittest.TestCase):
     
     def test_get_stations(self):
         stations = self.archive.get_stations()
-        attribute_names = ('id', 'name')
-        expected_values = [(i + 1, STATION_NAMES[i])
-                           for i in xrange(len(STATION_NAMES))]
-        self._assert_bunches(stations, attribute_names, expected_values)
+        attribute_names = ('id', 'name', 'long_name')
+        expected_values = [((i + 1,) + STATION_TUPLES[i][:-1])
+                           for i in xrange(len(STATION_TUPLES))]
+        self._assert_objects(stations, attribute_names, expected_values)
+        for i in xrange(len(STATION_TUPLES)):
+            self.assertEqual(stations[i].time_zone.zone, STATION_TUPLES[i][-1])
         
         
-    def _assert_bunches(self, bunches, attribute_names, expected_values):
+    def _assert_objects(self, objects, attribute_names, expected_values):
         
-        self.assertEqual(len(bunches), len(expected_values))
+        self.assertEqual(len(objects), len(expected_values))
         
-        for (bunch, values) in zip(bunches, expected_values):
-            
-            self.assertIsInstance(bunch, Bunch)
+        for (obj, values) in zip(objects, expected_values):
             
             for (i, name) in enumerate(attribute_names):
-                self.assertEqual(getattr(bunch, name), values[i])
+                self.assertEqual(getattr(obj, name), values[i])
 
 
     def test_get_detectors(self):
@@ -99,7 +103,7 @@ class ArchiveTests(unittest.TestCase):
         attribute_names = ('id', 'name')
         expected_values = [(i + 1, DETECTOR_NAMES[i])
                            for i in xrange(len(DETECTOR_NAMES))]
-        self._assert_bunches(detectors, attribute_names, expected_values)
+        self._assert_objects(detectors, attribute_names, expected_values)
         
         
     def test_get_clip_classes(self):
@@ -107,7 +111,7 @@ class ArchiveTests(unittest.TestCase):
         attribute_names = ('id', 'name')
         expected_values = [(i + 1, CLIP_CLASS_NAMES[i])
                            for i in xrange(len(CLIP_CLASS_NAMES))]
-        self._assert_bunches(clip_classes, attribute_names, expected_values)
+        self._assert_objects(clip_classes, attribute_names, expected_values)
         
         
     def test_get_start_night(self):
@@ -217,7 +221,7 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(len(result), len(expected_result))
         
         for (r, er) in zip(result, expected_result):
-            self.assertEqual(r.station_name, er[0])
+            self.assertEqual(r.station.name, er[0])
             self.assertEqual(r.detector_name, er[1])
             self.assertEqual(r.time, datetime.datetime(*er[2:9]))
             self.assertEqual(r.clip_class_name, er[9])
