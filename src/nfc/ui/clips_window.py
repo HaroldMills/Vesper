@@ -87,7 +87,7 @@ class ClipsWindow(QMainWindow):
         # of a command set, there must be exactly one clip class whose name
         # ends with that fragment.
         
-        classes = self._archive.get_clip_classes()
+        classes = self._archive.clip_classes
         classes_dict = self._create_fragment_to_classes_dict(classes)
         classification_dict = {}
         

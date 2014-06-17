@@ -13,6 +13,7 @@ import sys
 
 from nfc.archive.archive import Archive
 from nfc.archive.dummy_archive import DummyArchive
+from nfc.archive.station import Station
 from nfc.util.bunch import Bunch
 from nfc.util.directory_visitor import DirectoryVisitor
 from old_bird.wrangler_time_keeper import (
@@ -22,7 +23,7 @@ import nfc.util.sound_utils as sound_utils
 import old_bird.file_name_utils as file_name_utils
 
 
-_STATION_TUPLES = frozenset([
+_STATIONS = [Station(*t) for t in [
     ('Ajo', 'Ajo High School', 'US/Arizona'),
     ('Alfred', 'Klingensmith Residence', 'US/Eastern'),
     ('CLC', 'Columbia Land Conservancy', 'US/Eastern'),
@@ -39,7 +40,8 @@ _STATION_TUPLES = frozenset([
     ('ONWR', 'Ottawa National Wildlife Refuge', 'US/Eastern'),
     ('Skinner', 'Skinner State Park', 'US/Eastern'),
     ('WFU', 'Wake Forest University', 'US/Eastern')
-])
+]]
+
 
 _EXCLUDED_STATION_NAMES = frozenset(['Danby', 'LTU', 'Minatitlan'])
 
@@ -193,21 +195,12 @@ def _check_args(args):
     
 def _create_archive(args):
     archive_class = DummyArchive if args.dry_run else Archive
-    stations = _create_stations(_STATION_TUPLES)
     detectors = _create_bunches(_DETECTOR_NAMES)
     clip_class_names = _create_bunches(_CLIP_CLASS_NAMES)
     return archive_class.create(
-               args.dest_dir, stations, detectors, clip_class_names)
+               args.dest_dir, _STATIONS, detectors, clip_class_names)
 
 
-def _create_stations(tuples):
-    return [_create_station(*t) for t in tuples]
-
-
-def _create_station(name, long_name, time_zone_name):
-    return Bunch(name=name, long_name=long_name, time_zone_name=time_zone_name)
-    
-    
 def _create_bunches(names):
     names = list(names)
     names.sort()
@@ -221,7 +214,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         self.root_path = path
         self.archive = archive
-        self.stations = dict((s.name, s) for s in self.archive.get_stations())
+        self.stations = dict((s.name, s) for s in self.archive.stations)
         self.year = year
         self.dry_run = dry_run
         

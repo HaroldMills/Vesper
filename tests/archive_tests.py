@@ -4,6 +4,7 @@ import os
 import unittest
 
 from nfc.archive.archive import Archive
+from nfc.archive.station import Station
 from nfc.util.bunch import Bunch
 
 
@@ -13,8 +14,7 @@ STATION_TUPLES = [
     ('A', 'Station A', 'US/Eastern'),
     ('B', 'Station B', 'America/Mexico_City')
 ]
-STATIONS = [Bunch(name=n, long_name=ln, time_zone_name=tzn)
-            for n, ln, tzn in STATION_TUPLES]
+STATIONS = [Station(*t) for t in STATION_TUPLES]
 
 DETECTOR_NAMES = ['Tseep', 'Thrush']
 DETECTORS = [Bunch(name=n) for n in DETECTOR_NAMES]
@@ -78,8 +78,8 @@ class ArchiveTests(unittest.TestCase):
         return self.archive.add_clip(station_name, detector_name, time, sound)
 
     
-    def test_get_stations(self):
-        stations = self.archive.get_stations()
+    def test_stations_property(self):
+        stations = self.archive.stations
         attribute_names = ('id', 'name', 'long_name')
         expected_values = [((i + 1,) + STATION_TUPLES[i][:-1])
                            for i in xrange(len(STATION_TUPLES))]
@@ -98,31 +98,31 @@ class ArchiveTests(unittest.TestCase):
                 self.assertEqual(getattr(obj, name), values[i])
 
 
-    def test_get_detectors(self):
-        detectors = self.archive.get_detectors()
+    def test_detectors_property(self):
+        detectors = self.archive.detectors
         attribute_names = ('id', 'name')
         expected_values = [(i + 1, DETECTOR_NAMES[i])
                            for i in xrange(len(DETECTOR_NAMES))]
         self._assert_objects(detectors, attribute_names, expected_values)
         
         
-    def test_get_clip_classes(self):
-        clip_classes = self.archive.get_clip_classes()
+    def test_clip_classes_property(self):
+        clip_classes = self.archive.clip_classes
         attribute_names = ('id', 'name')
         expected_values = [(i + 1, CLIP_CLASS_NAMES[i])
                            for i in xrange(len(CLIP_CLASS_NAMES))]
         self._assert_objects(clip_classes, attribute_names, expected_values)
         
         
-    def test_get_start_night(self):
+    def test_start_night_property(self):
         self._add_clips()
-        night = self.archive.get_start_night()
+        night = self.archive.start_night
         self.assertEquals(night, _to_date((2012, 1, 2)))
         
         
-    def test_get_end_night(self):
+    def test_end_night_property(self):
         self._add_clips()
-        night = self.archive.get_end_night()
+        night = self.archive.end_night
         self.assertEquals(night, _to_date((2012, 1, 3)))
         
         

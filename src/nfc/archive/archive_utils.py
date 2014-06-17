@@ -28,8 +28,8 @@ def get_night(time):
 
 def get_year_month_pairs(archive):
     
-    pair = _get_pair(archive.get_start_night())
-    endPair = _increment_pair(_get_pair(archive.get_end_night()))
+    pair = _get_pair(archive.start_night)
+    endPair = _increment_pair(_get_pair(archive.end_night))
     
     pairs = []
 

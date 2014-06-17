@@ -34,11 +34,11 @@ class QueryFrame(QFrame):
         self, station_name, detector_name, clip_class_name, include_month,
         month_name):
         
-        texts = [s.name for s in self._archive.get_stations()]
+        texts = [s.name for s in self._archive.stations]
         self._station_combo_box = self._create_combo_box(
             'Station', texts, station_name, self._on_station_changed)
         
-        texts = [s.name for s in self._archive.get_detectors()]
+        texts = [s.name for s in self._archive.detectors]
         self._detector_combo_box = self._create_combo_box(
             'Detector', texts, detector_name, self._on_detector_changed)
         
@@ -105,7 +105,7 @@ class QueryFrame(QFrame):
             Only
         '''
         
-        texts = [s.name for s in self._archive.get_clip_classes()] + \
+        texts = [s.name for s in self._archive.clip_classes] + \
                 [Archive.CLIP_CLASS_NAME_ANY,
                  Archive.CLIP_CLASS_NAME_UNCLASSIFIED]
         texts.sort()

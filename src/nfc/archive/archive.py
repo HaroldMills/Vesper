@@ -32,9 +32,6 @@ Questions regarding cloud archives:
 '''
 
 
-# TODO: Use "night" rather than "nightDate" in database?
-
-
 _CLIP_CLASS_NAME_WILDCARD = '*'
 
 _CLIP_DATABASE_FILE_NAME = 'ClipDatabase.db'
@@ -48,9 +45,9 @@ _ClipClassNameComponentTuple = \
     namedtuple('_ClipClassNameComponentTuple', ('id', 'component'))
 _ClipTuple = namedtuple(
     '_ClipTuple',
-    ('id', 'stationId', 'detectorId', 'time', 'nightDate', 'duration',
-     'clipClassId', 'clipClassNameComponent0Id', 'clipClassNameComponent1Id',
-     'clipClassNameComponent2Id'))
+    ('id', 'station_id', 'detector_id', 'time', 'night', 'duration',
+     'clip_class_id', 'clip_class_name_0_id', 'clip_class_name_1_id',
+     'clip_class_name_2_id'))
 
 
 _CREATE_STATION_TABLE_SQL = '''
@@ -86,23 +83,23 @@ _CREATE_CLIP_CLASS_NAME_COMPONENT_TABLE_SQL = '''
 _CREATE_CLIP_TABLE_SQL = '''
     create table Clips (
         id integer primary key,
-        stationId integer,
-        detectorId integer,
+        station_id integer,
+        detector_id integer,
         time datetime,
-        nightDate integer,
+        night integer,
         duration real,
-        clipClassId integer,
-        clipClassNameComponent0Id integer,
-        clipClassNameComponent1Id integer,
-        clipClassNameComponent2Id integer,
-        unique(stationId, detectorId, time) on conflict rollback)'''
+        clip_class_id integer,
+        clip_class_name_0_id integer,
+        clip_class_name_1_id integer,
+        clip_class_name_2_id integer,
+        unique(station_id, detector_id, time) on conflict rollback)'''
         
 _CREATE_CLIP_TABLE_MULTICOLUMN_INDEX_SQL = '''
-    create index ClipsIndex on Clips(stationId, detectorId, nightDate)
+    create index ClipsIndex on Clips(station_id, detector_id, night)
 '''
 
 _CREATE_CLIP_TABLE_NIGHT_DATE_INDEX_SQL = '''
-    create index NightDateIndex on Clips(nightDate)
+    create index NightDateIndex on Clips(night)
 '''
 
 _INSERT_CLIP_SQL = \
@@ -111,9 +108,8 @@ _INSERT_CLIP_SQL = \
 
 
 _CLASSIFY_CLIP_SQL = (
-    'update Clips set clipClassId = ?, clipClassNameComponent0Id = ?, '
-    'clipClassNameComponent1Id = ?, clipClassNameComponent2Id = ? '
-    'where id = ?')
+    'update Clips set clip_class_id = ?, clip_class_name_0_id = ?, '
+    'clip_class_name_1_id = ?, clip_class_name_2_id = ? where id = ?')
 
 
 class Archive(object):
@@ -228,7 +224,7 @@ class Archive(object):
     def _create_station_tuple(self, station):
         return _StationTuple(
             id=None, name=station.name, long_name=station.long_name,
-            time_zone_name=station.time_zone_name)
+            time_zone_name=station.time_zone.zone)
     
     
     def _create_detector_table(self, detectors):
@@ -276,10 +272,10 @@ class Archive(object):
         
     def _create_dicts(self):
         aux = self._create_dicts_aux
-        (self._station_ids, self._stations) = aux(self.get_stations())
-        (self._detector_ids, self._detectors) = aux(self.get_detectors())
+        (self._station_ids, self._stations) = aux(self.stations)
+        (self._detector_ids, self._detectors) = aux(self.detectors)
         (self._clip_class_ids, self._clip_classes) = \
-            aux(self.get_clip_classes())
+            aux(self.clip_classes)
         self._clip_class_name_component_ids = \
             dict((o.component, o.id)
                  for o in self._get_clip_class_name_components())
@@ -291,15 +287,14 @@ class Archive(object):
         return (ids_dict, objects_dict)
         
         
-    # TODO: Make attributes for stations, detectors, and clip classes.
-    
-    
-    def get_stations(self):
+    @property
+    def stations(self):
         self._cursor.execute('select * from Stations order by id')
         return [_Station(*row) for row in self._cursor.fetchall()]
     
     
-    def get_detectors(self):
+    @property
+    def detectors(self):
         self._cursor.execute('select * from Detectors order by id')
         return self._create_bunches(_DetectorTuple, self._cursor.fetchall())
     
@@ -308,7 +303,8 @@ class Archive(object):
         return [Bunch(**dict(zip(cls._fields, r))) for r in rows]
     
 
-    def get_clip_classes(self):
+    @property
+    def clip_classes(self):
         self._cursor.execute('select * from ClipClasses order by id')
         classes = self._create_bunches(
             _ClipClassTuple, self._cursor.fetchall())
@@ -323,14 +319,16 @@ class Archive(object):
                    _ClipClassNameComponentTuple, self._cursor.fetchall())
     
     
-    def get_start_night(self):
-        self._cursor.execute('select min(nightDate) from Clips')
+    @property
+    def start_night(self):
+        self._cursor.execute('select min(night) from Clips')
         date_int = self._cursor.fetchone()[0]
         return _int_to_date(date_int)
         
         
-    def get_end_night(self):
-        self._cursor.execute('select max(nightDate) from Clips')
+    @property
+    def end_night(self):
+        self._cursor.execute('select max(night) from Clips')
         date_int = self._cursor.fetchone()[0]
         return _int_to_date(date_int)
         
@@ -380,22 +378,22 @@ class Archive(object):
         clip_class_id = self._check_clip_class_name(clip_class_name)
         
         station = self._stations[station_id]
-        night_date = _date_to_int(station.get_night(time))
+        night = _date_to_int(station.get_night(time))
         
         duration = len(sound.samples) / float(sound.sample_rate)
         ids = self._get_clip_class_name_component_ids(clip_class_name)
         
         clip_tuple = _ClipTuple(
             id=None,
-            stationId=station_id,
-            detectorId=detector_id,
+            station_id=station_id,
+            detector_id=detector_id,
             time=_format_clip_time(time),
-            nightDate=night_date,
+            night=night,
             duration=duration,
-            clipClassId=clip_class_id,
-            clipClassNameComponent0Id=ids[0],
-            clipClassNameComponent1Id=ids[1],
-            clipClassNameComponent2Id=ids[2])
+            clip_class_id=clip_class_id,
+            clip_class_name_0_id=ids[0],
+            clip_class_name_1_id=ids[1],
+            clip_class_name_2_id=ids[2])
     
         # TODO: Handle exceptions.
         self._cursor.execute(_INSERT_CLIP_SQL, clip_tuple)
@@ -468,8 +466,8 @@ class Archive(object):
             station_name, detector_name, start_night, end_night,
             clip_class_name)
         
-        sql = 'select nightDate, count(*) from Clips' + where + \
-              ' group by nightDate'
+        sql = 'select night, count(*) from Clips' + where + \
+              ' group by night'
         
 #        print('Archive.get_clip_counts:', sql)
         
@@ -500,7 +498,7 @@ class Archive(object):
         else:
             self._check_station_name(station_name)
             id_ = self._station_ids[station_name]
-            return ['stationId = {:d}'.format(id_)]
+            return ['station_id = {:d}'.format(id_)]
             
             
     def _get_detector_conditions(self, detector_name):
@@ -511,7 +509,7 @@ class Archive(object):
         else:
             self._check_detector_name(detector_name)
             id_ = self._detector_ids[detector_name]
-            return ['detectorId = {:d}'.format(id_)]
+            return ['detector_id = {:d}'.format(id_)]
             
             
     def _get_night_conditions(self, start_night, end_night):
@@ -523,7 +521,7 @@ class Archive(object):
         elif start_night is not None:
             # start date and end date are equal and not `None`
             
-            return ['nightDate = {:d}'.format(_date_to_int(start_night))]
+            return ['night = {:d}'.format(_date_to_int(start_night))]
         
         else:
             # start date and end date are both `None`
@@ -537,7 +535,7 @@ class Archive(object):
             return []
         
         else:
-            return ['nightDate {:s} {:d}'.format(operator, _date_to_int(date))]
+            return ['night {:s} {:d}'.format(operator, _date_to_int(date))]
         
         
     def _get_clip_class_conditions(self, class_name):
@@ -554,7 +552,7 @@ class Archive(object):
                 class_name = class_name[:-len(_CLIP_CLASS_NAME_WILDCARD)]
             
             if class_name == Archive.CLIP_CLASS_NAME_UNCLASSIFIED:
-                return ['clipClassId is null']
+                return ['clip_class_id is null']
                 
             else:
                 
@@ -567,12 +565,12 @@ class Archive(object):
                     ids = [self._clip_class_name_component_ids[c]
                            for c in components]
                     
-                    return ['clipClassNameComponent%dId = {:d}'.format(p)
+                    return ['clip_class_name_%d_id = {:d}'.format(p)
                             for p in enumerate(ids)]
                         
                 else:
                     id_ = self._clip_class_ids[class_name]
-                    return ['clipClassId = {:d}'.format(id_)]
+                    return ['clip_class_id = {:d}'.format(id_)]
     
     
     def get_clips(
@@ -616,10 +614,10 @@ class Archive(object):
     
     def _create_clip(self, clip):
         
-        station = self._stations[clip.stationId]
-        detector_name = self._detectors[clip.detectorId].name
+        station = self._stations[clip.station_id]
+        detector_name = self._detectors[clip.detector_id].name
         
-        class_id = clip.clipClassId
+        class_id = clip.clip_class_id
         try:
             clip_class_name = self._clip_classes[class_id].name
         except KeyError:
