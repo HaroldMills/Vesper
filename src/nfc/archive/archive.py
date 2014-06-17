@@ -51,7 +51,7 @@ _ClipTuple = namedtuple(
 
 
 _CREATE_STATION_TABLE_SQL = '''
-    create table Stations (
+    create table Station (
         id integer primary key,
         name text,
         long_name text,
@@ -60,28 +60,28 @@ _CREATE_STATION_TABLE_SQL = '''
         
         
 _CREATE_DETECTOR_TABLE_SQL = '''
-    create table Detectors (
+    create table Detector (
         id integer primary key,
         name text,
         unique(name) on conflict rollback)'''
         
         
 _CREATE_CLIP_CLASS_TABLE_SQL = '''
-    create table ClipClasses (
+    create table ClipClass (
         id integer primary key,
         name text,
         unique(name) on conflict rollback)'''
         
         
 _CREATE_CLIP_CLASS_NAME_COMPONENT_TABLE_SQL = '''
-    create table ClipClassNameComponents (
+    create table ClipClassNameComponent (
         id integer primary key,
         component text,
         unique(component) on conflict rollback)'''
         
         
 _CREATE_CLIP_TABLE_SQL = '''
-    create table Clips (
+    create table Clip (
         id integer primary key,
         station_id integer,
         detector_id integer,
@@ -95,20 +95,20 @@ _CREATE_CLIP_TABLE_SQL = '''
         unique(station_id, detector_id, time) on conflict rollback)'''
         
 _CREATE_CLIP_TABLE_MULTICOLUMN_INDEX_SQL = '''
-    create index ClipsIndex on Clips(station_id, detector_id, night)
+    create index ClipIndex on Clip(station_id, detector_id, night)
 '''
 
 _CREATE_CLIP_TABLE_NIGHT_DATE_INDEX_SQL = '''
-    create index NightDateIndex on Clips(night)
+    create index NightDateIndex on Clip(night)
 '''
 
 _INSERT_CLIP_SQL = \
-    'insert into Clips values (' + \
+    'insert into Clip values (' + \
     ', '.join(['?'] * len(_ClipTuple._fields)) + ')'
 
 
 _CLASSIFY_CLIP_SQL = (
-    'update Clips set clip_class_id = ?, clip_class_name_0_id = ?, '
+    'update Clip set clip_class_id = ?, clip_class_name_0_id = ?, '
     'clip_class_name_1_id = ?, clip_class_name_2_id = ? where id = ?')
 
 
@@ -170,11 +170,11 @@ class Archive(object):
         
         
     def _drop_tables(self):
-        self._drop_table('Stations')
-        self._drop_table('Detectors')
-        self._drop_table('ClipClasses')
-        self._drop_table('ClipClassNameComponents')
-        self._drop_table('Clips')
+        self._drop_table('Station')
+        self._drop_table('Detector')
+        self._drop_table('ClipClass')
+        self._drop_table('ClipClassNameComponent')
+        self._drop_table('Clip')
         
         
     def _drop_table(self, name):
@@ -198,7 +198,7 @@ class Archive(object):
     
     def _create_station_table(self, stations):
         self._create_table(
-            'Stations', _CREATE_STATION_TABLE_SQL, stations,
+            'Station', _CREATE_STATION_TABLE_SQL, stations,
             self._create_station_tuple)
         
         
@@ -229,7 +229,7 @@ class Archive(object):
     
     def _create_detector_table(self, detectors):
         self._create_table(
-            'Detectors', _CREATE_DETECTOR_TABLE_SQL, detectors,
+            'Detector', _CREATE_DETECTOR_TABLE_SQL, detectors,
             self._create_detector_tuple)
         
         
@@ -239,7 +239,7 @@ class Archive(object):
     
     def _create_clip_class_table(self, classes):
         self._create_table(
-            'ClipClasses', _CREATE_CLIP_CLASS_TABLE_SQL, classes,
+            'ClipClass', _CREATE_CLIP_CLASS_TABLE_SQL, classes,
             self._create_clip_class_tuple)
         
         
@@ -251,7 +251,7 @@ class Archive(object):
         components = [_ClipClassNameComponentTuple(None, c)
                       for c in Archive.get_clip_class_name_components(classes)]
         self._create_table(
-            'ClipClassNameComponents',
+            'ClipClassNameComponent',
             _CREATE_CLIP_CLASS_NAME_COMPONENT_TABLE_SQL,
             components)
         
@@ -262,7 +262,7 @@ class Archive(object):
     
     def _create_clip_table(self):
         
-        self._create_table('Clips', _CREATE_CLIP_TABLE_SQL)
+        self._create_table('Clip', _CREATE_CLIP_TABLE_SQL)
         
         self._cursor.execute(_CREATE_CLIP_TABLE_MULTICOLUMN_INDEX_SQL)
         self._cursor.execute(_CREATE_CLIP_TABLE_NIGHT_DATE_INDEX_SQL)
@@ -289,13 +289,13 @@ class Archive(object):
         
     @property
     def stations(self):
-        self._cursor.execute('select * from Stations order by id')
+        self._cursor.execute('select * from Station order by id')
         return [_Station(*row) for row in self._cursor.fetchall()]
     
     
     @property
     def detectors(self):
-        self._cursor.execute('select * from Detectors order by id')
+        self._cursor.execute('select * from Detector order by id')
         return self._create_bunches(_DetectorTuple, self._cursor.fetchall())
     
     
@@ -305,7 +305,7 @@ class Archive(object):
 
     @property
     def clip_classes(self):
-        self._cursor.execute('select * from ClipClasses order by id')
+        self._cursor.execute('select * from ClipClass order by id')
         classes = self._create_bunches(
             _ClipClassTuple, self._cursor.fetchall())
         classes.sort(key=lambda c: c.name)
@@ -314,21 +314,21 @@ class Archive(object):
     
     def _get_clip_class_name_components(self):
         self._cursor.execute(
-            'select * from ClipClassNameComponents order by id')
+            'select * from ClipClassNameComponent order by id')
         return self._create_bunches(
                    _ClipClassNameComponentTuple, self._cursor.fetchall())
     
     
     @property
     def start_night(self):
-        self._cursor.execute('select min(night) from Clips')
+        self._cursor.execute('select min(night) from Clip')
         date_int = self._cursor.fetchone()[0]
         return _int_to_date(date_int)
         
         
     @property
     def end_night(self):
-        self._cursor.execute('select max(night) from Clips')
+        self._cursor.execute('select max(night) from Clip')
         date_int = self._cursor.fetchone()[0]
         return _int_to_date(date_int)
         
@@ -466,7 +466,7 @@ class Archive(object):
             station_name, detector_name, start_night, end_night,
             clip_class_name)
         
-        sql = 'select night, count(*) from Clips' + where + \
+        sql = 'select night, count(*) from Clip' + where + \
               ' group by night'
         
 #        print('Archive.get_clip_counts:', sql)
@@ -588,7 +588,7 @@ class Archive(object):
         where = self._create_where_clause(
             station_name, detector_name, night, night, clip_class_name)
         
-        sql = 'select * from Clips' + where + ' order by time'
+        sql = 'select * from Clip' + where + ' order by time'
         
 #        print('Archive.get_clips', sql)
         
