@@ -10,6 +10,8 @@ import os.path
 import numpy as np
 import sqlite3 as sqlite
 
+from nfc.archive.clip_class import ClipClass
+from nfc.archive.detector import Detector
 from nfc.archive.station import Station
 from nfc.util.audio_file_utils import \
     WAVE_FILE_NAME_EXTENSION as _CLIP_FILE_NAME_EXTENSION
@@ -123,11 +125,13 @@ class Archive(object):
     CLIP_CLASS_NAME_UNCLASSIFIED = 'Unclassified'
 
 
+    # TODO: Do we really need this method? If yes, perhaps it should
+    # be in the `archive_utils` module.
     @staticmethod
-    def get_clip_class_name_components(classes):
+    def get_clip_class_name_components(clip_classes):
         
         components = set()
-        components.update(*[c.name.split('.') for c in classes])
+        components.update(*[c.name_components for c in clip_classes])
         
         components = list(components)
         components.sort()
@@ -237,9 +241,9 @@ class Archive(object):
         return _DetectorTuple(id=None, name=detector.name)
     
     
-    def _create_clip_class_table(self, classes):
+    def _create_clip_class_table(self, clip_classes):
         self._create_table(
-            'ClipClass', _CREATE_CLIP_CLASS_TABLE_SQL, classes,
+            'ClipClass', _CREATE_CLIP_CLASS_TABLE_SQL, clip_classes,
             self._create_clip_class_tuple)
         
         
@@ -247,9 +251,10 @@ class Archive(object):
         return _ClipClassTuple(id=None, name=clip_class.name)
     
     
-    def _create_clip_class_name_component_table(self, classes):
+    def _create_clip_class_name_component_table(self, clip_classes):
+        get_name_components = Archive.get_clip_class_name_components
         components = [_ClipClassNameComponentTuple(None, c)
-                      for c in Archive.get_clip_class_name_components(classes)]
+                      for c in get_name_components(clip_classes)]
         self._create_table(
             'ClipClassNameComponent',
             _CREATE_CLIP_CLASS_NAME_COMPONENT_TABLE_SQL,
@@ -287,16 +292,11 @@ class Archive(object):
         return (ids_dict, objects_dict)
         
         
-    @property
-    def stations(self):
-        self._cursor.execute('select * from Station order by id')
-        return [_Station(*row) for row in self._cursor.fetchall()]
-    
-    
-    @property
-    def detectors(self):
-        self._cursor.execute('select * from Detector order by id')
-        return self._create_bunches(_DetectorTuple, self._cursor.fetchall())
+    def _get_clip_class_name_components(self):
+        sql = 'select * from ClipClassNameComponent order by id'
+        self._cursor.execute(sql)
+        rows = self._cursor.fetchall()
+        return self._create_bunches(_ClipClassNameComponentTuple, rows)
     
     
     def _create_bunches(self, cls, rows):
@@ -304,33 +304,44 @@ class Archive(object):
     
 
     @property
+    def stations(self):
+        return self._create_objects_from_db_table(Station)
+    
+    
+    def _create_objects_from_db_table(self, cls):
+        sql = 'select * from {:s} order by id'.format(cls.__name__)
+        self._cursor.execute(sql)
+        rows = self._cursor.fetchall()
+        objects = [_create_with_id(cls, *r) for r in rows]
+        objects.sort(key=lambda o: o.name)
+        return objects
+    
+    
+    @property
+    def detectors(self):
+        return self._create_objects_from_db_table(Detector)
+    
+    
+    @property
     def clip_classes(self):
-        self._cursor.execute('select * from ClipClass order by id')
-        classes = self._create_bunches(
-            _ClipClassTuple, self._cursor.fetchall())
-        classes.sort(key=lambda c: c.name)
-        return classes
-    
-    
-    def _get_clip_class_name_components(self):
-        self._cursor.execute(
-            'select * from ClipClassNameComponent order by id')
-        return self._create_bunches(
-                   _ClipClassNameComponentTuple, self._cursor.fetchall())
+        return self._create_objects_from_db_table(ClipClass)
     
     
     @property
     def start_night(self):
-        self._cursor.execute('select min(night) from Clip')
+        return self._get_extremal_night('min')
+    
+    
+    def _get_extremal_night(self, function_name):
+        sql = 'select {:s}(night) from Clip'.format(function_name)
+        self._cursor.execute(sql)
         date_int = self._cursor.fetchone()[0]
         return _int_to_date(date_int)
         
         
     @property
     def end_night(self):
-        self._cursor.execute('select max(night) from Clip')
-        date_int = self._cursor.fetchone()[0]
-        return _int_to_date(date_int)
+        return self._get_extremal_night('max')
         
         
     def add_clip(
@@ -381,6 +392,7 @@ class Archive(object):
         night = _date_to_int(station.get_night(time))
         
         duration = len(sound.samples) / float(sound.sample_rate)
+#        duration = 1.
         ids = self._get_clip_class_name_component_ids(clip_class_name)
         
         clip_tuple = _ClipTuple(
@@ -404,7 +416,7 @@ class Archive(object):
             clip_class_name)
         
         self._create_clip_dir_if_needed(clip.file_path)
-        
+         
         sound_utils.write_sound_file(clip.file_path, sound)
         
         # We wait until here to commit since we don't want to commit if
@@ -704,18 +716,10 @@ def _format_clip_time(time):
     return time.strftime('%Y-%m-%d %H:%M:%S') + '.{:03d}'.format(millisecond)
 
 
-class _Station(Station):
-    
-    
-    def __init__(self, id_, name, long_name, time_zone_name):
-        super(_Station, self).__init__(name, long_name, time_zone_name)
-        self._id = id_
-        
-        
-    @property
-    def id(self):
-        return self._id
-        
+def _create_with_id(cls, id_, *args, **kwds):
+    obj = cls(*args, **kwds)
+    obj.id = id_
+    return obj
     
     
 SPECTROGRAM_PARAMS = Bunch(
@@ -810,100 +814,3 @@ def _create_clip_file_name(station_name, detector_name, time):
     time = time.strftime('%Y-%m-%d_%H.%M.%S') + '.{:03d}'.format(ms) + '_Z'
     return '{:s}_{:s}_{:s}{:s}'.format(
                station_name, detector_name, time, _CLIP_FILE_NAME_EXTENSION)
-
-
-
-'''
-Design notes:
-
-
-
-Clip counts:
-
-Many interesting questions can be answered from clip counts binned
-by station, time, and class. How much space would this require?
-Suppose our temporal bin size is T minutes, that an archive contains
-data for 120 days, and that we maintain counts through 12 hours
-of each day. Further suppose that each count requires B bytes to
-store, and that we have C clip classes. Then the size of the counts
-we have in an archive for each station is:
-
-    N = 120 * (12 * 60 / T) * C * B
-
-Some possibilities are:
-
-      T        B        C        N         M
-
-      1        1        40       3.5e6     350
-      5        2        40       1.4e6     140
-     10        2        40       6.9e5      69
-     15        2        40       4.6e5      46
-     30        2        40       2.3e5      23
-     60        2        40       1.1e5      11
-
-where the M column records how many megabytes of storage would
-be required for counts for 100 stations over 10 years (with only
-120 days in an archive for a given year).
-
-What bin size would suffice for NFC research? It is possible that
-we could store data for more than one bin size to support different
-types of queries.
-
-
-Data partitioning:
-
-For scalability, I expect to need to partition clips at some
-level and, at the lowest implementation level at least, not permit
-queries across partitions. The clips could be partitioned by
-location, night, and class, and I suspect that given both how
-data are collected and how they are used the two most natural
-partitions would be first by station and then by night.
-
-
-
-Queries:
-
-We would like to support very general queries on archives concerning
-clip counts and clips, and there will be archive methods like
-`get_clip_counts` and `get_clips` to support such queries.
-However, I expect that we will frequently restrict queries to a
-particular station, so it might be good to provide parallel query
-methods on the `Station` class.
-
-
-
-Station class:
-
-Properties:
-
-    name
-    long_name
-    location
-    latitude
-    longitude
-    time_zone
-
-Methods:
-
-    get_night(time)
-
-    get_local_time(time)
-
-    get_utc_time(time)
-
-    set_monitoring_intervals(night, intervals)
-
-    get_monitoring_intervals(start_night=None, end_night=None)
-
-    get_clip_counts(
-        start_night=None, end_night=None,
-        start_time=None, end_time=None,
-        clip_classes=None, bin_size=1)
-
-    add_clip(clip)
-
-    get_clips(
-        start_night=None, end_night=None,
-        start_time=None, end_time=None,
-        clip_classes=None)
-'''

@@ -10,8 +10,11 @@ import datetime
 import logging
 import os
 import sys
+import time
 
 from nfc.archive.archive import Archive
+from nfc.archive.clip_class import ClipClass
+from nfc.archive.detector import Detector
 from nfc.archive.dummy_archive import DummyArchive
 from nfc.archive.station import Station
 from nfc.util.bunch import Bunch
@@ -68,7 +71,7 @@ parameter.
 """
 
 
-_DETECTOR_NAMES = frozenset(['Tseep'])
+_DETECTORS = [Detector('Tseep')]
 
 _CLIP_CLASS_DIR_NAME_CORRECTIONS = {
     'calls': 'call',
@@ -95,9 +98,10 @@ _CALL_CLIP_CLASS_NAMES = frozenset([
 
 ])
 
-_CLIP_CLASS_NAMES = frozenset(
-    ['Call', 'Noise', 'Tone'] + ['Call.' + n for n in _CALL_CLIP_CLASS_NAMES])
-'''set of clip class names'''
+_CLIP_CLASS_NAMES = \
+    ['Call', 'Noise', 'Tone'] + ['Call.' + n for n in _CALL_CLIP_CLASS_NAMES]
+_CLIP_CLASS_NAMES.sort()
+_CLIP_CLASSES = [ClipClass(name) for name in _CLIP_CLASS_NAMES]
     
 _CLIP_CLASS_NAMES_DICT = dict(
     [(n.split('.')[-1].lower(), n) for n in _CLIP_CLASS_NAMES] +
@@ -195,16 +199,8 @@ def _check_args(args):
     
 def _create_archive(args):
     archive_class = DummyArchive if args.dry_run else Archive
-    detectors = _create_bunches(_DETECTOR_NAMES)
-    clip_class_names = _create_bunches(_CLIP_CLASS_NAMES)
     return archive_class.create(
-               args.dest_dir, _STATIONS, detectors, clip_class_names)
-
-
-def _create_bunches(names):
-    names = list(names)
-    names.sort()
-    return [Bunch(name=name) for name in names]
+        args.dest_dir, _STATIONS, _DETECTORS, _CLIP_CLASSES)
 
 
 class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
@@ -215,6 +211,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.root_path = path
         self.archive = archive
         self.stations = dict((s.name, s) for s in self.archive.stations)
+        self.detectors = dict((d.name, d) for d in self.archive.detectors)
         self.year = year
         self.dry_run = dry_run
         
@@ -261,6 +258,9 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         self._log_info('directory "{:s}"'.format(path))
         
+        self.start_time = time.time()
+        self._log_clip_count(0)
+        
         self._count_escaped_files(path)
         
         return True
@@ -275,6 +275,13 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.num_escaped_files += n
             
             
+    def _log_clip_count(self, num_clips):
+        return
+#         seconds = int(round(time.time() - self.start_time))
+#         f = 'processed {:d} clips at {:d} seconds'
+#         self._log_info(f.format(num_clips, seconds))
+                    
+    
     def _end_root_dir_visit(self, path):
         
         self._log_space()
@@ -721,8 +728,11 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 path, self.station, detector_name, time, clip_class_name)
             
         self.total_num_files += 1
-                    
-    
+        
+        if self.total_num_files % 10000 == 0:
+            self._log_clip_count(self.total_num_files)
+            
+            
     def _visit_clip_file_aux(
         self, path, station, detector_name, time, clip_class_name):
         
@@ -733,7 +743,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             self.misplaced_file_counts[dir_path] += 1
             return
             
-        if detector_name not in _DETECTOR_NAMES:
+        if detector_name not in self.detectors:
             self.num_bad_detector_name_file_names += 1
             self.bad_detector_name_dir_paths.add(dir_path)
             return
@@ -759,6 +769,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 # not dry run
                 
                 try:
+#                    sound = None
                     sound = sound_utils.read_sound_file(path)
                     
                 except Exception, e:

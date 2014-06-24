@@ -1,31 +1,23 @@
-"""
-Module containing `Station` class.
-
-A `Station` represents a nocturnal migration monitoring station.
-"""
+"""Module containing `Station` class."""
 
 
 import pytz
 
+from nfc.util.named import Named
 import nfc.archive.archive_utils as archive_utils
 
 
-class Station(object):
+class Station(Named):
     
     """Nocturnal migration monitoring station."""
     
     
     def __init__(self, name, long_name, time_zone_name):
-        self._name = name
+        super(Station, self).__init__(name)
         self._long_name = long_name
         self._time_zone = pytz.timezone(time_zone_name)
         
         
-    @property
-    def name(self):
-        return self._name
-    
-    
     @property
     def long_name(self):
         return self._long_name

@@ -1,4 +1,9 @@
+"""Module containing `DummyArchive` class."""
+
+
 class DummyArchive(object):
+    
+    """Trivial archive implementation for testing purposes."""
     
     
     @staticmethod

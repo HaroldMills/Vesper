@@ -1,0 +1,28 @@
+"""Module containing `ClipClass` class."""
+
+
+from nfc.util.named import Named
+
+
+class ClipClass(Named):
+    
+    """
+    Class of sound clips.
+    
+    A `ClipClass` represents a class of sound clip, such as a nocturnal
+    flight call or a noise.
+    
+    A `ClipClass` has a *name* that comprises one or more dot-separated
+    *components*. Examples of clip class names are `'Call'`, `'Noise'`,
+    and `'Call.AMRE'`.
+    """
+    
+    
+    def __init__(self, name):
+        super(ClipClass, self).__init__(name)
+        self._name_components = tuple(name.split('.'))
+        
+        
+    @property
+    def name_components(self):
+        return self._name_components

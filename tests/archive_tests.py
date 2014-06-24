@@ -4,6 +4,8 @@ import os
 import unittest
 
 from nfc.archive.archive import Archive
+from nfc.archive.clip_class import ClipClass
+from nfc.archive.detector import Detector
 from nfc.archive.station import Station
 from nfc.util.bunch import Bunch
 
@@ -17,10 +19,10 @@ STATION_TUPLES = [
 STATIONS = [Station(*t) for t in STATION_TUPLES]
 
 DETECTOR_NAMES = ['Tseep', 'Thrush']
-DETECTORS = [Bunch(name=n) for n in DETECTOR_NAMES]
+DETECTORS = [Detector(name=n) for n in DETECTOR_NAMES]
 
 CLIP_CLASS_NAMES = ['X', 'X.Z', 'X.Z.W', 'Y']
-CLIP_CLASSES = [Bunch(name=n) for n in CLIP_CLASS_NAMES]
+CLIP_CLASSES = [ClipClass(name=n) for n in CLIP_CLASS_NAMES]
 
 
 class ArchiveTests(unittest.TestCase):
@@ -83,6 +85,7 @@ class ArchiveTests(unittest.TestCase):
         attribute_names = ('id', 'name', 'long_name')
         expected_values = [((i + 1,) + STATION_TUPLES[i][:-1])
                            for i in xrange(len(STATION_TUPLES))]
+        expected_values.sort(key=lambda t: t[1])
         self._assert_objects(stations, attribute_names, expected_values)
         for i in xrange(len(STATION_TUPLES)):
             self.assertEqual(stations[i].time_zone.zone, STATION_TUPLES[i][-1])
@@ -103,6 +106,7 @@ class ArchiveTests(unittest.TestCase):
         attribute_names = ('id', 'name')
         expected_values = [(i + 1, DETECTOR_NAMES[i])
                            for i in xrange(len(DETECTOR_NAMES))]
+        expected_values.sort(key=lambda t: t[1])
         self._assert_objects(detectors, attribute_names, expected_values)
         
         
@@ -111,6 +115,7 @@ class ArchiveTests(unittest.TestCase):
         attribute_names = ('id', 'name')
         expected_values = [(i + 1, CLIP_CLASS_NAMES[i])
                            for i in xrange(len(CLIP_CLASS_NAMES))]
+        expected_values.sort(key=lambda t: t[1])
         self._assert_objects(clip_classes, attribute_names, expected_values)
         
         
