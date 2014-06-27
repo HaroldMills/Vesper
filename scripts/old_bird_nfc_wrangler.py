@@ -121,17 +121,6 @@ _MONTH_NAMES = dict((i + 1, s) for (i, s) in enumerate([
 
 _LOGGING_LEVELS = [logging.ERROR, logging.INFO, logging.DEBUG]
 
-# TODO: Make a command line argument for this.
-_MAX_NUM_FILES = -1
-'''
-Maximum number of files to process, or -1 to process all files.
-
-When `_MAX_NUM_FILES` is not -1, we compare the number of files processed
-to it at the beginning of each station and month directory visit, and
-do not process any files in that directory if the maximum number has been
-reached.
-'''
-
 
 def _main():
     
@@ -145,7 +134,9 @@ def _main():
         archive = _create_and_open_archive(args)
         
         visitor = _OldBirdDataDirectoryVisitor()
-        visitor.visit(args.source_dir, archive, args.year, args.dry_run)
+        visitor.visit(
+            args.source_dir, archive, args.year, args.dry_run,
+            args.max_num_clips)
         
         _close_archive(archive)
         
@@ -166,6 +157,10 @@ def _parse_args():
     parser.add_argument(
         '-d', '--dry-run', dest='dry_run', action='store_true', default=False,
         help='process data but do not construct archive')
+    
+    parser.add_argument(
+        '-m', '--max-num-clips', dest='max_num_clips', type=int,
+        default=-1, help='maximum number of clips to process')
     
     parser.add_argument(
         '-v', '--verbosity', type=int, choices=xrange(3), default=0,
@@ -237,7 +232,7 @@ def _close_archive(archive):
 class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
     
     
-    def visit(self, path, archive, year, dry_run=False):
+    def visit(self, path, archive, year, dry_run=False, max_num_clips=-1):
         
         self.root_path = path
         self.archive = archive
@@ -245,6 +240,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.detectors = dict((d.name, d) for d in self.archive.detectors)
         self.year = year
         self.dry_run = dry_run
+        self.max_num_clips = max_num_clips
         
         level_names = ['root', 'station', 'month', 'day']
         super(_OldBirdDataDirectoryVisitor, self).visit(path, level_names)
@@ -315,7 +311,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
     def _start_station_dir_visit(self, path):
         
-        if self._max_num_files_reached():
+        if self._max_num_clips_reached():
             return False
         
         name = os.path.basename(path)
@@ -339,13 +335,14 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             return True
         
         
-    def _max_num_files_reached(self):
-        return _MAX_NUM_FILES != -1 and self.total_num_files >= _MAX_NUM_FILES
+    def _max_num_clips_reached(self):
+        return self.max_num_clips != -1 and \
+               self.total_num_files >= self.max_num_clips
 
 
     def _start_month_dir_visit(self, path):
         
-        if self._max_num_files_reached():
+        if self._max_num_clips_reached():
             return False
 
         name = os.path.basename(path)
@@ -366,6 +363,9 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         
     def _start_day_dir_visit(self, path):
+        
+        if self._max_num_clips_reached():
+            return False
         
         try:
             self.day = self._get_day(path)
