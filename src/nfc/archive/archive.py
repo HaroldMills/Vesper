@@ -101,7 +101,7 @@ _CREATE_CLIP_TABLE_MULTICOLUMN_INDEX_SQL = '''
 '''
 
 _CREATE_CLIP_TABLE_NIGHT_DATE_INDEX_SQL = '''
-    create index NightDateIndex on Clip(night)
+    create index NightIndex on Clip(night)
 '''
 
 _INSERT_CLIP_SQL = \
@@ -149,28 +149,65 @@ class Archive(object):
             os.makedirs(dir_path)
     
         archive = Archive(dir_path)
+        
+        archive._open_db()
         archive._drop_tables()
         archive._create_tables(stations, detectors, clip_classes)
-        archive._create_dicts()
+        archive._close_db()
+        
         return archive
     
     
-    @staticmethod
-    def open(dir_path):
-        archive = Archive(dir_path)
-        archive._create_dicts()
-        return archive
-        
-        
     def __init__(self, dir_path):
-        
         self._archive_dir_path = dir_path
+        self._db_file_path = os.path.join(dir_path, _CLIP_DATABASE_FILE_NAME)
         
-        db_file_path = os.path.join(dir_path, _CLIP_DATABASE_FILE_NAME)
-        self._conn = sqlite.connect(db_file_path)
-        self._cursor = self._conn.cursor()
         
+    def open(self, cache_db=False):
+        self._open_db(cache_db)
+        self._create_dicts()
         self._clip_dir_paths = set()
+
+
+    def _open_db(self, cache_db=False):
+        
+        self._cache_db = cache_db
+        
+        if self._cache_db:
+            file_conn = sqlite.connect(self._db_file_path)
+            self._conn = sqlite.connect(':memory:')
+            _copy_db(file_conn, self._conn)
+            file_conn.close()
+            
+        else:
+            self._conn = sqlite.connect(self._db_file_path)
+
+        self._cursor = self._conn.cursor()
+
+
+    def close(self):
+        self._close_db()
+    
+    
+    def _close_db(self):
+        
+        if self._cache_db:
+            
+            path = self._db_file_path + ' new'
+            
+            # write memory database to new file
+            file_conn = sqlite.connect(path)
+            _copy_db(self._conn, file_conn)
+            file_conn.close()
+            
+            # delete old database file if it exists
+            if os.path.exists(self._db_file_path):
+                os.remove(self._db_file_path)
+                
+            # rename new database file
+            os.rename(path, self._db_file_path)
+        
+        self._conn.close()
         
         
     def _drop_tables(self):
@@ -657,10 +694,6 @@ class Archive(object):
         self._conn.commit()
         
         
-    def close(self):
-        self._conn.close()
-    
-    
     def _create_clip_dir_if_needed(self, path):
         
         dir_path = os.path.dirname(path)
@@ -698,6 +731,64 @@ class Archive(object):
         day_name = _create_day_dir_name(n.year, n.month, n.day)
         return os.path.join(
             self._archive_dir_path, station.name, month_name, day_name)
+    
+    
+def _copy_db(from_conn, to_conn):
+    _create_db_tables(to_conn)
+    _copy_db_tables(from_conn, to_conn)
+    
+    
+def _copy_db_tables(from_conn, to_conn):
+    _copy_db_table('Station', from_conn, to_conn)
+    _copy_db_table('Detector', from_conn, to_conn)
+    _copy_db_table('ClipClass', from_conn, to_conn)
+    _copy_db_table('ClipClassNameComponent', from_conn, to_conn)
+    _copy_db_table('Clip', from_conn, to_conn)
+
+    
+def _copy_db_table(name, from_conn, to_conn):
+    
+    from_cursor = from_conn.cursor()
+    to_cursor = to_conn.cursor()
+    
+    sql = 'select * from {:s} order by id'.format(name)
+    from_cursor.execute(sql)
+    
+    sql = None
+    
+    while True:
+        
+        rows = from_cursor.fetchmany(1000)
+        
+        if len(rows) == 0:
+            break
+        
+        if sql is None:
+            num_columns = len(rows[0])
+            question_marks = ', '.join(['?'] * num_columns)
+            sql = 'insert into {:s} values ({:s})'.format(name, question_marks)
+            
+        to_cursor.executemany(sql, rows)
+        
+    to_conn.commit()
+        
+    
+def _create_db_tables(conn):
+    
+    cursor = conn.cursor()
+    
+    # tables
+    cursor.execute(_CREATE_STATION_TABLE_SQL)
+    cursor.execute(_CREATE_DETECTOR_TABLE_SQL)
+    cursor.execute(_CREATE_CLIP_CLASS_TABLE_SQL)
+    cursor.execute(_CREATE_CLIP_CLASS_NAME_COMPONENT_TABLE_SQL)
+    cursor.execute(_CREATE_CLIP_TABLE_SQL)
+    
+    # indices
+    cursor.execute(_CREATE_CLIP_TABLE_MULTICOLUMN_INDEX_SQL)
+    cursor.execute(_CREATE_CLIP_TABLE_NIGHT_DATE_INDEX_SQL)
+    
+    conn.commit()
     
     
 def _date_to_int(date):

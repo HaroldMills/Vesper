@@ -33,6 +33,7 @@ class ArchiveTests(unittest.TestCase):
         archive_dir_path = os.path.join(parent_dir_path, *ARCHIVE_DIR_PATH)
         self.archive = Archive.create(
             archive_dir_path, STATIONS, DETECTORS, CLIP_CLASSES)
+        self.archive.open()
         
         
     def tearDown(self):
