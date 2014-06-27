@@ -6,6 +6,7 @@ import wave
 
 
 WAVE_FILE_NAME_EXTENSION = '.wav'
+_WAVE_SAMPLE_DTYPE = np.dtype('<i2')
 
 
 class AudioFileFormatError(Exception):
@@ -27,19 +28,27 @@ def read_wave_file(path):
     file_ = wave.open(path, 'rb')
     
     (num_channels, sample_size, frame_rate, num_frames,
-     compression_type, _) = file_.getparams()
+     compression_type, _) = _call(file_, file_.getparams)
         
     _check_wave_file_format(sample_size, compression_type, path)
     
     frame_rate = float(frame_rate)
      
-    string = file_.readframes(num_frames)
-    samples = np.fromstring(string, dtype='<i2')
+    string = _call(file_, file_.readframes, num_frames)
+    samples = np.fromstring(string, dtype=_WAVE_SAMPLE_DTYPE)
     samples = samples.reshape((num_frames, num_channels)).transpose()
         
     file_.close()
     
     return (samples, frame_rate)
+
+
+def _call(file_, method, *args, **kwds):
+    try:
+        return method(*args, **kwds)
+    except:
+        file_.close()
+        raise
 
 
 def _check_wave_file_format(sample_size, compression_type, path):
@@ -72,14 +81,20 @@ def write_wave_file(path, samples, frame_rate):
     num_frames = 0
     compression_type = 'NONE'
     compression_name = 'not compressed'
-    file_.setparams(
-        (num_channels, sample_size, frame_rate, num_frames,
-         compression_type, compression_name))
+    params = (num_channels, sample_size, frame_rate, num_frames,
+              compression_type, compression_name)
+    _call(file_, file_.setparams, params)
     
-    # TODO: Don't do these things if samples are already in the right form.
-    samples = samples.transpose().reshape(-1)
-    samples = np.array(samples, dtype='<i2')
-    
-    file_.writeframes(samples.tostring())
+    # Get samples as one-dimensional array.
+    if num_channels == 1:
+        samples = samples[0]
+    else:
+        samples = samples.transpose().reshape(-1)
+        
+    # Ensure that samples are of the correct type.
+    if samples.dtype != _WAVE_SAMPLE_DTYPE:
+        samples = np.array(samples, dtype=_WAVE_SAMPLE_DTYPE)
+        
+    _call(file_, file_.writeframes, samples.tostring())
     
     file_.close()
