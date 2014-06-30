@@ -15,3 +15,11 @@ class DummyArchive(object):
         self.stations = stations
         self.detectors = detectors
         self.clip_classes = clip_classes
+        
+        
+    def open(self, cache_db=False):
+        pass
+    
+    
+    def close(self):
+        pass
