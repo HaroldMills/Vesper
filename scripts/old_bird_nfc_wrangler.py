@@ -225,7 +225,7 @@ def _close_archive(archive):
     start_time = time.time()
     archive.close()
     delta = int(round(time.time() - start_time))
-    f = 'Wrote archive database to disk in {:d} seconds.'
+    f = 'Closed archive in {:d} seconds.'
     logging.info(f.format(delta))
         
 
