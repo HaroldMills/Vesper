@@ -136,7 +136,7 @@ def _main():
         visitor = _OldBirdDataDirectoryVisitor()
         visitor.visit(
             args.source_dir, archive, args.year, args.dry_run,
-            args.max_num_clips)
+            args.max_num_clips, args.performance_logging_period)
         
         _close_archive(archive)
         
@@ -160,7 +160,12 @@ def _parse_args():
     
     parser.add_argument(
         '-m', '--max-num-clips', dest='max_num_clips', type=int,
-        default=-1, help='maximum number of clips to process')
+        default=None, help='maximum number of clips to process')
+    
+    parser.add_argument(
+        '-p', '--performance-logging-period',
+        dest='performance_logging_period', type=int, default=None,
+        help='period with which to report performance, as a number of clips')
     
     parser.add_argument(
         '-v', '--verbosity', type=int, choices=xrange(3), default=0,
@@ -183,6 +188,16 @@ def _parse_args():
 
 
 def _check_args(args):
+    
+    if args.max_num_clips is not None and args.max_num_clips < 0:
+        print('Maximum number of clips must be nonnegative.', file=sys.stderr)
+        return False
+    
+    if args.performance_logging_period is not None and \
+       args.performance_logging_period <= 0:
+        
+        print('Performance logging period must be positive.', file=sys.stderr)
+        return False
     
     if args.year < 1900:
         print('Year {:d} is too small.'.format(args.year), file=sys.stderr)
@@ -222,9 +237,11 @@ def _create_and_open_archive(args):
 
 
 def _close_archive(archive):
+    
     start_time = time.time()
     archive.close()
     delta = int(round(time.time() - start_time))
+    
     f = 'Closed archive in {:d} seconds.'
     logging.info(f.format(delta))
         
@@ -232,7 +249,9 @@ def _close_archive(archive):
 class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
     
     
-    def visit(self, path, archive, year, dry_run=False, max_num_clips=-1):
+    def visit(
+        self, path, archive, year, dry_run=False, max_num_clips=None,
+        performance_logging_period=None):
         
         self.root_path = path
         self.archive = archive
@@ -241,8 +260,10 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.year = year
         self.dry_run = dry_run
         self.max_num_clips = max_num_clips
+        self.performance_logging_period = performance_logging_period
         
         level_names = ['root', 'station', 'month', 'day']
+        
         super(_OldBirdDataDirectoryVisitor, self).visit(path, level_names)
         
         
@@ -252,28 +273,31 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         self.num_escaped_files = 0
         self.num_ignored_dir_files = 0
-        
         self.num_date_time_file_names = 0
         self.num_resolved_file_names = 0
         self.num_unresolved_file_names = 0
-        self.num_malformed_file_names = 0
         
-        self.num_misplaced_files = 0
         self.num_bad_detector_name_file_names = 0
-        self.num_nonexistent_time_files = 0
-        self.num_ambiguous_time_files = 0
-        self.num_duplicate_files = 0
-        self.num_reclassified_files = 0
+        
+        self.num_file_repetitions = 0
+        self.num_duplicate_classifications = 0
+        self.num_consistent_reclassifications = 0
+        
         self.num_unreadable_files = 0
         self.num_add_errors = 0
         
-        self.unresolved_file_name_dir_paths = set()
-        self.malformed_file_name_file_paths = set()
+        self.clip_counts = defaultdict(int)
+        self.consistent_reclassification_counts = defaultdict(int)
+
         self.misplaced_file_counts = defaultdict(int)
+        self.malformed_file_name_file_paths = set()
         self.bad_detector_name_dir_paths = set()
         self.nonexistent_time_file_counts = defaultdict(int)
         self.ambiguous_time_file_counts = defaultdict(int)
-        self.reclassifications = set()
+        self.unresolved_file_name_dir_paths = set()
+        self.unreclassified_subclassified_call_paths = set()
+        self.duplicate_classification_path_pairs = set()
+        self.inconsistent_reclassifications = set()
         
         self.time_keeper = WranglerTimeKeeper(
             self.stations, _MONITORING_TIME_ZONE_NAMES,
@@ -302,11 +326,8 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             
             
     def _end_root_dir_visit(self, path):
-        
         self.total_num_files += \
             self.num_escaped_files + self.num_ignored_dir_files
-            
-        self._log_clip_count(self.total_num_files)
         
         
     def _start_station_dir_visit(self, path):
@@ -336,7 +357,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         
     def _max_num_clips_reached(self):
-        return self.max_num_clips != -1 and \
+        return self.max_num_clips is not None and \
                self.total_num_files >= self.max_num_clips
 
 
@@ -511,7 +532,6 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 (detector_name, time_delta) = f(file_name)
                     
             except ValueError:
-                self.num_malformed_file_names += 1
                 self.malformed_file_name_file_paths.add(path)
                               
             else:
@@ -543,11 +563,9 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 time = convert(time, self.station.name)
                 
             except NonexistentTimeError:
-                self.num_nonexistent_time_files += 1
                 self.nonexistent_time_file_counts[dir_path] += 1
             
             except AmbiguousTimeError:
-                self.num_ambiguous_time_files += 1
                 self.ambiguous_time_file_counts[dir_path] += 1
                 
             else:
@@ -558,8 +576,10 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             
         self.total_num_files += 1
         
-#         if self.total_num_files % 10000 == 0:
-#             self._log_clip_count(self.total_num_files)
+        if self.performance_logging_period is not None and \
+           self.total_num_files % self.performance_logging_period == 0:
+            
+            self._log_performance()
             
             
     def _visit_clip_file_aux(
@@ -568,7 +588,6 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         dir_path = os.path.dirname(path)
         
         if station.get_night(time) != self.night:
-            self.num_misplaced_files += 1
             self.misplaced_file_counts[dir_path] += 1
             return
             
@@ -586,7 +605,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             # do not already have clip for this station, detector, and time
             
             if self.dry_run:
-                self.clip_info[key] = (clip_class_name, path)
+                self._count_new_clip(key, clip_class_name, path)
                 
             else:
                 # not dry run
@@ -614,7 +633,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                         self.num_add_errors += 1
                     
                     else:
-                        self.clip_info[key] = (clip_class_name, path)
+                        self._count_new_clip(key, clip_class_name, path)
             
         else:
             # already have clip for this station, detector, and time
@@ -622,182 +641,183 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             old = old_clip_class_name
             new = clip_class_name
             
-            if new != old:
+            # We assume in the following that we will never encounter
+            # a less specific classification of a clip after a more
+            # specific but consistent one. This is the case since we
+            # enumerate clip files breadth first, and more
+            # specifically classified files are deeper in the
+            # directory hierarchy. If somehow we do encounter a
+            # less specific classification after a more specific one,
+            # the reclassification will be considered inconsistent
+            # and appear in the set of inconsistent classifications.
+            
+            if new == old:
+                self.duplicate_classification_path_pairs.add((old_path, path))
                 
-                if old is None or \
-                   new is not None and \
-                   new.startswith(old) and \
-                   new[len(old)] == '.':
-                    # new classification is more specific version of old one
+            elif old is None or \
+                 new is not None and \
+                 new.startswith(old) and \
+                 new[len(old)] == '.':
+                # new classification is more specific version of old one
+            
+                self.clip_info[key] = (new, path)
                 
-                    self.clip_info[key] = (new, path)
+                self.clip_counts[new] += 1
+                self.clip_counts[old] -= 1
+                
+                self.consistent_reclassification_counts[old] += 1
+                self.num_consistent_reclassifications += 1
+        
+            else:
+                # new classification differs from old one and is not
+                # a more specific version of it
+                
+                # In this case we leave the file with its original
+                # classification, but remember both the old and
+                # new classifications to report later. Inconsistent
+                # reclassifications must be resolved manually.
+                
+                self.inconsistent_reclassifications.add((old_path, path))
                     
-                else:
-                    # new classification differs from old one and is not
-                    # a more specific version of it
-                    
-                    self.reclassifications.add((old_path, path))
-                    self.num_reclassified_files += 1
-                    
-            self.num_duplicate_files += 1
+            self.num_file_repetitions += 1
         
     
-    def _log_clip_count(self, num_clips):
-        seconds = int(round(time.time() - self.start_time))
-        rate = int(round(num_clips / float(seconds)))
-        f = 'Processed {:d} clips in {:d} seconds, {:d} clips per second.'
-        logging.info(f.format(num_clips, seconds, rate))
-                    
-    
+    def _count_new_clip(self, key, clip_class_name, path):
+        
+        self.clip_info[key] = (clip_class_name, path)
+        self.clip_counts[clip_class_name] += 1
+        
+        if clip_class_name is not None and \
+           clip_class_name.startswith('Call.'):
+            
+            self.unreclassified_subclassified_call_paths.add(path)
+        
+
     def log_stats(self):
         
         _log_space()
+        self._log_performance()
         
-        logging.info(
-            'Total num clip files: {:d}'.format(self.total_num_files))
-        
-        if self.num_escaped_files != 0:
-            logging.info(
-                'Num escaped clip files: {:d}'.format(self.num_escaped_files))
-        
-        if self.num_ignored_dir_files != 0:
-            logging.info(
-                'Num clip files in ignored directories: {:d}'.format(
-                    self.num_ignored_dir_files))
-        
-        if self.num_date_time_file_names != 0:
-            logging.info(
-                'Num date/time clip file names: {:d}'.format(
-                    self.num_date_time_file_names))
-        
-        if self.num_resolved_file_names != 0:
-            logging.info(
-                'Num resolved elapsed time clip file names: {:d}'.format(
-                    self.num_resolved_file_names))
-        
-        if self.num_unresolved_file_names != 0:
-            logging.info(
-                'Num unresolved elapsed time clip file names: {:d}'.format(
-                    self.num_unresolved_file_names))
-        
-        if self.num_malformed_file_names != 0:
-            logging.info(
-                'Num malformed clip file names: {:d}'.format(
-                    self.num_malformed_file_names))
-        
-        _log_space()
-        
-        if self.num_misplaced_files != 0:
-            logging.info(
-                'Num misplaced clip files: {:d}'.format(
-                    self.num_misplaced_files))
-        
-        if self.num_bad_detector_name_file_names != 0:
-            logging.info(
-                'Num clip file names with bad detector names: {:d}'.format(
-                    self.num_bad_detector_name_file_names))
-        
-        if self.num_nonexistent_time_files != 0:
-            logging.info(
-                ('Num clip files with nonexistent times near DST start: '
-                 '{:d}').format(self.num_nonexistent_time_files))
+        _log_counts(
+                     
+            ('escaped clip files', self.num_escaped_files),
             
-        if self.num_ambiguous_time_files != 0:
-            logging.info(
-                ('Num clip files with ambiguous times near DST end: '
-                 '{:d}').format(self.num_ambiguous_time_files))
+            ('clip files in ignored directories', self.num_ignored_dir_files),
             
-        if self.num_duplicate_files != 0:
-            logging.info(
-                'Num duplicate clip files: {:d}'.format(
-                    self.num_duplicate_files))
+            ('malformed clip file names',
+             len(self.malformed_file_name_file_paths)),
+                     
+            ('date/time clip file names', self.num_date_time_file_names),
             
-        if self.num_reclassified_files != 0:
-            logging.info(
-                'Num reclassified clip files: {:d}'.format(
-                    self.num_reclassified_files))
-            
-        if self.num_unreadable_files != 0:
-            logging.info(
-                'Num unreadable clip files: {:d}'.format(
-                    self.num_unreadable_files))
-            
-        if self.num_add_errors != 0:
-            logging.info(
-                'Num archive add errors: {:d}'.format(
-                    self.num_add_errors))
-            
-        # directories containing elapsed time file names
-        if len(self.unresolved_file_name_dir_paths) != 0:
-            self._log_paths(
-                ('Paths of directories containing unresolved elapsed time '
-                 'file names:'), self.unresolved_file_name_dir_paths)
-            
-        # revsolved times
-        if len(self.resolved_times) != 0:
-            self._log_resolved_times()
+            ('resolved elapsed time clip file names',
+             self.num_resolved_file_names),
+                     
+            ('unresolved elapsed time clip file names',
+             self.num_unresolved_file_names))
+                     
+        _log_counts(
+                    
+            ('misplaced clip files',
+             _aggregate_counts(self.misplaced_file_counts)),
         
-        # paths of malformed file names
-        if len(self.malformed_file_name_file_paths) != 0:
-            self._log_paths(
-                'Paths of malformed file names:',
-                self.malformed_file_name_file_paths)
+            ('clip file names with bad detector names',
+             self.num_bad_detector_name_file_names),
+        
+            ('clip files with nonexistent times near DST start',
+             _aggregate_counts(self.nonexistent_time_file_counts)),
             
+            ('clip files with ambiguous times near DST end',
+             _aggregate_counts(self.ambiguous_time_file_counts)))
+            
+        _log_counts(
+
+            ('clip file repetitions', self.num_file_repetitions),
+            
+            ('duplicate classifications',
+             len(self.duplicate_classification_path_pairs)),
+
+            ('consistent reclassifications',
+             self.num_consistent_reclassifications),
+
+            ('inconsistent reclassifications',
+             len(self.inconsistent_reclassifications)))
+        
+        # total number of calls
+        self._log_total_num_calls()
+        
+        # clip counts by clip class
+        _log_count_dict('Clip counts by clip class:', self.clip_counts)
+        
+        # numbers of consistent reclassifications by less specific call class
+        _log_count_dict(
+            ('Numbers of consistent reclassifications by less '
+             'specific clip class:'),
+            self.consistent_reclassification_counts)
+        
+        _log_counts(
+            ('clip files classified as Call.* but not also as Call',
+             len(self.unreclassified_subclassified_call_paths)))
+        
+        _log_counts(
+            ('unreadable clip files', self.num_unreadable_files),
+            ('archive add errors', self.num_add_errors))
+        
         # directories containing misplaced files
-        if self.num_misplaced_files != 0:
-            self._log_misplaced_file_dir_paths()
+        self._log_misplaced_file_dir_paths()
             
+        # files with malformed names
+        self._log_paths(
+            'clip files with malformed names',
+            self.malformed_file_name_file_paths)
+        
         # directories containing file names with bad detector names
-        if len(self.bad_detector_name_dir_paths) != 0:
-            self._log_paths(
-                ('Paths of directories containing file names with bad '
-                 'detector names:'),
-                self.bad_detector_name_dir_paths)
-            
+        self._log_paths(
+            'directories containing file names with bad detector names',
+            self.bad_detector_name_dir_paths)
+        
         # directories containing files with nonexistent times near DST start
-        if self.num_nonexistent_time_files != 0:
-            self._log_nonexistent_time_dir_paths()
+        self._log_nonexistent_time_dir_paths()
             
         # directories containing files with ambiguous times near DST end
-        if self.num_ambiguous_time_files != 0:
-            self._log_ambiguous_time_dir_paths()
+        self._log_ambiguous_time_dir_paths()
             
-        # files that have two or more incompatible classifications
-        if len(self.reclassifications) != 0:
-            self._log_path_pairs('Reclassified files:', self.reclassifications)
+        # examples of resolved elapsed times
+        self._log_resolved_times()
+        
+        # directories containing unresolved elapsed time file names
+        self._log_paths(
+            'directories containing unresolved elapsed time clip file names',
+            self.unresolved_file_name_dir_paths)
+            
+        self._log_paths(
+            'clip files classified as Call.* but not also as Call',
+            self.unreclassified_subclassified_call_paths)
+        
+        self._log_path_pairs(
+            'clip files classified identically',
+            self.duplicate_classification_path_pairs)
+            
+        self._log_path_pairs(
+            'clip files classified inconsistently',
+            self.inconsistent_reclassifications)
 
         
-    def _log_paths(self, message, paths):
-        
+    def _log_performance(self):
+        num_files = self.total_num_files
+        seconds = int(round(time.time() - self.start_time))
+        rate = int(round(num_files / float(seconds)))
+        f = 'Processed {:d} clip files in {:d} seconds, {:d} files per second.'
+        logging.info(f.format(num_files, seconds, rate))
+                    
+    
+    def _log_total_num_calls(self):
         _log_space()
+        predicate = lambda k: k is not None and k.startswith('Call')
+        num_calls = _aggregate_counts(self.clip_counts, predicate)
+        logging.info(
+            'Total number of distinct call files: {:d}'.format(num_calls))
         
-        logging.info(message)
-            
-        paths = [self._rel(p) for p in paths]
-        paths.sort()
-        for path in paths:
-            logging.info(path)
-            
-            
-    def _log_resolved_times(self):
         
-        _log_space()
-        
-        logging.info('Examples of resolved times:')
-        
-        keys = self.resolved_times.keys()
-        keys.sort()
-        
-        for key in keys:
-            
-            station_name, night = key
-            delta_time, time = self.resolved_times[key]
-            
-            logging.info(
-                station_name + ' ' + str(night) + ': ' + str(delta_time) +
-                ' ' + str(time))
-            
-            
     def _log_misplaced_file_dir_paths(self):
         
         paths = self.misplaced_file_counts.keys()
@@ -806,8 +826,8 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             
             _log_space()
             
-            logging.info(
-                'Paths of directories containing misplaced clip files:')
+            f = 'Paths ({:d}) of directories containing misplaced clip files:'
+            logging.info(f.format(len(paths)))
             
             paths.sort()
                       
@@ -821,47 +841,87 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                         self._rel(path), num_misplaced_files, total_num_files))
             
             
+    def _log_paths(self, description, paths):
+        
+        if len(paths) != 0:
+            
+            _log_space()
+            
+            f = 'Paths ({:d}) of {:s}:'
+            logging.info(f.format(len(paths), description))
+                    
+            paths = [self._rel(p) for p in paths]
+            paths.sort()
+            for path in paths:
+                logging.info(path)
+            
+            
     def _log_nonexistent_time_dir_paths(self):
         self._log_bad_time_dir_paths('nonexistent', 'start')
 
 
     def _log_bad_time_dir_paths(self, name, point):
         
-        _log_space()
-        
-        logging.info(
-            ('Paths of directories containing clip files with {:s} '
-             'times near DST {:s}:').format(name, point))
-        
         name = '{:s}_time_file_counts'.format(name)
         counts = getattr(self, name)
-        pairs = counts.items()
-        pairs.sort()
-        for path, count in pairs:
-            logging.info('{:s} ({:d} files)'.format(self._rel(path), count))
+        total_count = _aggregate_counts(counts)
+        
+        if total_count != 0:
+            
+            _log_space()
+            
+            f = ('Paths ({:d}) of directories containing clip files with '
+                 '{:s} times near DST {:s}:')
+            logging.info(f.format(len(counts), name, point))
+            
+            pairs = counts.items()
+            pairs.sort()
+            
+            for path, count in pairs:
+                f = '{:s} ({:d} files)'
+                logging.info(f.format(self._rel(path), count))
 
 
     def _log_ambiguous_time_dir_paths(self):
         self._log_bad_time_dir_paths('ambiguous', 'end')
 
 
-    def _log_path_pairs(self, message, pairs):
+    def _log_resolved_times(self):
         
-        _log_space()
-        
-        logging.info(message)
-        
-        pairs = [(self._rel(p), self._rel(q)) for p, q in pairs]
-        pairs.sort()
-        for pair in pairs:
-            logging.info(pair)
-
-
-def _log_space():
-    for _ in xrange(3):
-        logging.info('')
+        if len(self.resolved_times) != 0:
+            
+            _log_space()
+            
+            logging.info('Examples of resolved times:')
+            
+            keys = self.resolved_times.keys()
+            keys.sort()
+            
+            for key in keys:
+                
+                station_name, night = key
+                delta_time, time = self.resolved_times[key]
+                
+                logging.info(
+                    station_name + ' ' + str(night) + ': ' +
+                    str(delta_time) + ' ' + str(time))
             
             
+    def _log_path_pairs(self, description, pairs):
+        
+        if len(pairs) != 0:
+            
+            _log_space()
+            
+            f = 'Pairs ({:d}) of {:s}:'
+            logging.info(f.format(len(pairs), description))
+            
+            pairs = [(self._rel(p), self._rel(q)) for p, q in pairs]
+            pairs.sort()
+            for pair in pairs:
+                logging.info(pair)
+
+
 def _count_clip_files(dir_path, recursive=True):
     count = 0
     for dir_path, subdir_names, file_names in os.walk(dir_path):
@@ -873,5 +933,57 @@ def _count_clip_files(dir_path, recursive=True):
     return count
 
 
+def _log_space(num_lines=2):
+    for _ in xrange(num_lines):
+        logging.info('')
+            
+          
+def _log_counts(*args):
+    
+    counts = [count for _, count in args]
+    
+    if any(counts):
+        
+        _log_space()
+        
+        for pair in args:
+            _log_count(*pair)
+
+
+def _log_count(description, count):
+    if count != 0:
+        logging.info('Number of {:s}: {:d}'.format(description, count))
+
+
+def _log_count_dict(message, counts):
+    
+    total_count = _aggregate_counts(counts)
+    
+    if total_count != 0:
+        
+        _log_space()
+        
+        logging.info(message)
+        
+        keys = counts.keys()
+        keys.sort()
+        
+        for key in keys:
+            count = counts[key]
+            if count != 0:
+                logging.info('    {:s} {:d}'.format(str(key), count))
+                
+                
+def _aggregate_counts(counts, key_predicate=None):
+
+    total = 0
+            
+    for key, count in counts.iteritems():
+        if key_predicate is None or key_predicate(key):
+            total += count
+                
+    return total
+
+                
 if __name__ == '__main__':
     _main()
