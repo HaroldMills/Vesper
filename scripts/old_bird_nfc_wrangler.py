@@ -7,7 +7,6 @@ from collections import defaultdict
 import argparse
 import calendar
 import datetime
-import logging
 import os
 import sys
 import time
@@ -119,8 +118,6 @@ _MONTH_NAMES = dict((i + 1, s) for (i, s) in enumerate([
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December']))
 
-_LOGGING_LEVELS = [logging.ERROR, logging.INFO, logging.DEBUG]
-
 
 def _main():
     
@@ -128,17 +125,16 @@ def _main():
     
     if _check_args(args):
         
-        level = _LOGGING_LEVELS[args.verbosity]
-        logging.basicConfig(level=level, format='%(message)s')
+        logger = _Logger(args.verbose, args.source_dir)
         
         archive = _create_and_open_archive(args)
         
         visitor = _OldBirdDataDirectoryVisitor()
         visitor.visit(
-            args.source_dir, archive, args.year, args.dry_run,
+            args.source_dir, archive, args.year, logger, args.dry_run,
             args.max_num_clips, args.performance_logging_period)
         
-        _close_archive(archive)
+        _close_archive(archive, logger)
         
         visitor.log_stats()
 
@@ -168,8 +164,8 @@ def _parse_args():
         help='period with which to report performance, as a number of clips')
     
     parser.add_argument(
-        '-v', '--verbosity', type=int, choices=xrange(3), default=0,
-        help='logging verbosity, either 0, 1, or 2, with 2 most verbose')
+        '-v', '--verbose', dest='verbose', action='store_true', default=False,
+        help='log additional messages')
     
     parser.add_argument(
         'year', metavar='YEAR', type=int, help='four-digit year of data')
@@ -236,21 +232,21 @@ def _create_and_open_archive(args):
     return archive
 
 
-def _close_archive(archive):
+def _close_archive(archive, logger):
     
     start_time = time.time()
     archive.close()
     delta = int(round(time.time() - start_time))
     
     f = 'Closed archive in {:d} seconds.'
-    logging.info(f.format(delta))
+    logger.log(f.format(delta))
         
 
 class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
     
     
     def visit(
-        self, path, archive, year, dry_run=False, max_num_clips=None,
+        self, path, archive, year, logger, dry_run=False, max_num_clips=None,
         performance_logging_period=None):
         
         self.root_path = path
@@ -262,8 +258,15 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.max_num_clips = max_num_clips
         self.performance_logging_period = performance_logging_period
         
-        level_names = ['root', 'station', 'month', 'day']
+        # logging functions
+        self._indent = logger.indent
+        self._unindent = logger.unindent
+        self._log = logger.log
+        self._indent_v = logger.indent_v
+        self._unindent_v = logger.unindent_v
+        self._log_v = logger.log_v
         
+        level_names = ['root', 'station', 'month', 'day']
         super(_OldBirdDataDirectoryVisitor, self).visit(path, level_names)
         
         
@@ -307,7 +310,8 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         self.clip_info = {}
         
-        logging.info('Directory "{:s}"'.format(path))
+        self._log('Directory "{:s}"'.format(path))
+        self._indent()
         
         self.start_time = time.time()
         
@@ -321,11 +325,12 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         if n != 0:
             suffix = 's' if n > 1 else ''
             f = 'Found {:d} escaped clip file{:s} in directory "{:s}"'
-            logging.info(f.format(n, suffix, self._rel(path)))
+            self._log(f.format(n, suffix, self._rel(path)))
         self.num_escaped_files += n
             
             
     def _end_root_dir_visit(self, path):
+        self._unindent()
         self.total_num_files += \
             self.num_escaped_files + self.num_ignored_dir_files
         
@@ -345,15 +350,20 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 s = 'unrecognized'
                 
             f = 'Ignored {:s} station directory "{:s}".'
-            logging.info(f.format(s, self._rel(path)))
+            self._log(f.format(s, self._rel(path)))
             self.num_ignored_dir_files += _count_clip_files(path)
             return False
         
         else:
             self.station = self.stations[name]
-            logging.info('    Station "{:s}"'.format(self.station.name))
+            self._log('Station "{:s}"'.format(self.station.name))
+            self._indent()
             self._count_escaped_files(path)
             return True
+        
+        
+    def _end_station_dir_visit(self, path):
+        self._unindent()
         
         
     def _max_num_clips_reached(self):
@@ -371,16 +381,21 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         if month is None:
             f = 'Ignored unrecognized month directory "{:s}".'
-            logging.info(f.format(self._rel(path)))
+            self._log(f.format(self._rel(path)))
             self.num_ignored_dir_files += _count_clip_files(path)
             return False
         
         else:
             self.month = month
-            f = '        Month "{:s}" {:d}'
-            logging.info(f.format(name, month))
+            f = 'Month "{:s}" {:d}'
+            self._log(f.format(name, month))
+            self._indent()
             self._count_escaped_files(path)
             return True
+        
+        
+    def _end_month_dir_visit(self, path):
+        self._unindent()
         
         
     def _start_day_dir_visit(self, path):
@@ -396,6 +411,10 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             self._visit_day_dir(path)
             
         return False
+        
+        
+    def _end_day_dir_visit(self, path):
+        self._unindent()
         
         
     def _get_day(self, path):
@@ -418,19 +437,19 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             
         except:
             f = 'Ignored unrecognized day directory "{:s}".'
-            logging.info(f.format(rel_path))
+            self._log(f.format(rel_path))
             self.num_ignored_dir_files += _count_clip_files(path)
             raise
 
         if month != self.month:
             f = 'Ignored misplaced or misnamed day directory "{:s}".'
-            logging.info(f.format(rel_path))
+            self._log(f.format(rel_path))
             self.num_ignored_dir_files += _count_clip_files(path)
             raise ValueError()
         
         if start_day < 1:
             f = 'Ignored unrecognized day directory "{:s}".'
-            logging.info(f.format(rel_path))
+            self._log(f.format(rel_path))
             self.num_ignored_dir_files += _count_clip_files(path)
             raise ValueError()
         
@@ -442,7 +461,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             
             if start_day > month_days:
                 f = 'Ignored day directory with invalid date "{:s}".'
-                logging.info(f.format(rel_path))
+                self._log(f.format(rel_path))
                 self.num_ignored_dir_files += _count_clip_files(path)
                 raise ValueError()
             
@@ -458,10 +477,12 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         name = os.path.basename(path)
         
-        f = '            Day "{:s}" {:02d}-{:02d}'
-        logging.debug(f.format(name, self.month, self.day))
+        f = 'Day "{:s}" {:02d}-{:02d}'
+        self._log_v(f.format(name, self.month, self.day))
         
+        self._indent_v()
         self._visit_clip_dir(path, [])
+        self._unindent_v()
         
         
     def _visit_clip_dir(self, path, clip_class_dir_names):
@@ -469,14 +490,15 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         clip_class_name = self._get_clip_class_name(path, clip_class_dir_names)
                     
         n = len(clip_class_dir_names)
+        
         if n != 0:
-            indentation = ' ' * (12 + 4 * n)
             class_name = clip_class_name
             if class_name is None:
                 class_name = '<None>'
             dir_name = os.path.basename(path)
-            f = '{:s}Clip class {:d} "{:s}" {:s}'
-            logging.debug(f.format(indentation, n, dir_name, class_name))
+            f = 'Clip class {:d} "{:s}" {:s}'
+            self._log_v(f.format(n, dir_name, class_name))
+            self._indent_v()
                 
         for _, subdir_names, file_names in os.walk(path):
             
@@ -498,6 +520,9 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             # stop walk from visiting subdirectories
             del subdir_names[:]
             
+        if n != 0:
+            self._unindent_v()
+            
             
     def _get_clip_class_name(self, path, clip_class_dir_names):
         
@@ -509,7 +534,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         except KeyError:
             f = 'Unrecognized clip class directory name at "{:s}".'
-            logging.info(f.format(self._rel(path)))
+            self._log(f.format(self._rel(path)))
             return None
             
             
@@ -616,7 +641,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                     
                 except Exception, e:
                     f = 'Error reading sound file "{:s}": {:s}'
-                    logging.error(f.format(self._rel(path), str(e)))
+                    self._log(f.format(self._rel(path), str(e)))
                     self.num_unreadable_files += 1
                 
                 else:
@@ -629,7 +654,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                     
                     except Exception, e:
                         f = 'Error adding clip from "{:s}": {:s}'
-                        logging.error(f.format(self._rel(path), str(e)))
+                        self._log(f.format(self._rel(path), str(e)))
                         self.num_add_errors += 1
                     
                     else:
@@ -695,10 +720,10 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
 
     def log_stats(self):
         
-        _log_space()
+        self._log_space()
         self._log_performance()
         
-        _log_counts(
+        self._log_counts(
                      
             ('escaped clip files', self.num_escaped_files),
             
@@ -715,7 +740,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             ('unresolved elapsed time clip file names',
              self.num_unresolved_file_names))
                      
-        _log_counts(
+        self._log_counts(
                     
             ('misplaced clip files',
              _aggregate_counts(self.misplaced_file_counts)),
@@ -729,7 +754,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             ('clip files with ambiguous times near DST end',
              _aggregate_counts(self.ambiguous_time_file_counts)))
             
-        _log_counts(
+        self._log_counts(
 
             ('clip file repetitions', self.num_file_repetitions),
             
@@ -746,19 +771,19 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self._log_total_num_calls()
         
         # clip counts by clip class
-        _log_count_dict('Clip counts by clip class:', self.clip_counts)
+        self._log_count_dict('Clip counts by clip class:', self.clip_counts)
         
         # numbers of consistent reclassifications by less specific call class
-        _log_count_dict(
+        self._log_count_dict(
             ('Numbers of consistent reclassifications by less '
              'specific clip class:'),
             self.consistent_reclassification_counts)
         
-        _log_counts(
+        self._log_counts(
             ('clip files classified as Call.* but not also as Call',
              len(self.unreclassified_subclassified_call_paths)))
         
-        _log_counts(
+        self._log_counts(
             ('unreadable clip files', self.num_unreadable_files),
             ('archive add errors', self.num_add_errors))
         
@@ -802,19 +827,60 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             self.inconsistent_reclassifications)
 
         
+    def _log_space(self, num_lines=2):
+        for _ in xrange(num_lines):
+            self._log('')
+                
+              
+    def _log_counts(self, *args):
+        
+        counts = [count for _, count in args]
+        
+        if any(counts):
+            
+            self._log_space()
+            
+            for pair in args:
+                self._log_count(*pair)
+    
+    
+    def _log_count(self, description, count):
+        if count != 0:
+            self._log('Number of {:s}: {:d}'.format(description, count))
+    
+    
+    def _log_count_dict(self, message, counts):
+        
+        total_count = _aggregate_counts(counts)
+        
+        if total_count != 0:
+            
+            self._log_space()
+            
+            self._log(message)
+            
+            keys = counts.keys()
+            keys.sort()
+            
+            for key in keys:
+                count = counts[key]
+                if count != 0:
+                    self._log('    {:s} {:d}'.format(str(key), count))
+                
+                
     def _log_performance(self):
         num_files = self.total_num_files
         seconds = int(round(time.time() - self.start_time))
         rate = int(round(num_files / float(seconds)))
         f = 'Processed {:d} clip files in {:d} seconds, {:d} files per second.'
-        logging.info(f.format(num_files, seconds, rate))
+        self._log(f.format(num_files, seconds, rate))
                     
     
     def _log_total_num_calls(self):
-        _log_space()
+        self._log_space()
         predicate = lambda k: k is not None and k.startswith('Call')
         num_calls = _aggregate_counts(self.clip_counts, predicate)
-        logging.info(
+        self._log(
             'Total number of distinct call files: {:d}'.format(num_calls))
         
         
@@ -824,10 +890,10 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         if len(paths) != 0:
             
-            _log_space()
+            self._log_space()
             
             f = 'Paths ({:d}) of directories containing misplaced clip files:'
-            logging.info(f.format(len(paths)))
+            self._log(f.format(len(paths)))
             
             paths.sort()
                       
@@ -836,7 +902,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 num_misplaced_files = self.misplaced_file_counts[path]
                 total_num_files = _count_clip_files(path, recursive=False)
                 
-                logging.info(
+                self._log(
                     '{:s} ({:d} of {:d} files)'.format(
                         self._rel(path), num_misplaced_files, total_num_files))
             
@@ -845,15 +911,15 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         if len(paths) != 0:
             
-            _log_space()
+            self._log_space()
             
             f = 'Paths ({:d}) of {:s}:'
-            logging.info(f.format(len(paths), description))
+            self._log(f.format(len(paths), description))
                     
             paths = [self._rel(p) for p in paths]
             paths.sort()
             for path in paths:
-                logging.info(path)
+                self._log(path)
             
             
     def _log_nonexistent_time_dir_paths(self):
@@ -868,18 +934,18 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         if total_count != 0:
             
-            _log_space()
+            self._log_space()
             
             f = ('Paths ({:d}) of directories containing clip files with '
                  '{:s} times near DST {:s}:')
-            logging.info(f.format(len(counts), name, point))
+            self._log(f.format(len(counts), name, point))
             
             pairs = counts.items()
             pairs.sort()
             
             for path, count in pairs:
                 f = '{:s} ({:d} files)'
-                logging.info(f.format(self._rel(path), count))
+                self._log(f.format(self._rel(path), count))
 
 
     def _log_ambiguous_time_dir_paths(self):
@@ -890,9 +956,9 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         if len(self.resolved_times) != 0:
             
-            _log_space()
+            self._log_space()
             
-            logging.info('Examples of resolved times:')
+            self._log('Examples of resolved times:')
             
             keys = self.resolved_times.keys()
             keys.sort()
@@ -902,7 +968,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
                 station_name, night = key
                 delta_time, time = self.resolved_times[key]
                 
-                logging.info(
+                self._log(
                     station_name + ' ' + str(night) + ': ' +
                     str(delta_time) + ' ' + str(time))
             
@@ -911,15 +977,15 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         
         if len(pairs) != 0:
             
-            _log_space()
+            self._log_space()
             
             f = 'Pairs ({:d}) of {:s}:'
-            logging.info(f.format(len(pairs), description))
+            self._log(f.format(len(pairs), description))
             
             pairs = [(self._rel(p), self._rel(q)) for p, q in pairs]
             pairs.sort()
             for pair in pairs:
-                logging.info(pair)
+                self._log(str(pair))
 
 
 def _count_clip_files(dir_path, recursive=True):
@@ -933,47 +999,6 @@ def _count_clip_files(dir_path, recursive=True):
     return count
 
 
-def _log_space(num_lines=2):
-    for _ in xrange(num_lines):
-        logging.info('')
-            
-          
-def _log_counts(*args):
-    
-    counts = [count for _, count in args]
-    
-    if any(counts):
-        
-        _log_space()
-        
-        for pair in args:
-            _log_count(*pair)
-
-
-def _log_count(description, count):
-    if count != 0:
-        logging.info('Number of {:s}: {:d}'.format(description, count))
-
-
-def _log_count_dict(message, counts):
-    
-    total_count = _aggregate_counts(counts)
-    
-    if total_count != 0:
-        
-        _log_space()
-        
-        logging.info(message)
-        
-        keys = counts.keys()
-        keys.sort()
-        
-        for key in keys:
-            count = counts[key]
-            if count != 0:
-                logging.info('    {:s} {:d}'.format(str(key), count))
-                
-                
 def _aggregate_counts(counts, key_predicate=None):
 
     total = 0
@@ -984,6 +1009,44 @@ def _aggregate_counts(counts, key_predicate=None):
                 
     return total
 
-                
+         
+class _Logger(object):
+    
+    
+    def __init__(self, verbose, root_dir_path):
+        self.verbose = verbose
+        self.root_dir_path = root_dir_path
+        self.indentation = ''
+        self.indentation_increment = 4
+        
+        
+    def indent(self):
+        self.indentation += ' ' * self.indentation_increment
+        
+        
+    def unindent(self):
+        if len(self.indentation) >= self.indentation_increment:
+            self.indentation = self.indentation[:-self.indentation_increment]
+        
+            
+    def log(self, message):
+        print(self.indentation + message)
+            
+            
+    def indent_v(self):
+        if self.verbose:
+            self.indent()
+        
+        
+    def unindent_v(self):
+        if self.verbose:
+            self.unindent()
+            
+            
+    def log_v(self, message):
+        if self.verbose:
+            self.log(message)
+        
+        
 if __name__ == '__main__':
     _main()
