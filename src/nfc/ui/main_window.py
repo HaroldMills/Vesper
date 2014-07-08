@@ -25,7 +25,9 @@ class MainWindow(QMainWindow):
         
         super(MainWindow, self).__init__()
         
-        self._archive = Archive.open(archive_dir_path)
+        self._archive = Archive(archive_dir_path)
+        self._archive.open(False)
+        
         self._count_display_type = count_display_type
         
         self._create_ui(
@@ -115,3 +117,9 @@ class MainWindow(QMainWindow):
         
     def _on_query_frame_change(self):
         self._configure_date_chooser()
+
+
+    # The name of this method is camel case since it comes from Qt.
+    def closeEvent(self, event):
+        self._archive.close()
+        event.accept()
