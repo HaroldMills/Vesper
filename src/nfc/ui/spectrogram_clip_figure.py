@@ -267,7 +267,7 @@ def _get_clip_text(clip):
     name = _get_clip_class_display_name(clip.clip_class_name)
     
     if prefs['clipGrid.showClipTimes']:
-        time = _format_clip_time(clip.time)
+        time = _format_clip_time(clip)
     else:
         time = None
     
@@ -302,9 +302,18 @@ def _get_clip_class_display_name(name):
         return None
         
             
-def _format_clip_time(time):
-    millisecond = int(round(time.microsecond / 1000.))
-    return time.strftime('%H:%M:%S') + '.{:03d}'.format(millisecond)
+def _format_clip_time(clip):
+    
+    # Get clip time localized to station time zone.
+    time_zone = clip.station.time_zone
+    time = clip.time.astimezone(time_zone)
+    
+    hms = time.strftime('%H:%M:%S')
+    milliseconds = int(round(time.microsecond / 1000.))
+    milliseconds = '{:03d}'.format(milliseconds)
+    time_zone = time.strftime('%Z')
+    
+    return hms + '.' + milliseconds + ' ' + time_zone
 
 
 # TODO: Fix PySide (and wx, if it is also broken) event handling

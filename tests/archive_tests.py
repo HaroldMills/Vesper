@@ -3,6 +3,8 @@ import numpy as np
 import os
 import unittest
 
+import pytz
+
 from nfc.archive.archive import Archive
 from nfc.archive.clip_class import ClipClass
 from nfc.archive.detector import Detector
@@ -74,7 +76,7 @@ class ArchiveTests(unittest.TestCase):
         year, month, day, hour, minute, second, ms):
         
         time = datetime.datetime(
-                   year, month, day, hour, minute, second, ms * 1000)
+            year, month, day, hour, minute, second, ms * 1000, pytz.utc)
         
         sound = Bunch(samples=np.zeros(100), sample_rate=22050.)
         
@@ -229,7 +231,8 @@ class ArchiveTests(unittest.TestCase):
         for (r, er) in zip(result, expected_result):
             self.assertEqual(r.station.name, er[0])
             self.assertEqual(r.detector_name, er[1])
-            self.assertEqual(r.time, datetime.datetime(*er[2:9]))
+            time = datetime.datetime(*(er[2:9] + (pytz.utc,)))
+            self.assertEqual(r.time, time)
             self.assertEqual(r.clip_class_name, er[9])
     
     

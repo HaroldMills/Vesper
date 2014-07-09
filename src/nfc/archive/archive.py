@@ -8,6 +8,7 @@ import datetime
 import os.path
 
 import numpy as np
+import pytz
 import sqlite3 as sqlite
 
 from nfc.archive.clip_class import ClipClass
@@ -396,12 +397,15 @@ class Archive(object):
                 the name of the detector of the clip.
                 
             time : `datetime`
-                the start time of the clip.
+                the UTC start time of the clip.
+                
+                To help ensure archive data quality, the start time is
+                required to have the `pytz.utc` time zone.
                 
             sound : `object`
                 the clip sound.
                 
-                the clip sound must include a `samples` attribute
+                The clip sound must include a `samples` attribute
                 whose value is a NumPy array containing the 16-bit
                 two's complement samples of the sound, and a
                 `sample_rate` attribute specifying the sample rate
@@ -424,6 +428,9 @@ class Archive(object):
         station_id = self._check_station_name(station_name)
         detector_id = self._check_detector_name(detector_name)
         clip_class_id = self._check_clip_class_name(clip_class_name)
+        
+        if time.tzinfo is not pytz.utc:
+            raise ValueError('Clip time zone must be `pytz.utc`.')
         
         station = self._stations[station_id]
         night = _date_to_int(station.get_night(time))
@@ -680,7 +687,9 @@ class Archive(object):
         
         
     def _parse_clip_time(self, time):
-        return datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S.%f')
+        time = datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S.%f')
+        time = pytz.utc.localize(time)
+        return time
     
     
     def _classify_clip(self, clip_id, clip_class_name):
