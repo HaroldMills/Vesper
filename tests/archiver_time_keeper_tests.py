@@ -6,8 +6,8 @@ import unittest
 import pytz
 
 from nfc.archive.station import Station
-from old_bird.wrangler_time_keeper import (
-    WranglerTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
+from old_bird.archiver_time_keeper import (
+    ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
 
 
 _STATIONS = [
@@ -26,12 +26,12 @@ _MONITORING_START_TIMES = {
 }
 
 
-class WranglerTimeKeeperTests(unittest.TestCase):
+class ArchiverTimeKeeperTests(unittest.TestCase):
     
                
     def setUp(self):
         stations = self._create_stations(_STATIONS)
-        self.time_keeper = WranglerTimeKeeper(
+        self.time_keeper = ArchiverTimeKeeper(
             stations, _MONITORING_TIME_ZONES, _MONITORING_START_TIMES)
             
             

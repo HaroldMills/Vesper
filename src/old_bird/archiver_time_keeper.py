@@ -1,4 +1,4 @@
-"""Module containing class `WranglerTimeKeeper`."""
+"""Module containing class `ArchiverTimeKeeper`."""
 
 
 import datetime
@@ -22,10 +22,10 @@ class AmbiguousTimeError(Exception):
     pass
 
 
-class WranglerTimeKeeper(object):
+class ArchiverTimeKeeper(object):
     
     """
-    Auxiliary time-keeping class for the NFC wrangler.
+    Auxiliary time-keeping class for the NFC archiver.
     
     An instance of this class can convert both naive and elapsed
     monitoring times to UTC.

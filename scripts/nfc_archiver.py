@@ -17,8 +17,8 @@ from nfc.archive.detector import Detector
 from nfc.archive.dummy_archive import DummyArchive
 from nfc.archive.station import Station
 from nfc.util.directory_visitor import DirectoryVisitor
-from old_bird.wrangler_time_keeper import (
-    WranglerTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
+from old_bird.archiver_time_keeper import (
+    ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
 import nfc.archive.archive_utils as archive_utils
 import nfc.util.sound_utils as sound_utils
 import old_bird.file_name_utils as file_name_utils
@@ -48,7 +48,7 @@ _EXCLUDED_STATION_NAMES = frozenset(['Danby', 'LTU', 'Minatitlan'])
 
 _MONITORING_TIME_ZONE_NAMES = {}
 """
-See documentation for the `WranglerTimeKeeper` initializer `time_zone_names`
+See documentation for the `ArchiverTimeKeeper` initializer `time_zone_names`
 parameter.
 """
 
@@ -64,7 +64,7 @@ _MONITORING_START_TIMES = {
     }
 }
 """
-See documentation for the `WranglerTimeKeeper` initializer `start_times`
+See documentation for the `ArchiverTimeKeeper` initializer `start_times`
 parameter.
 """
 
@@ -341,7 +341,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
         self.duplicate_classification_path_pairs = set()
         self.inconsistent_reclassifications = set()
         
-        self.time_keeper = WranglerTimeKeeper(
+        self.time_keeper = ArchiverTimeKeeper(
             self.stations, _MONITORING_TIME_ZONE_NAMES,
             _MONITORING_START_TIMES)
         
