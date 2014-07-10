@@ -1,4 +1,4 @@
-"""Creates a clip archive from Old Bird clip directories."""
+"""Adds clips to an NFC archive from an external source directory."""
 
 
 from __future__ import print_function
@@ -129,10 +129,10 @@ def _main():
         
         archive = _create_and_open_archive(args)
         
-        visitor = _OldBirdDataDirectoryVisitor()
+        visitor = _OldBirdSourceDirectoryVisitor()
         visitor.visit(
             args.source_dir, archive, args.year, logger, args.dry_run,
-            args.max_num_clips, args.performance_logging_period)
+            args.max_num_clips, args.performance_reporting_period)
         
         _close_archive(archive, logger)
         
@@ -143,40 +143,64 @@ def _parse_args():
     
     parser = argparse.ArgumentParser(
         description='''
-            This script creates an NFC archive from a directory containing
-            Old Bird NFC data. As the data are processed, messages are
-            logged as errors are encountered, and a summary of the
-            data is logged at the end. When run with the -d option,
-            the script does not create an archive, but still processes all
-            of the data, logging the same messages.''')
-        
-    parser.add_argument(
-        '-d', '--dry-run', dest='dry_run', action='store_true', default=False,
-        help='process data but do not construct archive')
+            This script adds clips to an NFC archive from an external
+            source directory. The archive can be either a new or
+            existing one. The source directory has a hierarchical
+            structure and contains clips in individual sound files.
+            The script displays progress and error messages as it
+            proceeds, and a summary of its processing on completion.''',
+        fromfile_prefix_chars='@')
+    
+    date_format = 'YYYY-MM-DD'
     
     parser.add_argument(
-        '-m', '--max-num-clips', dest='max_num_clips', type=int,
-        default=None, help='maximum number of clips to process')
+        '--verbose', action='store_true', default=False,
+        help='display more detailed progress messages')
     
     parser.add_argument(
-        '-p', '--performance-logging-period',
-        dest='performance_logging_period', type=int, default=None,
-        help='period with which to report performance, as a number of clips')
+        '--dry-run', action='store_true', default=False,
+        help='process clips as usual except do not add them to archive')
     
     parser.add_argument(
-        '-v', '--verbose', dest='verbose', action='store_true', default=False,
-        help='log additional messages')
+        '--max-num-clips', type=int, default=None,
+        help='maximum number of clips to process')
     
     parser.add_argument(
-        'year', metavar='YEAR', type=int, help='four-digit year of data')
+        '--performance-reporting-period', type=int, metavar='NUM_CLIPS',
+        default=None, help='period with which to report performance')
     
     parser.add_argument(
-        'source_dir', metavar='SOURCE_DIR', type=str,
-        help='path of Old Bird data directory')
+        '--stations', nargs='+', metavar='STATION',
+        help='names of stations to include')
     
     parser.add_argument(
-        'dest_dir', metavar='DEST_DIR', type=str,
-        help='path of new archive directory (must not exist)')
+        '--excluded-stations', nargs='+', metavar='STATION',
+        help='names of stations to exclude')
+    
+    parser.add_argument(
+        '--dates', nargs='+', metavar=date_format,
+        help='one or more dates of clips to process')
+    
+    parser.add_argument(
+        '--start-date', metavar=date_format,
+        help='start date of clips to process')
+    
+    parser.add_argument(
+        '--end-date', metavar=date_format,
+        help='end date of clips to process')
+    
+    parser.add_argument(
+        '--year', type=int, metavar='YYYY', help='year of clips')
+    
+    parser.add_argument(
+        '--create-archive', action='store_true', default=False,
+        help='create new archive')
+    
+    parser.add_argument(
+        'source_dir', type=str, help='path of source root directory')
+    
+    parser.add_argument(
+        'archive_dir', type=str, help='path of archive root directory')
     
     args = parser.parse_args()
     
@@ -189,10 +213,14 @@ def _check_args(args):
         print('Maximum number of clips must be nonnegative.', file=sys.stderr)
         return False
     
-    if args.performance_logging_period is not None and \
-       args.performance_logging_period <= 0:
+    if args.performance_reporting_period is not None and \
+       args.performance_reporting_period <= 0:
         
         print('Performance logging period must be positive.', file=sys.stderr)
+        return False
+    
+    if args.year is None:
+        print('Year of data must be specified.')
         return False
     
     if args.year < 1900:
@@ -208,18 +236,29 @@ def _check_args(args):
         print(f.format(args.source_dir), file=sys.stderr)
         return False
     
-    if not args.dry_run and os.path.exists(args.dest_dir):
-        f = ('Destination directory "{:s}" exists. Please delete or '
-             'rename it and try again.')
-        print(f.format(args.dest_dir), file=sys.stderr)
-        return False
-    
+    if not args.dry_run:
+        
+        archive_dir_exists = os.path.exists(args.archive_dir)
+        
+        if args.create_archive and archive_dir_exists:
+            
+            f = ('Archive directory "{:s}" exists. Please delete or '
+                 'rename it and try again.')
+            print(f.format(args.archive_dir), file=sys.stderr)
+            return False
+        
+        elif not args.create_archive and not archive_dir_exists:
+            
+            f = 'Archive directory "{:s}" does not exist.'
+            print(f.format(args.archive_dir), file=sys.stderr)
+            return False
+        
     return True
     
     
 def _create_and_open_archive(args):
     
-    init_args = (args.dest_dir, _STATIONS, _DETECTORS, _CLIP_CLASSES)
+    init_args = (args.archive_dir, _STATIONS, _DETECTORS, _CLIP_CLASSES)
     
     if args.dry_run:
         archive = DummyArchive.create(*init_args)
@@ -242,12 +281,12 @@ def _close_archive(archive, logger):
     logger.log(f.format(delta))
         
 
-class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
+class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
     
     
     def visit(
         self, path, archive, year, logger, dry_run=False, max_num_clips=None,
-        performance_logging_period=None):
+        performance_reporting_period=None):
         
         self.root_path = path
         self.archive = archive
@@ -256,7 +295,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self.year = year
         self.dry_run = dry_run
         self.max_num_clips = max_num_clips
-        self.performance_logging_period = performance_logging_period
+        self.performance_reporting_period = performance_reporting_period
         
         # logging functions
         self._indent = logger.indent
@@ -267,7 +306,7 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
         self._log_v = logger.log_v
         
         level_names = ['root', 'station', 'month', 'day']
-        super(_OldBirdDataDirectoryVisitor, self).visit(path, level_names)
+        super(_OldBirdSourceDirectoryVisitor, self).visit(path, level_names)
         
         
     def _start_root_dir_visit(self, path):
@@ -601,8 +640,8 @@ class _OldBirdDataDirectoryVisitor(DirectoryVisitor):
             
         self.total_num_files += 1
         
-        if self.performance_logging_period is not None and \
-           self.total_num_files % self.performance_logging_period == 0:
+        if self.performance_reporting_period is not None and \
+           self.total_num_files % self.performance_reporting_period == 0:
             
             self._log_performance()
             
