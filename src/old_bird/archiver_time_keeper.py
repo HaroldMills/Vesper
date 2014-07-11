@@ -184,7 +184,7 @@ def _get_time_zone_data(station, time_zone_names):
     return (station.name, time_zone)
 
 
-_TIME_RE = re.compile(r'(\d\d?):(\d\d):(\d\d)')
+_TIME_RE = re.compile(r'^(\d\d?):(\d\d):(\d\d)$')
 
 
 def _parse_time(s):
@@ -223,7 +223,7 @@ def _get_all_dates(year):
     return [datetime.date.fromordinal(i) for i in xrange(start, end)]
 
 
-_DATE_RE = re.compile(r'(\d\d?)-(\d\d?)')
+_DATE_RE = re.compile(r'^(\d\d?)-(\d\d?)$')
  
  
 def _parse_date(s, year):
