@@ -451,8 +451,15 @@ class Archive(object):
             clip_class_name_1_id=ids[1],
             clip_class_name_2_id=ids[2])
     
-        # TODO: Handle exceptions.
-        self._cursor.execute(_INSERT_CLIP_SQL, clip_tuple)
+        try:
+            self._cursor.execute(_INSERT_CLIP_SQL, clip_tuple)
+            
+        except sqlite.IntegrityError:
+            raise ValueError(
+                ('There is already a clip in the archive for station "{:s}", '
+                 'detector "{:s}", and UTC time {:s}.').format(
+                 station_name, detector_name, _format_clip_time(time)))
+        
         clip_id = self._cursor.lastrowid
         
         clip = _Clip(
