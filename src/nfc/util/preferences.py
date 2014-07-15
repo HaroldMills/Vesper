@@ -61,7 +61,7 @@ def _load_preferences():
     try:
         preferences = json.loads('''
 {
-    "archiveDirPath": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall",
+    "archiveDirPath": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall Full Test",
     "stationName": "Alfred",
     "detectorName": "Tseep",
     "clipClassName": "Call",
