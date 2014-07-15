@@ -477,7 +477,7 @@ class _FiguresFrame(QWidget):
         if all_:
             intervals = ((0, self.num_visible_clips - 1),)
         else:
-            intervals = self.selection.selectedIntervals
+            intervals = self.selection.selected_intervals
             
         for i, j in intervals:
             

@@ -25,7 +25,7 @@ _COMMAND_SETS = {
         Ctrl-C CCSP
         Alt-c CAWA
         Alt-C CHSP
-        D ShDbUp
+        D DbUp
         f FOSP
         g GHSP
         h HOWA
@@ -35,10 +35,10 @@ _COMMAND_SETS = {
         m MOWA
         n Noise
         N NWTH
-        o Oven
+        o OVEN
         O Other
         p PAWA
-        P PALM
+        P PROW
         q Unknown
         s SVSP
         S SwLi
@@ -61,7 +61,7 @@ def _load_preferences():
     try:
         preferences = json.loads('''
 {
-    "archiveDirPath": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall Full Test",
+    "archiveDirPath": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall",
     "stationName": "Alfred",
     "detectorName": "Tseep",
     "clipClassName": "Call",
@@ -79,7 +79,7 @@ def _load_preferences():
     "clipGrid.clipTextFontSize": 11,
     "clipGrid.clipTextColor": "white",
     "clipGrid.clipClassTextColors": { "Call": "cyan" },
-    "classification.defaultCommandSet": "Calls"
+    "classification.defaultCommandSet": "Coarse"
     
 }
 ''')
