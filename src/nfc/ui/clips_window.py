@@ -9,6 +9,7 @@ from PySide.QtGui import (
     QBrush, QFrame, QLabel, QMainWindow, QPainter, QVBoxLayout, QWidget)
 import numpy as np
 
+from nfc.archive.archive import Archive
 from nfc.ui.flow_layout import FlowLayout
 from nfc.ui.multiselection import Multiselection
 from nfc.ui.spectrogram_clip_figure import SpectrogramClipFigure as ClipFigure
@@ -114,6 +115,7 @@ class ClipsWindow(QMainWindow):
         
     def _create_fragment_to_classes_dict(self, clip_classes):
         d = defaultdict(list)
+        d[Archive.CLIP_CLASS_NAME_UNCLASSIFIED].append(None)
         for c in clip_classes:
             for f in self._get_clip_class_name_fragments(c.name):
                 d[f].append(c)
@@ -315,16 +317,16 @@ _MODIFIERS = [
 """modifiers that can be used in classification commands."""
 
 
-def _get_classification_command(keyEvent):
+def _get_classification_command(key_event):
     
-    char = _CHARS.get(keyEvent.key())
+    char = _CHARS.get(key_event.key())
     
     if char is None:
         return None
     
     else:
         
-        modifiers = keyEvent.modifiers()
+        modifiers = key_event.modifiers()
         
 #         if modifiers & Qt.ControlModifier:
 #
@@ -472,7 +474,7 @@ class _FiguresFrame(QWidget):
         if self.num_visible_clips == 0:
             return
         
-        new_name = clip_class.name
+        new_name = clip_class.name if clip_class is not None else None
         
         if all_:
             intervals = ((0, self.num_visible_clips - 1),)

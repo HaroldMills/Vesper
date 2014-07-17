@@ -105,9 +105,11 @@ class QueryFrame(QFrame):
             Only
         '''
         
+        # TODO: Generate wildcard class names automatically.
         texts = [s.name for s in self._archive.clip_classes] + \
                 [Archive.CLIP_CLASS_NAME_ANY,
-                 Archive.CLIP_CLASS_NAME_UNCLASSIFIED]
+                 Archive.CLIP_CLASS_NAME_UNCLASSIFIED,
+                 'Call*']
         texts.sort()
         return texts
     

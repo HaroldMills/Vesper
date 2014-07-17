@@ -12,6 +12,10 @@ _COMMAND_SETS = {
         C Call All
         n Noise
         N Noise All
+        t Tone
+        T Tone All
+        u Unclassified
+        U Unclassified All
     ''',
     
     'Calls': '''
@@ -19,6 +23,7 @@ _COMMAND_SETS = {
         A ATSP
         b BTBW
         B BAWW
+        k Call
         c CSWA
         C CMWA
         Ctrl-c COYE
@@ -43,7 +48,9 @@ _COMMAND_SETS = {
         s SVSP
         S SwLi
         Ctrl-s SNBULALO
+        t Tone
         T ATSP
+        u Unclassified
         v VESP
         w WIWA
         W WTSP

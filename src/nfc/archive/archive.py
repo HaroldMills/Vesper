@@ -118,11 +118,7 @@ _CLASSIFY_CLIP_SQL = (
 class Archive(object):
     
     
-    # TODO: Move these somewhere else. They are UI constants, and
-    # this class should not know anything about UI. Note that when
-    # they are moved the `_getClipClassWhereConditions` method will
-    # need to be modified accordingly.
-    CLIP_CLASS_NAME_ANY = 'Any'
+    CLIP_CLASS_NAME_ANY = '*'
     CLIP_CLASS_NAME_UNCLASSIFIED = 'Unclassified'
 
 
@@ -628,7 +624,7 @@ class Archive(object):
                     ids = [self._clip_class_name_component_ids[c]
                            for c in components]
                     
-                    return ['clip_class_name_%d_id = {:d}'.format(p)
+                    return ['clip_class_name_{:d}_id = {:d}'.format(*p)
                             for p in enumerate(ids)]
                         
                 else:
