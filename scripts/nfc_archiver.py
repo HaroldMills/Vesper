@@ -1119,8 +1119,8 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
 
     def _log_bad_time_dir_paths(self, name, point):
         
-        name = '{:s}_time_file_counts'.format(name)
-        counts = getattr(self, name)
+        attribute_name = '{:s}_time_file_counts'.format(name)
+        counts = getattr(self, attribute_name)
         total_count = _aggregate_counts(counts)
         
         if total_count != 0:
