@@ -26,6 +26,7 @@ import old_bird.file_name_utils as file_name_utils
 
 
 _STATIONS = [Station(*t) for t in [
+    ('ACR', 'Audubon Center at Riverlands', 'US/Central'),
     ('Ajo', 'Ajo High School', 'US/Arizona'),
     ('Alfred', 'Klingensmith Residence', 'US/Eastern'),
     ('CLC', 'Columbia Land Conservancy', 'US/Eastern'),
@@ -38,6 +39,7 @@ _STATIONS = [Station(*t) for t in [
      u'Minatitl\u00E1n/Coatzacoalcos International Airport',
      'America/Mexico_City'),
     ('NMHS', 'North Manchester High School', 'US/Eastern'),
+    ('NSU', 'Northeastern State University', 'US/Central'),
     ('Oneonta', 'Oneonta Municipal Airport', 'US/Eastern'),
     ('ONWR', 'Ottawa National Wildlife Refuge', 'US/Eastern'),
     ('Skinner', 'Skinner State Park', 'US/Eastern'),
