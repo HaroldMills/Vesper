@@ -826,9 +826,9 @@ def _create_with_id(cls, id_, *args, **kwds):
     
     
 SPECTROGRAM_PARAMS = Bunch(
-    window=np.hanning(100),
-    hop_size=25,
-    dft_size=None,
+    window=np.hamming(128),
+    hop_size=10,
+    dft_size=256,
     ref_power=1)
 
 
