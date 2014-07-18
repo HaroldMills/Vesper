@@ -66,9 +66,13 @@ _COMMAND_SETS = {
 def _load_preferences():
     
     try:
-        preferences = json.loads('''
+        preferences = json.loads(r'''
 {
-    "archiveDirPath": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall",
+    "archiveDirPaths": {
+        "2012": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall",
+        "2014": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014"
+    },
+    "defaultArchive": "2012",
     "stationName": "Alfred",
     "detectorName": "Tseep",
     "clipClassName": "Call",

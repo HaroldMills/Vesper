@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 
+import argparse
 import sys
 
 from PySide.QtGui import QApplication
@@ -15,8 +16,14 @@ def _main():
     
     app = QApplication(sys.argv)
     
+    args = _parse_args()
+    
+    archive_dir_path = _get_archive_dir_path(args)
+    command_set_name = _get_command_set_name(args)
+    
     window = MainWindow(
-        prefs['archiveDirPath'], prefs['mainWindow.countDisplayType'],
+        archive_dir_path, command_set_name,
+        prefs['mainWindow.countDisplayType'],
         prefs['stationName'], prefs['detectorName'], prefs['clipClassName'],
         prefs['monthName'])
     
@@ -30,6 +37,41 @@ def _main():
     sys.exit()
 
 
+def _parse_args():
+    
+    parser = argparse.ArgumentParser(description='NFC Viewer')
+    
+    parser.add_argument(
+        '--archive', help='the name of the archive to view')
+    
+    parser.add_argument(
+        '--command-set', help='the name of the command set to use')
+
+    args = parser.parse_args()
+    
+    return args
+
+
+def _get_archive_dir_path(args):
+    
+    name = args.archive
+    
+    if name is None:
+        name = prefs['defaultArchive']
+        
+    return prefs['archiveDirPaths'][name]
+    
+    
+def _get_command_set_name(args):
+    
+    name = args.command_set
+    
+    if name is None:
+        name = prefs['classification.defaultCommandSet']
+        
+    return name
+        
+    
 def _set_geometry(window, available_rect):
     
     r = available_rect

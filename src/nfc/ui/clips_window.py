@@ -34,7 +34,7 @@ class ClipsWindow(QMainWindow):
     
     def __init__(
         self, parent, archive, station_name, detector_name, night,
-        clip_class_name):
+        clip_class_name, command_set_name):
         
         super(ClipsWindow, self).__init__(parent)
         
@@ -42,7 +42,7 @@ class ClipsWindow(QMainWindow):
         
         self._archive = archive
         
-        self._init_classification_dict()
+        self._init_classification_dict(command_set_name)
         
         self._create_ui()
         
@@ -54,15 +54,14 @@ class ClipsWindow(QMainWindow):
         self.setWindowTitle(title)
         
         
-    def _init_classification_dict(self):
+    def _init_classification_dict(self, command_set_name):
         
-        name = prefs.get('classification.defaultCommandSet')
-        
-        if name is None:
+        if command_set_name is None:
             self._classification_dict = {}
             
         else:
-            self._classification_dict = self._create_classification_dict(name)
+            self._classification_dict = \
+                self._create_classification_dict(command_set_name)
         
         
     def _create_classification_dict(self, command_set_name):
