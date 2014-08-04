@@ -264,7 +264,7 @@ class ClipsWindow(QMainWindow):
         
         key = e.key()
         
-        if key == Qt.Key_PageDown:
+        if key == Qt.Key_PageDown or key == Qt.Key_Space:
             self.move_down_one_page()
             
         elif key == Qt.Key_PageUp:
