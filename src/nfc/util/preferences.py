@@ -9,13 +9,17 @@ _COMMAND_SETS = {
                  
     'Coarse': '''
         c Call
-        C Call All
+        C Call Page
+        Alt-c Call All
         n Noise
-        N Noise All
+        N Noise Page
+        Alt-n Noise All
         t Tone
-        T Tone All
+        T Tone Page
+        Alt-t Tone All
         u Unclassified
-        U Unclassified All
+        U Unclassified Page
+        Alt-u Unclassified All
     ''',
     
     'Calls': '''
@@ -119,7 +123,7 @@ def _parse_command_set(name, text):
     return (name, dict(pairs))
 
 
-_ALL_MARKER = 'All'
+_SCOPES = frozenset(['Selected', 'Page', 'All'])
 
 
 def _parseCommand(line, lineNum, commandSetName):
@@ -135,15 +139,14 @@ def _parseCommand(line, lineNum, commandSetName):
     
     name = items[0]
     command = items[1]
-    all_ = n == 3
+    scope = items[2] if n == 3 else 'Selected'
     
-    if all_ and items[2] != _ALL_MARKER:
-        raise ValueError(
-            ('Bad command specification "{:s}" for command set "{:s}": '
-             'third component must be "{:s}".').format(
-                line, commandSetName, _ALL_MARKER))
+    if scope not in _SCOPES:
+        f = ('Bad command specification "{:s}" for command set "{:s}": '
+             'third component must be "Page" or "All".')
+        raise ValueError(f.format(line, commandSetName))
         
-    return (name, (command, all_))
+    return (name, (command, scope))
 
 
 preferences = _load_preferences()

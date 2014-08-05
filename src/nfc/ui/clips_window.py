@@ -468,25 +468,41 @@ class _FiguresFrame(QWidget):
                 return clip_num - self.first_visible_clip_num
     
     
-    def _classify(self, clip_class, all_):
-        
-        if self.num_visible_clips == 0:
-            return
+    def _classify(self, clip_class, scope):
         
         new_name = clip_class.name if clip_class is not None else None
         
-        if all_:
-            intervals = ((0, self.num_visible_clips - 1),)
+        if scope == 'All':
+            intervals = ((0, len(self._clips) - 1),)
+            self._classify_aux(intervals, new_name)
+            
         else:
-            intervals = self.selection.selected_intervals
+            
+            if self.num_visible_clips == 0:
+                return
+            
+            first = self.first_visible_clip_num
+            
+            if scope == 'Page':
+                intervals = ((first, first + self.num_visible_clips - 1),)
+            else:
+                intervals = _shift(self.selection.selected_intervals, first)
+                
+            self._classify_aux(intervals, new_name)
+            
+            if scope == 'Selected':
+                self._move_selection_forward(intervals)
+                
+                            
+    def _classify_aux(self, intervals, new_name):
+        
+        first = self.first_visible_clip_num
             
         for i, j in intervals:
             
-            first_visible_clip_num = self.first_visible_clip_num
-            
             for k in xrange(i, j + 1):
                 
-                clip = self._clips[first_visible_clip_num + k]
+                clip = self._clips[k]
                 old_name = clip.clip_class_name
                 
 #                 print('ClipsWindow._classify', first_visible_clip_num + k,
@@ -496,19 +512,20 @@ class _FiguresFrame(QWidget):
                     
                     clip.clip_class_name = new_name
                     
-                    # This is very naughty. The figures frame should not
-                    # be rooting around in clip frames' private parts and
-                    # telling their clip figures to update their clip text.
-                    # Instead, clips (as models) should probably support
-                    # observers and clip figures (as views of clips) should
-                    # update themselves when they are notified that their
-                    # clips' classifications have changed.
-                    figure = self._active_clip_frames[k]._clip_figure
-                    figure._update_clip_text()
+                    if  k >= first and k < first + self.num_visible_clips:
                     
-        self._move_selection_forward(intervals)
-                
-                
+                        # This is very naughty. The figures frame should not
+                        # be rooting around in clip frames' private parts and
+                        # telling their clip figures to update their clip text.
+                        # Instead, clips (as models) should probably support
+                        # observers and clip figures (as views of clips) should
+                        # update themselves when they are notified that their
+                        # clips' classifications have changed.
+                        frame = self._active_clip_frames[k - first]
+                        figure = frame._clip_figure
+                        figure._update_clip_text()
+                    
+
     def _move_selection_forward(self, intervals):
         
         if len(intervals) == 1:
@@ -574,6 +591,10 @@ class _FiguresFrame(QWidget):
         self._update_clip_frame_selection_states()
             
         self.setFocus()
+
+
+def _shift(intervals, n):
+    return tuple([(i + n, j + n) for i, j in intervals])
 
 
 class _FiguresFrameWithFlowLayout(_FiguresFrame):
