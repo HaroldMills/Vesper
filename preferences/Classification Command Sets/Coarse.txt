@@ -1,0 +1,12 @@
+c Call
+C Call Page
+Alt-c Call All
+n Noise
+N Noise Page
+Alt-n Noise All
+t Tone
+T Tone Page
+Alt-t Tone All
+u Unclassified
+U Unclassified Page
+Alt-u Unclassified All

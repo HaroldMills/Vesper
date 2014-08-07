@@ -1,0 +1,25 @@
+{
+    "archiveDirPaths": {
+        "2012": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall",
+        "2014": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014"
+    },
+    "defaultArchive": "2012",
+    "stationName": "Alfred",
+    "detectorName": "Tseep",
+    "clipClassName": "Call",
+    "monthName": "September 2012",
+    "mainWindow.width": 1000,
+    "mainWindow.height": 800,
+    "mainWindow.countDisplayType": "archive calendar",
+    "clipsWindow.width": 1200,
+    "clipsWindow.height": 800,
+    "clipGrid.numRows": 4,
+    "clipGrid.numColumns": 5,
+    "clipGrid.showMouseTimeFreq": true,
+    "clipGrid.showClipClassNames": true,
+    "clipGrid.showClipTimes": true,
+    "clipGrid.clipTextFontSize": 11,
+    "clipGrid.clipTextColor": "white",
+    "clipGrid.clipClassTextColors": { "Call": "cyan" },
+    "classification.defaultCommandSet": "Coarse"
+}
