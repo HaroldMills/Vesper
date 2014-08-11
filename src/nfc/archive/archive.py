@@ -17,6 +17,7 @@ from nfc.archive.station import Station
 from nfc.util.audio_file_utils import \
     WAVE_FILE_NAME_EXTENSION as _CLIP_FILE_NAME_EXTENSION
 from nfc.util.bunch import Bunch
+from nfc.util.preferences import preferences as prefs
 from nfc.util.spectrogram import Spectrogram
 import nfc.util.sound_utils as sound_utils
 
@@ -825,10 +826,31 @@ def _create_with_id(cls, id_, *args, **kwds):
     return obj
     
     
+# This is a feeble attempt to abstract window types away from NumPy.
+# We should eventually support a `WindowType` class and window type plugins.
+_WINDOWS = {
+    'Bartlett': np.bartlett,
+    'Blackman': np.blackman,
+    'Hamming': np.hamming,
+    'Hann': np.hanning,
+    'Rectangular': np.ones
+}
+
+
+# TODO: Figure out a better way to manage clip spectrograms, especially
+# one that supports clients that use spectrograms computed with different
+# spectrogram parameters. Some sort of general facility for computing
+# and managing derived data (not just spectrograms) for a collection of
+# clips may be the way to go.
+# TODO: Confine code that reads `clipsWindow` preferences to the
+# `clips_window` module. This can happen after we figure out how to
+# support clients that use spectrograms computed with different
+# parameters.
+_WINDOW = _WINDOWS[prefs['clipsWindow.spectrogram.windowType']]
 SPECTROGRAM_PARAMS = Bunch(
-    window=np.hamming(128),
-    hop_size=10,
-    dft_size=256,
+    window=_WINDOW(prefs['clipsWindow.spectrogram.windowSize']),
+    hop_size=prefs['clipsWindow.spectrogram.hopSize'],
+    dft_size=prefs['clipsWindow.spectrogram.dftSize'],
     ref_power=1)
 
 

@@ -137,9 +137,9 @@ class ClipsWindow(QMainWindow):
         self._title_label.setAlignment(Qt.AlignCenter)
         
         config = Bunch(
-            clips_area_width=1.5,         # seconds
-            clip_spacing=.01,            # fraction of clips frame width
-            num_rows=6,
+            clips_area_width=prefs['clipsWindow.duration'],
+            clip_spacing=prefs['clipsWindow.spacing'],
+            num_rows=prefs['clipsWindow.numRows'],
             min_clip_height=40,
             selection_rect_thickness=3,
             selection_rect_color='red'
