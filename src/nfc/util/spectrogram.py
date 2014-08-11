@@ -9,7 +9,10 @@ from scipy import interpolate
 import numpy as np
 
 
-_SMALL_POWER = 1e-100
+# It's important not to make this too small, so that it is representable
+# as a 32-bit floating point number. The smallest normal (i.e. not
+# denormalized) positive floating point number is about 1.18e-38.
+_SMALL_POWER = 1e-30
 
 
 # TODO: Compare this spectrogram carefully to that computed by the
@@ -137,21 +140,16 @@ class Spectrogram(object):
             # TODO: If the following is unacceptably slow, implement a fast
             # replacement, for example using Cython or a NumPy ufunc.
             
-            # We substitute `_SMALL_POWER` for zero values in the gram
-            # before taking logs to avoid error messages, and also to
-            # avoid minus infinity values in the output. I believe that
-            # having large negative numbers is preferable to having
-            # infinities since the latter do not play well with other
-            # numbers in subsequent arithmetic (for example 0 times
-            # infinity is `NaN`). There is a slight chance that in some
-            # situation the large negative number we produce will not
-            # be small enough, but I think that chance is negligible.
-            # If we implement a fast replacement for the following,
-            # we can simply replace zeros with the largest magnitude
-            # negative number, a more satisfactory solution.
+            # We substitute `_SMALL_POWER` for small values in the gram
+            # before taking logs to avoid divide by zero error messages
+            # in the call to `np.log10`, and to avoid minus infinity
+            # values in the output. Having large negative numbers is
+            # preferable to having infinities since the latter do not
+            # play well with other numbers in subsequent arithmetic
+            # (for example 0 times infinity is `NaN`).
             
             spectra /= ref_power
-            spectra[spectra == 0] = _SMALL_POWER
+            spectra[spectra < _SMALL_POWER] = _SMALL_POWER
             spectra = 10. * np.log10(spectra)
             
         sample_rate = float(sound.sample_rate)
