@@ -203,6 +203,10 @@ def _parse_args():
         help='one or more dates of clips to process')
     
     parser.add_argument(
+        '--end', action='store_true', default=False,
+        help='flag to terminate list of station names or dates')
+    
+    parser.add_argument(
         '--start-date', metavar=date_format,
         help='start date of clips to process')
     
