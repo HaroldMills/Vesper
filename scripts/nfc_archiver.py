@@ -524,10 +524,14 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
             self._ignore_month_dir(path, 'unrecognized')
             return False
         
-        elif not self._is_month_included(self.year, month):
-            self._count_ignored_dir_files(path)
-            return False
-            
+        # An older version of this method ignored a month directory
+        # if none of the days of that month were to be processed.
+        # This was a mistake, however, since we want to accommodate
+        # day directories for the last day of one month that are
+        # placed in the directory for the next month, for example
+        # the day directory for April 30 in the May month directory.
+        # This is the norm in Old Bird data.
+        
         else:
             self.month = month
             f = 'Month "{:s}" {:d}'
@@ -543,40 +547,6 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
         self._count_ignored_dir_files(path)
             
             
-    def _is_month_included(self, year, month):
-        
-        if self.dates is not None:
-            for date in self.dates:
-                if date.year == year and date.month == month:
-                    return True
-                
-        else:
-            return self._is_month_ge_start_month(year, month) and \
-                   self._is_month_le_end_month(year, month)
-            
-            
-    def _is_month_ge_start_month(self, year, month):
-        
-        if self.start_date is None:
-            return True
-        
-        else:
-            date = datetime.date(year, month, 1)
-            start = self.start_date.replace(day=1)
-            return date >= start
-    
-    
-    def _is_month_le_end_month(self, year, month):
-        
-        if self.end_date is None:
-            return True
-        
-        else:
-            date = datetime.date(year, month, 1)
-            end = self.end_date.replace(day=1)
-            return date <= end
-
-    
     def _end_month_dir_visit(self, path):
         self._unindent()
         
