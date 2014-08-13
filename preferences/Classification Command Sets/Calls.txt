@@ -21,8 +21,9 @@ n Noise
 N NWTH
 o OVEN
 O Other
-p PAWA
-P PROW
+p NOPA
+P PAWA
+Alt-p PROW
 q Unknown
 s SVSP
 S SwLi
