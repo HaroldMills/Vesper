@@ -16,7 +16,7 @@
     "clipsWindow.numRows": 6,
     "clipsWindow.duration": 1.5,
     "clipsWindow.spacing": 0.01,
-    "clipsWindow.spectrogram.windowType": "Rectangular",
+    "clipsWindow.spectrogram.windowType": "Hann",
     "clipsWindow.spectrogram.windowSize": 128,
     "clipsWindow.spectrogram.hopSize": 10,
     "clipsWindow.spectrogram.dftSize": 256,
@@ -25,5 +25,6 @@
     "clipGrid.showClipTimes": true,
     "clipGrid.clipTextFontSize": 11,
     "clipGrid.clipTextColor": "white",
-    "classification.defaultCommandSet": "Coarse"
+    "classification.defaultCommandSet": "Coarse",
+    "classification.advanceAfterClassification": true
 }
