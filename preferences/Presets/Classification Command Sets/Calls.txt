@@ -24,6 +24,7 @@ O Other
 p NOPA
 P PAWA
 Alt-p PROW
+Alt-P PRAW
 q Unknown
 s SVSP
 S SwLi

@@ -11,6 +11,7 @@ import sys
 _PREFS_DIR_NAME = 'NFC'
 _PREFS_VAR_NAME = 'NFC_PREFS'
 _PREFS_FILE_NAME = 'Preferences.json'
+_PRESETS_DIR_NAME = 'Presets'
 _COMMAND_SETS_DIR_NAME = 'Classification Command Sets'
 _TEXT_FILE_NAME_EXTENSION = '.txt'
 _COMMAND_SCOPES = frozenset(['Selected', 'Page', 'All'])
@@ -59,7 +60,10 @@ def _handle_error(message):
 def _parse_command_sets(prefs_dir_path):
     
     command_sets = {}
-    dir_path = os.path.join(prefs_dir_path, _COMMAND_SETS_DIR_NAME)
+    dir_path = os.path.join(
+        prefs_dir_path, _PRESETS_DIR_NAME, _COMMAND_SETS_DIR_NAME)
+    
+    # TODO: Complain if preset directory does not exist.
     
     for _, _, file_names in os.walk(dir_path):
         
