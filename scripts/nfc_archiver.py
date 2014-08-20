@@ -32,6 +32,7 @@ _STATIONS = [Station(*t) for t in [
     ('CLC', 'Columbia Land Conservancy', 'US/Eastern'),
     ('Danby', 'Evans Residence', 'US/Eastern'),
     ('DHBO', 'Derby Hill Bird Observatory', 'US/Eastern'),
+    ('Findlay', 'Findlay Airport', 'US/Eastern'),
     ('HHSS', 'Harlingen High School South', 'US/Central'),
     ('JAS', 'Jamestown Audubon Society', 'US/Eastern'),
     ('LTU', 'Louisiana Technical University', 'US/Central'),
@@ -42,7 +43,9 @@ _STATIONS = [Station(*t) for t in [
     ('NSU', 'Northeastern State University', 'US/Central'),
     ('Oneonta', 'Oneonta Municipal Airport', 'US/Eastern'),
     ('ONWR', 'Ottawa National Wildlife Refuge', 'US/Eastern'),
+    ('Portage', 'Portage County Municipal Airport', 'US/Eastern'),
     ('Skinner', 'Skinner State Park', 'US/Eastern'),
+    ('Taunton', 'Taunton Municipal Airport', 'US/Eastern'),
     ('WFU', 'Wake Forest University', 'US/Eastern')
 ]]
 
@@ -68,8 +71,10 @@ See documentation for the `ArchiverTimeKeeper` initializer `start_times`
 parameter.
 """
 
-
-_DETECTORS = [Detector('Tseep')]
+_DETECTORS = [
+    Detector('Tseep'),
+    Detector('Thrush')
+]
 
 _CLIP_CLASS_DIR_NAME_CORRECTIONS = {
     'calls': 'call',
@@ -85,10 +90,11 @@ corrections.
 
 _CALL_CLIP_CLASS_NAMES = frozenset([
                           
-    'AMRE', 'ATSP', 'BAWW', 'BRSP', 'BTBW', 'CAWA', 'CCSP', 'CHSP',
-    'CMWA', 'COYE', 'CSWA', 'FOSP', 'GHSP', 'HESP', 'HOWA', 'INBU',
-    'LALO', 'LCSP', 'MOWA', 'NOPA', 'NWTH', 'OVEN', 'PAWA', 'PROW',
-    'SNBU', 'SVSP', 'VESP', 'WCSP', 'WIWA', 'WTSP', 'YRWA',
+    'AMRE', 'ATSP', 'BAWW', 'BBWA', 'BRSP', 'BTBW', 'CAWA', 'CCSP',
+    'CHSP', 'CMWA', 'COYE', 'CSWA', 'DICK', 'FISP', 'FOSP', 'GHSP',
+    'HESP', 'HOWA', 'INBU', 'LALO', 'LCSP', 'LOWA', 'MOWA', 'NOPA',
+    'NWTH', 'OVEN', 'PAWA', 'PRAW', 'PROW', 'SNBU', 'SVSP', 'VESP',
+    'WCSP', 'WIWA', 'WTSP', 'YRWA',
     
     'WTSP.Songtype',
     
