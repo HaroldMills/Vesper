@@ -280,20 +280,6 @@ class ClipsWindow(QMainWindow):
         self._update_title()
         
 
-    # TODO: What happens to selection when you move down or up less
-    # than a full page?
-    
-    
-    def move_down_one_row(self):
-        self._figures_frame.move_down_one_row()
-        self._update_title()
-                        
-            
-    def move_up_one_row(self):
-        self._figures_frame.move_up_one_row()
-        self._update_title()
-
-    
     def move_down_one_page(self):
         self._figures_frame.move_down_one_page()
         self._update_title()
@@ -571,9 +557,9 @@ class _FiguresFrame(QWidget):
             frame.selected = frame.index in self.selection
 
 
-    # TODO: Eliminate navigation by single rows? We don't use it.
-    def move_down_one_row(self):
-        self._move_by_num_rows(1)
+    def move_down_one_page(self):
+        if self.first_visible_row_num + self.num_rows < self.total_num_rows:
+            self._move_by_num_rows(self.num_rows)
         
     
     def _move_by_num_rows(self, num_rows):
@@ -581,15 +567,6 @@ class _FiguresFrame(QWidget):
             self.first_visible_row_num += num_rows
             
             
-    def move_up_one_row(self):
-        self._move_by_num_rows(-1)
-        
-    
-    def move_down_one_page(self):
-        if self.first_visible_row_num + self.num_rows < self.total_num_rows:
-            self._move_by_num_rows(self.num_rows)
-        
-    
     def move_up_one_page(self):
         self._move_by_num_rows(-self.num_rows)
         
