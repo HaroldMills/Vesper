@@ -17,10 +17,6 @@ from nfc.util.bunch import Bunch
 from nfc.util.preferences import preferences as prefs
 
 
-# TODO: Perhaps `ClipsWindow` should not know about archives, only about
-# clips.
-
-
 _SPACING_ASPECT_RATIO = 2
 """ratio of vertical clip spacing to minimum horizontal spacing."""
 
@@ -246,7 +242,7 @@ class ClipsWindow(QMainWindow):
             pair = self.classification_dict.get(command)
         
             if pair is not None:
-                self._figures_frame._classify(*pair)
+                self.classify(*pair)
                 
             else:
                 # key is not a classification command
@@ -279,6 +275,11 @@ class ClipsWindow(QMainWindow):
         return self._classification_dict
         
         
+    def classify(self, clip_class, scope):
+        self._figures_frame.classify(clip_class, scope)
+        self._update_title()
+        
+
     # TODO: What happens to selection when you move down or up less
     # than a full page?
     
@@ -468,13 +469,13 @@ class _FiguresFrame(QWidget):
                 return clip_num - self.first_visible_clip_num
     
     
-    def _classify(self, clip_class, scope):
+    def classify(self, clip_class, scope):
         
         new_name = clip_class.name if clip_class is not None else None
         
         if scope == 'All':
             intervals = ((0, len(self._clips) - 1),)
-            self._classify_aux(intervals, new_name)
+            self._classify(intervals, new_name)
             
         else:
             
@@ -488,13 +489,13 @@ class _FiguresFrame(QWidget):
             else:
                 intervals = _shift(self.selection.selected_intervals, first)
                 
-            self._classify_aux(intervals, new_name)
+            self._classify(intervals, new_name)
             
-            if scope == 'Selected':
-                self._move_selection_forward(intervals)
+            if prefs['classification.advanceAfterClassification']:
+                self._advance_after_classification(scope, intervals)
                 
                             
-    def _classify_aux(self, intervals, new_name):
+    def _classify(self, intervals, new_name):
         
         first = self.first_visible_clip_num
             
@@ -503,10 +504,8 @@ class _FiguresFrame(QWidget):
             for k in xrange(i, j + 1):
                 
                 clip = self._clips[k]
-                old_name = clip.clip_class_name
                 
-#                 print('ClipsWindow._classify', first_visible_clip_num + k,
-#                       new_name, old_name)
+                old_name = clip.clip_class_name
                 
                 if new_name != old_name:
                     
@@ -526,32 +525,53 @@ class _FiguresFrame(QWidget):
                         figure._update_clip_text()
                     
 
-    def _move_selection_forward(self, intervals):
+    def _advance_after_classification(self, scope, intervals):
         
-        if len(intervals) == 1:
+        if scope == 'Selected' and _is_singleton(intervals):
+                
+            clip_num = intervals[0][0]
             
-            start, end = intervals[0]
-        
-            if start == end:
+            last_visible_clip_num = \
+                self.first_visible_clip_num + self.num_visible_clips - 1
+            
+            if clip_num != last_visible_clip_num:
+                # selected clip is not last on this page
                 
-                last_visible_clip_num = \
-                    self.first_visible_clip_num + self.num_visible_clips - 1
+                self._select_clip(clip_num + 1)
+
+            elif clip_num != len(self._clips) - 1:
+                # there are more clips
                 
-                if start != last_visible_clip_num:
+                self.move_down_one_page()
+                self._select_clip(last_visible_clip_num + 1)
+                
+        elif scope == 'Page':
                     
-                    self.selection.select(start + 1)
-                    
-                    # TODO: Should selections be observable, so that we
-                    # can observe the selection and update our graphical
-                    # representation of it when it changes?
-                    self._update_clip_frame_selection_states()
-                    
+            last_visible_clip_num = \
+                self.first_visible_clip_num + self.num_visible_clips - 1
+            
+            if last_visible_clip_num != len(self._clips) - 1:
+                # there are more clips
+                
+                self.move_down_one_page()
+                
         
+    def _select_clip(self, clip_num):
+        
+        self.selection.select(clip_num - self.first_visible_clip_num)
+        
+        # TODO: Should selections be observable, so that we
+        # can observe the selection and update our graphical
+        # representation of it when it changes?
+        self._update_clip_frame_selection_states()
+        
+
     def _update_clip_frame_selection_states(self):
         for frame in self._active_clip_frames:
             frame.selected = frame.index in self.selection
 
 
+    # TODO: Eliminate navigation by single rows? We don't use it.
     def move_down_one_row(self):
         self._move_by_num_rows(1)
         
@@ -592,6 +612,16 @@ class _FiguresFrame(QWidget):
             
         self.setFocus()
 
+
+def _is_singleton(intervals):
+    
+    if len(intervals) != 1:
+        return False
+    
+    else:
+        start, end = intervals[0]
+        return start == end
+    
 
 def _shift(intervals, n):
     return tuple([(i + n, j + n) for i, j in intervals])
