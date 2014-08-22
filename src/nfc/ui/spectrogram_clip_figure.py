@@ -161,7 +161,7 @@ class SpectrogramClipFigure(ClipFigure):
             
             pos = self._get_mouse_pos(event)
             
-            if prefs['clipGrid.showMouseTimeFreq'] and pos is not None:
+            if prefs['clipFigure.showMouseLocation'] and pos is not None:
                 x, y = pos
                 text = '{:.3f} s  {:d} Hz'.format(x, int(round(y)))
                 
@@ -255,8 +255,8 @@ def _show_event(e, prefix):
 
 def _create_clip_text(axes):
     # TODO: Allow control of font name?
-    color = prefs['clipGrid.clipTextColor']
-    size = prefs['clipGrid.clipTextFontSize']
+    color = prefs['clipFigure.clipTextColor']
+    size = prefs['clipFigure.clipTextFontSize']
     return axes.text(
         .5, .02, '', color=color, size=size, ha='center',
         transform=axes.transAxes)
@@ -266,7 +266,7 @@ def _get_clip_text(clip):
     
     name = _get_clip_class_display_name(clip.clip_class_name)
     
-    if prefs['clipGrid.showClipTimes']:
+    if prefs['clipFigure.showClipTimes']:
         time = _format_clip_time(clip)
     else:
         time = None
@@ -283,8 +283,7 @@ def _get_clip_text(clip):
 
 def _get_clip_class_display_name(name):
     
-    # TODO: Change `clipGrid` in preferences names.
-    if prefs['clipGrid.showClipClassNames']:
+    if prefs['clipFigure.showClipClassNames']:
         
         if name is None:
             return Archive.CLIP_CLASS_NAME_UNCLASSIFIED

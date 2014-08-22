@@ -38,7 +38,8 @@ def _load_preferences():
     file_.close()
         
     try:
-        prefs['classification.commandSets'] = \
+        # TODO: Implement preset manager and get command sets from it?
+        prefs['clipsWindow.commandSets'] = \
             _parse_command_sets(prefs_dir_path)
     except ValueError as e:
         _handle_error(str(e))

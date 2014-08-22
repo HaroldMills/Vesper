@@ -842,15 +842,15 @@ _WINDOWS = {
 # spectrogram parameters. Some sort of general facility for computing
 # and managing derived data (not just spectrograms) for a collection of
 # clips may be the way to go.
-# TODO: Confine code that reads `clipsWindow` preferences to the
+# TODO: Confine code that reads `clipFigure` preferences to the
 # `clips_window` module. This can happen after we figure out how to
 # support clients that use spectrograms computed with different
 # parameters.
-_WINDOW = _WINDOWS[prefs['clipsWindow.spectrogram.windowType']]
+_WINDOW = _WINDOWS[prefs['clipFigure.spectrogram.windowType']]
 SPECTROGRAM_PARAMS = Bunch(
-    window=_WINDOW(prefs['clipsWindow.spectrogram.windowSize']),
-    hop_size=prefs['clipsWindow.spectrogram.hopSize'],
-    dft_size=prefs['clipsWindow.spectrogram.dftSize'],
+    window=_WINDOW(prefs['clipFigure.spectrogram.windowSize']),
+    hop_size=prefs['clipFigure.spectrogram.hopSize'],
+    dft_size=prefs['clipFigure.spectrogram.dftSize'],
     ref_power=1)
 
 

@@ -62,7 +62,7 @@ class ClipsWindow(QMainWindow):
         
     def _create_classification_dict(self, command_set_name):
         
-        command_sets = prefs.get('classification.commandSets')
+        command_sets = prefs.get('clipsWindow.commandSets')
         
         if command_sets is None:
             
@@ -477,7 +477,7 @@ class _FiguresFrame(QWidget):
                 
             self._classify(intervals, new_name)
             
-            if prefs['classification.advanceAfterClassification']:
+            if prefs['clipsWindow.advanceAfterClassification']:
                 self._advance_after_classification(scope, intervals)
                 
                             
