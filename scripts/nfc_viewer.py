@@ -14,12 +14,14 @@ from nfc.util.preferences import preferences as prefs
 
 def _main():
     
-    app = QApplication(sys.argv)
-    
     args = _parse_args()
-    
     archive_dir_path = _get_archive_dir_path(args, prefs)
     command_set_name = _get_command_set_name(args, prefs)
+
+    # This must happen before any other QT operations, including
+    # creating the main window.
+    app = QApplication(sys.argv)
+    
     count_display_type = 'archive calendar'
 
     window = MainWindow(
@@ -56,22 +58,42 @@ def _parse_args():
 
 def _get_archive_dir_path(args, prefs):
     
-    # TODO: Handle errors more gracefully.
-    
     name = args.archive
     if name is None:
-        name = prefs['archive']
+        name = prefs.get('archive')
         
-    return prefs['archives'][name]
+    if name is None:
+        _handle_init_error(
+            'No archive name specified. Please specify one either via an '
+            '"--archive" command line argument or the "archive" preference.')
+        
+    archives = prefs.get('archives')
+    
+    if archives is None:
+        _handle_init_error(
+            'No "archives" preference found. This preference is required '
+            'and should be a JSON object whose member names and values '
+            'are archive names and directory paths, respectively.')
+
+    path = archives.get(name)
+    
+    if path is None:
+        f = 'No archive "{:s}" found in "archives" preference.'
+        _handle_init_error(f.format(name))
+        
+    return path
     
     
+def _handle_init_error(message):
+    print(message, file=sys.stderr)
+    sys.exit(1)
+
+
 def _get_command_set_name(args, prefs):
-    
-    # TODO: Handle errors more gracefully.
     
     name = args.command_set
     if name is None:
-        name = prefs['clipsWindow.defaultCommandSet']
+        name = prefs.get('clipsWindow.defaultCommandSet')
         
     return name
         
