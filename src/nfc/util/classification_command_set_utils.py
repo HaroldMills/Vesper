@@ -11,25 +11,26 @@ _CHARS_DICT = dict((eval('Qt.Key_' + c.upper()), c) for c in _ALPHABETIC_CHARS)
 """mapping from integer Qt key codes to lower-case characters."""
 
 _CHARS = frozenset(_ALPHABETIC_CHARS + _ALPHABETIC_CHARS.upper())
-"""set of allowed command characters."""
+"""set of recognized command characters."""
 
 _MODIFIER_PAIRS = [('Alt', Qt.AltModifier)]
 """
-list of (command modifier, QT modifier key) pairs.
+list of recognized (modifier name, QT keyboard modifier flag) pairs.
 
 Note that we do *not* allow classification commands that use the control
 modifier (i.e. the control key on Linux and Windows and the command key
 on Mac OS X) since they could collide with menu item keyboard accelerators.
 """
 
-_ALLOWED_MODIFIERS = [p[0] for p in _MODIFIER_PAIRS]
-"""list of allowed command modifiers."""
+_MODIFIER_NAMES = frozenset([p[0] for p in _MODIFIER_PAIRS])
+"""set of recognized command modifiers."""
 
-_DISALLOWED_MODIFIERS = frozenset([Qt.ControlModifier, Qt.MetaModifier])
-"""set of disallowed command modifiers."""
+_MODIFIER_FLAGS = \
+    sum([int(p[1]) for p in _MODIFIER_PAIRS] + [int(Qt.ShiftModifier)])
+"""sum of recognized command modifier flags."""
 
 _SCOPES = frozenset(['Selected', 'Page', 'All'])
-"""set of allowed command scopes."""
+"""set of recognized command scopes."""
 
 
 def parse_command_set(text):
@@ -86,7 +87,7 @@ def _check_command_char(char, command):
 
 def _check_modifiers(modifiers, command):
     for m in modifiers:
-        if m not in _ALLOWED_MODIFIERS:
+        if m not in _MODIFIER_NAMES:
             f = 'Unrecognized modifier "{:s}" in command "{:s}".'
             raise ValueError(f.format(m, command))
     
@@ -109,9 +110,9 @@ def get_command_from_key_event(key_event):
         
         modifiers = key_event.modifiers()
         
-        for m in _DISALLOWED_MODIFIERS:
-            if modifiers & m:
-                return None
+        if modifiers | _MODIFIER_FLAGS != _MODIFIER_FLAGS:
+            # unrecognized modifier present
+            return None
             
         mods = ''.join(s + '-' for s, m in _MODIFIER_PAIRS
                                if modifiers & m != 0)
