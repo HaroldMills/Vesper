@@ -240,16 +240,5 @@ class ArchiveTests(unittest.TestCase):
         self._add_clips()
         
         
-#     def _assert_raises(self, exception_class, function, *args, **kwargs):
-#
-#         self.assertRaises(exception_class, function, *args, **kwargs)
-#
-#         try:
-#             function(*args, **kwargs)
-#
-#         except exception_class, e:
-#             print str(e)
-            
-
 def _to_date(triple):
     return datetime.date(*triple) if triple is not None else None

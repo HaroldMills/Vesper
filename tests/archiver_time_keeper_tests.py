@@ -1,13 +1,14 @@
 from __future__ import print_function
 
 import datetime
-import unittest
 
 import pytz
 
 from nfc.archive.station import Station
 from old_bird.archiver_time_keeper import (
     ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
+
+from test_case import TestCase
 
 
 _STATIONS = [
@@ -26,7 +27,7 @@ _MONITORING_START_TIMES = {
 }
 
 
-class ArchiverTimeKeeperTests(unittest.TestCase):
+class ArchiverTimeKeeperTests(TestCase):
     
                
     def setUp(self):
@@ -151,17 +152,6 @@ class ArchiverTimeKeeperTests(unittest.TestCase):
             self.assertEqual(result, expected_result)
              
              
-    def _assert_raises(self, exception_class, function, *args, **kwargs):
-        
-        self.assertRaises(exception_class, function, *args, **kwargs)
-        
-        try:
-            function(*args, **kwargs)
-            
-        except exception_class, e:
-            print(str(e))
-
-
 _combine = datetime.datetime.combine
 
 

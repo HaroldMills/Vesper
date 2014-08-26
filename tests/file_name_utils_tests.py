@@ -1,10 +1,11 @@
 import datetime
-import unittest
 
 import old_bird.file_name_utils as file_name_utils
 
+from test_case import TestCase
 
-class ClipFileNameUtilsTests(unittest.TestCase):
+
+class ClipFileNameUtilsTests(TestCase):
     
     
     def test_is_clip_file(self):
@@ -190,14 +191,3 @@ class ClipFileNameUtilsTests(unittest.TestCase):
         function = file_name_utils.parse_elapsed_time_clip_file_name
         for file_name in cases:
             self._assert_raises(ValueError, function, file_name)
-
-               
-    def _assert_raises(self, exception_class, function, *args, **kwargs):
-        
-        self.assertRaises(exception_class, function, *args, **kwargs)
-        
-        try:
-            function(*args, **kwargs)
-            
-        except exception_class, e:
-            print str(e)

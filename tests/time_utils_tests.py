@@ -1,10 +1,11 @@
 import datetime
-import unittest
 
 import nfc.util.time_utils as time_utils
 
+from test_case import TestCase
 
-class TimeUtilsTests(unittest.TestCase):
+
+class TimeUtilsTests(TestCase):
     
     
     def test_parse_date(self):
@@ -65,17 +66,6 @@ class TimeUtilsTests(unittest.TestCase):
             function(*_tuplize(case))
         for case in bad:
             self._assert_raises(ValueError, function, *_tuplize(case))
-            
-            
-    def _assert_raises(self, exception_class, function, *args, **kwargs):
-        
-        self.assertRaises(exception_class, function, *args, **kwargs)
-        
-        try:
-            function(*args, **kwargs)
-            
-        except exception_class, e:
-            print str(e)
             
             
     def test_check_month(self):

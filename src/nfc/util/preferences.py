@@ -6,6 +6,8 @@ from __future__ import print_function
 import json
 import os
 import sys
+
+import nfc.util.classification_command_set_utils as command_set_utils
         
             
 _PREFS_DIR_NAME = 'NFC'
@@ -14,7 +16,6 @@ _PREFS_FILE_NAME = 'Preferences.json'
 _PRESETS_DIR_NAME = 'Presets'
 _COMMAND_SETS_DIR_NAME = 'Classification Command Sets'
 _TEXT_FILE_NAME_EXTENSION = '.txt'
-_COMMAND_SCOPES = frozenset(['Selected', 'Page', 'All'])
 
 
 def _load_preferences():
@@ -107,40 +108,10 @@ def _parse_command_set(file_path):
         file_.close()
         
     try:
-        return _parse_command_set_aux(text)
+        return command_set_utils.parse_command_set(text)
     except ValueError as e:
-        f = 'Could not parse classification command set file "{:s}". {:s}'
+        f = 'Could not parse classification command set file "{:s}": {:s}'
         raise ValueError(f.format(file_path, str(e)))
     
     
-def _parse_command_set_aux(text):
-    lines = [line.strip() for line in text.split('\n')]
-    lines = [line for line in lines if line != '']
-    pairs = [_parseCommand(line, i + 1) for i, line in enumerate(lines)]
-    return dict(pairs)
-
-
-def _parseCommand(line, lineNum):
-    
-    items = line.split()
-    n = len(items)
-    
-    if n < 2 or n > 3:
-        raise ValueError(
-            ('Bad command specification "{:s}": specification '
-             'must have either two or three components separated '
-             'by spaces.').format(line))
-    
-    name = items[0]
-    command = items[1]
-    scope = items[2] if n == 3 else 'Selected'
-    
-    if scope not in _COMMAND_SCOPES:
-        f = ('Bad command specification "{:s}": third component '
-             'must be "Page" or "All".')
-        raise ValueError(f.format(line))
-        
-    return (name, (command, scope))
-
-
 preferences = _load_preferences()

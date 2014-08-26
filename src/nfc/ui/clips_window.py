@@ -15,6 +15,7 @@ from nfc.ui.multiselection import Multiselection
 from nfc.ui.spectrogram_clip_figure import SpectrogramClipFigure as ClipFigure
 from nfc.util.bunch import Bunch
 from nfc.util.preferences import preferences as prefs
+import nfc.util.classification_command_set_utils as command_set_utils
 
 
 _SPACING_ASPECT_RATIO = 2
@@ -235,7 +236,7 @@ class ClipsWindow(QMainWindow):
         
     def keyPressEvent(self, e):
         
-        command = _get_classification_command(e)
+        command = command_set_utils.get_command_from_key_event(e)
         
         if command is not None:
             
@@ -290,47 +291,6 @@ class ClipsWindow(QMainWindow):
         self._update_title()
 
 
-_CHARS = dict((eval('Qt.Key_' + c), c.lower())
-              for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-"""mapping from integer Qt key codes to lower-case characters."""
-
-
-_MODIFIERS = [
-    (Qt.ControlModifier, 'Ctrl'),
-    (Qt.AltModifier, 'Alt'),
-    (Qt.MetaModifier, 'Meta')
-]
-"""modifiers that can be used in classification commands."""
-
-
-def _get_classification_command(key_event):
-    
-    char = _CHARS.get(key_event.key())
-    
-    if char is None:
-        return None
-    
-    else:
-        
-        modifiers = key_event.modifiers()
-        
-#         if modifiers & Qt.ControlModifier:
-#
-#             # We do not allow classification commands that use the
-#             # control modifier (or, on Mac OS X, the command modifier),
-#             # since they could collide with menu item keyboard
-#             # accelerators.
-#             return None
-        
-        mods = ''.join(s + '-' for m, s in _MODIFIERS if modifiers & m != 0)
-
-        if modifiers & Qt.ShiftModifier:
-            char = char.upper()
-            
-        return mods + char
-    
-    
-    
 class _FiguresFrame(QWidget):
     
     

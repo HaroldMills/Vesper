@@ -5,8 +5,6 @@ B BAWW
 k Call
 c CSWA
 C CMWA
-Ctrl-c COYE
-Ctrl-C CCSP
 Alt-c CAWA
 Alt-C CHSP
 D DbUp
@@ -28,7 +26,7 @@ Alt-P PRAW
 q Unknown
 s SVSP
 S SwLi
-Ctrl-s SNBULALO
+Alt-s SNBULALO
 t Tone
 T ATSP
 u Unclassified
