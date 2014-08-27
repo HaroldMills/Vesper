@@ -11,8 +11,8 @@ import numpy as np
 class ClipFigurePlayButton(object):
     
     
-    DEFAULT_WIDTH = 13
-    DEFAULT_HEIGHT = 13
+    DEFAULT_WIDTH = 17
+    DEFAULT_HEIGHT = 17
     
     DEFAULT_UP_COLOR = (0, .9, 0)
     DEFAULT_DOWN_COLOR = (0, .6, 0)
