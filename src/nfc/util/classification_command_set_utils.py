@@ -121,3 +121,12 @@ def get_command_from_key_event(key_event):
             char = char.upper()
             
         return mods + char
+
+
+def is_key(key_event, key, modifiers=Qt.NoModifier):
+     
+    if key_event.key() != key:
+        return False
+     
+    else:
+        return key_event.modifiers() == modifiers

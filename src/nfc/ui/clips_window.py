@@ -15,7 +15,7 @@ from nfc.ui.multiselection import Multiselection
 from nfc.ui.spectrogram_clip_figure import SpectrogramClipFigure as ClipFigure
 from nfc.util.bunch import Bunch
 from nfc.util.preferences import preferences as prefs
-import nfc.util.classification_command_set_utils as command_set_utils
+import nfc.util.classification_command_set_utils as command_utils
 
 
 _SPACING_ASPECT_RATIO = 2
@@ -236,7 +236,7 @@ class ClipsWindow(QMainWindow):
         
     def keyPressEvent(self, e):
         
-        command = command_set_utils.get_command_from_key_event(e)
+        command = command_utils.get_command_from_key_event(e)
         
         if command is not None:
             
@@ -259,13 +259,24 @@ class ClipsWindow(QMainWindow):
             
     def _key_press_event(self, e):
         
-        key = e.key()
+        is_key = command_utils.is_key
         
-        if key == Qt.Key_PageDown or key == Qt.Key_Space:
+        if is_key(e, Qt.Key_Space) or is_key(e, Qt.Key_PageDown):
             self.move_down_one_page()
             
-        elif key == Qt.Key_PageUp:
+        elif is_key(e, Qt.Key_Space, Qt.ShiftModifier) or \
+             is_key(e, Qt.Key_PageUp):
+            
             self.move_up_one_page()
+            
+        elif is_key(e, Qt.Key_Tab):
+            self.move_singleton_selection_forward()
+            
+        # Note that when the user presses the tab key with the shift
+        # key held down, the event we get is for the backtab key
+        # rather than the tab key, with the shift modifier.
+        elif is_key(e, Qt.Key_Backtab, Qt.ShiftModifier):
+            self.move_singleton_selection_backward()
             
         else:
             super(ClipsWindow, self).keyPressEvent(e)
@@ -288,6 +299,16 @@ class ClipsWindow(QMainWindow):
             
     def move_up_one_page(self):
         self._figures_frame.move_up_one_page()
+        self._update_title()
+        
+        
+    def move_singleton_selection_forward(self):
+        self._figures_frame.move_singleton_selection_forward()
+        self._update_title()
+
+
+    def move_singleton_selection_backward(self):
+        self._figures_frame.move_singleton_selection_backward()
         self._update_title()
 
 
@@ -438,7 +459,7 @@ class _FiguresFrame(QWidget):
             self._classify(intervals, new_name)
             
             if prefs['clipsWindow.advanceAfterClassification']:
-                self._advance_after_classification(scope, intervals)
+                self._advance_after_classification(scope)
                 
                             
     def _classify(self, intervals, new_name):
@@ -471,25 +492,10 @@ class _FiguresFrame(QWidget):
                         figure._update_clip_text()
                     
 
-    def _advance_after_classification(self, scope, intervals):
+    def _advance_after_classification(self, scope):
         
-        if scope == 'Selected' and _is_singleton(intervals):
-                
-            clip_num = intervals[0][0]
-            
-            last_visible_clip_num = \
-                self.first_visible_clip_num + self.num_visible_clips - 1
-            
-            if clip_num != last_visible_clip_num:
-                # selected clip is not last on this page
-                
-                self._select_clip(clip_num + 1)
-
-            elif clip_num != len(self._clips) - 1:
-                # there are more clips
-                
-                self.move_down_one_page()
-                self._select_clip(last_visible_clip_num + 1)
+        if scope == 'Selected':
+            self.move_singleton_selection_forward()
                 
         elif scope == 'Page':
                     
@@ -502,6 +508,43 @@ class _FiguresFrame(QWidget):
                 self.move_down_one_page()
                 
         
+    def move_down_one_page(self):
+        if self.first_visible_row_num + self.num_rows < self.total_num_rows:
+            self._move_by_num_rows(self.num_rows)
+        
+    
+    def _move_by_num_rows(self, num_rows):
+        if self.total_num_rows != 0:
+            self.first_visible_row_num += num_rows
+            
+            
+    def move_up_one_page(self):
+        self._move_by_num_rows(-self.num_rows)
+        
+    
+    def move_singleton_selection_forward(self):
+        
+        intervals = self.selection.selected_intervals
+        
+        if _is_singleton(intervals):
+            
+            clip_num = self.first_visible_clip_num + intervals[0][0]
+            
+            last_visible_clip_num = \
+                self.first_visible_clip_num + self.num_visible_clips - 1
+            
+            if clip_num != last_visible_clip_num:
+                # selected clip is not last on this page
+                
+                self._select_clip(clip_num + 1)
+
+            elif clip_num != len(self._clips) - 1:
+                # there are clips after this page
+                
+                self.move_down_one_page()
+                self._select_clip(clip_num + 1)
+                
+                
     def _select_clip(self, clip_num):
         
         self.selection.select(clip_num - self.first_visible_clip_num)
@@ -517,20 +560,26 @@ class _FiguresFrame(QWidget):
             frame.selected = frame.index in self.selection
 
 
-    def move_down_one_page(self):
-        if self.first_visible_row_num + self.num_rows < self.total_num_rows:
-            self._move_by_num_rows(self.num_rows)
+    def move_singleton_selection_backward(self):
+
+        intervals = self.selection.selected_intervals
         
-    
-    def _move_by_num_rows(self, num_rows):
-        if self.total_num_rows != 0:
-            self.first_visible_row_num += num_rows
+        if _is_singleton(intervals):
             
+            clip_num = self.first_visible_clip_num + intervals[0][0]
             
-    def move_up_one_page(self):
-        self._move_by_num_rows(-self.num_rows)
-        
-    
+            if clip_num != self.first_visible_clip_num:
+                # selected clip is not first on this page
+                
+                self._select_clip(clip_num - 1)
+
+            elif clip_num != 0:
+                # there are clips before this page
+                
+                self.move_up_one_page()
+                self._select_clip(clip_num - 1)
+                
+                
     def _handle_selection_event(self, figure_frame, event):
         
         index = figure_frame.index
@@ -550,6 +599,10 @@ class _FiguresFrame(QWidget):
         self.setFocus()
 
 
+def _shift(intervals, n):
+    return tuple([(i + n, j + n) for i, j in intervals])
+
+
 def _is_singleton(intervals):
     
     if len(intervals) != 1:
@@ -559,10 +612,6 @@ def _is_singleton(intervals):
         start, end = intervals[0]
         return start == end
     
-
-def _shift(intervals, n):
-    return tuple([(i + n, j + n) for i, j in intervals])
-
 
 class _FiguresFrameWithFlowLayout(_FiguresFrame):
     
