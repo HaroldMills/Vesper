@@ -7,7 +7,7 @@ import json
 import os
 import sys
 
-import nfc.util.classification_command_set_utils as command_set_utils
+import nfc.util.classification_command_utils as command_utils
         
             
 _PREFS_DIR_NAME = 'NFC'
@@ -108,7 +108,7 @@ def _parse_command_set(file_path):
         file_.close()
         
     try:
-        return command_set_utils.parse_command_set(text)
+        return command_utils.parse_command_set(text)
     except ValueError as e:
         f = 'Could not parse classification command set file "{:s}": {:s}'
         raise ValueError(f.format(file_path, str(e)))

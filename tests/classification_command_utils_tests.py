@@ -1,4 +1,4 @@
-import nfc.util.classification_command_set_utils as utils
+import nfc.util.classification_command_utils as utils
 
 from test_case import TestCase
 

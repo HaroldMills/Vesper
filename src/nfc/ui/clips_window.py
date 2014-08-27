@@ -15,7 +15,7 @@ from nfc.ui.multiselection import Multiselection
 from nfc.ui.spectrogram_clip_figure import SpectrogramClipFigure as ClipFigure
 from nfc.util.bunch import Bunch
 from nfc.util.preferences import preferences as prefs
-import nfc.util.classification_command_set_utils as command_utils
+import nfc.util.classification_command_utils as command_utils
 
 
 _SPACING_ASPECT_RATIO = 2
