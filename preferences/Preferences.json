@@ -20,6 +20,8 @@
     "clipFigure.spectrogram.windowSize": 128,
     "clipFigure.spectrogram.hopSize": 10,
     "clipFigure.spectrogram.dftSize": 256,
+    "clipFigure.spectrogram.minPower": -20,
+    "clipFigure.spectrogram.maxPower": 80,
     "clipFigure.showMouseLocation": true,
     "clipFigure.showClipClassNames": true,
     "clipFigure.showClipTimes": true,

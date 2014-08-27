@@ -142,13 +142,16 @@ class SpectrogramClipFigure(ClipFigure):
             axes.set_xlim([0, duration])
             axes.set_ylim([0, fs / 2.])
                 
+            min_power = prefs.get('clipFigure.spectrogram.minPower', -20)
+            max_power = prefs.get('clipFigure.spectrogram.maxPower', 80)
+            
             # TODO: Should the time axis extent be from the time of
             # the first spectrum to the time of the last?
             spectra = clip.spectrogram.spectra.transpose()
             self._spectrogram_image = axes.imshow(
                 spectra, origin='lower', extent=(0, duration, 0, fs / 2.),
-                aspect='auto', cmap='Greys', interpolation='bilinear',
-                picker=None)
+                aspect='auto', cmap='Greys', vmin=min_power, vmax=max_power,
+                interpolation='bilinear', picker=None)
         
         
     def _update_clip_text(self, event=None):
