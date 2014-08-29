@@ -70,7 +70,7 @@ class ClipFigurePlayButton(object):
     
     @property
     def visible(self):
-        return self._ada.visible()
+        return self._ada.get_visible()
     
     
     @visible.setter
@@ -91,8 +91,11 @@ class ClipFigurePlayButton(object):
         
         
     def _on_figure_enter(self, event):
-        self.visible = True
+        # See 2014-08-29 comment for GitHub issue #1 for an explanation
+        # of why we don't show the play button here.
+#        self.visible = True
 #        print('ClipFigurePlayButton._on_figure_enter')
+        return
     
     
     def _on_figure_leave(self, event):
@@ -101,11 +104,17 @@ class ClipFigurePlayButton(object):
    
     
     def _on_button_press(self, event):
-        
         if event.button == 1 and self._contains(event):
             self.down = True
-            
 #        print('ClipFigurePlayButton._on_button_press')
+            
+            
+    def _on_motion(self, event):
+        # See 2014-08-29 comment for GitHub issue #1 for an explanation
+        # of why we show the play button here rather than in the
+        # `_on_figure_enter` method.
+        if not self.visible:
+            self.visible = True
             
             
     def _contains(self, event):

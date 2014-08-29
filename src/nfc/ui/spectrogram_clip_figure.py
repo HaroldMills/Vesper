@@ -236,6 +236,7 @@ class SpectrogramClipFigure(ClipFigure):
     
     def _on_motion(self, event):
         self._update_clip_text(event)
+        self._play_button._on_motion(event)
 #        _show_event(event, 'SpectrogramClipFigure._on_motion')
    
     
