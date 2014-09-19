@@ -296,10 +296,6 @@ class Archive(object):
             components)
         
         
-    def _createClipClassNameComponentTuple(self, component):
-        return _ClipClassNameComponentTuple(id=None, component=component)
-    
-    
     def _create_clip_table(self):
         
         self._create_table('Clip', _CREATE_CLIP_TABLE_SQL)
