@@ -9,4 +9,4 @@ Though the short-term goal of the project is quite specific, the tools are being
 
 The NFC Tools run on Windows, Mac OS X, and Linux. They are implemented in the [Python](http://www.python.org) programming language and leverage various other open source projects, including [NumPy](http://www.numpy.org), [Matplotlib](http://www.matplotlib.org), [PySide](http://qt-project.org/wiki/PySide), and [Qt](http://www.qt-project.org). We recommend running the NFC Tools atop the free [Anaconda](https://store.continuum.io/cshop/anaconda/) scientific Python distribution from [Continuum Analytics](http://www.continuum.io/).
 
-The NFC Tools are not yet ready for general testing and use, but for the intrepid there are preliminary [installation instructions](https://github.com/HaroldMills/NFC/wiki/How-to-Install-the-NFC-Tools).
+The NFC Tools are not quite ready for general testing and use, but for the intrepid there are preliminary [installation instructions](https://github.com/HaroldMills/NFC/wiki/How-to-Install-the-NFC-Tools).
