@@ -111,6 +111,10 @@ _INSERT_CLIP_SQL = \
     ', '.join(['?'] * len(_ClipTuple._fields)) + ')'
 
 
+_SELECT_CLIP_SQL = \
+    'select * from Clip where station_id = ? and detector_id = ? and time = ?'
+    
+    
 _CLASSIFY_CLIP_SQL = (
     'update Clip set clip_class_id = ?, clip_class_name_0_id = ?, '
     'clip_class_name_1_id = ?, clip_class_name_2_id = ? where id = ?')
@@ -692,6 +696,27 @@ class Archive(object):
         return time
     
     
+    def get_clip(self, station_name, detector_name, time):
+        
+        station_id = self._check_station_name(station_name)
+        detector_id = self._check_detector_name(detector_name)
+        
+        if time.tzinfo is not pytz.utc:
+            raise ValueError('Clip time zone must be `pytz.utc`.')
+        
+        time = _format_clip_time(time)
+        clip_info = (station_id, detector_id, time)
+        self._cursor.execute(_SELECT_CLIP_SQL, clip_info)
+    
+        row = self._cursor.fetchone()
+        
+        if row is None:
+            return None
+        
+        else:
+            return self._create_clip(_ClipTuple._make(row))
+        
+        
     def _classify_clip(self, clip_id, clip_class_name):
         
         class_id = self._check_clip_class_name(clip_class_name)

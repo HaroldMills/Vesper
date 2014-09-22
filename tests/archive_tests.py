@@ -236,8 +236,32 @@ class ArchiveTests(unittest.TestCase):
             self.assertEqual(r.clip_class_name, er[9])
     
     
-    def test_zzz(self):
+    def test_get_clip(self):
+        
+        cases = (
+            ('A', 'Tseep', (2012, 1, 2, 20, 11, 12, 0), 'X.Z.W'),
+            ('A', 'Tseep', (2014, 1, 1, 0, 0, 0, 0), None)
+        )
+        
         self._add_clips()
+        
+        for station_name, detector_name, time_tuple, expected_result in cases:
+            
+            time = datetime.datetime(*(time_tuple + (pytz.utc,)))
+            result = self.archive.get_clip(station_name, detector_name, time)
+            
+            if result is None:
+                self.assertIsNone(expected_result)
+                
+            elif result.clip_class_name is None:
+                self.assertEqual(expected_result, 'None')
+                
+            else:
+                self.assertEqual(result.clip_class_name, expected_result)
+        
+        
+#     def test_zzz(self):
+#         self._add_clips()
         
         
 def _to_date(triple):

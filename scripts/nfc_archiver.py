@@ -849,6 +849,10 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
                  new[len(old)] == '.':
                 # new classification is more specific version of old one
             
+                if not self.dry_run:
+                    clip = self.archive.get_clip(*key)
+                    clip.clip_class_name = clip_class_name
+                    
                 self.clip_info[key] = (new, path)
                 
                 self.clip_counts[new] += 1
