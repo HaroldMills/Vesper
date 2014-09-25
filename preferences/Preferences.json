@@ -1,7 +1,8 @@
 {
     "archives": {
-        "2012": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall",
-        "2014": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014"
+        "2012": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall Small Test",
+        "2014": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014",
+        "2014 CLC Test": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014 CLC Test"
     },
     "archive": "2012",
     "mainWindow.width": 1000,
@@ -9,6 +10,7 @@
     "mainWindow.initialStation": "Alfred",
     "mainWindow.initialDetector": "Tseep",
     "mainWindow.initialClipClass": "Call",
+    "clipsWindow.openMaximized": false,
     "clipsWindow.width": 1200,
     "clipsWindow.height": 800,
     "clipsWindow.numRows": 6,

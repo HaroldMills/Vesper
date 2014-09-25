@@ -100,7 +100,11 @@ class MainWindow(QMainWindow):
         height = prefs['clipsWindow.height']
         window.setGeometry(100, 100, width, height)
         
-        window.show()
+        openMaximized = prefs.get('clipsWindow.openMaximized')
+        if openMaximized:
+            window.showMaximized()
+        else:
+            window.show()
         
         # This appears to be necessary for Anaconda 1.9.2 on Mac OS X
         # (without it the new clips window does not get keyboard focus,
