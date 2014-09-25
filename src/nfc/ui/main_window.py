@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
         height = prefs['clipsWindow.height']
         window.setGeometry(100, 100, width, height)
         
-        openMaximized = prefs.get('clipsWindow.openMaximized')
+        openMaximized = prefs.get('clipsWindow.maximize')
         if openMaximized:
             window.showMaximized()
         else:
