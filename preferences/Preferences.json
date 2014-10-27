@@ -2,9 +2,10 @@
     "archives": {
         "2012": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall Small Test",
         "2014": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014",
-        "2014 CLC Test": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014 CLC Test"
+        "2014 CLC Test": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014 CLC Test",
+        "Example": "/Users/Harold/Desktop/NFC/Data/Old Bird/Example"
     },
-    "archive": "2012",
+    "archive": "Example",
     "mainWindow.width": 1000,
     "mainWindow.height": 800,
     "mainWindow.initialStation": "CLC",
@@ -22,8 +23,8 @@
     "clipFigure.spectrogram.windowSize": 128,
     "clipFigure.spectrogram.hopSize": 10,
     "clipFigure.spectrogram.dftSize": 256,
-    "clipFigure.spectrogram.minPower": -20,
-    "clipFigure.spectrogram.maxPower": 80,
+    "clipFigure.spectrogram.minPower": -10,
+    "clipFigure.spectrogram.maxPower": 90,
     "clipFigure.showMouseLocation": true,
     "clipFigure.showClipClassNames": true,
     "clipFigure.showClipTimes": true,
