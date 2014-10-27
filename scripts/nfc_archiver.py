@@ -377,10 +377,10 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
     
     
     def visit(
-        self, path, year, archive, logger,
-        station_names=None, dates=None, start_date=None, end_date=None,
-        dry_run=False, max_num_clips=None, performance_reporting_period=None,
-        count_ignored_dir_files=False):
+            self, path, year, archive, logger,
+            station_names=None, dates=None, start_date=None, end_date=None,
+            dry_run=False, max_num_clips=None,
+            performance_reporting_period=None, count_ignored_dir_files=False):
         
         self.root_path = path
         self.year = year
@@ -485,8 +485,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
             self._ignore_station_dir(path, 'unrecognized')
             return False
             
-        elif self.station_names is not None and \
-                 name not in self.station_names:
+        elif self.station_names is not None and name not in self.station_names:
             self._count_ignored_dir_files(path)
             return False
             
@@ -515,7 +514,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
         
     def _max_num_clips_reached(self):
         return self.max_num_clips is not None and \
-               self.total_num_files >= self.max_num_clips
+            self.total_num_files >= self.max_num_clips
 
 
     def _start_month_dir_visit(self, path):
@@ -773,7 +772,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
             
             
     def _visit_clip_file_aux(
-        self, path, station, detector_name, time, clip_class_name):
+            self, path, station, detector_name, time, clip_class_name):
         
         dir_path = os.path.dirname(path)
         
@@ -844,10 +843,10 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
                 self.duplicate_classification_path_pairs.add((old_path, path))
                 
             elif old is None or \
-                 new is not None and \
-                 new.startswith(old) and \
-                 new[len(old)] == '.':
-                # new classification is more specific version of old one
+                    new is not None and \
+                    new.startswith(old) and \
+                    new[len(old)] == '.':
+                    # new classification is more specific version of old one
             
                 if not self.dry_run:
                     clip = self.archive.get_clip(*key)

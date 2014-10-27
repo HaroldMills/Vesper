@@ -114,8 +114,8 @@ def get_command_from_key_event(key_event):
             # unrecognized modifier present
             return None
             
-        mods = ''.join(s + '-' for s, m in _MODIFIER_PAIRS
-                               if modifiers & m != 0)
+        mods = ''.join(
+            s + '-' for s, m in _MODIFIER_PAIRS if modifiers & m != 0)
 
         if modifiers & Qt.ShiftModifier:
             char = char.upper()

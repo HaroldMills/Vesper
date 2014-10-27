@@ -99,7 +99,7 @@ class ClipCountMonthBarChart(QFrame):
     
     
     def configure(
-        self, station_name, detector_name, clip_class_name, year, month):
+            self, station_name, detector_name, clip_class_name, year, month):
         
         self._station_name = station_name
         self._detector_name = detector_name

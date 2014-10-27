@@ -30,8 +30,8 @@ class ClipsWindow(QMainWindow):
     
     
     def __init__(
-        self, parent, archive, station_name, detector_name, night,
-        clip_class_name, command_set_name):
+            self, parent, archive, station_name, detector_name, night,
+            clip_class_name, command_set_name):
         
         super(ClipsWindow, self).__init__(parent)
         
@@ -227,11 +227,11 @@ class ClipsWindow(QMainWindow):
             
             if first == last:
                 return '{:s} Clip {:d} of {:d}'.format(
-                           self._clip_class_name, first + 1, n)
+                    self._clip_class_name, first + 1, n)
             
             else:
                 return '{:s} Clips {:d}-{:d} of {:d}'.format(
-                           self._clip_class_name, first + 1, last + 1, n)
+                    self._clip_class_name, first + 1, last + 1, n)
     
         
     def keyPressEvent(self, e):
@@ -265,7 +265,7 @@ class ClipsWindow(QMainWindow):
             self.move_down_one_page()
             
         elif is_key(e, Qt.Key_Space, Qt.ShiftModifier) or \
-             is_key(e, Qt.Key_PageUp):
+                is_key(e, Qt.Key_PageUp):
             
             self.move_up_one_page()
             
@@ -347,7 +347,7 @@ class _FiguresFrame(QWidget):
     
     @clips.setter
     def clips(self, clips):
-#        self._show_clip_durs(clips)
+        # self._show_clip_durs(clips)
         self._set_clips(clips)
 
 
@@ -478,7 +478,7 @@ class _FiguresFrame(QWidget):
                     
                     clip.clip_class_name = new_name
                     
-                    if  k >= first and k < first + self.num_visible_clips:
+                    if k >= first and k < first + self.num_visible_clips:
                     
                         # This is very naughty. The figures frame should not
                         # be rooting around in clip frames' private parts and

@@ -380,7 +380,8 @@ class Archive(object):
         
         
     def add_clip(
-        self, station_name, detector_name, time, sound, clip_class_name=None):
+            self, station_name, detector_name, time, sound,
+            clip_class_name=None):
         
         """
         Adds a clip to this archive.
@@ -452,10 +453,10 @@ class Archive(object):
             self._cursor.execute(_INSERT_CLIP_SQL, clip_tuple)
             
         except sqlite.IntegrityError:
+            f = ('There is already a clip in the archive for station "{:s}", '
+                 'detector "{:s}", and UTC time {:s}.')
             raise ValueError(
-                ('There is already a clip in the archive for station "{:s}", '
-                 'detector "{:s}", and UTC time {:s}.').format(
-                 station_name, detector_name, _format_clip_time(time)))
+                f.format(station_name, detector_name, _format_clip_time(time)))
         
         clip_id = self._cursor.lastrowid
         
@@ -509,8 +510,8 @@ class Archive(object):
         
         
     def get_clip_counts(
-        self, station_name=None, detector_name=None, start_night=None,
-        end_night=None, clip_class_name=None):
+            self, station_name=None, detector_name=None, start_night=None,
+            end_night=None, clip_class_name=None):
         
         """
         Counts the archived clips matching the specified criteria.
@@ -537,8 +538,8 @@ class Archive(object):
         
         
     def _create_where_clause(
-        self, station_name, detector_name, start_night, end_night,
-        clip_class_name):
+            self, station_name, detector_name, start_night, end_night,
+            clip_class_name):
         
         conds = []
         
@@ -634,8 +635,8 @@ class Archive(object):
     
     
     def get_clips(
-        self, station_name=None, detector_name=None, night=None,
-        clip_class_name=None):
+            self, station_name=None, detector_name=None, night=None,
+            clip_class_name=None):
         
         """
         Gets the archived clips matching the specified criteria.
@@ -665,8 +666,8 @@ class Archive(object):
     
     
     def _create_clips(self):
-#        rows = self._cursor.fetchall()
-#        return [self._create_clip(_ClipTuple._make(row)) for row in rows]
+        # rows = self._cursor.fetchall()
+        # return [self._create_clip(_ClipTuple._make(row)) for row in rows]
         # TODO: Try to speed this up. The iteration is slow.
         return [self._create_clip(_ClipTuple._make(row))
                 for row in self._cursor]
@@ -721,7 +722,7 @@ class Archive(object):
         
         class_id = self._check_clip_class_name(clip_class_name)
         component_ids = self._get_clip_class_name_component_ids(
-                            clip_class_name)
+            clip_class_name)
         
         values = [class_id] + component_ids + [clip_id]
         self._cursor.execute(_CLASSIFY_CLIP_SQL, values)
@@ -741,8 +742,7 @@ class Archive(object):
                 
             except OSError:
                 
-                if not (os.path.exists(dir_path) and \
-                        os.path.isdir(dir_path)):
+                if not (os.path.exists(dir_path) and os.path.isdir(dir_path)):
                     # makedirs did not fail because directory
                     # already existed
                     
@@ -879,8 +879,8 @@ class _Clip(object):
     
     
     def __init__(
-        self, archive, clip_id, station, detector_name, time, duration,
-        clip_class_name=None):
+            self, archive, clip_id, station, detector_name, time, duration,
+            clip_class_name=None):
         
         self._archive = archive
         self._id = clip_id
@@ -959,4 +959,4 @@ def _create_clip_file_name(station_name, detector_name, time):
     ms = int(round(time.microsecond / 1000.))
     time = time.strftime('%Y-%m-%d_%H.%M.%S') + '.{:03d}'.format(ms) + '_Z'
     return '{:s}_{:s}_{:s}{:s}'.format(
-               station_name, detector_name, time, _CLIP_FILE_NAME_EXTENSION)
+        station_name, detector_name, time, _CLIP_FILE_NAME_EXTENSION)

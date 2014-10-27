@@ -50,7 +50,7 @@ class ClipFigurePlayButton(object):
         
         # Create anchored drawing area.
         self._ada = AnchoredDrawingArea(
-                        w, h, 0, 0, loc=2, pad=0, frameon=False)
+            w, h, 0, 0, loc=2, pad=0, frameon=False)
         
         # Create triangle.
         path = np.array([[0, h], [w, h / 2.], [0, 0]])
@@ -93,9 +93,9 @@ class ClipFigurePlayButton(object):
     def _on_figure_enter(self, event):
         # See 2014-08-29 comment for GitHub issue #1 for an explanation
         # of why we don't show the play button here.
-#        self.visible = True
-#        print('ClipFigurePlayButton._on_figure_enter')
         return
+#         self.visible = True
+#         print('ClipFigurePlayButton._on_figure_enter')
     
     
     def _on_figure_leave(self, event):

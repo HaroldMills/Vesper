@@ -20,8 +20,8 @@ class MainWindow(QMainWindow):
 
 
     def __init__(
-        self, archive_dir_path, command_set_name, count_display_type,
-        station_name, detector_name, clip_class_name, month_name=None):
+            self, archive_dir_path, command_set_name, count_display_type,
+            station_name, detector_name, clip_class_name, month_name=None):
         
         super(MainWindow, self).__init__()
         
@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
         
         
     def _create_ui(
-        self, station_name, detector_name, clip_class_name, month_name):
+            self, station_name, detector_name, clip_class_name, month_name):
         
         widget = QWidget(self)
 
@@ -58,11 +58,11 @@ class MainWindow(QMainWindow):
         
         
     def _create_query_frame(
-        self, parent, station_name, detector_name, clip_class_name,
-        month_name):
+            self, parent, station_name, detector_name, clip_class_name,
+            month_name):
         
         include_month = self._count_display_type != \
-                            MainWindow.COUNT_DISPLAY_TYPE_ARCHIVE_CALENDAR
+            MainWindow.COUNT_DISPLAY_TYPE_ARCHIVE_CALENDAR
         
         frame = QueryFrame(
             parent, self._archive, station_name, detector_name,
@@ -76,12 +76,12 @@ class MainWindow(QMainWindow):
     def _create_date_chooser(self, parent):
         
         if self._count_display_type == \
-               MainWindow.COUNT_DISPLAY_TYPE_MONTH_BAR_CHART:
+                MainWindow.COUNT_DISPLAY_TYPE_MONTH_BAR_CHART:
             
             return ClipCountMonthBarChart(parent, self._archive)
             
         elif self._count_display_type == \
-                 MainWindow.COUNT_DISPLAY_TYPE_MONTH_CALENDAR:
+                MainWindow.COUNT_DISPLAY_TYPE_MONTH_CALENDAR:
             
             return ClipCountMonthCalendar(parent, self._archive)
             

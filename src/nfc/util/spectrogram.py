@@ -99,8 +99,8 @@ class Spectrogram(object):
         if num_samples < window_size:
             num_spectra = 0
         else:
-            num_spectra = int(math.floor((num_samples - window_size) / \
-                                         float(hop_size)) + 1)
+            num_spectra = int(math.floor(
+                (num_samples - window_size) / float(hop_size)) + 1)
             
         spectra = np.zeros((num_spectra, dft_size / 2 + 1), dtype='float32')
         

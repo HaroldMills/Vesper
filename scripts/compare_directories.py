@@ -61,7 +61,7 @@ def _aux(paths_a, paths_b, dir_path_a, dir_path_b):
     
     if len(diff) != 0:
         print('Files in "{:s}" but not in "{:s}":'.format(
-                  dir_path_a, dir_path_b))
+            dir_path_a, dir_path_b))
         for path in diff:
             print('    ' + path)
         

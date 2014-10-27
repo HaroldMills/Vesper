@@ -17,8 +17,8 @@ _CSV_FILE_NAME = 'clips.csv'
 
 
 def create_clip_dataset(
-    archive_dir_path, dataset_dir_path, dataset_size, clip_class_names,
-    clip_class_fractions=None):
+        archive_dir_path, dataset_dir_path, dataset_size, clip_class_names,
+        clip_class_fractions=None):
     
     # TODO: Balance counts from different stations.
     # TODO: Filter by station and date.
@@ -52,7 +52,7 @@ def create_clip_dataset(
 def _create_csv_file(file_name_lists, dataset_dir_path):
     
     line_lists = [_create_csv_line_list(l, i)
-                 for i, l in enumerate(file_name_lists)]
+                  for i, l in enumerate(file_name_lists)]
     
     lines = list(itertools.chain(*line_lists))
     lines.sort()
@@ -102,7 +102,7 @@ def _create_clip_files(clips, dataset_dir_path):
 
 def _create_clip_file(clip, dataset_dir_path):
     file_name = _create_clip_file_name(
-                    clip.station_name, clip.detector_name, clip.time)
+        clip.station_name, clip.detector_name, clip.time)
 #    file_path = os.path.join(dataset_dir_path, file_name)
     # TODO: Create the file.
     return file_name
@@ -115,9 +115,9 @@ _CLIP_FILE_NAME_EXTENSION = '.wav'
 def _create_clip_file_name(station_name, detector_name, clip_time):
     millisecond = int(round(clip_time.microsecond / 1000.))
     time = clip_time.strftime('%Y-%m-%d_%H.%M.%S') + \
-           '.{:03d}'.format(millisecond)
+        '.{:03d}'.format(millisecond)
     return '{:s}_{:s}_{:s}{:s}'.format(
-               station_name, detector_name, time, _CLIP_FILE_NAME_EXTENSION)
+        station_name, detector_name, time, _CLIP_FILE_NAME_EXTENSION)
 
 
 def load_dataset(dir_path):

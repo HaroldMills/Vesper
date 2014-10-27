@@ -14,8 +14,8 @@ class QueryFrame(QFrame):
     
     
     def __init__(
-        self, parent, archive, station_name=None, detector_name=None,
-        clip_class_name=None, include_month=False, month_name=None):
+            self, parent, archive, station_name=None, detector_name=None,
+            clip_class_name=None, include_month=False, month_name=None):
         
         super(QueryFrame, self).__init__(parent)
         
@@ -31,8 +31,8 @@ class QueryFrame(QFrame):
         
         
     def _create_form(
-        self, station_name, detector_name, clip_class_name, include_month,
-        month_name):
+            self, station_name, detector_name, clip_class_name, include_month,
+            month_name):
         
         texts = [s.name for s in self._archive.stations]
         self._station_combo_box = self._create_combo_box(
@@ -69,7 +69,7 @@ class QueryFrame(QFrame):
         
     
     def _create_combo_box(
-        self, label, item_texts, current_text, on_current_index_changed):
+            self, label, item_texts, current_text, on_current_index_changed):
         
         combo_box = QComboBox(self)
         combo_box.addItems(item_texts)

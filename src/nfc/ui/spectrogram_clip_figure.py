@@ -337,6 +337,6 @@ class _PyQt4EventHandlerWrapper(object):
         self._wrapped_handler = handler
         
     def __call__(self, qt_event):
-#        print('_QtEventHandlerWrapper')
+        # print('_QtEventHandlerWrapper')
         self._clip_figure._qt_event = qt_event
         self._wrapped_handler(qt_event)
