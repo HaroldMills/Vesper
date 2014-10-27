@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import calendar
 
-from PySide.QtGui import QFrame, QGridLayout
+from PyQt4.QtGui import QFrame, QGridLayout
 
 from nfc.ui.clip_count_month_calendar import ClipCountMonthCalendar
 from nfc.util.notifier import Notifier

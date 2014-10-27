@@ -12,7 +12,7 @@ from nfc.util.preferences import preferences as prefs
 
 
 '''
-Matplotlib/PySide issues to look into:
+Matplotlib/PyQt4 issues to look into:
 
 1. Matplotlib FigureCanvas event `guiEvent` attribute is apparently
    always `None`. It should be set to the Qt event that triggered the
@@ -80,7 +80,7 @@ class SpectrogramClipFigure(ClipFigure):
         connect('key_release_event', self._on_key_release)
         
         self.canvas.mouseReleaseEvent = \
-            _PySideEventHandlerWrapper(self, self.canvas.mouseReleaseEvent)
+            _PyQt4EventHandlerWrapper(self, self.canvas.mouseReleaseEvent)
         
         
     def _set_clip(self, clip):
@@ -319,12 +319,12 @@ def _format_clip_time(clip):
     return hms + '.' + milliseconds + ' ' + time_zone
 
 
-# TODO: Fix PySide (and wx, if it is also broken) event handling
+# TODO: Fix PyQt4 (and wx, if it is also broken) event handling
 # so this class is not needed.
-class _PySideEventHandlerWrapper(object):
+class _PyQt4EventHandlerWrapper(object):
     
     """
-    Wrapper for Matplotlib figure canvas PySide event handlers.
+    Wrapper for Matplotlib figure canvas PyQt4 event handlers.
     
     The default handlers discard the Qt event for which they were
     invoked, but this wrapper saves it in a clip figure's `_qt_event`

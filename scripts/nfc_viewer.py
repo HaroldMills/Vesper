@@ -6,7 +6,7 @@ from __future__ import print_function
 import argparse
 import sys
 
-from PySide.QtGui import QApplication
+from PyQt4.QtGui import QApplication
     
 from nfc.ui.main_window import MainWindow
 from nfc.util.preferences import preferences as prefs

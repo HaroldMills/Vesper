@@ -2,8 +2,8 @@ from __future__ import print_function
 
 import datetime
 
-from PySide.QtCore import QSize
-from PySide.QtGui import QHBoxLayout, QComboBox, QFrame, QLabel, QSizePolicy
+from PyQt4.QtCore import QSize
+from PyQt4.QtGui import QHBoxLayout, QComboBox, QFrame, QLabel, QSizePolicy
 
 from nfc.archive.archive import Archive
 import nfc.archive.archive_utils as archive_utils
@@ -142,17 +142,17 @@ class QueryFrame(QFrame):
         
     @property
     def station_name(self):
-        return self._station_combo_box.currentText()
+        return unicode(self._station_combo_box.currentText())
 
 
     @property
     def detector_name(self):
-        return self._detector_combo_box.currentText()
+        return unicode(self._detector_combo_box.currentText())
 
 
     @property
     def clip_class_name(self):
-        return self._clip_class_combo_box.currentText()
+        return unicode(self._clip_class_combo_box.currentText())
     
     
     @property

@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-from PySide.QtGui import QMainWindow, QVBoxLayout, QWidget
+from PyQt4.QtGui import QMainWindow, QVBoxLayout, QWidget
 
 from nfc.archive.archive import Archive
 from nfc.ui.clip_count_month_bar_chart import ClipCountMonthBarChart

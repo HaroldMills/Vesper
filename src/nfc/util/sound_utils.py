@@ -1,7 +1,7 @@
 """Utility functions pertaining to sounds."""
 
 
-from PySide.QtGui import QSound
+from PyQt4.QtGui import QSound
 import numpy as np
 
 from nfc.util.bunch import Bunch

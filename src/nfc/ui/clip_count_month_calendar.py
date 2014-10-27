@@ -4,11 +4,11 @@ import calendar
 import datetime
 
 import matplotlib as mpl
-mpl.rcParams['backend.qt4'] = 'PySide'
+mpl.rcParams['backend.qt4'] = 'PyQt4'
     
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PySide.QtGui import QFrame
+from PyQt4.QtGui import QFrame
 import numpy as np
 
 from nfc.util.notifier import Notifier
@@ -125,7 +125,7 @@ class ClipCountMonthCalendar(QFrame):
         # darker than the actual window color (at least for Mac OS X),
         # so we apply the following empirically-derived "fix". Try to
         # figure out how to obviate this. Is the underlying problem
-        # that Matplotlib and PySide treat colors slightly differently?
+        # that Matplotlib and PyQt4 treat colors slightly differently?
         return tuple(min(c / 249.5, 1) for c in color)
  
      

@@ -4,8 +4,8 @@ from collections import defaultdict
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PySide.QtCore import Qt
-from PySide.QtGui import (
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import (
     QBrush, QFrame, QLabel, QMainWindow, QPainter, QVBoxLayout, QWidget)
 import numpy as np
 

@@ -1,7 +1,7 @@
 """Utility functions pertaining to classification command sets."""
 
 
-from PySide.QtCore import Qt
+from PyQt4.QtCore import Qt
 
 
 _ALPHABETIC_CHARS = 'abcdefghijklmnopqrstuvwxyz'
