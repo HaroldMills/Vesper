@@ -319,6 +319,7 @@ def _format_clip_time(clip):
     return hms + '.' + milliseconds + ' ' + time_zone
 
 
+# TODO: This class was needed for PySide, but is it needed for PyQt4?
 # TODO: Fix PyQt4 (and wx, if it is also broken) event handling
 # so this class is not needed.
 class _PyQt4EventHandlerWrapper(object):
