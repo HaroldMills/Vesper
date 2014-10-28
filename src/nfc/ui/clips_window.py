@@ -684,7 +684,7 @@ class _FiguresFrameWithFlowLayout(_FiguresFrame):
             frame = inactive_frames.pop()
             frame.clip = clips[i]
             frame.index = i
-            frame.show()
+#            frame.show()
             self._active_clip_frames.append(frame)
         
         print('    creating selection...')
@@ -692,6 +692,9 @@ class _FiguresFrameWithFlowLayout(_FiguresFrame):
         
         print('    laying out clip frames...')
         self._lay_out_clips()
+        
+        print('    showing clip frames...')
+        self._show_clip_frames()
         
         print('    done')
 
@@ -808,6 +811,11 @@ class _FiguresFrameWithFlowLayout(_FiguresFrame):
             return None
         else:
             return self._layout[n][0]
+        
+        
+    def _show_clip_frames(self):
+        for frame in self._active_clip_frames:
+            frame.show()
         
         
 class _FigureFrame(QFrame):

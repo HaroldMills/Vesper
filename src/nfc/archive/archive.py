@@ -434,7 +434,6 @@ class Archive(object):
         night = _date_to_int(station.get_night(time))
         
         duration = len(sound.samples) / float(sound.sample_rate)
-#        duration = 1.
         ids = self._get_clip_class_name_component_ids(clip_class_name)
         
         clip_tuple = _ClipTuple(
@@ -875,6 +874,15 @@ SPECTROGRAM_PARAMS = Bunch(
     ref_power=1)
 
 
+_MIN_CLIP_DURATION = .05
+"""
+the minimum clip duration in seconds.
+
+Clips shorter than this duration are padded with zeros to make them
+long enough. This is part of a temporary "fix" to GitHub issue 30.
+"""
+
+
 class _Clip(object):
     
     
@@ -887,7 +895,7 @@ class _Clip(object):
         self.station = station
         self.detector_name = detector_name
         self.time = time
-        self.duration = duration
+        self._duration = duration
         self._clip_class_name = clip_class_name
         
         self._file_path = None
@@ -918,6 +926,17 @@ class _Clip(object):
             
             self._sound = sound_utils.read_sound_file(self.file_path)
             
+            # Pad sound with zeros to make it at least `_MIN_CLIP_DURATION`
+            # seconds long. This is part of a temporary "fix" to GitHub
+            # issue 30.
+            if self._duration < _MIN_CLIP_DURATION:
+                min_length = \
+                    int(round(_MIN_CLIP_DURATION * self._sound.sample_rate))
+                n = min_length - len(self._sound.samples)
+                if n > 0:
+                    self._sound.samples = \
+                        np.hstack((self._sound.samples, np.zeros(n)))
+                
         return self._sound
     
     
@@ -932,6 +951,11 @@ class _Clip(object):
         return self._spectrogram
         
         
+    @property
+    def duration(self):
+        return max(self._duration, _MIN_CLIP_DURATION)
+    
+    
     @property
     def clip_class_name(self):
         return self._clip_class_name
