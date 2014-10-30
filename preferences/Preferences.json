@@ -6,8 +6,6 @@
         "Example": "/Users/Harold/Desktop/NFC/Data/Old Bird/Example"
     },
     "archive": "Example",
-    "mainWindow.width": 1000,
-    "mainWindow.height": 800,
     "mainWindow.initialStation": "CLC",
     "mainWindow.initialDetector": "Tseep",
     "mainWindow.initialClipClass": "Call",

@@ -9,8 +9,7 @@ from nfc.util.notifier import Notifier
 import nfc.archive.archive_utils as archive_utils
 
 
-# TODO: Constrain figure canvas size according to number of calendar
-# rows? (Vertical scroll bar?)
+# TODO: Scroll bars for big calendars?
 
 
 class ClipCountArchiveCalendar(QFrame):
@@ -36,6 +35,7 @@ class ClipCountArchiveCalendar(QFrame):
 
     def _create_month_calendars(self):
         pairs = archive_utils.get_year_month_pairs(self._archive)
+        # pairs = [(2014, i) for i in xrange(7, 13)]
         return [self._create_month_calendar(*p) for p in pairs]
     
     
@@ -49,23 +49,44 @@ class ClipCountArchiveCalendar(QFrame):
         
     def _lay_out_month_calendars(self):
         
-        grid = QGridLayout()
-        
         calendars = self._month_calendars
+        num_months = len(calendars)
         
-        if len(calendars) > 0:
+        if num_months != 0:
         
-            num_cols = 3
-            start_col_num = (calendars[0].month - 1) % num_cols
+            grid = QGridLayout()
+
+            if num_months <= 3:
+                # three or fewer months in calendar
+                
+                # Put months in a single row.
+                num_cols = num_months
+                row_num = 0
+                for i, calendar in enumerate(calendars):
+                    grid.addWidget(calendar, row_num + 1, i + 1)
         
-            for i, calendar in enumerate(calendars):
+            else:
+                # more than three months in calendar
                 
-                col_num = (start_col_num + i) % num_cols
-                row_num = (start_col_num + i) // num_cols
-                
-                grid.addWidget(calendar, row_num, col_num)
-                
-        self.setLayout(grid)
+                # Put months in columns as in a 12-month calendar.
+                num_cols = 3
+                start_col_num = (calendars[0].month - 1) % num_cols
+                for i, calendar in enumerate(calendars):
+                    col_num = (start_col_num + i) % num_cols
+                    row_num = (start_col_num + i) // num_cols
+                    grid.addWidget(calendar, row_num + 1, col_num + 1)
+                    
+            num_rows = row_num + 1
+            
+            # Put stretchy columns to left and right of calendar and
+            # stretchy rows above and below. This will cause the
+            # calendar to be centered in the available space.
+            grid.setColumnStretch(0, 1)
+            grid.setColumnStretch(num_cols + 1, 1)
+            grid.setRowStretch(0, 1)
+            grid.setRowStretch(num_rows + 1, 1)
+            
+            self.setLayout(grid)
         
         
     @property

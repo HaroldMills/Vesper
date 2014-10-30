@@ -100,14 +100,20 @@ def _get_command_set_name(args, prefs):
     
 def _set_geometry(window, available_rect):
     
-    r = available_rect
+    w = prefs.get('mainWindow.width')
+    h = prefs.get('mainWindow.height')
     
-    w = min(prefs['mainWindow.width'], r.width())
-    h = min(prefs['mainWindow.height'], r.height())
-    x = (r.width() - w) / 2
-    y = (r.height() - h) / 2
-    
-    window.setGeometry(x, y, w, h)
+    if w is not None and h is not None:
+        # width and height preferences specified
+        
+        r = available_rect
+        
+        w = min(w, r.width())
+        h = min(h, r.height())
+        x = (r.width() - w) / 2
+        y = (r.height() - h) / 2
+        
+        window.setGeometry(x, y, w, h)
     
 
 if __name__ == '__main__':

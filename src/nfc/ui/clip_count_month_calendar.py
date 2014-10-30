@@ -8,10 +8,12 @@ mpl.rcParams['backend.qt4'] = 'PyQt4'
     
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PyQt4.QtGui import QFrame
+from PyQt4.QtCore import QSize
+from PyQt4.QtGui import QFrame, QSizePolicy
 import numpy as np
 
 from nfc.util.notifier import Notifier
+from nfc.util.preferences import preferences as prefs
 import nfc.util.calendar_utils as calendar_utils
 
 
@@ -49,6 +51,8 @@ class ClipCountMonthCalendar(QFrame):
         connect('axes_leave_event', self._on_axes_leave)
         connect('pick_event', self._on_pick)
         
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
 
     def _on_motion(self, e):
         
@@ -227,6 +231,17 @@ class ClipCountMonthCalendar(QFrame):
         self._canvas.draw()
 
 
+    def sizeHint(self):
+        # We fix the size of month calendars since we don't want them
+        # to expand or contract as the available space changes within
+        # the UI. We may need to change the size, however, if the font
+        # or font size used in the calendar changes. Hence we support
+        # width and height preferences.
+        width = prefs.get('monthCalendar.width', 300)
+        height = prefs.get('monthCalendar.height', 250)
+        return QSize(width, height)
+    
+    
     def resizeEvent(self, event):
         r = self.contentsRect()
         self._canvas.setGeometry(r.x(), r.y(), r.width(), r.height())
