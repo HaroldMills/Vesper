@@ -1,0 +1,1 @@
+nosetests -w C:\Users\Harold\Documents\Code\Python\NFC\tests
