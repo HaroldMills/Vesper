@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         self._create_ui(
             station_name, detector_name, clip_class_name, month_name)
         
-        self.setWindowTitle('NFC Viewer')
+        self.setWindowTitle('NFC Viewer - {:s}'.format(self._archive.name))
         
         
     def _create_ui(

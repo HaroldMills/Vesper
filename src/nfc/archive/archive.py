@@ -162,9 +162,15 @@ class Archive(object):
     
     def __init__(self, dir_path):
         self._archive_dir_path = dir_path
+        self._name = os.path.basename(dir_path)
         self._db_file_path = os.path.join(dir_path, _CLIP_DATABASE_FILE_NAME)
         
         
+    @property
+    def name(self):
+        return self._name
+    
+    
     def open(self, cache_db=False):
         self._open_db(cache_db)
         self._create_dicts()

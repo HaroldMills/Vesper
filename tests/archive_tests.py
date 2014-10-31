@@ -12,7 +12,8 @@ from nfc.archive.station import Station
 from nfc.util.bunch import Bunch
 
 
-ARCHIVE_DIR_PATH = ['data', 'Test Archive']
+ARCHIVE_NAME = 'Test Archive'
+ARCHIVE_DIR_PATH = ['data', ARCHIVE_NAME]
 
 STATION_TUPLES = [
     ('A', 'Station A', 'US/Eastern'),
@@ -40,6 +41,10 @@ class ArchiveTests(unittest.TestCase):
         
     def tearDown(self):
         self.archive.close()
+        
+        
+    def test_name(self):
+        self.assertEqual(self.archive.name, ARCHIVE_NAME)
         
         
     def test_add_clip(self):

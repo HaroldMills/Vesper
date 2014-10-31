@@ -46,8 +46,8 @@ class ClipsWindow(QMainWindow):
         self.set_clips(station_name, detector_name, night, clip_class_name)
         
         date = str(self._date.day) + ' ' + self._date.strftime('%B %Y')
-        title = '{:s} - {:s} - {:s}'.format(
-            self._station_name, self._detector_name, date)
+        title = '{:s} - {:s} - {:s} - {:s}'.format(
+            self._archive.name, self._station_name, self._detector_name, date)
         self.setWindowTitle(title)
         
         
