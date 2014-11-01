@@ -1,6 +1,7 @@
 from __future__ import print_function
 
-from PyQt4.QtGui import QMainWindow, QVBoxLayout, QWidget
+from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QMainWindow, QScrollArea, QVBoxLayout, QWidget
 
 from nfc.archive.archive import Archive
 from nfc.ui.clip_count_month_bar_chart import ClipCountMonthBarChart
@@ -49,9 +50,11 @@ class MainWindow(QMainWindow):
         self._date_chooser.add_listener(self._on_date_choice)
         self._configure_date_chooser()
         
+        scroll_area = _CalendarScrollArea(self._date_chooser)
+        
         box = QVBoxLayout()
         box.addWidget(self._query_frame)
-        box.addWidget(self._date_chooser)
+        box.addWidget(scroll_area)
         widget.setLayout(box)
 
         self.setCentralWidget(widget)
@@ -128,3 +131,18 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self._archive.close()
         event.accept()
+
+
+class _CalendarScrollArea(QScrollArea):
+    
+    """Scroll area for archive calendar, including size hint."""
+    
+    
+    def __init__(self, calendar):
+        super(_CalendarScrollArea, self).__init__()
+        self.setWidget(calendar)
+        self.setAlignment(Qt.AlignCenter)
+        
+        
+    def sizeHint(self):
+        return self.widget().scroll_area_size_hint

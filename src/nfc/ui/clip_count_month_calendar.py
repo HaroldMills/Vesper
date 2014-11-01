@@ -20,6 +20,18 @@ import nfc.util.calendar_utils as calendar_utils
 class ClipCountMonthCalendar(QFrame):
     
     
+    @staticmethod
+    def get_size_hint():
+        # We fix the size of month calendars since we don't want them
+        # to expand or contract as the available space changes within
+        # the UI. We may need to change the size, however, if the font
+        # or font size used in the calendar changes. Hence we support
+        # width and height preferences.
+        width = prefs.get('monthCalendar.width', 300)
+        height = prefs.get('monthCalendar.height', 250)
+        return QSize(width, height)
+    
+
     def __init__(self, parent, archive):
         
         super(ClipCountMonthCalendar, self).__init__(parent)
@@ -232,14 +244,7 @@ class ClipCountMonthCalendar(QFrame):
 
 
     def sizeHint(self):
-        # We fix the size of month calendars since we don't want them
-        # to expand or contract as the available space changes within
-        # the UI. We may need to change the size, however, if the font
-        # or font size used in the calendar changes. Hence we support
-        # width and height preferences.
-        width = prefs.get('monthCalendar.width', 300)
-        height = prefs.get('monthCalendar.height', 250)
-        return QSize(width, height)
+        return self.get_size_hint()
     
     
     def resizeEvent(self, event):

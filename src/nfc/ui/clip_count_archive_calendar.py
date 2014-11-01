@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import calendar
 
+from PyQt4.QtCore import QSize
 from PyQt4.QtGui import QFrame, QGridLayout
 
 from nfc.ui.clip_count_month_calendar import ClipCountMonthCalendar
@@ -9,7 +10,9 @@ from nfc.util.notifier import Notifier
 import nfc.archive.archive_utils as archive_utils
 
 
-# TODO: Scroll bars for big calendars?
+_GRID_LAYOUT_CONTENTS_MARGIN = 10
+_GRID_LAYOUT_SPACING = 10
+_EXTRA_SIZE = 20
 
 
 class ClipCountArchiveCalendar(QFrame):
@@ -35,7 +38,7 @@ class ClipCountArchiveCalendar(QFrame):
 
     def _create_month_calendars(self):
         pairs = archive_utils.get_year_month_pairs(self._archive)
-        # pairs = [(2014, i) for i in xrange(7, 13)]
+        # pairs = [(2014, i) for i in xrange(6, 9)]
         return [self._create_month_calendar(*p) for p in pairs]
     
     
@@ -52,15 +55,22 @@ class ClipCountArchiveCalendar(QFrame):
         calendars = self._month_calendars
         num_months = len(calendars)
         
-        if num_months != 0:
+        if num_months == 0:
+            self._num_cols = 0
+            self._num_rows = 0
+            
+        else:
         
             grid = QGridLayout()
+            m = _GRID_LAYOUT_CONTENTS_MARGIN
+            grid.setContentsMargins(m, m, m, m)
+            grid.setSpacing(_GRID_LAYOUT_SPACING)
 
             if num_months <= 3:
                 # three or fewer months in calendar
                 
                 # Put months in a single row.
-                num_cols = num_months
+                self._num_cols = num_months
                 row_num = 0
                 for i, calendar in enumerate(calendars):
                     grid.addWidget(calendar, row_num + 1, i + 1)
@@ -69,22 +79,22 @@ class ClipCountArchiveCalendar(QFrame):
                 # more than three months in calendar
                 
                 # Put months in columns as in a 12-month calendar.
-                num_cols = 3
-                start_col_num = (calendars[0].month - 1) % num_cols
+                self._num_cols = 3
+                start_col_num = (calendars[0].month - 1) % self._num_cols
                 for i, calendar in enumerate(calendars):
-                    col_num = (start_col_num + i) % num_cols
-                    row_num = (start_col_num + i) // num_cols
+                    col_num = (start_col_num + i) % self._num_cols
+                    row_num = (start_col_num + i) // self._num_cols
                     grid.addWidget(calendar, row_num + 1, col_num + 1)
                     
-            num_rows = row_num + 1
+            self._num_rows = row_num + 1
             
             # Put stretchy columns to left and right of calendar and
             # stretchy rows above and below. This will cause the
             # calendar to be centered in the available space.
             grid.setColumnStretch(0, 1)
-            grid.setColumnStretch(num_cols + 1, 1)
+            grid.setColumnStretch(self._num_cols + 1, 1)
             grid.setRowStretch(0, 1)
-            grid.setRowStretch(num_rows + 1, 1)
+            grid.setRowStretch(self._num_rows + 1, 1)
             
             self.setLayout(grid)
         
@@ -126,3 +136,25 @@ class ClipCountArchiveCalendar(QFrame):
         
     def clear_listeners(self):
         self._notifier.clear_listeners()
+
+
+    @property
+    def scroll_area_size_hint(self):
+        
+        if len(self._month_calendars) == 0:
+            num_cols = 1
+            num_rows = 1
+        else:
+            num_cols = self._num_cols
+            num_rows = min(self._num_rows, 2)
+            
+        size = ClipCountMonthCalendar.get_size_hint()
+        width = _get_size_dim(num_cols, size.width())
+        height = _get_size_dim(num_rows, size.height())
+        return QSize(width, height)
+    
+    
+def _get_size_dim(num_calendars, calendar_size):
+    n = num_calendars
+    s = (calendar_size + 2 * _GRID_LAYOUT_CONTENTS_MARGIN)
+    return n * s + (n - 1) * _GRID_LAYOUT_SPACING + _EXTRA_SIZE
