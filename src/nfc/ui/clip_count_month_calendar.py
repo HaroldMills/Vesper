@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import calendar
 import datetime
+import platform
 
 import matplotlib as mpl
 mpl.rcParams['backend.qt4'] = 'PyQt4'
@@ -47,7 +48,7 @@ class ClipCountMonthCalendar(QFrame):
         self._notifier = Notifier()
 
         self._figure = Figure()
-        self._figure.set_facecolor(self._get_window_color())
+        self._figure.set_facecolor(self._get_figure_face_color())
        
         self._canvas = FigureCanvasQTAgg(self._figure)
         self._canvas.setParent(self)
@@ -127,22 +128,30 @@ class ClipCountMonthCalendar(QFrame):
         self._notifier.notify_listeners(date)
         
         
-    def _get_window_color(self):
+    def _get_figure_face_color(self):
         
         """
-        Sets the face color of the figure to match the Qt palette
-        window color.
+        Gets a Matplotlib figure face color that will match the
+        Qt palette window color.
         """
         
         c = self.palette().window().color()
         color = (c.red(), c.green(), c.blue(), c.alpha())
         
-        # TODO: The color we get from the palette seems to be a little
-        # darker than the actual window color (at least for Mac OS X),
-        # so we apply the following empirically-derived "fix". Try to
-        # figure out how to obviate this. Is the underlying problem
-        # that Matplotlib and PyQt4 treat colors slightly differently?
-        return tuple(min(c / 249.5, 1) for c in color)
+        if platform.system() == 'Darwin':
+            # running on Mac OS X
+            
+            # The color we get from the palette seems to be a little
+            # darker than the actual window color (at least for Mac OS X),
+            # so we apply the following empirically-derived "fix".
+            # TODO: Figure out why the colors don't match and report
+            # a bug somewhere (probably to either Matplotlib or PyQt4).
+            return tuple(min(c / 249.5, 1) for c in color)
+        
+        else:
+            # not running on Mac OS X
+            
+            return tuple(c / 255. for c in color)
  
      
     @property
