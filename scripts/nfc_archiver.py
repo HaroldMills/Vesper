@@ -96,8 +96,6 @@ _CALL_CLIP_CLASS_NAMES = frozenset([
     'NWTH', 'OVEN', 'PAWA', 'PRAW', 'PROW', 'SNBU', 'SVSP', 'VESP',
     'WCSP', 'WIWA', 'WTSP', 'YRWA',
     
-    'WTSP.Songtype',
-    
     'DbUp', 'Other', 'SNBULALO', 'SwLi', 'Unknown', 'Weak', 'Zeep'
 
 ])
