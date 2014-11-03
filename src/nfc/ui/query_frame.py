@@ -5,7 +5,6 @@ import datetime
 from PyQt4.QtCore import QSize
 from PyQt4.QtGui import QHBoxLayout, QComboBox, QFrame, QLabel, QSizePolicy
 
-from nfc.archive.archive import Archive
 import nfc.archive.archive_utils as archive_utils
 import nfc.util.calendar_utils as calendar_utils
 
@@ -42,7 +41,8 @@ class QueryFrame(QFrame):
         self._detector_combo_box = self._create_combo_box(
             'Detector', texts, detector_name, self._on_detector_changed)
         
-        texts = self._get_clip_class_texts()
+        texts = archive_utils.get_clip_class_name_options(self._archive)
+        
         self._clip_class_combo_box = self._create_combo_box(
             'Class', texts, clip_class_name, self._on_clip_class_changed)
         
@@ -79,40 +79,6 @@ class QueryFrame(QFrame):
         
         return combo_box
 
-        
-    def _get_clip_class_texts(self):
-        
-        '''
-        Any
-        Call
-        Call.AMRE
-        .
-        .
-        .
-        Call.WTSP
-        Call.WTSP.Songtype
-        .
-        .
-        .
-        Noise
-        Tone
-        Unclassified
-        
-        
-        Subclasses:
-            Include
-            Exclude
-            Only
-        '''
-        
-        # TODO: Generate wildcard class names automatically.
-        texts = [s.name for s in self._archive.clip_classes] + \
-                [Archive.CLIP_CLASS_NAME_ANY,
-                 Archive.CLIP_CLASS_NAME_UNCLASSIFIED,
-                 'Call*']
-        texts.sort()
-        return texts
-    
         
     def _lay_out_widgets(self, pairs):
         

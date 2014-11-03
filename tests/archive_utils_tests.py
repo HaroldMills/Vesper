@@ -1,27 +1,21 @@
-import datetime
 import unittest
 
-import pytz
-
+from nfc.util.bunch import Bunch
 import nfc.archive.archive_utils as archive_utils
 
 
 class ArchiveUtilsTests(unittest.TestCase):
-    
-    def test_get_night(self):
+
+
+    def test_get_clip_class_name_options(self):
         
-        dt = datetime.datetime
-        d = datetime.date
-        tz = pytz.timezone('US/Eastern')
+        names = ['A', 'B', 'B.1', 'B.1.a', 'C']
+        expectedResult = [
+            '*', 'A', 'B', 'B*', 'B.1', 'B.1*', 'B.1.a', 'C', 'Unclassified']
         
-        cases = [
-            (dt(2012, 1, 1), d(2011, 12, 31)),
-            (dt(2012, 1, 1, 11, 59, 59), d(2011, 12, 31)),
-            (dt(2012, 1, 1, 12), d(2012, 1, 1)),
-            (tz.localize(dt(2012, 1, 1)), d(2011, 12, 31))
-        ]
+        clip_classes = [Bunch(name=n) for n in names]
+        archive = Bunch(clip_classes=clip_classes)
         
-        get_night = archive_utils.get_night
+        result = archive_utils.get_clip_class_name_options(archive)
         
-        for time, date in cases:
-            self.assertEqual(get_night(time), date)
+        self.assertEqual(result, expectedResult)

@@ -19,7 +19,7 @@ from nfc.archive.station import Station
 from nfc.util.directory_visitor import DirectoryVisitor
 from old_bird.archiver_time_keeper import (
     ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
-import nfc.archive.archive_utils as archive_utils
+import nfc.archive.archive_shared as archive_shared
 import nfc.util.sound_utils as sound_utils
 import nfc.util.time_utils as time_utils
 import old_bird.file_name_utils as file_name_utils
@@ -614,7 +614,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
         # We assume here that day directory names reflect local time,
         # regardless of the monitoring time zone.
         midnight = datetime.datetime(self.year, self.month, end_day, 0, 0, 0)
-        night = archive_utils.get_night(midnight)
+        night = archive_shared.get_night(midnight)
         
         return night
         

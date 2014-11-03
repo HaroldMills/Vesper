@@ -36,8 +36,6 @@ Questions regarding cloud archives:
 '''
 
 
-_CLIP_CLASS_NAME_WILDCARD = '*'
-
 _CLIP_DATABASE_FILE_NAME = 'ClipDatabase.db'
     
 # named tuple classes for database tables
@@ -123,24 +121,11 @@ _CLASSIFY_CLIP_SQL = (
 class Archive(object):
     
     
-    CLIP_CLASS_NAME_ANY = '*'
+    CLIP_CLASS_NAME_COMPONENT_SEPARATOR = '.'
+    CLIP_CLASS_NAME_WILDCARD = '*'
     CLIP_CLASS_NAME_UNCLASSIFIED = 'Unclassified'
 
 
-    # TODO: Do we really need this method? If yes, perhaps it should
-    # be in the `archive_utils` module.
-    @staticmethod
-    def get_clip_class_name_components(clip_classes):
-        
-        components = set()
-        components.update(*[c.name_components for c in clip_classes])
-        
-        components = list(components)
-        components.sort()
-    
-        return components
-    
-    
     @staticmethod
     def create(dir_path, stations, detectors, clip_classes):
         
@@ -297,13 +282,12 @@ class Archive(object):
     
     
     def _create_clip_class_name_component_table(self, clip_classes):
-        get_name_components = Archive.get_clip_class_name_components
-        components = [_ClipClassNameComponentTuple(None, c)
-                      for c in get_name_components(clip_classes)]
+        components = _get_name_components(clip_classes)
+        tuples = [_ClipClassNameComponentTuple(None, c) for c in components]
         self._create_table(
             'ClipClassNameComponent',
             _CREATE_CLIP_CLASS_NAME_COMPONENT_TABLE_SQL,
-            components)
+            tuples)
         
         
     def _create_clip_table(self):
@@ -606,16 +590,19 @@ class Archive(object):
         
     def _get_clip_class_conditions(self, class_name):
         
-        if class_name is None or class_name == Archive.CLIP_CLASS_NAME_ANY:
+        if class_name is None or \
+                class_name == Archive.CLIP_CLASS_NAME_WILDCARD:
+            
             return []
         
         else:
             
             include_subclasses = False
             
-            if class_name.endswith(_CLIP_CLASS_NAME_WILDCARD):
+            if class_name.endswith(Archive.CLIP_CLASS_NAME_WILDCARD):
                 include_subclasses = True
-                class_name = class_name[:-len(_CLIP_CLASS_NAME_WILDCARD)]
+                n = len(Archive.CLIP_CLASS_NAME_WILDCARD)
+                class_name = class_name[:-n]
             
             if class_name == Archive.CLIP_CLASS_NAME_UNCLASSIFIED:
                 return ['clip_class_id is null']
@@ -850,6 +837,17 @@ def _create_with_id(cls, id_, *args, **kwds):
     obj = cls(*args, **kwds)
     obj.id = id_
     return obj
+    
+
+def _get_name_components(clip_classes):
+    
+    components = set()
+    components.update(*[c.name_components for c in clip_classes])
+    
+    components = list(components)
+    components.sort()
+
+    return components
     
     
 # This is a feeble attempt to abstract window types away from NumPy.
