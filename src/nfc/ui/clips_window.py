@@ -22,10 +22,6 @@ _SPACING_ASPECT_RATIO = 2
 """ratio of vertical clip spacing to minimum horizontal spacing."""
 
 
-# TODO: Figure out where this belongs and put it there.
-_CLIP_CLASS_NAME_COMPONENT_SEPARATOR = '.'
-
-
 class ClipsWindow(QMainWindow):
     
     
@@ -119,7 +115,7 @@ class ClipsWindow(QMainWindow):
     
     
     def _get_clip_class_name_fragments(self, name):
-        sep = _CLIP_CLASS_NAME_COMPONENT_SEPARATOR
+        sep = Archive.CLIP_CLASS_NAME_COMPONENT_SEPARATOR
         parts = name.split(sep)
         n = len(parts)
         return [sep.join(parts[i:n]) for i in xrange(n)]
