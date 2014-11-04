@@ -2,8 +2,7 @@ from __future__ import print_function
 
 import datetime
 
-from PyQt4.QtCore import QSize
-from PyQt4.QtGui import QHBoxLayout, QComboBox, QFrame, QLabel, QSizePolicy
+from PyQt4.QtGui import QHBoxLayout, QComboBox, QFrame, QLabel
 
 import nfc.archive.archive_utils as archive_utils
 import nfc.util.calendar_utils as calendar_utils
@@ -20,8 +19,6 @@ class QueryFrame(QFrame):
         
         self._archive = archive
 
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        
         self._create_form(
             station_name, detector_name, clip_class_name, include_month,
             month_name)
@@ -83,16 +80,17 @@ class QueryFrame(QFrame):
     def _lay_out_widgets(self, pairs):
         
         box = QHBoxLayout()
+        
+        for (i, (label, widget)) in enumerate(pairs):
             
-        for label, widget in pairs:
+            box.addWidget(QLabel(label + ':'))
+            box.addWidget(widget)
             
-            b = QHBoxLayout()
-            b.addWidget(QLabel(label + ':'))
-            b.addWidget(widget)
-            
-            box.addLayout(b)
-            box.addSpacing(10)
-            
+            if i == len(pairs) - 1:
+                box.addStretch(1)
+            else:
+                box.addSpacing(10)
+                
         self.setLayout(box)
         
         
@@ -169,16 +167,6 @@ class QueryFrame(QFrame):
             self.observer()
         
         
-    # TODO: Figure out what we should really do here, and with the
-    # `setSizePolicy` call in the `__init__` method, to get what we
-    # want (if possible), which is a query frame that hugs its
-    # content horizontally. We also do not want the splitter frame
-    # that holds a query frame to expand the query frame horizontally
-    # when the splitter frame grows.
-    def sizeHint(self):
-        return QSize(0, -1)
-    
-    
 def _set_current_text(combo_box, text):
     if text is not None:
         for i in xrange(combo_box.count()):
