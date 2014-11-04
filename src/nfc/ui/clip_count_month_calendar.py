@@ -125,9 +125,11 @@ class ClipCountMonthCalendar(QFrame):
     def _on_pick(self, e):
         # We must test the type of mouse event that resulted in this
         # pick event, since (for some reason) pick events result from
-        # both button press events and scroll events.
-        if e.mouseevent.name == 'button_press_event':
-            day = self._get_path_index(e.mouseevent) + 1
+        # both button press events and scroll events. We also only
+        # respond to events from the primary mouse button.
+        e = e.mouseevent
+        if e.name == 'button_press_event' and e.button == 1:
+            day = self._get_path_index(e) + 1
             date = datetime.date(self.year, self.month, day)
             self._notifier.notify_listeners(date)
             self._pick_enabled = False
