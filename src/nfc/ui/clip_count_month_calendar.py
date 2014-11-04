@@ -123,9 +123,14 @@ class ClipCountMonthCalendar(QFrame):
         
         
     def _on_pick(self, e):
-        day = self._get_path_index(e.mouseevent) + 1
-        date = datetime.date(self.year, self.month, day)
-        self._notifier.notify_listeners(date)
+        # We must test the type of mouse event that resulted in this
+        # pick event, since (for some reason) pick events result from
+        # both button press events and scroll events.
+        if e.mouseevent.name == 'button_press_event':
+            day = self._get_path_index(e.mouseevent) + 1
+            date = datetime.date(self.year, self.month, day)
+            self._notifier.notify_listeners(date)
+            self._pick_enabled = False
         
         
     def _get_figure_face_color(self):
