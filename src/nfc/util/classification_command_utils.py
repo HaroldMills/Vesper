@@ -1,6 +1,8 @@
 """Utility functions pertaining to classification command sets."""
 
 
+import operator
+
 from PyQt4.QtCore import Qt
 
 
@@ -15,7 +17,8 @@ _CHARS = frozenset(_ALPHABETIC_CHARS + _ALPHABETIC_CHARS.upper())
 
 _MODIFIER_PAIRS = [('Alt', Qt.AltModifier)]
 """
-list of recognized (modifier name, QT keyboard modifier flag) pairs.
+list of recognized (modifier name, QT keyboard modifier flag) pairs,
+excluding shift.
 
 Note that we do *not* allow classification commands that use the control
 modifier (i.e. the control key on Linux and Windows and the command key
@@ -23,11 +26,11 @@ on Mac OS X) since they could collide with menu item keyboard accelerators.
 """
 
 _MODIFIER_NAMES = frozenset([p[0] for p in _MODIFIER_PAIRS])
-"""set of recognized command modifiers."""
+"""set of recognized command modifier names, excluding shift."""
 
-_MODIFIER_FLAGS = \
-    sum([int(p[1]) for p in _MODIFIER_PAIRS] + [int(Qt.ShiftModifier)])
-"""sum of recognized command modifier flags."""
+_ALL_MODIFIERS = reduce(
+    operator.or_, [m for _, m in _MODIFIER_PAIRS], Qt.ShiftModifier)
+"""disjunction of recognized command modifiers, including shift."""
 
 _SCOPES = frozenset(['Selected', 'Page', 'All'])
 """set of recognized command scopes."""
@@ -110,12 +113,11 @@ def get_command_from_key_event(key_event):
         
         modifiers = key_event.modifiers()
         
-        if modifiers | _MODIFIER_FLAGS != _MODIFIER_FLAGS:
+        if modifiers | _ALL_MODIFIERS != _ALL_MODIFIERS:
             # unrecognized modifier present
             return None
             
-        mods = ''.join(
-            s + '-' for s, m in _MODIFIER_PAIRS if modifiers & m != 0)
+        mods = ''.join(s + '-' for s, m in _MODIFIER_PAIRS if modifiers & m)
 
         if modifiers & Qt.ShiftModifier:
             char = char.upper()
