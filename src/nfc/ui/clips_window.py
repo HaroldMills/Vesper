@@ -617,6 +617,19 @@ class _FiguresFrameWithFlowLayout(_FiguresFrame):
         super(_FiguresFrameWithFlowLayout, self).__init__(
             parent, config, **kwargs)
         
+        # This helps prevent clip frames for short clips from winding
+        # up with zero width, which causes problems on Windows. It is
+        # not really a solution to that problem. A solution would be
+        # for clip figures to have a minimum width in both seconds and
+        # pixels (this might best be accomplished by limiting the width
+        # in seconds and the the plot scale in seconds per pixel), and
+        # for clip plotting to take this into consideration. The clip
+        # plotting code currently assume that the width of the clip
+        # figure in seconds is equal to the clip duration, an assumption
+        # that will be violated if the clip figure width can be larger
+        # than the clip duration.
+        self.setMinimumSize(500, 300)
+        
         # clip layout parameters
         self._clips_area_width = config.clips_area_width
         self._clip_spacing = config.clip_spacing
