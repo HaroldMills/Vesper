@@ -97,8 +97,10 @@ class PresetManager(object):
             return _copy_preset_data(self._preset_data[type_name])
         
         except KeyError:
-            f = 'Unrecognized preset type name "{:s}".'
-            raise ValueError(f.format(type_name))
+            f = ('Presets of unrecognized type "{:s}" requested from '
+                 'preset manager.')
+            _log_error(f.format(type_name))
+            return ([], {})
 
 
 def _load_presets(presets_dir_path, preset_types):
@@ -116,8 +118,8 @@ def _load_presets(presets_dir_path, preset_types):
                 preset_type = preset_types[dir_name]
                 
             except KeyError:
-                f = ('Preset manager encountered unrecognized preset type '
-                     '"{:s}" at "{:s}".')
+                f = ('Preset manager encountered directory for unrecognized '
+                     'preset type "{:s}" at "{:s}".')
                 _log_warning(f.format(dir_name, dir_path))
             
             else:
@@ -190,11 +192,11 @@ def _parse_preset(file_path, preset_name, preset_type):
         
         
 def _log_warning(message):
-    print('Warning:' + message, file=sys.stderr)
+    print('Warning: ' + message, file=sys.stderr)
     
     
 def _log_error(message):
-    print('Error:' + message, file=sys.stderr)
+    print('Error: ' + message, file=sys.stderr)
     
     
 def _copy_preset_data(data):

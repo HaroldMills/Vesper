@@ -48,7 +48,7 @@ class PresetManagerTests(unittest.TestCase):
         self.assertEqual(type_names, ['A', 'B'])
         
         
-    def test_presets(self):
+    def test_get_presets(self):
         
         expected = {
             
@@ -65,7 +65,8 @@ class PresetManagerTests(unittest.TestCase):
                      })
                  }),
                     
-            'B': ([B('1', '1'), B('2', '2')], {})
+            'B': ([B('1', '1'), B('2', '2')], {}),
+            'X': ([], {})
             
         }
         
