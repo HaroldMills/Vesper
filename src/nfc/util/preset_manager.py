@@ -28,7 +28,7 @@ class PresetManager(object):
             presets_dir_path : str
                 the path of the presets directory.
                 
-            preset_types : set or sequence of Preset objects
+            preset_types : set or sequence of `Preset` subclasses
                 the types of presets to expect in the presets directory.
                 
         :Raises ValueError:
@@ -55,7 +55,8 @@ class PresetManager(object):
     def preset_types(self):
         
         """
-        the preset types of this preset manager, in a tuple.
+        the preset types of this preset manager, as a tuple of `Preset`
+        subclasses.
         
         These are the preset types specified when the manager was initialized,
         sorted by name.
@@ -69,19 +70,24 @@ class PresetManager(object):
         """
         Gets all presets of the specified type.
         
+        :Parameters:
+            type_name : str
+                the name of a preset type.
+                
         :Returns:
             all presets of the specified type.
             
             The presets are returned in a recursive data structure
-            that reflects how the presets are stored in the file system.
-            The data structure has the form:
+            that reflects how the presets are stored in the persistent
+            store. The data structure has the form:
             
                 <preset data> := ([<preset>], {<subdir_name>: <preset data>})
                 
-            That is, it is a pair comprising a list of presets and a
-            dictionary that maps string subdirectory names to data
-            structures that in turn describe the presets that are in
-            those subdirectories. Each list of presets is sorted by name.
+            That is, it is a pair comprising a list of presets (each
+            an instance of a `Preset` subclass) and a dictionary that
+            maps string subdirectory names to data structures that in
+            turn describe the presets that are in those subdirectories.
+            Each list of presets is sorted by preset name.
             
         :Raises ValueError:
             if the specified preset type is not recognized.
