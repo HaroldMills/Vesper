@@ -35,6 +35,7 @@ class PresetManager(object):
             if the specified directory does not exist.
         """
         
+        # TODO: Should we raise exceptions or log errors here?
         if not os.path.exists(presets_dir_path):
             f = 'Presets directory "{:s}" does not exist.'
             raise ValueError(f.format(presets_dir_path))
@@ -81,13 +82,13 @@ class PresetManager(object):
             that reflects how the presets are stored in the persistent
             store. The data structure has the form:
             
-                <preset data> := ([<preset>], {<subdir_name>: <preset data>})
+                <preset data> := ((<preset>), {<subdir_name>: <preset data>})
                 
-            That is, it is a pair comprising a list of presets (each
+            That is, it is a pair comprising a tuple of presets (each
             an instance of a `Preset` subclass) and a dictionary that
             maps string subdirectory names to data structures that in
             turn describe the presets that are in those subdirectories.
-            Each list of presets is sorted by preset name.
+            Each tuple of presets is sorted by preset name.
             
         :Raises ValueError:
             if the specified preset type is not recognized.
@@ -100,7 +101,7 @@ class PresetManager(object):
             f = ('Presets of unrecognized type "{:s}" requested from '
                  'preset manager.')
             _log_error(f.format(type_name))
-            return ([], {})
+            return ((), {})
 
 
 def _load_presets(presets_dir_path, preset_types):
@@ -158,7 +159,7 @@ def _load_presets_aux(dir_path, preset_type):
         
     presets.sort(key=lambda p: p.name)
     
-    return (presets, preset_data)
+    return (tuple(presets), preset_data)
         
         
 def _get_preset_name(file_name):
