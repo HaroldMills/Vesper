@@ -6,7 +6,8 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import (
-    QBrush, QFrame, QLabel, QMainWindow, QPainter, QVBoxLayout, QWidget)
+    QBrush, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QMainWindow,
+    QPainter, QVBoxLayout, QWidget)
 import numpy as np
 
 from nfc.archive.archive import Archive
@@ -15,6 +16,7 @@ from nfc.ui.multiselection import Multiselection
 from nfc.ui.spectrogram_clip_figure import SpectrogramClipFigure as ClipFigure
 from nfc.util.bunch import Bunch
 from nfc.util.preferences import preferences as prefs
+from nfc.util.preferences import preset_manager
 import nfc.util.classification_command_utils as command_utils
 
 
@@ -27,7 +29,7 @@ class ClipsWindow(QMainWindow):
     
     def __init__(
             self, parent, archive, station_name, detector_name, night,
-            clip_class_name, command_set_name):
+            clip_class_name, commands_preset_name):
         
         super(ClipsWindow, self).__init__(parent)
         
@@ -35,9 +37,9 @@ class ClipsWindow(QMainWindow):
         
         self._archive = archive
         
-        self._init_classification_dict(command_set_name)
-        
         self._create_ui()
+        
+        self._init_commands(commands_preset_name)
         
         self.set_clips(station_name, detector_name, night, clip_class_name)
         
@@ -46,45 +48,100 @@ class ClipsWindow(QMainWindow):
             self._archive.name, self._station_name, self._detector_name, date)
         self.setWindowTitle(title)
         
+                
+    def _create_ui(self):
+        parent = QWidget(self)
+        self._create_ui_components(parent)
+        self._lay_out_ui_components(parent)
         
-    def _init_classification_dict(self, command_set_name):
         
-        if command_set_name is None:
-            self._classification_dict = {}
+    def _create_ui_components(self, parent):
+        
+        self._title_label = QLabel(parent)
+        self._title_label.setAlignment(Qt.AlignCenter)
+
+        (self._commands_combo_box, self._commands_indices,
+         self._commands_presets) = \
+            _create_preset_combo_box(
+                self, 'Classification Commands', self._on_commands_changed)
+        self._commands_combo_box.setFocusPolicy(Qt.NoFocus)
+
+        config = Bunch(
+            clips_area_width=prefs['clipsWindow.duration'],
+            clip_spacing=prefs['clipsWindow.spacing'],
+            num_rows=prefs['clipsWindow.numRows'],
+            min_clip_height=40,
+            selection_rect_thickness=3,
+            selection_rect_color='red'
+        )
+        self._figures_frame = _FiguresFrameWithFlowLayout(parent, config)
+        
+        
+    def _lay_out_ui_components(self, parent):
+        
+        grid = QGridLayout()
+        grid.setContentsMargins(20, 0, 20, 0)
+        
+        if self._commands_combo_box is not None:
+            box = QHBoxLayout()
+            box.addWidget(QLabel('Commands:', parent))
+            box.addWidget(self._commands_combo_box)
+            grid.addLayout(box, 0, 0, Qt.AlignLeft)
             
-        else:
-            self._classification_dict = \
-                self._create_classification_dict(command_set_name)
+        grid.addWidget(self._title_label, 0, 1, Qt.AlignHCenter)
+        for i in xrange(3):
+            grid.setColumnMinimumWidth(i, 10)
+            grid.setColumnStretch(i, 1)
+        
+        box = QVBoxLayout()
+        box.addLayout(grid)
+        box.addWidget(self._figures_frame, stretch=1)
+        
+        parent.setLayout(box)
+        
+        # We set the left, right, and bottom margins of the box layout
+        # to zero since we will lay out the figures of the figure frame
+        # ourselves. It seems to be important to set the margins after
+        # the call to `self.setLayout` rather than before since before
+        # the call the margins are all zero.
+        margins = box.contentsMargins()
+        margins.setLeft(0)
+        margins.setRight(0)
+        margins.setBottom(0)
+        box.setContentsMargins(margins)
+
+        self.setCentralWidget(parent)
+
+    
+    def _on_commands_changed(self, index):
+        self._update_classification_dict(index)
         
         
-    def _create_classification_dict(self, command_set_name):
+    def _update_classification_dict(self, index):
+        preset = self._commands_presets[index]
+        self._classification_dict = \
+            self._create_classification_dict(preset)
         
-        command_sets = prefs.get('clipsWindow.commandSets')
         
-        if command_sets is None:
-            
-            # TODO: Handle error.
-            return {}
+    def _create_classification_dict(self, commands_preset):
         
-        command_set = command_sets.get(command_set_name)
+        '''
+        Creates a mapping from command names to clip classes for the
+        specified commands preset.
         
-        if command_set is None:
-            
-            # TODO: Handle error.
-            return {}
-            
-        # Want to wind up with a mapping from commands to clip classes.
-        # This will be the composition of the command set, which maps commands
-        # to clip class name fragments, and a mapping from clip class name
-        # fragments to clip classes. For each clip class name fragment
-        # of a command set, there must be exactly one clip class whose name
-        # ends with that fragment.
+        The mapping is the composition of the preset's commands dictionary,
+        which maps command names to clip class name fragments, and a mapping
+        from clip class name fragments to clip classes. For each clip class
+        name fragment of a command, there must be exactly one clip class
+        whose name ends with that fragment.
+        '''
         
+        commands = commands_preset.commands
         classes = self._archive.clip_classes
         classes_dict = self._create_fragment_to_classes_dict(classes)
         classification_dict = {}
         
-        for command, (fragment, all_) in command_set.iteritems():
+        for command_name, (fragment, all_) in commands.iteritems():
             
             classes = classes_dict.get(fragment)
             
@@ -97,10 +154,7 @@ class ClipsWindow(QMainWindow):
                 pass
             
             else:
-                classification_dict[command] = (classes[0], all_)
-            
-#         for command, (clip_class, all_) in classification_dict.iteritems():
-#             print(command, clip_class.name, all_)
+                classification_dict[command_name] = (classes[0], all_)
             
         return classification_dict
         
@@ -121,44 +175,33 @@ class ClipsWindow(QMainWindow):
         return [sep.join(parts[i:n]) for i in xrange(n)]
     
     
-    def _create_ui(self):
+    def _init_commands(self, preset_name):
         
-        widget = QWidget(self)
-#        self.setFrameStyle(QFrame.Shape.Panel | QFrame.Shadow.Sunken)
+        if self._commands_combo_box is not None:
+            
+            index = 0
+            
+            if preset_name is not None:
+                
+                try:
+                    index = self._commands_indices[preset_name]
+                    
+                except KeyError:
+                    # TODO: Log error.
+                    pass
+                    
+            if self._commands_combo_box.currentIndex() == index:
+                self._update_classification_dict(index)
+                
+            else:
+                self._commands_combo_box.setCurrentIndex(index)
+                
+        else:
+            # no commands presets
+            
+            self._classification_dict = {}
         
-        self._title_label = QLabel(widget)
-        self._title_label.setAlignment(Qt.AlignCenter)
         
-        config = Bunch(
-            clips_area_width=prefs['clipsWindow.duration'],
-            clip_spacing=prefs['clipsWindow.spacing'],
-            num_rows=prefs['clipsWindow.numRows'],
-            min_clip_height=40,
-            selection_rect_thickness=3,
-            selection_rect_color='red'
-        )
-        self._figures_frame = _FiguresFrameWithFlowLayout(widget, config)
-        
-        box = QVBoxLayout()
-        box.addWidget(self._title_label)
-        box.addWidget(self._figures_frame, stretch=1)
-        
-        widget.setLayout(box)
-        
-        # We set the left, right, and bottom margins of the box layout
-        # to zero since we will lay out the figures of the figure frame
-        # ourselves. It seems to be important to set the margins after
-        # the call to `self.setLayout` rather than before since before
-        # the call the margins are all zero.
-        margins = box.contentsMargins()
-        margins.setLeft(0)
-        margins.setRight(0)
-        margins.setBottom(0)
-        box.setContentsMargins(margins)
-
-        self.setCentralWidget(widget)
-
-    
     def set_clips(self, station_name, detector_name, date, clip_class_name):
 
         # TODO: Does this make sense? Think about what `None` arguments
@@ -236,7 +279,7 @@ class ClipsWindow(QMainWindow):
         
         if command is not None:
             
-            pair = self.classification_dict.get(command)
+            pair = self._classification_dict.get(command)
         
             if pair is not None:
                 self.classify(*pair)
@@ -938,3 +981,26 @@ def _meta_down(event):
 
 def _shift_down(event):
     return _test_for_modifier(event, Qt.ShiftModifier)
+
+
+def _create_preset_combo_box(parent, preset_type_name, slot):
+    
+    preset_data = preset_manager.get_presets(preset_type_name)
+    pairs = preset_manager.flatten_preset_data(preset_data)
+    
+    if len(pairs) != 0:
+        
+        preset_name_tuples, presets = zip(*pairs)
+        preset_names = [' - '.join(t) for t in preset_name_tuples]
+        
+        combo_box = QComboBox(parent)
+        combo_box.addItems(preset_names)
+        combo_box.currentIndexChanged.connect(slot)
+        
+        indices = dict((p.name, i) for i, p in enumerate(presets))
+        presets = dict((i, p) for i, p in enumerate(presets))
+        
+        return (combo_box, indices, presets)
+    
+    else:
+        return (None, None, None)

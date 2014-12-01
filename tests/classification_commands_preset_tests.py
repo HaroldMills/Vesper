@@ -1,12 +1,12 @@
-import nfc.util.classification_command_utils as utils
+import nfc.util.classification_commands_preset as preset_module
 
 from test_case import TestCase
 
 
-class ClassificationCommandSetUtilsTests(TestCase):
+class ClassificationCommandsPresetTests(TestCase):
     
     
-    def test_parse_command_set(self):
+    def test_parse_preset(self):
         
         cases = [
             ('c Call', {'c': ('Call', 'Selected')}),
@@ -19,11 +19,11 @@ class ClassificationCommandSetUtilsTests(TestCase):
         ]
         
         for text, expected in cases:
-            commands = utils.parse_command_set(text)
+            commands = preset_module._parse_preset(text)
             self.assertEqual(commands, expected)
             
             
-    def test_parse_command_set_errors(self):
+    def test_parse_preset_errors(self):
         
         cases = [
             'c',
@@ -36,4 +36,4 @@ class ClassificationCommandSetUtilsTests(TestCase):
         ]
         
         for case in cases:
-            self._assert_raises(ValueError, utils.parse_command_set, case)
+            self._assert_raises(ValueError, preset_module._parse_preset, case)

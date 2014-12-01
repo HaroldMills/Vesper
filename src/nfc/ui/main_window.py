@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
 
 
     def __init__(
-            self, archive_dir_path, command_set_name, count_display_type,
+            self, archive_dir_path, commands_preset_name, count_display_type,
             station_name, detector_name, clip_class_name, month_name=None):
         
         super(MainWindow, self).__init__()
@@ -29,7 +29,7 @@ class MainWindow(QMainWindow):
         self._archive = Archive(archive_dir_path)
         self._archive.open(False)
         
-        self._command_set_name = command_set_name
+        self._commands_preset_name = commands_preset_name
         self._count_display_type = count_display_type
         
         self._create_ui(
@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
         f = self._query_frame
         window = ClipsWindow(
             self, self._archive, f.station_name, f.detector_name, date,
-            f.clip_class_name, self._command_set_name)
+            f.clip_class_name, self._commands_preset_name)
         
         width = prefs['clipsWindow.width']
         height = prefs['clipsWindow.height']

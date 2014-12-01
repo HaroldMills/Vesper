@@ -15,7 +15,7 @@
     "clipsWindow.numRows": 6,
     "clipsWindow.duration": 1.5,
     "clipsWindow.spacing": 0.01,
-    "clipsWindow.defaultCommandSet": "Coarse",
+    "clipsWindow.defaultClassificationCommands": "Coarse",
     "clipsWindow.advanceAfterClassification": true,
     "clipFigure.spectrogram.windowType": "Hann",
     "clipFigure.spectrogram.windowSize": 128,

@@ -16,7 +16,7 @@ def _main():
     
     args = _parse_args()
     archive_dir_path = _get_archive_dir_path(args, prefs)
-    command_set_name = _get_command_set_name(args, prefs)
+    commands_preset_name = _get_commands_preset_name(args, prefs)
 
     # This must happen before any other QT operations, including
     # creating the main window.
@@ -25,7 +25,7 @@ def _main():
     count_display_type = 'archive calendar'
 
     window = MainWindow(
-        archive_dir_path, command_set_name, count_display_type,
+        archive_dir_path, commands_preset_name, count_display_type,
         prefs['mainWindow.initialStation'],
         prefs['mainWindow.initialDetector'],
         prefs['mainWindow.initialClipClass'])
@@ -49,7 +49,8 @@ def _parse_args():
         '--archive', help='the name of the archive to view')
     
     parser.add_argument(
-        '--command-set', help='the name of the command set to use')
+        '--classification-commands',
+        help='the name of the commands preset to use')
     
     args = parser.parse_args()
     
@@ -89,11 +90,11 @@ def _handle_init_error(message):
     sys.exit(1)
 
 
-def _get_command_set_name(args, prefs):
+def _get_commands_preset_name(args, prefs):
     
-    name = args.command_set
+    name = args.classification_commands
     if name is None:
-        name = prefs.get('clipsWindow.defaultCommandSet')
+        name = prefs.get('clipsWindow.defaultClassificationCommands')
         
     return name
         
