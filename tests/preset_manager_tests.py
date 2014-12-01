@@ -6,6 +6,7 @@ import unittest
 
 from nfc.util.preset import Preset
 from nfc.util.preset_manager import PresetManager
+import nfc.util.preset_manager as preset_manager
 
 
 class _Preset(Preset):
@@ -73,3 +74,25 @@ class PresetManagerTests(unittest.TestCase):
         for type_name, expected_data in expected.iteritems():
             preset_data = self.manager.get_presets(type_name)
             self.assertEqual(preset_data, expected_data)
+            
+            
+    def test_flatten_preset_data(self):
+        
+        cases = [
+                 
+            ('A', ((('1',), A('1', 'one')),
+                   (('2',), A('2', 'two')),
+                   (('x', 'y', '3'), A('3', 'three')),
+                   (('x', 'z', '4'), A('4', 'four')))),
+                 
+            ('B', ((('1',), B('1', '1')),
+                   (('2',), B('2', '2')))),
+                 
+            ('X', ())
+            
+        ]
+        
+        for type_name, expected_data in cases:
+            preset_data = self.manager.get_presets(type_name)
+            flattened_data = self.manager.flatten_preset_data(preset_data)
+            self.assertEqual(flattened_data, expected_data)

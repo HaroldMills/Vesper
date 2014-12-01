@@ -15,6 +15,25 @@ class PresetManager(object):
     """Preset manager that loads and provides access to presets."""
     
     
+    @staticmethod
+    def flatten_preset_data(preset_data, name_tuple=()):
+        
+        presets, subdirs_data = preset_data
+        
+        # Get top-level (name, preset) pairs.
+        top_pairs = tuple((name_tuple + (p.name,), p) for p in presets)
+        
+        # Get subdirectory (name, preset) pairs
+        keys = subdirs_data.keys()
+        keys.sort()
+        f = PresetManager.flatten_preset_data
+        subdir_pair_tuples = \
+            [f(subdirs_data[k], name_tuple + (k,)) for k in keys]
+        subdir_pairs = sum(subdir_pair_tuples, ())
+        
+        return top_pairs + subdir_pairs
+
+
     def __init__(self, presets_dir_path, preset_types):
         
         """
