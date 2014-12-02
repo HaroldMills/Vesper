@@ -22,13 +22,12 @@ def _main():
     # creating the main window.
     app = QApplication(sys.argv)
     
-    count_display_type = 'archive calendar'
-
     window = MainWindow(
-        archive_dir_path, commands_preset_name, count_display_type,
+        archive_dir_path,
         prefs['mainWindow.initialStation'],
         prefs['mainWindow.initialDetector'],
-        prefs['mainWindow.initialClipClass'])
+        prefs['mainWindow.initialClipClass'],
+        commands_preset_name)
     
     _set_geometry(window, app.desktop().availableGeometry())
     

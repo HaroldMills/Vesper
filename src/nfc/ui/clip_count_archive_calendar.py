@@ -114,8 +114,7 @@ class ClipCountArchiveCalendar(QFrame):
         return self._clip_class_name
     
     
-    def configure(
-            self, station_name, detector_name, clip_class_name, year, month):
+    def configure(self, station_name, detector_name, clip_class_name):
         
         self._station_name = station_name
         self._detector_name = detector_name
