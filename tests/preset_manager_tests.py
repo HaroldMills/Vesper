@@ -6,7 +6,6 @@ import unittest
 
 from nfc.util.preset import Preset
 from nfc.util.preset_manager import PresetManager
-import nfc.util.preset_manager as preset_manager
 
 
 class _Preset(Preset):

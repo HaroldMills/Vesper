@@ -16,8 +16,31 @@ class PresetManager(object):
     
     
     @staticmethod
-    def flatten_preset_data(preset_data, name_tuple=()):
+    def flatten_preset_data(preset_data):
         
+        """
+        Flattens preset data returned by the `get_preset_data` method.
+        
+        :Parameters:
+            preset_data : tuple of length two
+                preset data as returned by the `get_preset_data` method.
+                
+        :Returns:
+            flattened version of the specified preset data.
+            
+            The returned value is a tuple of (<preset path>, <preset>)
+            pairs, where each preset path is a tuple of string path
+            components. For example, the preset path for a preset
+            named "P" that is within subdirectory "D" of the
+            directory for the preset's type is `('D', 'P')`.
+        """
+        
+        return PresetManager._flatten_preset_data(preset_data, ())
+        
+        
+    @staticmethod
+    def _flatten_preset_data(preset_data, name_tuple):
+
         presets, subdirs_data = preset_data
         
         # Get top-level (name, preset) pairs.
@@ -26,7 +49,7 @@ class PresetManager(object):
         # Get subdirectory (name, preset) pairs
         keys = subdirs_data.keys()
         keys.sort()
-        f = PresetManager.flatten_preset_data
+        f = PresetManager._flatten_preset_data
         subdir_pair_tuples = \
             [f(subdirs_data[k], name_tuple + (k,)) for k in keys]
         subdir_pairs = sum(subdir_pair_tuples, ())
