@@ -11,6 +11,7 @@ from PyQt4.QtGui import (
 import numpy as np
 
 from nfc.archive.archive import Archive
+from nfc.ui.clip_times_rug_plot import ClipTimesRugPlot
 from nfc.ui.flow_layout import FlowLayout
 from nfc.ui.multiselection import Multiselection
 from nfc.ui.spectrogram_clip_figure import SpectrogramClipFigure as ClipFigure
@@ -57,15 +58,17 @@ class ClipsWindow(QMainWindow):
         
     def _create_ui_components(self, parent):
         
-        self._title_label = QLabel(parent)
-        self._title_label.setAlignment(Qt.AlignCenter)
-
         (self._commands_combo_box, self._commands_indices,
          self._commands_presets) = \
             _create_preset_combo_box(
                 self, 'Classification Commands', self._on_commands_changed)
         self._commands_combo_box.setFocusPolicy(Qt.NoFocus)
 
+        self._title_label = QLabel(parent)
+        self._title_label.setAlignment(Qt.AlignCenter)
+
+        self._rug_plot = ClipTimesRugPlot(parent)
+        
         config = Bunch(
             clips_area_width=prefs['clipsWindow.duration'],
             clip_spacing=prefs['clipsWindow.spacing'],
@@ -81,20 +84,26 @@ class ClipsWindow(QMainWindow):
         
         grid = QGridLayout()
         grid.setContentsMargins(20, 0, 20, 0)
+        grid.addWidget(self._title_label, 0, 1, Qt.AlignHCenter)
         
         if self._commands_combo_box is not None:
             box = QHBoxLayout()
             box.addWidget(QLabel('Commands:', parent))
             box.addWidget(self._commands_combo_box)
-            grid.addLayout(box, 0, 0, Qt.AlignLeft)
+            grid.addLayout(box, 0, 2, Qt.AlignRight)
             
-        grid.addWidget(self._title_label, 0, 1, Qt.AlignHCenter)
         for i in xrange(3):
             grid.setColumnMinimumWidth(i, 10)
             grid.setColumnStretch(i, 1)
         
+        hBox = QHBoxLayout()
+        hBox.addSpacing(20)
+        hBox.addWidget(self._rug_plot.canvas)
+        hBox.addSpacing(20)
+        
         box = QVBoxLayout()
         box.addLayout(grid)
+        box.addLayout(hBox)
         box.addWidget(self._figures_frame, stretch=1)
         
         parent.setLayout(box)
@@ -234,6 +243,7 @@ class ClipsWindow(QMainWindow):
         
         
     def _update_ui(self):
+        self._rug_plot.clips = self._clips
         self._figures_frame.clips = self._clips
         self._update_title()
         
@@ -248,6 +258,9 @@ class ClipsWindow(QMainWindow):
         else:
             title = self._create_clips_string()
 
+        f = self._figures_frame
+        self._rug_plot.highlight_clips(
+            f.first_visible_clip_num, f.num_visible_clips)
         self._title_label.setText(title)
 
         
