@@ -14,7 +14,7 @@ class ClipFigurePlayButton(object):
     DEFAULT_WIDTH = 17
     DEFAULT_HEIGHT = 17
     
-    DEFAULT_UP_COLOR = (0, .9, 0)
+    DEFAULT_UP_COLOR = (.5, 1, .5)
     DEFAULT_DOWN_COLOR = (0, .6, 0)
     DEFAULT_BORDER_COLOR = (.2, .2, .2)
 
