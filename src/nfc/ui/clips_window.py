@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from collections import defaultdict
+import math
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -67,7 +68,7 @@ class ClipsWindow(QMainWindow):
         self._title_label = QLabel(parent)
         self._title_label.setAlignment(Qt.AlignCenter)
 
-        self._rug_plot = ClipTimesRugPlot(parent)
+        self._rug_plot = ClipTimesRugPlot(parent, self.move_to_page)
         
         config = Bunch(
             clips_area_width=prefs['clipsWindow.duration'],
@@ -243,8 +244,9 @@ class ClipsWindow(QMainWindow):
         
         
     def _update_ui(self):
-        self._rug_plot.clips = self._clips
-        self._figures_frame.clips = self._clips
+        frame = self._figures_frame
+        frame.clips = self._clips
+        self._rug_plot.set_clips(self._clips, frame.page_start_indices)
         self._update_title()
         
 
@@ -258,9 +260,7 @@ class ClipsWindow(QMainWindow):
         else:
             title = self._create_clips_string()
 
-        f = self._figures_frame
-        self._rug_plot.highlight_clips(
-            f.first_visible_clip_num, f.num_visible_clips)
+        self._rug_plot.current_page_num = self._figures_frame.page_num
         self._title_label.setText(title)
 
         
@@ -351,6 +351,11 @@ class ClipsWindow(QMainWindow):
             
     def move_up_one_page(self):
         self._figures_frame.move_up_one_page()
+        self._update_title()
+        
+        
+    def move_to_page(self, page_num):
+        self._figures_frame.move_to_page(page_num)
         self._update_title()
         
         
@@ -488,6 +493,27 @@ class _FiguresFrame(QWidget):
                 return clip_num - self.first_visible_clip_num
     
     
+    @property
+    def num_pages(self):
+        return int(math.ceil(self.total_num_rows / float(self.num_rows)))
+    
+    
+    @property
+    def page_start_indices(self):
+        return [self._get_first_clip_num_of_row(i * self.num_rows)
+                for i in xrange(self.num_pages)]
+        
+        
+    @property
+    def page_num(self):
+        clip_num = self.first_visible_clip_num
+        if clip_num is None:
+            return None
+        else:
+            return np.searchsorted(
+                self.page_start_indices, clip_num, side='right') - 1
+            
+            
     def classify(self, clip_class, scope):
         
         new_name = clip_class.name if clip_class is not None else None
@@ -574,6 +600,15 @@ class _FiguresFrame(QWidget):
         self._move_by_num_rows(-self.num_rows)
         
     
+    def move_to_page(self, page_num):
+        if self.total_num_rows != 0:
+            if page_num < 0:
+                page_num = 0
+            elif page_num >= self.num_pages:
+                page_num = self.num_pages - 1
+            self.first_visible_row_num = page_num * self.num_rows
+            
+            
     def move_singleton_selection_forward(self):
         
         intervals = self.selection.selected_intervals
