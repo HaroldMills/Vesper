@@ -59,4 +59,4 @@ docs/_build/
 ClipDatabase.db
 
 scripts/test_hdf5.py
-src/nfc/archive/clip.py
+src/vesper/archive/clip.py

@@ -11,15 +11,16 @@ from PyQt4.QtGui import (
     QPainter, QVBoxLayout, QWidget)
 import numpy as np
 
-from nfc.archive.archive import Archive
-from nfc.ui.clip_times_rug_plot import ClipTimesRugPlot
-from nfc.ui.flow_layout import FlowLayout
-from nfc.ui.multiselection import Multiselection
-from nfc.ui.spectrogram_clip_figure import SpectrogramClipFigure as ClipFigure
-from nfc.util.bunch import Bunch
-from nfc.util.preferences import preferences as prefs
-from nfc.util.preferences import preset_manager
-import nfc.util.classification_command_utils as command_utils
+from vesper.archive.archive import Archive
+from vesper.ui.clip_times_rug_plot import ClipTimesRugPlot
+from vesper.ui.flow_layout import FlowLayout
+from vesper.ui.multiselection import Multiselection
+from vesper.ui.spectrogram_clip_figure import \
+    SpectrogramClipFigure as ClipFigure
+from vesper.util.bunch import Bunch
+from vesper.util.preferences import preferences as prefs
+from vesper.util.preferences import preset_manager
+import vesper.util.classification_command_utils as command_utils
 
 
 _SPACING_ASPECT_RATIO = 2
@@ -998,7 +999,7 @@ class _FigureFrame(QFrame):
     
 # The following four functions are Qt-specific, since Matplotlib's
 # `event.key` appears to be unreliable. For example, if one starts up
-# the NFC viewer and shift-clicks in a figure, the reported `event.key`
+# the Vesper viewer and shift-clicks in a figure, the reported `event.key`
 # is `None` rather than the expected `'shift'`. If one first clicks with
 # no modifier keys down, however, subsequent modifier key presses
 # (excepting the command key on the Macintosh, which is apparently

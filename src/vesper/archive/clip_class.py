@@ -1,7 +1,7 @@
 """Module containing `ClipClass` class."""
 
 
-from nfc.util.named import Named
+from vesper.util.named import Named
 
 
 class ClipClass(Named):

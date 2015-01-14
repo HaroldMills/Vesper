@@ -6,7 +6,7 @@ import re
 
 import pytz
 
-import nfc.util.time_utils as time_utils
+import vesper.util.time_utils as time_utils
 
 
 _ONE_HOUR = datetime.timedelta(hours=1)
@@ -25,7 +25,7 @@ class AmbiguousTimeError(Exception):
 class ArchiverTimeKeeper(object):
     
     """
-    Auxiliary time-keeping class for the NFC archiver.
+    Auxiliary time-keeping class for the Vesper archiver.
     
     An instance of this class can convert both naive and elapsed
     monitoring times to UTC.

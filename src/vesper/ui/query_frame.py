@@ -2,7 +2,7 @@ from __future__ import print_function
 
 from PyQt4.QtGui import QHBoxLayout, QComboBox, QFrame, QLabel
 
-import nfc.archive.archive_utils as archive_utils
+import vesper.archive.archive_utils as archive_utils
 
 
 class QueryFrame(QFrame):

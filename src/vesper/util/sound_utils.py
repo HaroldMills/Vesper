@@ -4,8 +4,8 @@
 from PyQt4.QtGui import QSound
 import numpy as np
 
-from nfc.util.bunch import Bunch
-import nfc.util.audio_file_utils as audio_file_utils
+from vesper.util.bunch import Bunch
+import vesper.util.audio_file_utils as audio_file_utils
 
 
 def read_sound_file(path):

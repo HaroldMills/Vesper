@@ -1,10 +1,9 @@
 """
 Creates a call/noise classification dataset.
 
-The dataset contains call and noise clips selected at random from an
-NFC archive.
+The dataset contains call and noise clips selected at random from an archive.
 
-nfc_dataset
+dataset
     create_call_and_noise_dataset(
         archive_dir_path, dataset_dir_path, num_clips, calls_fraction)
     load_dataset(dir_path)
@@ -41,7 +40,7 @@ extract features
     
 classify
 
-Useful NFC Viewer features:
+Useful viewer features:
 
     Select some clips and then perform some kind of analysis on them,
     possibly involving UI. For example, might cluster spectra and then
@@ -56,8 +55,8 @@ Useful NFC Viewer features:
 
 from __future__ import print_function
 
-from nfc.util.preferences import preferences as prefs
-import nfc.classification.clip_dataset as clip_dataset
+from vesper.util.preferences import preferences as prefs
+import vesper.classification.clip_dataset as clip_dataset
 
 
 _TEST_DATASET_DIR_PATH = '/Users/Harold/Desktop/NFC/Datasets/Test'

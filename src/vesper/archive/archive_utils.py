@@ -12,7 +12,7 @@ without causing import cycles.
 """
 
 
-from nfc.archive.archive import Archive
+from vesper.archive.archive import Archive
 
 
 def get_year_month_pairs(archive):

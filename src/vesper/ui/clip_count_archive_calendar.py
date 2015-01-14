@@ -5,9 +5,9 @@ import calendar
 from PyQt4.QtCore import QSize
 from PyQt4.QtGui import QFrame, QGridLayout
 
-from nfc.ui.clip_count_month_calendar import ClipCountMonthCalendar
-from nfc.util.notifier import Notifier
-import nfc.archive.archive_utils as archive_utils
+from vesper.ui.clip_count_month_calendar import ClipCountMonthCalendar
+from vesper.util.notifier import Notifier
+import vesper.archive.archive_utils as archive_utils
 
 
 _GRID_LAYOUT_CONTENTS_MARGIN = 10

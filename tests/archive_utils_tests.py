@@ -1,7 +1,7 @@
 import unittest
 
-from nfc.util.bunch import Bunch
-import nfc.archive.archive_utils as archive_utils
+from vesper.util.bunch import Bunch
+import vesper.archive.archive_utils as archive_utils
 
 
 class ArchiveUtilsTests(unittest.TestCase):

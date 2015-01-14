@@ -1,6 +1,6 @@
 import unittest
 
-from nfc.ui.flow_layout import FlowLayout
+from vesper.ui.flow_layout import FlowLayout
 
 
 class FlowLayoutTests(unittest.TestCase):

@@ -5,11 +5,11 @@ import unittest
 
 import pytz
 
-from nfc.archive.archive import Archive
-from nfc.archive.clip_class import ClipClass
-from nfc.archive.detector import Detector
-from nfc.archive.station import Station
-from nfc.util.bunch import Bunch
+from vesper.archive.archive import Archive
+from vesper.archive.clip_class import ClipClass
+from vesper.archive.detector import Detector
+from vesper.archive.station import Station
+from vesper.util.bunch import Bunch
 
 
 ARCHIVE_NAME = 'Test Archive'

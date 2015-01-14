@@ -1,4 +1,4 @@
-"""Adds clips to an NFC archive from an external source directory."""
+"""Adds clips to an archive from an external source directory."""
 
 
 from __future__ import print_function
@@ -11,17 +11,17 @@ import os
 import sys
 import time
 
-from nfc.archive.archive import Archive
-from nfc.archive.clip_class import ClipClass
-from nfc.archive.detector import Detector
-from nfc.archive.dummy_archive import DummyArchive
-from nfc.archive.station import Station
-from nfc.util.directory_visitor import DirectoryVisitor
+from vesper.archive.archive import Archive
+from vesper.archive.clip_class import ClipClass
+from vesper.archive.detector import Detector
+from vesper.archive.dummy_archive import DummyArchive
+from vesper.archive.station import Station
+from vesper.util.directory_visitor import DirectoryVisitor
 from old_bird.archiver_time_keeper import (
     ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
-import nfc.archive.archive_shared as archive_shared
-import nfc.util.sound_utils as sound_utils
-import nfc.util.time_utils as time_utils
+import vesper.archive.archive_shared as archive_shared
+import vesper.util.sound_utils as sound_utils
+import vesper.util.time_utils as time_utils
 import old_bird.file_name_utils as file_name_utils
 
 
@@ -168,7 +168,7 @@ def _parse_args():
     
     parser = argparse.ArgumentParser(
         description='''
-            This script adds clips to an NFC archive from an external
+            This script adds clips to an archive from an external
             source directory. The archive can be either a new or
             existing one. The source directory has a hierarchical
             structure and contains clips in individual sound files.

@@ -4,8 +4,8 @@ import json
 import os
 import unittest
 
-from nfc.util.preset import Preset
-from nfc.util.preset_manager import PresetManager
+from vesper.util.preset import Preset
+from vesper.util.preset_manager import PresetManager
 
 
 class _Preset(Preset):

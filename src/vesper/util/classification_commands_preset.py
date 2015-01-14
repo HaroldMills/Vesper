@@ -1,7 +1,7 @@
 """Module containing `ClassificationCommandsPreset` class."""
 
 
-from nfc.util.preset import Preset
+from vesper.util.preset import Preset
 
 
 class ClassificationCommandsPreset(Preset):

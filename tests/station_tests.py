@@ -3,7 +3,7 @@ import unittest
 
 import pytz
 
-from nfc.archive.station import Station
+from vesper.archive.station import Station
 
 
 STATION_TUPLE = ('Ithaca', 'Test Station', 'US/Eastern')

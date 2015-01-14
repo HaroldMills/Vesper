@@ -13,9 +13,9 @@ from PyQt4.QtCore import QSize
 from PyQt4.QtGui import QFrame, QSizePolicy
 import numpy as np
 
-from nfc.util.notifier import Notifier
-from nfc.util.preferences import preferences as prefs
-import nfc.util.calendar_utils as calendar_utils
+from vesper.util.notifier import Notifier
+from vesper.util.preferences import preferences as prefs
+import vesper.util.calendar_utils as calendar_utils
 
 
 class ClipCountMonthCalendar(QFrame):

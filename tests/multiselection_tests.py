@@ -1,6 +1,6 @@
 import unittest
 
-from nfc.ui.multiselection import Multiselection
+from vesper.ui.multiselection import Multiselection
 
 
 class MultiselectionTests(unittest.TestCase):

@@ -1,4 +1,4 @@
-"""Module containing NFC Viewer preferences."""
+"""Module containing Vesper viewer preferences."""
 
 
 from __future__ import print_function
@@ -7,14 +7,14 @@ import json
 import os
 import sys
 
-from nfc.util.classification_commands_preset import \
+from vesper.util.classification_commands_preset import \
     ClassificationCommandsPreset
-from nfc.util.preset_manager import PresetManager
-#import nfc.util.classification_command_utils as command_utils
+from vesper.util.preset_manager import PresetManager
+#import vesper.util.classification_command_utils as command_utils
         
             
-_PREFS_DIR_NAME = 'NFC'
-_PREFS_VAR_NAME = 'NFC_PREFS'
+_PREFS_DIR_NAME = 'Vesper'
+_PREFS_VAR_NAME = 'VESPER_PREFS'
 _PREFS_FILE_NAME = 'Preferences.json'
 _PRESETS_DIR_NAME = 'Presets'
 _PRESET_TYPES = { ClassificationCommandsPreset }

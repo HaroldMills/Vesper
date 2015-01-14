@@ -4,8 +4,8 @@ import unittest
 
 import numpy as np
 
-from nfc.util.bunch import Bunch
-from nfc.util.spectrogram import Spectrogram
+from vesper.util.bunch import Bunch
+from vesper.util.spectrogram import Spectrogram
 
 
 class SpectrogramUtilsTests(unittest.TestCase):

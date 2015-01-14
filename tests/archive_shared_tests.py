@@ -3,7 +3,7 @@ import unittest
 
 import pytz
 
-import nfc.archive.archive_shared as archive_shared
+import vesper.archive.archive_shared as archive_shared
 
 
 class ArchiveSharedTests(unittest.TestCase):

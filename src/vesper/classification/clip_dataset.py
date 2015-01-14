@@ -10,7 +10,7 @@ import random
 
 import numpy as np
 
-from nfc.archive.archive import Archive
+from vesper.archive.archive import Archive
 
 
 _CSV_FILE_NAME = 'clips.csv'

@@ -1,7 +1,7 @@
 from __future__ import print_function
 
-from nfc.archive.archive import Archive
-from nfc.util.preferences import preferences as prefs
+from vesper.archive.archive import Archive
+from vesper.util.preferences import preferences as prefs
 
 
 '''

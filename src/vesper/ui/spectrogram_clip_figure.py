@@ -5,10 +5,10 @@ from __future__ import print_function
 
 import numpy as np
 
-from nfc.archive.archive import Archive
-from nfc.ui.clip_figure import ClipFigure
-from nfc.ui.clip_figure_play_button import ClipFigurePlayButton
-from nfc.util.preferences import preferences as prefs
+from vesper.archive.archive import Archive
+from vesper.ui.clip_figure import ClipFigure
+from vesper.ui.clip_figure_play_button import ClipFigurePlayButton
+from vesper.util.preferences import preferences as prefs
 
 
 '''

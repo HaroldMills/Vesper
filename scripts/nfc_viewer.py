@@ -1,4 +1,4 @@
-"""NFC viewer application."""
+"""Vesper viewer application."""
 
 
 from __future__ import print_function
@@ -8,8 +8,8 @@ import sys
 
 from PyQt4.QtGui import QApplication
     
-from nfc.ui.main_window import MainWindow
-from nfc.util.preferences import preferences as prefs
+from vesper.ui.main_window import MainWindow
+from vesper.util.preferences import preferences as prefs
 
 
 def _main():
@@ -42,7 +42,7 @@ def _main():
 
 def _parse_args():
     
-    parser = argparse.ArgumentParser(description='NFC Viewer')
+    parser = argparse.ArgumentParser(description='Vesper Viewer')
     
     parser.add_argument(
         '--archive', help='the name of the archive to view')

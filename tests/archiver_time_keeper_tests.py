@@ -4,9 +4,9 @@ import datetime
 
 import pytz
 
-from nfc.archive.station import Station
 from old_bird.archiver_time_keeper import (
     ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
+from vesper.archive.station import Station
 
 from test_case import TestCase
 

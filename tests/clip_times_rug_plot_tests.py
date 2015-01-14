@@ -1,6 +1,6 @@
 import unittest
 
-from nfc.ui.clip_times_rug_plot import _find_page_num as find_page_num
+from vesper.ui.clip_times_rug_plot import _find_page_num as find_page_num
 
 
 class ClipTimesRugPlotTests(unittest.TestCase):

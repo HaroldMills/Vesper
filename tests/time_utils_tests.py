@@ -1,6 +1,6 @@
 import datetime
 
-import nfc.util.time_utils as time_utils
+import vesper.util.time_utils as time_utils
 
 from test_case import TestCase
 

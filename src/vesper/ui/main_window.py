@@ -3,11 +3,11 @@ from __future__ import print_function
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QMainWindow, QScrollArea, QVBoxLayout, QWidget
 
-from nfc.archive.archive import Archive
-from nfc.ui.clip_count_archive_calendar import ClipCountArchiveCalendar
-from nfc.ui.clips_window import ClipsWindow
-from nfc.ui.query_frame import QueryFrame
-from nfc.util.preferences import preferences as prefs
+from vesper.archive.archive import Archive
+from vesper.ui.clip_count_archive_calendar import ClipCountArchiveCalendar
+from vesper.ui.clips_window import ClipsWindow
+from vesper.ui.query_frame import QueryFrame
+from vesper.util.preferences import preferences as prefs
 
 
 class MainWindow(QMainWindow):
@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
         self._archive = Archive(archive_dir_path)
         self._archive.open(False)
         
-        self.setWindowTitle('NFC Viewer - {:s}'.format(self._archive.name))
+        self.setWindowTitle('Vesper Viewer - {:s}'.format(self._archive.name))
         self._create_ui(station_name, detector_name, clip_class_name)
         
         self._commands_preset_name = commands_preset_name

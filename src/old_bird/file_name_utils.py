@@ -4,7 +4,7 @@
 import datetime
 import re
 
-import nfc.util.time_utils as time_utils
+import vesper.util.time_utils as time_utils
 
 
 _WAVE_EXTENSION = '.wav'

@@ -3,8 +3,8 @@
 
 import pytz
 
-from nfc.util.named import Named
-import nfc.archive.archive_shared as archive_shared
+from vesper.util.named import Named
+import vesper.archive.archive_shared as archive_shared
 
 
 class Station(Named):

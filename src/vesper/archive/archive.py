@@ -11,15 +11,15 @@ import numpy as np
 import pytz
 import sqlite3 as sqlite
 
-from nfc.archive.clip_class import ClipClass
-from nfc.archive.detector import Detector
-from nfc.archive.station import Station
-from nfc.util.audio_file_utils import \
+from vesper.archive.clip_class import ClipClass
+from vesper.archive.detector import Detector
+from vesper.archive.station import Station
+from vesper.util.audio_file_utils import \
     WAVE_FILE_NAME_EXTENSION as _CLIP_FILE_NAME_EXTENSION
-from nfc.util.bunch import Bunch
-from nfc.util.preferences import preferences as prefs
-from nfc.util.spectrogram import Spectrogram
-import nfc.util.sound_utils as sound_utils
+from vesper.util.bunch import Bunch
+from vesper.util.preferences import preferences as prefs
+from vesper.util.spectrogram import Spectrogram
+import vesper.util.sound_utils as sound_utils
 
 
 '''
