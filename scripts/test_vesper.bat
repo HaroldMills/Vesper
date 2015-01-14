@@ -1,1 +1,1 @@
-nosetests -w C:\Users\Harold\Documents\Code\Python\NFC\tests
+nosetests -w C:\Users\Harold\Documents\Code\Python\Vesper\tests
