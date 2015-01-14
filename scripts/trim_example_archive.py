@@ -21,13 +21,35 @@ from vesper.archive.archive import Archive
 
 
 _ARCHIVE_DIR_PATH = '/Users/Harold/Desktop/NFC/Data/Old Bird/Example'
-_NOISE_FRACTION = .5
+_DESIRED_NUM_CALLS = 4000
+_DESIRED_NOISE_FRACTION = .5
+_CULLING_THRESHOLD = .98
+_CALL = 'Call*'
+_NOISE = 'Noise*'
 
 
 class ArchiveTrimmer(object):
     
     
     def __init__(self):
+        self.archive = None
+        
+        
+    def trim(self):
+        
+        _show_clip_counts('before')
+            
+        self._open_archive()
+        self._delete_extra_stations_and_detectors()
+        self._delete_unwanted_clip_classes()
+        self._cull_clips()
+        self.conn.commit()
+        self._close_archive()
+            
+        _show_clip_counts('after')
+            
+        
+    def _open_archive(self):
         
         archive = Archive(_ARCHIVE_DIR_PATH)
         archive.open(True)
@@ -42,36 +64,20 @@ class ArchiveTrimmer(object):
         self.archive = archive
         
         
-    def trim(self):
-        
-        try:
-            
-            self._delete_extra_stations_and_detectors()
-            self._delete_unwanted_clip_classes()
-            self._adjust_call_to_noise_ratio()
-            
-            self.conn.commit()
-            
-        finally:
+    def _close_archive(self):
+        if self.archive is not None:
             self.archive.close()
-            
+        
         
     def _delete_extra_stations_and_detectors(self):
         
-        station_counts = self._get_clip_counts(self.stations, 'station_name')
-        detector_counts = self._get_clip_counts(
-            self.detectors, 'detector_name')
-        clip_class_counts = self._get_clip_counts(
-            self.clip_classes, 'clip_class_name', ['Call*', 'Unclassified'])
-            
-        _show_clip_counts(station_counts, 'station')
-        _show_clip_counts(detector_counts, 'detector')
-        _show_clip_counts(clip_class_counts, 'clip class')
+        counts = self._get_clip_counts(self.stations, 'station_name')
+        self._delete_zero_count_entities(counts, 'station')
         
-        self._delete_zero_count_entities(station_counts, 'station')
-        self._delete_zero_count_entities(detector_counts, 'detector')
+        counts = self._get_clip_counts(self.detectors, 'detector_name')
+        self._delete_zero_count_entities(counts, 'detector')
+        
                     
-        
     def _get_clip_counts(self, items, arg_name, extra_item_names=None):
         names = [i.name for i in items]
         names += extra_item_names if extra_item_names is not None else []
@@ -164,35 +170,39 @@ class ArchiveTrimmer(object):
             raise ValueError(f.format(name_component, str(e)))
         
         
-    def _adjust_call_to_noise_ratio(self):
+    def _cull_clips(self):
         
-        retention_probability = self._get_noise_retention_probability()
-        
-        if retention_probability < .98:
-            self._delete_noises(retention_probability)
+        # Cull calls to leave desired number.
+        p = self._get_call_retention_probability()
+        if p < _CULLING_THRESHOLD:
+            self._cull_clips_aux(_CALL, p)
+
+        # Cull noises to leave desired proportion.
+        p = self._get_noise_retention_probability()
+        if p < _CULLING_THRESHOLD:
+            self._cull_clips_aux(_NOISE, p)
             
-            
+
+    def _get_call_retention_probability(self):
+        counts = self._get_clip_counts([], 'clip_class_name', [_CALL])
+        return min(_DESIRED_NUM_CALLS / float(counts[_CALL]), 1.)
+    
+    
     def _get_noise_retention_probability(self):
-        
-        clip_class_counts = self._get_clip_counts(
-            [], 'clip_class_name', ['Call*', 'Noise*'])
-    
-        num_calls = clip_class_counts['Call*']
-        num_noises = clip_class_counts['Noise*']
-        
-        desired_num_noises = _NOISE_FRACTION * num_calls
-        
-        return min(desired_num_noises / float(num_noises), 1.)
+        counts = self._get_clip_counts([], 'clip_class_name', [_CALL, _NOISE])
+        desired_num_noises = _DESIRED_NOISE_FRACTION * counts[_CALL]
+        return min(desired_num_noises / float(counts[_NOISE]), 1.)
             
     
-    def _delete_noises(self, retention_probability):
+    def _cull_clips_aux(self, clip_class_name, retention_probability):
         
         for station in self.stations:
             
             for detector in self.detectors:
                 
                 counts = self.archive.get_clip_counts(
-                    station.name, detector.name, clip_class_name='Noise*')
+                    station.name, detector.name,
+                    clip_class_name=clip_class_name)
                 
                 nights = counts.keys()
                 nights.sort()
@@ -200,7 +210,7 @@ class ArchiveTrimmer(object):
                 for night in nights:
                     
                     clips = self.archive.get_clips(
-                        station.name, detector.name, night, 'Noise*')
+                        station.name, detector.name, night, clip_class_name)
                     
                     num_deleted = 0
                     
@@ -210,8 +220,8 @@ class ArchiveTrimmer(object):
                             self._delete_clip(clip)
                             num_deleted += 1
                             
-                    print(station.name, detector.name, night, len(clips),
-                          num_deleted)
+                    print('culled', station.name, detector.name,
+                          clip_class_name, night, len(clips), num_deleted)
         
     
     def _delete_clip(self, clip):
@@ -235,7 +245,41 @@ class ArchiveTrimmer(object):
             raise ValueError(f.format(clip._id, str(e)))
     
     
-def _show_clip_counts(counts, item_type):
+def _show_clip_counts(description):
+    
+    print()
+    print('Archive {:s} trimming:'.format(description))
+    print()
+    
+    archive = Archive(_ARCHIVE_DIR_PATH)
+    archive.open(True)
+    
+    counts = _get_clip_counts(archive, archive.stations, 'station_name')
+    _show_clip_counts_aux(counts, 'station')
+    
+    counts = _get_clip_counts(archive, archive.detectors, 'detector_name')
+    _show_clip_counts_aux(counts, 'detector')
+    
+    counts = _get_clip_counts(
+        archive, archive.clip_classes, 'clip_class_name',
+        ['Call*', 'Unclassified'])
+    _show_clip_counts_aux(counts, 'clip class')
+    
+    archive.close()
+
+
+def _get_clip_counts(archive, items, arg_name, extra_item_names=None):
+    names = [i.name for i in items]
+    names += extra_item_names if extra_item_names is not None else []
+    return dict((n, _get_clip_counts_aux(archive, n, arg_name)) for n in names)
+
+
+def _get_clip_counts_aux(archive, name, arg_name):
+    counts = archive.get_clip_counts(**{arg_name: name})
+    return sum(c for c in counts.itervalues())
+
+
+def _show_clip_counts_aux(counts, item_type):
     
     print('Clip counts by {:s}:'.format(item_type))
     
