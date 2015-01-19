@@ -1,9 +1,7 @@
 {
     "archives": {
-        "2012": "/Users/Harold/Desktop/NFC/Data/Old Bird/2012 Summer and Fall Small Test",
-        "2014": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014",
-        "2014 CLC Test": "/Users/Harold/Desktop/NFC/Data/Old Bird/2014 CLC Test",
-        "Example": "/Users/Harold/Desktop/NFC/Data/Old Bird/Example"
+        "Vesper Example Archive":
+            "/Users/Harold/Desktop/NFC/Vesper Example Archive"
     },
     "archive": "Example",
     "mainWindow.initialStation": "CLC",
