@@ -3,7 +3,7 @@
         "Vesper Example Archive":
             "/Users/Harold/Desktop/NFC/Vesper Example Archive"
     },
-    "archive": "Example",
+    "archive": "Vesper Example Archive",
     "mainWindow.initialStation": "CLC",
     "mainWindow.initialDetector": "Tseep",
     "mainWindow.initialClipClass": "Call*",
