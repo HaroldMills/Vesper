@@ -9,7 +9,8 @@ Alt-c CAWA
 Alt-C CHSP
 D DbUp
 f FOSP
-g GHSP
+g COYE
+G GHSP
 h HOWA
 H HESP
 i INBU
