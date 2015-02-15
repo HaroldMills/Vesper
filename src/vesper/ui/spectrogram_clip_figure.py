@@ -9,6 +9,8 @@ from vesper.archive.archive import Archive
 from vesper.ui.clip_figure import ClipFigure
 from vesper.ui.clip_figure_play_button import ClipFigurePlayButton
 from vesper.util.preferences import preferences as prefs
+import vesper.util.measurements as measurements
+import vesper.util.spectrogram as spectrogram
 
 
 '''
@@ -38,6 +40,17 @@ Matplotlib/PyQt4 issues to look into:
 '''
 
 
+_MEASUREMENT_DATA = {
+    'Entropy': (measurements.entropy, 0, 6),
+    'Equivalent Bandwidth': (measurements.equivalent_bandwidth, 0, 30)
+}
+
+_SHOW_MEASUREMENT_LINE = False
+_MEASUREMENT_NAME = 'Entropy'
+_DENOISE = False
+_BLOCK_SIZE = 1
+
+
 class SpectrogramClipFigure(ClipFigure):
     
     
@@ -53,6 +66,7 @@ class SpectrogramClipFigure(ClipFigure):
         
         self._waveform_line = None
         self._spectrogram_image = None
+        self._measurement_line = None
         self._clip_text = _create_clip_text(self._axes)
         self._play_button = ClipFigurePlayButton(self)
 
@@ -87,8 +101,12 @@ class SpectrogramClipFigure(ClipFigure):
         
         super(SpectrogramClipFigure, self)._set_clip(clip)
         
-#        self._create_waveform_line()
+#         self._create_waveform_line()
         self._create_spectrogram_image()
+        
+        if _SHOW_MEASUREMENT_LINE:
+            self._create_measurement_line()
+            
         self._update_clip_text()
         self._play_button.reset()
         
@@ -121,7 +139,7 @@ class SpectrogramClipFigure(ClipFigure):
             sound = clip.sound
             samples = sound.samples
             times = np.arange(len(samples)) / float(sound.sample_rate)
-            self._waveform_line = axes.plot(times, samples, 'b')
+            self._waveform_line = axes.plot(times, samples, 'b')[0]
 
 
     def _create_spectrogram_image(self):
@@ -145,15 +163,58 @@ class SpectrogramClipFigure(ClipFigure):
             min_power = prefs.get('clipFigure.spectrogram.minPower', -20)
             max_power = prefs.get('clipFigure.spectrogram.maxPower', 80)
             
+            if _DENOISE:
+                spectra = np.array(clip.spectrogram.spectra)
+                spectrogram.log_to_linear(spectra, out=spectra)
+                spectrogram.denoise(spectra, out=spectra)
+                spectrogram.linear_to_log(spectra, out=spectra)
+                
+            else:
+                spectra = clip.spectrogram.spectra
+            
             # TODO: Should the time axis extent be from the time of
             # the first spectrum to the time of the last?
-            spectra = clip.spectrogram.spectra.transpose()
+            spectra = spectra.transpose()
             self._spectrogram_image = axes.imshow(
                 spectra, origin='lower', extent=(0, duration, 0, fs / 2.),
                 aspect='auto', cmap='Greys', vmin=min_power, vmax=max_power,
                 interpolation='bilinear', picker=None)
         
         
+    # RESUME:
+    #
+    # * Implement spectrogram reassignment. Does reassignment sharpen
+    #   calls more than noise, or can auxiliary information computed
+    #   by a reassignment algorithm, like consensus information, be
+    #   used for this purpose? Could we implement some sort of consensus
+    #   measurement to compare with the entropy and equivalent bandwidth
+    #   measurements? We might want to combine both magnitude and phase
+    #   information in our definition of consensus (or we might not).
+    
+    def _create_measurement_line(self):
+
+        measurement, m_min, m_max = _MEASUREMENT_DATA[_MEASUREMENT_NAME]
+        
+        axes = self._axes
+        
+        if self._measurement_line is not None:
+            axes.lines.remove(self._measurement_line)
+            self._measurement_line = None
+                
+        clip = self.clip
+        
+        if clip is not None:
+            
+            y_min, y_max = axes.get_ylim()
+            ms, times = measurements.apply_measurement_to_spectra(
+                measurement, clip.spectrogram,
+                start_freq=6000., end_freq=10000.,
+                denoise=_DENOISE, block_size=_BLOCK_SIZE)
+            normalized_ys = (ms - m_min) / (m_max - m_min)
+            ys = y_min + (y_max - y_min) * normalized_ys
+            self._measurement_line = axes.plot(times, ys, 'b')[0]
+            
+
     def _update_clip_text(self, event=None):
         
         if self.clip is None:

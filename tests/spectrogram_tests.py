@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 
 from vesper.util.bunch import Bunch
+from vesper.util.data_windows import RectangularWindow
 from vesper.util.spectrogram import Spectrogram
 
 
@@ -32,7 +33,7 @@ class SpectrogramUtilsTests(unittest.TestCase):
             hop_size = n / 2
             
             params = Bunch(
-                window=np.ones(n),
+                window=RectangularWindow(n),
                 hop_size=hop_size,
                 dft_size=None,
                 ref_power=None)

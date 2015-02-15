@@ -19,6 +19,7 @@ from vesper.util.audio_file_utils import \
 from vesper.util.bunch import Bunch
 from vesper.util.preferences import preferences as prefs
 from vesper.util.spectrogram import Spectrogram
+import vesper.util.data_windows as data_windows
 import vesper.util.sound_utils as sound_utils
 
 
@@ -850,17 +851,6 @@ def _get_name_components(clip_classes):
     return components
     
     
-# This is a feeble attempt to abstract window types away from NumPy.
-# We should eventually support a `WindowType` class and window type plugins.
-_WINDOWS = {
-    'Bartlett': np.bartlett,
-    'Blackman': np.blackman,
-    'Hamming': np.hamming,
-    'Hann': np.hanning,
-    'Rectangular': np.ones
-}
-
-
 # TODO: Figure out a better way to manage clip spectrograms, especially
 # one that supports clients that use spectrograms computed with different
 # spectrogram parameters. Some sort of general facility for computing
@@ -870,9 +860,11 @@ _WINDOWS = {
 # `clips_window` module. This can happen after we figure out how to
 # support clients that use spectrograms computed with different
 # parameters.
-_WINDOW = _WINDOWS[prefs['clipFigure.spectrogram.windowType']]
+_window_type_name = prefs['clipFigure.spectrogram.windowType']
+_window_size = prefs['clipFigure.spectrogram.windowSize']
+_window = data_windows.create_window(_window_type_name, _window_size)
 SPECTROGRAM_PARAMS = Bunch(
-    window=_WINDOW(prefs['clipFigure.spectrogram.windowSize']),
+    window=_window,
     hop_size=prefs['clipFigure.spectrogram.hopSize'],
     dft_size=prefs['clipFigure.spectrogram.dftSize'],
     ref_power=1)
