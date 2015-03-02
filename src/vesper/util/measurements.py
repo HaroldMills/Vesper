@@ -3,7 +3,7 @@
 
 import numpy as np
 
-import vesper.util.spectrogram as spectrogram_utils
+import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
 def equivalent_bandwidth(x):
@@ -33,25 +33,25 @@ def apply_measurement_to_spectra(
     if start_freq is None:
         start_index = 0
     else:
-        start_index = int(round(start_freq / spectrogram.bin_size))
+        start_index = int(round(start_freq / spectrogram.freq_spacing))
         
     if end_freq is None:
         end_index = len(spectrogram.spectra[0])
     else:
-        end_index = int(round(end_freq / spectrogram.bin_size)) + 1
+        end_index = int(round(end_freq / spectrogram.freq_spacing)) + 1
         
     s = spectrogram.spectra[:, start_index:end_index]
 #    s = spectrogram_utils.log_to_linear(s)
     s = np.power(10, s / 10.)
     
     if denoise:
-        spectrogram_utils.denoise(s, out=s)
+        tfa_utils.denoise(s, out=s)
     
     num_blocks = num_spectra - block_size + 1
     measurements = np.array([_measure(measurement, s, i, block_size)
                             for i in xrange(num_blocks)])
     
-    t = spectrogram.spectrum_times
+    t = spectrogram.times
     times = np.array([np.mean(t[i:i + block_size])
                       for i in xrange(num_blocks)])
     

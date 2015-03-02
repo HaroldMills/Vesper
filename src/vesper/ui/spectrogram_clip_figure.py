@@ -3,6 +3,8 @@
 
 from __future__ import print_function
 
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 import numpy as np
 
 from vesper.archive.archive import Archive
@@ -10,7 +12,7 @@ from vesper.ui.clip_figure import ClipFigure
 from vesper.ui.clip_figure_play_button import ClipFigurePlayButton
 from vesper.util.preferences import preferences as prefs
 import vesper.util.measurements as measurements
-import vesper.util.spectrogram as spectrogram
+import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
 '''
@@ -47,8 +49,15 @@ _MEASUREMENT_DATA = {
 
 _SHOW_MEASUREMENT_LINE = False
 _MEASUREMENT_NAME = 'Entropy'
+_MEASUREMENT_BLOCK_SIZE = 1
+
+# _IMAGE_TYPE = 'Instantaneous Frequency'
+_IMAGE_TYPE = 'Spectrogram'
 _DENOISE = False
-_BLOCK_SIZE = 1
+
+_SHOW_AUX_FIGURE = False
+_AUX_FIGURE_TYPE = 'Spectrum'
+# _AUX_FIGURE_TYPE = 'Instantaneous Frequency'
 
 
 class SpectrogramClipFigure(ClipFigure):
@@ -160,37 +169,37 @@ class SpectrogramClipFigure(ClipFigure):
             axes.set_xlim([0, duration])
             axes.set_ylim([0, fs / 2.])
                 
-            min_power = prefs.get('clipFigure.spectrogram.minPower', -20)
-            max_power = prefs.get('clipFigure.spectrogram.maxPower', 80)
-            
-            if _DENOISE:
-                spectra = np.array(clip.spectrogram.spectra)
-                spectrogram.log_to_linear(spectra, out=spectra)
-                spectrogram.denoise(spectra, out=spectra)
-                spectrogram.linear_to_log(spectra, out=spectra)
+            if _IMAGE_TYPE == 'Spectrogram':
                 
-            else:
-                spectra = clip.spectrogram.spectra
+                if _DENOISE:
+                    spectra = np.array(clip.spectrogram.spectra)
+                    tfa_utils.log_to_linear(spectra, out=spectra)
+                    tfa_utils.denoise(spectra, out=spectra)
+                    tfa_utils.linear_to_log(spectra, out=spectra)
+                    
+                else:
+                    spectra = clip.spectrogram.spectra
             
-            # TODO: Should the time axis extent be from the time of
-            # the first spectrum to the time of the last?
+                min_power = prefs.get('clipFigure.spectrogram.minPower', -20)
+                max_power = prefs.get('clipFigure.spectrogram.maxPower', 80)
+            
+            elif _IMAGE_TYPE == 'Instantaneous Frequency':
+                
+                spectra = clip.instantaneous_frequencies.analyses
+                min_power = -500
+                max_power = 500
+                
             spectra = spectra.transpose()
+            times = clip.spectrogram.times
+            freqs = clip.spectrogram.freqs
+            axes.set_xlim(times[0], times[-1])
             self._spectrogram_image = axes.imshow(
-                spectra, origin='lower', extent=(0, duration, 0, fs / 2.),
+                spectra, origin='lower',
+                extent=(times[0], times[-1], freqs[0], freqs[-1]),
                 aspect='auto', cmap='Greys', vmin=min_power, vmax=max_power,
                 interpolation='bilinear', picker=None)
         
         
-    # RESUME:
-    #
-    # * Implement spectrogram reassignment. Does reassignment sharpen
-    #   calls more than noise, or can auxiliary information computed
-    #   by a reassignment algorithm, like consensus information, be
-    #   used for this purpose? Could we implement some sort of consensus
-    #   measurement to compare with the entropy and equivalent bandwidth
-    #   measurements? We might want to combine both magnitude and phase
-    #   information in our definition of consensus (or we might not).
-    
     def _create_measurement_line(self):
 
         measurement, m_min, m_max = _MEASUREMENT_DATA[_MEASUREMENT_NAME]
@@ -209,7 +218,7 @@ class SpectrogramClipFigure(ClipFigure):
             ms, times = measurements.apply_measurement_to_spectra(
                 measurement, clip.spectrogram,
                 start_freq=6000., end_freq=10000.,
-                denoise=_DENOISE, block_size=_BLOCK_SIZE)
+                denoise=_DENOISE, block_size=_MEASUREMENT_BLOCK_SIZE)
             normalized_ys = (ms - m_min) / (m_max - m_min)
             ys = y_min + (y_max - y_min) * normalized_ys
             self._measurement_line = axes.plot(times, ys, 'b')[0]
@@ -298,9 +307,85 @@ class SpectrogramClipFigure(ClipFigure):
     def _on_motion(self, event):
         self._update_clip_text(event)
         self._play_button._on_motion(event)
+        self._update_aux_figure(event)
 #        _show_event(event, 'SpectrogramClipFigure._on_motion')
+        
+        
+    def _update_aux_figure(self, event):
+        if _SHOW_AUX_FIGURE:
+            p = self.parent.parent()
+            if not hasattr(p, '_aux_figure'):
+                p._aux_figure, p._aux_canvas = self._create_aux_figure()
+            if _AUX_FIGURE_TYPE == 'Spectrum':
+                self._update_aux_figure_spectrum_plot(event)
+            elif _AUX_FIGURE_TYPE == 'Instantaneous Frequency':
+                self._update_aux_figure_if_plot(event)
+            else:
+                s = 'Unrecognized auxiliary figure type {:s}.'
+                print(s.format(_AUX_FIGURE_TYPE))
+                
+                
+    def _create_aux_figure(self):
    
+        figure = Figure()
+        
+        canvas = FigureCanvasQTAgg(figure)
+        canvas.setWindowTitle('Clip Slice')
+        
+        figure.add_subplot(1, 1, 1)
+        
+        canvas.show()
+        canvas.raise_()
+        
+        return (figure, canvas)
+        
     
+    def _update_aux_figure_spectrum_plot(self, event):
+        clip = self.clip
+        gram = clip.spectrogram
+        p = self.parent.parent()
+        figure = p._aux_figure
+        axes = figure.axes[0]
+        axes.clear()
+        i = int(round((event.xdata - gram.times[0]) * gram.analysis_rate))
+        axes.plot(gram.freqs, gram.spectra[i])
+        axes.set_xlim([0, gram.freqs[-1]])
+        axes.set_ylim([-20, 80])
+        axes.grid(True)
+        axes.set_xlabel('Frequency (Hz)')
+        axes.set_ylabel('Power (dB)')
+        axes.set_title('Spectrum at {:.3f} s'.format(event.xdata))
+        axes.axvline(event.ydata, color='r')
+        p._aux_canvas.draw()
+        
+        
+    def _update_aux_figure_if_plot(self, event):
+        clip = self.clip
+        gram = clip.instantaneous_frequencies
+        p = self.parent.parent()
+        figure = p._aux_figure
+        axes = figure.axes[0]
+        axes.clear()
+        i = int(round((event.xdata - gram.times[0]) * gram.analysis_rate))
+        xs = gram.freqs
+        ys = xs + gram.analyses[i]
+        axes.plot(xs, ys, marker='.')
+        axes.plot([xs[0], xs[-1]], [xs[0], xs[-1]], color='r')
+#         axes.set_xlim([0, gram.freqs[-1]])
+#         axes.set_ylim([-100, gram.freqs[-1] + 100])
+        axes.set_xlim([5000, 10000])
+        axes.set_ylim([5000, 10000])
+#        axes.set_ylim([-20, 20])
+        axes.grid(True)
+        axes.set_xlabel('Grid Frequency (Hz)')
+        axes.set_ylabel('Instantaneous Frequency (Hz)')
+        s = 'Instantaneous Frequencies at {:.3f} s'
+        axes.set_title(s.format(event.xdata))
+        axes.axvline(event.ydata, color='r')
+#        print(gram.times[0], gram.times[-1], event.xdata)
+        p._aux_canvas.draw()
+        
+        
     def _on_key_press(self, event):
         pass
 #        print('SpectrogramClipFigure._on_key_press', event.key)

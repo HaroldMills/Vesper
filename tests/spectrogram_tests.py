@@ -40,7 +40,7 @@ class SpectrogramUtilsTests(unittest.TestCase):
             
             gram = Spectrogram(sound, params)
             
-            self.assertEqual(gram.frame_rate, 1. / hop_size)
+            self.assertEqual(gram.analysis_rate, 1. / hop_size)
             
             expected_spectrum = np.array(expected_spectrum, dtype='float')
             

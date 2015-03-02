@@ -18,6 +18,8 @@ from vesper.util.audio_file_utils import \
     WAVE_FILE_NAME_EXTENSION as _CLIP_FILE_NAME_EXTENSION
 from vesper.util.bunch import Bunch
 from vesper.util.preferences import preferences as prefs
+from vesper.util.instantaneous_frequency_analysis import \
+    InstantaneousFrequencyAnalysis
 from vesper.util.spectrogram import Spectrogram
 import vesper.util.data_windows as data_windows
 import vesper.util.sound_utils as sound_utils
@@ -28,7 +30,7 @@ Questions regarding cloud archives:
 
 * What should GAE entity groups be?
 * How do we support classification histories?
-* How do we support aggregate staistics?
+* How do we support aggregate statistics?
 * What indexes do we need?
 * Should we require login, perhaps just for certain functionality?
 * Do we provide just sounds, or spectrograms, too?
@@ -897,6 +899,7 @@ class _Clip(object):
         self._file_path = None
         self._sound = None
         self._spectrogram = None
+        self._instantaneous_frequencies = None
         
         
     @property
@@ -946,7 +949,19 @@ class _Clip(object):
                 
         return self._spectrogram
         
+    
+    @property
+    def instantaneous_frequencies(self):
         
+        if self._instantaneous_frequencies is None:
+            # have not yet computed instantaneous frequencies
+        
+            self._instantaneous_frequencies = \
+                InstantaneousFrequencyAnalysis(self.sound, SPECTROGRAM_PARAMS)
+                
+        return self._instantaneous_frequencies
+        
+ 
     @property
     def duration(self):
         return max(self._duration, _MIN_CLIP_DURATION)
