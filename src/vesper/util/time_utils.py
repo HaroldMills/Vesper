@@ -6,38 +6,83 @@ import datetime
 import re
 
 
-_DATE_RE = re.compile(r'^(\d\d\d\d)-(\d\d)-(\d\d)$')
 _MIN_YEAR = 1900
 _MAX_YEAR = 2099
 
 
-def parse_date(s):
+# The parsing functions of this module (`parse_date`, `parse_time`, and
+# `parse_time_delta`) are intended for use in conjunction with regular
+# expression parsing elsewhere. The basic idea is that the regular
+# expressions are used to parse strings of certain numbers of digits,
+# perhaps mixed with other things (e.g. strings of the form yyyy-mm-dd),
+# and then the digit strings (e.g. yyyy, mm, and dd) are passed to one
+# or more of the functions of this module to complete the parsing.
+# In accordance with this paradigm, the parsing functions of this
+# module assume that their arguments have a reasonable number of digits
+# (e.g. two or four for a year, but not three), and do not check for this:
+# they assume that such checking happened in the regular expression matching.
+
+
+def parse_date(y, mm, dd):
     
-    m = _DATE_RE.match(s)
-     
-    if m is None:
-        raise ValueError('Bad date "{:s}".'.format(s))
-     
-    else:
+    year = int(y)
+    if year < 100:
+        year += 2000 if year < 50 else 1900
+        
+    month = int(mm)
+    day = int(dd)
+    
+    _check('year', y, check_year, year)
+    _check('month', mm, check_month, month)
+    _check('day', dd, check_day, day, year, month)
          
-        year, month, day = m.groups()
-         
-        year = int(year)
-        month = int(month)
-        day = int(day)
-         
-        _check_field('year', s, check_year, year)
-        _check_field('month', s, check_month, month)
-        _check_field('day', s, check_day, day, year, month)
-             
-        return datetime.date(year, month, day)
-     
- 
-def _check_field(name, s, function, *args):
+    return datetime.date(year, month, day)
+
+
+def parse_time(hh, mm, ss=None, f=None):
+    
+    hour = int(hh)
+    minute = int(mm)
+    second = int(ss) if ss is not None else 0
+    microsecond = _parse_fractional_second(f) if f is not None else 0
+    
+    _check('hour', hh, check_hour, hour)
+    _check('minute', mm, check_minute, minute)
+    _check('second', ss, check_second, second)
+    
+    return datetime.time(hour, minute, second, microsecond)
+
+
+def _parse_fractional_second(f):
+    
+    # f is a string of fractional second digits that followed a decimal point
+    
+    # Get factor by which to multiply `f` to convert it to microseconds.
+    factor = 10. ** (6 - len(f))
+    
+    return int(round(int(f) * factor))
+        
+    
+def parse_time_delta(h, mm, ss=None, f=None):
+    
+    hours = int(h)
+    minutes = int(mm)
+    seconds = int(ss) if ss is not None else 0
+    microseconds = _parse_fractional_second(f) if f is not None else 0
+    
+    _check('minutes', mm, check_minutes, minutes)
+    _check('seconds', ss, check_seconds, seconds)
+    
+    return datetime.timedelta(
+        hours=hours, minutes=minutes, seconds=seconds,
+        microseconds=microseconds)
+    
+    
+def _check(name, s, function, *args):
     try:
         function(*args)
     except ValueError:
-        raise ValueError('Bad {:s} in "{:s}".'.format(name, s))
+        raise ValueError('Bad {:s} "{:s}".'.format(name, s))
     
     
 def check_year(year):
@@ -79,3 +124,18 @@ def check_second(second):
     
 def check_seconds(seconds):
     _check_range(seconds, 0, 59, 'seconds')
+
+
+_DATE_RE = re.compile(r'^(\d\d\d\d)-(\d\d)-(\d\d)$')
+
+
+# TODO: This is a bit of an odd duck. Move it somewhere else?
+def parse_command_line_date(s):
+    
+    m = _DATE_RE.match(s)
+     
+    if m is None:
+        raise ValueError('Bad date "{:s}".'.format(s))
+     
+    else:
+        return parse_date(*m.groups())

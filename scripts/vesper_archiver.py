@@ -312,7 +312,7 @@ def _parse_dates(args):
             
 def _parse_date(s, name):
     try:
-        return time_utils.parse_date(s)
+        return time_utils.parse_command_line_date(s)
     except ValueError:
         raise ValueError('Bad {:s} "{:s}".'.format(name, s))
     
