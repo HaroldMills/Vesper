@@ -130,18 +130,27 @@ class Archive(object):
 
 
     @staticmethod
-    def create(dir_path, stations, detectors, clip_classes):
+    def create(dir_path, stations=None, detectors=None, clip_classes=None):
         
         # TODO: Validate arguments, for example to make sure that
         # clip class names do not have more than three components?
         
+        if stations is None:
+            stations = []
+            
+        if detectors is None:
+            detectors = []
+            
+        if clip_classes is None:
+            clip_classes = []
+        
+        # Create archive directory, along with any needed directories above,
+        # if needed.
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
     
         archive = Archive(dir_path)
-        
         archive._open_db()
-        archive._drop_tables()
         archive._create_tables(stations, detectors, clip_classes)
         archive._close_db()
         

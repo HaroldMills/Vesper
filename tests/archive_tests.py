@@ -1,6 +1,7 @@
 import datetime
 import numpy as np
 import os
+import shutil
 import unittest
 
 import pytz
@@ -34,6 +35,7 @@ class ArchiveTests(unittest.TestCase):
     def setUp(self):
         parent_dir_path = os.path.dirname(__file__)
         archive_dir_path = os.path.join(parent_dir_path, *ARCHIVE_DIR_PATH)
+        shutil.rmtree(archive_dir_path, ignore_errors=True)
         self.archive = Archive.create(
             archive_dir_path, STATIONS, DETECTORS, CLIP_CLASSES)
         self.archive.open()
