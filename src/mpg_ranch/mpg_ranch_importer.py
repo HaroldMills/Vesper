@@ -18,6 +18,7 @@ import vesper.util.time_utils as time_utils
 
 '''
 Remaining issues:
+* ccsp -> Call.CCSP_BRSP?
 * start time corrections
 * comments not included
 * effort data
@@ -442,7 +443,10 @@ class MpgRanchImporter:
 
 _CALL_CLIP_CLASS_NAME_CORRECTIONS = {
     'bhgr_type': 'BHGR',
+    'ccbr': 'CCSP_BRSP',
+    'ccsp': 'CCSP_BRSP',
     'ccsp_brsp': 'CCSP_BRSP',
+    'DbUp': 'DoubleUp',
     'lalo_type': 'LALO',
     'lisp_type': 'LISP',
     'mgwa_type': 'MGWA',
@@ -450,10 +454,13 @@ _CALL_CLIP_CLASS_NAME_CORRECTIONS = {
     'other': 'Other',
     'peep': 'Peep',
     'pynu_lbdo': 'PYNU_LBDO',
-    'sdup': 'ShDbUp',
+    'sdup': 'DoubleUp',
+    'ShDbUp': 'DoubleUp',
     'sosp_type': 'SOSP',
+    'spso': 'SPSA_SOSA',
     'unkn': 'Unknown',
     'unkw': 'Unknown',
+    'vewe': 'VEER_WETA',
     'weak': 'Weak',
     'zeep': 'Zeep'
 }
