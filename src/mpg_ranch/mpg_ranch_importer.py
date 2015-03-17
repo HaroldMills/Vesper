@@ -18,17 +18,11 @@ import vesper.util.time_utils as time_utils
 
 '''
 Remaining issues:
-* ccsp -> Call.CCSP_BRSP?
-* start time corrections
 * comments not included
 * effort data
 * station locations
 * clip class descriptions
 * sunrise/sunset data
-
-To discuss:
-* underscores within fields
-* zero seconds assumed for 4-digit times and durations
 '''
 
 
@@ -266,9 +260,6 @@ class MpgRanchImporter:
                 
         else:
             
-            # m = 'file "{:s}" {:s}'.format(file_name, str(info))
-            # logging.info(self._indent(m))
-                
             self._encountered_station_names.add(info.station_name)
             self._encountered_detector_names.add(info.detector_name)
             self._encountered_clip_class_names.add(info.clip_class_name)
@@ -298,10 +289,16 @@ class MpgRanchImporter:
 
     def _get_clip_time(self, info):
         
-        # Get naive clip time.
+        # Get monitoring start time.
         date = info.monitoring_start_date
         time = info.monitoring_start_time
         dt = datetime.datetime.combine(date, time)
+        
+        # Correct monitoring start time if needed.
+        if info.interior_comment == 'add':
+            dt += info.second_dur
+            
+        # Get clip start time.
         dt += info.clip_start_time
         
         # Add offset for clip num if needed.
@@ -433,10 +430,6 @@ class MpgRanchImporter:
                 corrected_name = _correct_clip_class_name(name)
                 logging.info(self._indent(
                     '{:s}: {:s}'.format(name, corrected_name)))
-                
-#             for name in names:
-#                 corrected_name = _correct_clip_class_name(name)
-#                 logging.info('    - Call.{:s}'.format(corrected_name))
                 
         self._decrease_indentation()
         
