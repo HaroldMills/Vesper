@@ -179,15 +179,32 @@ class Archive(object):
         self._cache_db = cache_db
         
         if self._cache_db:
-            file_conn = sqlite.connect(self._db_file_path)
+            file_conn = self._open_db_file()
             self._conn = sqlite.connect(':memory:')
             _copy_db(file_conn, self._conn)
             file_conn.close()
             
         else:
-            self._conn = sqlite.connect(self._db_file_path)
+            self._conn = self._open_db_file()
 
         self._cursor = self._conn.cursor()
+
+
+    def _open_db_file(self):
+        
+        path = self._db_file_path
+        
+        try:
+            return sqlite.connect(path)
+        
+        except:
+            
+            if not os.path.exists(path):
+                raise ValueError(
+                    'Database file "{:s}" does not exist'.format(path))
+            else:
+                m = 'Database file "{:s}" exists but could not be opened.'
+                raise ValueError(m.format(path))
 
 
     def close(self):
