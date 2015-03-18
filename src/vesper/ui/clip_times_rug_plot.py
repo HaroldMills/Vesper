@@ -12,6 +12,8 @@ from PyQt4.QtGui import QSizePolicy
 import numpy as np
 import pytz
 
+from vesper.util.preferences import preferences as prefs
+
 
 _BACKGROUND_COLOR = (0, 0, 0, 0)
 _LINE_COLOR = (0, 0, 0)
@@ -19,9 +21,9 @@ _CURRENT_PAGE_COLOR = (.6, .6, 1)
 _MOUSE_PAGE_COLOR = (.5, 1, .5)
 _MAX_PLOT_WIDTH = 800
 _PLOT_HEIGHT = 50
-_START_TIME = 18         # hours after night date midnight
-_END_TIME = 30           # hours after night date midnight
-_PADDING = .2            # hours
+_DEFAULT_START_TIME = 18         # hours
+_DEFAULT_END_TIME = 6            # hours
+_DEFAULT_PADDING = .2            # hours
 _LINE_START_Y = .2
 _LINE_END_Y = .8
 
@@ -220,8 +222,18 @@ class ClipTimesRugPlot(object):
         self._mouse_page_lines = None
         
         # Configure X axis.
-        axes.set_xlim([_START_TIME - _PADDING, _END_TIME + _PADDING])
-        tick_xs, tick_labels = _get_tick_data(_START_TIME, _END_TIME)
+        start_time = prefs.get(
+            'clipsWindow.rugPlot.startTime', _DEFAULT_START_TIME)
+        end_time = prefs.get('clipsWindow.rugPlot.endTime', _DEFAULT_END_TIME)
+        padding = prefs.get('clipsWindow.rugPlot.padding', _DEFAULT_PADDING)
+
+        # If end time is less than start time, assume it is for the
+        # following day.
+        if end_time < start_time:
+            end_time += 24
+            
+        axes.set_xlim([start_time - padding, end_time + padding])
+        tick_xs, tick_labels = _get_tick_data(start_time, end_time)
         axes.set_xticks(tick_xs)
         axes.set_xticklabels(tick_labels)
         axes.get_xaxis().set_tick_params(direction='out', top='off')

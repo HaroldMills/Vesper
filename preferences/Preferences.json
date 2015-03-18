@@ -15,6 +15,8 @@
     "clipsWindow.spacing": 0.01,
     "clipsWindow.defaultClassificationCommands": "Coarse",
     "clipsWindow.advanceAfterClassification": true,
+    "clipsWindow.rugPlot.startTime": 18,
+    "clipsWindow.rugPlot.endTime": 7,
     "clipFigure.spectrogram.windowType": "Hann",
     "clipFigure.spectrogram.windowSize": 128,
     "clipFigure.spectrogram.hopSize": 10,
