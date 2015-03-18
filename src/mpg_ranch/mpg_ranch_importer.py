@@ -295,10 +295,10 @@ class MpgRanchImporter:
         dt = datetime.datetime.combine(date, time)
         
         # Correct monitoring start time if needed.
-        if info.interior_comment == 'add':
-            dt += info.second_dur
+#         if info.interior_comment == 'add':
+#             dt += info.second_dur
             
-        # Get clip start time.
+        # Add clip start time.
         dt += info.clip_start_time
         
         # Add offset for clip num if needed.
