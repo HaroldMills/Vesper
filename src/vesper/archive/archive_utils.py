@@ -15,36 +15,6 @@ without causing import cycles.
 from vesper.archive.archive import Archive
 
 
-def get_year_month_pairs(archive):
-    
-    pair = _get_pair(archive.start_night)
-    endPair = _increment_pair(_get_pair(archive.end_night))
-    
-    pairs = []
-
-    while pair != endPair:
-        pairs.append(pair)
-        pair = _increment_pair(pair)
-        
-    return pairs
-    
-    
-def _get_pair(date):
-    return (date.year, date.month)
-
-
-def _increment_pair(pair):
-    
-    (year, month) = pair
-    
-    month += 1
-    if month == 13:
-        month = 1
-        year += 1
-        
-    return (year, month)
-
-
 def get_clip_class_name_options(archive):
     names = [s.name for s in archive.clip_classes] + \
             [Archive.CLIP_CLASS_NAME_UNCLASSIFIED]

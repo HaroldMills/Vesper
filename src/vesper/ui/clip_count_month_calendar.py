@@ -56,8 +56,6 @@ class ClipCountMonthCalendar(QFrame):
         self._axes = self._figure.add_subplot(111)
 #        self._axes = self._figure.add_axes([.05, .05, .9, .9])
              
-        self._draw_calendar()
-        
         connect = self._canvas.mpl_connect
         connect('motion_notify_event', self._on_motion)
         connect('figure_leave_event', self._on_figure_leave)
@@ -195,18 +193,10 @@ class ClipCountMonthCalendar(QFrame):
         self._year = year
         self._month = month
         
-        self._draw_calendar()
-        
-        
-    def _draw_calendar(self):
-                
         axes = self._axes
         axes.cla()
         
         if self._station_name is not None:
-            
-            year = self.year
-            month = self.month
             
             (first_day_offset, num_days) = calendar.monthrange(year, month)
             
