@@ -21,6 +21,22 @@ def is_wave_file_path(path):
     return path.endswith(WAVE_FILE_NAME_EXTENSION)
 
 
+def get_wave_file_info(path):
+    
+    file_ = wave.open(path, 'rb')
+    
+    (num_channels, sample_size, frame_rate, num_frames,
+     compression_type, _) = _call(file_, file_.getparams)
+     
+    sample_size *= 8
+    frame_rate = float(frame_rate)
+    
+    file_.close()
+    
+    return (num_channels, sample_size, frame_rate, num_frames,
+            compression_type)
+    
+        
 def read_wave_file(path):
     
     # TODO: Handle file I/O errors.

@@ -14,7 +14,6 @@ def read_sound_file(path):
     return Bunch(samples=samples, sample_rate=sample_rate)
     
 
-
 def write_sound_file(path, sound):
     samples = np.array([sound.samples])
     audio_file_utils.write_wave_file(path, samples, sound.sample_rate)

@@ -10,6 +10,8 @@ batch file wrapper.
 """
 
 
+from __future__ import print_function
+
 import logging
 import os
 import sys
@@ -19,11 +21,28 @@ from vesper.archive.archive import Archive
 from vesper.archive.clip_class import ClipClass
 from vesper.archive.detector import Detector
 from vesper.archive.station import Station
+from vesper.exception.command_exceptions import CommandFormatError
+import vesper.util.vcl_utils as vcl_utils
+
+
+'''
+Error handling policy:
+
+* Command logs messages (debug, info, error, etc., but not critical) using
+Python Standard Library logging module.
+
+* Command returns boolean indicating whether or not errors occurred.
+Script prints message pointing user to error log if and only if error occurs.
+
+* Do we need to include command name in log messages? We could do this using
+the `extra` keyword argument to the logging methods.
+'''
 
 
 def _main():
     
-    logging.basicConfig(format='%(message)s', level=logging.INFO)
+    logging.basicConfig(
+        format='%(levelname)s %(asctime)s: %(message)s', level=logging.INFO)
     
     if len(sys.argv) < 2:
         _usage()
@@ -33,39 +52,98 @@ def _main():
     except KeyError:
         _usage()
         
-    handler(os.getcwd(), sys.argv[2:])
+    # TODO: Perhaps command handler should parse arguments (see below)
+    positional_args, keyword_args = _parse_args(sys.argv[2:])
     
-
+    # TODO: Handle errors better. They won't all be instances of
+    # `ValueError`, for example. See commented code below for one
+    # possibility.
+    try:
+        handler(positional_args, keyword_args)
+    except ValueError as e:
+        vcl_utils.log_fatal_error(str(e))
+        
+    # TODO: Consider executing a command in two stages, one in which
+    # the command parses command line arguments and the other in which
+    # the command is executed. The code might look like this:
+#     try:
+#         handler.configure(sys.argv[2:])
+#     except CommandFormatError as e:
+#         vcl_utils.log_fatal_error(str(e))
+#         
+#     try:
+#         status = handler.execute()
+#     except CommandExecutionError as e:
+#         vcl_utils.log_fatal_error(str(e))
+#         
+#     if not status:
+#         logging.info(
+#             'Command completed with errors. See above messages for details.')
+#         sys.exit(1)
+        
+        
+# TODO: Improve argument parsing, adding declarative argument
+# specification, type checking, and missing and extra argument
+# checks. Implement argument types and commands as extensions.
+def _parse_args(args):
+    
+    i = 0
+    while i != len(args) and not args[i].startswith('--'):
+        i += 1
+        
+    positional_args = tuple(args[:i])
+    
+    keyword_args = {}
+    
+    while i != len(args):
+        
+        name = args[i][2:]
+        i += 1
+        
+        values = []
+        while i != len(args) and not args[i].startswith('--'):
+            values.append(args[i])
+            i += 1
+            
+        keyword_args[name] = values
+        
+    return (positional_args, keyword_args)
+    
+    
 def _usage():
-    _log_fatal_error('''
-usage: vesper init <YAML file>
-       vesper import <importer> <source dir>
-'''.strip())
     
-    
-def _log_fatal_error(message):
-    logging.critical(message)
+    message = '''
+usage: vesper init <YAML file> [--archive <archive dir>]
+       vesper import <importer> <source dir> [--archive <archive dir>]
+       vesper detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> [--archive <archive dir>]
+'''.strip()
+
+    print(message, file=sys.stderr)
     sys.exit(1)
     
     
-def _init(archive_dir_path, args):
+def _init(positional_args, keyword_args):
     
-    if len(args) != 1:
+    if len(positional_args) != 1:
         _usage()
         
-    stations, detectors, clip_classes = _read_yaml_data(args[0])
+    archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
     
-    # TODO: Warn if archive already exists, and confirm that user
-    # wants to overwrite it. This might be done with the help of
-    # a new `Archive.exists` function.
+    stations, detectors, clip_classes = _read_yaml_data(positional_args[0])
     
+    if Archive.exists(archive_dir_path):
+        vcl_utils.log_fatal_error((
+            'There is already an archive at "{:s}". If you want to '
+            're-initialize it to be empty, delete its contents and '
+            'run this command again.').format(archive_dir_path))
+        
     Archive.create(archive_dir_path, stations, detectors, clip_classes)
     
     
 def _read_yaml_data(file_path):
     
     if not os.path.exists(file_path):
-        _log_fatal_error('YAML file "{:s}" not found.'.format(file_path))
+        vcl_utils.log_fatal_error('YAML file "{:s}" not found.'.format(file_path))
         
     data = yaml.load(open(file_path, 'r').read())
     
@@ -80,26 +158,19 @@ def _read_yaml_data(file_path):
     return stations, detectors, clip_classes
     
     
-def _add(archive_dir_path, args):
-    logging.info('add "{:s}" {:s}'.format(archive_dir_path, str(args)))
+def _import(positional_args, keyword_args):
     
-    
-def _import(archive_dir_path, args):
-    
-    archive = _get_archive(archive_dir_path)
-    
-    if len(args) < 2:
+    if len(positional_args) < 2:
         _usage()
         
-    importer_klass = _get_importer_class(args[0])
+    klass = _get_importer_class(positional_args[0])
+    importer = klass()
     
-    source_dir_path = args[1]
-    _check_dir_path(source_dir_path)
+    source_dir_path = positional_args[1]
+    vcl_utils.check_dir_path(source_dir_path)
     
-    importer = importer_klass()
-    
-    # TODO: Use `with` statement?
-    archive.open()
+    archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
+    archive = vcl_utils.open_archive(archive_dir_path)
     
     try:
         importer.import_(source_dir_path, archive)
@@ -109,42 +180,54 @@ def _import(archive_dir_path, args):
     importer.log_summary()
     
     
-def _get_archive(archive_dir_path):
-    _check_dir_path(archive_dir_path)
-    return Archive(archive_dir_path)
-    
-    
 def _get_importer_class(name):
 
     try:
         return _IMPORTER_CLASSES[name]
     except KeyError:
-        _log_fatal_error('Unrecognized importer "{:s}".'.format(name))
+        vcl_utils.log_fatal_error('Unrecognized importer "{:s}".'.format(name))
         
         
-def _check_dir_path(path):
-        
-    if not os.path.exists(path):
-        m = 'Directory "{:s}" does not exist.'
-        _log_fatal_error(m.format(path))
-        
-    if not os.path.isdir(path):
-        m = 'Path "{:s}" exists but is not a directory.'
-        _log_fatal_error(m.format(path))
-        
-    return path
-        
+def _detect(positional_args, keyword_args):
     
+    if len(positional_args) < 1:
+        _usage()
+        
+    klass = _get_detector_class(positional_args[0])
+    
+    try:
+        detector = klass(positional_args[1:], keyword_args)
+    except CommandFormatError as e:
+        vcl_utils.log_fatal_error(str(e))
+        
+    detector.detect()
+
+
+def _get_detector_class(name):
+
+    try:
+        return _DETECTOR_CLASSES[name]
+    except KeyError:
+        raise ValueError('Unrecognized detector "{:s}".'.format(name))
+        
+        
 _COMMAND_HANDLERS = {
     'init': _init,
-    'add': _add,
-    'import': _import
+    'import': _import,
+    'detect': _detect
 }
 
 from mpg_ranch.mpg_ranch_importer import MpgRanchImporter
 
 _IMPORTER_CLASSES = {
     'MPG Ranch': MpgRanchImporter
+}
+
+
+from old_bird.detector import Detector as OldBirdDetector
+
+_DETECTOR_CLASSES = {
+    'Old Bird': OldBirdDetector
 }
 
 

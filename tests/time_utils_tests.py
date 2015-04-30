@@ -7,11 +7,88 @@ from test_case import TestCase
 
 _D2 = '{:2d}'.format
 _D4 = '{:4d}'.format
+_D6 = '{:06d}'.format
 
 
+def _get_four_digit_year(y):
+    if y < 100:
+        return y + (2000 if y < 50 else 1900)
+    else:
+        return y
+    
+    
 class TimeUtilsTests(TestCase):
     
     
+    def test_parse_date_time(self):
+        
+        cases = [
+                 
+            (1900, 01, 01,  00, 00, 00, 0),
+            (2099, 12, 31,  23, 59, 59, 999999),
+            (2015, 04, 23,  10, 12, 34, 500000),
+            
+            (00, 01, 01,  00, 00, 00, 0),
+            (99, 12, 31,  23, 59, 59, 999999),
+            (15, 04, 23,  10, 12, 34, 500000),
+            
+        ]
+        
+        for y, M, d, h, m, s, f in cases:
+            year = _get_four_digit_year(y)
+            expected_result = datetime.datetime(year, M, d, h, m, s, f)
+            format_ = _D2 if y < 100 else _D4
+            y = format_(y)
+            M = _D2(M)
+            d = _D2(d)
+            h = _D2(h)
+            m = _D2(m)
+            s = _D2(s)
+            f = _D6(f)
+            result = time_utils.parse_date_time(y, M, d, h, m, s, f)
+            self.assertEqual(result, expected_result)
+            
+            
+    def test_parse_date_time_errors(self):
+        
+        cases = [
+                 
+            # year out of range
+            (1899, 12, 31,  00, 00, 00, 0),
+            (2100, 01, 01,  00, 00, 00, 0),
+            
+            # month out of range
+            (2015, 00, 01,  00, 00, 00, 0),
+            (2015, 13, 01,  00, 00, 00, 0),
+            
+            # day out of range
+            (2015, 01, 00,  00, 00, 00, 0),
+            (2015, 01, 32,  00, 00, 00, 0),
+            (2015, 02, 29,  00, 00, 00, 0),
+            
+            # hour out of range
+            (2015, 01, 01,  24, 00, 00, 0),
+            
+            # minute out of range
+            (2015, 01, 01,  00, 60, 00, 0),
+            
+            # second out of range
+            (2015, 01, 01,  00, 00, 60, 0),
+            
+        ]
+        
+        for y, M, d, h, m, s, f in cases:
+            y = _D4(y)
+            M = _D2(M)
+            d = _D2(d)
+            h = _D2(h)
+            m = _D2(m)
+            s = _D2(s)
+            f = _D6(f)
+            self._assert_raises(
+                ValueError, time_utils.parse_date_time, y, M, d, h, m, s, f)
+            
+            
     def test_parse_date(self):
         
         cases = [
@@ -30,12 +107,10 @@ class TimeUtilsTests(TestCase):
         ]
         
         for y, m, d in cases:
-            year = y
-            if y < 100:
-                year += 2000 if y < 50 else 1900
+            year = _get_four_digit_year(y)
             expected_result = datetime.date(year, m, d)
-            f = _D2 if y < 100 else _D4
-            y = f(y)
+            format_ = _D2 if y < 100 else _D4
+            y = format_(y)
             m = _D2(m)
             d = _D2(d)
             result = time_utils.parse_date(y, m, d)

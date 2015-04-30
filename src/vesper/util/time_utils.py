@@ -10,19 +10,27 @@ _MIN_YEAR = 1900
 _MAX_YEAR = 2099
 
 
-# The parsing functions of this module (`parse_date`, `parse_time`, and
-# `parse_time_delta`) are intended for use in conjunction with regular
-# expression parsing elsewhere. The basic idea is that the regular
-# expressions are used to parse strings of certain numbers of digits,
-# perhaps mixed with other things (e.g. strings of the form yyyy-mm-dd),
-# and then the digit strings (e.g. yyyy, mm, and dd) are passed to one
-# or more of the functions of this module to complete the parsing.
-# In accordance with this paradigm, the parsing functions of this
-# module assume that their arguments have a reasonable number of digits
-# (e.g. two or four for a year, but not three), and do not check for this:
-# they assume that such checking happened in the regular expression matching.
+# The parsing functions of this module (`parse_date_time`, `parse_date`,
+# `parse_time`, and `parse_time_delta`) are intended for use in
+# conjunction with regular expression parsing elsewhere. The basic idea
+# is that the regular expressions are used to parse strings of certain
+# numbers of digits, perhaps mixed with other things (e.g. strings of
+# the form yyyy-mm-dd), and then the digit strings (e.g. yyyy, mm, and dd)
+# are passed to one or more of the functions of this module to complete
+# the parsing. In accordance with this paradigm, the parsing functions
+# of this module assume that their arguments have a reasonable number
+# of digits (e.g. two or four for a year, but not three), and do not
+# check for this: they assume that such checking happened in the regular
+# expression matching.
 
 
+def parse_date_time(y, MM, dd, hh, mm, ss=None, f=None):
+    d = parse_date(y, MM, dd)
+    t = parse_time(hh, mm, ss, f)
+    return datetime.datetime(
+        d.year, d.month, d.day, t.hour, t.minute, t.second, t.microsecond)
+    
+    
 def parse_date(y, mm, dd):
     
     year = int(y)

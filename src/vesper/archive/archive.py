@@ -130,6 +130,12 @@ class Archive(object):
 
 
     @staticmethod
+    def exists(dir_path):
+        db_file_path = os.path.join(dir_path, _CLIP_DATABASE_FILE_NAME)
+        return os.path.isfile(db_file_path)
+    
+    
+    @staticmethod
     def create(dir_path, stations=None, detectors=None, clip_classes=None):
         
         # TODO: Validate arguments, for example to make sure that

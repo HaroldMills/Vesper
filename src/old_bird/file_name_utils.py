@@ -88,20 +88,20 @@ def parse_elapsed_time_clip_file_name(file_name):
         
     else:
         
-        (detector_name, hours, minutes, seconds, num) = m.groups()
+        (detector_name, hhh, mm, ss, nn) = m.groups()
         
-        hours = int(hours)
-        minutes = int(minutes)
-        seconds = int(seconds)
-        num = int(num)
+        hours = int(hhh)
+        minutes = int(mm)
+        seconds = int(ss)
+        num = int(nn)
     
         tu = time_utils
         _check(file_name, 'minutes', tu.check_minutes, minutes)
         _check(file_name, 'seconds', tu.check_seconds, seconds)
         _check_num(num, file_name)
             
-        time_delta = datetime.timedelta(
+        elapsed_time = datetime.timedelta(
             hours=hours, minutes=minutes, seconds=seconds,
             microseconds=num * 100000)
-
-        return (detector_name, time_delta)
+        
+        return (detector_name, elapsed_time)
