@@ -39,6 +39,28 @@ the `extra` keyword argument to the logging methods.
 '''
 
 
+'''
+TODO: Investigate Ctrl-C behavior. This script should shut down gracefully
+if it doesn't already, and if possible, in response to Ctrl-C.
+
+A short script that can be interrupted by Ctrl-C:
+
+from __future__ import print_function
+
+import signal
+import sys
+import time
+
+def signal_handler(signal, frame):
+    print('You pressed Ctrl+C!')
+    sys.exit(0)
+    
+signal.signal(signal.SIGINT, signal_handler)
+print('Press Ctrl+C')
+time.sleep(20)
+'''
+
+
 def _main():
     
     logging.basicConfig(
