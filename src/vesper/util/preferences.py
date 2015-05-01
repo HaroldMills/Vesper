@@ -10,10 +10,9 @@ import sys
 from vesper.util.classification_commands_preset import \
     ClassificationCommandsPreset
 from vesper.util.preset_manager import PresetManager
+import vesper.util.vesper_path_utils as vesper_path_utils
         
             
-_PREFS_DIR_NAME = 'Vesper'
-_PREFS_VAR_NAME = 'VESPER_PREFS'
 _PREFS_FILE_NAME = 'Preferences.json'
 _PRESETS_DIR_NAME = 'Presets'
 _PRESET_TYPES = {ClassificationCommandsPreset}
@@ -29,6 +28,10 @@ def _load_preferences():
     except Exception as e:
         f = 'An error occurred while loading application preferences: {:s}'
         _handle_error(f.format(str(e)))
+
+
+def _get_prefs_dir_path():
+    return vesper_path_utils.get_app_home_dir_path()
 
 
 # TODO: Put this in a JSON utility module?
@@ -52,12 +55,6 @@ def _read_json_file(path):
     return contents
 
 
-def _get_prefs_dir_path():
-    home_dir_path = os.path.expanduser('~')
-    default_prefs_dir_path = os.path.join(home_dir_path, _PREFS_DIR_NAME)
-    return os.environ.get(_PREFS_VAR_NAME, default_prefs_dir_path)
-
-
 def _handle_error(message):
     print(message, file=sys.stderr)
     sys.exit(1)
@@ -71,3 +68,4 @@ def _create_preset_manager():
     
 preferences = _load_preferences()
 preset_manager = _create_preset_manager()
+

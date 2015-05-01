@@ -194,7 +194,7 @@ class Detector(object):
         
         try:
             (self._station_name, self._monitoring_start_time,
-             self._num_samples) = \
+             sample_rate, num_samples) = \
                 _get_input_file_info(file_path)
                 
         except ValueError as e:
@@ -203,20 +203,26 @@ class Detector(object):
                 'Error message was: {:s}').format(file_path, str(e)))
             return
             
-#         logging.info(
-#             'station {:s} start time {:s} num samples {:d}'.format(
-#                 self._station_name, str(self._monitoring_start_time),
-#                 self._num_samples))
+        file_duration = num_samples / float(sample_rate)
         
         try:
+            start_time = time.time()
             self._copy_input_file(file_path)
+            processing_time = time.time() - start_time
+            _log_performance('Copied', file_duration, processing_time)
             
         except OSError as e:
             logging.error(str(e))
         
         else:
+            start_time = time.time()
             detectors = self._start_detectors()
             self._wait_for_detectors(detectors)
+            processing_time = time.time() - start_time
+            logging.info(
+                'Detection on file "{:s}" is complete.'.format(file_path))
+            _log_performance(
+                'Detection ran on', file_duration, processing_time)
             
             
     def _copy_input_file(self, file_path):
@@ -254,16 +260,21 @@ class Detector(object):
     
     
     def _handle_detection(self, clip):
+        
         file_name = os.path.basename(clip.file_path)
         start_time = self._monitoring_start_time + clip.start_time
+        
+        s = start_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-5]
+        s += ' ' + start_time.strftime('%Z')
         logging.info(
-            'Archiving {:s} {:s} {:s} {:s}...'.format(
-                file_name, self._station_name, clip.detector_name,
-                str(start_time)))
+            'Archiving {:s} ({:s} {:s})...'.format(
+                file_name, self._station_name, s))
+        
         try:
             self._archive_task_serializer.run(
                 self._archive.add_clip, self._station_name,
                 clip.detector_name, start_time, clip)
+            
         except ValueError as e:
             logging.error(
                 'Clip archival failed with message: {:s}'.format(str(e)))
@@ -440,9 +451,18 @@ def _get_input_file_info(file_path):
             'File has a compression type of "{:s}", but only a compression '
             'type of "NONE" is curently supported.').format(compression_type))
 
-    return (station, start_time, num_frames)
+    return (station, start_time, frame_rate, num_frames)
             
         
+def _log_performance(prefix, file_duration, processing_time):
+    speedup = file_duration / processing_time
+    file_duration = int(round(file_duration))
+    processing_time = int(round(processing_time))
+    logging.info((
+        '{:s} {:d}-second file in {:d} seconds, {:.1f} times faster than '
+        'real time.').format(prefix, file_duration, processing_time, speedup))
+
+
 class _Detector(Thread):
     
     

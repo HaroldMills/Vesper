@@ -23,6 +23,10 @@ from vesper.archive.detector import Detector
 from vesper.archive.station import Station
 from vesper.exception.command_exceptions import CommandFormatError
 import vesper.util.vcl_utils as vcl_utils
+import vesper.util.vesper_path_utils as vesper_path_utils
+
+
+_LOG_FILE_NAME = 'vcl.log'
 
 
 '''
@@ -63,8 +67,7 @@ time.sleep(20)
 
 def _main():
     
-    logging.basicConfig(
-        format='%(levelname)s %(asctime)s: %(message)s', level=logging.INFO)
+    _configure_logging()
     
     if len(sys.argv) < 2:
         _usage()
@@ -103,7 +106,30 @@ def _main():
 #             'Command completed with errors. See above messages for details.')
 #         sys.exit(1)
         
-        
+      
+def _configure_logging():
+    
+    format_ = '%(asctime)s %(levelname)-8s %(message)s'
+    level = logging.INFO
+    
+    home_dir_path = vesper_path_utils.get_app_home_dir_path()
+    log_file_path = os.path.join(home_dir_path, _LOG_FILE_NAME)
+    
+    # Configure output to log file.
+    logging.basicConfig(
+        format=format_,
+        level=level,
+        filename=log_file_path,
+        filemode='w')
+    
+    # Add output to stderr.
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    formatter = logging.Formatter(format_)
+    handler.setFormatter(formatter)
+    logging.getLogger('').addHandler(handler)
+    
+    
 # TODO: Improve argument parsing, adding declarative argument
 # specification, type checking, and missing and extra argument
 # checks. Implement argument types and commands as extensions.
@@ -135,9 +161,9 @@ def _parse_args(args):
 def _usage():
     
     message = '''
-usage: vesper init <YAML file> [--archive <archive dir>]
-       vesper import <importer> <source dir> [--archive <archive dir>]
-       vesper detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> [--archive <archive dir>]
+usage: vcl init <YAML file> [--archive <archive dir>]
+       vcl import <importer> <source dir> [--archive <archive dir>]
+       vcl detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> [--archive <archive dir>]
 '''.strip()
 
     print(message, file=sys.stderr)
