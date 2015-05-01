@@ -20,18 +20,14 @@ _PRESET_TYPES = {ClassificationCommandsPreset}
 
 def _load_preferences():
     
-    prefs_dir_path = _get_prefs_dir_path()
-    prefs_file_path = os.path.join(prefs_dir_path, _PREFS_FILE_NAME)
+    app_home_dir_path = vesper_path_utils.get_app_home_dir_path()
+    prefs_file_path = os.path.join(app_home_dir_path, _PREFS_FILE_NAME)
     
     try:
         return _read_json_file(prefs_file_path)
     except Exception as e:
         f = 'An error occurred while loading application preferences: {:s}'
         _handle_error(f.format(str(e)))
-
-
-def _get_prefs_dir_path():
-    return vesper_path_utils.get_app_home_dir_path()
 
 
 # TODO: Put this in a JSON utility module?
@@ -61,8 +57,8 @@ def _handle_error(message):
     
     
 def _create_preset_manager():
-    prefs_dir_path = _get_prefs_dir_path()
-    presets_dir_path = os.path.join(prefs_dir_path, _PRESETS_DIR_NAME)
+    app_home_dir_path = vesper_path_utils.get_app_home_dir_path()
+    presets_dir_path = os.path.join(app_home_dir_path, _PRESETS_DIR_NAME)
     return PresetManager(presets_dir_path, _PRESET_TYPES)
     
     
