@@ -14,6 +14,7 @@ from __future__ import print_function
 
 import logging
 import os
+import platform
 import sys
 import yaml
 
@@ -160,11 +161,14 @@ def _parse_args(args):
     
 def _usage():
     
+    name = 'vcl.bat' if platform.system() == 'Windows' else 'vcl'
+    
     message = '''
-usage: vcl init <YAML file> [--archive <archive dir>]
-       vcl import <importer> <source dir> [--archive <archive dir>]
-       vcl detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> [--archive <archive dir>]
-'''.strip()
+usage: VCL help
+       VCL init <YAML file> [--archive <archive dir>]
+       VCL import <importer> <source dir> [--archive <archive dir>]
+       VCL detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> [--archive <archive dir>]
+'''.strip().replace('VCL', name)
 
     print(message, file=sys.stderr)
     sys.exit(1)
