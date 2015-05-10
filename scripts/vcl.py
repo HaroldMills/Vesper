@@ -21,7 +21,7 @@ from vesper.vcl.init_command import InitCommand
 from vesper.vcl.detect_command import DetectCommand
 from vesper.vcl.import_command import ImportCommand
 from vesper.vcl.export_command import ExportCommand
-import vesper.util.vcl_utils as vcl_utils
+import vesper.vcl.vcl_utils as vcl_utils
 import vesper.util.vesper_path_utils as vesper_path_utils
 
 

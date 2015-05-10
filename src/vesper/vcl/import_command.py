@@ -4,7 +4,7 @@
 from mpg_ranch.importer import Importer as MpgRanchImporter
 from vesper.vcl.command import (
     Command, CommandSyntaxError, CommandExecutionError)
-import vesper.util.vcl_utils as vcl_utils
+import vesper.vcl.vcl_utils as vcl_utils
 
 
 # TODO: Get importer names from importer classes.

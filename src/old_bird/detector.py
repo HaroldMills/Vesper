@@ -20,7 +20,7 @@ import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
-import vesper.util.vcl_utils as vcl_utils
+import vesper.vcl.vcl_utils as vcl_utils
 
 
 '''

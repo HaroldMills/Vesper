@@ -10,7 +10,7 @@ from vesper.archive.detector import Detector
 from vesper.archive.station import Station
 from vesper.vcl.command import (
     Command, CommandSyntaxError, CommandExecutionError)
-import vesper.util.vcl_utils as vcl_utils
+import vesper.vcl.vcl_utils as vcl_utils
 
 
 class InitCommand(Command):
