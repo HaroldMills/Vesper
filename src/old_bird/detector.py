@@ -12,12 +12,13 @@ import pytz
 
 from old_bird.file_name_utils import \
     parse_elapsed_time_clip_file_name as _parse_clip_file_name
-from vesper.exception.command_exceptions import CommandFormatError
 from vesper.util.audio_file_utils import read_wave_file as _read_wave_file
 from vesper.util.bunch import Bunch
 from vesper.util.task_serializer import TaskSerializer
+from vesper.vcl.command import CommandExecutionError, CommandSyntaxError
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
+import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.vcl_utils as vcl_utils
 
@@ -112,22 +113,18 @@ class Detector(object):
     
     def __init__(self, positional_args, keyword_args):
         
+        # TODO: Make this more generally available.
         if len(positional_args) != 0:
             s = 's' if len(positional_args) > 1 else ''
             args = ' '.join(positional_args)
             message = 'Extra positional argument{:s}: {:s}'.format(s, args)
-            raise CommandFormatError(message)
+            raise CommandSyntaxError(message)
         
         self._detector_names = _get_detector_name(keyword_args)
         self._input_mode = _get_input_mode(keyword_args)
         self._input_paths = _get_input_paths(keyword_args)
         
         self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
-        self._archive_task_serializer = TaskSerializer()
-        
-        # Make sure we can open archive.
-        archive = vcl_utils.open_archive(self._archive_dir_path)
-        archive.close()
         
                 
     def detect(self):
@@ -142,26 +139,25 @@ class Detector(object):
         
         if self._input_mode == _INPUT_MODE_FILE:
             
-            self._archive = self._archive_task_serializer.run(
+            self._archive_task_serializer = TaskSerializer()
+            
+            self._archive = self._archive_task_serializer.execute(
                 vcl_utils.open_archive, self._archive_dir_path)
-#            self._archive = vcl_utils.open_archive(self._archive_dir_path)
             
             try:
-                self._detect_on_dirs_and_files()
+                return self._detect_on_dirs_and_files()
             finally:
-                self._archive_task_serializer.run(self._archive.close)
-#                self._archive.close()
+                self._archive_task_serializer.execute(self._archive.close)
         
         
     def _detect_on_dirs_and_files(self):
         
+        self._success = True
+        
         for path in self._input_paths:
             
             if not os.path.exists(path):
-                message = (
-                    'Input path "{:s}" does not exist and will be '
-                    'ignored.').format(path)
-                logging.info(message)
+                self._handle_nonexistent_path(path)
                     
             else:
                 # path exists
@@ -172,7 +168,17 @@ class Detector(object):
                 else:
                     self._detect_on_file(path)
                     
+        return self._success
                     
+                 
+    def _handle_nonexistent_path(self, path):
+        message = (
+            'Input path "{:s}" does not exist and will be '
+            'ignored.').format(path)
+        logging.info(message)
+        self._success = False
+        
+   
     def _detect_on_dir(self, dir_path):
                     
         for _, subdir_names, file_names in os.walk(dir_path):
@@ -201,20 +207,27 @@ class Detector(object):
             logging.error((
                 'Could not get information for file "{:s}". '
                 'Error message was: {:s}').format(file_path, str(e)))
+            self._success = False
             return
             
         file_duration = num_samples / float(sample_rate)
         
+        start_time = time.time()
+        
         try:
-            start_time = time.time()
             self._copy_input_file(file_path)
-            processing_time = time.time() - start_time
-            _log_performance('Copied', file_duration, processing_time)
             
         except OSError as e:
             logging.error(str(e))
+            self._success = False
         
         else:
+            
+            processing_time = time.time() - start_time
+            _log_performance('Copied', file_duration, processing_time)
+
+            # RESUME: Handle errors running detectors. They may fail,
+            # for example, if detector programs are absent.
             start_time = time.time()
             detectors = self._start_detectors()
             self._wait_for_detectors(detectors)
@@ -271,7 +284,7 @@ class Detector(object):
                 file_name, self._station_name, s))
         
         try:
-            self._archive_task_serializer.run(
+            self._archive_task_serializer.execute(
                 self._archive.add_clip, self._station_name,
                 clip.detector_name, start_time, clip)
             
@@ -336,12 +349,12 @@ def _get_detector_name(keyword_args):
         names = keyword_args['detectors']
     except KeyError:
         message = 'Missing required "--detectors" argument.'
-        raise CommandFormatError(message)
+        raise CommandSyntaxError(message)
     
     for name in names:
         if name not in _DETECTOR_NAMES:
             message = 'Unrecognized detector "{:s}".'.format(name)
-            raise CommandFormatError(message)
+            raise CommandExecutionError(message)
         
     return names
 
@@ -354,24 +367,24 @@ def _get_input_mode(keyword_args):
     try:
         modes = keyword_args['input-mode']
     except KeyError:
-        raise CommandFormatError('Missing required "--input-mode" argument.')
+        raise CommandSyntaxError('Missing required "--input-mode" argument.')
     
     if len(modes) != 1:
-        raise CommandFormatError(
+        raise CommandSyntaxError(
             '"--input-mode" argument value must be a single string.')
     
     mode = modes[0]
     
     if mode not in _INPUT_MODES:
         message = 'Unrecognized input mode "{:s}".'.format(mode)
-        raise CommandFormatError(message)
+        raise CommandExecutionError(message)
         
     # For now we support only file input.
     if mode != _INPUT_MODE_FILE:
         message = (
             'Sorry, but only the "{:s}" input mode is supported at this '
             'time.').format(_INPUT_MODE_FILE)
-        raise CommandFormatError(message)
+        raise CommandExecutionError(message)
     
     return mode
     
@@ -382,7 +395,7 @@ def _get_input_paths(keyword_args):
         values = keyword_args['input-paths']
     except KeyError:
         message = 'Missing required "--input-paths" argument.'
-        raise CommandFormatError(message)
+        raise CommandSyntaxError(message)
     
     return values
 
@@ -455,12 +468,21 @@ def _get_input_file_info(file_path):
             
         
 def _log_performance(prefix, file_duration, processing_time):
-    speedup = file_duration / processing_time
-    file_duration = int(round(file_duration))
-    processing_time = int(round(processing_time))
-    logging.info((
-        '{:s} {:d}-second file in {:d} seconds, {:.1f} times faster than '
-        'real time.').format(prefix, file_duration, processing_time, speedup))
+    
+    format_ = text_utils.format_number
+    
+    dur = format_(file_duration)
+    time = format_(processing_time)
+    
+    message = '{:s} {:s}-second file in {:s} seconds'.format(prefix, dur, time)
+    
+    if processing_time != 0:
+        speedup = format_(file_duration / processing_time)
+        message += ', {:s} times faster than real time.'.format(speedup)
+    else:
+        message += '.'
+        
+    logging.info(message)
 
 
 class _Detector(Thread):
@@ -485,6 +507,9 @@ class _Detector(Thread):
         
         
     def run(self):
+        
+        # TODO: When detection does not complete normally, vcl detect
+        # command needs to return `False`. this currently does not happen.
         
         # TODO: Do we need to ensure that all output directory clearing
         # and all clip processing happens on a single thread? Both involve
@@ -523,8 +548,9 @@ class _Detector(Thread):
                 # detector process finished processing an input file
                 
                 logging.info((
-                    'Terminating {:s} detector since log indicates it has '
-                    'finished processing sound file...').format(self.name))
+                    'Terminating {:s} detector since detector log indicates '
+                    'that sound file processing is complete...').format(
+                        self.name))
                 self._detector_process.terminate()
                 break
                 
@@ -554,7 +580,8 @@ class _Detector(Thread):
         pattern = _CLIP_FILE_NAME_PATTERN.format(name)
         os_utils.delete_files(_OUTPUT_DIR_PATH, pattern)
         
-        logging.info('Creating empty log file "{:s}"...'.format(log_path))
+        logging.info(
+            'Creating empty detector log file "{:s}"...'.format(log_path))
         os_utils.create_file(log_path)
 
 

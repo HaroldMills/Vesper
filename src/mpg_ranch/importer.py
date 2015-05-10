@@ -1,4 +1,4 @@
-"""Module containing class `MpgRanchImporter`."""
+"""Module containing class `Importer`."""
 
 
 from __future__ import print_function
@@ -172,7 +172,7 @@ _IGNORED_FILE_NAMES = frozenset(
     ['.DS_Store', 'Thumbs.db', 'desktop.ini', 'keylist.txt'])
 
 
-class MpgRanchImporter:
+class Importer:
     
     """Importer for MPG Ranch 2012-2014 nocturnal flight call data."""
     

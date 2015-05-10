@@ -14,18 +14,23 @@ from __future__ import print_function
 
 import logging
 import os
-import platform
 import sys
-import yaml
 
-from vesper.archive.archive import Archive
-from vesper.archive.clip_class import ClipClass
-from vesper.archive.detector import Detector
-from vesper.archive.station import Station
-from vesper.exception.command_exceptions import CommandFormatError
+from vesper.vcl.command import CommandSyntaxError, CommandExecutionError
+from vesper.vcl.init_command import InitCommand
+from vesper.vcl.detect_command import DetectCommand
+from vesper.vcl.import_command import ImportCommand
+from vesper.vcl.export_command import ExportCommand
 import vesper.util.vcl_utils as vcl_utils
 import vesper.util.vesper_path_utils as vesper_path_utils
 
+
+_COMMAND_CLASSES = dict((c.name, c) for c in (
+    InitCommand,
+    ImportCommand,
+    DetectCommand,
+    ExportCommand
+))
 
 _LOG_FILE_NAME = 'vcl.log'
 
@@ -66,6 +71,14 @@ time.sleep(20)
 '''
 
 
+'''
+vcl.bat export clips --format "MPG Ranch Clips CSV" --to-file <file path>
+    --stations <stations> --detectors <detectors> --clip-classes <clip classes>
+    --from-date <from date> --to-date <to date>
+    --dates <dates>
+'''
+
+
 def _main():
     
     _configure_logging()
@@ -74,38 +87,34 @@ def _main():
         _usage()
         
     try:
-        handler = _COMMAND_HANDLERS[sys.argv[1]]
+        klass = _COMMAND_CLASSES[sys.argv[1]]
     except KeyError:
         _usage()
         
     # TODO: Perhaps command handler should parse arguments (see below)
     positional_args, keyword_args = _parse_args(sys.argv[2:])
     
-    # TODO: Handle errors better. They won't all be instances of
-    # `ValueError`, for example. See commented code below for one
-    # possibility.
     try:
-        handler(positional_args, keyword_args)
-    except ValueError as e:
-        vcl_utils.log_fatal_error(str(e))
+        command = klass(positional_args, keyword_args)
+    except CommandSyntaxError as e:
+        vcl_utils.log_fatal_error('Command syntax error: {:s}'.format(str(e)))
         
-    # TODO: Consider executing a command in two stages, one in which
-    # the command parses command line arguments and the other in which
-    # the command is executed. The code might look like this:
-#     try:
-#         handler.configure(sys.argv[2:])
-#     except CommandFormatError as e:
-#         vcl_utils.log_fatal_error(str(e))
-#         
-#     try:
-#         status = handler.execute()
-#     except CommandExecutionError as e:
-#         vcl_utils.log_fatal_error(str(e))
-#         
-#     if not status:
-#         logging.info(
-#             'Command completed with errors. See above messages for details.')
-#         sys.exit(1)
+    try:
+        success = command.execute()
+    except CommandExecutionError as e:
+        vcl_utils.log_fatal_error(
+            'Command "{:s}" failed with fatal error: {:s}'.format(
+                command.name, str(e)))
+        
+    if success:
+        suffix = 'no errors.'
+    else:
+        suffix = 'one or more non-fatal errors. See log for details.'
+        
+    logging.info(
+        'Command "{:s}" completed with {:s}'.format(command.name, suffix))
+    
+    sys.exit(0 if success else 1)
         
       
 def _configure_logging():
@@ -131,9 +140,23 @@ def _configure_logging():
     logging.getLogger('').addHandler(handler)
     
     
-# TODO: Improve argument parsing, adding declarative argument
-# specification, type checking, and missing and extra argument
-# checks. Implement argument types and commands as extensions.
+def _usage():
+    
+    # TODO: Move help strings to command classes.
+    message = '''
+usage: vcl help
+       vcl init <YAML file> [--archive <archive dir>]
+       vcl import <importer> <source dir> [--archive <archive dir>]
+       vcl detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> [--archive <archive dir>]
+'''.strip()
+
+    print(message, file=sys.stderr)
+    sys.exit(1)
+    
+    
+# TODO: Improve argument parsing, with such things as declarative argument
+# specification by command classes, type checking, and missing and extra
+# argument checks. Implement argument types and commands as extensions.
 def _parse_args(args):
     
     i = 0
@@ -159,130 +182,6 @@ def _parse_args(args):
     return (positional_args, keyword_args)
     
     
-def _usage():
-    
-    name = 'vcl.bat' if platform.system() == 'Windows' else 'vcl'
-    
-    message = '''
-usage: VCL help
-       VCL init <YAML file> [--archive <archive dir>]
-       VCL import <importer> <source dir> [--archive <archive dir>]
-       VCL detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> [--archive <archive dir>]
-'''.strip().replace('VCL', name)
-
-    print(message, file=sys.stderr)
-    sys.exit(1)
-    
-    
-def _init(positional_args, keyword_args):
-    
-    if len(positional_args) != 1:
-        _usage()
-        
-    archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
-    
-    stations, detectors, clip_classes = _read_yaml_data(positional_args[0])
-    
-    if Archive.exists(archive_dir_path):
-        vcl_utils.log_fatal_error((
-            'There is already an archive at "{:s}". If you want to '
-            're-initialize it to be empty, delete its contents and '
-            'run this command again.').format(archive_dir_path))
-        
-    Archive.create(archive_dir_path, stations, detectors, clip_classes)
-    
-    
-def _read_yaml_data(file_path):
-    
-    if not os.path.exists(file_path):
-        vcl_utils.log_fatal_error('YAML file "{:s}" not found.'.format(file_path))
-        
-    data = yaml.load(open(file_path, 'r').read())
-    
-    station_dicts = data.get('stations', [])
-    detector_names = data.get('detectors', [])
-    clip_class_names = data.get('clip_classes', [])
-    
-    stations = [Station(**kwds) for kwds in station_dicts]
-    detectors = [Detector(name) for name in detector_names]
-    clip_classes = [ClipClass(name) for name in clip_class_names]
-    
-    return stations, detectors, clip_classes
-    
-    
-def _import(positional_args, keyword_args):
-    
-    if len(positional_args) < 2:
-        _usage()
-        
-    klass = _get_importer_class(positional_args[0])
-    importer = klass()
-    
-    source_dir_path = positional_args[1]
-    vcl_utils.check_dir_path(source_dir_path)
-    
-    archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
-    archive = vcl_utils.open_archive(archive_dir_path)
-    
-    try:
-        importer.import_(source_dir_path, archive)
-    finally:
-        archive.close()
-    
-    importer.log_summary()
-    
-    
-def _get_importer_class(name):
-
-    try:
-        return _IMPORTER_CLASSES[name]
-    except KeyError:
-        vcl_utils.log_fatal_error('Unrecognized importer "{:s}".'.format(name))
-        
-        
-def _detect(positional_args, keyword_args):
-    
-    if len(positional_args) < 1:
-        _usage()
-        
-    klass = _get_detector_class(positional_args[0])
-    
-    try:
-        detector = klass(positional_args[1:], keyword_args)
-    except CommandFormatError as e:
-        vcl_utils.log_fatal_error(str(e))
-        
-    detector.detect()
-
-
-def _get_detector_class(name):
-
-    try:
-        return _DETECTOR_CLASSES[name]
-    except KeyError:
-        raise ValueError('Unrecognized detector "{:s}".'.format(name))
-        
-        
-_COMMAND_HANDLERS = {
-    'init': _init,
-    'import': _import,
-    'detect': _detect
-}
-
-from mpg_ranch.mpg_ranch_importer import MpgRanchImporter
-
-_IMPORTER_CLASSES = {
-    'MPG Ranch': MpgRanchImporter
-}
-
-
-from old_bird.detector import Detector as OldBirdDetector
-
-_DETECTOR_CLASSES = {
-    'Old Bird': OldBirdDetector
-}
-
-
 if __name__ == '__main__':
     _main()
 

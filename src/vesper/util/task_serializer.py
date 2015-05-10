@@ -24,14 +24,22 @@ class TaskSerializer(object):
         self._thread.start()
         
         
-    def run(self, callable_, *args, **kwds):
+    def execute(self, callable_, *args, **kwds):
         
         """
-        Runs a task synchronously on the task thread.
+        Executes a task synchronously on the task thread.
         
         This method invokes the specified callable on the specified
-        arguments. It returns the value returned by the callable, and
-        re-raises any exception raised by the callable.
+        arguments.
+        
+        :Returns:
+            the value returned by the callable.
+            
+        :Raises TaskError:
+            if the callable raised an exception.
+            
+            The exception raised by the callable is the `exception` member
+            of the exception raised by this method.
         """
         
         task = _Task(callable_, *args, **kwds)
@@ -42,11 +50,9 @@ class TaskSerializer(object):
         self._queue.join()
         
         if task.exception is not None:
-            
-            # TODO: It would be helpful to somehow include the stack trace
-            # of the original exception in the raised exception.
+            # TODO: Is there some way to preserve the stack trace of the
+            # original exception when we re-raise it?
             raise task.exception
-        
         else:
             return task.result
             
@@ -63,7 +69,7 @@ class _Thread(Thread):
     def run(self):
         while True:
             task = self._queue.get()
-            task.run()
+            task.execute()
             self._queue.task_done()
         
         
@@ -77,7 +83,7 @@ class _Task(object):
         self._kwds = kwds
         
         
-    def run(self):
+    def execute(self):
         self.exception = None
         try:
             self.result = self._callable(*self._args, **self._kwds)

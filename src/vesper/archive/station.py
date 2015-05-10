@@ -12,15 +12,36 @@ class Station(Named):
     """Nocturnal migration monitoring station."""
     
     
-    def __init__(self, name, long_name, time_zone_name):
+    def __init__(
+            self, name, long_name, time_zone_name,
+            latitude=None, longitude=None, elevation=None):
+        
         super(Station, self).__init__(name)
         self._long_name = long_name
+        self._latitude = latitude
+        self._longitude = longitude
+        self._elevation = elevation
         self._time_zone = pytz.timezone(time_zone_name)
         
         
     @property
     def long_name(self):
         return self._long_name
+    
+    
+    @property
+    def latitude(self):
+        return self._latitude
+    
+    
+    @property
+    def longitude(self):
+        return self._longitude
+    
+    
+    @property
+    def elevation(self):
+        return self._elevation
     
     
     @property
