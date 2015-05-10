@@ -1,7 +1,7 @@
 from test_case import TestCase
 import datetime
 
-import mpg_ranch.mpg_ranch_importer as importer
+import mpg_ranch.importer as importer
 
 
 '''
