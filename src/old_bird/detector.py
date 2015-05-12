@@ -3,12 +3,14 @@
 
 from threading import Event, Thread
 import logging
+import math
 import os
 import re
 import subprocess
 import time
 
 import pytz
+import yaml
 
 from old_bird.file_name_utils import \
     parse_elapsed_time_clip_file_name as _parse_clip_file_name
@@ -108,6 +110,241 @@ _DETECTOR_DIR_PATH = 'C:\\Program Files (x86)\\Old Bird'
 # should import but decline to run.
 
 
+'''
+To use default detection handler, which writes detections to an archive:
+
+    vcl detect "Old Bird" --detectors Tseep Thrush --input-mode File
+        --input-paths /Users/Harold/Desktop/NFC [--archive <archive-path>]
+    
+To use MPG Ranch Renamer detection handler, which moves and renames
+detection sound files:
+
+    vcl detect "Old Bird" --detectors Tseep Thrush --input-mode File
+        --input-paths /Users/Harold/Desktop/NFC
+        --detection-handler "MPG Ranch Renamer"
+        
+These commands work fine when there is only a single detection handler.
+We would have to do something different if we wanted to support multiple
+detection handlers, perhaps by allowing a handler configuration to be
+specified via a YAML file (or even a command line argument that includes
+a YAML string).
+'''
+
+
+class DetectionHandlerError(Exception):
+    pass
+
+
+class DetectionHandler(object):
+    
+    
+    def __init__(self, keyword_args):
+        pass
+    
+    
+    def on_detection_start(self):
+        pass
+    
+    
+    def on_file_start(self, file_path):
+        pass
+    
+    
+    def on_detection(self, clip):
+        pass
+    
+    
+    def on_file_end(self):
+        pass
+    
+    
+    def on_detection_end(self):
+        pass
+    
+        
+_INPUT_FILE_NAME_RE = \
+    re.compile(r'^(.+)_(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d).wav$')
+
+
+class DetectionArchiver(DetectionHandler):
+    
+    
+    def __init__(self, keyword_args):
+        super(DetectionArchiver, self).__init__(keyword_args)
+        self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
+    
+    
+    def on_detection_start(self):
+        self._archive_task_serializer = TaskSerializer()
+        self._archive = self._archive_task_serializer.execute(
+            vcl_utils.open_archive, self._archive_dir_path)
+        
+        
+    def on_file_start(self, file_path):
+        file_name = os.path.basename(file_path)
+        self._station_name, self.file_start_time = \
+            _parse_mpg_ranch_input_file_name(file_name)
+            
+            
+    def on_detection(self, clip):
+        
+        file_name = os.path.basename(clip.file_path)
+        start_time = self._file_start_time + clip.start_time
+        
+        s = start_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-5]
+        s += ' ' + start_time.strftime('%Z')
+        logging.info(
+            'Archiving {:s} ({:s} {:s})...'.format(
+                file_name, self._station_name, s))
+        
+        try:
+            self._archive_task_serializer.execute(
+                self._archive.add_clip, self._station_name,
+                clip.detector_name, start_time, clip)
+            
+        except ValueError as e:
+            raise DetectionHandlerError(
+                'Clip archival failed with message: {:s}'.format(str(e)))
+
+
+    def on_detection_end(self):
+        self._archive_task_serializer.execute(self._archive.close)
+
+
+
+class DetectionRenamer(DetectionHandler):
+    
+    """
+    Moves and renames detections in accordance with the first steps of the
+    MPG Ranch Tseep and Thrush detection workflow.
+    """
+    
+    
+    def on_detection_start(self):
+        self._station_name_changes = _get_station_name_changes()        
+        
+        
+    def on_file_start(self, file_path):
+
+        file_name = os.path.basename(file_path)
+        
+        station_name, start_time = _parse_mpg_ranch_input_file_name(file_name)
+        
+        # Convert station name to lower case and abbreviate if needed.
+        station_name = station_name.lower()
+        station_name = \
+            self._station_name_changes.get(station_name, station_name)
+        
+        # Convert start time from UTC to US/Mountain time zone and format.
+        mountain = pytz.timezone('US/Mountain')
+        start_time = start_time.astimezone(mountain)
+        start_time = start_time.strftime('%m%d%y_%H%M%S')
+        
+        try:
+            sample_rate, num_samples = _get_input_file_info(file_path)
+        except ValueError as e:
+            raise DetectionHandlerError((
+                'Could not read duration information from file. Error '
+                'message was: {:s}').format(str(e)))
+            
+        duration = num_samples / float(sample_rate)
+        hours = int(math.floor(duration / 3600))
+        duration -= hours * 3600
+        minutes = int(math.floor(duration / 60))
+        seconds = int(round(duration - minutes * 60))
+        duration = '{:02d}{:02d}{:02d}'.format(hours, minutes, seconds)
+        
+        dir_name = station_name + '_' + start_time + '_' + duration
+        dir_path = os.path.join(_OUTPUT_DIR_PATH, dir_name)
+        
+        if os.path.exists(dir_path):
+            raise DetectionHandlerError((
+                'Detection output directory "{:s}" already exists. Please '
+                'delete it and try again.').format(dir_path))
+            
+        try:
+            os_utils.create_directory(dir_path)
+        except OSError as e:
+            raise DetectionHandlerError((
+                'Could not create output directory "{:s}". Error message '
+                'was: {:s}').format(dir_path, str(e)))
+            
+        self._dir_name = dir_name
+        self._dir_path = dir_path
+        
+            
+    def on_detection(self, clip):
+        
+        old_file_name = os.path.basename(clip.file_path)
+        new_file_name = self._dir_name + '_' + old_file_name
+        new_file_path = os.path.join(self._dir_path, new_file_name)
+        
+        logging.info(
+            'Copying {:s} to {:s}...'.format(old_file_name, new_file_name))
+
+        try:
+            os_utils.copy_file(clip.file_path, new_file_path)
+        except OSError as e:
+            raise DetectionHandlerError(str(e))
+
+
+def _get_station_name_changes():
+    
+    file_path = os.path.join(_OUTPUT_DIR_PATH, 'StationNameChanges.yaml')
+    
+    if os.path.exists(file_path):
+        
+        try:
+            text = os_utils.read_file(file_path)
+        except OSError:
+            raise DetectionHandlerError(
+                'Could not read YAML file "{:s}".'.format(file_path))
+        
+        try:
+            changes = yaml.load(text)
+        except yaml.parser.ParserError:
+            raise DetectionHandlerError(
+                'Could not parse YAML file "{:s}".'.format(file_path))
+            
+        if isinstance(changes, dict):
+            return changes
+        else:
+            raise DetectionHandlerError(
+                'Contents of YAML file "{:s}" are not a dictionary.'.format(
+                    file_path))
+            
+    else:
+        return {}
+                
+                
+def _parse_mpg_ranch_input_file_name(file_name):
+    
+    m = _INPUT_FILE_NAME_RE.match(file_name)
+    
+    if m is None:
+        raise DetectionHandlerError((
+            'File name is not of the form '
+            '<station name>_<yyyymmdd>_<hhmmss>.wav'))
+        
+    station_name, year, month, day, hour, minute, second = m.groups()
+    start_time = time_utils.parse_date_time(
+        year, month, day, hour, minute, second)
+    
+    # Convert naive monitoring start time to UTC. We assume that the
+    # local time zone is US/Mountain, that the naive start time observes
+    # DST, and that it will never be ambiguous or nonexistent (i.e. we
+    # do not worry about the `is_dst` argument to `mountain.localize`).
+    # If we do supply an ambiguous or nonexistent time to
+    # `mountain.localize` it will raise an exception. See the
+    # "Problems with Localtime" section of the `pytz` documentation at
+    # http://pytz.sourceforge.net for more.
+    mountain = pytz.timezone('US/Mountain')
+    start_time = mountain.localize(start_time)
+    start_time = start_time.astimezone(pytz.utc)
+    
+    return station_name, start_time
+        
+
 class Detector(object):
     
     
@@ -123,8 +360,7 @@ class Detector(object):
         self._detector_names = _get_detector_name(keyword_args)
         self._input_mode = _get_input_mode(keyword_args)
         self._input_paths = _get_input_paths(keyword_args)
-        
-        self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
+        self._detection_handler = _get_detection_handler(keyword_args)
         
                 
     def detect(self):
@@ -139,15 +375,12 @@ class Detector(object):
         
         if self._input_mode == _INPUT_MODE_FILE:
             
-            self._archive_task_serializer = TaskSerializer()
-            
-            self._archive = self._archive_task_serializer.execute(
-                vcl_utils.open_archive, self._archive_dir_path)
+            self._detection_handler.on_detection_start()
             
             try:
                 return self._detect_on_dirs_and_files()
             finally:
-                self._archive_task_serializer.execute(self._archive.close)
+                self._detection_handler.on_detection_end()
         
         
     def _detect_on_dirs_and_files(self):
@@ -199,15 +432,21 @@ class Detector(object):
             'Running detector{:s} on file "{:s}"...'.format(s, file_path))
         
         try:
-            (self._station_name, self._monitoring_start_time,
-             sample_rate, num_samples) = \
-                _get_input_file_info(file_path)
-                
-        except ValueError as e:
+            self._detection_handler.on_file_start(file_path)
+        except DetectionHandlerError as e:
             logging.error((
-                'Could not get information for file "{:s}". '
+                'Error at start of processing for input file "{:s}". '
                 'Error message was: {:s}').format(file_path, str(e)))
             self._success = False
+            return
+            
+        try:
+            sample_rate, num_samples = _get_input_file_info(file_path)
+        except ValueError as e:
+            logging.error((
+                'Could not get information from input file "{:s}". '
+                'Error message was: {:s}').format(file_path, str(e)))
+            self._on_file_error(file_path)
             return
             
         file_duration = num_samples / float(sample_rate)
@@ -216,28 +455,43 @@ class Detector(object):
         
         try:
             self._copy_input_file(file_path)
-            
         except OSError as e:
             logging.error(str(e))
-            self._success = False
+            self._on_file_error(file_path)
+            return
         
-        else:
-            
-            processing_time = time.time() - start_time
-            _log_performance('Copied', file_duration, processing_time)
+        processing_time = time.time() - start_time
+        _log_performance('Copied', file_duration, processing_time)
 
-            # RESUME: Handle errors running detectors. They may fail,
-            # for example, if detector programs are absent.
-            start_time = time.time()
-            detectors = self._start_detectors()
-            self._wait_for_detectors(detectors)
-            processing_time = time.time() - start_time
-            logging.info(
-                'Detection on file "{:s}" is complete.'.format(file_path))
+        start_time = time.time()
+        
+        # TODO: set self._success appropriately when there is an error
+        # in a detector.
+        detectors = self._start_detectors()
+        self._wait_for_detectors(detectors)
+        
+        self._detection_handler.on_file_end()
+        
+        processing_time = time.time() - start_time
+        if self._success:
             _log_performance(
                 'Detection ran on', file_duration, processing_time)
             
             
+    def _on_file_error(self, file_path):
+        self._success = False
+        self._on_file_end(file_path)
+        
+        
+    def _on_file_end(self, file_path):
+        try:
+            self._detection_handler.on_file_end()
+        except DetectionHandlerError as e:
+            logging.error((
+                'Error at end of processing for input file "{:s}". '
+                'Error message was: {:s}').format(file_path, str(e)))
+            
+        
     def _copy_input_file(self, file_path):
         
         file_name = os.path.basename(file_path)
@@ -253,8 +507,7 @@ class Detector(object):
         
         for name in self._detector_names:
             
-            detector = _Detector(
-                name, self._input_mode, self._handle_detection)
+            detector = _Detector(name, self._input_mode, self._on_detection)
             
             logging.info('Starting {:s} detector...'.format(name))
             
@@ -265,6 +518,7 @@ class Detector(object):
                 logging.error((
                     'Could not start "{:s}" detector. Error message '
                     'was: {:s}').format(name, str(e)))
+                self._success = False
                 
             else:
                 detectors.append(detector)
@@ -272,25 +526,13 @@ class Detector(object):
         return detectors
     
     
-    def _handle_detection(self, clip):
-        
-        file_name = os.path.basename(clip.file_path)
-        start_time = self._monitoring_start_time + clip.start_time
-        
-        s = start_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-5]
-        s += ' ' + start_time.strftime('%Z')
-        logging.info(
-            'Archiving {:s} ({:s} {:s})...'.format(
-                file_name, self._station_name, s))
-        
+    def _on_detection(self, clip):
         try:
-            self._archive_task_serializer.execute(
-                self._archive.add_clip, self._station_name,
-                clip.detector_name, start_time, clip)
-            
-        except ValueError as e:
-            logging.error(
-                'Clip archival failed with message: {:s}'.format(str(e)))
+            self._detection_handler.on_detection(clip)
+        except DetectionHandlerError as e:
+            logging.error((
+                'Error processing clip file "{:s}". '
+                'Error message was: {:s}').format(clip.file_path, str(e)))
         
 
     def _wait_for_detectors(self, detectors):
@@ -400,49 +642,38 @@ def _get_input_paths(keyword_args):
     return values
 
 
+_DETECTION_HANDLER_CLASSES = {
+    'MPG Ranch Renamer': DetectionRenamer,
+    'Archiver': DetectionArchiver
+}
+
+def _get_detection_handler(keyword_args):
+    
+    handler_names = keyword_args.get('detection-handler', 'Archiver')
+    
+    if len(handler_names) != 1:
+        raise CommandSyntaxError(
+            'Argument "--detection-handler" must have exactly one value.')
+
+    handler_name = handler_names[0]
+    
+    try:
+        klass = _DETECTION_HANDLER_CLASSES[handler_name]
+    except KeyError:
+        raise CommandSyntaxError(
+            'Unrecognized detection handler "{:s}".'.format(handler_name))
+        
+    return klass(keyword_args)
+
+
 def _is_audio_file(path):
     return path.endswith('.wav')
 
 
-# TODO: Add extension point for provision of monitoring info, including
-# station name, start time, and duration. We currently assume .wav files
-# with names of a certain format, parsed by the `_get_input_file_info`
-# function.
-
-
-_INPUT_FILE_NAME_RE = \
-    re.compile(r'^(.+)_(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d).wav$')
-
-
-def _get_input_file_info(file_path):
-    
-    name = os.path.basename(file_path)
-
-    m = _INPUT_FILE_NAME_RE.match(name)
-    
-    if m is None:
-        raise ValueError((
-            'File name is not of the form '
-            '<station name>_<yyyymmdd>_<hhmmss>.wav'))
-        
-    station, year, month, day, hour, minute, second = m.groups()
-    start_time = time_utils.parse_date_time(
-        year, month, day, hour, minute, second)
-    
-    # Convert naive monitoring start time to UTC. We assume that the
-    # local time zone is US/Mountain, that the naive start time observes
-    # DST, and that it will never be ambiguous or nonexistent (i.e. we
-    # do not worry about the `is_dst` argument to `mountain.localize`).
-    # If we do supply an ambiguous or nonexistent time to
-    # `mountain.localize` it will raise an exception. See the
-    # "Problems with Localtime" section of the `pytz` documentation at
-    # http://pytz.sourceforge.net for more.
-    mountain = pytz.timezone('US/Mountain')
-    start_time = mountain.localize(start_time)
-    start_time = start_time.astimezone(pytz.utc)
+def _get_input_file_info(path):
     
     (num_channels, sample_size, frame_rate, num_frames, compression_type) = \
-        audio_file_utils.get_wave_file_info(file_path)
+        audio_file_utils.get_wave_file_info(path)
     
     if num_channels != 1:
         raise ValueError(
@@ -464,9 +695,9 @@ def _get_input_file_info(file_path):
             'File has a compression type of "{:s}", but only a compression '
             'type of "NONE" is curently supported.').format(compression_type))
 
-    return (station, start_time, frame_rate, num_frames)
-            
-        
+    return (frame_rate, num_frames)
+
+    
 def _log_performance(prefix, file_duration, processing_time):
     
     format_ = text_utils.format_number
@@ -588,14 +819,13 @@ class _Detector(Thread):
     def _is_input_file_exhausted(self):
         
         try:
-            with open(self._log_path) as file_:
-                contents = file_.read()
-        except Exception:
+            contents = os_utils.read_file(self._log_path)
+        except OSError:
             logging.error(
                 'Could not read detector log file "{:s}".'.format(
                     self._log_path))
             return False
-        
+            
         lines = [line.strip() for line in contents.split('\n')]
         lines = [line for line in lines if line != '']
         nums = [line.split()[-1] for line in lines]

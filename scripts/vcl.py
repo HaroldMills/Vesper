@@ -109,7 +109,7 @@ def _main():
     if success:
         suffix = 'no errors.'
     else:
-        suffix = 'one or more non-fatal errors. See log for details.'
+        suffix = 'one or more errors. See log for details.'
         
     logging.info(
         'Command "{:s}" completed with {:s}'.format(command.name, suffix))
@@ -148,6 +148,7 @@ usage: vcl help
        vcl init <YAML file> [--archive <archive dir>]
        vcl import <importer> <source dir> [--archive <archive dir>]
        vcl detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> [--archive <archive dir>]
+       vcl detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> --detection-handler "MPG Ranch Renamer"
 '''.strip()
 
     print(message, file=sys.stderr)

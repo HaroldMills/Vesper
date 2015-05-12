@@ -171,3 +171,16 @@ def copy_file(from_path, to_path):
             '{:s}').format(from_path, to_path, str(e))
         raise OSError(message)
     
+    
+def read_file(path):
+    
+    try:
+        with open(path, 'r') as file_:
+            return file_.read()
+        
+    except Exception as e:
+        raise OSError(
+            'Could not read file "{:s}". Error message was: {:s}'.format(
+                path, str(e)))
+
+        
