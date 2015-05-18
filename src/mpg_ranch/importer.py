@@ -12,18 +12,9 @@ import re
 
 import pytz
 
+from vesper.vcl.command import CommandSyntaxError
 import vesper.util.sound_utils as sound_utils
 import vesper.util.time_utils as time_utils
-
-
-'''
-Remaining issues:
-* comments not included
-* effort data
-* station locations
-* clip class descriptions
-* sunrise/sunset data
-'''
 
 
 # TODO: Implement an indenting `logging` message formatter, so that
@@ -44,13 +35,26 @@ _parse_time = time_utils.parse_time
 _parse_dur = time_utils.parse_time_delta
 
 
+_STATION_NAMES = {
+    'flood': 'Floodplain',
+    'sheep': 'Sheep Camp'
+}
+
+
+def _parse_station_name(s):
+    try:
+        return _STATION_NAMES[s.lower()]
+    except KeyError:
+        return s.capitalize()
+    
+    
 _FieldFormat = namedtuple(
     '_FieldFormat', ('name', 'field_name', 're', 'num_subfields', 'parser'))
     
 _FIELD_FORMATS = dict((t[0], _FieldFormat(*t)) for t in (
     ('class', 'clip_class_name', r'([a-zA-Z_]+)', 1, _identity),
     ('station', 'station_name', r'(baldy|flood|ridge|sheep)', 1,
-     _capitalize),
+     _parse_station_name),
     ('detector', 'detector_name', r'(Tseep|Thrush|Manual)', 1, _capitalize),
     ('date6', 'monitoring_start_date', r'(\d{2})(\d{2})(\d{2})', 3,
      _parse_date6),
@@ -172,10 +176,22 @@ _IGNORED_FILE_NAMES = frozenset(
     ['.DS_Store', 'Thumbs.db', 'desktop.ini', 'keylist.txt'])
 
 
-class Importer:
+class Importer(object):
     
     """Importer for MPG Ranch 2012-2014 nocturnal flight call data."""
     
+    
+    def __init__(self, positional_args, keyword_args):
+        
+        super(Importer, self).__init__()
+        
+        # TODO: Make this more generally available.
+        if len(positional_args) != 0:
+            s = 's' if len(positional_args) > 1 else ''
+            args = ' '.join(positional_args)
+            message = 'Extra positional argument{:s}: {:s}'.format(s, args)
+            raise CommandSyntaxError(message)
+
     
     def import_(self, source_dir_path, archive):
         
@@ -203,6 +219,11 @@ class Importer:
 
         dir_names = [os.path.basename(source_dir_path)]
         self._walk(source_dir_path, dir_names)
+        
+        # TODO: Modify this method to correctly report whether or not errors
+        # occurred. Currently it raises exceptions on some errors (which it
+        # should not) and does not return `False` for others.
+        return True
         
         
     def _walk(self, dir_path, dir_names):
