@@ -75,4 +75,4 @@ def _get_importer_class(name):
         return _IMPORTER_CLASSES[name]
     except KeyError:
         raise CommandSyntaxError(
-           'Unrecognized importer "{:s}".'.format(name))
+            'Unrecognized importer "{:s}".'.format(name))

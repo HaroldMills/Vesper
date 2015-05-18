@@ -221,7 +221,7 @@ class DetectionRenamer(DetectionHandler):
     
     
     def on_detection_start(self):
-        self._station_name_changes = _get_station_name_changes()        
+        self._station_name_changes = _get_station_name_changes()
         
         
     def on_file_start(self, file_path):
@@ -647,6 +647,7 @@ _DETECTION_HANDLER_CLASSES = {
     'Archiver': DetectionArchiver
 }
 
+
 def _get_detection_handler(keyword_args):
     
     handler_names = keyword_args.get('detection-handler', 'Archiver')
@@ -775,7 +776,7 @@ class _Detector(Thread):
                 break
             
             elif self.input_mode == _INPUT_MODE_FILE and \
-                 self._is_input_file_exhausted():
+                    self._is_input_file_exhausted():
                 # detector process finished processing an input file
                 
                 logging.info((
@@ -919,9 +920,11 @@ class _Detector(Thread):
         
     
 '''
-vesper detect "Old Bird" --detectors Tseep Thrush --input-mode File --input-paths ...
+vesper detect "Old Bird" --detectors Tseep Thrush --input-mode File
+    --input-paths ...
 vesper detect "Old Bird" --detectors Tseep Thrush --input-mode Live
-vesper detect "Old Bird" --detectors Tseep Thrush --input-mode Playback --start-time "2014-08-26 07:25:00 MDT"
+vesper detect "Old Bird" --detectors Tseep Thrush --input-mode Playback
+    --start-time "2014-08-26 07:25:00 MDT"
 '''
         
 '''
@@ -949,38 +952,40 @@ keyword arguments:
 '''
         
         
+'''
 # class _StringParser(object):
-#     
+#
 #     def __init__(self, config):
 #         self._config = config
-#         
+#
 #     def parse_value(self, value):
 #         pass
-#         
-#         
+#
+#
 # _argument_classes = {
 #     'String': _StringParser,
 #     'Integer': _IntegerParser,
 #     'Float': _FloatParser,
 #     'DateTime': _DateTimeParser
 # }
-# 
-# 
+#
+#
 # def _get_keyword_arg(
 #         args, name, value_type, values=None, default=None, required=True):
-#     
+#
 #     try:
 #         value = args[name]
-#         
+#
 #     except KeyError:
 #         if required:
-#             message = 'Missing required keyword argument "{:s}".'.format(name)
+#             message = 'Missing required keyword argument "{:s}".'.format(
+#                 name)
 #             raise CommandFormatError(message)
 #         else:
 #             return default
-#         
-#     
+#
+#
 #     if values is not None and value not in values:
 #         message = 'Illegal value "{:s}" for keyword argument'
 #         raise CommandFormatError(message)
-    
+'''
