@@ -795,10 +795,12 @@ class Archive(object):
         
     def _create_clip_dir_path(self, station, time):
         n = station.get_night(time)
+        year_name = _create_year_dir_name(n.year)
         month_name = _create_month_dir_name(n.year, n.month)
         day_name = _create_day_dir_name(n.year, n.month, n.day)
         return os.path.join(
-            self._archive_dir_path, station.name, month_name, day_name)
+            self._archive_dir_path, station.name, year_name, month_name,
+            day_name)
     
     
 def _copy_db(from_conn, to_conn):
@@ -1020,6 +1022,10 @@ class _Clip(object):
     def play(self):
         sound_utils.play_sound_file(self.file_path)
         
+
+def _create_year_dir_name(year):
+    return '{:d}'.format(year)
+
 
 def _create_month_dir_name(year, month):
     return '{:02d}'.format(month)
