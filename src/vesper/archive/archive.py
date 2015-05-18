@@ -43,7 +43,9 @@ _CLIP_DATABASE_FILE_NAME = 'ClipDatabase.db'
     
 # named tuple classes for database tables
 _StationTuple = namedtuple(
-    '_StationTuple', ('id', 'name', 'long_name', 'time_zone_name'))
+    '_StationTuple',
+    ('id', 'name', 'long_name', 'time_zone_name', 'latitude', 'longitude',
+     'elevation'))
 _DetectorTuple = namedtuple('_DetectorTuple', ('id', 'name'))
 _ClipClassTuple = namedtuple('_ClipClassTuple', ('id', 'name'))
 _ClipClassNameComponentTuple = \
@@ -61,6 +63,9 @@ _CREATE_STATION_TABLE_SQL = '''
         name text,
         long_name text,
         time_zone_name text,
+        latitude real,
+        longitude real,
+        elevation real,
         unique(name) on conflict rollback)'''
         
         
@@ -291,9 +296,11 @@ class Archive(object):
     
     
     def _create_station_tuple(self, station):
+        s = station
         return _StationTuple(
-            id=None, name=station.name, long_name=station.long_name,
-            time_zone_name=station.time_zone.zone)
+            id=None, name=s.name, long_name=s.long_name,
+            time_zone_name=s.time_zone.zone,
+            latitude=s.latitude, longitude=s.longitude, elevation=s.elevation)
     
     
     def _create_detector_table(self, detectors):
