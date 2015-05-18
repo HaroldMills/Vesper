@@ -9,7 +9,7 @@ import vesper.archive.archive_shared as archive_shared
 
 class Station(Named):
     
-    """Nocturnal migration monitoring station."""
+    """Recording station."""
     
     
     def __init__(
@@ -18,15 +18,20 @@ class Station(Named):
         
         super(Station, self).__init__(name)
         self._long_name = long_name
+        self._time_zone = pytz.timezone(time_zone_name)
         self._latitude = latitude
         self._longitude = longitude
         self._elevation = elevation
-        self._time_zone = pytz.timezone(time_zone_name)
         
         
     @property
     def long_name(self):
         return self._long_name
+    
+    
+    @property
+    def time_zone(self):
+        return self._time_zone
     
     
     @property
@@ -42,11 +47,6 @@ class Station(Named):
     @property
     def elevation(self):
         return self._elevation
-    
-    
-    @property
-    def time_zone(self):
-        return self._time_zone
     
     
     def get_night(self, time):
