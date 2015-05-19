@@ -22,6 +22,7 @@ from vesper.util.instantaneous_frequency_analysis import \
     InstantaneousFrequencyAnalysis
 from vesper.util.spectrogram import Spectrogram
 import vesper.util.data_windows as data_windows
+import vesper.util.os_utils as os_utils
 import vesper.util.sound_utils as sound_utils
 
 
@@ -39,7 +40,9 @@ Questions regarding cloud archives:
 '''
 
 
-_CLIP_DATABASE_FILE_NAME = 'ClipDatabase.db'
+_MANIFEST_FILE_NAME = 'ArchiveManifest.yaml'
+_DATABASE_FILE_NAME = 'ArchiveDatabase.sqlite'
+_CLIPS_DIR_NAME = 'Clips'
     
 # named tuple classes for database tables
 _StationTuple = namedtuple(
@@ -136,7 +139,9 @@ class Archive(object):
 
     @staticmethod
     def exists(dir_path):
-        db_file_path = os.path.join(dir_path, _CLIP_DATABASE_FILE_NAME)
+        # TODO: Check for manifest and ensure that archive type and
+        # version are supported.
+        db_file_path = os.path.join(dir_path, _DATABASE_FILE_NAME)
         return os.path.isfile(db_file_path)
     
     
@@ -160,6 +165,8 @@ class Archive(object):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
     
+        _create_archive_manifest(dir_path)
+        
         archive = Archive(dir_path)
         archive._open_db()
         archive._create_tables(stations, detectors, clip_classes)
@@ -171,7 +178,7 @@ class Archive(object):
     def __init__(self, dir_path):
         self._archive_dir_path = dir_path
         self._name = os.path.basename(dir_path)
-        self._db_file_path = os.path.join(dir_path, _CLIP_DATABASE_FILE_NAME)
+        self._db_file_path = os.path.join(dir_path, _DATABASE_FILE_NAME)
         
         
     @property
@@ -187,6 +194,8 @@ class Archive(object):
 
     def _open_db(self, cache_db=False):
         
+        self._open_manifest_file()
+        
         self._cache_db = cache_db
         
         if self._cache_db:
@@ -201,6 +210,18 @@ class Archive(object):
         self._cursor = self._conn.cursor()
 
 
+    def _open_manifest_file(self):
+        
+        path = os.path.join(self._archive_dir_path, _MANIFEST_FILE_NAME)
+        
+        try:
+            manifest = os_utils.read_yaml_file(path)
+        except OSError as e:
+            raise ValueError(str(e))
+        
+        _check_manifest(manifest, path)
+        
+        
     def _open_db_file(self):
         
         path = self._db_file_path
@@ -799,10 +820,33 @@ class Archive(object):
         month_name = _create_month_dir_name(n.year, n.month)
         day_name = _create_day_dir_name(n.year, n.month, n.day)
         return os.path.join(
-            self._archive_dir_path, station.name, year_name, month_name,
-            day_name)
+            self._archive_dir_path, _CLIPS_DIR_NAME, station.name,
+            year_name, month_name, day_name)
+    
+
+def _create_archive_manifest(archive_dir_path):
+    file_path = os.path.join(archive_dir_path, _MANIFEST_FILE_NAME)
+    contents = ''.join([line.strip() + '\n' for line in '''
+        archiveType: "Vesper SQLite/File System Archive"
+        archiveVersion: "0.01"
+    '''.strip().split('\n')])
+    os_utils.write_file(file_path, contents)
+
+    
+def _check_manifest(manifest, path):
+    _check_manifest_aux(
+        manifest, 'archiveType', 'Vesper SQLite/File System Archive', path)
+    _check_manifest_aux(manifest, 'archiveVersion', '0.01', path)
     
     
+def _check_manifest_aux(manifest, key, expectedValue, path):
+    value = manifest.get(key)
+    if value != expectedValue:
+        raise ValueError((
+            'Unrecognized value "{:s}" for archive manifest key "{:s}". '
+            'Was expecting "{:s}".').format(value, key, expectedValue))
+        
+
 def _copy_db(from_conn, to_conn):
     _create_db_tables(to_conn)
     _copy_db_tables(from_conn, to_conn)

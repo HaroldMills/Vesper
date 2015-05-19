@@ -7,6 +7,8 @@ import os
 import re
 import shutil
 
+import yaml
+
       
 def assert_directory(path):
     
@@ -31,8 +33,8 @@ def create_directory(path):
             
         except OSError as e:
             message = (
-               'Could not create directory "{:s}". Error message was: '
-               '{:s}').format(path, str(e))
+                'Could not create directory "{:s}". Error message was: '
+                '{:s}').format(path, str(e))
             raise OSError(message)
 
 
@@ -183,4 +185,33 @@ def read_file(path):
             'Could not read file "{:s}". Error message was: {:s}'.format(
                 path, str(e)))
 
+
+def write_file(path, contents):
+    
+    try:
+        with open(path, 'w') as file_:
+            return file_.write(contents)
         
+    except Exception as e:
+        raise OSError(
+            'Could not write file "{:s}". Error message was: {:s}'.format(
+                path, str(e)))
+
+
+def read_yaml_file(path):
+
+    try:
+        contents = read_file(path)
+        
+    except Exception as e:
+        raise OSError(
+            'Could not read file "{:s}". Error message was: {:s}'.format(
+                path, str(e)))
+    
+    try:
+        return yaml.load(contents)
+    
+    except Exception as e:
+        raise OSError(
+            'Could not load YAML file "{:s}". Error message was: {:s}'.format(
+                path, str(e)))
