@@ -20,6 +20,10 @@ import mpg_ranch.importer as importer
     
     
 _STATION_NAMES = ['baldy', 'flood', 'ridge', 'sheep']
+_STATION_NAME_CORRECTIONS = {
+    'flood': 'Floodplain',
+    'sheep': 'Sheep Camp'
+}
 _DETECTOR_NAMES = ['Manual', 'Tseep', 'Thrush']
 _CLIP_CLASS_NAMES = ['unkn', 'wiwa']
 _COMMENTS = [None, 'comment', 'comment_with_underscores']
@@ -74,8 +78,11 @@ class MpgRanchArchiverTests(TestCase):
         
         result = importer._parse_file_name(file_name)
         
+        station_name = _STATION_NAME_CORRECTIONS.get(
+            station_name, station_name.capitalize())
+        
         expected_result = importer._ClipInfo(
-            station_name.capitalize(), detector_name.capitalize(),
+            station_name, detector_name.capitalize(),
             _date(2015, 3, 9), _time(*time), _delta(dur),
             mcomment, _delta(mdur),
             _delta(clip_time), clip_num, clip_class_name,

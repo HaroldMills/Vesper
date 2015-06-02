@@ -2,23 +2,23 @@ import datetime
 import numpy as np
 import os
 import shutil
-import unittest
-
-import pytz
 
 from vesper.archive.archive import Archive
 from vesper.archive.clip_class import ClipClass
 from vesper.archive.detector import Detector
 from vesper.archive.station import Station
 from vesper.util.bunch import Bunch
+import vesper.util.time_utils as time_utils
+
+from test_case import TestCase
 
 
 ARCHIVE_NAME = 'Test Archive'
 ARCHIVE_DIR_PATH = ['data', ARCHIVE_NAME]
 
 STATION_TUPLES = [
-    ('A', 'Station A', 'US/Eastern'),
-    ('B', 'Station B', 'America/Mexico_City')
+    ('A', 'Station A', 'US/Eastern', 42.4, -76.5, 120.),
+    ('B', 'Station B', 'America/Mexico_City', 42.5, -76.6, 130.)
 ]
 STATIONS = [Station(*t) for t in STATION_TUPLES]
 
@@ -28,8 +28,16 @@ DETECTORS = [Detector(name=n) for n in DETECTOR_NAMES]
 CLIP_CLASS_NAMES = ['X', 'X.Z', 'X.Z.W', 'Y']
 CLIP_CLASSES = [ClipClass(name=n) for n in CLIP_CLASS_NAMES]
 
+RECORDING_TUPLES = [
+    ('A', 2012, 5, 19, 19, 11, 12, 0, 100, 22050),
+    ('A', 2015, 5, 20, 19, 11, 12, 0, 100, 22050),
+    ('A', 2015, 5, 20, 20, 12, 13, 0, 200, 24000),
+    ('A', 2015, 5, 21, 19, 12, 13, 100, 200, 24000),
+    ('B', 2015, 5, 20, 19, 11, 12, 0, 100, 22050)
+]
 
-class ArchiveTests(unittest.TestCase):
+
+class ArchiveTests(TestCase):
     
     
     def setUp(self):
@@ -47,6 +55,97 @@ class ArchiveTests(unittest.TestCase):
         
     def test_name(self):
         self.assertEqual(self.archive.name, ARCHIVE_NAME)
+        
+        
+    def test_stations_property(self):
+        stations = self.archive.stations
+        attribute_names = (
+            'id', 'name', 'long_name', 'latitude', 'longitude', 'elevation')
+        expected_values = [
+            ((i + 1,) + STATION_TUPLES[i][:2] + STATION_TUPLES[i][3:])
+            for i in xrange(len(STATION_TUPLES))]
+        expected_values.sort(key=lambda t: t[1])
+        self._assert_objects(stations, attribute_names, expected_values)
+        for i in xrange(len(STATION_TUPLES)):
+            self.assertEqual(stations[i].time_zone.zone, STATION_TUPLES[i][2])
+        
+        
+    def _assert_objects(self, objects, attribute_names, expected_values):
+        
+        self.assertEqual(len(objects), len(expected_values))
+        
+        for (obj, values) in zip(objects, expected_values):
+            
+            for (i, name) in enumerate(attribute_names):
+                self.assertEqual(getattr(obj, name), values[i])
+
+
+    def test_get_station(self):
+        self._test_get_method(self.archive.get_station, 'A')
+        
+        
+    def _test_get_method(self, method, name):
+        obj = method(name)
+        self.assertEqual(obj.name, name)
+        self._assert_raises(ValueError, method, 'Bobo')
+        
+        
+    def test_detectors_property(self):
+        detectors = self.archive.detectors
+        attribute_names = ('id', 'name')
+        expected_values = [(i + 1, DETECTOR_NAMES[i])
+                           for i in xrange(len(DETECTOR_NAMES))]
+        expected_values.sort(key=lambda t: t[1])
+        self._assert_objects(detectors, attribute_names, expected_values)
+        
+        
+    def test_get_detector(self):
+        self._test_get_method(self.archive.get_detector, 'Tseep')
+        
+        
+    def test_clip_classes_property(self):
+        clip_classes = self.archive.clip_classes
+        attribute_names = ('id', 'name')
+        expected_values = [(i + 1, CLIP_CLASS_NAMES[i])
+                           for i in xrange(len(CLIP_CLASS_NAMES))]
+        expected_values.sort(key=lambda t: t[1])
+        self._assert_objects(clip_classes, attribute_names, expected_values)
+        
+        
+    def test_get_clip_class(self):
+        self._test_get_method(self.archive.get_clip_class, 'X')
+        
+        
+    def test_start_night_property(self):
+        self._add_clips()
+        night = self.archive.start_night
+        self.assertEqual(night, _to_date((2012, 1, 2)))
+        
+        
+    def test_end_night_property(self):
+        self._add_clips()
+        night = self.archive.end_night
+        self.assertEqual(night, _to_date((2012, 1, 3)))
+        
+        
+    def test_add_recording(self):
+        self._add_recordings()
+        
+        
+    def _add_recordings(self):
+        for r in RECORDING_TUPLES:
+            self._add_recording(*r)
+            
+            
+    def _add_recording(
+            self, station_name, year, month, day, hour, minute, second, ms,
+            length, sample_rate):
+        
+        start_time = time_utils.create_utc_datetime(
+            year, month, day, hour, minute, second, ms * 1000, 'US/Eastern')
+        
+        self.archive.add_recording(
+            station_name, start_time, length, sample_rate)
         
         
     def test_add_clip(self):
@@ -79,66 +178,38 @@ class ArchiveTests(unittest.TestCase):
     
     
     def _add_clip(
-        self, station_name, detector_name,
-        year, month, day, hour, minute, second, ms):
+            self, station_name, detector_name,
+            year, month, day, hour, minute, second, ms):
         
-        time = datetime.datetime(
-            year, month, day, hour, minute, second, ms * 1000, pytz.utc)
+        time = time_utils.create_utc_datetime(
+            year, month, day, hour, minute, second, ms * 1000)
         
         sound = Bunch(samples=np.zeros(100), sample_rate=22050.)
         
         return self.archive.add_clip(station_name, detector_name, time, sound)
 
     
-    def test_stations_property(self):
-        stations = self.archive.stations
-        attribute_names = ('id', 'name', 'long_name')
-        expected_values = [((i + 1,) + STATION_TUPLES[i][:-1])
-                           for i in xrange(len(STATION_TUPLES))]
-        expected_values.sort(key=lambda t: t[1])
-        self._assert_objects(stations, attribute_names, expected_values)
-        for i in xrange(len(STATION_TUPLES)):
-            self.assertEqual(stations[i].time_zone.zone, STATION_TUPLES[i][-1])
+    def test_get_recordings(self):
+        self._add_recordings()
+        night = _to_date((2015, 5, 20))
+        recordings = self.archive.get_recordings('A', night)
+        self.assertEqual(len(recordings), 2)
+        for i, recording in enumerate(recordings):
+            self._assert_recording(recording, *RECORDING_TUPLES[1 + i])
         
         
-    def _assert_objects(self, objects, attribute_names, expected_values):
+    def _assert_recording(
+            self, recording, station_name, year, month, day, hour, minute,
+            second, ms, length, sample_rate):
         
-        self.assertEqual(len(objects), len(expected_values))
+        self.assertEqual(recording.station.name, station_name)
         
-        for (obj, values) in zip(objects, expected_values):
-            
-            for (i, name) in enumerate(attribute_names):
-                self.assertEqual(getattr(obj, name), values[i])
-
-
-    def test_detectors_property(self):
-        detectors = self.archive.detectors
-        attribute_names = ('id', 'name')
-        expected_values = [(i + 1, DETECTOR_NAMES[i])
-                           for i in xrange(len(DETECTOR_NAMES))]
-        expected_values.sort(key=lambda t: t[1])
-        self._assert_objects(detectors, attribute_names, expected_values)
+        start_time = time_utils.create_utc_datetime(
+            year, month, day, hour, minute, second, ms * 1000, 'US/Eastern')
+        self.assertEqual(recording.start_time, start_time)
         
-        
-    def test_clip_classes_property(self):
-        clip_classes = self.archive.clip_classes
-        attribute_names = ('id', 'name')
-        expected_values = [(i + 1, CLIP_CLASS_NAMES[i])
-                           for i in xrange(len(CLIP_CLASS_NAMES))]
-        expected_values.sort(key=lambda t: t[1])
-        self._assert_objects(clip_classes, attribute_names, expected_values)
-        
-        
-    def test_start_night_property(self):
-        self._add_clips()
-        night = self.archive.start_night
-        self.assertEquals(night, _to_date((2012, 1, 2)))
-        
-        
-    def test_end_night_property(self):
-        self._add_clips()
-        night = self.archive.end_night
-        self.assertEquals(night, _to_date((2012, 1, 3)))
+        self.assertEqual(recording.length, length)
+        self.assertEqual(recording.sample_rate, sample_rate)
         
         
     def test_get_clip_counts(self):
@@ -171,8 +242,8 @@ class ArchiveTests(unittest.TestCase):
             
             
     def _create_get_counts_case_args(
-        self, station_name=None, detector_name=None,
-        start_night=None, end_night=None, clip_class_name=None):
+            self, station_name=None, detector_name=None,
+            start_night=None, end_night=None, clip_class_name=None):
         
         return (station_name, detector_name,
                 _to_date(start_night), _to_date(end_night), clip_class_name)
@@ -225,8 +296,8 @@ class ArchiveTests(unittest.TestCase):
             
             
     def _create_get_clips_case_args(
-        self, station_name=None, detector_name=None, night=None,
-        clip_class_name=None):
+            self, station_name=None, detector_name=None, night=None,
+            clip_class_name=None):
         
         return (station_name, detector_name, _to_date(night), clip_class_name)
     
@@ -238,7 +309,7 @@ class ArchiveTests(unittest.TestCase):
         for (r, er) in zip(result, expected_result):
             self.assertEqual(r.station.name, er[0])
             self.assertEqual(r.detector_name, er[1])
-            time = datetime.datetime(*(er[2:9] + (pytz.utc,)))
+            time = time_utils.create_utc_datetime(*er[2:9])
             self.assertEqual(r.time, time)
             self.assertEqual(r.clip_class_name, er[9])
     
@@ -254,7 +325,7 @@ class ArchiveTests(unittest.TestCase):
         
         for station_name, detector_name, time_tuple, expected_result in cases:
             
-            time = datetime.datetime(*(time_tuple + (pytz.utc,)))
+            time = time_utils.create_utc_datetime(*time_tuple)
             result = self.archive.get_clip(station_name, detector_name, time)
             
             if result is None:

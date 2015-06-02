@@ -13,6 +13,7 @@ import sqlite3 as sqlite
 
 from vesper.archive.clip_class import ClipClass
 from vesper.archive.detector import Detector
+from vesper.archive.recording import Recording
 from vesper.archive.station import Station
 from vesper.util.audio_file_utils import \
     WAVE_FILE_NAME_EXTENSION as _CLIP_FILE_NAME_EXTENSION
@@ -24,6 +25,7 @@ from vesper.util.spectrogram import Spectrogram
 import vesper.util.data_windows as data_windows
 import vesper.util.os_utils as os_utils
 import vesper.util.sound_utils as sound_utils
+import vesper.util.time_utils as time_utils
 
 
 '''
@@ -53,11 +55,22 @@ _DetectorTuple = namedtuple('_DetectorTuple', ('id', 'name'))
 _ClipClassTuple = namedtuple('_ClipClassTuple', ('id', 'name'))
 _ClipClassNameComponentTuple = \
     namedtuple('_ClipClassNameComponentTuple', ('id', 'component'))
+_RecordingTuple = namedtuple(
+    '_RecordingTuple',
+    ('id', 'station_id', 'start_time', 'length', 'sample_rate'))
 _ClipTuple = namedtuple(
     '_ClipTuple',
     ('id', 'station_id', 'detector_id', 'time', 'night', 'duration',
      'clip_class_id', 'clip_class_name_0_id', 'clip_class_name_1_id',
      'clip_class_name_2_id'))
+
+
+# TODO: Review SQL for vulnerability to injection attacks. Would it be
+# possible to use ?s everywhere? String formatting can be safe, but it
+# would be safer still to not use it at all.
+
+# TODO: Add non-null requirements, e.g. for station and detector names
+# and station time zone names.
 
 
 _CREATE_STATION_TABLE_SQL = '''
@@ -93,6 +106,16 @@ _CREATE_CLIP_CLASS_NAME_COMPONENT_TABLE_SQL = '''
         unique(component) on conflict rollback)'''
         
         
+_CREATE_RECORDING_TABLE_SQL = '''
+    create table Recording (
+        id integer primary key,
+        station_id integer,
+        start_time datetime,
+        length integer,
+        sample_rate real,
+        unique(station_id, start_time) on conflict rollback)'''
+
+
 _CREATE_CLIP_TABLE_SQL = '''
     create table Clip (
         id integer primary key,
@@ -107,22 +130,34 @@ _CREATE_CLIP_TABLE_SQL = '''
         clip_class_name_2_id integer,
         unique(station_id, detector_id, time) on conflict rollback)'''
         
+_CREATE_RECORDING_TABLE_START_TIME_INDEX_SQL = '''
+    create index StartTimeIndex on Recording(start_time)
+'''
+
 _CREATE_CLIP_TABLE_MULTICOLUMN_INDEX_SQL = '''
     create index ClipIndex on Clip(station_id, detector_id, night)
 '''
 
-_CREATE_CLIP_TABLE_NIGHT_DATE_INDEX_SQL = '''
+_CREATE_CLIP_TABLE_NIGHT_INDEX_SQL = '''
     create index NightIndex on Clip(night)
 '''
+
+_SELECT_STATION_SQL = 'select * from Station where name = ?'
+
+_INSERT_RECORDING_SQL = \
+    'insert into Recording values (' + \
+    ', '.join(['?'] * len(_RecordingTuple._fields)) + ')'
+    
+_SELECT_RECORDINGS_SQL = (
+    'select * from Recording where station_id = ? and '
+    'start_time >= ? and start_time < ?')
 
 _INSERT_CLIP_SQL = \
     'insert into Clip values (' + \
     ', '.join(['?'] * len(_ClipTuple._fields)) + ')'
 
-
 _SELECT_CLIP_SQL = \
     'select * from Clip where station_id = ? and detector_id = ? and time = ?'
-    
     
 _CLASSIFY_CLIP_SQL = (
     'update Clip set clip_class_id = ?, clip_class_name_0_id = ?, '
@@ -269,6 +304,7 @@ class Archive(object):
         self._drop_table('Detector')
         self._drop_table('ClipClass')
         self._drop_table('ClipClassNameComponent')
+        self._drop_table('Recording')
         self._drop_table('Clip')
         
         
@@ -288,6 +324,7 @@ class Archive(object):
         self._create_detector_table(detectors)
         self._create_clip_class_table(clip_classes)
         self._create_clip_class_name_component_table(clip_classes)
+        self._create_recording_table()
         self._create_clip_table()
     
     
@@ -353,13 +390,16 @@ class Archive(object):
             tuples)
         
         
+    def _create_recording_table(self):
+        self._create_table('Recording', _CREATE_RECORDING_TABLE_SQL)
+        self._cursor.execute(_CREATE_RECORDING_TABLE_START_TIME_INDEX_SQL)
+        self._conn.commit()
+        
+        
     def _create_clip_table(self):
-        
         self._create_table('Clip', _CREATE_CLIP_TABLE_SQL)
-        
         self._cursor.execute(_CREATE_CLIP_TABLE_MULTICOLUMN_INDEX_SQL)
-        self._cursor.execute(_CREATE_CLIP_TABLE_NIGHT_DATE_INDEX_SQL)
-        
+        self._cursor.execute(_CREATE_CLIP_TABLE_NIGHT_INDEX_SQL)
         self._conn.commit()
         
         
@@ -405,9 +445,19 @@ class Archive(object):
         return objects
     
     
+    def get_station(self, name):
+        id_ = self._check_station_name(name)
+        return self._stations[id_]
+        
+        
     @property
     def detectors(self):
         return self._create_objects_from_db_table(Detector)
+    
+    
+    def get_detector(self, name):
+        id_ = self._check_detector_name(name)
+        return self._detectors[id_]
     
     
     @property
@@ -415,6 +465,11 @@ class Archive(object):
         return self._create_objects_from_db_table(ClipClass)
     
     
+    def get_clip_class(self, name):
+        id_ = self._check_clip_class_name(name)
+        return self._clip_classes[id_]
+        
+        
     @property
     def start_night(self):
         return self._get_extremal_night('min')
@@ -431,6 +486,69 @@ class Archive(object):
     def end_night(self):
         return self._get_extremal_night('max')
         
+        
+    def add_recording(self, station_name, start_time, length, sample_rate):
+        
+        """
+        Adds a recording to this archive.
+        
+        :Parameters:
+        
+            station_name : `str`
+                the name of the station of the clip.
+                
+            start_time : `datetime`
+                the UTC start time of the recording.
+                
+                To help ensure archive data quality, the start time is
+                required to have the `pytz.utc` time zone.
+                
+            length : `int`
+                the length of the recording in sample frames.
+               
+            sample_rate : `int` or `float`
+                the sample rate of the recording in hertz.
+                
+        :Returns:
+            the inserted recording, of type `Recording`.
+            
+        :Raises ValueError:
+            if the specified station name is not recognized, or if
+            there is already a recording in the archive with the
+            specified station name and start time.
+        """
+        
+        
+        station_id = self._check_station_name(station_name)
+        
+        if start_time.tzinfo is not pytz.utc:
+            raise ValueError('Recording time zone must be `pytz.utc`.')
+        
+        recording_tuple = _RecordingTuple(
+            id=None,
+            station_id=station_id,
+            start_time=_format_time(start_time),
+            length=length,
+            sample_rate=sample_rate)
+    
+        try:
+            self._cursor.execute(_INSERT_RECORDING_SQL, recording_tuple)
+            
+        except sqlite.IntegrityError:
+            f = ('There is already a recording in the archive for station '
+                 '"{:s}" and UTC start time {:s}.')
+            raise ValueError(
+                f.format(station_name, _format_time(start_time)))
+        
+        station = self._stations[station_id]
+        recording = Recording(station, start_time, length, sample_rate)
+        
+        # We wait until here to commit since we don't want to commit if
+        # any of the above steps fail.
+        self._conn.commit()
+                    
+        return recording
+
         
     def add_clip(
             self, station_name, detector_name, time, sound,
@@ -493,7 +611,7 @@ class Archive(object):
             id=None,
             station_id=station_id,
             detector_id=detector_id,
-            time=_format_clip_time(time),
+            time=_format_time(time),
             night=night,
             duration=duration,
             clip_class_id=clip_class_id,
@@ -508,7 +626,7 @@ class Archive(object):
             f = ('There is already a clip in the archive for station "{:s}", '
                  'detector "{:s}", and UTC time {:s}.')
             raise ValueError(
-                f.format(station_name, detector_name, _format_clip_time(time)))
+                f.format(station_name, detector_name, _format_time(time)))
         
         clip_id = self._cursor.lastrowid
         
@@ -561,6 +679,45 @@ class Archive(object):
                     'Unrecognized clip class name "{:s}".'.format(name))
         
         
+    def get_recordings(self, station_name, night):
+            
+        """
+        Gets the archived recordings for the specified station and night.
+        
+        :Returns:
+            a list of recordings for the specified station and night.
+        """
+        
+        station_id = self._check_station_name(station_name)
+        station = self._stations[station_id]
+        
+        night_start_time = time_utils.create_utc_datetime(
+            night.year, night.month, night.day, 12,
+            time_zone=station.time_zone)
+        
+        night_end_time = night_start_time + datetime.timedelta(days=1)
+        
+        # Convert times to strings for database query.
+        night_start_time = _format_time(night_start_time)
+        night_end_time = _format_time(night_end_time)
+        
+        self._cursor.execute(
+            _SELECT_RECORDINGS_SQL,
+            (station_id, night_start_time, night_end_time))
+        
+        recordings = [self._create_recording(_RecordingTuple._make(row))
+                      for row in self._cursor]
+        
+        return recordings
+    
+    
+    def _create_recording(self, recording):
+        r = recording
+        station = self._stations[r.station_id]
+        start_time = _parse_time(r.start_time)
+        return Recording(station, start_time, r.length, r.sample_rate)
+        
+        
     def get_clip_counts(
             self, station_name=None, detector_name=None, start_night=None,
             end_night=None, clip_class_name=None):
@@ -579,8 +736,7 @@ class Archive(object):
             station_name, detector_name, start_night, end_night,
             clip_class_name)
         
-        sql = 'select night, count(*) from Clip' + where + \
-              ' group by night'
+        sql = 'select night, count(*) from Clip' + where + ' group by night'
         
 #        print('Archive.get_clip_counts:', sql)
         
@@ -609,8 +765,7 @@ class Archive(object):
             return []
         
         else:
-            self._check_station_name(station_name)
-            id_ = self._station_ids[station_name]
+            id_ = self._check_station_name(station_name)
             return ['station_id = {:d}'.format(id_)]
             
             
@@ -620,8 +775,7 @@ class Archive(object):
             return []
         
         else:
-            self._check_detector_name(detector_name)
-            id_ = self._detector_ids[detector_name]
+            id_ = self._check_detector_name(detector_name)
             return ['detector_id = {:d}'.format(id_)]
             
             
@@ -739,19 +893,13 @@ class Archive(object):
         except KeyError:
             clip_class_name = None
             
-        time = self._parse_clip_time(clip.time)
+        time = _parse_time(clip.time)
         
         return _Clip(
             self, clip.id, station, detector_name, time,
             clip.duration, clip_class_name)
         
         
-    def _parse_clip_time(self, time):
-        time = datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S.%f')
-        time = pytz.utc.localize(time)
-        return time
-    
-    
     def get_clip(self, station_name, detector_name, time):
         
         station_id = self._check_station_name(station_name)
@@ -760,7 +908,7 @@ class Archive(object):
         if time.tzinfo is not pytz.utc:
             raise ValueError('Clip time zone must be `pytz.utc`.')
         
-        time = _format_clip_time(time)
+        time = _format_time(time)
         clip_info = (station_id, detector_id, time)
         self._cursor.execute(_SELECT_CLIP_SQL, clip_info)
     
@@ -900,7 +1048,7 @@ def _create_db_tables(conn):
     
     # indices
     cursor.execute(_CREATE_CLIP_TABLE_MULTICOLUMN_INDEX_SQL)
-    cursor.execute(_CREATE_CLIP_TABLE_NIGHT_DATE_INDEX_SQL)
+    cursor.execute(_CREATE_CLIP_TABLE_NIGHT_INDEX_SQL)
     
     conn.commit()
     
@@ -916,7 +1064,13 @@ def _int_to_date(night):
     return datetime.date(year, month, day)
 
 
-def _format_clip_time(time):
+def _parse_time(time):
+    time = datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S.%f')
+    time = pytz.utc.localize(time)
+    return time
+    
+    
+def _format_time(time):
     millisecond = int(round(time.microsecond / 1000.))
     return time.strftime('%Y-%m-%d %H:%M:%S') + '.{:03d}'.format(millisecond)
 

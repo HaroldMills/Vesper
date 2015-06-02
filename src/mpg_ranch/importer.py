@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 import datetime
 import itertools
 import logging
@@ -12,7 +12,9 @@ import re
 
 import pytz
 
+from vesper.archive.recording import Recording
 from vesper.vcl.command import CommandSyntaxError
+import vesper.archive.recording_utils as recording_utils
 import vesper.util.sound_utils as sound_utils
 import vesper.util.time_utils as time_utils
 
@@ -211,14 +213,19 @@ class Importer(object):
         self._ignored_file_paths = set()
         self._bad_file_paths = set()
         self._unreadable_file_paths = set()
+        self._num_clips_without_recording_durations = 0
         self._num_add_errors = 0
         
         self._encountered_station_names = set()
         self._encountered_detector_names = set()
         self._encountered_clip_class_names = set()
-
+        self._encountered_recordings = defaultdict(dict)
+        
         dir_names = [os.path.basename(source_dir_path)]
         self._walk(source_dir_path, dir_names)
+        
+        self._recording_mergers = []
+        self._add_recordings()
         
         # TODO: Modify this method to correctly report whether or not errors
         # occurred. Currently it raises exceptions on some errors (which it
@@ -281,6 +288,12 @@ class Importer(object):
                 
         else:
             
+            try:
+                station = self._archive.get_station(info.station_name)
+            except ValueError as e:
+                self._handle_add_error(file_path, str(e))
+                return
+            
             self._encountered_station_names.add(info.station_name)
             self._encountered_detector_names.add(info.detector_name)
             self._encountered_clip_class_names.add(info.clip_class_name)
@@ -295,19 +308,130 @@ class Importer(object):
             
             clip_class_name = _correct_clip_class_name(info.clip_class_name)
             
+            if not self._note_recording(info, station, sound, file_path):
+                return
+            
             try:
                 self._archive.add_clip(
                     info.station_name, info.detector_name, time, sound,
                     clip_class_name)
             
             except Exception as e:
-                m = self._indent('Error adding clip from "{:s}": {:s}')
-                logging.error(m.format(self._rel(file_path), str(e)))
-                self._num_add_errors += 1
+                self._handle_add_error(file_path, str(e))
                 
             self._num_parsed_file_paths += 1
 
 
+    def _handle_add_error(self, file_path, message):
+        m = self._indent('Error adding clip from "{:s}": {:s}')
+        logging.error(m.format(self._rel(file_path), message))
+        self._num_add_errors += 1
+            
+
+    def _note_recording(self, clip_info, station, sound, file_path):
+        
+        t = datetime.datetime.combine(
+            clip_info.monitoring_start_date, clip_info.monitoring_start_time)
+        start_time = time_utils.create_utc_datetime(
+            t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond,
+            station.time_zone)
+        
+        night = station.get_night(start_time)
+        
+        duration = self._get_recording_duration(clip_info)
+        
+        if duration is not None:
+
+            recordings = self._encountered_recordings[(station.name, night)]
+            
+            sample_rate = sound.sample_rate
+            length = int(round(duration * sample_rate))
+            key = (start_time, length, sample_rate)
+            
+            # Add recording for this station, start time, length, and
+            # sample rate if and only if we haven't seen it already.
+            if recordings.get(key) is None:
+                recordings[key] = (station, file_path)
+                
+            return True
+
+        else:
+            # duration unknown
+            
+            # TODO: Some 2012 and 2013 clips do not include monitoring
+            # durations. How do we get recording data into archive for
+            # such clips?
+            
+            # TODO: Track stations and nights for which recording
+            # durations are unknown.
+            
+            self._num_clips_without_recording_durations += 1
+            return False
+        
+        
+    def _get_recording_duration(self, clip_info):
+        
+        # TODO: Review `clip_info` field names. Perhaps change
+        # `monitoring` to `recording`?
+        
+        duration = clip_info.monitoring_duration
+        
+        if duration is None:
+            return None
+        
+        else:
+            # duration is not `None`
+            
+            # TODO: Review use of `second_dur` field. Is it used
+            # inconsistently? In particular, does it sometimes indicate
+            # something other than the duration of a second part of a
+            # recording?
+            if clip_info.second_dur is not None:
+                duration += clip_info.second_dur
+            
+            return int(round(duration.total_seconds()))
+                    
+
+    def _add_recordings(self):
+        
+        merge = recording_utils.merge_recordings
+        
+        keys = self._encountered_recordings.keys()
+        keys.sort()
+        
+        for key in keys:
+            
+            unmerged_recordings = [
+                _create_recording(
+                    station, start_time, length, sample_rate, file_path)
+                for (start_time, length, sample_rate), (station, file_path)
+                in self._encountered_recordings[key].iteritems()]
+            
+            unmerged_recordings.sort(
+                key=lambda r: (r.station.name, r.start_time))
+            
+            merged_recordings = merge(unmerged_recordings, tolerance=60)
+            
+            for recording in merged_recordings:
+                self._add_recording(recording)
+                
+            if len(unmerged_recordings) != 1:
+                self._recording_mergers.append(
+                    (unmerged_recordings, merged_recordings))
+            
+
+    def _add_recording(self, recording):
+        
+        r = recording
+        
+        try:
+            self._archive.add_recording(
+                r.station.name, r.start_time, r.length, r.sample_rate)
+        except ValueError:
+            # TODO: Handle add errors.
+            pass
+     
+     
     def _get_clip_time(self, info):
         
         # Get monitoring start time.
@@ -381,6 +505,9 @@ class Importer(object):
         self._show_items('Unreadable files:', self._unreadable_file_paths, sfp)
         
         logging.info('')
+        self._show_recording_mergers()
+        
+        logging.info('')
         self._show_items('Station names:', self._encountered_station_names)
         
         logging.info('')
@@ -394,11 +521,14 @@ class Importer(object):
         good = self._num_parsed_file_paths
         bad = len(self._bad_file_paths)
         ignored = len(self._ignored_file_paths)
+        durationless = self._num_clips_without_recording_durations
         
         logging.info('{:d} files visited'.format(good + bad + ignored))
         logging.info('{:d} file names were parsed'.format(good))
         logging.info('{:d} file names could not be parsed'.format(bad))
         logging.info('{:d} file names were ignored'.format(ignored))
+        logging.info(
+            '{:d} clips lacked recording durations'.format(durationless))
         logging.info(
             '{:d} clip add operations failed'.format(self._num_add_errors))
         
@@ -426,13 +556,63 @@ class Importer(object):
 
 
     def _show_item(self, item):
-        logging.info(self._indent(item))
+        logging.info(self._indent(str(item)))
         
         
     def _show_file_path(self, path):
         (dir_path, file_name) = os.path.split(path)
-        logging.info(self._indent('{:s} ({:s})'.format(file_name, dir_path)))
+        message = self._indent('{:s} ({:s})'.format(file_name, dir_path))
+        logging.info(message)
 
+
+    def _show_recording_mergers(self):
+        
+        logging.info('Recording Mergers:')
+        
+        self._increase_indentation()
+        
+        mergers = self._recording_mergers
+        
+        if len(mergers) == 0:
+            logging.info(self._indent('None'))
+            
+            
+        else:
+            
+            for unmerged_recordings, merged_recordings in mergers:
+                
+                logging.info('')
+                
+                self._show_recordings(unmerged_recordings)
+                
+                if len(merged_recordings) == len(unmerged_recordings):
+                    logging.info(self._indent('    no merges were needed'))
+                    
+                else:
+                    logging.info(self._indent('    merged to:'))
+                    self._show_recordings(merged_recordings)
+                    
+        self._decrease_indentation()
+        
+        
+    def _show_recordings(self, recordings):
+        
+        for r in recordings:
+            
+            try:
+                file_path = r.file_path
+            except AttributeError:
+                file_name = ''
+            else:
+                file_name = os.path.basename(file_path)
+                
+            message = self._indent(
+                '{:s}   {:s}   {:s}   {:s}'.format(
+                    r.station.name, str(r.start_time), str(r.duration),
+                    file_name))
+            
+            logging.info(message)
+            
 
     def _show_clip_class_names(self):
         
@@ -454,6 +634,12 @@ class Importer(object):
                 
         self._decrease_indentation()
         
+
+def _create_recording(station, start_time, length, sample_rate, file_path):
+    recording = Recording(station, start_time, length, sample_rate)
+    recording.file_path = file_path
+    return recording
+
 
 _CALL_CLIP_CLASS_NAME_CORRECTIONS = {
     'bhgr_type': 'BHGR',
