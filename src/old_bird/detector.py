@@ -110,6 +110,10 @@ _DETECTOR_DIR_PATH = 'C:\\Program Files (x86)\\Old Bird'
 # should import but decline to run.
 
 
+# TODO: This detector should not know anything about MPG Ranch data
+# processing, so we really need plug-ins!
+
+
 '''
 To use default detection handler, which writes detections to an archive:
 
@@ -330,16 +334,13 @@ def _parse_mpg_ranch_input_file_name(file_name):
     start_time = time_utils.parse_date_time(
         year, month, day, hour, minute, second)
     
-    # Convert naive monitoring start time to UTC. We assume that the
-    # local time zone is US/Mountain, that the naive start time observes
-    # DST, and that it will never be ambiguous or nonexistent (i.e. we
-    # do not worry about the `is_dst` argument to `mountain.localize`).
-    # If we do supply an ambiguous or nonexistent time to
-    # `mountain.localize` it will raise an exception. See the
+    # Convert naive monitoring start time to UTC. We specify `is_dst=None`
+    # here for the `localize` method so it will raise an exception if the
+    # naive time is either nonexistent or ambiguous. See the
     # "Problems with Localtime" section of the `pytz` documentation at
     # http://pytz.sourceforge.net for more.
     mountain = pytz.timezone('US/Mountain')
-    start_time = mountain.localize(start_time)
+    start_time = mountain.localize(start_time, is_dst=None)
     start_time = start_time.astimezone(pytz.utc)
     
     return station_name, start_time
