@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import datetime
 import math
 
 import matplotlib as mpl
@@ -10,9 +9,9 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as Canvas
 from matplotlib.figure import Figure
 from PyQt4.QtGui import QSizePolicy
 import numpy as np
-import pytz
 
 from vesper.util.preferences import preferences as prefs
+import vesper.util.time_utils as time_utils
 
 
 _BACKGROUND_COLOR = (0, 0, 0, 0)
@@ -269,29 +268,16 @@ def _get_clip_times(clips):
         # have at least one clip
         
         # Get local midnight of first clip night date as a UTC time.
-        #
         # Note that it's important to use `clip.night` in the following
         # rather than the date of `clip.time`, since the date of the
         # latter can be one day later than what we want.
-        #
-        # Note also that contrary to what one might expect the following
-        # would not work:
-        #
-        #     local_midnight = datetime.datetime(
-        #         date.year, date.month, date.day, tzinfo=time_zone)
-        #
-        # since (as of 2014-12-04, at least) pytz time zones cannot be
-        # used as arguments to the standard datetime constructor. See
-        # the "Example & Usage" section of http://pytz.sourceforge.net
-        # for more information.
         clip = clips[0]
         date = clip.night
-        naive_midnight = datetime.datetime(date.year, date.month, date.day)
-        time_zone = clip.station.time_zone
-        local_midnight = time_zone.localize(naive_midnight)
-        ref_time = local_midnight.astimezone(pytz.utc)
+        midnight = time_utils.create_utc_datetime(
+            date.year, date.month, date.day,
+            time_zone=clip.station.time_zone)
 
-        times = [(c.time - ref_time).total_seconds() / 3600 for c in clips]
+        times = [(c.time - midnight).total_seconds() / 3600 for c in clips]
         
     return np.array(times)
 

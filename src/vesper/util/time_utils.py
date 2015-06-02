@@ -5,9 +5,94 @@ import calendar
 import datetime
 import re
 
+import pytz
+import six
+
 
 _MIN_YEAR = 1900
 _MAX_YEAR = 2099
+
+
+def create_utc_datetime(
+        year, month, day, hour=0, minute=0, second=0, microsecond=0,
+        time_zone=None, is_dst=None):
+    
+    """
+    Creates a UTC `datetime.datetime` object.
+    
+    The date and time specified by the arguments to this function may
+    be for a non-UTC time zone, in which case they are converted to UTC.
+    The `time_zone` parameter indicates the time zone of the date and
+    time specified by the arguments that precede it. It can be:
+    
+    * `None`, implying that the time zone of the other arguments is UTC.
+    
+    * a string acceptable as an argument to the `pytz.timezone` function,
+      for example 'US/Eastern' or 'America/Costa_Rica'.
+    
+    * a `pytz` time zone object.
+    
+    When the `time_zone` argument is a time zone that observes DST,
+    the `is_dst` argument can be used to disambiguate ambiguous local
+    times, i.e. times in the interval [1:00:00, 2:00:00) on the day
+    that DST ends. The value of the `is_dst` argument should be either
+    `True`, `False`, or `None` (the default). The argument is ignored
+    for nonambiguous times.
+    
+    :Raises ValueError:
+        if an unrecognized time zone is specified, if a nonexistent
+        local time is specified, or if an ambiguous time is specified
+        and the `is_dst` argument is neither `True` nor `False` to
+        resolve the ambiguity.
+    """
+    
+    
+    if time_zone is None:
+        
+        return datetime.datetime(
+            year, month, day, hour, minute, second, microsecond, pytz.utc)
+    
+    else:
+        
+        if isinstance(time_zone, six.string_types):
+            try:
+                time_zone = pytz.timezone(time_zone)
+            except pytz.UnknownTimeZoneError:
+                raise ValueError(
+                    'Unrecognized time zone "{:s}".'.format(time_zone))
+        
+        # Note that contrary to what one might think we should not do the
+        # following:
+        #
+        #     dt = datetime.datetime(
+        #         year, month day, hour, minute, second, microsecond,
+        #         tzinfo=time_zone)
+        #
+        # since (as of 2015-05-21, at least) pytz time zones that
+        # observer DST cannot be used as arguments to the standard
+        # datetime constructor. See the "Example & Usage" section of
+        # http://pytz.sourceforge.net for more information.
+        dt = datetime.datetime(
+            year, month, day, hour, minute, second, microsecond)
+        
+        # We specify `is_dst=None` in the following to cause an
+        # exception to be raised if the local time is nonexistent or
+        # ambiguous because of DST. See the "Problems with Localtime"
+        # section of http://pytz.sourceforge.net for more information.
+        try:
+            dt = time_zone.localize(dt, is_dst=is_dst)
+        except pytz.NonExistentTimeError:
+            _raise_dst_value_error('does not exist', dt, time_zone)
+        except pytz.AmbiguousTimeError:
+            _raise_dst_value_error('is ambiguous', dt, time_zone)
+        
+        return dt.astimezone(pytz.utc)
+
+
+def _raise_dst_value_error(fragment, dt, time_zone):
+    raise ValueError((
+        'Local time {:s} {:s} for time zone "{:s}" '
+        'due to DST.').format(str(dt), fragment, str(time_zone)))
 
 
 # The parsing functions of this module (`parse_date_time`, `parse_date`,
@@ -24,6 +109,9 @@ _MAX_YEAR = 2099
 # expression matching.
 
 
+# TODO: Consider adding conversion to UTC to this function. That would
+# decrease the chance of mistakes in such conversions, and encourage
+# the conversion of times to UTC on input.
 def parse_date_time(y, MM, dd, hh, mm, ss=None, f=None):
     d = parse_date(y, MM, dd)
     t = parse_time(hh, mm, ss, f)

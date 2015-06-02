@@ -1,5 +1,7 @@
 import datetime
 
+import pytz
+
 import vesper.util.time_utils as time_utils
 
 from test_case import TestCase
@@ -17,20 +19,62 @@ def _get_four_digit_year(y):
         return y
     
     
+def _create_utc_datetime(y, M, d, h, m, s, u, delta):
+    dt = datetime.datetime(y, M, d, h, m, s, u, pytz.utc)
+    return dt + datetime.timedelta(hours=delta)
+
+
 class TimeUtilsTests(TestCase):
     
     
+    def test_create_utc_datetime(self):
+        
+        eastern = pytz.timezone('US/Eastern')
+        
+        cases = [
+            (2015, 5, 24, 12, 0, 0, 0, None, None, 0),
+            (2015, 5, 24, 12, 0, 0, 0, 'US/Eastern', None, 4),
+            (2015, 5, 24, 22, 0, 0, 0, 'US/Eastern', None, 4),
+            (2014, 12, 31, 22, 0, 0, 0, 'US/Eastern', None, 5),
+            (2015, 3, 8, 1, 59, 59, 999999, 'US/Eastern', None, 5),
+            (2015, 3, 8, 3, 0, 0, 0, eastern, None, 4),
+            (2015, 11, 1, 1, 0, 0, 0, eastern, True, 4),
+            (2015, 11, 1, 1, 0, 0, 0, eastern, False, 5),
+            (2015, 11, 1, 2, 0, 0, 0, eastern, None, 5)
+        ]
+        
+        for y, M, d, h, m, s, u, z, is_dst, delta in cases:
+            expected = _create_utc_datetime(y, M, d, h, m, s, u, delta)
+            result = time_utils.create_utc_datetime(
+                y, M, d, h, m, s, u, z, is_dst)
+            self.assertEqual(result, expected)
+            
+        
+    def test_create_utc_datetime_errors(self):
+        
+        cases = [
+            (2015, 4, 24, 0, 'Bobo'),
+            (2015, 3, 8, 2, 'US/Eastern'),
+            (2015, 11, 1, 1, 'US/Eastern')
+        ]
+        
+        f = time_utils.create_utc_datetime
+        
+        for y, m, d, h, z in cases:
+            self._assert_raises(ValueError, f, y, m, d, h, time_zone=z)
+            
+            
     def test_parse_date_time(self):
         
         cases = [
                  
-            (1900, 01, 01,  00, 00, 00, 0),
-            (2099, 12, 31,  23, 59, 59, 999999),
-            (2015, 04, 23,  10, 12, 34, 500000),
+            (1900, 01, 01, 00, 00, 00, 0),
+            (2099, 12, 31, 23, 59, 59, 999999),
+            (2015, 04, 23, 10, 12, 34, 500000),
             
-            (00, 01, 01,  00, 00, 00, 0),
-            (99, 12, 31,  23, 59, 59, 999999),
-            (15, 04, 23,  10, 12, 34, 500000),
+            (00, 01, 01, 00, 00, 00, 0),
+            (99, 12, 31, 23, 59, 59, 999999),
+            (15, 04, 23, 10, 12, 34, 500000),
             
         ]
         
@@ -54,26 +98,26 @@ class TimeUtilsTests(TestCase):
         cases = [
                  
             # year out of range
-            (1899, 12, 31,  00, 00, 00, 0),
-            (2100, 01, 01,  00, 00, 00, 0),
+            (1899, 12, 31, 00, 00, 00, 0),
+            (2100, 01, 01, 00, 00, 00, 0),
             
             # month out of range
-            (2015, 00, 01,  00, 00, 00, 0),
-            (2015, 13, 01,  00, 00, 00, 0),
+            (2015, 00, 01, 00, 00, 00, 0),
+            (2015, 13, 01, 00, 00, 00, 0),
             
             # day out of range
-            (2015, 01, 00,  00, 00, 00, 0),
-            (2015, 01, 32,  00, 00, 00, 0),
-            (2015, 02, 29,  00, 00, 00, 0),
+            (2015, 01, 00, 00, 00, 00, 0),
+            (2015, 01, 32, 00, 00, 00, 0),
+            (2015, 02, 29, 00, 00, 00, 0),
             
             # hour out of range
-            (2015, 01, 01,  24, 00, 00, 0),
+            (2015, 01, 01, 24, 00, 00, 0),
             
             # minute out of range
-            (2015, 01, 01,  00, 60, 00, 0),
+            (2015, 01, 01, 00, 60, 00, 0),
             
             # second out of range
-            (2015, 01, 01,  00, 00, 60, 0),
+            (2015, 01, 01, 00, 00, 60, 0),
             
         ]
         
