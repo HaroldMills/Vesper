@@ -269,7 +269,7 @@ def _get_clip_times(clips):
         
         # Get local midnight of first clip night date as a UTC time.
         # Note that it's important to use `clip.night` in the following
-        # rather than the date of `clip.time`, since the date of the
+        # rather than the date of `clip.start_time`, since the date of the
         # latter can be one day later than what we want.
         clip = clips[0]
         date = clip.night
@@ -277,7 +277,8 @@ def _get_clip_times(clips):
             date.year, date.month, date.day,
             time_zone=clip.station.time_zone)
 
-        times = [(c.time - midnight).total_seconds() / 3600 for c in clips]
+        times = [(c.start_time - midnight).total_seconds() / 3600
+                 for c in clips]
         
     return np.array(times)
 

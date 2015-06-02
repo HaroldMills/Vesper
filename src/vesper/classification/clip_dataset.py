@@ -102,7 +102,7 @@ def _create_clip_files(clips, dataset_dir_path):
 
 def _create_clip_file(clip, dataset_dir_path):
     file_name = _create_clip_file_name(
-        clip.station_name, clip.detector_name, clip.time)
+        clip.station_name, clip.detector_name, clip.start_time)
 #    file_path = os.path.join(dataset_dir_path, file_name)
     # TODO: Create the file.
     return file_name

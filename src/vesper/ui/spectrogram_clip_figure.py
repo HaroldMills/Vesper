@@ -455,7 +455,7 @@ def _format_clip_time(clip):
     
     # Get clip time localized to station time zone.
     time_zone = clip.station.time_zone
-    time = clip.time.astimezone(time_zone)
+    time = clip.start_time.astimezone(time_zone)
     
     hms = time.strftime('%H:%M:%S')
     milliseconds = int(round(time.microsecond / 1000.))

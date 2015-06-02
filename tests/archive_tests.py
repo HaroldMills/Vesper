@@ -181,12 +181,13 @@ class ArchiveTests(TestCase):
             self, station_name, detector_name,
             year, month, day, hour, minute, second, ms):
         
-        time = time_utils.create_utc_datetime(
+        start_time = time_utils.create_utc_datetime(
             year, month, day, hour, minute, second, ms * 1000)
         
         sound = Bunch(samples=np.zeros(100), sample_rate=22050.)
         
-        return self.archive.add_clip(station_name, detector_name, time, sound)
+        return self.archive.add_clip(
+            station_name, detector_name, start_time, sound)
 
     
     def test_get_recordings(self):
@@ -309,8 +310,8 @@ class ArchiveTests(TestCase):
         for (r, er) in zip(result, expected_result):
             self.assertEqual(r.station.name, er[0])
             self.assertEqual(r.detector_name, er[1])
-            time = time_utils.create_utc_datetime(*er[2:9])
-            self.assertEqual(r.time, time)
+            start_time = time_utils.create_utc_datetime(*er[2:9])
+            self.assertEqual(r.start_time, start_time)
             self.assertEqual(r.clip_class_name, er[9])
     
     
@@ -325,8 +326,9 @@ class ArchiveTests(TestCase):
         
         for station_name, detector_name, time_tuple, expected_result in cases:
             
-            time = time_utils.create_utc_datetime(*time_tuple)
-            result = self.archive.get_clip(station_name, detector_name, time)
+            start_time = time_utils.create_utc_datetime(*time_tuple)
+            result = self.archive.get_clip(
+                station_name, detector_name, start_time)
             
             if result is None:
                 self.assertIsNone(expected_result)

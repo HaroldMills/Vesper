@@ -60,7 +60,7 @@ _RecordingTuple = namedtuple(
     ('id', 'station_id', 'start_time', 'length', 'sample_rate'))
 _ClipTuple = namedtuple(
     '_ClipTuple',
-    ('id', 'station_id', 'detector_id', 'time', 'night', 'duration',
+    ('id', 'station_id', 'detector_id', 'start_time', 'night', 'duration',
      'clip_class_id', 'clip_class_name_0_id', 'clip_class_name_1_id',
      'clip_class_name_2_id'))
 
@@ -121,14 +121,14 @@ _CREATE_CLIP_TABLE_SQL = '''
         id integer primary key,
         station_id integer,
         detector_id integer,
-        time datetime,
+        start_time datetime,
         night integer,
         duration real,
         clip_class_id integer,
         clip_class_name_0_id integer,
         clip_class_name_1_id integer,
         clip_class_name_2_id integer,
-        unique(station_id, detector_id, time) on conflict rollback)'''
+        unique(station_id, detector_id, start_time) on conflict rollback)'''
         
 _CREATE_RECORDING_TABLE_START_TIME_INDEX_SQL = '''
     create index StartTimeIndex on Recording(start_time)
@@ -156,8 +156,9 @@ _INSERT_CLIP_SQL = \
     'insert into Clip values (' + \
     ', '.join(['?'] * len(_ClipTuple._fields)) + ')'
 
-_SELECT_CLIP_SQL = \
-    'select * from Clip where station_id = ? and detector_id = ? and time = ?'
+_SELECT_CLIP_SQL = (
+    'select * from Clip where station_id = ? and detector_id = ? and '
+    'start_time = ?')
     
 _CLASSIFY_CLIP_SQL = (
     'update Clip set clip_class_id = ?, clip_class_name_0_id = ?, '
@@ -551,7 +552,7 @@ class Archive(object):
 
         
     def add_clip(
-            self, station_name, detector_name, time, sound,
+            self, station_name, detector_name, start_time, sound,
             clip_class_name=None):
         
         """
@@ -565,7 +566,7 @@ class Archive(object):
             detector_name : `str`
                 the name of the detector of the clip.
                 
-            time : `datetime`
+            start_time : `datetime`
                 the UTC start time of the clip.
                 
                 To help ensure archive data quality, the start time is
@@ -590,7 +591,7 @@ class Archive(object):
             if the specified station name, detector name, or clip
             class name is not recognized, or if there is already a
             clip in the archive with the specified station name,
-            detector name, and time.
+            detector name, and start time.
         """
         
         
@@ -598,11 +599,11 @@ class Archive(object):
         detector_id = self._check_detector_name(detector_name)
         clip_class_id = self._check_clip_class_name(clip_class_name)
         
-        if time.tzinfo is not pytz.utc:
+        if start_time.tzinfo is not pytz.utc:
             raise ValueError('Clip time zone must be `pytz.utc`.')
         
         station = self._stations[station_id]
-        night = _date_to_int(station.get_night(time))
+        night = _date_to_int(station.get_night(start_time))
         
         duration = len(sound.samples) / float(sound.sample_rate)
         ids = self._get_clip_class_name_component_ids(clip_class_name)
@@ -611,7 +612,7 @@ class Archive(object):
             id=None,
             station_id=station_id,
             detector_id=detector_id,
-            time=_format_time(time),
+            start_time=_format_time(start_time),
             night=night,
             duration=duration,
             clip_class_id=clip_class_id,
@@ -624,14 +625,14 @@ class Archive(object):
             
         except sqlite.IntegrityError:
             f = ('There is already a clip in the archive for station "{:s}", '
-                 'detector "{:s}", and UTC time {:s}.')
-            raise ValueError(
-                f.format(station_name, detector_name, _format_time(time)))
+                 'detector "{:s}", and UTC start time {:s}.')
+            t = _format_time(start_time)
+            raise ValueError(f.format(station_name, detector_name, t))
         
         clip_id = self._cursor.lastrowid
         
         clip = _Clip(
-            self, clip_id, station, detector_name, time, duration,
+            self, clip_id, station, detector_name, start_time, duration,
             clip_class_name)
         
         self._create_clip_dir_if_needed(clip.file_path)
@@ -858,7 +859,7 @@ class Archive(object):
         where = self._create_where_clause(
             station_name, detector_name, night, night, clip_class_name)
         
-        sql = 'select * from Clip' + where + ' order by time'
+        sql = 'select * from Clip' + where + ' order by start_time'
         
 #        print('Archive.get_clips', sql)
         
@@ -893,23 +894,23 @@ class Archive(object):
         except KeyError:
             clip_class_name = None
             
-        time = _parse_time(clip.time)
+        start_time = _parse_time(clip.start_time)
         
         return _Clip(
-            self, clip.id, station, detector_name, time,
+            self, clip.id, station, detector_name, start_time,
             clip.duration, clip_class_name)
         
         
-    def get_clip(self, station_name, detector_name, time):
+    def get_clip(self, station_name, detector_name, start_time):
         
         station_id = self._check_station_name(station_name)
         detector_id = self._check_detector_name(detector_name)
         
-        if time.tzinfo is not pytz.utc:
+        if start_time.tzinfo is not pytz.utc:
             raise ValueError('Clip time zone must be `pytz.utc`.')
         
-        time = _format_time(time)
-        clip_info = (station_id, detector_id, time)
+        start_time = _format_time(start_time)
+        clip_info = (station_id, detector_id, start_time)
         self._cursor.execute(_SELECT_CLIP_SQL, clip_info)
     
         row = self._cursor.fetchone()
@@ -956,14 +957,15 @@ class Archive(object):
             self._clip_dir_paths.add(dir_path)
                     
         
-    def _create_clip_file_path(self, station, detector_name, time):
-        dir_path = self._create_clip_dir_path(station, time)
-        file_name = _create_clip_file_name(station.name, detector_name, time)
+    def _create_clip_file_path(self, station, detector_name, start_time):
+        dir_path = self._create_clip_dir_path(station, start_time)
+        file_name = _create_clip_file_name(
+            station.name, detector_name, start_time)
         return os.path.join(dir_path, file_name)
         
         
-    def _create_clip_dir_path(self, station, time):
-        n = station.get_night(time)
+    def _create_clip_dir_path(self, station, start_time):
+        n = station.get_night(start_time)
         year_name = _create_year_dir_name(n.year)
         month_name = _create_month_dir_name(n.year, n.month)
         day_name = _create_day_dir_name(n.year, n.month, n.day)
@@ -1124,14 +1126,14 @@ class _Clip(object):
     
     
     def __init__(
-            self, archive, clip_id, station, detector_name, time, duration,
-            clip_class_name=None):
+            self, archive, clip_id, station, detector_name, start_time,
+            duration, clip_class_name=None):
         
         self._archive = archive
         self._id = clip_id
         self.station = station
         self.detector_name = detector_name
-        self.time = time
+        self.start_time = start_time
         self._duration = duration
         self._clip_class_name = clip_class_name
         
@@ -1146,14 +1148,14 @@ class _Clip(object):
         
         if self._file_path is None:
             self._file_path = self._archive._create_clip_file_path(
-                self.station, self.detector_name, self.time)
+                self.station, self.detector_name, self.start_time)
             
         return self._file_path
     
     
     @property
     def night(self):
-        return self.station.get_night(self.time)
+        return self.station.get_night(self.start_time)
     
     
     @property
@@ -1233,8 +1235,9 @@ def _create_day_dir_name(year, month, day):
     return '{:02d}'.format(day)
 
 
-def _create_clip_file_name(station_name, detector_name, time):
-    ms = int(round(time.microsecond / 1000.))
-    time = time.strftime('%Y-%m-%d_%H.%M.%S') + '.{:03d}'.format(ms) + '_Z'
+def _create_clip_file_name(station_name, detector_name, start_time):
+    ms = int(round(start_time.microsecond / 1000.))
+    start_time = start_time.strftime('%Y-%m-%d_%H.%M.%S') + \
+        '.{:03d}'.format(ms) + '_Z'
     return '{:s}_{:s}_{:s}{:s}'.format(
-        station_name, detector_name, time, _CLIP_FILE_NAME_EXTENSION)
+        station_name, detector_name, start_time, _CLIP_FILE_NAME_EXTENSION)
