@@ -375,54 +375,6 @@ class TimeUtilsTests(TestCase):
                 ValueError, time_utils.parse_time_delta, h, m, s)
             
             
-    def test_parse_command_line_date(self):
-        
-        cases = [
-            (1900, 01, 01),
-            (2099, 12, 31),
-            (2014, 01, 02),
-            (2014, 02, 28),
-            (2012, 02, 29)
-        ]
-        
-        for y, m, d in cases:
-            s = '{:d}-{:02d}-{:02d}'.format(y, m, d)
-            expected_result = datetime.date(y, m, d)
-            result = time_utils.parse_command_line_date(s)
-            self.assertEqual(result, expected_result)
-            
-            
-    def test_parse_command_line_date_errors(self):
-        
-        cases = [
-                 
-            # bad characters
-            'bobo',
-            
-            # wrong numbers of digits
-            '1-01-01',
-            '12345-01-01',
-            '2014-1-01',
-            '2014-123-01',
-            '2014-01-1',
-            '2014-01-123',
-            
-            # values out of range
-            '1899-12-31',
-            '2100-01-01',
-            '2014-00-01',
-            '2014-13-01',
-            '2014-01-00',
-            '2014-01-32',
-            '2014-02-29'
-            
-        ]
-        
-        for case in cases:
-            self._assert_raises(
-                ValueError, time_utils.parse_command_line_date, case)
-            
-            
     def test_check_year(self):
         good = [1900, 2000, 2099]
         bad = [1800, 1899, 2100, 2200]

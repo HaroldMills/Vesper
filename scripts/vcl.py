@@ -72,10 +72,29 @@ time.sleep(20)
 
 
 '''
-vcl.bat export clips --format "MPG Ranch Clips CSV" --to-file <file path>
-    --stations <stations> --detectors <detectors> --clip-classes <clip classes>
-    --from-date <from date> --to-date <to date>
-    --dates <dates>
+Query options:
+    --stations <stations>
+    --station <station>
+    --detectors <detectors>
+    --detector <detector>
+    --clip-classes <clip classes>
+    --clip-class <clip class>
+    --date <date>
+    --start-date <start date>
+    --end-date <end date>
+
+vcl visit clips --visitor "MPG Ranch Diurnal Marker"
+    <query options>
+
+vcl export clips --format "MPG Ranch Clips CSV" --output-file <file path>
+    <query options>
+    
+vcl export clips --format "Sound Files" --time-zone "US/Eastern"
+    <query options>
+    
+vcl list clips --limit 10
+
+vcl update clip-class --with-name AMRE
 '''
 
 
@@ -92,7 +111,8 @@ def _main():
         _usage()
         
     # TODO: Perhaps command handler should parse arguments (see below)
-    positional_args, keyword_args = _parse_args(sys.argv[2:])
+    positional_args, keyword_args = \
+        vcl_utils.parse_command_line_args(sys.argv[2:])
     
     try:
         command = klass(positional_args, keyword_args)
@@ -153,34 +173,6 @@ usage: vcl help
 
     print(message, file=sys.stderr)
     sys.exit(1)
-    
-    
-# TODO: Improve argument parsing, with such things as declarative argument
-# specification by command classes, type checking, and missing and extra
-# argument checks. Implement argument types and commands as extensions.
-def _parse_args(args):
-    
-    i = 0
-    while i != len(args) and not args[i].startswith('--'):
-        i += 1
-        
-    positional_args = tuple(args[:i])
-    
-    keyword_args = {}
-    
-    while i != len(args):
-        
-        name = args[i][2:]
-        i += 1
-        
-        values = []
-        while i != len(args) and not args[i].startswith('--'):
-            values.append(args[i])
-            i += 1
-            
-        keyword_args[name] = values
-        
-    return (positional_args, keyword_args)
     
     
 if __name__ == '__main__':

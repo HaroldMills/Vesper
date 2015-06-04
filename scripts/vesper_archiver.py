@@ -11,18 +11,19 @@ import os
 import sys
 import time
 
+from old_bird.archiver_time_keeper import (
+    ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
 from vesper.archive.archive import Archive
 from vesper.archive.clip_class import ClipClass
 from vesper.archive.detector import Detector
 from vesper.archive.dummy_archive import DummyArchive
 from vesper.archive.station import Station
 from vesper.util.directory_visitor import DirectoryVisitor
-from old_bird.archiver_time_keeper import (
-    ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
+from vesper.vcl.command import CommandSyntaxError
+import old_bird.file_name_utils as file_name_utils
 import vesper.archive.archive_shared as archive_shared
 import vesper.util.sound_utils as sound_utils
-import vesper.util.time_utils as time_utils
-import old_bird.file_name_utils as file_name_utils
+import vesper.vcl.vcl_utils as vcl_utils
 
 
 _STATIONS = [Station(*t) for t in [
@@ -312,8 +313,8 @@ def _parse_dates(args):
             
 def _parse_date(s, name):
     try:
-        return time_utils.parse_command_line_date(s)
-    except ValueError:
+        return vcl_utils.parse_date(s)
+    except CommandSyntaxError:
         raise ValueError('Bad {:s} "{:s}".'.format(name, s))
     
     

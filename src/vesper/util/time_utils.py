@@ -3,7 +3,6 @@
 
 import calendar
 import datetime
-import re
 
 import pytz
 import six
@@ -220,18 +219,3 @@ def check_second(second):
     
 def check_seconds(seconds):
     _check_range(seconds, 0, 59, 'seconds')
-
-
-_DATE_RE = re.compile(r'^(\d\d\d\d)-(\d\d)-(\d\d)$')
-
-
-# TODO: This is a bit of an odd duck. Move it somewhere else?
-def parse_command_line_date(s):
-    
-    m = _DATE_RE.match(s)
-     
-    if m is None:
-        raise ValueError('Bad date "{:s}".'.format(s))
-     
-    else:
-        return parse_date(*m.groups())
