@@ -852,8 +852,7 @@ class Archive(object):
         Gets the archived clips matching the specified criteria.
         
         :Returns:
-            Per-night clip lists in a dictionary that maps start
-            night dates (of type `Date`) to lists of `Clip` objects.
+            a list of `Clip` objects ordered by start time.
         """
         
         where = self._create_where_clause(
