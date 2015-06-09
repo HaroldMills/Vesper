@@ -17,19 +17,21 @@ import os
 import sys
 
 from vesper.vcl.command import CommandSyntaxError, CommandExecutionError
-from vesper.vcl.init_command import InitCommand
+from vesper.vcl.classify_command import ClassifyCommand
 from vesper.vcl.detect_command import DetectCommand
-from vesper.vcl.import_command import ImportCommand
 from vesper.vcl.export_command import ExportCommand
+from vesper.vcl.import_command import ImportCommand
+from vesper.vcl.init_command import InitCommand
 import vesper.vcl.vcl_utils as vcl_utils
 import vesper.util.vesper_path_utils as vesper_path_utils
 
 
 _COMMAND_CLASSES = dict((c.name, c) for c in (
-    InitCommand,
-    ImportCommand,
+    ClassifyCommand,
     DetectCommand,
-    ExportCommand
+    ExportCommand,
+    ImportCommand,
+    InitCommand
 ))
 
 _LOG_FILE_NAME = 'vcl.log'
@@ -83,13 +85,20 @@ Query options:
     --start-date <start date>
     --end-date <end date>
 
-vcl visit clips --visitor "MPG Ranch Diurnal Marker"
+vcl classify clip --id 789378937893 --clip-class Noise
+vcl classify clips --station Alfred --detector Tseep --date 2014-06-01
+    --clip-class Noise
+vcl classify clips --classifier "MPG Ranch Diurnal Classifier"
+vcl classify "MPG Ranch Diurnal Classifier"
     <query options>
 
-vcl export clips --format "MPG Ranch Clips CSV" --output-file <file path>
-    <query options>
+vcl export clips --data "MPG Ranch Clip Stats 1.00" --format CSV
+vcl export "MPG Ranch Clips CSV"
+    --output-file <file path> <query options>
     
-vcl export clips --format "Sound Files" --time-zone "US/Eastern"
+vcl export clips --data "Sound" --format WAV
+vcl export clips --export-format "Sound Files" --time-zone "US/Eastern"
+vcl export "Sound Files" --time-zone "US/Eastern"
     <query options>
     
 vcl list clips --limit 10

@@ -12,4 +12,5 @@ class ClipsCsvExporter:
         
         
     def export(self):
+        print('Export clips to CSV...')
         return True
