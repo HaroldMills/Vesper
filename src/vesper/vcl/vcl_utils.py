@@ -53,9 +53,10 @@ def get_archive_dir_path(keyword_args):
 def get_clip_query(keyword_args):
     station_names = get_station_names(keyword_args)
     detector_names = get_detector_names(keyword_args)
-    clip_classes = get_clip_class_names(keyword_args)
+    clip_class_names = get_clip_class_names(keyword_args)
     start_date, end_date = get_dates(keyword_args)
-    return station_names, detector_names, clip_classes, start_date, end_date
+    return (station_names, detector_names, clip_class_names, start_date,
+            end_date)
         
     
 def get_station_names(keyword_args):
