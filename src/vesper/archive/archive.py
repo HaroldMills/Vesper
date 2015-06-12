@@ -1158,6 +1158,32 @@ class _Clip(object):
     
     
     @property
+    def recording(self):
+        
+        station_name = self.station.name
+        night = self.night
+        recordings = self._archive.get_recordings(station_name, night)
+        
+        if len(recordings) == 0:
+            return None
+        
+        else:
+            
+            for recording in recordings:
+                
+                start_time = self.start_time
+                
+                if recording.start_time <= start_time and \
+                   recording.end_time >= start_time:
+                    
+                    return recording
+                
+            # If we get here, the clip start time was outside all
+            # recording intervals.
+            return None
+        
+        
+    @property
     def sound(self):
         
         if self._sound is None:
