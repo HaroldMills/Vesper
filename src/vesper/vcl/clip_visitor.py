@@ -47,6 +47,12 @@ class ClipVisitor(Visitor):
                             station_name, detector_name, date,
                             clip_class_name)
                         
+                        # Clips come from the archive sorted by start time.
+                        # Resort by the combination of clip class name and
+                        # start time.
+                        clips.sort(
+                            key=lambda c: (c.clip_class_name, c.start_time))
+                        
                         for clip in clips:
                             yield clip
                             
@@ -55,19 +61,24 @@ class ClipVisitor(Visitor):
 
 
 def _get_clip_query_tuples(
-        station_names, detector_names, clip_classes, start_date, end_date,
+        station_names, detector_names, clip_class_names, start_date, end_date,
         archive):
     
-    station_names = _get(station_names, (None,))
-    detector_names = _get(detector_names, (None,))
-    clip_classes = _get(clip_classes, (None,))
+    if station_names is None:
+        station_names = tuple(s.name for s in archive.stations)
+    
+    if detector_names is None:
+        detector_names = tuple(d.name for d in archive.detectors)
+        
+    if clip_class_names is None:
+        clip_class_names = tuple(c.name for c in archive.clip_classes)
     
     start_date = _get(start_date, archive.start_night)
     end_date = _get(end_date, archive.end_night)
     end_date += datetime.timedelta(days=1)
     dates = _get_dates(start_date, end_date)
     
-    return station_names, detector_names, clip_classes, dates
+    return station_names, detector_names, clip_class_names, dates
     
     
 def _get(arg, none_result):

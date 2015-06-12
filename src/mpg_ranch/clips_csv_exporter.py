@@ -99,7 +99,7 @@ columns:
           name: Duplicate Call
           parameters:
               min_intercall_interval: 60
-              ignored_classes: [Unknown, Other]
+              ignored_classes: [Other, Unknown, Weak]
       format:
           name: Boolean
           parameters:
@@ -253,6 +253,10 @@ class DetectorMeasurement(object):
 class DuplicateCallMeasurement(object):
     
     
+    # This measurement assumes that clips of a given clip class are
+    # visited in order of increasing start time.
+    
+    
     name = 'Duplicate Call'
     
     
@@ -272,24 +276,25 @@ class DuplicateCallMeasurement(object):
     
     def measure(self, clip):
         
-        name = clip.clip_class_name
+        class_name = clip.clip_class_name
         
-        if not name.startswith('Call.'):
+        if not class_name.startswith('Call.'):
             return False
         
         else:
             # clip is a call
             
-            if name in self._ignored_class_names:
+            if class_name in self._ignored_class_names:
                 return False
             
             else:
                 # call class should not be ignored
                 
-                last_time = self._last_call_times.get(name)
+                key = (clip.station.name, clip.detector_name, class_name)
+                last_time = self._last_call_times.get(key)
                 
                 time = clip.start_time
-                self._last_call_times[name] = time
+                self._last_call_times[key] = time
                 
                 if last_time is None:
                     # first call of this class
@@ -299,7 +304,7 @@ class DuplicateCallMeasurement(object):
                 else:
                     # not first call of this class
                     
-                    return time - last_time > self._min_intercall_interval
+                    return time - last_time < self._min_intercall_interval
     
     
 class ElapsedStartTimeMeasurement(object):
