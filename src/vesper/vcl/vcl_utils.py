@@ -40,6 +40,14 @@ def parse_command_line_args(args):
     return (positional_args, keyword_args)
     
     
+def get_required_keyword_arg(name, keyword_args):
+    try:
+        return keyword_args[name]
+    except KeyError:
+        message = 'Missing required "{:s}" keyword argument.'.format(name)
+        raise CommandSyntaxError(message)
+    
+    
 def get_archive_dir_path(keyword_args):
     
     try:

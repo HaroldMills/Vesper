@@ -1,6 +1,8 @@
 """Module containing class `ExportCommand`."""
 
     
+from __future__ import print_function
+
 from mpg_ranch.clips_csv_exporter \
     import ClipsCsvExporter as MpgRanchClipsCsvExporter
 from vesper.vcl.command import Command, CommandSyntaxError
@@ -13,7 +15,7 @@ _EXPORTER_CLASSES = {
 
 class ExportCommand(Command):
     
-    """vcl command that exports data from an archive."""
+    """vcl command that exports clips from an archive."""
     
     
     name = 'export'
@@ -22,7 +24,16 @@ class ExportCommand(Command):
     @staticmethod
     def get_help_text():
         # TODO: Get help text for individual exporters from the exporters.
-        return ('export "MPG Ranch Clips CSV" [--archive <archive dir>]')
+        return (
+            'export "MPG Ranch Clips CSV" '
+            '[--output-file <file path>] '
+            '[--station <station name>] [--stations <station names>] '
+            '[--detector <detector name>] [--detectors <detector names>] '
+            '[--clip-class <clip class name>] '
+            '[--clip-classes <clip class names>] '
+            '[--date <YYYY-MM-DD>] '
+            '[--start-date <YYYY-MM-DD] [--end-date <YYYY-MM-DD>] '
+            '[--archive <archive dir>]')
 
     
     def __init__(self, positional_args, keyword_args):
@@ -44,8 +55,8 @@ class ExportCommand(Command):
         
         
 def _get_exporter_class(name):
-
     try:
         return _EXPORTER_CLASSES[name]
     except KeyError:
-        raise ValueError('Unrecognized exporter "{:s}".'.format(name))
+        raise CommandSyntaxError(
+            'Unrecognized export type "{:s}".'.format(name))
