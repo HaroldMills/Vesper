@@ -34,7 +34,11 @@ class Recording(object):
     
     @property
     def end_time(self):
-        return self.start_time + datetime.timedelta(seconds=self.duration)
+        length = self.length
+        if length == 0:
+            return None
+        else:
+            return self.start_time + self.span
     
     
     @property
@@ -59,7 +63,7 @@ class Recording(object):
         # (The method might alternatively return `None` for a recording
         # of length zero.)
         #
-        # Alternatively, if we define the duration of a signal to be
+        # Alternatively, we can define the duration of a signal to be
         # its length times its sample period. For this definition the
         # body of this method is as below.
         #
@@ -71,9 +75,23 @@ class Recording(object):
         #
         # I chose to implement the second option for its simplicity.
         #
-        # TODO: Implement the first option as a `span` method?
+        # Addendum: There is an awkwardness to the simpler definition.
+        # The obvious choice for the end time of a signal would seem to
+        # be the time of its last sample, and it seems clear that the
+        # duration of a signal should equal the difference between its
+        # end and start times. Yet with the simpler duration definition
+        # and the obvious end time definition this equality does not hold.
         
         return datetime.timedelta(seconds=self.length / self.sample_rate)
+    
+    
+    @property
+    def span(self):
+        length = self.length
+        if length == 0:
+            return None
+        else:
+            return datetime.timedelta(seconds=(length - 1) / self.sample_rate)
 
 
     @property
