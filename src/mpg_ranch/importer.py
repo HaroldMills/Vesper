@@ -214,6 +214,8 @@ class Importer(object):
         self._bad_file_paths = set()
         self._unreadable_file_paths = set()
         self._num_clips_without_recording_durations = 0
+        self._durationless_recordings = set()
+        self._durationless_recording_file_paths = {}
         self._num_add_errors = 0
         
         self._encountered_station_names = set()
@@ -308,8 +310,7 @@ class Importer(object):
             
             clip_class_name = _correct_clip_class_name(info.clip_class_name)
             
-            if not self._note_recording(info, station, sound, file_path):
-                return
+            self._note_recording(info, station, sound, file_path)
             
             try:
                 self._archive.add_clip(
@@ -352,8 +353,6 @@ class Importer(object):
             # sample rate if and only if we haven't seen it already.
             if recordings.get(key) is None:
                 recordings[key] = (station, file_path)
-                
-            return True
 
         else:
             # duration unknown
@@ -362,11 +361,11 @@ class Importer(object):
             # durations. How do we get recording data into archive for
             # such clips?
             
-            # TODO: Track stations and nights for which recording
-            # durations are unknown.
+            recording = (station.name, start_time)
+            self._durationless_recordings.add(recording)
+            self._durationless_recording_file_paths[recording] = file_path
             
             self._num_clips_without_recording_durations += 1
-            return False
         
         
     def _get_recording_duration(self, clip_info):
@@ -532,7 +531,20 @@ class Importer(object):
         logging.info(
             '{:d} clip add operations failed'.format(self._num_add_errors))
         
-
+        logging.info('')
+        logging.info(
+            '{:d} recordings lacked durations:'.format(
+                len(self._durationless_recordings)))
+        recordings = list(self._durationless_recordings)
+        recordings.sort()
+        self._increase_indentation()
+        for recording in recordings:
+            file_path = self._durationless_recording_file_paths[recording]
+            station_name, start_time = recording
+            text = '{:s} {:s} "{:s}"'.format(
+                station_name, str(start_time), file_path)
+            logging.info(self._indent(text))
+        
 
     def _show_items(self, title, items, show=None):
         
