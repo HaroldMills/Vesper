@@ -74,10 +74,10 @@ def create_utc_datetime(
         dt = datetime.datetime(
             year, month, day, hour, minute, second, microsecond)
         
-        # We specify `is_dst=None` in the following to cause an
-        # exception to be raised if the local time is nonexistent or
-        # ambiguous because of DST. See the "Problems with Localtime"
-        # section of http://pytz.sourceforge.net for more information.
+        # Note that if `is_dst` is `None`, the following will raise
+        # an exception if the time `dt` is nonexistent or ambiguous
+        # because of DST. See the "Problems with Localtime" section
+        # of http://pytz.sourceforge.net for more information.
         try:
             dt = time_zone.localize(dt, is_dst=is_dst)
         except pytz.NonExistentTimeError:
