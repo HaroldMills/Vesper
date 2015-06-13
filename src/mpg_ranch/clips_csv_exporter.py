@@ -500,22 +500,27 @@ class DurationFormat(object):
         
     def format(self, duration):
         
-        seconds = duration.total_seconds()
+        if duration is None:
+            return ''
         
-        hours = int(seconds // 3600)
-        seconds -= hours * 3600
-        
-        minutes = int(seconds // 60)
-        seconds -= minutes * 60
-        
-        seconds = int(round(seconds))
-        
-        duration = self._format.format(hours, minutes, seconds)
-        
-        if self._quote:
-            return '"' + duration + '"'
         else:
-            return duration
+            
+            seconds = duration.total_seconds()
+            
+            hours = int(seconds // 3600)
+            seconds -= hours * 3600
+            
+            minutes = int(seconds // 60)
+            seconds -= minutes * 60
+            
+            seconds = int(round(seconds))
+            
+            duration = self._format.format(hours, minutes, seconds)
+            
+            if self._quote:
+                return '"' + duration + '"'
+            else:
+                return duration
 
     
 class LowerCaseFormat(object):
@@ -556,11 +561,14 @@ class TimeFormat(object):
         
         
     def format(self, time):
-        time = time.strftime(self._format)
-        if self._quote:
-            return '"' + time + '"'
+        if time is None:
+            return ''
         else:
-            return time
+            time = time.strftime(self._format)
+            if self._quote:
+                return '"' + time + '"'
+            else:
+                return time
     
     
 _FORMAT_CLASSES = dict((c.name, c) for c in [
