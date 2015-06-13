@@ -113,6 +113,14 @@ columns:
 # TODO: Write file in chunks to avoid accumulating an unreasonable
 # number of table lines in memory.
 
+# TODO: Create a format superclass that provides a boolean `quote-values`
+# option. (Or perhaps there should be a third option to quote only if
+# needed.
+
+# TODO: Provide exporter-level control of CSV options, like the
+# separator and quote characters, and whether or not values are quoted
+# by default. Provide a function to escape quotes as needed.
+
 
 class ClipsCsvExporter(ClipVisitor):
     
