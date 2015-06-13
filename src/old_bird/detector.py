@@ -321,6 +321,10 @@ def _get_station_name_changes():
         return {}
                 
                 
+# We assume that the time zone is US/Mountain for all MPG Ranch detections.
+_MPG_RANCH_TIME_ZONE = pytz.timezone('US/Mountain')
+
+
 def _parse_mpg_ranch_input_file_name(file_name):
     
     m = _INPUT_FILE_NAME_RE.match(file_name)
@@ -331,17 +335,9 @@ def _parse_mpg_ranch_input_file_name(file_name):
             '<station name>_<yyyymmdd>_<hhmmss>.wav'))
         
     station_name, year, month, day, hour, minute, second = m.groups()
-    start_time = time_utils.parse_date_time(
-        year, month, day, hour, minute, second)
     
-    # Convert naive monitoring start time to UTC. We specify `is_dst=None`
-    # here for the `localize` method so it will raise an exception if the
-    # naive time is either nonexistent or ambiguous. See the
-    # "Problems with Localtime" section of the `pytz` documentation at
-    # http://pytz.sourceforge.net for more.
-    mountain = pytz.timezone('US/Mountain')
-    start_time = mountain.localize(start_time, is_dst=None)
-    start_time = start_time.astimezone(pytz.utc)
+    start_time = time_utils.create_utc_datetime(
+        year, month, day, hour, minute, second, _MPG_RANCH_TIME_ZONE)
     
     return station_name, start_time
         
