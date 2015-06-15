@@ -185,9 +185,17 @@ class DetectionArchiver(DetectionHandler):
         
         
     def on_file_start(self, file_path):
+        
         file_name = os.path.basename(file_path)
-        self._station_name, self.file_start_time = \
+        self._station_name, self._file_start_time = \
             _parse_mpg_ranch_input_file_name(file_name)
+            
+        (_, _, sample_rate, length, _) = \
+            audio_file_utils.get_wave_file_info(file_path)
+            
+        self._archive_task_serializer.execute(
+            self._archive.add_recording, self._station_name,
+            self._file_start_time, length, sample_rate)
             
             
     def on_detection(self, clip):
@@ -336,8 +344,11 @@ def _parse_mpg_ranch_input_file_name(file_name):
         
     station_name, year, month, day, hour, minute, second = m.groups()
     
+    t = time_utils.parse_date_time(year, month, day, hour, minute, second)
+    
     start_time = time_utils.create_utc_datetime(
-        year, month, day, hour, minute, second, _MPG_RANCH_TIME_ZONE)
+        t.year, t.month, t.day, t.hour, t.minute, t.second,
+        time_zone=_MPG_RANCH_TIME_ZONE)
     
     return station_name, start_time
         
@@ -647,7 +658,7 @@ _DETECTION_HANDLER_CLASSES = {
 
 def _get_detection_handler(keyword_args):
     
-    handler_names = keyword_args.get('detection-handler', 'Archiver')
+    handler_names = keyword_args.get('detection-handler', ('Archiver',))
     
     if len(handler_names) != 1:
         raise CommandSyntaxError(

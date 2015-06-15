@@ -64,14 +64,22 @@ def _get_clip_query_tuples(
         station_names, detector_names, clip_class_names, start_date, end_date,
         archive):
     
+    # When station names and/or detector names are not specified, we
+    # return a list of all of them. When clip class names are not
+    # specified, however, we return a tuple containing just `None`.
+    # This asymmetry is because in order to keep archive clip query
+    # results within reasonable size limits we want to query for
+    # clips one combination of station, detector, and night at a
+    # time. However, we do not mind querying for all clip classes
+    # at once.
+
     if station_names is None:
         station_names = tuple(s.name for s in archive.stations)
     
     if detector_names is None:
         detector_names = tuple(d.name for d in archive.detectors)
         
-    if clip_class_names is None:
-        clip_class_names = tuple(c.name for c in archive.clip_classes)
+    clip_class_names = _get(clip_class_names, (None,))
     
     start_date = _get(start_date, archive.start_night)
     end_date = _get(end_date, archive.end_night)

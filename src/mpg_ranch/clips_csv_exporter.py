@@ -118,8 +118,9 @@ columns:
 # needed.
 
 # TODO: Provide exporter-level control of CSV options, like the
-# separator and quote characters, and whether or not values are quoted
-# by default. Provide a function to escape quotes as needed.
+# separator and quote characters, the `None` value string, and whether
+# or not values are quoted by default. Provide a function to escape
+# quotes as needed.
 
 
 class ClipsCsvExporter(ClipVisitor):
@@ -286,14 +287,14 @@ class DuplicateCallMeasurement(object):
         
         class_name = clip.clip_class_name
         
-        if not class_name.startswith('Call.'):
-            return False
+        if class_name is None or not class_name.startswith('Call.'):
+            return None
         
         else:
             # clip is a call
             
             if class_name in self._ignored_class_names:
-                return False
+                return None
             
             else:
                 # call class should not be ignored
@@ -321,26 +322,21 @@ class ElapsedStartTimeMeasurement(object):
     
     def measure(self, clip):
         recording = clip.recording
-        if recording is not None:
-            return clip.start_time - recording.start_time
-        else:
+        if recording is None:
             return None
+        else:
+            return clip.start_time - recording.start_time
         
             
-class EmptyMeasurement(object):
-    
-    name = 'Empty'
-    
-    def measure(self, clip):
-        return ''
-    
-    
 class FileNameMeasurement(object):
     
     name = 'File Name'
     
     def measure(self, clip):
-        return os.path.basename(clip.file_path)
+        if clip.file_path is None:
+            return None
+        else:
+            return os.path.basename(clip.file_path)
     
     
 class NightMeasurement(object):
@@ -357,10 +353,10 @@ class RecordingDurationMeasurement(object):
     
     def measure(self, clip):
         recording = clip.recording
-        if recording is not None:
-            return recording.duration
-        else:
+        if recording is None:
             return None
+        else:
+            return recording.duration
         
         
 class RecordingStartTimeMeasurement(object):
@@ -369,11 +365,11 @@ class RecordingStartTimeMeasurement(object):
     
     def measure(self, clip):
         recording = clip.recording
-        if recording is not None:
+        if recording is None:
+            return None
+        else:
             time_zone = recording.station.time_zone
             return recording.start_time.astimezone(time_zone)
-        else:
-            return None
     
     
 # TODO: Implement more general time rounding in `time_utils`.
@@ -421,7 +417,6 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     DetectorMeasurement,
     DuplicateCallMeasurement,
     ElapsedStartTimeMeasurement,
-    EmptyMeasurement,
     FileNameMeasurement,
     NightMeasurement,
     RecordingDurationMeasurement,
@@ -432,14 +427,26 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
 ])
 
 
+_NONE_STRING = ''
+
+
 class BirdMigrationSeasonFormat(object):
     
     name = 'Bird Migration Season'
         
     def format(self, date):
-        return 'Fall' if date.month >= 7 else 'Spring'
+        if date is None:
+            return _NONE_STRING
+        else:
+            return 'Fall' if date.month >= 7 else 'Spring'
     
     
+_DEFAULT_BOOLEAN_VALUES = {
+    True: 'True',
+    False: 'False'
+}
+
+
 class BooleanFormat(object):
     
     name = 'Boolean'
@@ -447,10 +454,13 @@ class BooleanFormat(object):
     def __init__(self, parameters=None):
         if parameters is None:
             parameters = {}
-        self._values = parameters.get('values', {True: 'True', False: 'False'})
+        self._values = parameters.get('values', _DEFAULT_BOOLEAN_VALUES)
         
     def format(self, value):
-        return self._values[value]
+        if value is None:
+            return _NONE_STRING
+        else:
+            return self._values[value]
     
     
 class CallClipClassFormat(object):
@@ -465,11 +475,11 @@ class CallClipClassFormat(object):
             
     def format(self, clip_class_name):
         prefix = 'Call.'
-        if clip_class_name.startswith(prefix):
+        if clip_class_name is None or not clip_class_name.startswith(prefix):
+            return _NONE_STRING
+        else:
             name = clip_class_name[len(prefix):]
             return self._mapping.get(name, name.lower())
-        else:
-            return ''
         
            
 class DurationFormat(object):
@@ -501,7 +511,7 @@ class DurationFormat(object):
     def format(self, duration):
         
         if duration is None:
-            return ''
+            return _NONE_STRING
         
         else:
             
@@ -528,7 +538,10 @@ class LowerCaseFormat(object):
     name = 'Lower Case'
     
     def format(self, value):
-        return value.lower()
+        if value is None:
+            return _NONE_STRING
+        else:
+            return value.lower()
     
     
 class MappingFormat(object):
@@ -542,7 +555,10 @@ class MappingFormat(object):
             self._mapping = parameters.get('mapping', {})
             
     def format(self, value):
-        return self._mapping.get(value, value)
+        if value is None:
+            return _NONE_STRING
+        else:
+            return self._mapping.get(value, value)
     
     
 class TimeFormat(object):
@@ -562,7 +578,7 @@ class TimeFormat(object):
         
     def format(self, time):
         if time is None:
-            return ''
+            return _NONE_STRING
         else:
             time = time.strftime(self._format)
             if self._quote:
