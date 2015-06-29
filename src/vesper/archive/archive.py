@@ -61,9 +61,16 @@ _RecordingTuple = namedtuple(
 _ClipTuple = namedtuple(
     '_ClipTuple',
     ('id', 'station_id', 'detector_id', 'start_time', 'night', 'duration',
+     'selection_start_index', 'selection_length',
      'clip_class_id', 'clip_class_name_0_id', 'clip_class_name_1_id',
      'clip_class_name_2_id'))
 
+
+# TODO: Replace separate recording, clip, and selection abstractions
+# with a single sound abstraction. Add sound tags and/or key/value
+# stores to support features like sound sets and multi-user classification.
+# Where do stations and detectors fit into this? How does such an
+# organization scale?
 
 # TODO: Review SQL for vulnerability to injection attacks. Would it be
 # possible to use ?s everywhere? String formatting can be safe, but it
@@ -124,6 +131,8 @@ _CREATE_CLIP_TABLE_SQL = '''
         start_time datetime,
         night integer,
         duration real,
+        selection_start_index integer,
+        selection_length integer,
         clip_class_id integer,
         clip_class_name_0_id integer,
         clip_class_name_1_id integer,
@@ -163,6 +172,10 @@ _SELECT_CLIP_SQL = (
 _CLASSIFY_CLIP_SQL = (
     'update Clip set clip_class_id = ?, clip_class_name_0_id = ?, '
     'clip_class_name_1_id = ?, clip_class_name_2_id = ? where id = ?')
+
+_SET_CLIP_SELECTION_SQL = (
+    'update Clip set selection_start_index = ?, selection_length = ? '
+    'where id = ?')
 
 
 class Archive(object):
@@ -615,6 +628,8 @@ class Archive(object):
             start_time=_format_time(start_time),
             night=night,
             duration=duration,
+            selection_start_index=None,
+            selection_length=None,
             clip_class_id=clip_class_id,
             clip_class_name_0_id=ids[0],
             clip_class_name_1_id=ids[1],
@@ -630,10 +645,11 @@ class Archive(object):
             raise ValueError(f.format(station_name, detector_name, t))
         
         clip_id = self._cursor.lastrowid
+        selection = None
         
         clip = _Clip(
             self, clip_id, station, detector_name, start_time, duration,
-            clip_class_name)
+            selection, clip_class_name)
         
         self._create_clip_dir_if_needed(clip.file_path)
          
@@ -895,9 +911,14 @@ class Archive(object):
             
         start_time = _parse_time(clip.start_time)
         
+        if clip.selection_start_index is None:
+            selection = None
+        else:
+            selection = (clip.selection_start_index, clip.selection_length)
+        
         return _Clip(
-            self, clip.id, station, detector_name, start_time,
-            clip.duration, clip_class_name)
+            self, clip.id, station, detector_name, start_time, clip.duration,
+            selection, clip_class_name)
         
         
     def get_clip(self, station_name, detector_name, start_time):
@@ -929,6 +950,19 @@ class Archive(object):
         
         values = [class_id] + component_ids + [clip_id]
         self._cursor.execute(_CLASSIFY_CLIP_SQL, values)
+        self._conn.commit()
+        
+        
+    def _set_clip_selection(self, clip_id, selection):
+        
+        if selection is None:
+            start_index = None
+            length = None
+        else:
+            start_index, length = selection
+            
+        values = (start_index, length, clip_id)
+        self._cursor.execute(_SET_CLIP_SELECTION_SQL, values)
         self._conn.commit()
         
         
@@ -1126,7 +1160,7 @@ class _Clip(object):
     
     def __init__(
             self, archive, clip_id, station, detector_name, start_time,
-            duration, clip_class_name=None):
+            duration, selection=None, clip_class_name=None):
         
         self._archive = archive
         self._id = clip_id
@@ -1134,6 +1168,7 @@ class _Clip(object):
         self.detector_name = detector_name
         self.start_time = start_time
         self._duration = duration
+        self._selection = selection
         self._clip_class_name = clip_class_name
         
         self._file_path = None
@@ -1246,6 +1281,17 @@ class _Clip(object):
 
     def play(self):
         sound_utils.play_sound_file(self.file_path)
+        
+        
+    @property
+    def selection(self):
+        return self._selection
+    
+    
+    @selection.setter
+    def selection(self, selection):
+        self._archive._set_clip_selection(self._id, selection)
+        self._selection = selection
         
 
 def _create_year_dir_name(year):

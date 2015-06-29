@@ -59,7 +59,39 @@ _SHOW_AUX_FIGURE = False
 _AUX_FIGURE_TYPE = 'Spectrum'
 # _AUX_FIGURE_TYPE = 'Instantaneous Frequency'
 
+_SELECTION_COLOR = (1, 0, 0, .15)
 
+
+class _SelectionEventHandler(object):
+    
+    
+    def __init__(self, figure):
+        self._figure = figure
+        self._start_time = None
+        
+        
+    def on_button_press(self, event):
+
+        clip = self._figure.clip
+        button = event.button
+        
+        if button == 1:
+            time = event.xdata
+            if self._start_time is None:
+                self._start_time = time
+            else:
+                sample_rate = clip.sound.sample_rate
+                start_index = int(round(self._start_time * sample_rate))
+                end_index = int(round(time * sample_rate))
+                length = end_index - start_index + 1
+                clip.selection = (start_index, length)
+                self._start_time = None
+            
+        elif button == 3:
+            self._start_time = None
+            clip.selection = None
+            
+        
 class SpectrogramClipFigure(ClipFigure):
     
     
@@ -78,6 +110,13 @@ class SpectrogramClipFigure(ClipFigure):
         self._measurement_line = None
         self._clip_text = _create_clip_text(self._axes)
         self._play_button = ClipFigurePlayButton(self)
+        
+        self._show_selections = \
+            prefs.get('clipFigure.showSelections', False)
+            
+        if self._show_selections:
+            self._selection_polygon = None
+            self._selection_event_handler = _SelectionEventHandler(self)
 
         # Note that axis rendering is very expensive. Perhaps we should
         # draw our own grid with a collection of line2D artists? Also
@@ -118,8 +157,35 @@ class SpectrogramClipFigure(ClipFigure):
             
         self._update_clip_text()
         self._play_button.reset()
+        if self._show_selections:
+            self._update_selection()
         
         
+    def _update_selection(self):
+        
+        if self.clip is None:
+            return
+        
+        axes = self._axes
+        
+        if self._selection_polygon is not None:
+            axes.patches.remove(self._selection_polygon)
+            self._selection_polygon = None
+            
+        selection = self.clip.selection
+        
+        if selection is not None:
+        
+            start_index, length = selection
+            
+            sample_rate = self.clip.sound.sample_rate
+            start_time = start_index / sample_rate
+            end_time = start_time + (length - 1) / sample_rate
+            
+            self._selection_polygon = axes.axvspan(
+                start_time, end_time, color=_SELECTION_COLOR)
+                
+                
     def _create_waveform_line(self):
 
         axes = self._axes
@@ -282,6 +348,9 @@ class SpectrogramClipFigure(ClipFigure):
     def _on_button_press(self, event):
         self._update_clip_text(event)
         self._play_button._on_button_press(event)
+        if self._show_selections:
+            self._selection_event_handler.on_button_press(event)
+            self._update_selection()
 #        _show_event(event, 'SpectrogramClipFigure._on_button_press')
             
             
