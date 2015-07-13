@@ -5,10 +5,12 @@ from __future__ import print_function
 
 from mpg_ranch.clips_csv_exporter \
     import ClipsCsvExporter as MpgRanchClipsCsvExporter
+from vesper.vcl.call_noise_segments_exporter import CallNoiseSegmentsExporter
 from vesper.vcl.command import Command, CommandSyntaxError
 
 
 _EXPORTER_CLASSES = {
+    'Call/Noise Segments': CallNoiseSegmentsExporter,
     'MPG Ranch Clips CSV': MpgRanchClipsCsvExporter
 }
 
