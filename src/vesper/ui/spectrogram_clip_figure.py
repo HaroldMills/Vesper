@@ -59,6 +59,7 @@ _SHOW_AUX_FIGURE = False
 _AUX_FIGURE_TYPE = 'Spectrum'
 # _AUX_FIGURE_TYPE = 'Instantaneous Frequency'
 
+_SELECTION_START_COLOR = (1, 0, 0, 1)
 _SELECTION_COLOR = (1, 0, 0, .15)
 
 
@@ -67,7 +68,7 @@ class _SelectionEventHandler(object):
     
     def __init__(self, figure):
         self._figure = figure
-        self._start_time = None
+        self.start_time = None
         
         
     def on_button_press(self, event):
@@ -77,18 +78,18 @@ class _SelectionEventHandler(object):
         
         if button == 1:
             time = event.xdata
-            if self._start_time is None:
-                self._start_time = time
+            if self.start_time is None:
+                self.start_time = time
             else:
                 sample_rate = clip.sound.sample_rate
-                start_index = int(round(self._start_time * sample_rate))
+                start_index = int(round(self.start_time * sample_rate))
                 end_index = int(round(time * sample_rate))
                 length = end_index - start_index + 1
                 clip.selection = (start_index, length)
-                self._start_time = None
+                self.start_time = None
             
         elif button == 3:
-            self._start_time = None
+            self.start_time = None
             clip.selection = None
             
         
@@ -184,7 +185,18 @@ class SpectrogramClipFigure(ClipFigure):
             
             self._selection_polygon = axes.axvspan(
                 start_time, end_time, color=_SELECTION_COLOR)
+            
+        else:
+            # selection is None
+            
+            start_time = self._selection_event_handler.start_time
+            
+            if start_time is not None:
+                # have new selection start time
                 
+                self._selection_polygon = axes.axvspan(
+                    start_time, start_time, color=_SELECTION_START_COLOR)
+            
                 
     def _create_waveform_line(self):
 
@@ -348,7 +360,7 @@ class SpectrogramClipFigure(ClipFigure):
     def _on_button_press(self, event):
         self._update_clip_text(event)
         self._play_button._on_button_press(event)
-        if self._show_selections:
+        if self._show_selections and not self._play_button._contains(event):
             self._selection_event_handler.on_button_press(event)
             self._update_selection()
 #        _show_event(event, 'SpectrogramClipFigure._on_button_press')
