@@ -12,6 +12,7 @@ def _main():
         ('help', 'help'),
         ('help', 'classify'),
         ('help', 'classify', 'MPG Ranch Outside Clip Classifier'),
+        ('help', 'create'),
         ('help', 'detect'),
         ('help', 'detect', 'Old Bird'),
         ('help', 'export'),
@@ -19,7 +20,6 @@ def _main():
         ('help', 'export', 'MPG Ranch Clips CSV'),
         ('help', 'import'),
         ('help', 'import', 'MPG Ranch Importer'),
-        ('help', 'init'),
     )
     
     for case in cases:

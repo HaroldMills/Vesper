@@ -41,11 +41,11 @@ def load_extensions():
     from vesper.vcl.call_noise_segments_exporter \
         import CallNoiseSegmentsExporter
     from vesper.vcl.classify_command import ClassifyCommand
+    from vesper.vcl.create_command import CreateCommand
     from vesper.vcl.detect_command import DetectCommand
     from vesper.vcl.export_command import ExportCommand
     from vesper.vcl.help_command import HelpCommand
     from vesper.vcl.import_command import ImportCommand
-    from vesper.vcl.init_command import InitCommand
 
     global _extensions
     
@@ -57,11 +57,11 @@ def load_extensions():
         
         'VCL Command': (
             ClassifyCommand,
+            CreateCommand,
             DetectCommand,
             ExportCommand,
             HelpCommand,
-            ImportCommand,
-            InitCommand
+            ImportCommand
         ),
         
         'VCL Detector': (

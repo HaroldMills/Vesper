@@ -89,7 +89,7 @@ def _get_specific_help(positional_args, keyword_args):
     command_class = command_classes.get(command_name)
     
     if command_class is None:
-        return 'Unrecognized command "{:s}".'
+        return 'Unrecognized command "{:s}".'.format(command_name)
     
     else:
         try:

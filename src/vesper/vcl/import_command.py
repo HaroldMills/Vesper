@@ -8,12 +8,11 @@ import vesper.util.extension_manager as extension_manager
 # RESUME:
 # * Refactor help functions in classify, detect, export, and import commands,
 #   moving common code to extension manager where that makes sense.
-# * Rename `init` command to `create`.
 # * Add example YAML file to `create` documentation.
 # * Describe MPG Ranch Renamer detection handler in more detail.
 # * Review present and future commands. Should `export` and `import` commands
 #   have a positional argument indicating what type of object is being
-#   exported or imported, or not?
+#   exported or imported, or not? If not, remove TODO from `export` command.
 
 
 class ImportCommand(Command):

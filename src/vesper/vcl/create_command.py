@@ -1,4 +1,4 @@
-"""Module containing class `InitCommand`."""
+"""Module containing class `CreateCommand`."""
 
 
 import os
@@ -13,7 +13,7 @@ import vesper.vcl.vcl_utils as vcl_utils
 
 
 _HELP = '''
-init [<keyword arguments>]
+create [<keyword arguments>]
 
 Creates a new archive.
 '''.strip()
@@ -41,12 +41,12 @@ _ARGS = '''
 '''
 
 
-class InitCommand(Command):
+class CreateCommand(Command):
     
     """vcl command that creates a new archive."""
     
     
-    name = 'init'
+    name = 'create'
     
     
     @staticmethod
@@ -57,7 +57,7 @@ class InitCommand(Command):
     
     
     def __init__(self, positional_args, keyword_args):
-        super(InitCommand, self).__init__()
+        super(CreateCommand, self).__init__()
         self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
         self._yaml_file_path = keyword_args.get('archive-data')
         
