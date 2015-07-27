@@ -13,10 +13,11 @@ import re
 import pytz
 
 from vesper.archive.recording import Recording
-from vesper.vcl.command import CommandSyntaxError
 import vesper.archive.recording_utils as recording_utils
 import vesper.util.sound_utils as sound_utils
+import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
+import vesper.vcl.vcl_utils as vcl_utils
 
 
 # TODO: Implement an indenting `logging` message formatter, so that
@@ -178,27 +179,53 @@ _IGNORED_FILE_NAMES = frozenset(
     ['.DS_Store', 'Thumbs.db', 'desktop.ini', 'keylist.txt'])
 
 
+_HELP = '''
+<keyword arguments>
+
+Imports MPG Ranch 2012-2015 nocturnal flight call data into an archive.
+'''.strip()
+
+
+_ARGS = '''
+- name: --input-dir
+  required: true
+  value description: directory path
+  documentation: |
+      The directory containing the data to import.
+'''
+
+
 class Importer(object):
     
-    """Importer for MPG Ranch 2012-2014 nocturnal flight call data."""
+    """Importer for MPG Ranch 2012-2015 nocturnal flight call data."""
     
     
-    def __init__(self, positional_args, keyword_args):
-        
-        super(Importer, self).__init__()
-        
-        # TODO: Make this more generally available.
-        if len(positional_args) != 0:
-            s = 's' if len(positional_args) > 1 else ''
-            args = ' '.join(positional_args)
-            message = 'Extra positional argument{:s}: {:s}'.format(s, args)
-            raise CommandSyntaxError(message)
+    name = "MPG Ranch Importer"
+    
+    
+    arg_descriptors = \
+        vcl_utils.parse_command_args_yaml(_ARGS) + \
+        vcl_utils.ARCHIVE_ARG_DESCRIPTORS
 
     
-    def import_(self, source_dir_path, archive):
+    @staticmethod
+    def get_help(positional_args, keyword_args):
+        name = text_utils.quote_if_needed(Importer.name)
+        args_help = vcl_utils.create_command_args_help(
+            Importer.arg_descriptors)
+        return name + ' ' + _HELP + '\n\n' + args_help
+
+    
+    def __init__(self, positional_args, keyword_args):
+        super(Importer, self).__init__()
+        self._input_dir_path = vcl_utils.get_required_keyword_arg(
+            'input-dir', keyword_args)
+        self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
+
+    
+    def import_(self):
         
-        self._source_dir_path = source_dir_path
-        self._archive = archive
+        archive = vcl_utils.open_archive(self._archive_dir_path)
 
         self._indent_level = 0
         self._indent_size = 4
@@ -223,8 +250,8 @@ class Importer(object):
         self._encountered_clip_class_names = set()
         self._encountered_recordings = defaultdict(dict)
         
-        dir_names = [os.path.basename(source_dir_path)]
-        self._walk(source_dir_path, dir_names)
+        dir_names = [os.path.basename(self._input_dir_path)]
+        self._walk(self._input_dir_path, dir_names)
         
         self._recording_mergers = []
         self._add_recordings()
@@ -482,7 +509,7 @@ class Importer(object):
     
     
     def _rel(self, path):
-        return path[len(self._source_dir_path) + 1:]
+        return path[len(self._input_dir_path) + 1:]
     
     
     def _visit_dir(self, dir_path, dir_names):

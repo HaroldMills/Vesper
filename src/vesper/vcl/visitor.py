@@ -14,6 +14,9 @@ class Visitor(object):
     """
     
     
+    arg_descriptors = vcl_utils.ARCHIVE_ARG_DESCRIPTORS
+
+
     def __init__(self, positional_args, keyword_args):
         super(Visitor, self).__init__()
         self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)

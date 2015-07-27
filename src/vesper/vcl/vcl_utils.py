@@ -5,12 +5,132 @@ import logging
 import os
 import re
 import sys
+import yaml
 
 from vesper.archive.archive import Archive
+from vesper.util.bunch import Bunch
 from vesper.vcl.command import CommandExecutionError, CommandSyntaxError
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 
+
+def parse_command_args_yaml(s):
+    args = yaml.load(s)
+    args = _transform_args(args)
+    descriptors = [Bunch(**a) for a in args]
+    return descriptors
+
+
+def _transform_args(args):
+    return [_transform_arg(a) for a in args]
+
+
+def _transform_arg(arg):
+    result = dict((k.replace(' ', '_'), v) for k, v in arg.iteritems())
+    result['name'] = result['name'].replace(' ', '-')
+    return result
+                
+                
+_ARCHIVE_ARGS = '''
+
+- name: --archive
+  required: false
+  value description: directory path
+  documentation: |
+      The archive on which to operate.
+      Default: The archive of current directory.
+'''
+
+
+ARCHIVE_ARG_DESCRIPTORS = parse_command_args_yaml(_ARCHIVE_ARGS)
+
+
+_CLIP_QUERY_ARGS = '''
+
+- name: --stations
+  required: false
+  value description: station names
+  documentation: |
+      The stations of the clips to process.
+      Default: All stations.
+  
+- name: --detectors
+  required: false
+  value description: detector names
+  documentation: |
+      The detectors of the clips to process.
+      Default: All detectors.
+  
+- name: --night
+  required: false
+  value description: YYYY-MM-DD
+  documentation: |
+      The night of the clips to process.
+      The night is specified by the date on which it began.
+      Specifying this argument is the same as specifying the --start-night
+      and --end-night arguments with the same date. If this argument is
+      provided, neither of those arguments should be provided.
+  
+- name: --start-night
+  required: false
+  value description: YYYY-MM-DD
+  documentation: |
+      The start night of the clips to process.
+      The night is specified by the date on which it began.
+      Default: The start night of the archive.
+  
+- name: --end-night
+  required: false
+  value description: YYYY-MM-DD
+  documentation: |
+      The end night of the clips to process.
+      The night is specified by the date on which it began.
+      Default: The end night of the archive.
+  
+- name: --clip-classes
+  required: false
+  value description: clip class names
+  documentation: |
+      The clip classes of the clips to process.
+      Default: All clip classes.
+'''
+
+
+CLIP_QUERY_ARG_DESCRIPTORS = parse_command_args_yaml(_CLIP_QUERY_ARGS)
+
+
+def create_command_args_help(descriptors):
+    
+    required_args = [d for d in descriptors if d.required]
+    required_text = _create_args_help(required_args, 'Required')
+    
+    optional_args = [d for d in descriptors if not d.required]
+    optional_text = _create_args_help(optional_args, 'Optional')
+    
+    return (required_text + '\n\n' + optional_text).strip()
+
+
+def _create_args_help(descriptors, title_prefix):
+    title = title_prefix + ' keyword arguments:'
+    if len(descriptors) == 0:
+        args = ['    None.']
+        return title + '\n    None.'
+    else:
+        args = [_create_arg_help(d) for d in descriptors]
+        return '\n\n'.join([title] + args)
+
+
+def _create_arg_help(d):
+    header = '    {:s} <{:s}>'.format(d.name, d.value_description)
+    try:
+        doc = d.documentation
+    except AttributeError:
+        doc_lines = []
+    else:
+        doc_lines = doc.strip().split('\n')
+        doc_lines = ['        ' + line for line in doc_lines]
+    return '\n'.join([header] + doc_lines)
+        
 
 # TODO: Improve argument parsing, with such things as declarative argument
 # specification by command classes, type checking, and missing and extra

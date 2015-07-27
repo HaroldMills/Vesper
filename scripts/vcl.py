@@ -17,22 +17,10 @@ import os
 import sys
 
 from vesper.vcl.command import CommandSyntaxError, CommandExecutionError
-from vesper.vcl.classify_command import ClassifyCommand
-from vesper.vcl.detect_command import DetectCommand
-from vesper.vcl.export_command import ExportCommand
-from vesper.vcl.import_command import ImportCommand
-from vesper.vcl.init_command import InitCommand
 import vesper.vcl.vcl_utils as vcl_utils
+import vesper.util.extension_manager as extension_manager
 import vesper.util.vesper_path_utils as vesper_path_utils
 
-
-_COMMAND_CLASSES = dict((c.name, c) for c in (
-    ClassifyCommand,
-    DetectCommand,
-    ExportCommand,
-    ImportCommand,
-    InitCommand
-))
 
 _LOG_FILE_NAME = 'vcl.log'
 
@@ -111,20 +99,24 @@ def _main():
     
     _configure_logging()
     
-    if len(sys.argv) < 2:
-        _usage()
+    n = len(sys.argv)
+    if n < 2:
+        _usage('No command specified.')
         
+    command_classes = extension_manager.get_extensions('VCL Command')
+    command_name = sys.argv[1]
+    
     try:
-        klass = _COMMAND_CLASSES[sys.argv[1]]
+        command_class = command_classes[command_name]
     except KeyError:
-        _usage()
+        _usage('Unrecognized command "{:s}".'.format(command_name))
         
     # TODO: Perhaps command handler should parse arguments (see below)
     positional_args, keyword_args = \
         vcl_utils.parse_command_line_args(sys.argv[2:])
     
     try:
-        command = klass(positional_args, keyword_args)
+        command = command_class(positional_args, keyword_args)
     except CommandSyntaxError as e:
         vcl_utils.log_fatal_error('Command syntax error: {:s}'.format(str(e)))
         
@@ -138,7 +130,7 @@ def _main():
     if success:
         suffix = 'no errors.'
     else:
-        suffix = 'one or more errors. See log for details.'
+        suffix = 'one or more non-fatal errors. See log for details.'
         
     logging.info(
         'Command "{:s}" completed with {:s}'.format(command.name, suffix))
@@ -169,20 +161,35 @@ def _configure_logging():
     logging.getLogger('').addHandler(handler)
     
     
-def _usage():
+def _usage(message):
     
-    # TODO: Move help strings to command classes.
-    message = '''
-usage: vcl help
-       vcl init <YAML file> [--archive <archive dir>]
-       vcl import <importer> <source dir> [--archive <archive dir>]
-       vcl detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> [--archive <archive dir>]
-       vcl detect "Old Bird" --detectors <detector names> --input-mode File --input-paths <input files/dirs> --detection-handler "MPG Ranch Renamer"
+    command_classes = extension_manager.get_extensions('VCL Command')
+    
+    try:
+        command_class = command_classes['help']
+        
+    except KeyError:
+        
+        text = '''
+Usage: vcl <command> [<positional arguments>] [<keyword arguments>]
+    
+Available commands:
 '''.strip()
-
-    print(message, file=sys.stderr)
-    sys.exit(1)
     
+        command_names = command_classes.keys()
+        command_names.sort()
+        command_names = '\n'.join(('    ' + n) for n in command_names)
+        
+        text += '\n' + command_names + '\n'
+        
+        print(text)
+    
+    else:
+        command = command_class([], {})
+        command.execute()
+
+    vcl_utils.log_fatal_error(message)
+        
     
 if __name__ == '__main__':
     _main()

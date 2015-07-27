@@ -1,6 +1,13 @@
 """Utility functions pertaining to text."""
 
 
+def quote_if_needed(s):
+    if s.find(' ') != -1:
+        return '"' + s + '"'
+    else:
+        return s
+    
+    
 def format_number(x):
     
     # Formats a nonnegative number either as an integer if it rounds to

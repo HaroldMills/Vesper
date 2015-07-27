@@ -8,19 +8,77 @@ import random
 import h5py
 
 from vesper.vcl.clip_visitor import ClipVisitor
+import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
 
 
-class CallNoiseSegmentsExporter(ClipVisitor):
+_HELP = '''
+<keyword arguments>
+
+Exports call and noise segments of a specified duration to an HDF5 file.
+
+The segments are extracted from call clips that include selections of
+at least the specified duration. For each such clip, one call segment
+is extracted from the selection, and one noise segment is extracted
+from the portion of the clip that precedes the selection.
+'''.strip()
+
+
+_ARGS = '''
+
+- name: --min-segment-spacing
+  required: false
+  value description: seconds
+        
+- name: --output-file
+  required: true
+  value description: output file path
+  
+- name: --segment-duration
+  required: true
+  value description: seconds
+  
+'''
+
+
+class CallNoiseSegmentsExporter(object):
+
+
+    name = 'Call/Noise Segments'
+    
+        
+    @staticmethod
+    def get_help(positional_args, keyword_args):
+        name = text_utils.quote_if_needed(CallNoiseSegmentsExporter.name)
+        arg_descriptors = _ClipVisitor.arg_descriptors
+        args_help = vcl_utils.create_command_args_help(arg_descriptors)
+        return name + ' ' + _HELP + '\n\n' + args_help
+
+    
+    def __init__(self, positional_args, keyword_args):
+        super(CallNoiseSegmentsExporter, self).__init__()
+        self._clip_visitor = _ClipVisitor(positional_args, keyword_args)
+        
+        
+    def export(self):
+        self._clip_visitor.visit_clips()
+        return True
+        
+        
+class _ClipVisitor(ClipVisitor):
+    
+    
+    arg_descriptors = \
+        vcl_utils.parse_command_args_yaml(_ARGS) + \
+        ClipVisitor.arg_descriptors
 
 
     def __init__(self, positional_args, keyword_args):
         
-        super(CallNoiseSegmentsExporter, self).__init__(
-            positional_args, keyword_args)
+        super(_ClipVisitor, self).__init__(positional_args, keyword_args)
         
         self._file_path = vcl_utils.get_required_keyword_arg(
-            'output-path', keyword_args)[0]
+            'output-file', keyword_args)[0]
             
         self._segment_dur = float(
             vcl_utils.get_required_keyword_arg(
@@ -29,10 +87,7 @@ class CallNoiseSegmentsExporter(ClipVisitor):
         self._min_segment_spacing = float(
             keyword_args.get('min-segment-spacing', ('0',))[0])
         
-        
-    export = ClipVisitor.visit_clips
-        
-        
+
     def begin_visits(self):
         
         # It is important to provide the random number generator with

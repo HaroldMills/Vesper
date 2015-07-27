@@ -3,16 +3,13 @@
     
 from __future__ import print_function
 
-from mpg_ranch.clips_csv_exporter \
-    import ClipsCsvExporter as MpgRanchClipsCsvExporter
-from vesper.vcl.call_noise_segments_exporter import CallNoiseSegmentsExporter
 from vesper.vcl.command import Command, CommandSyntaxError
+import vesper.util.extension_manager as extension_manager
 
 
-_EXPORTER_CLASSES = {
-    'Call/Noise Segments': CallNoiseSegmentsExporter,
-    'MPG Ranch Clips CSV': MpgRanchClipsCsvExporter
-}
+# TODO: Support export of different types of objects via subcommands,
+# e.g. `export clips "MPG Ranch Clips CSV"` rather than
+# `export "MPG Ranch Clips CSV"`
 
 
 class ExportCommand(Command):
@@ -24,18 +21,8 @@ class ExportCommand(Command):
     
     
     @staticmethod
-    def get_help_text():
-        # TODO: Get help text for individual exporters from the exporters.
-        return (
-            'export "MPG Ranch Clips CSV" '
-            '[--output-file <file path>] '
-            '[--station <station name>] [--stations <station names>] '
-            '[--detector <detector name>] [--detectors <detector names>] '
-            '[--clip-class <clip class name>] '
-            '[--clip-classes <clip class names>] '
-            '[--date <YYYY-MM-DD>] '
-            '[--start-date <YYYY-MM-DD] [--end-date <YYYY-MM-DD>] '
-            '[--archive <archive dir>]')
+    def get_help(positional_args, keyword_args):
+        return _get_help(positional_args, keyword_args)
 
     
     def __init__(self, positional_args, keyword_args):
@@ -48,17 +35,66 @@ class ExportCommand(Command):
                 '{:s} command requires exactly one positional '
                 'argument.').format(self.name))
             
-        klass = _get_exporter_class(positional_args[0])
-        self._exporter = klass(positional_args[1:], keyword_args)
+        exporter_class = _get_exporter_class(positional_args[0])
+        self._exporter = exporter_class(positional_args[1:], keyword_args)
         
         
     def execute(self):
         return self._exporter.export()
         
         
+def _get_help(positional_args, keyword_args):
+    
+    n = len(positional_args)
+    if n == 0:
+        return _get_general_help()
+    else:
+        return _get_specific_help(positional_args, keyword_args)
+    
+
+_HELP = '''
+export <exporter> [<positional arguments>] [<keyword arguments>]
+
+Exports data from an archive.
+
+The data to be exported and the form in which they are exported are
+specified by the <exporter> argument and the remaining arguments.
+
+Type "vcl help export <exporter>" for help regarding a particular exporter.
+
+Available exporters:
+'''.strip()
+
+
+def _get_general_help():
+    
+    classes = extension_manager.get_extensions('VCL Exporter')
+    names = classes.keys()
+    names.sort()
+    names = '\n'.join(('    ' + n) for n in names)
+    
+    return _HELP + '\n' + names
+    
+    
+def _get_specific_help(positional_args, keyword_args):
+    
+    classes = extension_manager.get_extensions('VCL Exporter')
+    name = positional_args[0]
+    klass = classes.get(name)
+    
+    if klass is None:
+        return 'Unrecognized exporter "{:s}".'.format(name)
+    
+    else:
+        help_ = klass.get_help(positional_args[1:], keyword_args)
+        return ExportCommand.name + ' ' + help_
+
+
 def _get_exporter_class(name):
+    
+    classes = extension_manager.get_extensions('VCL Exporter')
+    
     try:
-        return _EXPORTER_CLASSES[name]
+        return classes[name]
     except KeyError:
-        raise CommandSyntaxError(
-            'Unrecognized export type "{:s}".'.format(name))
+        raise CommandSyntaxError('Unrecognized exporter "{:s}".'.format(name))

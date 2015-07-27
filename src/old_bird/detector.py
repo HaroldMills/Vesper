@@ -25,6 +25,13 @@ import vesper.util.time_utils as time_utils
 import vesper.vcl.vcl_utils as vcl_utils
 
 
+# TODO: Refactor this module. It contains a jumble of generic detector
+# functionality, Old-Bird-detector-specific functionality, and
+# MPG-Ranch-specific functionality that needs to be untangled.
+
+# TODO: Add support for input from audio devices.
+
+
 '''
 To run Tseep-x on a sound file one should:
 
@@ -87,10 +94,9 @@ _INPUT_MODE_SUFFIXES = {
 }
 
 # These are dictated by the Old Bird detector programs.
-# TODO: Use raw strings for Windows paths.
-_INPUT_DIR_PATH = 'C:\\My Recordings'
-_OUTPUT_DIR_PATH = 'C:\\temp\\calls'
-_STOP_FILE_PATH = 'C:\\stop.txt'
+_INPUT_DIR_PATH = r'C:\My Recordings'
+_OUTPUT_DIR_PATH = r'C:\temp\calls'
+_STOP_FILE_PATH = r'C:\stop.txt'
 _INPUT_FILE_PATH = os.path.join(_INPUT_DIR_PATH, 'Soundfile.wav')
 _CLIP_FILE_NAME_PATTERN = r'^{:s}_\d\d\d\.\d\d\.\d\d_\d\d\.wav$'
 
@@ -102,16 +108,12 @@ _CLIP_FILE_PROCESSING_DELAY = 1
 # otherwise of `%ProgramFiles%`, otherwise `None`) with the option to
 # override on the command line. Observe `%OLD_BIRD_HOME%`? Or maybe
 # we should just insist that the detector be on the user's path.
-_DETECTOR_DIR_PATH = 'C:\\Program Files (x86)\\Old Bird'
+_DETECTOR_DIR_PATH = r'C:\Program Files (x86)\Old Bird'
 
 
 # TODO: This detector should only be available on Windows, so we really
 # need plug-ins! For the time being, if present on other platforms it
 # should import but decline to run.
-
-
-# TODO: This detector should not know anything about MPG Ranch data
-# processing, so we really need plug-ins!
 
 
 '''
@@ -133,6 +135,17 @@ detection handlers, perhaps by allowing a handler configuration to be
 specified via a YAML file (or even a command line argument that includes
 a YAML string).
 '''
+
+
+# TODO: Certain information, such as the start time of a recording,
+# is needed by a detector for any audio input source. Factor out the
+# gathering of this information, adding extension types (e.g. perhaps
+# for a sound file name parser) as needed.
+
+# TODO: Split detection handling out into extensions. Note that the need
+# for detection handling is not specific to the Old Bird detector (every
+# detector takes as input a continuous stream of audio and outputs
+# discrete detections), and the extensions should reflect this.
 
 
 class DetectionHandlerError(Exception):
@@ -353,8 +366,149 @@ def _parse_mpg_ranch_input_file_name(file_name):
     return station_name, start_time
         
 
+_HELP = '''
+<keyword arguments>
+
+Detects nocturnal flight calls (NFCs) using programs from Old Bird, Inc.
+
+NFCs are detected using either or both of the Old Bird Tseep and
+Thrush detectors, as specified via the --detectors argument.
+Detection is performed on one or more .wav files. By default the
+detected calls are added to an archive, but this behavior can be
+overridden via the --detection-handler argument.
+
+This detector is only available on Windows computers, and requires
+that Old Bird's Tseep-x (see http://oldbird.org/tseep.htm) and/or
+Thrush-x (see http://oldbird.org/Thrush.htm) detectors are installed
+in the directory "C:\\Program Files (x86)\\Old Bird" (or
+"C:\\Program Files\\Old Bird" if you're using an older, 32-bit
+version of Windows). Additional requirements for the proper operation
+of the Old Bird detectors must also be satisfied. See the above links
+for details.
+
+Detection on input from a computer's sound card using the Old Bird
+Tseep-o, Tseep-r, Thrush-o, and Thrush-r detectors is not currently
+supported, but is planned.
+'''.strip()
+
+
+'''
+To use default detection handler, which writes detections to an archive:
+
+    vcl detect "Old Bird"
+        --detectors Tseep Thrush
+        --input-mode File
+        --input-paths /Users/Harold/Desktop/NFC
+        [--archive <archive-path>]
+    
+To use the MPG Ranch Renaming Detection Handler, which moves and renames
+detection sound files:
+
+    vcl detect "Old Bird"
+        --detectors Tseep Thrush
+        --input-mode File
+        --input-paths /Users/Harold/Desktop/NFC
+        --detection-handler "MPG Ranch Renamer"
+        
+These commands work fine when there is only a single detection handler.
+We would have to do something different if we wanted to support multiple
+detection handlers, perhaps by allowing a handler configuration to be
+specified via a YAML file (or even a command line argument that includes
+a YAML string).
+'''
+
+
+# TODO: Make detection handlers extensions and figure out how to handle
+# documentation for them. This is the first command where an extension is
+# chosen with a keyword argument rather than a positional argument.
+
+# TODO: "archive" argument should be associated with `DetectionArchiver`
+# detection handler. The documentation for that argument should come
+# from the handler extension.
+
+# TODO: Provide a means of specifying argument dependencies (e.g.
+# --input-paths only makes sense when --input-mode is "File") in
+# YAML argument descriptors, and make documentation reflect dependencies.
+
+# TODO: There are both positional and keyword arguments whose values
+# are extension names. Can we unify the construction of documentation
+# for such arguments?
+
+# TODO: Provide for specification of sets of mutually exclusive arguments.
+
+# TODO: Do away with --input-mode argument and infer input mode from
+# other arguments?
+
+
+_ARGS = r'''
+
+- name: --detectors
+  required: true
+  value description: Old Bird detector names
+  documentation: |
+      The Old Bird NFC detectors to run.
+      Available detectors:
+          Tseep
+          Thrush
+  
+- name: --input-mode
+  required: true
+  value description: mode
+  documentation: |
+      The mode of audio input.
+      Available modes:
+          File
+              Input is taken from one or more .wav files specified via the
+              --inputs argument.
+  
+- name: --inputs
+  required: true
+  value description: file and/or directory paths
+  documentation: |
+      The audio input files and directories on which to detect.
+      Files must be .wav files with a sample rate of 22050 Hz. For each
+      directory, all of the .wav files of the directory (but not of any
+      subdirectories of the directory) are taken as input.
+      Dependency: --input-mode File
+  
+- name: --detection-handler
+  required: false
+  value description: name
+  documentation: |
+      The detection handler with which to process each detection.
+      Available handlers:
+          Archiver
+              Adds each detection to an archive. The archive can be
+              specified via the --archive argument.
+          MPG Ranch Renamer
+              Renames each detection .wav file in accordance with the
+              MPG Ranch migration monitoring workflow.
+      Default: Archiver
+  
+- name: --archive
+  required: false
+  value description: directory path
+  documentation: |
+      The archive to which to add detections.
+      Dependency: --detection-handler Archiver
+      Default: The archive of the current directory.
+  
+'''
+
+
 class Detector(object):
     
+    
+    name = 'Old Bird'
+    
+    
+    @staticmethod
+    def get_help(positional_args, keyword_args):
+        name = text_utils.quote_if_needed(Detector.name)
+        arg_descriptors = vcl_utils.parse_command_args_yaml(_ARGS)
+        args_help = vcl_utils.create_command_args_help(arg_descriptors)
+        return name + ' ' + _HELP + '\n\n' + args_help
+
     
     def __init__(self, positional_args, keyword_args):
         
@@ -632,7 +786,7 @@ def _get_input_mode(keyword_args):
     # For now we support only file input.
     if mode != _INPUT_MODE_FILE:
         message = (
-            'Sorry, but only the "{:s}" input mode is supported at this '
+            'Sorry, but only the "{:s}" input mode is available at this '
             'time.').format(_INPUT_MODE_FILE)
         raise CommandExecutionError(message)
     
@@ -702,7 +856,7 @@ def _get_input_file_info(path):
     if compression_type != 'NONE':
         raise ValueError((
             'File has a compression type of "{:s}", but only a compression '
-            'type of "NONE" is curently supported.').format(compression_type))
+            'type of "NONE" is currently supported.').format(compression_type))
 
     return (frame_rate, num_frames)
 
@@ -929,7 +1083,7 @@ class _Detector(Thread):
     
 '''
 vesper detect "Old Bird" --detectors Tseep Thrush --input-mode File
-    --input-paths ...
+    --inputs ...
 vesper detect "Old Bird" --detectors Tseep Thrush --input-mode Live
 vesper detect "Old Bird" --detectors Tseep Thrush --input-mode Playback
     --start-time "2014-08-26 07:25:00 MDT"

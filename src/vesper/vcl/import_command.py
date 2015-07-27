@@ -1,16 +1,19 @@
 """Module containing class `ImportCommand`."""
 
 
-from mpg_ranch.importer import Importer as MpgRanchImporter
-from vesper.vcl.command import (
-    Command, CommandSyntaxError, CommandExecutionError)
-import vesper.vcl.vcl_utils as vcl_utils
+from vesper.vcl.command import (Command, CommandSyntaxError)
+import vesper.util.extension_manager as extension_manager
+    
 
-
-# TODO: Get importer names from importer classes.
-_IMPORTER_CLASSES = {
-    'MPG Ranch': MpgRanchImporter
-}
+# RESUME:
+# * Refactor help functions in classify, detect, export, and import commands,
+#   moving common code to extension manager where that makes sense.
+# * Rename `init` command to `create`.
+# * Add example YAML file to `create` documentation.
+# * Describe MPG Ranch Renamer detection handler in more detail.
+# * Review present and future commands. Should `export` and `import` commands
+#   have a positional argument indicating what type of object is being
+#   exported or imported, or not?
 
 
 class ImportCommand(Command):
@@ -22,57 +25,82 @@ class ImportCommand(Command):
     
     
     @staticmethod
-    def get_help_text():
-        # TODO: Get help text for individual importers from the importers.
-        return 'import "MPG Ranch" <data dir>'
-    
+    def get_help(positional_args, keyword_args):
+        return _get_help(positional_args, keyword_args)
+
     
     def __init__(self, positional_args, keyword_args):
         
         super(ImportCommand, self).__init__()
         
         # TODO: Move this check to superclass.
-        if len(positional_args) != 2:
+        if len(positional_args) != 1:
             raise CommandSyntaxError((
-                '{:s} command requires exactly two positional '
-                'arguments.').format(self.name))
+                '{:s} command requires exactly one positional '
+                'argument.').format(self.name))
             
-        # TODO: Have importer parse source dir path, and make it a
-        # keyword argument rather than a positional argument.
-        importer_name, self._source_dir_path = positional_args
-        
-        klass = _get_importer_class(importer_name)
-        self._importer = klass(positional_args[2:], keyword_args)
-        
-        self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
+        importer_class = _get_importer_class(positional_args[0])
+        self._importer = importer_class(positional_args[1:], keyword_args)
         
         
     def execute(self):
+        self._importer.import_()
         
-        # TODO: In the end, this method should simply invoke the
-        # importer's `import_` method.
         
-        vcl_utils.check_dir_path(self._source_dir_path)
+def _get_help(positional_args, keyword_args):
+
+    n = len(positional_args)
+    if n == 0:
+        return _get_general_help()
+    else:
+        return _get_specific_help(positional_args, keyword_args)
     
-        archive = vcl_utils.open_archive(self._archive_dir_path)
+
+_HELP = '''
+import <importer> [<positional arguments>] [<keyword arguments>]
+
+Imports data into an archive.
+
+The importer to use and the data to import are specified by the
+<importer> argument and the remaining arguments.
+
+Type "vcl help import <importer>" for help regarding a particular
+importer.
+
+Available importers:
+'''.strip()
+
+
+def _get_general_help():
     
-        try:
-            success = self._importer.import_(self._source_dir_path, archive)
-        except Exception as e:
-            raise CommandExecutionError(str(e))
-        finally:
-            archive.close()
-        
-        # TODO: Move this into importer `import_` method?
-        self._importer.log_summary()
-        
-        return success
-        
+    classes = extension_manager.get_extensions('VCL Importer')
+    names = classes.keys()
+    names.sort()
+    names = '\n'.join(('    ' + n) for n in names)
+    
+    return _HELP + '\n' + names
+    
+    
+def _get_specific_help(positional_args, keyword_args):
+    
+    classes = extension_manager.get_extensions('VCL Importer')
+    name = positional_args[0]
+    klass = classes.get(name)
+    
+    if klass is None:
+        return 'Unrecognized importer "{:s}".'.format(name)
+    
+    else:
+        help_ = klass.get_help(positional_args[1:], keyword_args)
+        return ImportCommand.name + ' ' + help_
+
 
 def _get_importer_class(name):
-
+    
+    importer_classes = extension_manager.get_extensions('VCL Importer')
+    
     try:
-        return _IMPORTER_CLASSES[name]
+        return importer_classes[name]
     except KeyError:
         raise CommandSyntaxError(
             'Unrecognized importer "{:s}".'.format(name))

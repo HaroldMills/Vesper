@@ -18,6 +18,10 @@ class ClipVisitor(Visitor):
     """
     
     
+    arg_descriptors = \
+        Visitor.arg_descriptors + vcl_utils.CLIP_QUERY_ARG_DESCRIPTORS
+
+
     def __init__(self, positional_args, keyword_args):
         
         super(ClipVisitor, self).__init__(positional_args, keyword_args)

@@ -13,7 +13,39 @@ from vesper.util.bunch import Bunch
 from vesper.vcl.clip_visitor import ClipVisitor
 from vesper.vcl.command import CommandExecutionError
 import vesper.util.os_utils as os_utils
+import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
+
+
+# TODO: Write file in chunks to avoid accumulating an unreasonable
+# number of table lines in memory.
+
+# TODO: Create a format superclass that provides a boolean `quote-values`
+# option. (Or perhaps there should be a third option to quote only if
+# needed.
+
+# TODO: Provide exporter-level control of CSV options, like the
+# separator and quote characters, the `None` value string, and whether
+# or not values are quoted by default. Provide a function to escape
+# quotes as needed.
+
+
+_HELP = '''
+<keyword arguments>
+
+Exports a CSV file with a row for each of the specified clips of an archive.
+'''.strip()
+
+
+_ARGS = '''
+
+- name: --output-file
+  required: true
+  value description: file path
+  documentation: |
+      The output CSV file.
+        
+'''
 
 
 # TODO: Allow specification of table format YAML file via command line.
@@ -110,30 +142,43 @@ columns:
 ''')
 
      
-# TODO: Write file in chunks to avoid accumulating an unreasonable
-# number of table lines in memory.
-
-# TODO: Create a format superclass that provides a boolean `quote-values`
-# option. (Or perhaps there should be a third option to quote only if
-# needed.
-
-# TODO: Provide exporter-level control of CSV options, like the
-# separator and quote characters, the `None` value string, and whether
-# or not values are quoted by default. Provide a function to escape
-# quotes as needed.
-
-
-class ClipsCsvExporter(ClipVisitor):
+class ClipsCsvExporter(object):
     
+    
+    name = 'MPG Ranch Clips CSV'
+    
+    
+    @staticmethod
+    def get_help(positional_args, keyword_args):
+        name = text_utils.quote_if_needed(ClipsCsvExporter.name)
+        arg_descriptors = _ClipVisitor.arg_descriptors
+        args_help = vcl_utils.create_command_args_help(arg_descriptors)
+        return name + ' ' + _HELP + '\n\n' + args_help
+
     
     def __init__(self, positional_args, keyword_args):
-        super(ClipsCsvExporter, self).__init__(positional_args, keyword_args)
+        super(ClipsCsvExporter, self).__init__()
+        self._clip_visitor = _ClipVisitor(positional_args, keyword_args)
+        
+        
+    def export(self):
+        self._clip_visitor.visit_clips()
+        return True
+        
+        
+class _ClipVisitor(ClipVisitor):
+    
+    
+    arg_descriptors = \
+        vcl_utils.parse_command_args_yaml(_ARGS) + \
+        ClipVisitor.arg_descriptors
+
+
+    def __init__(self, positional_args, keyword_args):
+        super(_ClipVisitor, self).__init__(positional_args, keyword_args)
         (self._output_file_path,) = \
             vcl_utils.get_required_keyword_arg('output-file', keyword_args)
         self._columns = _create_table_columns(_TABLE_FORMAT)
-        
-        
-    export = ClipVisitor.visit_clips
         
         
     def begin_visits(self):
