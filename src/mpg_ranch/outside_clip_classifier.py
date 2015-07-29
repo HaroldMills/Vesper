@@ -67,7 +67,7 @@ class OutsideClipClassifier(object):
         self._clip_visitor = _ClipVisitor(positional_args, keyword_args)
         
         
-    def _classify(self):
+    def classify(self):
         self._clip_visitor.visit_clips()
         
         
