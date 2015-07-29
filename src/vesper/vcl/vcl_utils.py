@@ -10,8 +10,23 @@ import yaml
 from vesper.archive.archive import Archive
 from vesper.util.bunch import Bunch
 from vesper.vcl.command import CommandExecutionError, CommandSyntaxError
+import vesper.util.extension_manager as extension_manager
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
+
+
+def get_command_delegate_extension(
+        extension_name, extension_point_name, delegate_description):
+    
+    extensions = extension_manager.get_extensions(extension_point_name)
+    
+    try:
+        return extensions[extension_name]
+    
+    except KeyError:
+        raise CommandSyntaxError(
+            'Unrecognized {:s} "{:s}".'.format(
+                delegate_description, extension_name))
 
 
 def parse_command_args_yaml(s):
