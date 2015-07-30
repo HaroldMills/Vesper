@@ -24,4 +24,4 @@ The classifier to use and which clips to classify are specified by the
     
     
     def execute(self):
-        self._delegate.classify()
+        return self._delegate.classify()

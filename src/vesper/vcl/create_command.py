@@ -59,7 +59,7 @@ class CreateCommand(Command):
     def __init__(self, positional_args, keyword_args):
         super(CreateCommand, self).__init__()
         self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
-        self._yaml_file_path = keyword_args.get('archive-data')
+        self._yaml_file_path = keyword_args.get('archive-data')[0]
         
         
     def execute(self):

@@ -129,6 +129,6 @@ class DelegatingCommand(Command):
             
         extension = vcl_utils.get_command_delegate_extension(
             positional_args[0], self.delegate_extension_point_name,
-            self.delegate_name)
+            self.delegate_description)
 
         self._delegate = extension(positional_args[1:], keyword_args)

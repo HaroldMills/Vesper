@@ -24,4 +24,4 @@ The importer to use and the data to import are specified by the
     
     
     def execute(self):
-        self._delegate.import_()
+        return self._delegate.import_()

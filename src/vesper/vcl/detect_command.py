@@ -24,4 +24,4 @@ The detector to use and its configuration are specified by the
     
     
     def execute(self):
-        self._delegate.detect()
+        return self._delegate.detect()

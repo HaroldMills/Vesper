@@ -219,14 +219,15 @@ class Importer(object):
     def __init__(self, positional_args, keyword_args):
         super(Importer, self).__init__()
         self._input_dir_path = vcl_utils.get_required_keyword_arg(
-            'input-dir', keyword_args)
+            'input-dir', keyword_args)[0]
         self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
 
     
     def import_(self):
         
         archive = vcl_utils.open_archive(self._archive_dir_path)
-
+        self._archive = archive
+        
         self._indent_level = 0
         self._indent_size = 4
         self._indentation = ''

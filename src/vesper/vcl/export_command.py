@@ -24,4 +24,4 @@ specified by the <exporter> argument and the remaining arguments.
     
     
     def execute(self):
-        self._delegate.export()
+        return self._delegate.export()
