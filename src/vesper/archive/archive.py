@@ -42,8 +42,8 @@ Questions regarding cloud archives:
 '''
 
 
-_MANIFEST_FILE_NAME = 'ArchiveManifest.yaml'
-_DATABASE_FILE_NAME = 'ArchiveDatabase.sqlite'
+_MANIFEST_FILE_NAME = 'Archive Manifest.yaml'
+_DATABASE_FILE_NAME = 'Archive Database.sqlite'
 _CLIPS_DIR_NAME = 'Clips'
     
 # named tuple classes for database tables
@@ -1010,16 +1010,16 @@ class Archive(object):
 def _create_archive_manifest(archive_dir_path):
     file_path = os.path.join(archive_dir_path, _MANIFEST_FILE_NAME)
     contents = ''.join([line.strip() + '\n' for line in '''
-        archiveType: "Vesper SQLite/File System Archive"
-        archiveVersion: "0.01"
+        archive_type: "Vesper SQLite/File System Archive"
+        archive_version: "0.01"
     '''.strip().split('\n')])
     os_utils.write_file(file_path, contents)
 
     
 def _check_manifest(manifest, path):
     _check_manifest_aux(
-        manifest, 'archiveType', 'Vesper SQLite/File System Archive', path)
-    _check_manifest_aux(manifest, 'archiveVersion', '0.01', path)
+        manifest, 'archive_type', 'Vesper SQLite/File System Archive', path)
+    _check_manifest_aux(manifest, 'archive_version', '0.01', path)
     
     
 def _check_manifest_aux(manifest, key, expectedValue, path):
