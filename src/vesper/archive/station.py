@@ -96,24 +96,24 @@ class Station(Named):
     
     @memoize
     def get_sunset_time(self, date):
-        lat, lon = self._get_lat_lon()
-        return sun_utils.get_sunset_time(date, lat, lon)
+        lon, lat = self._get_lon_lat()
+        return sun_utils.get_sunset_time(date, lon, lat)
         
         
-    def _get_lat_lon(self):
+    def _get_lon_lat(self):
         
-        lat = self.latitude
         lon = self.longitude
+        lat = self.latitude
         
-        if lat is None or lon is None:
+        if lon is None or lat is None:
             raise ValueError((
                 'Sunset and sunrise times are not available for station '
                 '"{:s}" since its location is unknown.').format(self.name))
             
-        return (lat, lon)
+        return (lon, lat)
  
  
     @memoize
     def get_sunrise_time(self, date):
-        lat, lon = self._get_lat_lon()
-        return sun_utils.get_sunrise_time(date, lat, lon)
+        lon, lat = self._get_lon_lat()
+        return sun_utils.get_sunrise_time(date, lon, lat)
