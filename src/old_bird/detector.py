@@ -796,9 +796,9 @@ def _get_input_mode(keyword_args):
 def _get_input_paths(keyword_args):
     
     try:
-        values = keyword_args['input-paths']
+        values = keyword_args['inputs']
     except KeyError:
-        message = 'Missing required "--input-paths" argument.'
+        message = 'Missing required "--inputs" argument.'
         raise CommandSyntaxError(message)
     
     return values
