@@ -21,8 +21,10 @@ import mpg_ranch.importer as importer
     
 _STATION_NAMES = ['baldy', 'flood', 'ridge', 'sheep']
 _STATION_NAME_CORRECTIONS = {
-    'flood': 'Floodplain',
-    'sheep': 'Sheep Camp'
+    'baldy': 'Baldy NFC',
+    'flood': 'Floodplain NFC',
+    'ridge': 'Ridge NFC',
+    'sheep': 'Sheep Camp NFC'
 }
 _DETECTOR_NAMES = ['Manual', 'Tseep', 'Thrush']
 _CLIP_CLASS_NAMES = ['unkn', 'wiwa']
