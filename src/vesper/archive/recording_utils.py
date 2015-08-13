@@ -4,64 +4,92 @@
 from vesper.archive.recording import Recording
 
 
-class SampleRateMismatchError(Exception):
-    
-    def __init__(self, recording_0, recording_1):
-        super(SampleRateMismatchError, self).__init__()
-        self.recording_0 = recording_0
-        self.recording_1 = recording_1
-        
-        
 def merge_recordings(recordings, tolerance=1):
     
     """
-    Merges a sequence of recordings.
+    Merges a collection of recordings.
     
-    This method partitions a sequence of recordings into subsequences of
-    consecutive recordings and merges each subsequence into a single
-    recording. Two recordings are deemed consecutive if the end time
-    of the first recording as computed from its start time, length,
-    and sample rate is not farther than `tolerance` seconds from
-    the start time of the second recording.
+    This method first sorts a collection of recordings by station name
+    and start time. It then merges longest subsequences of consecutive
+    recordings into single recordings.
+    
+    Two recordings are deemed consecutive if:
+    
+        1. They have the same station name.
+        
+        2. They have the same sample rate.
+    
+        3. The end time of the first recording as computed from its start
+           time, length, and sample rate is not farther than `tolerance`
+           seconds from the start time of the second recording.
+           
+    Each output recording contains the input recordings that were merged
+    to create it in its `subrecordings` attribute.
     """
     
+    return _Merger().merge_recordings(recordings, tolerance)
+
+
+class _Merger(object):
     
-    merged_recordings = []
     
-    if len(recordings) > 0:
+    def merge_recordings(self, recordings, tolerance):
         
-        recordings.sort(key=lambda r: r.start_time)
+        self._tolerance = tolerance
         
-        r = recordings[0]
-        station = r.station
-        start_time = r.start_time
-        end_time = start_time + r.duration
-        length = r.length
-        sample_rate = r.sample_rate
+        merged_recordings = []
         
-        for r in recordings[1:]:
+        if len(recordings) > 0:
             
-            if r.sample_rate != sample_rate:
-                raise SampleRateMismatchError(recordings[0], r)
-            
-            delta = abs((r.start_time - end_time).total_seconds())
-            
-            if delta <= tolerance:
-                # recording should be merged
-                
-                end_time = r.start_time + r.duration
-                length += r.length
-                
-            else:
-                # recording should not be merged
-                
-                merged_recordings.append(
-                    Recording(station, start_time, length, sample_rate))
-                
-                start_time = r.start_time
-                end_time = start_time + r.duration
-                
-        merged_recordings.append(
-            Recording(station, start_time, length, sample_rate))
+            recordings = list(recordings)
+            recordings.sort(key=lambda r: (r.station.name, r.start_time))
         
-    return merged_recordings
+            self._start_merged_recording(recordings[0])
+            
+            for r in recordings[1:]:
+                
+                if self._is_consecutive_recording(r):
+                    # recording is consecutive with last
+                    
+                    self._merge_recording(r)
+                    
+                else:
+                    # recording is not consecutive with last
+                    
+                    merged_recording = self._end_merged_recording()
+                    merged_recordings.append(merged_recording)
+                    self._start_merged_recording(r)
+                    
+            merged_recording = self._end_merged_recording()
+            merged_recordings.append(merged_recording)
+            
+        return merged_recordings
+
+
+    def _start_merged_recording(self, r):
+        self._subrecordings = [r]
+        self._station = r.station
+        self._start_time = r.start_time
+        self._end_time = self._start_time + r.duration
+        self._length = r.length
+        self._sample_rate = r.sample_rate
+        
+        
+    def _is_consecutive_recording(self, r):
+        delta = abs((r.start_time - self._end_time).total_seconds())
+        return r.station.name == self._station.name and \
+               r.sample_rate == self._sample_rate and \
+               delta <= self._tolerance
+
+
+    def _merge_recording(self, r):
+        self._subrecordings.append(r)
+        self._end_time = r.start_time + r.duration
+        self._length += r.length
+
+
+    def _end_merged_recording(self):
+        recording = Recording(
+            self._station, self._start_time, self._length, self._sample_rate)
+        recording.subrecordings = self._subrecordings
+        return recording

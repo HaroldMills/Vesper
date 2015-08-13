@@ -14,15 +14,19 @@ import yaml
 
 from old_bird.file_name_utils import \
     parse_elapsed_time_clip_file_name as _parse_clip_file_name
+from vesper.archive.recording import Recording
+from vesper.archive.station import Station
 from vesper.util.audio_file_utils import read_wave_file as _read_wave_file
 from vesper.util.bunch import Bunch
 from vesper.util.task_serializer import TaskSerializer
 from vesper.vcl.command import CommandExecutionError, CommandSyntaxError
+import vesper.archive.recording_utils as recording_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 import vesper.vcl.vcl_utils as vcl_utils
+from blaze.expr.core import path
 
 
 # TODO: Refactor this module. It contains a jumble of generic detector
@@ -98,6 +102,7 @@ _INPUT_DIR_PATH = r'C:\My Recordings'
 _OUTPUT_DIR_PATH = r'C:\temp\calls'
 _STOP_FILE_PATH = r'C:\stop.txt'
 _INPUT_FILE_PATH = os.path.join(_INPUT_DIR_PATH, 'Soundfile.wav')
+_INPUT_SAMPLE_RATE = 22050
 _CLIP_FILE_NAME_PATTERN = r'^{:s}_\d\d\d\.\d\d\.\d\d_\d\d\.wav$'
 
 _CLIP_FILE_PROCESSING_DELAY = 1
@@ -163,7 +168,102 @@ class DetectionHandler(object):
         pass
     
     
-    def on_file_start(self, file_path):
+    def get_recordings(self, input_paths):
+        
+        self._success = True
+        file_paths = self._get_input_file_paths(input_paths)
+        recordings = self._create_recordings(file_paths)
+        recordings = recording_utils.merge_recordings(recordings)
+        return (recordings, self._success)
+        
+        
+    def _get_input_file_paths(self, input_paths):
+        
+        file_paths = []
+        
+        for path in input_paths:
+            
+            if not os.path.exists(path):
+                self._handle_nonexistent_path(path)
+                    
+            else:
+                # path exists
+                
+                if os.path.isdir(path):
+                    file_paths += self._get_input_file_paths_in_dir(path)
+                    
+                else:
+                    file_paths.append(path)
+                    
+        return file_paths
+    
+    
+    def _handle_nonexistent_path(self, path):
+        message = (
+            'Input path "{:s}" does not exist and will be '
+            'ignored.').format(path)
+        logging.info(message)
+        self._success = False
+        
+   
+    def _get_input_file_paths_in_dir(self, dir_path):
+        
+        file_paths = []
+        
+        for _, subdir_names, file_names in os.walk(dir_path):
+            
+            for file_name in file_names:
+                file_path = os.path.join(dir_path, file_name)
+                if self._is_input_file_path(file_path):
+                    file_paths.append(file_path)
+                
+            # stop walk from visiting subdirectories
+            del subdir_names[:]
+            
+        return file_paths
+            
+            
+    def _is_input_file_path(self, path):
+        return path.endswith('.wav')
+
+
+    def _create_recordings(self, file_paths):
+        recordings = []
+        for path in file_paths:
+            recording = self._create_recording(path)
+            if recording is not None:
+                recordings.append(recording)
+        return recordings
+    
+    
+    def _create_recording(self, path):
+        
+        info = _get_mpg_ranch_input_file_info(path)
+        
+        station = self._get_station(info.station_name)
+        
+        # Get UTC start time from local start time using station time zone.
+        t = info.start_time
+        start_time = time_utils.create_utc_datetime(
+            t.year, t.month, t.day, t.hour, t.minute, t.second,
+            time_zone=station.time_zone)
+    
+        recording = Recording(
+            station, start_time, info.length, info.sample_rate)
+        recording.file_path = path
+        
+        return recording
+
+    
+    def _get_station(self, station_name):
+        raise NotImplementedError()
+    
+    
+    def on_recording_start(self, recording):
+        pass
+    
+    
+    def on_subrecording_start(self, subrecording):
         pass
     
     
@@ -171,7 +271,11 @@ class DetectionHandler(object):
         pass
     
     
-    def on_file_end(self):
+    def on_subrecording_end(self, subrecording):
+        pass
+    
+    
+    def on_recording_end(self, recording):
         pass
     
     
@@ -181,6 +285,12 @@ class DetectionHandler(object):
         
 _INPUT_FILE_NAME_RE = \
     re.compile(r'^(.+)_(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d).wav$')
+    
+_STATION_NAME_CHANGES = {
+    'floodplain': 'Floodplain NFC',
+    'ridge': 'Ridge NFC',
+    'sheep': 'Sheep Camp NFC'
+}
 
 
 class DetectionArchiver(DetectionHandler):
@@ -189,42 +299,55 @@ class DetectionArchiver(DetectionHandler):
     def __init__(self, keyword_args):
         super(DetectionArchiver, self).__init__(keyword_args)
         self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
-    
-    
+        
+        
     def on_detection_start(self):
         self._archive_task_serializer = TaskSerializer()
         self._archive = self._archive_task_serializer.execute(
             vcl_utils.open_archive, self._archive_dir_path)
+    
+    
+    def _get_station(self, station_name):
+        station_name = _STATION_NAME_CHANGES.get(
+            station_name.lower(), station_name)
+        return self._archive_task_serializer.execute(
+            self._archive.get_station, station_name)
+
+
+    def on_recording_start(self, recording):
+        
+        r = recording
+        
+        try:
+            self._archive_task_serializer.execute(
+                self._archive.add_recording, r.station.name, r.start_time,
+                r.length, r.sample_rate)
+        
+        except ValueError as e:
+            raise DetectionHandlerError(
+                'Recording archival failed with message: {:s}'.format(str(e)))
+        
+        self._station = r.station
         
         
-    def on_file_start(self, file_path):
+    def on_subrecording_start(self, subrecording):
+        self._subrecording_start_time = subrecording.start_time
         
-        file_name = os.path.basename(file_path)
-        self._station_name, self._file_start_time = \
-            _parse_mpg_ranch_input_file_name(file_name)
-            
-        (_, _, sample_rate, length, _) = \
-            audio_file_utils.get_wave_file_info(file_path)
-            
-        self._archive_task_serializer.execute(
-            self._archive.add_recording, self._station_name,
-            self._file_start_time, length, sample_rate)
-            
-            
+        
     def on_detection(self, clip):
         
         file_name = os.path.basename(clip.file_path)
-        start_time = self._file_start_time + clip.start_time
+        start_time = self._subrecording_start_time + clip.start_time
         
         s = start_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-5]
         s += ' ' + start_time.strftime('%Z')
         logging.info(
             'Archiving {:s} ({:s} {:s})...'.format(
-                file_name, self._station_name, s))
+                file_name, self._station.name, s))
         
         try:
             self._archive_task_serializer.execute(
-                self._archive.add_clip, self._station_name,
+                self._archive.add_clip, self._station.name,
                 clip.detector_name, start_time, clip)
             
         except ValueError as e:
@@ -234,7 +357,6 @@ class DetectionArchiver(DetectionHandler):
 
     def on_detection_end(self):
         self._archive_task_serializer.execute(self._archive.close)
-
 
 
 class DetectionRenamer(DetectionHandler):
@@ -247,38 +369,41 @@ class DetectionRenamer(DetectionHandler):
     
     def on_detection_start(self):
         self._station_name_changes = _get_station_name_changes()
+        self._stations = {}
         
         
-    def on_file_start(self, file_path):
-
-        file_name = os.path.basename(file_path)
-        
-        station_name, start_time = _parse_mpg_ranch_input_file_name(file_name)
-        
-        # Convert station name to lower case and abbreviate if needed.
-        station_name = station_name.lower()
-        station_name = \
-            self._station_name_changes.get(station_name, station_name)
-        
-        # Convert start time from UTC to US/Mountain time zone and format.
-        mountain = pytz.timezone('US/Mountain')
-        start_time = start_time.astimezone(mountain)
-        start_time = start_time.strftime('%m%d%y_%H%M%S')
+    def _get_station(self, station_name):
         
         try:
-            sample_rate, num_samples = _get_input_file_info(file_path)
-        except ValueError as e:
-            raise DetectionHandlerError((
-                'Could not read duration information from file. Error '
-                'message was: {:s}').format(str(e)))
-            
-        duration = num_samples / float(sample_rate)
+            return self._stations[station_name]
+        
+        except KeyError:
+            station = Station(station_name, '', 'US/Mountain')
+            self._stations[station_name] = station
+            return station
+
+
+    def on_subrecording_start(self, subrecording):
+
+        station = subrecording.station
+        
+        # Format station name for directory name.
+        name = station.name.lower()
+        station_name = self._station_name_changes.get(name, name)
+        
+        # Format start time for directory name.
+        start_time = subrecording.start_time.astimezone(station.time_zone)
+        start_time = start_time.strftime('%m%d%y_%H%M%S')
+        
+        # Format duration for directory name.
+        duration = subrecording.length / float(subrecording.sample_rate)
         hours = int(math.floor(duration / 3600))
         duration -= hours * 3600
         minutes = int(math.floor(duration / 60))
         seconds = int(round(duration - minutes * 60))
         duration = '{:02d}{:02d}{:02d}'.format(hours, minutes, seconds)
         
+        # Create directory name and path.
         dir_name = station_name + '_' + start_time + '_' + duration
         dir_path = os.path.join(_OUTPUT_DIR_PATH, dir_name)
         
@@ -346,6 +471,32 @@ def _get_station_name_changes():
 _MPG_RANCH_TIME_ZONE = pytz.timezone('US/Mountain')
 
 
+def _get_mpg_ranch_input_file_info(file_path):
+    
+    file_name = os.path.basename(file_path)
+    station_name, start_time = \
+        _parse_mpg_ranch_input_file_name(file_name)
+        
+    try:
+        (_, _, sample_rate, length, _) = \
+            audio_file_utils.get_wave_file_info(file_path)
+    except Exception as e:
+        raise DetectionHandlerError(
+            'Input file operation failed with message: {:s}'.format(str(e)))
+       
+    if sample_rate != _INPUT_SAMPLE_RATE:
+        raise DetectionHandlerError((
+            'Sample rate is {:d} Hz rather than the required {:d} Hz '
+            'for input file "{:s}".').format(
+                _INPUT_SAMPLE_RATE, int(round(sample_rate)), file_path))
+        
+    return Bunch(
+        station_name=station_name,
+        start_time=start_time,
+        length=length,
+        sample_rate=sample_rate)
+        
+    
 def _parse_mpg_ranch_input_file_name(file_name):
     
     m = _INPUT_FILE_NAME_RE.match(file_name)
@@ -357,11 +508,8 @@ def _parse_mpg_ranch_input_file_name(file_name):
         
     station_name, year, month, day, hour, minute, second = m.groups()
     
-    t = time_utils.parse_date_time(year, month, day, hour, minute, second)
-    
-    start_time = time_utils.create_utc_datetime(
-        t.year, t.month, t.day, t.hour, t.minute, t.second,
-        time_zone=_MPG_RANCH_TIME_ZONE)
+    start_time = time_utils.parse_date_time(
+        year, month, day, hour, minute, second)
     
     return station_name, start_time
         
@@ -547,71 +695,34 @@ class Detector(object):
         
     def _detect_on_dirs_and_files(self):
         
-        self._success = True
+        delegate = self._detection_handler
         
-        for path in self._input_paths:
+        (recordings, self._success) = \
+            delegate.get_recordings(self._input_paths)
+        
+        for recording in recordings:
             
-            if not os.path.exists(path):
-                self._handle_nonexistent_path(path)
+            delegate.on_recording_start(recording)
+            
+            for subrecording in recording.subrecordings:
+                self._detect_on_subrecording(subrecording)
                     
-            else:
-                # path exists
-                
-                if os.path.isdir(path):
-                    self._detect_on_dir(path)
-                    
-                else:
-                    self._detect_on_file(path)
-                    
+            delegate.on_recording_end(recording)
+            
         return self._success
                     
                  
-    def _handle_nonexistent_path(self, path):
-        message = (
-            'Input path "{:s}" does not exist and will be '
-            'ignored.').format(path)
-        logging.info(message)
-        self._success = False
+    def _detect_on_subrecording(self, subrecording):
         
-   
-    def _detect_on_dir(self, dir_path):
-                    
-        for _, subdir_names, file_names in os.walk(dir_path):
-            
-            for file_name in file_names:
-                file_path = os.path.join(dir_path, file_name)
-                if _is_audio_file(file_path):
-                    self._detect_on_file(file_path)
-                
-            # stop walk from visiting subdirectories
-            del subdir_names[:]
-            
-            
-    def _detect_on_file(self, file_path):
+        file_path = subrecording.file_path
         
         s = 's' if len(self._detector_names) > 1 else ''
         logging.info(
             'Running detector{:s} on file "{:s}"...'.format(s, file_path))
         
-        try:
-            self._detection_handler.on_file_start(file_path)
-        except DetectionHandlerError as e:
-            logging.error((
-                'Error at start of processing for input file "{:s}". '
-                'Error message was: {:s}').format(file_path, str(e)))
-            self._success = False
-            return
-            
-        try:
-            sample_rate, num_samples = _get_input_file_info(file_path)
-        except ValueError as e:
-            logging.error((
-                'Could not get information from input file "{:s}". '
-                'Error message was: {:s}').format(file_path, str(e)))
-            self._on_file_error(file_path)
-            return
-            
-        file_duration = num_samples / float(sample_rate)
+        self._detection_handler.on_subrecording_start(subrecording)
+        
+        file_duration = subrecording.length / float(subrecording.sample_rate)
         
         start_time = time.time()
         
@@ -632,7 +743,7 @@ class Detector(object):
         detectors = self._start_detectors()
         self._wait_for_detectors(detectors)
         
-        self._detection_handler.on_file_end()
+        self._detection_handler.on_subrecording_end(subrecording)
         
         processing_time = time.time() - start_time
         if self._success:
