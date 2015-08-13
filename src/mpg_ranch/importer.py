@@ -39,8 +39,25 @@ _parse_dur = time_utils.parse_time_delta
 
 
 _STATION_NAMES = {
-    'flood': 'Floodplain',
-    'sheep': 'Sheep Camp'
+                  
+    'baldy': 'Baldy NFC',
+    
+    'flood': 'Floodplain NFC',
+    'floodnfc': 'Floodplain NFC',
+    'flood21c': 'Floodplain 21c',
+    
+    'ridge': 'Ridge NFC',
+    'ridgenfc': 'Ridge NFC',
+    'ridge21c': 'Ridge 21c',
+    
+    'sheep': 'Sheep Camp NFC',
+    'sheepnfc': 'Sheep Camp NFC',
+    'sheep21c': 'Sheep Camp 21c',
+    
+    'florence': 'Florence 21c',
+    
+    'medwheel': 'Medicine Wheel NFC'
+    
 }
 
 
@@ -433,9 +450,6 @@ class Importer(object):
                     station, start_time, length, sample_rate, file_path)
                 for (start_time, length, sample_rate), (station, file_path)
                 in self._encountered_recordings[key].iteritems()]
-            
-            unmerged_recordings.sort(
-                key=lambda r: (r.station.name, r.start_time))
             
             merged_recordings = merge(unmerged_recordings, tolerance=60)
             
