@@ -219,3 +219,81 @@ def check_second(second):
     
 def check_seconds(seconds):
     _check_range(seconds, 0, 59, 'seconds')
+
+
+def round_datetime(dt, unit_size):
+    
+    """
+    Rounds a `datetime` according to the specified unit size.
+    
+    The unit size is specified in seconds.
+    """
+    
+    seconds = _round_time(dt.time(), unit_size)
+    delta = datetime.timedelta(seconds=seconds)
+    return datetime.datetime(
+        dt.year, dt.month, dt.day, tzinfo=dt.tzinfo) + delta
+
+
+_ONE_DAY = 24 * 3600
+
+
+def _round_time(time, unit_size):
+    
+    """
+    Rounds a `time` to the specified unit size.
+    
+    The unit size is specified in seconds.
+    
+    This function returns a number of seconds rather than a `time`
+    since in the return valuewe must be able to distinguish between
+    the beginning and the end of a day.
+    """
+    
+    # TODO: Allow subsecond unit sizes. This is a little tricky because of
+    # floating point precision issues. We might require that the size be
+    # at least one microsecond and that it divide one if it is smaller
+    # than a second.
+    
+    if unit_size <= 0:
+        raise ValueError(
+            ('Time rounding unit size of {:g} seconds is not '
+             'positive.').format(unit_size))
+    
+    elif unit_size % 1 != 0:
+        raise ValueError(
+            ('Time rounding unit size of {:g} seconds is not an '
+             'integral number of seconds.').format(unit_size))
+    
+    elif _ONE_DAY % unit_size != 0:
+        raise ValueError(
+            ('Time rounding unit size of {:d} seconds does not evenly '
+             'divide one day.').format(int(unit_size)))
+        
+    # Convert time to number of seconds.
+    delta = datetime.timedelta(
+        hours=time.hour, minutes=time.minute, seconds=time.second,
+        microseconds=time.microsecond)
+    seconds = delta.total_seconds()
+    
+    # Round number of seconds to nearest multiple of unit size.
+    units = round(seconds / float(unit_size))
+    return int(units * unit_size)
+    
+
+def round_time(time, unit_size):
+    
+    """
+    Rounds a `time` according to the specified unit size.
+    
+    The unit size is specified in seconds.
+    """
+    
+    seconds = _round_time(time, unit_size) % _ONE_DAY
+    
+    hour = seconds // 3600
+    seconds -= hour * 3600
+    minute = seconds // 60
+    second = seconds % 60
+
+    return datetime.time(hour=hour, minute=minute, second=second)

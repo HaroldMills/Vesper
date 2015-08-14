@@ -24,6 +24,25 @@ def _create_utc_datetime(y, M, d, h, m, s, u, delta):
     return dt + datetime.timedelta(hours=delta)
 
 
+_TIME_ROUNDING_CASES = [
+    ((0, 0, 0, 0, 1), (0, 0, 0)),
+    ((0, 0, 0, 1, 1), (0, 0, 0)),
+    ((0, 0, 0, 999999, 1), (0, 0, 1)),
+    ((0, 0, 59, 999999, 60), (0, 1, 0)),
+    ((0, 1, 2, 3, 60), (0, 1, 0)),
+    ((0, 59, 59, 999999, 3600), (1, 0, 0)),
+    ((1, 2, 3, 4, 3600), (1, 0, 0)),
+    ((0, 4, 59, 999999, 300), (0, 5, 0)),
+    ((0, 5, 1, 2, 300), (0, 5, 0)),
+    ((12, 23, 45, 0, 30), (12, 24, 0)),
+    ((12, 23, 45, 0, 1200), (12, 20, 0)),
+    ((13, 34, 56, 0, 7200), (14, 0, 0))
+]
+
+
+_BAD_TIME_ROUNDING_UNIT_SIZES = [-1, 0, .5, 7]
+
+
 class TimeUtilsTests(TestCase):
     
     
@@ -428,5 +447,58 @@ class TimeUtilsTests(TestCase):
         self._test_ms(time_utils.check_seconds)
 
 
+    def test_round_datetime(self):
+        
+        _DT = datetime.datetime
+        
+        for (h, m, s, u, unit_size), (eh, em, es) in _TIME_ROUNDING_CASES:
+            dt = _DT(2015, 8, 14, h, m, s, u)
+            r = time_utils.round_datetime(dt, unit_size)
+            edt = _DT(2015, 8, 14, eh, em, es)
+            self.assertEqual(r, edt)
+            
+        # case that rounds to the beginning of the next day
+        dt = _DT(2015, 8, 31, 23, 59)
+        r = time_utils.round_datetime(dt, 900)
+        edt = _DT(2015, 9, 1)
+        self.assertEqual(r, edt)
+        
+        # case with an aware `datetime`
+        localize = pytz.utc.localize
+        dt = localize(_DT(2015, 8, 14, 1, 1))
+        r = time_utils.round_datetime(dt, 3600)
+        edt = localize(_DT(2015, 8, 14, 1))
+        self.assertEqual(r, edt)
+        
+        
+    def test_round_datetime_errors(self):
+        for unit_size in _BAD_TIME_ROUNDING_UNIT_SIZES:
+            dt = datetime.datetime(2015, 8, 14)
+            self._assert_raises(
+                ValueError, time_utils.round_datetime, dt, unit_size)
+        
+        
+    def test_round_time(self):
+        
+        for (h, m, s, u, unit_size), (eh, em, es) in _TIME_ROUNDING_CASES:
+            time = datetime.time(h, m, s, u)
+            result = time_utils.round_time(time, unit_size)
+            expected = datetime.time(eh, em, es)
+            self.assertEqual(result, expected)
+            
+        # case that rounds up to midnight
+        time = datetime.time(23, 59)
+        result = time_utils.round_time(time, 900)
+        expected = datetime.time()
+        self.assertEqual(result, expected)
+        
+        
+    def test_round_time_errors(self):
+        for unit_size in _BAD_TIME_ROUNDING_UNIT_SIZES:
+            time = datetime.time()
+            self._assert_raises(
+                ValueError, time_utils.round_time, time, unit_size)
+        
+        
 def _tuplize(x):
     return x if isinstance(x, tuple) else (x,)
