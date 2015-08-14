@@ -7,6 +7,11 @@ import vesper.util.time_utils as time_utils
 from test_case import TestCase
 
 
+_DT = datetime.datetime
+_D = datetime.date
+_T = datetime.time
+_TD = datetime.timedelta
+
 _D2 = '{:2d}'.format
 _D4 = '{:4d}'.format
 _D6 = '{:06d}'.format
@@ -20,8 +25,8 @@ def _get_four_digit_year(y):
     
     
 def _create_utc_datetime(y, M, d, h, m, s, u, delta):
-    dt = datetime.datetime(y, M, d, h, m, s, u, pytz.utc)
-    return dt + datetime.timedelta(hours=delta)
+    dt = _DT(y, M, d, h, m, s, u, pytz.utc)
+    return dt + _TD(hours=delta)
 
 
 _TIME_ROUNDING_CASES = [
@@ -99,7 +104,7 @@ class TimeUtilsTests(TestCase):
         
         for y, M, d, h, m, s, f in cases:
             year = _get_four_digit_year(y)
-            expected_result = datetime.datetime(year, M, d, h, m, s, f)
+            expected_result = _DT(year, M, d, h, m, s, f)
             format_ = _D2 if y < 100 else _D4
             y = format_(y)
             M = _D2(M)
@@ -171,7 +176,7 @@ class TimeUtilsTests(TestCase):
         
         for y, m, d in cases:
             year = _get_four_digit_year(y)
-            expected_result = datetime.date(year, m, d)
+            expected_result = _D(year, m, d)
             format_ = _D2 if y < 100 else _D4
             y = format_(y)
             m = _D2(m)
@@ -277,17 +282,17 @@ class TimeUtilsTests(TestCase):
             if len(case) == 4:
                 h, m, s, f = case
                 u = time_utils._parse_fractional_second(str(f))
-                expected_result = datetime.time(h, m, s, u)
+                expected_result = _T(h, m, s, u)
                 result = time_utils.parse_time(_D2(h), _D2(m), _D2(s), str(f))
                  
             elif len(case) == 3:
                 h, m, s = case
-                expected_result = datetime.time(h, m, s)
+                expected_result = _T(h, m, s)
                 result = time_utils.parse_time(_D2(h), _D2(m), _D2(s))
                  
             else:
                 h, m = case
-                expected_result = datetime.time(h, m)
+                expected_result = _T(h, m)
                 result = time_utils.parse_time(_D2(h), _D2(m))
                 
             self.assertEqual(result, expected_result)
@@ -355,20 +360,19 @@ class TimeUtilsTests(TestCase):
             if len(case) == 4:
                 h, m, s, f = case
                 u = time_utils._parse_fractional_second(str(f))
-                expected_result = datetime.timedelta(
+                expected_result = _TD(
                     hours=h, minutes=m, seconds=s, microseconds=u)
                 result = time_utils.parse_time_delta(
                     str(h), _D2(m), _D2(s), str(f))
                  
             elif len(case) == 3:
                 h, m, s = case
-                expected_result = datetime.timedelta(
-                    hours=h, minutes=m, seconds=s)
+                expected_result = _TD(hours=h, minutes=m, seconds=s)
                 result = time_utils.parse_time_delta(str(h), _D2(m), _D2(s))
                  
             else:
                 h, m = case
-                expected_result = datetime.timedelta(hours=h, minutes=m)
+                expected_result = _TD(hours=h, minutes=m)
                 result = time_utils.parse_time_delta(str(h), _D2(m))
                 
             self.assertEqual(result, expected_result)
@@ -449,8 +453,6 @@ class TimeUtilsTests(TestCase):
 
     def test_round_datetime(self):
         
-        _DT = datetime.datetime
-        
         for (h, m, s, u, unit_size), (eh, em, es) in _TIME_ROUNDING_CASES:
             dt = _DT(2015, 8, 14, h, m, s, u)
             r = time_utils.round_datetime(dt, unit_size)
@@ -473,7 +475,7 @@ class TimeUtilsTests(TestCase):
         
     def test_round_datetime_errors(self):
         for unit_size in _BAD_TIME_ROUNDING_UNIT_SIZES:
-            dt = datetime.datetime(2015, 8, 14)
+            dt = _DT(2015, 8, 14)
             self._assert_raises(
                 ValueError, time_utils.round_datetime, dt, unit_size)
         
@@ -481,21 +483,21 @@ class TimeUtilsTests(TestCase):
     def test_round_time(self):
         
         for (h, m, s, u, unit_size), (eh, em, es) in _TIME_ROUNDING_CASES:
-            time = datetime.time(h, m, s, u)
+            time = _T(h, m, s, u)
             result = time_utils.round_time(time, unit_size)
-            expected = datetime.time(eh, em, es)
+            expected = _T(eh, em, es)
             self.assertEqual(result, expected)
             
         # case that rounds up to midnight
-        time = datetime.time(23, 59)
+        time = _T(23, 59)
         result = time_utils.round_time(time, 900)
-        expected = datetime.time()
+        expected = _T()
         self.assertEqual(result, expected)
         
         
     def test_round_time_errors(self):
         for unit_size in _BAD_TIME_ROUNDING_UNIT_SIZES:
-            time = datetime.time()
+            time = _T()
             self._assert_raises(
                 ValueError, time_utils.round_time, time, unit_size)
         
