@@ -78,8 +78,8 @@ class _Merger(object):
     def _is_consecutive_recording(self, r):
         delta = abs((r.start_time - self._end_time).total_seconds())
         return r.station.name == self._station.name and \
-               r.sample_rate == self._sample_rate and \
-               delta <= self._tolerance
+            r.sample_rate == self._sample_rate and \
+            delta <= self._tolerance
 
 
     def _merge_recording(self, r):
