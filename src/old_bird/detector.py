@@ -26,7 +26,6 @@ import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 import vesper.vcl.vcl_utils as vcl_utils
-from blaze.expr.core import path
 
 
 # TODO: Refactor this module. It contains a jumble of generic detector
@@ -161,7 +160,8 @@ class DetectionHandler(object):
     
     
     def __init__(self, keyword_args):
-        pass
+        super(DetectionHandler, self).__init__()
+        self._success = True
     
     
     def on_detection_start(self):
@@ -202,7 +202,7 @@ class DetectionHandler(object):
         message = (
             'Input path "{:s}" does not exist and will be '
             'ignored.').format(path)
-        logging.info(message)
+        logging.error(message)
         self._success = False
         
    
@@ -317,6 +317,7 @@ class DetectionArchiver(DetectionHandler):
     def on_recording_start(self, recording):
         
         r = recording
+        self._station = r.station
         
         try:
             self._archive_task_serializer.execute(
@@ -324,10 +325,9 @@ class DetectionArchiver(DetectionHandler):
                 r.length, r.sample_rate)
         
         except ValueError as e:
-            raise DetectionHandlerError(
-                'Recording archival failed with message: {:s}'.format(str(e)))
-        
-        self._station = r.station
+            logging.error(
+                'Recording archival failed: {:s}'.format(str(e)))
+            self._success = False
         
         
     def on_subrecording_start(self, subrecording):
@@ -351,8 +351,9 @@ class DetectionArchiver(DetectionHandler):
                 clip.detector_name, start_time, clip)
             
         except ValueError as e:
-            raise DetectionHandlerError(
-                'Clip archival failed with message: {:s}'.format(str(e)))
+            logging.error(
+                'Clip archival failed: {:s}'.format(str(e)))
+            self._success = False
 
 
     def on_detection_end(self):
@@ -669,7 +670,8 @@ class Detector(object):
         
         self._detector_names = _get_detector_name(keyword_args)
         self._input_mode = _get_input_mode(keyword_args)
-        self._input_paths = _get_input_paths(keyword_args)
+        self._input_paths = \
+            vcl_utils.get_required_keyword_arg_tuple('inputs', keyword_args)
         self._detection_handler = _get_detection_handler(keyword_args)
         
                 
@@ -709,7 +711,7 @@ class Detector(object):
                     
             delegate.on_recording_end(recording)
             
-        return self._success
+        return self._success and delegate._success
                     
                  
     def _detect_on_subrecording(self, subrecording):
@@ -745,8 +747,11 @@ class Detector(object):
         
         self._detection_handler.on_subrecording_end(subrecording)
         
-        processing_time = time.time() - start_time
+        # TODO: Track success on individual recordings. Try to show
+        # performance in all cases where it makes sense, even if there
+        # were errors.
         if self._success:
+            processing_time = time.time() - start_time
             _log_performance(
                 'Detection ran on', file_duration, processing_time)
             
@@ -860,11 +865,7 @@ def _get_detector_executable_path(detector_name, input_mode):
 
 def _get_detector_name(keyword_args):
     
-    try:
-        names = keyword_args['detectors']
-    except KeyError:
-        message = 'Missing required "--detectors" argument.'
-        raise CommandSyntaxError(message)
+    names = vcl_utils.get_required_keyword_arg_tuple('detectors', keyword_args)
     
     for name in names:
         if name not in _DETECTOR_NAMES:
@@ -879,16 +880,7 @@ def _get_input_mode(keyword_args):
     # TODO: Make --input-mode argument optional, and infer its value
     # in some or all cases?
     
-    try:
-        modes = keyword_args['input-mode']
-    except KeyError:
-        raise CommandSyntaxError('Missing required "--input-mode" argument.')
-    
-    if len(modes) != 1:
-        raise CommandSyntaxError(
-            '"--input-mode" argument value must be a single string.')
-    
-    mode = modes[0]
+    mode = vcl_utils.get_required_keyword_arg('input-mode', keyword_args)
     
     if mode not in _INPUT_MODES:
         message = 'Unrecognized input mode "{:s}".'.format(mode)
@@ -904,17 +896,6 @@ def _get_input_mode(keyword_args):
     return mode
     
     
-def _get_input_paths(keyword_args):
-    
-    try:
-        values = keyword_args['inputs']
-    except KeyError:
-        message = 'Missing required "--inputs" argument.'
-        raise CommandSyntaxError(message)
-    
-    return values
-
-
 _DETECTION_HANDLER_CLASSES = {
     'MPG Ranch Renamer': DetectionRenamer,
     'Archiver': DetectionArchiver
@@ -923,13 +904,8 @@ _DETECTION_HANDLER_CLASSES = {
 
 def _get_detection_handler(keyword_args):
     
-    handler_names = keyword_args.get('detection-handler', ('Archiver',))
-    
-    if len(handler_names) != 1:
-        raise CommandSyntaxError(
-            'Argument "--detection-handler" must have exactly one value.')
-
-    handler_name = handler_names[0]
+    handler_name = vcl_utils.get_optional_keyword_arg(
+        'detection-handler', keyword_args, 'Archiver')
     
     try:
         klass = _DETECTION_HANDLER_CLASSES[handler_name]

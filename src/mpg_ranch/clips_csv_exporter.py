@@ -176,7 +176,7 @@ class _ClipVisitor(ClipVisitor):
 
     def __init__(self, positional_args, keyword_args):
         super(_ClipVisitor, self).__init__(positional_args, keyword_args)
-        (self._output_file_path,) = \
+        self._output_file_path = \
             vcl_utils.get_required_keyword_arg('output-file', keyword_args)
         self._columns = _create_table_columns(_TABLE_FORMAT)
         

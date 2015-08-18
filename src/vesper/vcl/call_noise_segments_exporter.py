@@ -78,14 +78,15 @@ class _ClipVisitor(ClipVisitor):
         super(_ClipVisitor, self).__init__(positional_args, keyword_args)
         
         self._file_path = vcl_utils.get_required_keyword_arg(
-            'output-file', keyword_args)[0]
+            'output-file', keyword_args)
             
         self._segment_dur = float(
             vcl_utils.get_required_keyword_arg(
-                'segment-duration', keyword_args)[0])
+                'segment-duration', keyword_args))
         
         self._min_segment_spacing = float(
-            keyword_args.get('min-segment-spacing', ('0',))[0])
+            vcl_utils.get_optional_keyword_arg(
+                'min-segment-spacing', keyword_args, 0))
         
 
     def begin_visits(self):

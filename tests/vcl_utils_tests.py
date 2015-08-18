@@ -176,6 +176,108 @@ class VclUtilsTests(TestCase):
                 CommandSyntaxError, vcl_utils.parse_date, case)
 
 
+    def test_get_required_keyword_arg(self):
+        
+        cases = [
+            ({'a': (0,)}, 'a', 0)
+        ]
+        
+        for keyword_args, name, expected in cases:
+            value = vcl_utils.get_required_keyword_arg(name, keyword_args)
+            self.assertEqual(value, expected)
+        
+        
+    def test_get_required_keyword_arg_errors(self):
+        
+        cases = [
+            ({}, 'a'),
+            ({'a': ()}, 'a'),
+            ({'a': (0, 1)}, 'a')
+        ]
+        
+        get_arg = vcl_utils.get_required_keyword_arg
+        
+        for keyword_args, name in cases:
+            self._assert_raises(
+                CommandSyntaxError, get_arg, name, keyword_args)
+
+
+    def test_get_required_keyword_arg_tuple(self):
+         
+        cases = [(), (0,), (0, 1)]
+         
+        for value in cases:
+            result = vcl_utils.get_required_keyword_arg_tuple(
+                'a', {'a': value})
+            self.assertEqual(result, value)
+         
+         
+    def test_get_required_keyword_arg_tuple_errors(self):
+         
+        cases = [{}]
+         
+        get_arg = vcl_utils.get_required_keyword_arg
+         
+        for keyword_args in cases:
+            self._assert_raises(
+                CommandSyntaxError, get_arg, 'a', keyword_args)
+
+
+    def test_get_optional_keyword_arg(self):
+        
+        cases = [
+            ([{}], None),
+            ([{'a': (0,)}], 0),
+            ([{}, 0], 0)
+        ]
+        
+        for args, expected in cases:
+            args = ['a'] + args
+            value = vcl_utils.get_optional_keyword_arg(*args)
+            self.assertEqual(value, expected)
+        
+        
+    def test_get_optional_keyword_arg_errors(self):
+         
+        cases = [
+            [{'a': (0, 1)}]
+        ]
+         
+        get_arg = vcl_utils.get_optional_keyword_arg
+        
+        for args in cases:
+            args = ['a'] + args
+            self._assert_raises(CommandSyntaxError, get_arg, *args)
+        
+        
+    def test_get_optional_keyword_arg_tuple(self):
+          
+        cases = [
+            ([{}], None),
+            ([{'a': (0,)}], (0,)),
+            ([{'a': (0, 1)}], (0, 1)),
+            ([{}, (0,)], (0,))
+        ]
+          
+        for args, expected in cases:
+            args = ['a'] + args
+            value = vcl_utils.get_optional_keyword_arg_tuple(*args)
+            self.assertEqual(value, expected)
+        
+        
+    def test_get_optional_keyword_arg_tuple_errors(self):
+          
+        cases = [
+            [{}, 0]
+        ]
+          
+        get_tuple = vcl_utils.get_optional_keyword_arg_tuple
+        
+        for args in cases:
+            args = ['a'] + args
+            self._assert_raises(TypeError, get_tuple, *args)
+        
+        
 def _parse_date(date):
     if date is None:
         return date

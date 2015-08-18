@@ -176,15 +176,61 @@ def parse_command_line_args(args):
     
     
 def get_required_keyword_arg(name, keyword_args):
+    values = get_required_keyword_arg_tuple(name, keyword_args)
+    return _get_singleton_arg_value(values, name)
+
+
+def _get_singleton_arg_value(values, name):
+    _check_arg_values_count(name, values, 1, 1)
+    return values[0]
+
+
+def get_required_keyword_arg_tuple(name, keyword_args):
     try:
         return keyword_args[name]
     except KeyError:
-        message = 'Missing required "{:s}" keyword argument.'.format(name)
+        message = 'Missing required keyword argument "--{:s}".'.format(name)
         raise CommandSyntaxError(message)
     
     
+def get_optional_keyword_arg(name, keyword_args, default=None):
+    
+    try:
+        values = keyword_args[name]
+    except KeyError:
+        return default
+    else:
+        return _get_singleton_arg_value(values, name)
+    
+    
+def get_optional_keyword_arg_tuple(name, keyword_args, default=None):
+    
+    if default is not None:
+        if not isinstance(default, tuple):
+            raise TypeError(
+                ('A tuple is required as the default value for '
+                 'argument "--{:s}".').format(name))
+            
+    try:
+        values = keyword_args[name]
+    except KeyError:
+        return default
+    else:
+        return values
+
+
 def get_archive_dir_path(keyword_args):
     
+    # We make a separate function for this rather than just using
+    # `get_optional_keyword_arg` for two reasons:
+    #
+    #    1. The `archive` keyword argument is common.
+    #
+    #    2. We would prefer not to invoke `os.getcwd` unless we have to.
+    #       If we were to use `get_optional_keyword_arg`, we would always
+    #       invoke `os.getcwd` at each call site to get the default value
+    #       to pass to `get_optional_keyword_arg`.
+
     try:
         paths = keyword_args['archive']
     except KeyError:

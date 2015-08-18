@@ -236,7 +236,7 @@ class Importer(object):
     def __init__(self, positional_args, keyword_args):
         super(Importer, self).__init__()
         self._input_dir_path = vcl_utils.get_required_keyword_arg(
-            'input-dir', keyword_args)[0]
+            'input-dir', keyword_args)
         self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
 
     
