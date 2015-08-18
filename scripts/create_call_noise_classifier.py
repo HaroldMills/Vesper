@@ -1,4 +1,6 @@
 from __future__ import print_function
+import os.path
+import sys
 
 from sklearn import cross_validation
 from sklearn import svm
@@ -10,24 +12,48 @@ from vesper.util.spectrogram import Spectrogram
 import vesper.util.data_windows as data_windows
 
 
-_INPUT_FILE_PATH = \
-    '/Users/Harold/Desktop/NFC/Data/MPG Ranch/CallNoiseSegments.hdf5'
-    
-_WINDOW_TYPE = 'Hann'
-_WINDOW_SIZE = 110
-_HOP_SIZE = 55
-_DFT_SIZE = 128
-_MIN_FREQ = 4000
-_MAX_FREQ = 11000
-_MIN_POWER = -10
-_MAX_POWER = 65
-    
-_WINDOW = data_windows.create_window(_WINDOW_TYPE, _WINDOW_SIZE)
-_SPECTROGRAM_PARAMS = Bunch(
-    window=_WINDOW,
-    hop_size=_HOP_SIZE,
-    dft_size=_DFT_SIZE,
-    ref_power=1)
+def _create_input_file_path(detector_name):
+    dir_path = '/Users/Harold/Desktop/NFC/Data/MPG Ranch'
+    file_name = '{:s} Call Noise Segments.hdf5'.format(detector_name)
+    return os.path.join(dir_path, file_name)
+
+
+_CONFIGS = {
+                       
+    'Tseep': Bunch(
+        input_file_path=_create_input_file_path('Tseep'),
+        spectrogram_params=Bunch(
+            window=data_windows.create_window('Hann', 110),
+            hop_size=55,
+            dft_size=128,
+            ref_power=1),
+        min_freq=4000,
+        max_freq=11000,
+        min_power=-10,
+        max_power=65,
+        svc_params={
+            'gamma': .001,
+            'C': 1000.
+        }),
+        
+    'Thrush': Bunch(
+        input_file_path=_create_input_file_path('Thrush'),
+        spectrogram_params=Bunch(
+            window=data_windows.create_window('Hann', 110),
+            hop_size=55,
+            dft_size=128,
+            ref_power=1),
+        min_freq=1500,
+        max_freq=4000,
+        min_power=-10,
+        max_power=65,
+        svc_params={
+            'gamma': .001,
+            'C': 1000.
+        })
+
+}
+
 
 _TARGETS = {
     'Noise': 0,
@@ -39,21 +65,40 @@ def _main():
     
     # _test_sum_adjacent()
     
-    print('creating dataset...')
-    segments = _create_dataset()
+    config = _CONFIGS[sys.argv[1]]
     
-    print('training and testing classifiers...')
-    X = segments.features
-    y = segments.targets
-    folds = cross_validation.StratifiedKFold(
-        y, n_folds=10, shuffle=True, random_state=0)
-    scores = np.array([_train_and_test_classifier(X, y, f) for f in folds])
+    segments = _load_segments(config.input_file_path)
     
-    print('scores', scores)
-    print('average scrore {:f}'.format(scores.mean()))
+    num_fractions = 10
+    fractions = (1. + np.arange(num_fractions)) / num_fractions
+    average_scores = np.zeros_like(fractions)
+    
+    for i, fraction in enumerate(fractions):
+        
+        print('creating dataset...')
+        dataset = _create_dataset(segments, fraction, config)
+        
+        print('training and testing classifiers...')
+        X = dataset.features
+        y = dataset.targets
+        folds = cross_validation.StratifiedKFold(
+            y, n_folds=10, shuffle=True, random_state=0)
+        scores = np.array(
+            [_train_and_test_classifier(X, y, f, config) for f in folds])
+        average_score = scores.mean()
+        
+        print('scores', scores)
+        print('average scrore {:f}'.format(average_score))
+        print
+        
+        average_scores[i] = average_score
+        
+    for i in xrange(len(average_scores)):
+        percentage = int(round(fractions[i] * 100))
+        print(percentage, average_scores[i])
     
     
-def _train_and_test_classifier(X, y, fold):
+def _train_and_test_classifier(X, y, fold, config):
     
     train_indices, test_indices = fold
     
@@ -63,7 +108,7 @@ def _train_and_test_classifier(X, y, fold):
     X_test = X[test_indices]
     y_test = y[test_indices]
         
-    classifier = svm.SVC(gamma=.001, C=100.)
+    classifier = svm.SVC(**config.svc_params)
     classifier.fit(X_train, y_train)
     
     predictions = classifier.predict(X_test)
@@ -73,12 +118,6 @@ def _train_and_test_classifier(X, y, fold):
     
     return score
 
-    
-def _create_dataset():
-    segments = _load_segments(_INPUT_FILE_PATH)
-    dataset = _create_dataset_from_segments(segments)
-    return dataset
-    
     
 def _load_segments(file_path):
     with h5py.File(file_path, 'r') as file_:
@@ -106,9 +145,14 @@ def _create_segment(dataset):
     return segment
 
 
-def _create_dataset_from_segments(segments):
+def _create_dataset(segments, fraction, config):
     
-    tuples = [_create_segment_tuple(s) for s in segments]
+    n = int(round(fraction * len(segments)))
+    np.random.seed(0)
+    segments = np.random.choice(segments, n, replace=False)
+    
+    tuples = [_create_segment_tuple(s, config) for s in segments]
+    
     features, targets, names, images = zip(*tuples)
     features = np.array(features)
     targets = np.array(targets)
@@ -122,27 +166,32 @@ def _create_dataset_from_segments(segments):
     return dataset
     
     
-def _create_segment_tuple(segment):
-    features, spectra = _create_features(segment)
+def _create_segment_tuple(segment, config):
+    features, spectra = _create_features(segment, config)
     target = _TARGETS[segment.classification]
     return (features, target, segment.name, spectra)
      
 
-def _create_features(segment):
+def _create_features(segment, config):
     
-    spectrogram = Spectrogram(segment, _SPECTROGRAM_PARAMS)
+    c = config
+    
+    spectrogram = Spectrogram(segment, c.spectrogram_params)
     spectra = spectrogram.spectra
     
     # Clip spectra to specified power range.
-    spectra.clip(_MIN_POWER, _MAX_POWER)
+    spectra.clip(config.min_power, config.max_power)
     
     # Remove portions of spectra outside of specified frequency range.
     sample_rate = segment.sample_rate
-    start_index = _freq_to_index(_MIN_FREQ, sample_rate, _DFT_SIZE)
-    end_index = _freq_to_index(_MAX_FREQ, sample_rate, _DFT_SIZE) + 1
+    dft_size = c.spectrogram_params.dft_size
+    start_index = _freq_to_index(c.min_freq, sample_rate, dft_size)
+    end_index = _freq_to_index(c.max_freq, sample_rate, dft_size) + 1
     spectra = spectra[:, start_index:end_index]
     
     # TODO: Should summing happen before logs are taken?
+    # TODO: Consider parameterizing both the block size and the method
+    # of combining spectrogram values (e.g. is sum or max better?).
     spectra = _sum_adjacent(spectra, 2, 2)
     
     features = _normalize(spectra.flatten())
