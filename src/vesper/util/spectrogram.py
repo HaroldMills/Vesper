@@ -38,7 +38,7 @@ class Spectrogram(TimeFrequencyAnalysis):
                 the spectrogram parameters.
              
                 This parameter must be a Python object with the
-                followingattributes:
+                following attributes:
              
                     window : NumPy array
                         the data window to use for the spectrogram.
