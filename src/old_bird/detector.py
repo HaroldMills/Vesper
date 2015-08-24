@@ -289,7 +289,8 @@ _INPUT_FILE_NAME_RE = \
 _STATION_NAME_CHANGES = {
     'floodplain': 'Floodplain NFC',
     'ridge': 'Ridge NFC',
-    'sheep': 'Sheep Camp NFC'
+    'sheep': 'Sheep Camp NFC',
+    'sheepcamp': 'Sheep Camp NFC'
 }
 
 
