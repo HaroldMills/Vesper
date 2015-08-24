@@ -38,16 +38,16 @@ LON = -114.076499
 LAT = 46.641042
 
 # start night (arguments to datetime.date function are year, month, and day)
-START_NIGHT = datetime.date(2015, 8, 14)
+START_NIGHT = datetime.date(2015, 8, 20)
 
 # end night (arguments to datetime.date function are year, month, and day)
-END_NIGHT = datetime.date(2015, 10, 31)
+END_NIGHT = datetime.date(2015, 10, 30)
 
 # sunset offset in minutes
-SUNSET_OFFSET = 60
+SUNSET_OFFSET = -30
 
 # sunrise offset in minutes
-SUNRISE_OFFSET = -30
+SUNRISE_OFFSET = 30
 
 # Time zone name. Note that if you specify the name of a time zone in which
 # DST is observed, the times output by the script will reflect DST-related
