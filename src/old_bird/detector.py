@@ -293,6 +293,25 @@ _STATION_NAME_CHANGES = {
     'sheepcamp': 'Sheep Camp NFC'
 }
 
+_RECORDING_CONFIGS_YAML = '''
+    
+    - station: Floodplain
+    
+        - start_night: 2015-04-22
+          end_night: 2015-06-11
+          microphones: [NFC, 21c]
+          
+    - station: Sheep Camp
+    
+        - start_night: 2014-04-11
+          end_night: 2014-04-17
+          microphones: [SMX-II]
+          
+        - start_night: 2014-04-18
+          end_night: 2014-06-08
+          microphones: [SMX-II, NFC]
+'''
+
 
 class DetectionArchiver(DetectionHandler):
     
@@ -733,7 +752,7 @@ class Detector(object):
             self._copy_input_file(file_path)
         except OSError as e:
             logging.error(str(e))
-            self._on_file_error(file_path)
+            self._success = False
             return
         
         processing_time = time.time() - start_time
@@ -757,20 +776,6 @@ class Detector(object):
                 'Detection ran on', file_duration, processing_time)
             
             
-    def _on_file_error(self, file_path):
-        self._success = False
-        self._on_file_end(file_path)
-        
-        
-    def _on_file_end(self, file_path):
-        try:
-            self._detection_handler.on_file_end()
-        except DetectionHandlerError as e:
-            logging.error((
-                'Error at end of processing for input file "{:s}". '
-                'Error message was: {:s}').format(file_path, str(e)))
-            
-        
     def _copy_input_file(self, file_path):
         
         file_name = os.path.basename(file_path)
