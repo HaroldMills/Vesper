@@ -120,8 +120,11 @@ def parse_date_time(y, MM, dd, hh, mm, ss=None, f=None):
     
 def parse_date(y, mm, dd):
     
+    # We assume that `y` is a two- or four-digit string, and that
+    # `mm` and `dd` are two-digit strings.
+    
     year = int(y)
-    if year < 100:
+    if len(y) == 2:
         year += 2000 if year < 50 else 1900
         
     month = int(mm)

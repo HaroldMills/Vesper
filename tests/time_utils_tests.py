@@ -12,8 +12,8 @@ _D = datetime.date
 _T = datetime.time
 _TD = datetime.timedelta
 
-_D2 = '{:2d}'.format
-_D4 = '{:4d}'.format
+_D2 = '{:02d}'.format
+_D4 = '{:04d}'.format
 _D6 = '{:06d}'.format
 
 
@@ -122,6 +122,7 @@ class TimeUtilsTests(TestCase):
         cases = [
                  
             # year out of range
+            (0000, 01, 01, 00, 00, 00, 0),
             (1899, 12, 31, 00, 00, 00, 0),
             (2100, 01, 01, 00, 00, 00, 0),
             
