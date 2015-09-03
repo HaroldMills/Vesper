@@ -9,9 +9,10 @@ import re
 import subprocess
 import time
 
-import pytz
 import yaml
 
+from mpg_ranch.song_meter_audio_file_parser import SongMeterAudioFileParser \
+    as MpgRanchSongMeterAudioFileParser
 from old_bird.file_name_utils import \
     parse_elapsed_time_clip_file_name as _parse_clip_file_name
 from vesper.archive.recording import Recording
@@ -160,7 +161,17 @@ class DetectionHandler(object):
     
     
     def __init__(self, keyword_args):
+        
         super(DetectionHandler, self).__init__()
+        
+        # TODO: Create an input file parser extension point and repackage
+        # the file parser as an extension that is specified and configured
+        # by VCL command arguments. Parsing file names and getting audio
+        # file metadata from within the file are concerns that I worry
+        # are not currently as separate as I suspect they should be.
+        # Think about this.
+        self._input_file_parser = MpgRanchSongMeterAudioFileParser()
+        
         self._success = True
     
     
@@ -170,7 +181,6 @@ class DetectionHandler(object):
     
     def get_recordings(self, input_paths):
         
-        self._success = True
         file_paths = self._get_input_file_paths(input_paths)
         recordings = self._create_recordings(file_paths)
         recordings = recording_utils.merge_recordings(recordings)
@@ -229,30 +239,43 @@ class DetectionHandler(object):
 
     def _create_recordings(self, file_paths):
         recordings = []
-        for path in file_paths:
-            recording = self._create_recording(path)
-            if recording is not None:
-                recordings.append(recording)
+        for file_path in file_paths:
+            recordings += self._create_recording(file_path)
         return recordings
     
     
-    def _create_recording(self, path):
+    def _create_recording(self, file_path):
         
-        info = _get_mpg_ranch_input_file_info(path)
+        info = self._input_file_parser.get_file_info(file_path)
         
-        station = self._get_station(info.station_name)
+        _check_sample_rate(info.sample_rate, file_path)
+            
+        recordings = []
         
-        # Get UTC start time from local start time using station time zone.
-        t = info.start_time
-        start_time = time_utils.create_utc_datetime(
-            t.year, t.month, t.day, t.hour, t.minute, t.second,
-            time_zone=station.time_zone)
-    
-        recording = Recording(
-            station, start_time, info.length, info.sample_rate)
-        recording.file_path = path
+        for channel_num, microphone_name in \
+                enumerate(info.channel_microphone_names):
+            
+            if microphone_name is not None:
+                
+                station_name = info.station_name + ' ' + microphone_name
+                station = self._get_station(station_name)
+                
+                # Get UTC start time from local start time using station
+                # time zone.
+                t = info.start_time
+                start_time = time_utils.create_utc_datetime(
+                    t.year, t.month, t.day, t.hour, t.minute, t.second,
+                    time_zone=station.time_zone)
+                    
+                recording = Recording(
+                    station, start_time, info.length, info.sample_rate)
+                recording.file_path = file_path
+                recording.channel_num = channel_num
+                recording.microphone_name = microphone_name
+                
+                recordings.append(recording)
         
-        return recording
+        return recordings
 
     
     def _get_station(self, station_name):
@@ -283,36 +306,6 @@ class DetectionHandler(object):
         pass
     
         
-_INPUT_FILE_NAME_RE = \
-    re.compile(r'^(.+)_(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d).wav$')
-    
-_STATION_NAME_CHANGES = {
-    'floodplain': 'Floodplain NFC',
-    'ridge': 'Ridge NFC',
-    'sheep': 'Sheep Camp NFC',
-    'sheepcamp': 'Sheep Camp NFC'
-}
-
-_RECORDING_CONFIGS_YAML = '''
-    
-    - station: Floodplain
-    
-        - start_night: 2015-04-22
-          end_night: 2015-06-11
-          microphones: [NFC, 21c]
-          
-    - station: Sheep Camp
-    
-        - start_night: 2014-04-11
-          end_night: 2014-04-17
-          microphones: [SMX-II]
-          
-        - start_night: 2014-04-18
-          end_night: 2014-06-08
-          microphones: [SMX-II, NFC]
-'''
-
-
 class DetectionArchiver(DetectionHandler):
     
     
@@ -328,8 +321,6 @@ class DetectionArchiver(DetectionHandler):
     
     
     def _get_station(self, station_name):
-        station_name = _STATION_NAME_CHANGES.get(
-            station_name.lower(), station_name)
         return self._archive_task_serializer.execute(
             self._archive.get_station, station_name)
 
@@ -459,6 +450,14 @@ class DetectionRenamer(DetectionHandler):
             raise DetectionHandlerError(str(e))
 
 
+def _check_sample_rate(sample_rate, file_path):
+    if sample_rate != _INPUT_SAMPLE_RATE:
+        raise ValueError((
+            'Sample rate is {:g} Hz rather than the required {:d} Hz '
+            'for input sound file "{:s}".').format(
+                sample_rate, _INPUT_SAMPLE_RATE, file_path))
+
+
 def _get_station_name_changes():
     
     file_path = os.path.join(_OUTPUT_DIR_PATH, 'StationNameChanges.yaml')
@@ -488,53 +487,6 @@ def _get_station_name_changes():
         return {}
                 
                 
-# We assume that the time zone is US/Mountain for all MPG Ranch detections.
-_MPG_RANCH_TIME_ZONE = pytz.timezone('US/Mountain')
-
-
-def _get_mpg_ranch_input_file_info(file_path):
-    
-    file_name = os.path.basename(file_path)
-    station_name, start_time = \
-        _parse_mpg_ranch_input_file_name(file_name)
-        
-    try:
-        (_, _, sample_rate, length, _) = \
-            audio_file_utils.get_wave_file_info(file_path)
-    except Exception as e:
-        raise DetectionHandlerError(
-            'Input file operation failed with message: {:s}'.format(str(e)))
-       
-    if sample_rate != _INPUT_SAMPLE_RATE:
-        raise DetectionHandlerError((
-            'Sample rate is {:d} Hz rather than the required {:d} Hz '
-            'for input file "{:s}".').format(
-                _INPUT_SAMPLE_RATE, int(round(sample_rate)), file_path))
-        
-    return Bunch(
-        station_name=station_name,
-        start_time=start_time,
-        length=length,
-        sample_rate=sample_rate)
-        
-    
-def _parse_mpg_ranch_input_file_name(file_name):
-    
-    m = _INPUT_FILE_NAME_RE.match(file_name)
-    
-    if m is None:
-        raise DetectionHandlerError((
-            'File name is not of the form '
-            '<station name>_<yyyymmdd>_<hhmmss>.wav'))
-        
-    station_name, year, month, day, hour, minute, second = m.groups()
-    
-    start_time = time_utils.parse_date_time(
-        year, month, day, hour, minute, second)
-    
-    return station_name, start_time
-        
-
 _HELP = '''
 <keyword arguments>
 
@@ -749,8 +701,11 @@ class Detector(object):
         start_time = time.time()
         
         try:
-            self._copy_input_file(file_path)
+            self._copy_input_file_channel(
+                file_path, subrecording.channel_num,
+                subrecording.microphone_name)
         except OSError as e:
+            # TODO: Handle this as a fatal error.
             logging.error(str(e))
             self._success = False
             return
@@ -776,13 +731,18 @@ class Detector(object):
                 'Detection ran on', file_duration, processing_time)
             
             
-    def _copy_input_file(self, file_path):
+    def _copy_input_file_channel(
+            self, file_path, channel_num, microphone_name):
         
         file_name = os.path.basename(file_path)
-        logging.info(
-            'Copying input file "{:s}" to "{:s}"...'.format(
-                file_name, _INPUT_FILE_PATH))
-        os_utils.copy_file(file_path, _INPUT_FILE_PATH)
+        
+        logging.info((
+            'Copying input file "{}" channel {} (for microphone {}) '
+            'to "{}"...').format(
+                file_name, channel_num, microphone_name, _INPUT_FILE_PATH))
+        
+        audio_file_utils.copy_wave_file_channel(
+            file_path, channel_num, _INPUT_FILE_PATH)
         
         
     def _start_detectors(self):
