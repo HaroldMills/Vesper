@@ -238,13 +238,27 @@ class DetectionHandler(object):
 
 
     def _create_recordings(self, file_paths):
+        
         recordings = []
+        
         for file_path in file_paths:
-            recordings += self._create_recording(file_path)
+            
+            try:
+                channel_recordings = self._create_channel_recordings(file_path)
+                
+            except ValueError as e:
+                logging.error((
+                    'Could not parse input path "{}": file will be ignored. '
+                    'Error message was: {}').format(file_path, str(e)))
+                self._success = False
+                
+            else:
+                recordings += channel_recordings
+                
         return recordings
     
     
-    def _create_recording(self, file_path):
+    def _create_channel_recordings(self, file_path):
         
         info = self._input_file_parser.get_file_info(file_path)
         
@@ -258,6 +272,12 @@ class DetectionHandler(object):
             if microphone_name is not None:
                 
                 station_name = info.station_name + ' ' + microphone_name
+                
+                # TODO: The following raises a `ValueError` if there
+                # is no station with the specified name, for example if
+                # the microphone name is unrecognized. Figure out how
+                # best to deal with this. It might be better to do so
+                # in the file parser rather than here.
                 station = self._get_station(station_name)
                 
                 # Get UTC start time from local start time using station
