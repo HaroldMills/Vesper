@@ -5,7 +5,9 @@ import yaml
 
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
+import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
+import vesper.util.vesper_path_utils as vesper_path_utils
 
 
 _INPUT_FILE_NAME_RE_1 = \
@@ -17,58 +19,7 @@ _INPUT_FILE_NAME_RE_2 = \
         r'^([^_]+)_(\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)_(\d{6})(_.+)?\.wav$')
     
     
-_STATION_NAME_ALIASES = '''
-   Floodplain: [floodplain, flood]
-   Ridge: ridge
-   Sheep Camp: [sheep camp, sheep, sheepcamp]
-'''
-
-_MICROPHONE_NAME_ALIASES = '''
-    21c: c
-    NFC: n
-    SMX-II: s
-'''
-
-_CHANNEL_MICROPHONE_NAMES = '''
-    
-    Floodplain:
-    
-        - start_night: 2014-08-01
-          end_night: 2014-10-01
-          microphones: [NFC]
-          
-        - start_night: 2015-04-22
-          end_night: 2015-06-11
-          microphones: [NFC, 21c]
-          
-    Ridge:
-    
-        - start_night: 2014-08-02
-          end_night: 2014-10-21
-          microphones: [NFC]
-          
-        - start_night: 2015-04-23
-          end_night: 2015-06-10
-          microphones: [NFC]
-          
-    Sheep Camp:
-    
-        - start_night: 2014-04-11
-          end_night: 2014-04-17
-          microphones: [SMX-II]
-          
-        - start_night: 2014-04-18
-          end_night: 2014-06-08
-          microphones: [SMX-II, NFC]
-          
-        - start_night: 2015-04-22
-          end_night: 2015-06-10
-          microphones: [NFC]
-          
-'''
-
-
-def _parse_station_name_aliases(aliases_yaml):
+def _get_station_name_translations(prefs):
     
     # TODO: We assume here that if the YAML parses the result has a
     # certain structure, but it might not. We need a general way to
@@ -76,38 +27,38 @@ def _parse_station_name_aliases(aliases_yaml):
     # declarative YAML descriptions of the required structure, or
     # perhaps somebody has already implemented something like this?
     
-    aliases = _parse_yaml(aliases_yaml, 'station name aliases')
+    aliases = prefs.get('station_name_aliases', {})
     return _invert_aliases_dict(aliases)
 
 
-def _parse_yaml(s, description):
-    try:
-        return yaml.load(s)
-    except ValueError as e:
-        raise ValueError((
-            'Could not parse {:s} YAML. '
-            'Error message was: {:s}').format(description, str(e)))
-
-        
 def _invert_aliases_dict(aliases):
+    
     translations = {}
+    
     for translation, a in aliases.iteritems():
+        
         if isinstance(a, list):
+            
             for alias in a:
+                
                 if alias in translations:
+                    
                     raise ValueError(
                         ('Alias "{:s}" specified for both "{:s}" '
                          'and "{:s}".').format(
                             str(alias), str(translations[alias]),
                             str(translation)))
+                    
                 else:
                     translations[alias] = translation
+                    
         else:
             translations[a] = translation
+            
     return translations
             
         
-def _parse_channel_microphone_names(names_yaml):
+def _get_channel_microphone_names(prefs, file_path):
     
     # TODO: We assume here that if the YAML parses the result has a
     # certain structure, but it might not. We need a general way to
@@ -115,12 +66,15 @@ def _parse_channel_microphone_names(names_yaml):
     # declarative YAML descriptions of the required structure, or
     # perhaps somebody has already implemented something like this?
     
-    # `names` is a dictionary mapping station names to lists of
-    # microphone name dictionaries. Each microphone name dictionary
-    # contains "start_night", "end_night", and "microphones" keys.
-    return _parse_yaml(names_yaml, 'station microphone names')
+    key = 'channel_microphone_names'
+    try:
+        return prefs[key]
+    except KeyError:
+        raise ValueError(
+            'Required preference "{}" is missing from file "{}".'.format(
+                key, file_path))
         
-    
+
 class SongMeterAudioFileParser(object):
     
     
@@ -128,11 +82,34 @@ class SongMeterAudioFileParser(object):
         
         super(SongMeterAudioFileParser, self).__init__()
         
-        self._station_name_translations = \
-            _parse_station_name_aliases(_STATION_NAME_ALIASES)
+        self._get_preferences()
+        
+        
+    def _get_preferences(self):
+        
+        home_dir_path = vesper_path_utils.get_app_home_dir_path()
+        file_path = os.path.join(
+            home_dir_path, 'Preferences', 'MPG Ranch',
+            'Song Meter Audio File Parser.yaml')
+        
+        try:
+            text = os_utils.read_file(file_path)
+        except Exception as e:
+            raise ValueError((
+                'Could not read preferences file "{}". Error message '
+                'was: {}').format(file_path, str(e)))
+            
+        try:
+            prefs = yaml.load(text)
+        except Exception as e:
+            raise ValueError((
+                'Could not parse YAML from preferences file "{}". '
+                'Error message was: {}').format(file_path, str(e)))
+            
+        self._station_name_translations = _get_station_name_translations(prefs)
         
         self._channel_microphone_names = \
-            _parse_channel_microphone_names(_CHANNEL_MICROPHONE_NAMES)
+            _get_channel_microphone_names(prefs, file_path)
         
         
     def get_file_info(self, file_path):
