@@ -1,4 +1,50 @@
+"""
+Creates a call/noise clip segment classifier for the specified detector.
+
+The name of the detector (e.g. "Tseep" or "Thrush" is specified as the
+single command-line argument to this script. Given labeled examples of
+call and noise segments, the script trains a classifier to distinguish
+the two types of segments. Training is performed on increasingly large
+subsets of the training data, using stratified k-fold cross-validation
+for each subset. The fraction of test clips that are correctly classified
+is reported for each fold, along with the average for all folds. At the
+end of the cross-validation training runs learning curve data are output
+in the form of a textual table giving the size of each training data
+subset and the average correct classification fraction for the classifiers
+that were built from those data. Finally, a classifier is trained on
+all of the training data.
+
+The script requires two HDF5 input files with names:
+
+    <detector> Call Segments.hdf5
+    <detector> Noise Segments.hdf5
+    
+for example:
+
+    Tseep Call Segments.hdf5
+    Tseep Noise Segments.hdf5
+    
+and writes the final classifier to a pickle file called:
+
+    <detector> Segment Classifier.pkl
+    
+for example:
+
+    Tseep Segment Classifier.pkl
+    
+The classifier is a scikit-learn Support Vector classifier and can be read
+by a Python script with:
+
+    with open(pickle_file_path, 'r') as file_:
+        classifier = pickle.load(file_)
+        
+See http://scikit-learn.org/stable/modules/model_persistence.html for more
+on scikit-learn classifier persistance.
+"""
+
+
 from __future__ import print_function
+import cPickle as pickle
 import os.path
 import sys
 
@@ -12,10 +58,7 @@ from vesper.util.spectrogram import Spectrogram
 import vesper.util.data_windows as data_windows
 
 
-def _create_input_file_path(detector_name, classification):
-    dir_path = '/Users/Harold/Desktop/NFC/Data/MPG Ranch'
-    file_name = '{} {} Segments.hdf5'.format(detector_name, classification)
-    return os.path.join(dir_path, file_name)
+_DIR_PATH = '/Users/Harold/Desktop/NFC/Data/MPG Ranch'
 
 
 _CONFIGS = {
@@ -88,7 +131,7 @@ def _main():
         average_score = scores.mean()
         
         print('scores', scores)
-        print('average scrore {:f}'.format(average_score))
+        print('average scrore {}'.format(average_score))
         print
         
         average_scores[i] = average_score
@@ -96,28 +139,12 @@ def _main():
     for i in xrange(len(average_scores)):
         percentage = int(round(fractions[i] * 100))
         print(percentage, average_scores[i])
-    
-    
-def _train_and_test_classifier(X, y, fold, config):
-    
-    train_indices, test_indices = fold
-    
-    X_train = X[train_indices]
-    y_train = y[train_indices]
-    
-    X_test = X[test_indices]
-    y_test = y[test_indices]
         
-    classifier = svm.SVC(**config.svc_params)
-    classifier.fit(X_train, y_train)
+    # Train final classifier on all data.
+    classifier = _train_classifier(X, y, config)
     
-    predictions = classifier.predict(X_test)
-    num_errors = np.abs(predictions - y_test).sum()
-    num_predictions = len(predictions)
-    score = (num_predictions - num_errors) / float(num_predictions)
+    _save_classifier(classifier, detector_name)
     
-    return score
-
     
 def _load_segments(detector_name):
     
@@ -128,6 +155,15 @@ def _load_segments(detector_name):
     noise_segments = _load_segments_file(noises_file_path)
     
     return call_segments + noise_segments
+
+
+def _create_input_file_path(detector_name, classification):
+    file_name = '{} {} Segments.hdf5'.format(detector_name, classification)
+    return _create_file_path(file_name)
+
+
+def _create_file_path(file_name):
+    return os.path.join(_DIR_PATH, file_name)
 
 
 def _load_segments_file(file_path):
@@ -248,6 +284,43 @@ def _test_sum_adjacent():
 def _normalize(x):
     norm = np.linalg.norm(x)
     return x / norm if norm != 0 else x
+
+
+def _train_and_test_classifier(X, y, fold, config):
+    
+    train_indices, test_indices = fold
+    
+    X_train = X[train_indices]
+    y_train = y[train_indices]
+    
+    X_test = X[test_indices]
+    y_test = y[test_indices]
+        
+    classifier = _train_classifier(X_train, y_train, config)
+    
+    predictions = classifier.predict(X_test)
+    num_errors = np.abs(predictions - y_test).sum()
+    num_predictions = len(predictions)
+    score = (num_predictions - num_errors) / float(num_predictions)
+    
+    return score
+
+    
+def _train_classifier(X, y, config):
+    classifier = svm.SVC(**config.svc_params)
+    classifier.fit(X, y)
+    return classifier
+
+   
+def _save_classifier(classifier, detector_name):
+    file_path = _create_output_file_path(detector_name)
+    with open(file_path, 'wb') as file_:
+        pickle.dump(classifier, file_)
+    
+    
+def _create_output_file_path(detector_name):
+    file_name = '{} Segment Classifier.pkl'.format(detector_name)
+    return _create_file_path(file_name)
 
 
 if __name__ == '__main__':
