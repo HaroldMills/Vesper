@@ -46,6 +46,7 @@ def load_extensions():
     from vesper.vcl.export_command import ExportCommand
     from vesper.vcl.help_command import HelpCommand
     from vesper.vcl.import_command import ImportCommand
+    from vesper.vcl.sample_command import SampleCommand
 
     global _extensions
     
@@ -61,7 +62,8 @@ def load_extensions():
             DetectCommand,
             ExportCommand,
             HelpCommand,
-            ImportCommand
+            ImportCommand,
+            SampleCommand
         ),
         
         'VCL Detector': (
