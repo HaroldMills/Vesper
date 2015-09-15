@@ -893,7 +893,9 @@ class Archive(object):
     def _create_clips(self):
         # rows = self._cursor.fetchall()
         # return [self._create_clip(_ClipTuple._make(row)) for row in rows]
-        # TODO: Try to speed this up. The iteration is slow.
+        # TODO: Try to speed this up. The iteration is slow. Perhaps
+        # returning a generator that constructs clips from rows on
+        # the fly would be faster?
         return [self._create_clip(_ClipTuple._make(row))
                 for row in self._cursor]
     
