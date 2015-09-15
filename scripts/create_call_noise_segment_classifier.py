@@ -5,14 +5,14 @@ The name of the detector (e.g. "Tseep" or "Thrush" is specified as the
 single command-line argument to this script. Given labeled examples of
 call and noise segments, the script trains a classifier to distinguish
 the two types of segments. Training is performed on increasingly large
-subsets of the training data, using stratified k-fold cross-validation
-for each subset. The fraction of test clips that are correctly classified
+subsets of the examples, using stratified k-fold cross-validation for
+each subset. The fraction of test clips that are correctly classified
 is reported for each fold, along with the average for all folds. At the
-end of the cross-validation training runs learning curve data are output
-in the form of a textual table giving the size of each training data
-subset and the average correct classification fraction for the classifiers
-that were built from those data. Finally, a classifier is trained on
-all of the training data.
+end of all of the cross-validation training runs learning curve data are
+output in the form of a textual table giving the size of each subset of
+examples on which cross-validation training was performed and the average
+correct classification fraction for the classifiers that were built from
+those examples. Finally, a classifier is trained on all of the examples.
 
 The script requires two HDF5 input files with names:
 
@@ -116,12 +116,16 @@ def _main():
     fractions = (1. + np.arange(num_fractions)) / num_fractions
     average_scores = np.zeros_like(fractions)
     
+    print()
+    
     for i, fraction in enumerate(fractions):
         
-        print('creating dataset...')
+        percent = _fraction_to_percent(fraction)
+        print(
+            'Creating dataset with {} percent of examples...'.format(percent))
         dataset = _create_dataset(segments, fraction, config)
         
-        print('training and testing classifiers...')
+        print('Training and testing classifiers...')
         X = dataset.features
         y = dataset.targets
         folds = cross_validation.StratifiedKFold(
@@ -130,29 +134,33 @@ def _main():
             [_train_and_test_classifier(X, y, f, config) for f in folds])
         average_score = scores.mean()
         
+        f = _format_score
+        scores = ' '.join([f(score) for score in scores])
         print('scores', scores)
-        print('average scrore {}'.format(average_score))
-        print
+        print('average score', f(average_score))
+        print()
         
         average_scores[i] = average_score
         
-    for i in xrange(len(average_scores)):
-        percentage = int(round(fractions[i] * 100))
-        print(percentage, average_scores[i])
+    _show_learning_curve(fractions, average_scores)
         
     # Train final classifier on all data.
-    classifier = _train_classifier(X, y, config)
+    print('Training final classifier on all examples...')
+    dataset = _create_dataset(segments, 1, config)
+    classifier = _train_classifier(dataset.features, dataset.targets, config)
     
     _save_classifier(classifier, detector_name)
     
     
 def _load_segments(detector_name):
     
-    calls_file_path = _create_input_file_path(detector_name, 'Call')
-    call_segments = _load_segments_file(calls_file_path)
+    path = _create_input_file_path(detector_name, 'Call')
+    print('Loading example call segments from "{}"...'.format(path))
+    call_segments = _load_segments_file(path)
     
-    noises_file_path = _create_input_file_path(detector_name, 'Noise')
-    noise_segments = _load_segments_file(noises_file_path)
+    path = _create_input_file_path(detector_name, 'Noise')
+    print('Loading example noise segments from "{}"...'.format(path))
+    noise_segments = _load_segments_file(path)
     
     return call_segments + noise_segments
 
@@ -190,6 +198,10 @@ def _create_segment(dataset):
         classification=classification)
     
     return segment
+
+
+def _fraction_to_percent(fraction):
+    return int(round(100 * fraction))
 
 
 def _create_dataset(segments, fraction, config):
@@ -312,8 +324,21 @@ def _train_classifier(X, y, config):
     return classifier
 
    
+def _format_score(score):
+    return '{:.1f}'.format(100 * score)
+
+
+def _show_learning_curve(fractions, average_scores):
+    print('Learning curve:')
+    for i in xrange(len(average_scores)):
+        percent = _fraction_to_percent(fractions[i])
+        print('    ', percent, _format_score(average_scores[i]))
+    print()
+        
+        
 def _save_classifier(classifier, detector_name):
     file_path = _create_output_file_path(detector_name)
+    print('Writing final classifier to "{}"...'.format(file_path))
     with open(file_path, 'wb') as file_:
         pickle.dump(classifier, file_)
     
