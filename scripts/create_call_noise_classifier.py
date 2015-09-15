@@ -12,16 +12,15 @@ from vesper.util.spectrogram import Spectrogram
 import vesper.util.data_windows as data_windows
 
 
-def _create_input_file_path(detector_name):
+def _create_input_file_path(detector_name, classification):
     dir_path = '/Users/Harold/Desktop/NFC/Data/MPG Ranch'
-    file_name = '{:s} Call Noise Segments.hdf5'.format(detector_name)
+    file_name = '{} {} Segments.hdf5'.format(detector_name, classification)
     return os.path.join(dir_path, file_name)
 
 
 _CONFIGS = {
                        
     'Tseep': Bunch(
-        input_file_path=_create_input_file_path('Tseep'),
         spectrogram_params=Bunch(
             window=data_windows.create_window('Hann', 110),
             hop_size=55,
@@ -37,7 +36,6 @@ _CONFIGS = {
         }),
         
     'Thrush': Bunch(
-        input_file_path=_create_input_file_path('Thrush'),
         spectrogram_params=Bunch(
             window=data_windows.create_window('Hann', 110),
             hop_size=55,
@@ -65,9 +63,11 @@ def _main():
     
     # _test_sum_adjacent()
     
-    config = _CONFIGS[sys.argv[1]]
+    detector_name = sys.argv[1]
     
-    segments = _load_segments(config.input_file_path)
+    segments = _load_segments(detector_name)
+    
+    config = _CONFIGS[detector_name]
     
     num_fractions = 10
     fractions = (1. + np.arange(num_fractions)) / num_fractions
@@ -119,7 +119,18 @@ def _train_and_test_classifier(X, y, fold, config):
     return score
 
     
-def _load_segments(file_path):
+def _load_segments(detector_name):
+    
+    calls_file_path = _create_input_file_path(detector_name, 'Call')
+    call_segments = _load_segments_file(calls_file_path)
+    
+    noises_file_path = _create_input_file_path(detector_name, 'Noise')
+    noise_segments = _load_segments_file(noises_file_path)
+    
+    return call_segments + noise_segments
+
+
+def _load_segments_file(file_path):
     with h5py.File(file_path, 'r') as file_:
         segments = [_create_segment(file_[name]) for name in file_]
     return segments
@@ -168,7 +179,7 @@ def _create_dataset(segments, fraction, config):
     
 def _create_segment_tuple(segment, config):
     features, spectra = _create_features(segment, config)
-    target = _TARGETS[segment.classification]
+    target = _TARGETS[segment.classification.split('.')[0]]
     return (features, target, segment.name, spectra)
      
 
