@@ -157,14 +157,34 @@ class ClipsWindow(QMainWindow):
             classes = classes_dict.get(fragment)
             
             if classes is None:
+                # no clip class names include fragment
+                
                 # TODO: Handle error.
                 pass
             
             elif len(classes) != 1:
-                # TODO: Handle error.
-                pass
+                # more than one clip class name includes fragment
+                
+                # Look for clip class whose entire name is fragment.
+                clip_class = None
+                for c in classes:
+                    if c.name == fragment:
+                        clip_class = c
+                        
+                if clip_class is None:
+                    # no clip class has name equal to fragment
+                    
+                    # TODO: Handle error.
+                    pass
+                
+                else:
+                    # one clip class has name equal to fragment
+                    
+                    classification_dict[command_name] = (clip_class, all_)
             
             else:
+                # exactly one clip class for specified fragment
+                
                 classification_dict[command_name] = (classes[0], all_)
             
         return classification_dict
