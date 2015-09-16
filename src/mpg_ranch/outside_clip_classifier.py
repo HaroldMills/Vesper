@@ -75,16 +75,23 @@ class _ClipVisitor(ClipVisitor):
     
     
     def visit(self, clip):
+        if _is_clip_outside_monitoring_period(clip):
+            clip.clip_class_name = 'Outside'
+            
+
+def _is_clip_outside_monitoring_period(clip):
+    
+    timedelta = datetime.timedelta
+    
+    station = clip.station
+    
+    if station.longitude is None or station.latitude is None:
+        # station location unknown
         
-        # In this method we assume that every station we encounter
-        # will have a location, so that we do not need to handle
-        # the `ValueError` exceptions that are raised by the
-        # `get_sunset_time` and `get_sunrise_time` methods of the
-        # `Station` class for such stations.
-        
-        timedelta = datetime.timedelta
-        
-        station = clip.station
+        return None
+    
+    else:
+        # station location known
         
         sunset_time = station.get_sunset_time(clip.night)
         start_time = sunset_time + timedelta(minutes=_START_OFFSET)
@@ -95,12 +102,10 @@ class _ClipVisitor(ClipVisitor):
         
         time = clip.start_time
         outside = time < start_time or time > end_time
-        
-        if outside:
-            
-            clip.clip_class_name = 'Outside'
-            
-#             print(clip.start_time,
-#                   'sunset', sunset_time, 'start', start_time,
-#                   'sunrise', sunrise_time, 'end', end_time,
-#                   'outside', outside)
+
+#         print(clip.start_time,
+#               'sunset', sunset_time, 'start', start_time,
+#               'sunrise', sunrise_time, 'end', end_time,
+#               'outside', outside)
+
+        return outside
