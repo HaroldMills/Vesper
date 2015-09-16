@@ -1,18 +1,18 @@
 """
 Creates a call/noise clip segment classifier for the specified detector.
 
-The name of the detector (e.g. "Tseep" or "Thrush" is specified as the
+The name of the detector (e.g. "Tseep" or "Thrush") is specified as the
 single command-line argument to this script. Given labeled examples of
 call and noise segments, the script trains a classifier to distinguish
 the two types of segments. Training is performed on increasingly large
 subsets of the examples, using stratified k-fold cross-validation for
-each subset. The fraction of test clips that are correctly classified
-is reported for each fold, along with the average for all folds. At the
-end of all of the cross-validation training runs learning curve data are
-output in the form of a textual table giving the size of each subset of
-examples on which cross-validation training was performed and the average
-correct classification fraction for the classifiers that were built from
-those examples. Finally, a classifier is trained on all of the examples.
+each subset. The correct test classification rate is reported for each
+fold, along with the mean for all folds. At the end of all of the
+cross-validation training runs learning curve data are output in the
+form of a table giving the size of each subset of examples on which
+cross-validation training was performed and the mean correct test
+classification rate for the classifiers that were built from those
+examples. Finally, a classifier is trained on all of the examples.
 
 The script requires two HDF5 input files with names:
 
@@ -58,7 +58,7 @@ from vesper.util.spectrogram import Spectrogram
 import vesper.util.data_windows as data_windows
 
 
-_DIR_PATH = '/Users/Harold/Desktop/NFC/Data/MPG Ranch'
+_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch'
 
 
 _CONFIGS = {
@@ -108,46 +108,34 @@ def _main():
     
     detector_name = sys.argv[1]
     
-    segments = _load_segments(detector_name)
+    all_segments = _load_segments(detector_name)
     
     config = _CONFIGS[detector_name]
     
     num_fractions = 10
     fractions = (1. + np.arange(num_fractions)) / num_fractions
-    average_scores = np.zeros_like(fractions)
+    mean_scores = np.zeros_like(fractions)
     
     print()
     
     for i, fraction in enumerate(fractions):
         
         percent = _fraction_to_percent(fraction)
-        print(
-            'Creating dataset with {} percent of examples...'.format(percent))
-        dataset = _create_dataset(segments, fraction, config)
+        print((
+            'Training cross-validation classifiers with {} percent of '
+            'examples...').format(percent))
         
-        print('Training and testing classifiers...')
-        X = dataset.features
-        y = dataset.targets
-        folds = cross_validation.StratifiedKFold(
-            y, n_folds=10, shuffle=True, random_state=0)
-        scores = np.array(
-            [_train_and_test_classifier(X, y, f, config) for f in folds])
-        average_score = scores.mean()
+        segments = _sample_segments(all_segments, fraction)
+        fold_scores = _train_cross_validation_classifiers(segments, config)
+        mean_scores[i] = fold_scores.mean()
         
-        f = _format_score
-        scores = ' '.join([f(score) for score in scores])
-        print('scores', scores)
-        print('average score', f(average_score))
+        _show_fold_scores(fold_scores)
         print()
         
-        average_scores[i] = average_score
+    _show_learning_curve(fractions, mean_scores)
         
-    _show_learning_curve(fractions, average_scores)
-        
-    # Train final classifier on all data.
-    print('Training final classifier on all examples...')
-    dataset = _create_dataset(segments, 1, config)
-    classifier = _train_classifier(dataset.features, dataset.targets, config)
+    print('Training final classifier with all examples...')
+    classifier = _train_final_classifier(segments, config)
     
     _save_classifier(classifier, detector_name)
     
@@ -204,11 +192,28 @@ def _fraction_to_percent(fraction):
     return int(round(100 * fraction))
 
 
-def _create_dataset(segments, fraction, config):
-    
+def _sample_segments(segments, fraction):
     n = int(round(fraction * len(segments)))
     np.random.seed(0)
-    segments = np.random.choice(segments, n, replace=False)
+    return np.random.choice(segments, n, replace=False)
+        
+
+def _train_cross_validation_classifiers(segments, config):
+    
+    dataset = _create_dataset(segments, config)
+    X = dataset.features
+    y = dataset.targets
+    
+    folds = cross_validation.StratifiedKFold(
+        y, n_folds=10, shuffle=True, random_state=0)
+    
+    fold_scores = np.array(
+        [_train_and_test_classifier(X, y, f, config) for f in folds])
+    
+    return fold_scores
+
+
+def _create_dataset(segments, config):
     
     tuples = [_create_segment_tuple(s, config) for s in segments]
     
@@ -324,18 +329,31 @@ def _train_classifier(X, y, config):
     return classifier
 
    
+def _show_fold_scores(scores):
+    f = _format_score
+    s = ' '.join([f(score) for score in scores])
+    print('    fold scores', s)
+    print('    mean fold score', f(scores.mean()))
+
 def _format_score(score):
     return '{:.1f}'.format(100 * score)
 
 
-def _show_learning_curve(fractions, average_scores):
+def _show_learning_curve(fractions, mean_scores):
     print('Learning curve:')
-    for i in xrange(len(average_scores)):
+    for i in xrange(len(mean_scores)):
         percent = _fraction_to_percent(fractions[i])
-        print('    ', percent, _format_score(average_scores[i]))
+        print('    ', percent, _format_score(mean_scores[i]))
     print()
         
-        
+       
+def _train_final_classifier(segments, config):
+    dataset = _create_dataset(segments, config)
+    X = dataset.features
+    y = dataset.targets
+    return _train_classifier(X, y, config)
+
+ 
 def _save_classifier(classifier, detector_name):
     file_path = _create_output_file_path(detector_name)
     print('Writing final classifier to "{}"...'.format(file_path))
