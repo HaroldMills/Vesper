@@ -290,7 +290,8 @@ _STATION_NAME_CHANGES = {
     'floodplain': 'Floodplain NFC',
     'ridge': 'Ridge NFC',
     'sheep': 'Sheep Camp NFC',
-    'sheepcamp': 'Sheep Camp NFC'
+    'sheepcamp': 'Sheep Camp NFC',
+    'florence': 'Florence 21c'
 }
 
 
