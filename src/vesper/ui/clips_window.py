@@ -2,6 +2,7 @@ from __future__ import print_function
 
 from collections import defaultdict
 import math
+import sys
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -136,7 +137,7 @@ class ClipsWindow(QMainWindow):
         
     def _create_classification_dict(self, commands_preset):
         
-        '''
+        """
         Creates a mapping from command names to clip classes for the
         specified commands preset.
         
@@ -145,7 +146,7 @@ class ClipsWindow(QMainWindow):
         from clip class name fragments to clip classes. For each clip class
         name fragment of a command, there must be exactly one clip class
         whose name ends with that fragment.
-        '''
+        """
         
         commands = commands_preset.commands
         classes = self._archive.clip_classes
@@ -159,8 +160,14 @@ class ClipsWindow(QMainWindow):
             if classes is None:
                 # no clip class names include fragment
                 
-                # TODO: Handle error.
-                pass
+                # TODO: Implement a proper logging facility.
+                print((
+                    'Warning: Unrecognized clip class name fragment "{}" '
+                    'for command "{}" in {} preset "{}". Command will be '
+                    'ignored.').format(
+                        fragment, command_name, commands_preset.type_name,
+                        commands_preset.name),
+                    file=sys.stderr)
             
             elif len(classes) != 1:
                 # more than one clip class name includes fragment
@@ -174,8 +181,14 @@ class ClipsWindow(QMainWindow):
                 if clip_class is None:
                     # no clip class has name equal to fragment
                     
-                    # TODO: Handle error.
-                    pass
+                    # TODO: Implement a proper logging facility.
+                    print((
+                        'Warning: Clip class name fragment "{}" for '
+                        'command "{}" in {} preset "{}" is ambiguous. '
+                        'Command will be ignored.').format(
+                            fragment, command_name, commands_preset.type_name,
+                            commands_preset.name),
+                        file=sys.stderr)
                 
                 else:
                     # one clip class has name equal to fragment
