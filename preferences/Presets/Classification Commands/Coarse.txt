@@ -4,9 +4,6 @@ Alt-C Call All
 n Noise
 N Noise Page
 Alt-N Noise All
-t Tone
-T Tone Page
-Alt-T Tone All
 u Unclassified
 U Unclassified Page
 Alt-U Unclassified All
