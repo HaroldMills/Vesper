@@ -9,4 +9,4 @@ Vesper runs on Windows, Mac OS X, and Linux. It is implemented in the [Python](h
 
 Vesper is not yet ready for widespread use, but for the intrepid there are preliminary [installation instructions](https://github.com/HaroldMills/Vesper/wiki/How-to-Install-Vesper).
 
-Many thanks to the [MPG Ranch](http://mpgranch.com), [Old Bird](http://oldbird.org), and an anonymous donor for financial and moral support.
+Many thanks to [MPG Ranch](http://mpgranch.com), [Old Bird](http://oldbird.org), and an anonymous donor for financial support of the Vesper project.
