@@ -73,6 +73,7 @@ _CONFIGS = {
         max_freq=11000,
         min_power=-10,
         max_power=65,
+        pooling_block_size=(2, 2),
         svc_params={
             'gamma': .001,
             'C': 1000.
@@ -88,6 +89,7 @@ _CONFIGS = {
         max_freq=4000,
         min_power=-10,
         max_power=65,
+        pooling_block_size=(2, 2),
         svc_params={
             'gamma': .001,
             'C': 1000.
@@ -145,10 +147,12 @@ def _load_segments(detector_name):
     path = _create_input_file_path(detector_name, 'Call')
     print('Loading example call segments from "{}"...'.format(path))
     call_segments = _load_segments_file(path)
+    print('Loaded {} call segments.'.format(len(call_segments)))
     
     path = _create_input_file_path(detector_name, 'Noise')
     print('Loading example noise segments from "{}"...'.format(path))
     noise_segments = _load_segments_file(path)
+    print('Loaded {} noise segments.'.format(len(noise_segments)))
     
     return call_segments + noise_segments
 
@@ -254,9 +258,9 @@ def _create_features(segment, config):
     spectra = spectra[:, start_index:end_index]
     
     # TODO: Should summing happen before logs are taken?
-    # TODO: Consider parameterizing both the block size and the method
-    # of combining spectrogram values (e.g. is sum or max better?).
-    spectra = _sum_adjacent(spectra, 2, 2)
+    # TODO: Consider parameterizing the pooling operation, and offering
+    # at least averaging and max.
+    spectra = _sum_adjacent(spectra, c.pooling_block_size)
     
     features = _normalize(spectra.flatten())
     
@@ -268,7 +272,7 @@ def _freq_to_index(freq, sample_rate, dft_size):
     return int(round(freq / bin_size))
 
 
-def _sum_adjacent(x, m, n):
+def _sum_adjacent(x, (m, n)):
     
     xm, xn = x.shape
     
