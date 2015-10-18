@@ -1,3 +1,6 @@
+"""Module containing class `SongMeterAudioFileParser`."""
+
+
 import os.path
 import re
 
@@ -76,6 +79,30 @@ def _get_channel_microphone_names(prefs, file_path):
         
 
 class SongMeterAudioFileParser(object):
+    
+    
+    """
+    Parses MPG Ranch Song Meter audio files.
+    
+    This class provides information about an MPG Ranch Song Meter audio
+    file. Some of the information, including the station name and the
+    recording start time, is obtained by parsing the audio file name.
+    The information obtained from the file name may optionally be
+    transformed according to information provided in the preferences
+    file:
+    
+        MPG Ranch/Song Meter Audio File Parser.yaml
+        
+    located within the user's preferences directory. For example, a
+    station name alias that appears in a file name can be mapped to
+    the "official" archive station name, and channel microphone names
+    can be determined from a table that specifies the microphones
+    used at various stations during various date ranges.
+    
+    The rest of the information, including the length of the recording
+    in sample frames and the recording sample rate, is obtained from
+    within the audio file.
+    """
     
     
     def __init__(self):
