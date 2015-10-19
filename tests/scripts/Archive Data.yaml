@@ -1,0 +1,83 @@
+stations:
+
+    - name:            Station A NFC
+      long_name:       ""
+      latitude:        42.44
+      longitude:       -76.50
+      elevation:       100
+      time_zone_name:  US/Eastern
+      
+    - name:            Station A 21c
+      long_name:       ""
+      latitude:        42.44
+      longitude:       -76.50
+      elevation:       100
+      time_zone_name:  US/Eastern
+      
+    - name:            Station B NFC
+      long_name:       ""
+      latitude:        42.44
+      longitude:       -76.51
+      elevation:       200
+      time_zone_name:  US/Eastern
+      
+detectors:
+    - Tseep
+    - Thrush
+      
+clip_classes:
+    - Diurnal
+    - Nocturnal
+    - Noise
+    - Outside
+    - Unknown
+    - Call
+    - Call.Thrush
+    - Call.Tseep
+    - Call.AMCO
+    - Call.AMPI
+    - Call.AMRE
+    - Call.AMRO
+    - Call.ATSP
+    - Call.BHGR
+    - Call.CCSP_BRSP
+    - Call.CHSP
+    - Call.CONI
+    - Call.COYE
+    - Call.DoubleUp
+    - Call.GBHE
+    - Call.GRSP
+    - Call.GRYE
+    - Call.HETH
+    - Call.HOLA
+    - Call.KILL
+    - Call.LALO
+    - Call.LAZB
+    - Call.LBCU
+    - Call.LISP
+    - Call.MGWA
+    - Call.NOWA
+    - Call.NSWO
+    - Call.Other
+    - Call.OVEN
+    - Call.Peep
+    - Call.PYNU_LBDO
+    - Call.SAPH
+    - Call.SAVS
+    - Call.SORA
+    - Call.SOSP
+    - Call.SPSA_SOSA
+    - Call.SWTH
+    - Call.Unknown
+    - Call.UPSA
+    - Call.VEER
+    - Call.VEER_WETA
+    - Call.VESP
+    - Call.VIRA
+    - Call.WCSP
+    - Call.Weak
+    - Call.WETA
+    - Call.WISN
+    - Call.WIWA
+    - Call.YRWA
+    - Call.Zeep

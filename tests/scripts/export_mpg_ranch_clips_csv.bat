@@ -1,0 +1,1 @@
+vcl export "MPG Ranch Clips CSV" --archive "..\data\Test Archive" --output-file "..\data\clips.csv"
