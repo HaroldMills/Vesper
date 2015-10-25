@@ -54,7 +54,7 @@ import h5py
 import numpy as np
 
 from vesper.util.bunch import Bunch
-from vesper.util.spectrogram import Spectrogram
+import vesper.util.call_noise_classifier as call_noise_classifier
 import vesper.util.data_windows as data_windows
 
 
@@ -235,77 +235,11 @@ def _create_dataset(segments, config):
     
     
 def _create_segment_tuple(segment, config):
-    features, spectra = _create_features(segment, config)
+    features, spectra, _ = call_noise_classifier.get_segment_features(
+        segment, config)
     target = _TARGETS[segment.classification.split('.')[0]]
     return (features, target, segment.name, spectra)
      
-
-def _create_features(segment, config):
-    
-    c = config
-    
-    spectrogram = Spectrogram(segment, c.spectrogram_params)
-    spectra = spectrogram.spectra
-    
-    # Clip spectra to specified power range.
-    spectra.clip(config.min_power, config.max_power)
-    
-    # Remove portions of spectra outside of specified frequency range.
-    sample_rate = segment.sample_rate
-    dft_size = c.spectrogram_params.dft_size
-    start_index = _freq_to_index(c.min_freq, sample_rate, dft_size)
-    end_index = _freq_to_index(c.max_freq, sample_rate, dft_size) + 1
-    spectra = spectra[:, start_index:end_index]
-    
-    # TODO: Should summing happen before logs are taken?
-    # TODO: Consider parameterizing the pooling operation, and offering
-    # at least averaging and max.
-    spectra = _sum_adjacent(spectra, c.pooling_block_size)
-    
-    features = _normalize(spectra.flatten())
-    
-    return (features, spectra)
-
-
-def _freq_to_index(freq, sample_rate, dft_size):
-    bin_size = sample_rate / dft_size
-    return int(round(freq / bin_size))
-
-
-def _sum_adjacent(x, (m, n)):
-    
-    xm, xn = x.shape
-    
-    xm = (xm // m) * m
-    xn = (xn // n) * n
-    x = x[:xm, :xn]
-    
-    # Sum columns.
-    x.shape = (xm, xn / n, n)
-    x = x.sum(2)
-    xn /= n
-    
-    # Sum rows.
-    x = x.transpose()
-    x.shape = (xn, xm / m, m)
-    x = x.sum(2)
-    x = x.transpose()
-    
-    return x
-    
-    
-def _test_sum_adjacent():
-    x = np.arange(24)
-    x.shape = (4, 6)
-    print(x)
-    x = _sum_adjacent(x, 2, 3)
-    print(x)
-    
-    
-def _normalize(x):
-    norm = np.linalg.norm(x)
-    return x / norm if norm != 0 else x
-
 
 def _train_and_test_classifier(X, y, fold, config):
     

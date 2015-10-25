@@ -6,11 +6,15 @@ from __future__ import print_function
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 import numpy as np
+import os.path
 
 from vesper.archive.archive import Archive
 from vesper.ui.clip_figure import ClipFigure
 from vesper.ui.clip_figure_play_button import ClipFigurePlayButton
+from vesper.util.bunch import Bunch
+from vesper.util.call_noise_classifier import CallNoiseClassifier
 from vesper.util.preferences import preferences as prefs
+import vesper.util.data_windows as data_windows
 import vesper.util.measurements as measurements
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
@@ -40,6 +44,23 @@ Matplotlib/PyQt4 issues to look into:
 6. Matplotlib `MouseEvent` instances delivered when the mouse is released
    (`button_release_event`) have a `key` attribute of `None`.
 '''
+
+
+# TODO: Share at least part of configuration with
+# `create_call_noise_segment_classifier`.
+_CALL_NOISE_CLASSIFICATION_CONFIG = Bunch(
+    spectrogram_params=Bunch(
+        window=data_windows.create_window('Hann', 110),
+        hop_size=55,
+        dft_size=128,
+        ref_power=1),
+    min_freq=4000,
+    max_freq=11000,
+    min_power=-10,
+    max_power=65,
+    pooling_block_size=(2, 2),
+    segment_duration=.03,
+    segment_hop_size=.01)
 
 
 _MEASUREMENT_DATA = {
@@ -118,6 +139,12 @@ class SpectrogramClipFigure(ClipFigure):
         if self._show_selections:
             self._selection_polygon = None
             self._selection_event_handler = _SelectionEventHandler(self)
+            
+        self._show_segment_call_noise_classifications = \
+            prefs.get('clipFigure.showSegmentCallNoiseClassifications', False)
+            
+        if self._show_segment_call_noise_classifications:
+            self._call_noise_line = None
 
         # Note that axis rendering is very expensive. Perhaps we should
         # draw our own grid with a collection of line2D artists? Also
@@ -144,6 +171,10 @@ class SpectrogramClipFigure(ClipFigure):
         
         self.canvas.mouseReleaseEvent = \
             _PyQt4EventHandlerWrapper(self, self.canvas.mouseReleaseEvent)
+            
+        if self._show_segment_call_noise_classifications:
+            self._call_noise_classifier = \
+                CallNoiseClassifier(_CALL_NOISE_CLASSIFICATION_CONFIG)
         
         
     def _set_clip(self, clip):
@@ -153,14 +184,26 @@ class SpectrogramClipFigure(ClipFigure):
 #         self._create_waveform_line()
         self._create_spectrogram_image()
         
-        if _SHOW_MEASUREMENT_LINE:
-            self._create_measurement_line()
-            
         self._update_clip_text()
         self._play_button.reset()
+        
         if self._show_selections:
             self._update_selection()
         
+        if self._show_segment_call_noise_classifications and clip is not None:
+            
+            (bits, frame_rate, start_time) = \
+                self._call_noise_classifier.classify_clip_segments(clip)
+                
+            self._create_call_noise_line(
+                bits, frame_rate, start_time)
+            
+            file_name = os.path.basename(clip.file_path)
+            print(file_name, bits, frame_rate, start_time)
+        
+        if _SHOW_MEASUREMENT_LINE:
+            self._create_measurement_line()
+            
         
     def _update_selection(self):
         
@@ -278,6 +321,35 @@ class SpectrogramClipFigure(ClipFigure):
                 interpolation='bilinear', picker=None)
         
         
+    def _create_call_noise_line(
+            self, bits, frame_rate, start_time):
+
+        axes = self._axes
+        
+        # TODO: Calling `cla` is very slow. It appears from profiling
+        # that `cla` causes the x and y axes to do some stuff that takes
+        # a long time. Some of the stuff (e.g. concerning tick marks) is
+        # irrelevant to us since we do not display the axes. Can we cut
+        # out the irrelevant stuff somehow, perhaps by deleting certain
+        # artists, so that `cla` will perform acceptably? Note that
+        # something like this might also allow us to improve the
+        # performance of figure creation, which seems to involve a
+        # call to `cla`.
+#            axes.cla()
+
+        if self._call_noise_line is not None:
+            axes.lines.remove(self._call_noise_line)
+            self._call_noise_line = None
+                
+        clip = self.clip
+        
+        if clip is not None:
+            times = start_time + np.arange(len(bits)) / float(frame_rate)
+            fs2 = clip.sound.sample_rate / 2.
+            freqs = (.1 + .8 * np.array(bits)) * fs2
+            self._call_noise_line = axes.plot(times, freqs, 'b')[0]
+
+
     def _create_measurement_line(self):
 
         measurement, m_min, m_max = _MEASUREMENT_DATA[_MEASUREMENT_NAME]
