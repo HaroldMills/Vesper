@@ -8,7 +8,7 @@ import vesper.util.os_utils as os_utils
 from test_case import TestCase
 
 
-_DATA_DIR_PATH = r'data\audio_file_utils Test Files'
+_DATA_DIR_PATH = os.path.join('data', 'audio_file_utils Test Files')
 _TEST_FILE_NAME = 'test.wav'
 
 _TEST_CASES = [
@@ -141,4 +141,3 @@ def _create_file_path(file_name):
 def _create_samples(num_channels, num_frames):
     samples = np.arange(num_frames)
     return np.vstack(samples + i * 1000 for i in range(num_channels))
-

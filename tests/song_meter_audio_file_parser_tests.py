@@ -6,7 +6,8 @@ from mpg_ranch.song_meter_audio_file_parser import SongMeterAudioFileParser
 from test_case import TestCase
 
 
-_DATA_DIR_PATH = r'data\song_meter_audio_file_parser Test Files'
+_DATA_DIR_PATH = \
+    os.path.join('data', 'song_meter_audio_file_parser Test Files')
 
 
 class SongMeterSoundFileParserTests(TestCase):
@@ -96,4 +97,3 @@ class SongMeterSoundFileParserTests(TestCase):
             
 def _dt(*args):
     return datetime.datetime(*args)
-    
