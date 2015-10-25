@@ -11,6 +11,7 @@ import h5py
 
 from vesper.vcl.clip_visitor import ClipVisitor
 from vesper.vcl.command import CommandSyntaxError
+import vesper.util.signal_utils as signal_utils
 import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
 
@@ -162,7 +163,7 @@ class _ClipVisitor(ClipVisitor):
             source_start_index, source_length = source
             
             sample_rate = clip.sound.sample_rate
-            segment_length = _seconds_to_samples(
+            segment_length = signal_utils.seconds_to_frames(
                 self._segment_dur, sample_rate)
             
             if source_length < segment_length:
@@ -207,7 +208,7 @@ class _ClipVisitor(ClipVisitor):
         elif source == _SEGMENT_SOURCE_CLIP_CENTER:
             
             sample_rate = clip.sound.sample_rate
-            source_length = _seconds_to_samples(
+            source_length = signal_utils.seconds_to_frames(
                 self._source_duration, sample_rate)
             
             if source_length >= clip_length:
@@ -249,10 +250,6 @@ def _check_segment_source(source):
             'Unrecognized segment source "{}".'.format(source))
         
         
-def _seconds_to_samples(duration, sample_rate):
-    return int(round(duration * sample_rate))
-
-
 def _create_clip_dataset_name(clip, segment_start_index):
     
     dt = clip.start_time
