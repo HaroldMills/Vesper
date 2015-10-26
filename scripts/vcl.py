@@ -143,8 +143,8 @@ def _configure_logging():
     format_ = '%(asctime)s %(levelname)-8s %(message)s'
     level = logging.INFO
     
-    home_dir_path = vesper_path_utils.get_app_home_dir_path()
-    log_file_path = os.path.join(home_dir_path, _LOG_FILE_NAME)
+    app_data_dir_path = vesper_path_utils.get_path('App Data')
+    log_file_path = os.path.join(app_data_dir_path, _LOG_FILE_NAME)
     
     # Configure output to log file.
     logging.basicConfig(

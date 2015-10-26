@@ -20,8 +20,8 @@ _PRESET_TYPES = {ClassificationCommandsPreset}
 
 def _load_preferences():
     
-    app_home_dir_path = vesper_path_utils.get_app_home_dir_path()
-    prefs_file_path = os.path.join(app_home_dir_path, _PREFS_FILE_NAME)
+    app_data_dir_path = vesper_path_utils.get_path('App Data')
+    prefs_file_path = os.path.join(app_data_dir_path, _PREFS_FILE_NAME)
     
     try:
         return _read_json_file(prefs_file_path)
@@ -57,8 +57,8 @@ def _handle_error(message):
     
     
 def _create_preset_manager():
-    app_home_dir_path = vesper_path_utils.get_app_home_dir_path()
-    presets_dir_path = os.path.join(app_home_dir_path, _PRESETS_DIR_NAME)
+    app_data_dir_path = vesper_path_utils.get_path('App Data')
+    presets_dir_path = os.path.join(app_data_dir_path, _PRESETS_DIR_NAME)
     return PresetManager(presets_dir_path, _PRESET_TYPES)
     
     

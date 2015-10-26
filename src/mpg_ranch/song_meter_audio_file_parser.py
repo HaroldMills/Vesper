@@ -114,9 +114,9 @@ class SongMeterAudioFileParser(object):
         
     def _get_preferences(self):
         
-        home_dir_path = vesper_path_utils.get_app_home_dir_path()
+        app_data_dir_path = vesper_path_utils.get_path('App Data')
         file_path = os.path.join(
-            home_dir_path, 'Preferences', 'MPG Ranch',
+            app_data_dir_path, 'Preferences', 'MPG Ranch',
             'Song Meter Audio File Parser.yaml')
         
         try:
