@@ -1,19 +1,31 @@
 """Module containing class `CallNoiseClassifier`."""
 
 
-import numpy as np
 import cPickle as pickle
+import os.path
+
+import numpy as np
 
 from vesper.util.bunch import Bunch
 from vesper.util.spectrogram import Spectrogram
 import vesper.util.signal_utils as signal_utils
 
 
-_PICKLE_FILE_PATH = \
-    r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\Tseep Segment Classifier.pkl'
+# TODO: Think more about where data files should go, and how this interacts
+# with the plugin facility.
+
+# TODO: Support multiple classifier versions. Perhaps the code and data
+# for a particular classifier version should go in its own Python package,
+# and the package name should include the version number? I'm not sure
+# this will really work, though, since different classifier versions
+# might depend on different versions of other packages.
 
 
-# TODO: Load classifier from within Vesper installation directory.
+_MODULE_DIR_PATH = os.path.dirname(__file__)
+_PICKLE_FILE_PATH = os.path.join(
+    _MODULE_DIR_PATH, 'Tseep Segment Classifier.pkl')
+
+
 # TODO: Handle load errors.
 def _load_segment_classifier():
     with open(_PICKLE_FILE_PATH, 'r') as file_:
