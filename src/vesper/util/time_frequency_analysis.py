@@ -24,6 +24,31 @@ from scipy import interpolate
 import numpy as np
 
 
+# TODO: Consider using more standard terminology, like "frames" instead
+# of "analyses" and "frame rate" instead of "analysis rate".
+
+# TODO: Consider having a time/frequency analysis always have a start
+# time, which is the time of its first frame. Consider having the
+# start time always be defined, even if the analysis has no frames.
+# I believe this should work, since the time of the first frame
+# can be computed from the input signal's frame rate and start time
+# and the analysis window size and hop size, even if the input signal
+# is too short for the analysis to have any frames.
+
+# TODO: Consider unifying time/frequency analyses and sounds.
+
+# TODO: Figure out how to deal with multichannel signals. It will be
+# important to figure this out early in the game, before we write lots
+# of code that would be difficult to rewrite. I lean toward making a
+# multichannel signal just be an array of single-channel signals, perhaps
+# with certain additional metadata. More often than not we process the
+# channels of a multichannel signal independently, and this will be both
+# faster and more natural if the channel signals are separate. A good
+# question to ask is how do the interfaces for single-channel signals
+# and multi-channel signals relate to each other? For example, what is
+# is the interface for reading samples in the two cases?
+
+
 # TODO: Make `analyses` a property and compute spectra lazily?
 class TimeFrequencyAnalysis(object):
     
