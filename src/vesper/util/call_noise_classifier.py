@@ -1,8 +1,9 @@
-"""Module containing class `CallNoiseClassifier`."""
+"""Module containing class `CoarseClassifier`."""
 
 
 import cPickle as pickle
 import os.path
+import random
 
 import numpy as np
 
@@ -21,26 +22,104 @@ import vesper.util.signal_utils as signal_utils
 # might depend on different versions of other packages.
 
 
-_MODULE_DIR_PATH = os.path.dirname(__file__)
-_PICKLE_FILE_PATH = os.path.join(
-    _MODULE_DIR_PATH, 'Tseep Segment Classifier.pkl')
+SEGMENT_SOURCE_CLIP = 'Clip'
+SEGMENT_SOURCE_CLIP_CENTER = 'Clip Center'
+SEGMENT_SOURCE_SELECTION = 'Selection'
 
 
-# TODO: Handle load errors.
-def _load_segment_classifier():
-    with open(_PICKLE_FILE_PATH, 'r') as file_:
+def create_classifier(classifier_name):
+
+    package_dir_path = os.path.dirname(__file__)
+    file_name = '{} Coarse Classifier.pkl'.format(classifier_name)
+    file_path = os.path.join(package_dir_path, file_name)
+
+    # TODO: Handle load errors.
+    with open(file_path, 'r') as file_:
         return pickle.load(file_)
 
 
-class CallNoiseClassifier(object):
+def extract_clip_segment(
+        clip, segment_duration, segment_source, source_duration=None):
+    
+    source = _get_segment_source(clip, segment_source, source_duration)
+    
+    if source is None:
+        return None
+    
+    else:
+        
+        source_start_index, source_length = source
+        
+        sample_rate = clip.sound.sample_rate
+        segment_length = signal_utils.seconds_to_frames(
+            segment_duration, sample_rate)
+        
+        if source_length < segment_length:
+            # source not long enough to extract segment from
+            
+            return None
+            
+        else:
+            
+            # Extract samples from source.
+            offset = random.randrange(source_length - segment_length)
+            start_index = source_start_index + offset
+            end_index = start_index + segment_length
+            samples = clip.sound.samples[start_index:end_index]
+            
+            return Bunch(
+                samples=samples,
+                sample_rate=clip.sound.sample_rate,
+                start_index=start_index)
+
+
+
+def _get_segment_source(clip, segment_source, source_duration):
+    
+    source = segment_source
+    clip_length = len(clip.sound.samples)
+    
+    if source == SEGMENT_SOURCE_CLIP:
+        return (0, clip_length)
+        
+    elif source == SEGMENT_SOURCE_CLIP_CENTER:
+        
+        sample_rate = clip.sound.sample_rate
+        source_length = signal_utils.seconds_to_frames(
+            source_duration, sample_rate)
+        
+        if source_length >= clip_length:
+            return (0, clip_length)
+        
+        else:
+            source_start_index = int((clip_length - source_length) // 2)
+            return (source_start_index, source_length)
+            
+    elif source == SEGMENT_SOURCE_SELECTION:
+        return clip.selection
+    
+    else:
+        raise ValueError(
+            'Unrecognized clip segment source "{}".'.format(source))
+
+    
+class CoarseClassifier(object):
     
     
-    def __init__(self, config):
-        super(CallNoiseClassifier, self).__init__()
+    def __init__(self, config, segment_classifier):
+        super(CoarseClassifier, self).__init__()
         self._config = config
-        self._segment_classifier = _load_segment_classifier()
+        self._segment_classifier = segment_classifier
         
         
+    def classify_clip(self, clip):
+        classifications, _, _ = self.classify_clip_segments(clip)
+        if np.any(classifications == 1):
+            return 1.
+        else:
+            return 0.
+    
+    
     def classify_clip_segments(self, clip):
         
         sound = clip.sound
@@ -54,11 +133,11 @@ class CallNoiseClassifier(object):
         pairs = [self._classify_segment(s, c)
                  for s in _generate_segments(sound, segment_length, hop_size)]
         
-        bits, times = zip(*pairs)
+        classifications, times = zip(*pairs)
         frame_rate = sound.sample_rate / hop_size
         start_time = times[0]
         
-        return (bits, frame_rate, start_time)
+        return (np.array(classifications), frame_rate, start_time)
     
     
     def _classify_segment(self, segment, config):
@@ -133,6 +212,20 @@ def get_segment_features(segment, config):
     time = (times[0] + times[n - 1]) / 2.
     
     features = _normalize(spectra.flatten())
+    
+    # For a training set of about 9000 MPG Ranch call and noise segments
+    # (roughly half call segments and half noise segments), including the
+    # segment spectrogram norm did not yield a classifier that was as
+    # good as the one gotten when we did not include the norm. However,
+    # learning curves suggested that the classifier that included the
+    # norm might be superior if trained on a larger number of examples.
+    # The learning curve for features that did not include the norm rose
+    # more quickly than the learning curve for features that did include
+    # the norm, but also leveled off more, so that it looked like the
+    # latter might eventually overtake the former.
+    if c.include_norm_in_features:
+        norm = np.linalg.norm(spectra)
+        features = np.hstack([features, norm])
     
     return (features, spectra, time)
 

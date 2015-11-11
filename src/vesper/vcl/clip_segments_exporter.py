@@ -11,6 +11,7 @@ import h5py
 
 from vesper.vcl.clip_visitor import ClipVisitor
 from vesper.vcl.command import CommandSyntaxError
+import vesper.util.call_noise_classifier as call_noise_classifier
 import vesper.util.signal_utils as signal_utils
 import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
@@ -32,14 +33,10 @@ exported can be specified with the --segment-source argument.
 # argument has a certain value.
 
 
-_SEGMENT_SOURCE_CLIP = 'Clip'
-_SEGMENT_SOURCE_CLIP_CENTER = 'Clip Center'
-_SEGMENT_SOURCE_SELECTION = 'Selection'
-
 _SEGMENT_SOURCES = frozenset([
-    _SEGMENT_SOURCE_CLIP,
-    _SEGMENT_SOURCE_CLIP_CENTER,
-    _SEGMENT_SOURCE_SELECTION])
+    call_noise_classifier.SEGMENT_SOURCE_CLIP,
+    call_noise_classifier.SEGMENT_SOURCE_CLIP_CENTER,
+    call_noise_classifier.SEGMENT_SOURCE_SELECTION])
 
 
 _ARGS = '''
@@ -127,10 +124,15 @@ class _ClipVisitor(ClipVisitor):
         
         _check_segment_source(self._segment_source)
         
-        if self._segment_source == _SEGMENT_SOURCE_CLIP_CENTER:
+        if self._segment_source == \
+                call_noise_classifier.SEGMENT_SOURCE_CLIP_CENTER:
+            
             self._source_duration = float(
                 vcl_utils.get_required_keyword_arg(
                     'source-duration', keyword_args))
+            
+        else:
+            self._source_duration = None
             
         self._segment_dur = float(
             vcl_utils.get_required_keyword_arg(
@@ -154,72 +156,33 @@ class _ClipVisitor(ClipVisitor):
         
     def visit(self, clip):
         
-        source = self._get_segment_source(clip)
+        segment = call_noise_classifier.extract_clip_segment(
+            clip, self._segment_dur, self._segment_source,
+            self._source_duration)
         
-        if source is not None:
-        
-            self._clip_count += 1
-            
-            source_start_index, source_length = source
-            
-            sample_rate = clip.sound.sample_rate
-            segment_length = signal_utils.seconds_to_frames(
-                self._segment_dur, sample_rate)
-            
-            if source_length < segment_length:
-                # source not long enough to extract segment from
+        if segment is None:
+            # source not long enough to extract segment from
                 
-                self._short_clips.append(clip)
-                
-            else:
-                
-                # Extract samples from source.
-                offset = random.randrange(source_length - segment_length)
-                segment_start_index = source_start_index + offset
-                end_index = segment_start_index + segment_length
-                samples = clip.sound.samples[segment_start_index:end_index]
-                
-                # Write samples to HDF5 file.
-                dataset_name = _create_clip_dataset_name(
-                    clip, segment_start_index)
-                self._file[dataset_name] = samples
-                
-                # Set call segment attributes in HDF5 file.
-                attrs = self._file[dataset_name].attrs
-                attrs['station_name'] = clip.station.name
-                attrs['detector_name'] = clip.detector_name
-                attrs['clip_start_time'] = str(clip.start_time)
-                attrs['sample_rate'] = sample_rate
-                attrs['segment_start_index'] = segment_start_index
-                attrs['classification'] = \
-                    _get_hdf5_clip_class_name(clip.clip_class_name)
-                
-                self._segment_count += 1
-        
-        
-    def _get_segment_source(self, clip):
-        
-        source = self._segment_source
-        clip_length = len(clip.sound.samples)
-        
-        if source == _SEGMENT_SOURCE_CLIP:
-            return (0, clip_length)
+            self._short_clips.append(clip)
             
-        elif source == _SEGMENT_SOURCE_CLIP_CENTER:
-            
-            sample_rate = clip.sound.sample_rate
-            source_length = signal_utils.seconds_to_frames(
-                self._source_duration, sample_rate)
-            
-            if source_length >= clip_length:
-                return (0, clip_length)
-            
-            else:
-                source_start_index = int((clip_length - source_length) // 2)
-                return (source_start_index, source_length)
-                
         else:
-            return clip.selection
+            
+            # Write samples to HDF5 file.
+            dataset_name = _create_clip_dataset_name(
+                clip, segment.start_index)
+            self._file[dataset_name] = segment.samples
+            
+            # Set call segment attributes in HDF5 file.
+            attrs = self._file[dataset_name].attrs
+            attrs['station_name'] = clip.station.name
+            attrs['detector_name'] = clip.detector_name
+            attrs['clip_start_time'] = str(clip.start_time)
+            attrs['sample_rate'] = clip.sound.sample_rate
+            attrs['segment_start_index'] = segment.start_index
+            attrs['classification'] = \
+                _get_hdf5_clip_class_name(clip.clip_class_name)
+            
+            self._segment_count += 1
 
     
     def end_visits(self):

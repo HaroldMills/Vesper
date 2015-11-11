@@ -1,14 +1,16 @@
 """
-Module containing class `CallNoiseClassifier`.
+Module containing class `CallClassifier`.
 
-A `CallNoiseClassifier` assigns clips to the `'Call'` and `'Noise'` classes.
-Each clip is assigned to one of those to classes.
+A `CallClassifier` assigns an `"Unclassified"` clip to the `"Call"` clip
+class if the clip appears to contain a nocturnal flight call, and leaves
+it unclassified otherwise.
 """
 
 
 from __future__ import print_function
 
 from vesper.vcl.clip_visitor import ClipVisitor
+import vesper.util.call_noise_classifier as coarse_classifier
 import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
 
@@ -16,9 +18,12 @@ import vesper.vcl.vcl_utils as vcl_utils
 _HELP = '''
 <keyword arguments>
 
-Classifies clips as either "Call" clips or "Noise" clips.
+Assigns unclassified clips that appear to contain nocturnal flight calls to
+the "Call" clip class.
 
-Each clip is assigned to either the "Call" class or the "Noise" class.
+Only unclassified clips are considered. An unclassified clip that appears
+to contain a nocturnal flight call is assigned to the "Call" clip class.
+Otherwise the clip is left unclassified.
 
 See the keyword arguments documentation for how to specify the archive
 in which clips are to be classified, and the subset of clips of that
@@ -31,22 +36,22 @@ _ARG_DESCRIPTORS = \
     vcl_utils.CLIP_QUERY_ARG_DESCRIPTORS
     
     
-class CallNoiseClassifier(object):
+class CoarseClassifier(object):
     
     
-    name = 'Call/Noise Classifier'
+    name = 'Coarse Classifier'
     
     
     @staticmethod
     def get_help(positional_args, keyword_args):
-        name = text_utils.quote_if_needed(CallNoiseClassifier.name)
+        name = text_utils.quote_if_needed(CoarseClassifier.name)
         arg_descriptors = _ClipVisitor.arg_descriptors
         args_help = vcl_utils.create_command_args_help(arg_descriptors)
         return name + ' ' + _HELP + '\n\n' + args_help
 
     
     def __init__(self, positional_args, keyword_args):
-        super(CallNoiseClassifier, self).__init__()
+        super(CoarseClassifier, self).__init__()
         self._clip_visitor = _ClipVisitor(positional_args, keyword_args)
         
         
@@ -54,12 +59,39 @@ class CallNoiseClassifier(object):
         return self._clip_visitor.visit_clips()
         
         
+_DETECTOR_NAMES = ['Tseep']
+
+
 class _ClipVisitor(ClipVisitor):
     
     
+    def __init__(self, positional_args, keyword_args):
+        super(_ClipVisitor, self).__init__(positional_args, keyword_args)
+        self._classifiers = dict(
+            (name, _create_classifier(name)) for name in _DETECTOR_NAMES)
+        
+        
     def visit(self, clip):
-        clip.clip_class_name = _classify_clip(clip)
         
+        if clip.clip_class_name == None:
+            # clip is unclassified
+            
+            if self._is_call(clip):
+                clip.clip_class_name = 'Call'
+
+
+    def _is_call(self, clip):
         
-def _classify_clip(clip):
-    return 'Noise'
+        for detector_name, classifier in self._classifiers.iteritems():
+            if clip.detector_name == detector_name and \
+                    classifier.classify_clip(clip) == 1:
+                return True
+            
+        # If we get here, none of the classifiers classified the clip
+        # as a call.
+        return False
+                
+
+def _create_classifier(detector_name):
+    return coarse_classifier.create_classifier(detector_name)    
+

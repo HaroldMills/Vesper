@@ -11,10 +11,8 @@ import os.path
 from vesper.archive.archive import Archive
 from vesper.ui.clip_figure import ClipFigure
 from vesper.ui.clip_figure_play_button import ClipFigurePlayButton
-from vesper.util.bunch import Bunch
-from vesper.util.call_noise_classifier import CallNoiseClassifier
 from vesper.util.preferences import preferences as prefs
-import vesper.util.data_windows as data_windows
+import vesper.util.call_noise_classifier as coarse_classifier
 import vesper.util.measurements as measurements
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
@@ -44,23 +42,6 @@ Matplotlib/PyQt4 issues to look into:
 6. Matplotlib `MouseEvent` instances delivered when the mouse is released
    (`button_release_event`) have a `key` attribute of `None`.
 '''
-
-
-# TODO: Share at least part of configuration with
-# `create_call_noise_segment_classifier`.
-_CALL_NOISE_CLASSIFICATION_CONFIG = Bunch(
-    spectrogram_params=Bunch(
-        window=data_windows.create_window('Hann', 110),
-        hop_size=55,
-        dft_size=128,
-        ref_power=1),
-    min_freq=4000,
-    max_freq=11000,
-    min_power=-10,
-    max_power=65,
-    pooling_block_size=(2, 2),
-    segment_duration=.03,
-    segment_hop_size=.01)
 
 
 _MEASUREMENT_DATA = {
@@ -140,11 +121,11 @@ class SpectrogramClipFigure(ClipFigure):
             self._selection_polygon = None
             self._selection_event_handler = _SelectionEventHandler(self)
             
-        self._show_segment_call_noise_classifications = \
-            prefs.get('clipFigure.showSegmentCallNoiseClassifications', False)
+        self._show_segment_coarse_classifications = \
+            prefs.get('clipFigure.showSegmentCoarseClassifications', False)
             
-        if self._show_segment_call_noise_classifications:
-            self._call_noise_line = None
+        if self._show_segment_coarse_classifications:
+            self._coarse_classification_line = None
 
         # Note that axis rendering is very expensive. Perhaps we should
         # draw our own grid with a collection of line2D artists? Also
@@ -172,9 +153,9 @@ class SpectrogramClipFigure(ClipFigure):
         self.canvas.mouseReleaseEvent = \
             _PyQt4EventHandlerWrapper(self, self.canvas.mouseReleaseEvent)
             
-        if self._show_segment_call_noise_classifications:
-            self._call_noise_classifier = \
-                CallNoiseClassifier(_CALL_NOISE_CLASSIFICATION_CONFIG)
+        if self._show_segment_coarse_classifications:
+            self._coarse_classifier = \
+                coarse_classifier.create_classifier('Tseep')
         
         
     def _set_clip(self, clip):
@@ -190,12 +171,12 @@ class SpectrogramClipFigure(ClipFigure):
         if self._show_selections:
             self._update_selection()
         
-        if self._show_segment_call_noise_classifications and clip is not None:
+        if self._show_segment_coarse_classifications and clip is not None:
             
             (bits, frame_rate, start_time) = \
-                self._call_noise_classifier.classify_clip_segments(clip)
+                self._coarse_classifier.classify_clip_segments(clip)
                 
-            self._create_call_noise_line(
+            self._create_coarse_classification_line(
                 bits, frame_rate, start_time)
             
             file_name = os.path.basename(clip.file_path)
@@ -321,7 +302,7 @@ class SpectrogramClipFigure(ClipFigure):
                 interpolation='bilinear', picker=None)
         
         
-    def _create_call_noise_line(
+    def _create_coarse_classification_line(
             self, bits, frame_rate, start_time):
 
         axes = self._axes
@@ -337,9 +318,9 @@ class SpectrogramClipFigure(ClipFigure):
         # call to `cla`.
 #            axes.cla()
 
-        if self._call_noise_line is not None:
-            axes.lines.remove(self._call_noise_line)
-            self._call_noise_line = None
+        if self._coarse_classification_line is not None:
+            axes.lines.remove(self._coarse_classification_line)
+            self._coarse_classification_line = None
                 
         clip = self.clip
         
@@ -347,7 +328,7 @@ class SpectrogramClipFigure(ClipFigure):
             times = start_time + np.arange(len(bits)) / float(frame_rate)
             fs2 = clip.sound.sample_rate / 2.
             freqs = (.1 + .8 * np.array(bits)) * fs2
-            self._call_noise_line = axes.plot(times, freqs, 'b')[0]
+            self._coarse_classification_line = axes.plot(times, freqs, 'b')[0]
 
 
     def _create_measurement_line(self):
