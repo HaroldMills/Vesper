@@ -142,6 +142,55 @@ columns:
 ''')
 
      
+# _TABLE_FORMAT = yaml.load('''
+#  
+# columns:
+#  
+#     - name: Station
+#       measurement: Station
+#       format:
+#           name: Mapping
+#           parameters:
+#               mapping:
+#                   Floodplain: Floodplain NFC
+#                   Sheep Camp: Sheep Camp NFC
+#                   Ridge: Ridge NFC
+#                   Baldy: Baldy NFC
+#        
+#     - name: Detector
+#       measurement: Detector
+#  
+#     - name: Year
+#       measurement: Night
+#       format:
+#           name: Time
+#           parameters:
+#               format: "%Y"
+#  
+#     - name: Season
+#       measurement: Night
+#       format: Bird Migration Season
+#    
+#     - name: Night
+#       measurement: Night
+#       format:
+#           name: Time
+#           parameters:
+#               format: "%Y-%m-%d"
+#  
+#     - name: Start Date/Time (MDT)
+#       measurement: Start Time
+#       format:
+#           name: Time
+#           parameters:
+#               format: "%Y-%m-%d %H:%M:%S"
+#                
+#     - name: Clip Class
+#       measurement: Clip Class
+#             
+# ''')
+
+     
 class ClipsCsvExporter(object):
     
     
