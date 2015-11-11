@@ -1,3 +1,9 @@
+"""
+Analyze call and noise clip CSV files and print tables of Tseep and Thrush
+call, noise, and unclassifier clip counts.
+"""
+
+
 from __future__ import print_function
 import os.path
 
