@@ -1,8 +1,8 @@
 ccopy_reg
 _reconstructor
 p1
-(cvesper.util.call_noise_classifier
-CoarseClassifier
+(cvesper.util.nfc_coarse_classifier
+NfcCoarseClassifier
 p2
 c__builtin__
 object

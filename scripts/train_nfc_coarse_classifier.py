@@ -1,5 +1,5 @@
 """
-Creates a coarse classifier from training data.
+Trains an NFC coarse classifier.
 
 The classifier classifies a clip by first classifying a sequence of short,
 regularly spaced segments within the clip using a *segment classifier*.
@@ -46,8 +46,8 @@ pickle file named:
     
 where <detector> is either "Tseep" or "Thrush".
 
-The classifier is of Python class `CoarseClassifier`, and can be
-loaded via the `create_classifier` function of the `coarse_classifier`
+The classifier is of Python class `NfcCoarseClassifier`, and can be
+loaded via the `create_classifier` function of the `nfc_coarse_classifier`
 module.
 """
 
@@ -64,8 +64,8 @@ import numpy as np
 
 from vesper.archive.archive import Archive
 from vesper.util.bunch import Bunch
-from vesper.util.call_noise_classifier import CoarseClassifier
-import vesper.util.call_noise_classifier as call_noise_classifier
+from vesper.util.nfc_coarse_classifier import NfcCoarseClassifier
+import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
 import vesper.util.data_windows as data_windows
 
 
@@ -126,7 +126,7 @@ _CONFIGS = {
         segment_duration = .03,
         segment_hop_size = .015,
         noise_segment_source_duration = .1,
-        num_cross_validation_folds=10,
+        num_cross_validation_folds=0,
         num_learning_curve_points=10,
         spectrogram_params=Bunch(
             window=data_windows.create_window('Hann', 110),
@@ -179,10 +179,10 @@ def _main():
         _save_cross_validation_test_results(results, config)
     
     print('Training segment classifier on all clips...')
-    classifier = _train_segment_classifier(clips, config)
+    segment_classifier = _train_segment_classifier(clips, config)
     print()
 
-    _save_classifier(config, classifier)
+    _save_clip_classifier(config, segment_classifier)
 
     
 def _balance_clips(clips):
@@ -235,17 +235,17 @@ def _extract_clip_segments(clips, config):
 
 def _extract_clip_segment(clip, config):
     
-    cnc = call_noise_classifier
+    ncc = nfc_coarse_classifier
     duration = config.segment_duration
 
     if clip.clip_class_name == 'Noise':
-        segment = cnc.extract_clip_segment(
-            clip, duration, cnc.SEGMENT_SOURCE_CLIP_CENTER,
+        segment = ncc.extract_clip_segment(
+            clip, duration, ncc.SEGMENT_SOURCE_CLIP_CENTER,
             config.noise_segment_source_duration)
 
     else:
-        segment = cnc.extract_clip_segment(
-            clip, duration, cnc.SEGMENT_SOURCE_SELECTION)
+        segment = ncc.extract_clip_segment(
+            clip, duration, ncc.SEGMENT_SOURCE_SELECTION)
         
     if segment is not None:
         segment.name = os.path.basename(clip.file_path)
@@ -346,7 +346,7 @@ def _train_clip_classifier(training_clips, test_clips, config):
     segment_results = _test_segment_classifier(
         segment_classifier, test_clips, config)
         
-    clip_classifier = CoarseClassifier(config, segment_classifier)
+    clip_classifier = NfcCoarseClassifier(config, segment_classifier)
     
     clip_results = _test_clip_classifier(clip_classifier, test_clips, config)
     
@@ -373,7 +373,7 @@ def _get_clip_segments(clips):
 
 
 def _get_segment_features(segments, config):
-    get_features = call_noise_classifier.get_segment_features
+    get_features = nfc_coarse_classifier.get_segment_features
     return [get_features(segment, config)[0] for segment in segments]
 
 
@@ -393,9 +393,9 @@ def _tally_classification_results(targets, predictions):
         num_true_negatives)
         
 
-def _test_clip_classifier(call_noise_classifier, clips, config):
+def _test_clip_classifier(classifier, clips, config):
     targets = _get_targets(clips)
-    predict = call_noise_classifier.classify_clip
+    predict = classifier.classify_clip
     predictions = np.array([predict(clip) for clip in clips])
     return _tally_classification_results(targets, predictions)
 
@@ -481,9 +481,9 @@ def _create_csv_result_line(results):
     return ','.join(result_strings)
 
 
-def _save_classifier(config, segment_classifier):
+def _save_clip_classifier(config, segment_classifier):
     
-    clip_classifier = CoarseClassifier(config, segment_classifier)
+    clip_classifier = NfcCoarseClassifier(config, segment_classifier)
     
     file_name = '{} Coarse Classifier.pkl'.format(config.detector_name)
     file_path = _create_full_path(file_name)

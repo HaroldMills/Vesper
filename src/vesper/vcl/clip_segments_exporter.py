@@ -11,8 +11,7 @@ import h5py
 
 from vesper.vcl.clip_visitor import ClipVisitor
 from vesper.vcl.command import CommandSyntaxError
-import vesper.util.call_noise_classifier as call_noise_classifier
-import vesper.util.signal_utils as signal_utils
+import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
 import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
 
@@ -34,9 +33,9 @@ exported can be specified with the --segment-source argument.
 
 
 _SEGMENT_SOURCES = frozenset([
-    call_noise_classifier.SEGMENT_SOURCE_CLIP,
-    call_noise_classifier.SEGMENT_SOURCE_CLIP_CENTER,
-    call_noise_classifier.SEGMENT_SOURCE_SELECTION])
+    nfc_coarse_classifier.SEGMENT_SOURCE_CLIP,
+    nfc_coarse_classifier.SEGMENT_SOURCE_CLIP_CENTER,
+    nfc_coarse_classifier.SEGMENT_SOURCE_SELECTION])
 
 
 _ARGS = '''
@@ -125,7 +124,7 @@ class _ClipVisitor(ClipVisitor):
         _check_segment_source(self._segment_source)
         
         if self._segment_source == \
-                call_noise_classifier.SEGMENT_SOURCE_CLIP_CENTER:
+                nfc_coarse_classifier.SEGMENT_SOURCE_CLIP_CENTER:
             
             self._source_duration = float(
                 vcl_utils.get_required_keyword_arg(
@@ -156,7 +155,7 @@ class _ClipVisitor(ClipVisitor):
         
     def visit(self, clip):
         
-        segment = call_noise_classifier.extract_clip_segment(
+        segment = nfc_coarse_classifier.extract_clip_segment(
             clip, self._segment_dur, self._segment_source,
             self._source_duration)
         

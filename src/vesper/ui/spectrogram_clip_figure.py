@@ -12,7 +12,7 @@ from vesper.archive.archive import Archive
 from vesper.ui.clip_figure import ClipFigure
 from vesper.ui.clip_figure_play_button import ClipFigurePlayButton
 from vesper.util.preferences import preferences as prefs
-import vesper.util.call_noise_classifier as coarse_classifier
+import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
 import vesper.util.measurements as measurements
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
@@ -155,7 +155,7 @@ class SpectrogramClipFigure(ClipFigure):
             
         if self._show_segment_coarse_classifications:
             self._coarse_classifier = \
-                coarse_classifier.create_classifier('Tseep')
+                nfc_coarse_classifier.create_classifier('Tseep')
         
         
     def _set_clip(self, clip):

@@ -38,7 +38,6 @@ def load_extensions():
     from mpg_ranch.outside_clip_classifier \
         import OutsideClipClassifier as MpgRanchOutsideClipClassifier
     from old_bird.detector import Detector as OldBirdDetector
-    from vesper.vcl.call_noise_classifier import CoarseClassifier
     from vesper.vcl.clip_segments_exporter import ClipSegmentsExporter
     from vesper.vcl.classify_command import ClassifyCommand
     from vesper.vcl.create_command import CreateCommand
@@ -46,6 +45,7 @@ def load_extensions():
     from vesper.vcl.export_command import ExportCommand
     from vesper.vcl.help_command import HelpCommand
     from vesper.vcl.import_command import ImportCommand
+    from vesper.vcl.nfc_coarse_classifier import NfcCoarseClassifier
     from vesper.vcl.sample_command import SampleCommand
 
     global _extensions
@@ -53,8 +53,8 @@ def load_extensions():
     _extensions = {
             
         'VCL Classifier': (
-            CoarseClassifier,
-            MpgRanchOutsideClipClassifier
+            MpgRanchOutsideClipClassifier,
+            NfcCoarseClassifier,
         ),
         
         'VCL Command': (
@@ -64,7 +64,7 @@ def load_extensions():
             ExportCommand,
             HelpCommand,
             ImportCommand,
-            SampleCommand
+            SampleCommand,
         ),
         
         'VCL Detector': (

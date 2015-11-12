@@ -1,4 +1,4 @@
-"""Module containing class `CoarseClassifier`."""
+"""Module containing class `NfcCoarseClassifier`."""
 
 
 import cPickle as pickle
@@ -103,11 +103,11 @@ def _get_segment_source(clip, segment_source, source_duration):
             'Unrecognized clip segment source "{}".'.format(source))
 
     
-class CoarseClassifier(object):
+class NfcCoarseClassifier(object):
     
     
     def __init__(self, config, segment_classifier):
-        super(CoarseClassifier, self).__init__()
+        super(NfcCoarseClassifier, self).__init__()
         self._config = config
         self._segment_classifier = segment_classifier
         

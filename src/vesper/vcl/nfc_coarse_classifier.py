@@ -10,7 +10,7 @@ it unclassified otherwise.
 from __future__ import print_function
 
 from vesper.vcl.clip_visitor import ClipVisitor
-import vesper.util.call_noise_classifier as coarse_classifier
+import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
 import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
 
@@ -36,22 +36,22 @@ _ARG_DESCRIPTORS = \
     vcl_utils.CLIP_QUERY_ARG_DESCRIPTORS
     
     
-class CoarseClassifier(object):
+class NfcCoarseClassifier(object):
     
     
-    name = 'Coarse Classifier'
+    name = 'NFC Coarse Classifier'
     
     
     @staticmethod
     def get_help(positional_args, keyword_args):
-        name = text_utils.quote_if_needed(CoarseClassifier.name)
+        name = text_utils.quote_if_needed(NfcCoarseClassifier.name)
         arg_descriptors = _ClipVisitor.arg_descriptors
         args_help = vcl_utils.create_command_args_help(arg_descriptors)
         return name + ' ' + _HELP + '\n\n' + args_help
 
     
     def __init__(self, positional_args, keyword_args):
-        super(CoarseClassifier, self).__init__()
+        super(NfcCoarseClassifier, self).__init__()
         self._clip_visitor = _ClipVisitor(positional_args, keyword_args)
         
         
@@ -93,5 +93,5 @@ class _ClipVisitor(ClipVisitor):
                 
 
 def _create_classifier(detector_name):
-    return coarse_classifier.create_classifier(detector_name)    
+    return nfc_coarse_classifier.create_classifier(detector_name)    
 
