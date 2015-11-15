@@ -32,7 +32,7 @@ parameter (see the `_CONFIGS` dictionary below) is positive
 (cross-validation is disabled if the value is zero). Cross-validation
 results are written to a file named:
 
-    <detector> Classifier Test Results.csv
+    <detector> Classifier Training and Test Results.csv
     
 where <detector> is either "Tseep" or "Thrush". The file is located in
 the same directory as the call and noise archives.
@@ -126,8 +126,8 @@ _CONFIGS = {
         segment_duration = .03,
         segment_hop_size = .015,
         noise_segment_source_duration = .1,
-        num_cross_validation_folds=0,
-        num_learning_curve_points=10,
+        num_cross_validation_folds=5,
+        num_learning_curve_points=5,
         spectrogram_params=Bunch(
             window=data_windows.create_window('Hann', 110),
             hop_size=55,
@@ -176,7 +176,7 @@ def _main():
     # Perform cross-validation training on clip folds.
     if config.num_cross_validation_folds != 0:
         results = _train_and_test_cross_validation_classifiers(clips, config)
-        _save_cross_validation_test_results(results, config)
+        _save_training_and_test_results(results, config)
     
     print('Training segment classifier on all clips...')
     segment_classifier = _train_segment_classifier(clips, config)
@@ -282,16 +282,20 @@ def _train_and_test_cross_validation_classifiers(clips, config):
             
             training_clips = _sample_items(all_training_clips, fraction)
         
-            _, segment_results, _, clip_results = _train_clip_classifier(
-                training_clips, test_clips, config)
+            _, segment_training_results, segment_test_results, \
+            _, clip_training_results, clip_test_results = \
+                _train_clip_classifier(training_clips, test_clips, config)
                 
-            _show_results(segment_results, clip_results)
+            _show_results(
+                segment_training_results, segment_test_results,
+                clip_training_results, clip_test_results)
             
             training_counts = _count_clips(training_clips)
             test_counts = _count_clips(test_clips)
             results.append(
-                (fold_num, percent) + training_counts + test_counts +
-                segment_results + clip_results)
+                (fold_num, percent) + training_counts +
+                segment_training_results + clip_training_results +
+                test_counts + segment_test_results + clip_test_results)
             
             print()
           
@@ -343,14 +347,23 @@ def _train_clip_classifier(training_clips, test_clips, config):
     
     segment_classifier = _train_segment_classifier(training_clips, config)
         
-    segment_results = _test_segment_classifier(
+    segment_training_results = _test_segment_classifier(
+        segment_classifier, training_clips, config)
+    
+    segment_test_results = _test_segment_classifier(
         segment_classifier, test_clips, config)
         
     clip_classifier = NfcCoarseClassifier(config, segment_classifier)
     
-    clip_results = _test_clip_classifier(clip_classifier, test_clips, config)
+    clip_training_results = _test_clip_classifier(
+        clip_classifier, training_clips, config)
     
-    return (segment_classifier, segment_results, clip_classifier, clip_results)
+    clip_test_results = _test_clip_classifier(
+        clip_classifier, test_clips, config)
+    
+    return (
+        segment_classifier, segment_training_results, segment_test_results,
+        clip_classifier, clip_training_results, clip_test_results)
 
 
 def _train_segment_classifier(training_clips, config):
@@ -400,9 +413,14 @@ def _test_clip_classifier(classifier, clips, config):
     return _tally_classification_results(targets, predictions)
 
 
-def _show_results(segment_results, clip_results):
-    _show_results_aux('segments', segment_results)
-    _show_results_aux('clips', clip_results)
+def _show_results(
+        segment_training_results, segment_test_results,
+        clip_training_results, clip_test_results):
+    
+    _show_results_aux('segment training', segment_training_results)
+    _show_results_aux('segment test', segment_test_results)
+    _show_results_aux('clip training', clip_training_results)
+    _show_results_aux('clip test', clip_test_results)
     
     
 def _show_results_aux(name, results):
@@ -436,27 +454,36 @@ Training Percent
 Training Clips
 Training Calls
 Training Noises
+Training Segment True Positives
+Training Segment False Negatives
+Training Segment False Positives
+Training Segment True Negatives
+Training Clip True Positives
+Training Clip False Negatives
+Training Clip False Positives
+Training Clip True Negatives
 Test Clips
 Test Calls
 Test Noises
-Segment True Positives
-Segment False Negatives
-Segment False Positives
-Segment True Negatives
-Clip True Positives
-Clip False Negatives
-Clip False Positives
-Clip True Negatives
+Test Segment True Positives
+Test Segment False Negatives
+Test Segment False Positives
+Test Segment True Negatives
+Test Clip True Positives
+Test Clip False Negatives
+Test Clip False Positives
+Test Clip True Negatives
 '''
 
 
-def _save_cross_validation_test_results(results, config):
+def _save_training_and_test_results(results, config):
     
-    file_name = '{} Classifier Test Results.csv'.format(config.detector_name)
+    name_format = '{} Classifier Training and Test Results.csv'
+    file_name = name_format.format(config.detector_name)
     file_path = _create_full_path(file_name)
     
     print(
-        'Saving cross-validation test results to file "{}".'.format(file_path))
+        'Saving training and test results to file "{}".'.format(file_path))
 
     header_line = _create_csv_header(_COLUMN_NAMES)
     result_lines = [_create_csv_result_line(r) for r in results]
