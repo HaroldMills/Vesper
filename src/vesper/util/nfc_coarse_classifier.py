@@ -62,7 +62,10 @@ def extract_clip_segment(
         else:
             
             # Extract samples from source.
-            offset = random.randrange(source_length - segment_length)
+            if source_length == segment_length:
+                offset = 0
+            else:
+                offset = random.randrange(source_length - segment_length)
             start_index = source_start_index + offset
             end_index = start_index + segment_length
             samples = clip.sound.samples[start_index:end_index]
