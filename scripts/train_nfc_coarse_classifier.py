@@ -116,7 +116,7 @@ Training and test clips from different queries:
 
 _DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch'
 _CALL_ARCHIVE_NAME = 'MPG Ranch 2012-2014'
-_NOISE_ARCHIVE_NAME = 'MPG Ranch Sampled 2014 Tseep'
+_NOISE_ARCHIVE_NAME_PREFIX = 'MPG Ranch Sampled 2014 '
 
 
 _CONFIGS = {
@@ -126,8 +126,8 @@ _CONFIGS = {
         segment_duration = .03,
         segment_hop_size = .015,
         noise_segment_source_duration = .1,
-        num_cross_validation_folds=5,
-        num_learning_curve_points=5,
+        num_cross_validation_folds=10,
+        num_learning_curve_points=10,
         spectrogram_params=Bunch(
             window=data_windows.create_window('Hann', 110),
             hop_size=55,
@@ -144,9 +144,32 @@ _CONFIGS = {
             'kernel': 'rbf',
             'gamma': .001,
             'C': 1000.
-        })
+        }),
             
-    # Thrush frequency range will be 1500 to 4000 Hz.
+    'Thrush': Bunch(
+        detector_name = 'Thrush',
+        segment_duration = .09,
+        segment_hop_size = .045,
+        noise_segment_source_duration = .2,
+        num_cross_validation_folds=10,
+        num_learning_curve_points=10,
+        spectrogram_params=Bunch(
+            window=data_windows.create_window('Hann', 110),
+            hop_size=55,
+            dft_size=128,
+            ref_power=1),
+        min_freq=1500,
+        max_freq=4000,
+        min_power=-10,
+        max_power=65,
+        pooling_block_size=(2, 2),
+        include_norm_in_features=False,
+        svc_params={
+            'cache_size': 500,
+            'kernel': 'rbf',
+            'gamma': .001,
+            'C': 1000.
+        })
             
 }
 
@@ -211,7 +234,8 @@ def _balance_clips(clips):
             
 def _get_clips_from_archives(config):
     call_clips = _get_clips_from_archive(_CALL_ARCHIVE_NAME, 'Call*', config)
-    noise_clips = _get_clips_from_archive(_NOISE_ARCHIVE_NAME, 'Noise', config)
+    noise_archive_name = _NOISE_ARCHIVE_NAME_PREFIX + config.detector_name
+    noise_clips = _get_clips_from_archive(noise_archive_name, 'Noise', config)
     return call_clips + noise_clips
     
 
@@ -478,7 +502,7 @@ Test Clip True Negatives
 
 def _save_training_and_test_results(results, config):
     
-    name_format = '{} Classifier Training and Test Results.csv'
+    name_format = '{} Classifier Results.csv'
     file_name = name_format.format(config.detector_name)
     file_path = _create_full_path(file_name)
     
