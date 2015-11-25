@@ -28,7 +28,7 @@ def _main():
         
     means_df = df.groupby('Training Percent').aggregate(np.mean)
     
-    _plot_results(means_df, detector_name)
+    _plot_results(df, means_df, detector_name)
 
 
 def _read_csv_file(detector_name):
@@ -67,31 +67,36 @@ def _add_percent_columns_aux_2(df, prefix, name_a, name_b):
         df[n + ' Percent'] = 100 * df[n] / totals
     
     
-def _plot_results(df, detector_name):
+def _plot_results(df, means_df, detector_name):
     
     plt.figure(1, figsize=(7.5, 10))
     
     plt.subplot(211)
-    _plot_error_curves(df, detector_name, 'Segment')
+    _plot_error_curves(df, means_df, detector_name, 'Segment')
     
     plt.subplot(212)
-    _plot_error_curves(df, detector_name, 'Clip')
+    _plot_error_curves(df, means_df, detector_name, 'Clip')
     plt.show()
     
     
-def _plot_error_curves(df, detector_name, segment_or_clip):
+def _plot_error_curves(df, means_df, detector_name, segment_or_clip):
     
-    x = df.index
+    x = means_df.index
     
-    y = df['Training ' + segment_or_clip + ' Errors Percent']
-    plt.plot(x, y, 'g', label='Training Overall')
-    y = df['Test ' + segment_or_clip + ' Errors Percent']
-    plt.plot(x, y, 'k', label='Test Overall')
-    y = df['Test ' + segment_or_clip + ' False Negatives Percent']
-    plt.plot(x, y, 'r', label='Test False Negatives')
-    y = df['Test ' + segment_or_clip + ' False Positives Percent']
-    plt.plot(x, y, 'b', label='Test False Positives')
-      
+    column_name = 'Training ' + segment_or_clip + ' Errors Percent'
+    _plot_error_curve(None, means_df, x, column_name, 'Training Overall', 'g')
+    
+    column_name = 'Test ' + segment_or_clip + ' Errors Percent'
+    _plot_error_curve(None, means_df, x, column_name, 'Test Overall', 'k')
+    
+    column_name = 'Test ' + segment_or_clip + ' False Negatives Percent'
+    _plot_error_curve(
+        None, means_df, x, column_name, 'Test False Negatives', 'r')
+    
+    column_name = 'Test ' + segment_or_clip + ' False Positives Percent'
+    _plot_error_curve(
+        None, means_df, x, column_name, 'Test False Positives', 'b')
+    
     plt.xlabel('Training Set Size (percent)')
     plt.ylabel('Error Rate (percent)')
     plt.title(detector_name + ' ' + segment_or_clip + ' Classifier')
@@ -99,6 +104,20 @@ def _plot_error_curves(df, detector_name, segment_or_clip):
     plt.grid(True)
     plt.legend(prop={'size': 10})
     plt.subplots_adjust(hspace=.4)
+
+
+def _plot_error_curve(df, means_df, x, column_name, label, color):
+    
+    # line connecting means
+    y = means_df[column_name]
+    plt.plot(x, y, color, label=label)
+    
+    # points averaged to obtain means
+    if df is not None:
+        for percent in x:
+            mask = df['Training Percent'] == percent
+            y = df[mask][column_name]
+            plt.plot(percent * np.ones(len(x)), y, color + 'o')
 
 
 if __name__ == '__main__':
