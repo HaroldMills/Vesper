@@ -117,6 +117,7 @@ Training and test clips from different queries:
 _DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch'
 _CALL_ARCHIVE_NAME = 'MPG Ranch 2012-2014'
 _NOISE_ARCHIVE_NAME_PREFIX = 'MPG Ranch Sampled 2014 '
+_TEST_CLIP_CLASSIFIER = False
 
 
 _CONFIGS = {
@@ -148,8 +149,8 @@ _CONFIGS = {
             
     'Thrush': Bunch(
         detector_name = 'Thrush',
-        segment_duration = .09,
-        segment_hop_size = .045,
+        segment_duration = .07,
+        segment_hop_size = .035,
         noise_segment_source_duration = .2,
         num_cross_validation_folds=10,
         num_learning_curve_points=10,
@@ -159,7 +160,7 @@ _CONFIGS = {
             dft_size=128,
             ref_power=1),
         min_freq=1500,
-        max_freq=4000,
+        max_freq=5000,
         min_power=-10,
         max_power=65,
         pooling_block_size=(2, 2),
@@ -168,7 +169,7 @@ _CONFIGS = {
             'cache_size': 500,
             'kernel': 'rbf',
             'gamma': .001,
-            'C': 1000.
+            'C': 10000.
         })
             
 }
@@ -273,10 +274,22 @@ def _extract_clip_segment(clip, config):
         
     if segment is not None:
         segment.name = os.path.basename(clip.file_path)
-        segment.clip_class_name = clip.clip_class_name
+        (segment.features, segment.spectra, segment.features_time) = \
+            ncc.get_segment_features(segment, config)
         clip.segment = segment
+        clip.target = _get_target(clip.clip_class_name)
 
     return segment is not None
+
+
+def _get_target(clip_class_name):
+    if clip_class_name == 'Noise':
+        return 0
+    elif clip_class_name.startswith('Call'):
+        return 1
+    else:
+        raise ValueError(
+            'Unrecognized clip class "{}".'.format(clip_class_name))
 
 
 def _train_and_test_cross_validation_classifiers(clips, config):
@@ -343,18 +356,8 @@ def _generate_clip_folds(clips, num_folds):
         fold_num += 1
         
         
-def _get_targets(items):
-    return np.array([_get_target(item.clip_class_name) for item in items])
-
-
-def _get_target(clip_class_name):
-    if clip_class_name == 'Noise':
-        return 0
-    elif clip_class_name.startswith('Call'):
-        return 1
-    else:
-        raise ValueError(
-            'Unrecognized clip class "{}".'.format(clip_class_name))
+def _get_targets(clips):
+    return np.array([clip.target for clip in clips])
 
 
 def _fraction_to_percent(fraction):
@@ -377,13 +380,20 @@ def _train_clip_classifier(training_clips, test_clips, config):
     segment_test_results = _test_segment_classifier(
         segment_classifier, test_clips, config)
         
-    clip_classifier = NfcCoarseClassifier(config, segment_classifier)
-    
-    clip_training_results = _test_clip_classifier(
-        clip_classifier, training_clips, config)
-    
-    clip_test_results = _test_clip_classifier(
-        clip_classifier, test_clips, config)
+    if _TEST_CLIP_CLASSIFIER:
+        
+        clip_classifier = NfcCoarseClassifier(config, segment_classifier)
+        
+        clip_training_results = _test_clip_classifier(
+            clip_classifier, training_clips, config)
+        
+        clip_test_results = _test_clip_classifier(
+            clip_classifier, test_clips, config)
+        
+    else:
+        clip_classifier = None
+        clip_training_results = tuple([''] * 4)
+        clip_test_results = tuple([''] * 4)
     
     return (
         segment_classifier, segment_training_results, segment_test_results,
@@ -391,43 +401,26 @@ def _train_clip_classifier(training_clips, test_clips, config):
 
 
 def _train_segment_classifier(training_clips, config):
-    features, targets = _get_segment_features_and_targets(
-        training_clips, config)
+    features = [clip.segment.features for clip in training_clips]
+    targets = _get_targets(training_clips)
     classifier = svm.SVC(**config.svc_params)
     classifier.fit(features, targets)
     return classifier
     
     
-def _get_segment_features_and_targets(clips, config):
-    segments = _get_clip_segments(clips)
-    features = _get_segment_features(segments, config)
-    targets = _get_targets(segments)
-    return (features, targets)
-
-
-def _get_clip_segments(clips):
-    return [clip.segment for clip in clips]
-
-
-def _get_segment_features(segments, config):
-    get_features = nfc_coarse_classifier.get_segment_features
-    return [get_features(segment, config)[0] for segment in segments]
-
-
 def _test_segment_classifier(classifier, test_clips, config):
-    features, targets = _get_segment_features_and_targets(test_clips, config)
+    features = [clip.segment.features for clip in test_clips]
+    targets = _get_targets(test_clips)
     predictions = classifier.predict(features)
     return _tally_classification_results(targets, predictions)
 
 
 def _tally_classification_results(targets, predictions):
-    num_true_positives = ((targets == 1) & (predictions == 1)).sum()
-    num_false_negatives = ((targets == 1) & (predictions == 0)).sum()
-    num_false_positives = ((targets == 0) & (predictions == 1)).sum()
-    num_true_negatives = ((targets == 0) & (predictions == 0)).sum()
-    return (
-        num_true_positives, num_false_negatives, num_false_positives,
-        num_true_negatives)
+    tp = ((targets == 1) & (predictions == 1)).sum()
+    fn = ((targets == 1) & (predictions == 0)).sum()
+    fp = ((targets == 0) & (predictions == 1)).sum()
+    tn = ((targets == 0) & (predictions == 0)).sum()
+    return (tp, fn, fp, tn)
         
 
 def _test_clip_classifier(classifier, clips, config):
@@ -443,8 +436,9 @@ def _show_results(
     
     _show_results_aux('segment training', segment_training_results)
     _show_results_aux('segment test', segment_test_results)
-    _show_results_aux('clip training', clip_training_results)
-    _show_results_aux('clip test', clip_test_results)
+    if _TEST_CLIP_CLASSIFIER:
+        _show_results_aux('clip training', clip_training_results)
+        _show_results_aux('clip test', clip_test_results)
     
     
 def _show_results_aux(name, results):
