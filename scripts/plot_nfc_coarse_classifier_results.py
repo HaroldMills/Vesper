@@ -14,7 +14,7 @@ _DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch'
 _CSV_FILE_NAME_SUFFIX = ' Classifier Results.csv'
 _PLOT_Y_LIMITS = {
     'Tseep': 10,
-    'Thrush': 20
+    'Thrush': 15
 }
 
 
