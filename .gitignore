@@ -58,5 +58,6 @@ docs/_build/
 # Local test files
 ClipDatabase.db
 
+.ipynb_checkpoints
 scripts/test_hdf5.py
 src/vesper/archive/clip.py
