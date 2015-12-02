@@ -54,6 +54,7 @@ module.
 
 from __future__ import print_function
 import cPickle as pickle
+import itertools
 import os.path
 import random
 import sys
@@ -61,6 +62,7 @@ import sys
 from sklearn import cross_validation
 from sklearn import svm
 import numpy as np
+import pandas as pd
 
 from vesper.archive.archive import Archive
 from vesper.util.bunch import Bunch
@@ -118,6 +120,7 @@ _DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch'
 _CALL_ARCHIVE_NAME = 'MPG Ranch 2012-2014'
 _NOISE_ARCHIVE_NAME_PREFIX = 'MPG Ranch Sampled 2014 '
 _TEST_CLIP_CLASSIFIER = False
+_SAVE_SEGMENT_RESULTS = True
 
 
 _CONFIGS = {
@@ -199,7 +202,10 @@ def _main():
     
     # Perform cross-validation training on clip folds.
     if config.num_cross_validation_folds != 0:
-        results = _train_and_test_cross_validation_classifiers(clips, config)
+        results, segment_results = \
+            _train_and_test_cross_validation_classifiers(clips, config)
+        if _SAVE_SEGMENT_RESULTS:
+            _save_segment_results(segment_results, config)
         _save_training_and_test_results(results, config)
     
     print('Training segment classifier on all clips...')
@@ -208,6 +214,17 @@ def _main():
 
     _save_clip_classifier(config, segment_classifier)
 
+    
+def _save_segment_results(results, config):
+    
+    name_format = '{} Classifier Segment Results.pkl'
+    file_name = name_format.format(config.detector_name)
+    file_path = _create_full_path(file_name)
+    
+    print('Saving segment results to file "{}".'.format(file_path))
+    results.to_pickle(file_path)
+    print()
+    
     
 def _balance_clips(clips):
     
@@ -302,6 +319,8 @@ def _train_and_test_cross_validation_classifiers(clips, config):
     fractions = (1. + np.arange(n)) / n
     # fractions = fractions[:1]
     results = []
+    if _SAVE_SEGMENT_RESULTS:
+        segment_results = []
       
     for fold_num, all_training_clips, test_clips in \
             _generate_clip_folds(clips, config.num_cross_validation_folds):
@@ -319,9 +338,15 @@ def _train_and_test_cross_validation_classifiers(clips, config):
             
             training_clips = _sample_items(all_training_clips, fraction)
         
-            _, segment_training_results, segment_test_results, \
-            _, clip_training_results, clip_test_results = \
+            segment_classifier, segment_training_results, \
+            segment_test_results, _, clip_training_results, \
+            clip_test_results = \
                 _train_clip_classifier(training_clips, test_clips, config)
+            
+            if _SAVE_SEGMENT_RESULTS:
+                segment_results.append(_get_segment_results(
+                    fold_num, percent, segment_classifier, training_clips,
+                    test_clips))
                 
             _show_results(
                 segment_training_results, segment_test_results,
@@ -336,9 +361,51 @@ def _train_and_test_cross_validation_classifiers(clips, config):
             
             print()
           
-    return results
+    if _SAVE_SEGMENT_RESULTS:
+        segment_results = _combine_fold_segment_results(segment_results)
+    else:
+        segment_results = None
+        
+    return results, segment_results
     
     
+def _get_segment_results(
+        fold_num, percent, classifier, training_clips, test_clips):
+
+    training_rows = _get_segment_results_aux(
+        fold_num, percent, classifier, training_clips, 'Training')
+    
+    test_rows = _get_segment_results_aux(
+        fold_num, percent, classifier, test_clips, 'Test')
+    
+    return training_rows + test_rows
+    
+    
+def _get_segment_results_aux(
+        fold_num, percent, classifier, clips, segment_type):
+    
+    return [{
+        'fold': fold_num,
+        'percent': percent,
+        'segment_type': segment_type,
+        'station': clip.station.name,
+        'detector': clip.detector_name,
+        'start_time': clip.start_time,
+        'spectra': clip.segment.spectra,
+        'features': clip.segment.features,
+        'target': clip.target,
+        'prediction': classifier.predict([clip.segment.features])[0]
+    } for clip in clips]
+
+
+def _combine_fold_segment_results(segment_results):
+    rows = list(itertools.chain(*segment_results))
+    columns = [
+        'fold', 'percent', 'segment_type', 'station', 'detector',
+        'start_time', 'spectra', 'features', 'target', 'prediction']
+    return pd.DataFrame(rows, columns=columns)
+
+
 def _generate_clip_folds(clips, num_folds):
     
     targets = _get_targets(clips)
