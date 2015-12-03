@@ -39,6 +39,7 @@ def load_extensions():
         import OutsideClipClassifier as MpgRanchOutsideClipClassifier
     from old_bird.detector import Detector as OldBirdDetector
     from vesper.vcl.classify_command import ClassifyCommand
+    from vesper.vcl.clips_exporter import ClipsExporter
     from vesper.vcl.create_command import CreateCommand
     from vesper.vcl.detect_command import DetectCommand
     from vesper.vcl.export_command import ExportCommand
@@ -71,6 +72,7 @@ def load_extensions():
         ),
                    
         'VCL Exporter': (
+            ClipsExporter,
             MpgRanchClipsCsvExporter,
         ),
                    
