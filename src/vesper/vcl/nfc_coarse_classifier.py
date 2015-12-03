@@ -31,11 +31,6 @@ archive to be classified.
 '''.strip()
 
 
-_ARG_DESCRIPTORS = \
-    vcl_utils.ARCHIVE_ARG_DESCRIPTORS + \
-    vcl_utils.CLIP_QUERY_ARG_DESCRIPTORS
-    
-    
 class NfcCoarseClassifier(object):
     
     
