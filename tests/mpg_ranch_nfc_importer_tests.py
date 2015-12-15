@@ -1,7 +1,7 @@
 from test_case import TestCase
 import datetime
 
-import mpg_ranch.importer as importer
+import mpg_ranch.nfc_importer as nfc_importer
 
 
 '''
@@ -78,12 +78,12 @@ class MpgRanchArchiverTests(TestCase):
             clip_class_name, station_name, name_a, detector_name, name_b,
             suffix)
         
-        result = importer._parse_file_name(file_name)
+        result = nfc_importer._parse_file_name(file_name)
         
         station_name = _STATION_NAME_CORRECTIONS.get(
             station_name, station_name.capitalize())
         
-        expected_result = importer._ClipInfo(
+        expected_result = nfc_importer._ClipInfo(
             station_name, detector_name.capitalize(),
             _date(2015, 3, 9), _time(*time), _delta(dur),
             mcomment, _delta(mdur),

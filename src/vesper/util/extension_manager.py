@@ -34,7 +34,7 @@ def load_extensions():
     # import problems.
     from mpg_ranch.clips_csv_exporter \
         import ClipsCsvExporter as MpgRanchClipsCsvExporter
-    from mpg_ranch.importer import Importer as MpgRanchImporter
+    from mpg_ranch.nfc_importer import NfcImporter as MpgRanchNfcImporter
     from mpg_ranch.outside_clip_classifier \
         import OutsideClipClassifier as MpgRanchOutsideClipClassifier
     from old_bird.detector import Detector as OldBirdDetector
@@ -77,7 +77,7 @@ def load_extensions():
         ),
                    
         'VCL Importer': (
-            MpgRanchImporter,
+            MpgRanchNfcImporter,
         )
             
     }

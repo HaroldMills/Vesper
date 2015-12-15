@@ -1,4 +1,4 @@
-"""Module containing class `Importer`."""
+"""Module containing class `NfcImporter`."""
 
 
 from __future__ import print_function
@@ -212,12 +212,12 @@ _ARGS = '''
 '''
 
 
-class Importer(object):
+class NfcImporter(object):
     
     """Importer for MPG Ranch 2012-2015 nocturnal flight call data."""
     
     
-    name = "MPG Ranch Importer"
+    name = "MPG Ranch NFC Importer"
     
     
     arg_descriptors = \
@@ -227,14 +227,14 @@ class Importer(object):
     
     @staticmethod
     def get_help(positional_args, keyword_args):
-        name = text_utils.quote_if_needed(Importer.name)
+        name = text_utils.quote_if_needed(NfcImporter.name)
         args_help = vcl_utils.create_command_args_help(
-            Importer.arg_descriptors)
+            NfcImporter.arg_descriptors)
         return name + ' ' + _HELP + '\n\n' + args_help
 
     
     def __init__(self, positional_args, keyword_args):
-        super(Importer, self).__init__()
+        super(NfcImporter, self).__init__()
         self._input_dir_path = vcl_utils.get_required_keyword_arg(
             'input-dir', keyword_args)
         self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
