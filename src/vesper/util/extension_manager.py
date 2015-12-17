@@ -32,6 +32,7 @@ def load_extensions():
     
     # These imports are here rather than at top level to avoid circular
     # import problems.
+    from mpg_ranch.bat_importer import BatImporter as MpgRanchBatImporter
     from mpg_ranch.clips_csv_exporter \
         import ClipsCsvExporter as MpgRanchClipsCsvExporter
     from mpg_ranch.nfc_importer import NfcImporter as MpgRanchNfcImporter
@@ -77,6 +78,7 @@ def load_extensions():
         ),
                    
         'VCL Importer': (
+            MpgRanchBatImporter,
             MpgRanchNfcImporter,
         )
             
