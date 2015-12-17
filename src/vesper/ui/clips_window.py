@@ -8,8 +8,8 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import (
-    QBrush, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QMainWindow,
-    QPainter, QVBoxLayout, QWidget)
+    QBrush, QColor, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
+    QMainWindow, QPainter, QVBoxLayout, QWidget)
 import numpy as np
 
 from vesper.archive.archive import Archive
@@ -964,7 +964,7 @@ class _FigureFrame(QFrame):
         self._selection_rect_thickness = selection_rect_thickness
         self._selection_rect_color = selection_rect_color
         
-        self._brush = QBrush(selection_rect_color)
+        self._brush = QBrush(QColor(selection_rect_color))
         
         self.selected = False
         
