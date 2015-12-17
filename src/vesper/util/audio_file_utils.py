@@ -137,8 +137,21 @@ def _write_samples(file_, samples):
     if samples.dtype != _WAVE_SAMPLE_DTYPE:
         samples = np.array(samples, dtype=_WAVE_SAMPLE_DTYPE)
         
-    # Write samples.
-    _call(file_, file_.writeframes, samples.tostring())
+    # Convert samples to string.
+    samples = samples.tostring()
+    
+    # Write to file.
+    # This appears to slow down by about an order of magnitude after
+    # we archive perhaps a gigabyte of data across hundreds of clips.
+    # Not sure why. The slowdown also happens if we open regular files
+    # instead of wave files and write samples to them with plain old
+    # file_.write(samples).
+    # TODO: Write simple test script that writes hundreds of files
+    # containing zeros (a million 16-bit integers apiece, say) and
+    # see if it is similarly slow. If so, is it slow on Mac OS X?
+    # Is it slow on a non-parallels version of Windows? Is it slow
+    # if we write the program in C instead of in Python?
+    _call(file_, file_.writeframes, samples)
     
 
 _DEFAULT_CHUNK_SIZE = 1000000
