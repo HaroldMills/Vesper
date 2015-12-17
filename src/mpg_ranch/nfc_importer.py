@@ -274,6 +274,8 @@ class NfcImporter(object):
         self._recording_mergers = []
         self._add_recordings()
         
+        self.log_summary()
+        
         # TODO: Modify this method to correctly report whether or not errors
         # occurred. Currently it raises exceptions on some errors (which it
         # should not) and does not return `False` for others.
