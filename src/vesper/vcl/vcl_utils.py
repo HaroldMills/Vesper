@@ -219,6 +219,30 @@ def get_optional_keyword_arg_tuple(name, keyword_args, default=None):
         return values
 
 
+# def get_optional_boolean_keyword_arg(name, keyword_args, default):
+#     try:
+#         values = keyword_args[name]
+#     except KeyError:
+#         return default
+#     else:
+#         if len(values) == 0:
+#             return default
+#         else:
+#             _check_arg_values_count(name, values, max_count=1)
+#             return _parse_boolean_arg_value(name, values[0])
+#                 
+#         
+# def _parse_boolean_arg_value(name, value):
+#     if value == 'true':
+#         return True
+#     elif value == 'false':
+#         return False
+#     else:
+#         raise TypeError(
+#             ('A value of either "true" or "false" is required for '
+#              'argument "--{:s}".').format(name))
+    
+    
 def get_archive_dir_path(keyword_args):
     
     # We make a separate function for this rather than just using

@@ -8,22 +8,23 @@ import logging
 import os
 import re
 
+import pandas as pd
 import pytz
 
 from vesper.util.audio_file_utils import WAVE_FILE_NAME_EXTENSION
-from vesper.util.bunch import Bunch
+from vesper.vcl.command import CommandSyntaxError
+import mpg_ranch.bat_utils as bat_utils
 import vesper.util.sound_utils as sound_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 import vesper.vcl.vcl_utils as vcl_utils
 
 
-_identity = lambda s: s
-_capitalize = lambda s: s.capitalize()
-_parse_date = time_utils.parse_date
-_parse_date6 = lambda mm, dd, yy: _parse_date(yy, mm, dd)
-_parse_time = time_utils.parse_time
-_parse_dur = time_utils.parse_time_delta
+_ALL_CLIP_CLASSES = '*'
+_CALL_CLIP_CLASSES = 'Call*'
+_SPECIES_CLIP_CLASSES = 'Call.*'
+_CLIP_CLASSES_ARG_VALUES = [
+    _ALL_CLIP_CLASSES, _CALL_CLIP_CLASSES, _SPECIES_CLIP_CLASSES]
 
 
 _HELP = '''
@@ -34,12 +35,25 @@ Imports MPG Ranch bat clips into an archive.
 
 
 _ARGS = '''
+
 - name: --input-dir
   required: true
   value description: directory path
   documentation: |
-      The directory containing the data to import.
-'''
+      The directory containing the clips to import.
+      
+- name: --clip-classes
+  required: false
+  value description: clip classes
+  documentation: |
+      The classes of clips to import. This argument must have one of
+      three values, "{}", "{}", and "{}".
+      Default: "{}"
+
+'''.format(
+    _ALL_CLIP_CLASSES, _CALL_CLIP_CLASSES, _SPECIES_CLIP_CLASSES,
+    _CALL_CLIP_CLASSES)
+
 
 # Station names from 2015-09-05 email message from Debbie Leick:
 #     Clubhouse
@@ -53,6 +67,8 @@ _ARGS = '''
 _STATION_NAMES = {
     'tcpond': 'TC Pond'          
 }
+
+_DETECTOR_NAME = 'KPro'
 
 _DATE_RE = re.compile(r'^(\d{4})(\d{2})(\d{2})$')
 _TIME_RE = re.compile(r'^(\d{2})(\d{2})(\d{2})$')
@@ -87,37 +103,52 @@ class BatImporter(object):
         super(BatImporter, self).__init__()
         self._input_dir_path = vcl_utils.get_required_keyword_arg(
             'input-dir', keyword_args)
+        self._included_clip_classes = _parse_clip_classes_arg(keyword_args)
+        self._ignore_noise_dirs = False
         self._archive_dir_path = vcl_utils.get_archive_dir_path(keyword_args)
 
     
     def import_(self):
         
+        self._classifications = self._get_classifications(self._input_dir_path)
+        
         archive = vcl_utils.open_archive(self._archive_dir_path)
         self._archive = archive
-        
+         
         self._indent_level = 0
         self._indent_size = 4
         self._indentation = ''
-        
+         
         self._station_names = frozenset(s.name for s in archive.stations)
         self._capitalized_station_names = dict(
             (name.lower, name) for name in self._station_names)
-
+ 
         self._num_parsed_file_paths = 0
         self._bad_file_paths = set()
         self._unreadable_file_paths = set()
         self._num_add_errors = 0
-        
+         
         self._encountered_station_names = set()
-        
+         
         dir_names = [os.path.basename(self._input_dir_path)]
         self._walk(self._input_dir_path, dir_names)
-        
+         
         self.log_summary()
         
         return True
         
         
+    def _get_classifications(self, input_dir_path):
+        
+        df = _get_classifications(input_dir_path)
+        return dict(self._get_classification(*t) for t in df.itertuples())
+    
+    
+    def _get_classification(self, index, file_name_base, species_code):
+        station_name, start_time = self._parse_file_name_base(file_name_base)
+        return ((station_name, start_time), species_code)
+            
+    
     def _walk(self, dir_path, dir_names):
         
         for _, subdir_names, file_names in os.walk(dir_path):
@@ -131,7 +162,7 @@ class BatImporter(object):
                 subdir_path = os.path.join(dir_path, subdir_name)
                 names = dir_names + [subdir_name]
                 
-                if subdir_name.lower() == 'noise':
+                if self._ignore_noise_dirs and subdir_name.lower() == 'noise':
                     logging.info(
                         'Ignoring noise directory "{}".'.format(subdir_path))
                     
@@ -170,8 +201,10 @@ class BatImporter(object):
         if not file_name.endswith(WAVE_FILE_NAME_EXTENSION):
             return
         
+        parent_dir_name = dir_names[-1].lower()
+        
         try:
-            info = self._parse_file_name(file_name)
+            station_name, start_time = self._parse_file_name(file_name)
             
         except ValueError:
             logging.error(
@@ -184,24 +217,29 @@ class BatImporter(object):
             self._num_parsed_file_paths += 1
             
             try:
-                _ = self._archive.get_station(info.station_name)
+                _ = self._archive.get_station(station_name)
             except ValueError as e:
                 self._handle_add_error(file_path, str(e))
                 return
             
-            self._encountered_station_names.add(info.station_name)
+            self._encountered_station_names.add(station_name)
             
             sound = self._get_clip_sound(file_path)
             if sound is None:
                 return
              
-            detector_name = 'KPro'
-            clip_class_name = 'Call'
-              
+            detector_name = _DETECTOR_NAME
+            
+            clip_class_name = self._get_clip_class_name(
+                station_name, detector_name, start_time, parent_dir_name)
+            
+            if not self._clip_class_included(clip_class_name):
+                return
+                
             try:
                 self._archive.add_clip(
-                    info.station_name, detector_name, info.start_time,
-                    sound, clip_class_name)
+                    station_name, detector_name, start_time, sound,
+                    clip_class_name)
               
             except Exception as e:
                 self._handle_add_error(file_path, str(e))
@@ -210,8 +248,13 @@ class BatImporter(object):
             
 
     def _parse_file_name(self, file_name):
+        base = file_name[:-len(WAVE_FILE_NAME_EXTENSION)]
+        return self._parse_file_name_base(base)
         
-        parts = file_name[:-len(WAVE_FILE_NAME_EXTENSION)].split('_')
+        
+    def _parse_file_name_base(self, file_name_base):
+        
+        parts = file_name_base.split('_')
         
         if len(parts) < 5:
             raise ValueError()
@@ -225,9 +268,7 @@ class BatImporter(object):
         start_time = _parse_start_time(other_parts[1], other_parts[2])
         _parse_digits(other_parts[3], 3)
         
-        return Bunch(
-            station_name=station_name,
-            start_time=start_time)
+        return (station_name, start_time)
         
         
     def _parse_station_name(self, parts):
@@ -242,6 +283,24 @@ class BatImporter(object):
                 raise ValueError()
 
     
+    def _get_clip_class_name(
+            self, station_name, detector_name, start_time, dir_name):
+        
+        key = (station_name, start_time)
+        species_code = self._classifications.get(key)
+        
+        if species_code is not None:
+            return 'Call.{}'.format(species_code)
+        elif dir_name == 'noise':
+            return 'Noise'
+        else:
+            return 'Call'            
+ 
+ 
+    def _clip_class_included(self, clip_class_name):
+        return clip_class_name.startswith(self._included_clip_classes[:-1])
+         
+         
     def _handle_add_error(self, file_path, message):
         m = self._indent('Error adding clip from "{}": {}')
         logging.error(m.format(self._rel(file_path), message))
@@ -324,6 +383,58 @@ class BatImporter(object):
         logging.info(message)
 
 
+def _parse_clip_classes_arg(keyword_args):
+    
+    name = 'clip-classes'
+    value = vcl_utils.get_optional_keyword_arg(
+        name, keyword_args, _CALL_CLIP_CLASSES)
+    
+    if value not in _CLIP_CLASSES_ARG_VALUES:
+        options = _create_value_list(_CLIP_CLASSES_ARG_VALUES)
+        raise CommandSyntaxError(
+            ('Bad value "{}" for argument "--{}". Value must be '
+             '{}.').format(value, name, options))
+        
+    return value
+        
+        
+def _create_value_list(values):
+    
+    values = [('"' + v + '"') for v in values]
+    
+    n = len(values)
+    
+    if n == 1:
+        return values[0]
+    
+    elif n == 2:
+        return values[0] + ' or ' + values[1]
+    
+    else:
+        return ', '.join(values[:-1]) + ' or ' + values[-1]
+    
+
+def _get_classifications(dir_path):
+    
+    """
+    This is a placeholder for a function that we will write when we
+    know more about the structure of the data directories that this
+    importer will work with. The placeholder assumes that the KPro
+    and SonoBat spreadsheet files have certain names and are located
+    in the "Spreadsheets" subdirectory of the directory at `dir_path`.
+    """
+    
+    dir_path = os.path.join(dir_path, 'Spreadsheets')
+    kpro_file_path = os.path.join(dir_path, 'id.csv')
+    sonobat_file_path = os.path.join(
+        dir_path, 'tc_pond_5sec_split_sm2enabled-BatchClassify.txt')
+    
+    kpro = pd.read_csv(kpro_file_path)
+    sonobat = pd.read_csv(sonobat_file_path, sep='\t')
+    
+    return bat_utils.merge_kpro_and_sonobat_data(kpro, sonobat)
+    
+    
 def _parse_digits(s, n):
     if len(s) != n or not s.isdigit():
         raise ValueError()

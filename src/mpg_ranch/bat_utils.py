@@ -22,16 +22,16 @@ def merge_kpro_and_sonobat_data(kpro, sonobat):
     sonobat = sonobat[sonobat[_SONOBAT_SPECIES_COLUMN_NAME].notnull()]
     
     # Add file name base column to `sonobat`.
-    sonobat['file_name_base'] = \
-        sonobat['Filename'].apply(_get_file_name_base)
+    sonobat = pd.DataFrame(sonobat)
+    sonobat['file_name_base'] = sonobat['Filename'].apply(_get_file_name_base)
         
     # Merge by file name base.
     merged = pd.merge(
         kpro, sonobat, left_on='OUT FILE', right_on='file_name_base')
     
     # Add lower case species code columns.
-    merged['kpro_species'] = _lower(merged[_KPRO_SPECIES_COLUMN_NAME])
-    merged['sonobat_species'] = _lower(merged[_SONOBAT_SPECIES_COLUMN_NAME])
+    merged['kpro_species'] = _upper(merged[_KPRO_SPECIES_COLUMN_NAME])
+    merged['sonobat_species'] = _upper(merged[_SONOBAT_SPECIES_COLUMN_NAME])
     
     # Eliminate rows with different KPro and SonoBat classifications.
     merged = merged[merged['kpro_species'] == merged['sonobat_species']]
@@ -57,5 +57,5 @@ def _get_file_name_base(name):
     return '_'.join(parts)
 
 
-def _lower(series):
-    return series.apply(lambda s: s.lower())
+def _upper(series):
+    return series.apply(lambda s: s.upper())

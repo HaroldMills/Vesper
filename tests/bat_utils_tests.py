@@ -38,7 +38,7 @@ class BatUtilsTests(TestCase):
             'file_name_base': [
                 'NFP-POOL_0_20130906_210212_268',
                 'NFP-POOL_0_20130906_212736_503'],
-            'species': ['mylu', 'myyu']
+            'species': ['MYLU', 'MYYU']
                   
         })]
         
