@@ -2,6 +2,7 @@
 
 
 from __future__ import print_function
+import cPickle as pickle
 import os.path
 import random
 import sys
@@ -18,16 +19,35 @@ import vesper.util.nfc_classification_utils as nfc_classification_utils
 import vesper.util.signal_utils as signal_utils
 
 
+# NOTE: The C and gamma SVM hyperparameter values for both the coarse
+# and species classifiers were chosen by brief hand experimentation.
+# While this was quick it is probably suboptimal, and it is also
+# methodologically unsound to report test results on data that were
+# used for the hyperparameter value selection. We should revise our
+# training and test procedure to:
+#
+# (1) Divide data into training and test set.
+#
+# (2) Select hyperparameter values with cross validation using training
+#     data only.
+#
+# (3) Train final classifier on training data.
+#
+# (4) Test final classifier on test data.
+    
+
 _DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch'
 _ARCHIVE_NAME = 'MPG Ranch 2012-2014'
 _PICKLE_FILE_NAME = 'Call Clips.pkl'
-_SAVE_DETAILED_RESULTS = False
 
 
 _CONFIGS = {
             
     'Tseep': Bunch(
         detector_name = 'Tseep',
+#        clip_class_names = ['Call.WIWA', 'Call.CHSP'],
+#        clip_class_names = [
+#            'Call.WIWA', 'Call.CHSP', 'Call.WCSP', 'Call.VESP', 'Call.SAVS'],
         clip_class_names = [
             'Call.WIWA', 'Call.DoubleUp', 'Call.CHSP', 'Call.WCSP',
             'Call.VESP', 'Call.SAVS'],
@@ -44,7 +64,14 @@ _CONFIGS = {
         max_power=65,
         pooling_block_size=(2, 2),
         include_norm_in_features=False,
-        svc_params={
+        classifier_type='One Versus Rest',
+        one_vs_rest_svc_params={
+            'cache_size': 500,
+            'kernel': 'rbf',
+            'gamma': .001,
+            'C': 10000.
+        },
+        one_vs_one_svc_params={
             'cache_size': 500,
             'kernel': 'rbf',
             'gamma': .001,
@@ -85,18 +112,14 @@ def _main():
     
     # Perform cross-validation training on clip folds.
     if config.num_cross_validation_folds != 0:
-        results, detailed_results = \
-            _train_and_test_cross_validation_classifiers(clips, config)
-        if _SAVE_DETAILED_RESULTS:
-            _save_detailed_results(detailed_results, config)
-        _save_training_and_test_results(results, config)
+        _train_and_test_cv_classifiers(clips, config)
     
-    print('Training species classifiers on all clips...')
-    classifiers = _train_species_classifiers(clips, config)
+    print('Training classifier on all clips...')
+    classifier = _train_classifier(clips, config)
     print()
     
-    print('Saving classifiers...')
-    _save_classifiers(classifiers)
+    print('Saving classifier...')
+    _save_classifier(classifier, config)
     print()
     
     print('Done.')
@@ -117,13 +140,17 @@ def _get_clips_from_archive(config):
     
     
 def _get_clips_list_from_archive(detector_name):
-    archive_dir_path = os.path.join(_DIR_PATH, _ARCHIVE_NAME)
+    archive_dir_path = _create_full_path(_ARCHIVE_NAME)
     archive = Archive(archive_dir_path)
     archive.open()
     clips = archive.get_clips(
         detector_name=detector_name, clip_class_name='Call*')
     archive.close()
     return clips
+
+
+def _create_full_path(*parts):
+    return os.path.join(_DIR_PATH, *parts)
 
 
 def _create_clips_dataframe(clips, config):
@@ -216,7 +243,7 @@ def _compute_segment_features_aux(clip, config):
 
 
 def _save_clips(clips):
-    file_path = os.path.join(_DIR_PATH, _PICKLE_FILE_NAME)
+    file_path = _create_full_path(_PICKLE_FILE_NAME)
     clips.to_pickle(file_path)
     
     
@@ -226,191 +253,36 @@ def _save_clips(clips):
 #     fine cross validation results (DataFrame, one row per fold/clip)
 
 
-def _train_and_test_cross_validation_classifiers(clips, config):
+def _train_and_test_cv_classifiers(clips, config):
+    
+    results = []
     
     for fold_num, training_clips, test_clips in \
             _generate_clip_folds(clips, config):
             
         print((
-            'Training classifiers for cross-validation fold {} of '
+            'Training classifier for cross-validation fold {} of '
             '{}...').format(fold_num, config.num_cross_validation_folds))
         
         # _show_clip_counts(all_training_clips, test_clips)
         
-        single_species_classifiers = {}
+        classifier = _train_classifier(training_clips, config)
         
-        for clip_class_name in config.clip_class_names:
-            
-            print('Training {} classifier...'.format(clip_class_name))
-            
-            classifier, training_targets = _train_single_species_classifier(
-                clip_class_name, training_clips, config)
-            
-            _, training_predictions = _test_single_species_classifier(
-                classifier, clip_class_name, training_clips)
-            
-            _show_test_results(training_targets, training_predictions)
-            
-            print('Testing {} classifier...'.format(clip_class_name))
-            
-            test_targets, test_predictions = _test_single_species_classifier(
-                classifier, clip_class_name, test_clips)
-            
-            _show_test_results(test_targets, test_predictions)
-            
-            single_species_classifiers[clip_class_name] = classifier
-            
-        classifier = _MultipleSpeciesClassifier(single_species_classifiers)
+        if config.classifier_type == 'One Versus Rest':
+            _test_single_species_cv_classifiers(
+                classifier, training_clips, test_clips)
+
+        fold_results = _test_cv_classifier(
+            classifier, training_clips, test_clips)
+                
+        _show_cv_fold_results(fold_results)
         
-        training_targets, training_predictions = \
-            _test_multiple_species_classifier(
-                classifier, training_clips, config)
-            
-        _show_confusion_matrix(training_targets, training_predictions, config)
-        
-        test_targets, test_predictions = \
-            _test_multiple_species_classifier(classifier, test_clips, config)
-            
-        _show_confusion_matrix(test_targets, test_predictions, config)
-        
-        
-    return (None, None)
+        results.append(fold_results)
     
-
-class _MultipleSpeciesClassifier(object):
+    _show_cv_results(results)
     
+    return results
     
-    def __init__(self, single_species_classifiers):
-        super(_MultipleSpeciesClassifier, self).__init__()
-        self._single_species_classifiers = single_species_classifiers
-        
-    
-    def predict(self, features):
-        
-        num_predictions = len(features)
-        
-        classifiers = self._single_species_classifiers
-        num_species = len(classifiers)
-        
-        clip_class_names = classifiers.keys()
-        clip_class_names.sort()
-        
-        species_predictions = \
-            np.zeros((num_species, num_predictions), dtype='int32')
-        for i, clip_class_name in enumerate(clip_class_names):
-            classifier = classifiers[clip_class_name]
-            species_predictions[i] = classifier.predict(features)
-            
-        # Transpose species predictions so `species_predictions[i, j]` is
-        # prediction of classifier `j` for clip `i`.
-        species_predictions = species_predictions.transpose()
-            
-        # Get booleans indicating which clips were positive for
-        # exactly one species.
-        indicators = species_predictions.sum(axis=1) == 1
-        
-        # Get predictions as integers in the range [1, num_species].
-        # A prediction of zero indicates no species.
-        integer_codes = np.arange(num_species) + 1
-        predictions = species_predictions * integer_codes
-        predictions = predictions.sum(axis=1)
-        predictions[~indicators] = 0
-        
-        # Get predictions as clip class names.
-        clip_class_names = np.array(['Unclassified'] + clip_class_names)
-        predictions = clip_class_names[predictions]
-
-        return predictions        
-
-
-def _test_multiple_species_classifier(classifier, clips, config):
-    features = _get_features_array(clips)
-    targets = _get_multiple_species_classifier_targets(clips, config)
-    predictions = classifier.predict(features)
-    return (targets, predictions)
-
-    
-def _get_multiple_species_classifier_targets(clips, config):
-    clip_class_names = pd.Series(clips['clip_class'])
-    unclassified = ~clip_class_names.isin(config.clip_class_names)
-    clip_class_names[unclassified] = 'Unclassified'
-    return np.array(clip_class_names)
-
-
-def _show_confusion_matrix(targets, predictions, config):
-    
-    matrix = _compute_confusion_matrix(targets, predictions, config)
-    
-    names = list(matrix.columns.values)
-    
-    for target in names:
-        counts = [matrix[prediction][target] for prediction in names]
-        print(target, counts)
-            
-    
-def _compute_confusion_matrix(targets, predictions, config):
-    
-    names = config.clip_class_names
-    names.sort()
-    names = ['Unclassified'] + names
-    
-    n = len(names)
-    counts = np.zeros((n, n), dtype='int32')
-    matrix = pd.DataFrame(counts, columns=names, index=names)
-    
-    for target, prediction in zip(targets, predictions):
-        matrix[prediction][target] += 1
-        
-    return matrix
-    
-    
-def _get_features_array(clips):
-    
-    # In the following, `clips['features']` is a Pandas `Series`.
-    # If we do not convert the `Series` to a `list` before constructing
-    # a NumPy array we wind up with a NumPy object array, with each
-    # object a one-dimensional NumPy array, rather than a two-dimensional
-    # NumPy array.
-    return np.array(list(clips['features']))
-
-
-        
-            
-def _train_single_species_classifier(clip_class_name, clips, config):
-    features = _get_features_array(clips)
-    targets = _get_targets(clips, clip_class_name)
-    classifier = svm.SVC(**config.svc_params)
-    classifier.fit(features, targets)
-    return (classifier, targets)
-
-
-def _test_single_species_classifier(classifier, clip_class_name, clips):
-    features = _get_features_array(clips)
-    targets = _get_targets(clips, clip_class_name)
-    predictions = classifier.predict(features)
-    return (targets, predictions)
-
-
-# TODO: Move this to `nfc_classification_utils`. There is redundant code
-# in `train_nfc_coarse_classifier`.
-def _tally_classification_results(targets, predictions):
-    tp = ((targets == 1) & (predictions == 1)).sum()
-    fn = ((targets == 1) & (predictions == 0)).sum()
-    fp = ((targets == 0) & (predictions == 1)).sum()
-    tn = ((targets == 0) & (predictions == 0)).sum()
-    return (tp, fn, fp, tn)
-
-
-def _show_test_results(targets, predictions):
-    
-    tp, fn, fp, tn = _tally_classification_results(targets, predictions)
-        
-    fn_rate = 100 * fn / float(tp + fn)
-    fp_rate = 100 * fp / float(tn + fp)
-    
-    print('{} {} {} {} {:.1f} {:.1f}'.format(
-        tp, fn, fp, tn, fn_rate, fp_rate))
-
 
 def _generate_clip_folds(clips, config):
     
@@ -450,26 +322,269 @@ def _show_clip_counts(training_clips, test_clips):
     print()
 
 
-def _get_targets(clips, clip_class_name):
+def _train_classifier(clips, config):
+    
+    if config.classifier_type == 'One Versus One':
+        return _train_one_vs_one_classifier(clips, config)
+    else:
+        return _train_one_vs_rest_classifier(clips, config)
+
+
+def _train_one_vs_one_classifier(clips, config):
+    features = _get_features_array(clips)
+    targets = _get_classifier_targets(clips, config.clip_class_names)
+    classifier = svm.SVC(**config.one_vs_one_svc_params)
+    classifier.fit(features, targets)
+    clip_class_names = np.unique(targets)
+    return _Classifier(classifier, clip_class_names)
+
+
+def _get_features_array(clips):
+    
+    # In the following, `clips['features']` is a Pandas `Series`.
+    # If we do not convert the `Series` to a `list` before constructing
+    # a NumPy array we wind up with a NumPy object array, with each
+    # object a one-dimensional NumPy array, rather than a two-dimensional
+    # NumPy array.
+    return np.array(list(clips['features']))
+
+   
+def _get_classifier_targets(clips, clip_class_names):
+    names = pd.Series(clips['clip_class'])
+    unclassified = ~names.isin(clip_class_names)
+    names[unclassified] = 'Unclassified'
+    return np.array(names)
+
+
+def _train_one_vs_rest_classifier(clips, config):
+    
+    single_species_classifiers = dict(
+        (name, _train_single_species_classifier(name, clips, config))
+        for name in config.clip_class_names)
+    
+    return _OneVsRestClassifier(single_species_classifiers)
+
+
+def _train_single_species_classifier(clip_class_name, clips, config):
+    features = _get_features_array(clips)
+    targets = _get_single_species_classifier_targets(clips, clip_class_name)
+    classifier = svm.SVC(**config.one_vs_rest_svc_params)
+    classifier.fit(features, targets)
+    return classifier
+
+
+def _get_single_species_classifier_targets(clips, clip_class_name):
     return np.array([
         1 if name == clip_class_name else 0
         for name in clips['clip_class']])
 
 
-def _save_detailed_results(results, config):
-    pass
+def _test_single_species_cv_classifiers(
+        classifier, training_clips, test_clips):
+    
+    test = _test_single_species_cv_classifier
+    classifiers = classifier.single_species_classifiers
+    clip_class_names = sorted(classifiers.keys())
+    
+    return dict(
+        (name, test(classifiers[name], name, training_clips, test_clips))
+        for name in clip_class_names)
+    
+    
+def _test_single_species_cv_classifier(
+        classifier, clip_class_name, training_clips, test_clips):
+    
+    training_targets, training_predictions = \
+        _test_single_species_cv_classifier_aux(
+            classifier, clip_class_name, training_clips, 'training')
+        
+    test_targets, test_predictions = \
+        _test_single_species_cv_classifier_aux(
+            classifier, clip_class_name, test_clips, 'test')
+            
+    return (training_targets, training_predictions,
+            test_targets, test_predictions)
+    
+    
+def _test_single_species_cv_classifier_aux(
+        classifier, clip_class_name, clips, description):
+
+    print('Testing {} classifier on {} clips...'.format(
+              clip_class_name, description))
+
+    targets, predictions = _test_single_species_classifier(
+        classifier, clip_class_name, clips)
+        
+    # _show_test_results(targets, predictions)
+    
+    return (targets, predictions)
+
+   
+def _test_single_species_classifier(classifier, clip_class_name, clips):
+    features = _get_features_array(clips)
+    targets = _get_single_species_classifier_targets(clips, clip_class_name)
+    predictions = classifier.predict(features)
+    return (targets, predictions)
 
 
-def _save_training_and_test_results(results, config):
-    pass
+def _show_test_results(targets, predictions):
+    
+    tp, fn, fp, tn = _tally_classification_results(targets, predictions)
+        
+    fn_rate = 100 * fn / float(tp + fn)
+    fp_rate = 100 * fp / float(tn + fp)
+    
+    print('{} {} {} {} {:.1f} {:.1f}'.format(
+        tp, fn, fp, tn, fn_rate, fp_rate))
 
 
-def _train_species_classifiers(clips, config):
-    pass
+# TODO: Move this to `nfc_classification_utils`. There is redundant code
+# in `train_nfc_coarse_classifier`.
+def _tally_classification_results(targets, predictions):
+    tp = ((targets == 1) & (predictions == 1)).sum()
+    fn = ((targets == 1) & (predictions == 0)).sum()
+    fp = ((targets == 0) & (predictions == 1)).sum()
+    tn = ((targets == 0) & (predictions == 0)).sum()
+    return (tp, fn, fp, tn)
 
 
-def _save_classifiers(classifiers):
-    pass
+def _test_cv_classifier(classifier, training_clips, test_clips):
+    
+    clip_class_names = classifier.clip_class_names
+    
+    training_targets, training_predictions = \
+        _test_classifier(classifier, training_clips, clip_class_names)
+        
+    test_targets, test_predictions = \
+        _test_classifier(classifier, test_clips, clip_class_names)
+        
+    return (training_targets, training_predictions, test_targets,
+            test_predictions)
+
+
+def _test_classifier(classifier, clips, clip_class_names):
+    features = _get_features_array(clips)
+    targets = _get_classifier_targets(clips, clip_class_names)
+    predictions = classifier.predict(features)
+    return (targets, predictions)
+
+    
+def _show_cv_fold_results(results):
+    
+#     training_targets, training_predictions = results[:2]
+#     _show_confusion_matrix(
+#         training_targets, training_predictions, 'Fold training')
+    
+    test_targets, test_predictions = results[2:]
+    _show_confusion_matrix(test_targets, test_predictions, 'Fold test')
+
+
+def _show_confusion_matrix(targets, predictions, prefix):
+    print('{} confusion matrix:'.format(prefix))
+    names = sorted(np.unique(targets))
+    matrix = _compute_confusion_matrix(targets, predictions, names)
+    for target in names:
+        counts = [matrix[prediction][target] for prediction in names]
+        print('    ', target, counts)
+            
+    
+def _compute_confusion_matrix(targets, predictions, clip_class_names):
+    names = clip_class_names
+    n = len(names)
+    counts = np.zeros((n, n), dtype='int32')
+    matrix = pd.DataFrame(counts, columns=names, index=names)
+    for target, prediction in zip(targets, predictions):
+        matrix[prediction][target] += 1
+    return matrix
+    
+    
+def _show_cv_results(results):
+    results = tuple([np.hstack(y) for y in zip(*results)])
+    test_targets, test_predictions = results[2:]
+    _show_confusion_matrix(test_targets, test_predictions, 'Overall test')
+    
+    
+def _save_classifier(classifier, config):
+    
+    file_name = '{} Species Classifier.pkl'.format(config.detector_name)
+    file_path = _create_full_path(file_name)
+    
+    print('Saving species classifier to file "{}".'.format(file_path))
+    
+    with open(file_path, 'wb') as file_:
+        pickle.dump(classifier, file_)
+        
+    print()
+
+
+class _Classifier(object):
+    
+    
+    def __init__(self, classifier, clip_class_names):
+        super(_Classifier, self).__init__()
+        self._classifier = classifier
+        self._clip_class_names = sorted(clip_class_names)
+        
+    
+    @property
+    def clip_class_names(self):
+        return list(self._clip_class_names)
+    
+    
+    def predict(self, features):
+        return self._classifier.predict(features)
+    
+    
+class _OneVsRestClassifier(object):
+    
+    
+    def __init__(self, single_species_classifiers):
+        super(_OneVsRestClassifier, self).__init__()
+        self.single_species_classifiers = single_species_classifiers
+        
+    
+    @property
+    def clip_class_names(self):
+        names = sorted(self.single_species_classifiers.keys())
+        return names + ['Unclassified']
+    
+    
+    def predict(self, features):
+        
+        num_predictions = len(features)
+        
+        classifiers = self.single_species_classifiers
+        num_species = len(classifiers)
+        
+        clip_class_names = sorted(classifiers.keys())
+        clip_class_names.sort()
+        
+        species_predictions = \
+            np.zeros((num_species, num_predictions), dtype='int32')
+        for i, clip_class_name in enumerate(clip_class_names):
+            classifier = classifiers[clip_class_name]
+            species_predictions[i] = classifier.predict(features)
+            
+        # Transpose species predictions so `species_predictions[i, j]` is
+        # prediction of classifier `j` for clip `i`.
+        species_predictions = species_predictions.transpose()
+            
+        # Get booleans indicating which clips were positive for
+        # exactly one species.
+        indicators = species_predictions.sum(axis=1) == 1
+        
+        # Get predictions as integers in the range [1, num_species].
+        # A prediction of zero indicates no species.
+        integer_codes = np.arange(num_species) + 1
+        predictions = species_predictions * integer_codes
+        predictions = predictions.sum(axis=1)
+        predictions[~indicators] = 0
+        
+        # Get predictions as clip class names.
+        clip_class_names = np.array(['Unclassified'] + clip_class_names)
+        predictions = clip_class_names[predictions]
+
+        return predictions        
 
 
 if __name__ == '__main__':
