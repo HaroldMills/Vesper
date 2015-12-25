@@ -2,6 +2,7 @@
 
 
 from __future__ import print_function
+import cPickle as pickle
 import os.path
 import random
 import sys
@@ -18,16 +19,35 @@ import vesper.util.nfc_classification_utils as nfc_classification_utils
 import vesper.util.signal_utils as signal_utils
 
 
+# NOTE: The C and gamma SVM hyperparameter values for both the coarse
+# and species classifiers were chosen by brief hand experimentation.
+# While this was quick it is probably suboptimal, and it is also
+# methodologically unsound to report test results on data that were
+# used for the hyperparameter value selection. We should revise our
+# training and test procedure to:
+#
+# (1) Divide data into training and test set.
+#
+# (2) Select hyperparameter values with cross validation using training
+#     data only.
+#
+# (3) Train final classifier on training data.
+#
+# (4) Test final classifier on test data.
+    
+
 _DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch'
 _ARCHIVE_NAME = 'MPG Ranch 2012-2014'
 _PICKLE_FILE_NAME = 'Call Clips.pkl'
-_SAVE_DETAILED_RESULTS = False
 
 
 _CONFIGS = {
             
     'Tseep': Bunch(
         detector_name = 'Tseep',
+#        clip_class_names = ['Call.WIWA', 'Call.CHSP'],
+#        clip_class_names = [
+#            'Call.WIWA', 'Call.CHSP', 'Call.WCSP', 'Call.VESP', 'Call.SAVS'],
         clip_class_names = [
             'Call.WIWA', 'Call.DoubleUp', 'Call.CHSP', 'Call.WCSP',
             'Call.VESP', 'Call.SAVS'],
@@ -44,7 +64,7 @@ _CONFIGS = {
         max_power=65,
         pooling_block_size=(2, 2),
         include_norm_in_features=False,
-        classifier_type='One Versus One',
+        classifier_type='One Versus Rest',
         one_vs_rest_svc_params={
             'cache_size': 500,
             'kernel': 'rbf',
@@ -92,20 +112,14 @@ def _main():
     
     # Perform cross-validation training on clip folds.
     if config.num_cross_validation_folds != 0:
-        results, detailed_results = \
-            _train_and_test_xv_classifiers(clips, config)
-        if _SAVE_DETAILED_RESULTS:
-            _save_detailed_results(detailed_results, config)
-        _save_training_and_test_results(results, config)
-    
-    # TODO: Train a multiclass classifier and save it.
+        _train_and_test_cv_classifiers(clips, config)
     
     print('Training classifier on all clips...')
-    species_classifiers = _train_species_classifiers(clips, config)
+    classifier = _train_classifier(clips, config)
     print()
     
     print('Saving classifier...')
-    _save_classifier(species_classifiers)
+    _save_classifier(classifier, config)
     print()
     
     print('Done.')
@@ -126,13 +140,17 @@ def _get_clips_from_archive(config):
     
     
 def _get_clips_list_from_archive(detector_name):
-    archive_dir_path = os.path.join(_DIR_PATH, _ARCHIVE_NAME)
+    archive_dir_path = _create_full_path(_ARCHIVE_NAME)
     archive = Archive(archive_dir_path)
     archive.open()
     clips = archive.get_clips(
         detector_name=detector_name, clip_class_name='Call*')
     archive.close()
     return clips
+
+
+def _create_full_path(*parts):
+    return os.path.join(_DIR_PATH, *parts)
 
 
 def _create_clips_dataframe(clips, config):
@@ -225,7 +243,7 @@ def _compute_segment_features_aux(clip, config):
 
 
 def _save_clips(clips):
-    file_path = os.path.join(_DIR_PATH, _PICKLE_FILE_NAME)
+    file_path = _create_full_path(_PICKLE_FILE_NAME)
     clips.to_pickle(file_path)
     
     
@@ -235,7 +253,9 @@ def _save_clips(clips):
 #     fine cross validation results (DataFrame, one row per fold/clip)
 
 
-def _train_and_test_xv_classifiers(clips, config):
+def _train_and_test_cv_classifiers(clips, config):
+    
+    results = []
     
     for fold_num, training_clips, test_clips in \
             _generate_clip_folds(clips, config):
@@ -249,12 +269,19 @@ def _train_and_test_xv_classifiers(clips, config):
         classifier = _train_classifier(training_clips, config)
         
         if config.classifier_type == 'One Versus Rest':
-            _test_single_species_xv_classifiers(
+            _test_single_species_cv_classifiers(
                 classifier, training_clips, test_clips)
 
-        _test_xv_classifier(classifier, training_clips, test_clips)
+        fold_results = _test_cv_classifier(
+            classifier, training_clips, test_clips)
                 
-    return (None, None)
+        _show_cv_fold_results(fold_results)
+        
+        results.append(fold_results)
+    
+    _show_cv_results(results)
+    
+    return results
     
 
 def _generate_clip_folds(clips, config):
@@ -352,10 +379,10 @@ def _get_single_species_classifier_targets(clips, clip_class_name):
         for name in clips['clip_class']])
 
 
-def _test_single_species_xv_classifiers(
+def _test_single_species_cv_classifiers(
         classifier, training_clips, test_clips):
     
-    test = _test_single_species_xv_classifier
+    test = _test_single_species_cv_classifier
     classifiers = classifier.single_species_classifiers
     clip_class_names = sorted(classifiers.keys())
     
@@ -364,22 +391,22 @@ def _test_single_species_xv_classifiers(
         for name in clip_class_names)
     
     
-def _test_single_species_xv_classifier(
+def _test_single_species_cv_classifier(
         classifier, clip_class_name, training_clips, test_clips):
     
     training_targets, training_predictions = \
-        _test_single_species_xv_classifier_aux(
+        _test_single_species_cv_classifier_aux(
             classifier, clip_class_name, training_clips, 'training')
         
     test_targets, test_predictions = \
-        _test_single_species_xv_classifier_aux(
+        _test_single_species_cv_classifier_aux(
             classifier, clip_class_name, test_clips, 'test')
             
     return (training_targets, training_predictions,
             test_targets, test_predictions)
     
     
-def _test_single_species_xv_classifier_aux(
+def _test_single_species_cv_classifier_aux(
         classifier, clip_class_name, clips, description):
 
     print('Testing {} classifier on {} clips...'.format(
@@ -388,7 +415,7 @@ def _test_single_species_xv_classifier_aux(
     targets, predictions = _test_single_species_classifier(
         classifier, clip_class_name, clips)
         
-    _show_test_results(targets, predictions)
+    # _show_test_results(targets, predictions)
     
     return (targets, predictions)
 
@@ -421,20 +448,18 @@ def _tally_classification_results(targets, predictions):
     return (tp, fn, fp, tn)
 
 
-def _test_xv_classifier(classifier, training_clips, test_clips):
+def _test_cv_classifier(classifier, training_clips, test_clips):
     
     clip_class_names = classifier.clip_class_names
     
     training_targets, training_predictions = \
         _test_classifier(classifier, training_clips, clip_class_names)
         
-    _show_confusion_matrix(
-        training_targets, training_predictions, clip_class_names)
-    
     test_targets, test_predictions = \
         _test_classifier(classifier, test_clips, clip_class_names)
         
-    _show_confusion_matrix(test_targets, test_predictions, clip_class_names)
+    return (training_targets, training_predictions, test_targets,
+            test_predictions)
 
 
 def _test_classifier(classifier, clips, clip_class_names):
@@ -444,12 +469,23 @@ def _test_classifier(classifier, clips, clip_class_names):
     return (targets, predictions)
 
     
-def _show_confusion_matrix(targets, predictions, clip_class_names):
-    names = clip_class_names
+def _show_cv_fold_results(results):
+    
+#     training_targets, training_predictions = results[:2]
+#     _show_confusion_matrix(
+#         training_targets, training_predictions, 'Fold training')
+    
+    test_targets, test_predictions = results[2:]
+    _show_confusion_matrix(test_targets, test_predictions, 'Fold test')
+
+
+def _show_confusion_matrix(targets, predictions, prefix):
+    print('{} confusion matrix:'.format(prefix))
+    names = sorted(np.unique(targets))
     matrix = _compute_confusion_matrix(targets, predictions, names)
     for target in names:
         counts = [matrix[prediction][target] for prediction in names]
-        print(target, counts)
+        print('    ', target, counts)
             
     
 def _compute_confusion_matrix(targets, predictions, clip_class_names):
@@ -462,20 +498,23 @@ def _compute_confusion_matrix(targets, predictions, clip_class_names):
     return matrix
     
     
-def _save_detailed_results(results, config):
-    pass
-
-
-def _save_training_and_test_results(results, config):
-    pass
-
-
-def _train_species_classifiers(clips, config):
-    pass
-
-
-def _save_classifier(classifier):
-    pass
+def _show_cv_results(results):
+    results = tuple([np.hstack(y) for y in zip(*results)])
+    test_targets, test_predictions = results[2:]
+    _show_confusion_matrix(test_targets, test_predictions, 'Overall test')
+    
+    
+def _save_classifier(classifier, config):
+    
+    file_name = '{} Species Classifier.pkl'.format(config.detector_name)
+    file_path = _create_full_path(file_name)
+    
+    print('Saving species classifier to file "{}".'.format(file_path))
+    
+    with open(file_path, 'wb') as file_:
+        pickle.dump(classifier, file_)
+        
+    print()
 
 
 class _Classifier(object):
