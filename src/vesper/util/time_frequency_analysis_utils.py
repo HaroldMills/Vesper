@@ -134,14 +134,14 @@ def linear_to_log(spectra, ref_power=1., out=None):
     
     """Converts linear spectral values to logarithmic ones."""
     
-    # TODO: If the following is unacceptably slow, implement a fast
-    # replacement, for example using Cython or a NumPy ufunc.
-        
     if out is None:
-        spectra = np.array(spectra)
+        out = np.array(spectra)
+        
+    elif out is not spectra:
+        np.copyto(out, spectra)
 
     if ref_power != 1:
-        spectra /= ref_power
+        out /= ref_power
         
     # We substitute `_SMALL_POWER` for small values in the spectra
     # before taking logs to avoid divide by zero error messages
@@ -150,13 +150,13 @@ def linear_to_log(spectra, ref_power=1., out=None):
     # preferable to having infinities since the latter do not
     # play well with other numbers in subsequent arithmetic
     # (for example 0 times infinity is `NaN`).
-    spectra[spectra < _SMALL_POWER] = _SMALL_POWER
+    out[out < _SMALL_POWER] = _SMALL_POWER
     
-    np.log10(spectra, out=spectra)
+    np.log10(out, out=out)
     
-    spectra *= 10
+    out *= 10
     
-    return spectra
+    return out
 
 
 def log_to_linear(spectra, ref_power=1., out=None):
@@ -164,37 +164,52 @@ def log_to_linear(spectra, ref_power=1., out=None):
     """Converts logarithmic spectral values to linear ones."""
     
     if out is None:
-        spectra = np.array(spectra)
+        out = np.array(spectra)
         
-    spectra /= 10
+    elif out is not spectra:
+        np.copyto(out, spectra)
+        
+    out /= 10
     
     if ref_power != 1:
-        spectra += np.log10(ref_power)
+        out += np.log10(ref_power)
         
-    np.power(10, spectra, spectra)
+    np.power(10, out, out=out)
     
-    return spectra
+    return out
 
 
-def denoise(spectra, out=None):
+# TODO: Revisit this function, and consider renaming and/or reimplementing
+# it. The current implementation clips spectral values below according to
+# order statistical thresholds. We use the function to reduce the variation
+# within spectra that contain only background noise. This isn't what is
+# usually meant by the term "denoising", however, which usually implies
+# *zeroing* bins that are deemed to contain only background noise.
+def denoise(spectra, percentile=50, out=None):
     
-    """
-    Denoises a sequence of spectra.
-    
-    The spectrum powers are assumed to be linear, not logarithmic.
-    """
+    """Denoises a sequence of spectra."""
     
     if out is None:
-        spectra = np.array(spectra)
+        out = np.array(spectra)
         
-    # Transpose so first dimension is frequency rather than time.
-    s = spectra.transpose()
+    elif out is not spectra:
+        np.copyto(out, spectra)
+        
+    # Compute percentile spectral values across time for each frequency bin.
+    percentiles = np.percentile(out, percentile, axis=0)
     
-    # Compute median spectral values across time for each frequency bin.
-    m = np.median(s)
+    # The `np.percentile` function yields an array whose dtype is float64,
+    # even though `out` has dtype float32. We create an array with dtype
+    # float32 to avoid implicit casting errors in subsequent arithmetic.
+    percentiles = np.array(percentiles, dtype='float32')
     
-    # Zero spectral values that don't exceed the medians.
-    s[s <= m] = 0
-
-    # Transpose back so first dimension is again time.
-    return s.transpose()
+    # Subtract percentiles from spectral values.
+    out -= percentiles
+    
+    # Zero negative spectral values.
+    out[out < 0.] = 0.
+    
+    # Add percentiles back.
+    out += percentiles
+    
+    return out
