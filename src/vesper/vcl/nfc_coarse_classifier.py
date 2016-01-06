@@ -1,9 +1,9 @@
 """
-Module containing class `CallClassifier`.
+Module containing class `NfcCoarseClassifier`.
 
-A `CallClassifier` assigns an `"Unclassified"` clip to the `"Call"` clip
-class if the clip appears to contain a nocturnal flight call, and leaves
-it unclassified otherwise.
+An `NfcCoarseClassifier` assigns an `"Unclassified"` clip to the `"Call"`
+clip class if the clip appears to contain a nocturnal flight call, and
+leaves it unclassified otherwise.
 """
 
 
