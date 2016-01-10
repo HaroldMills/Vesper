@@ -67,6 +67,7 @@ import pandas as pd
 from vesper.archive.archive import Archive
 from vesper.util.bunch import Bunch
 from vesper.util.nfc_coarse_classifier import NfcCoarseClassifier
+import vesper.util.nfc_classification_utils as nfc_classification_utils
 import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
 import vesper.util.data_windows as data_windows
 
@@ -278,6 +279,7 @@ def _extract_clip_segments(clips, config):
 def _extract_clip_segment(clip, config):
     
     ncc = nfc_coarse_classifier
+    ncu = nfc_classification_utils
     duration = config.segment_duration
 
     if clip.clip_class_name == 'Noise':
@@ -292,7 +294,7 @@ def _extract_clip_segment(clip, config):
     if segment is not None:
         segment.name = os.path.basename(clip.file_path)
         (segment.features, segment.spectra, segment.features_time) = \
-            ncc.get_segment_features(segment, config)
+            ncu.get_segment_features(segment, config)
         clip.segment = segment
         clip.target = _get_target(clip.clip_class_name)
 
@@ -492,7 +494,7 @@ def _tally_classification_results(targets, predictions):
 
 def _test_clip_classifier(classifier, clips, config):
     targets = _get_targets(clips)
-    predict = classifier.classify_clip
+    predict = lambda c: 1 if classifier.classify_clip(c) == 'Call' else 0
     predictions = np.array([predict(clip) for clip in clips])
     return _tally_classification_results(targets, predictions)
 

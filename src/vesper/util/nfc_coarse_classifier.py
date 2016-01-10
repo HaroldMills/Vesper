@@ -116,11 +116,11 @@ class NfcCoarseClassifier(object):
         
         
     def classify_clip(self, clip):
-        classifications, _, _ = self.classify_clip_segments(clip)
-        if np.any(classifications == 1):
-            return 1.
+        segment_classifications, _, _ = self.classify_clip_segments(clip)
+        if np.any(segment_classifications == 1):
+            return 'Call'
         else:
-            return 0.
+            return None
     
     
     def classify_clip_segments(self, clip):
@@ -167,5 +167,3 @@ def _generate_segments(sound, segment_length, hop_size, start_index=0):
         yield segment
         
         i += hop_size
-
-
