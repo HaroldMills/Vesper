@@ -11,9 +11,7 @@ import os.path
 from vesper.archive.archive import Archive
 from vesper.ui.clip_figure import ClipFigure
 from vesper.ui.clip_figure_play_button import ClipFigurePlayButton
-from vesper.util.bunch import Bunch
 from vesper.util.preferences import preferences as prefs
-import vesper.util.data_windows as data_windows
 import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
 import vesper.util.nfc_detection_utils as nfc_detection_utils
 import vesper.util.measurements as measurements
@@ -68,25 +66,6 @@ _AUX_FIGURE_TYPE = 'Spectrum'
 _SELECTION_START_COLOR = (1, 0, 0, 1)
 _SELECTION_COLOR = (1, 0, 0, .15)
 
-_WINDOW_TYPE_NAME = 'Hann'
-_WINDOW_SIZE = 128
-_WINDOW = data_windows.create_window(_WINDOW_TYPE_NAME, _WINDOW_SIZE)
-_SPECTROGRAM_PARAMS = Bunch(
-    window=_WINDOW,
-    hop_size=32,
-    dft_size=128,
-    ref_power=1)
-_DETECTOR_CONFIG = Bunch(
-    spectrogram_params=_SPECTROGRAM_PARAMS,
-    start_freq=6000,
-    end_freq=10000,
-    typical_background_percentile=50,
-    small_background_percentile=10,
-    bit_threshold_factor=5,
-    min_event_duration=.01,
-    max_event_duration=.2,
-    min_event_separation=.02,
-    min_event_density=50)
 _DETECTION_COLOR = (0, 1, 0, .15)
 
 
@@ -399,13 +378,11 @@ class SpectrogramClipFigure(ClipFigure):
             axes.patches.remove(self._detection_polygon)
             self._detection_polygon = None
             
-        events = nfc_detection_utils.find_clip_events(
-            self.clip, _DETECTOR_CONFIG)
+        selections = nfc_detection_utils.detect_tseeps(self.clip)
+        selection = nfc_detection_utils.get_longest_selection(selections)
         
-        if len(events) != 0:
-            
-            start_time, end_time = _get_longest_event(events)
-            
+        if selection is not None:
+            start_time, end_time = selection
             self._detection_polygon = axes.axvspan(
                 start_time, end_time, color=_DETECTION_COLOR)
             
@@ -585,17 +562,6 @@ class SpectrogramClipFigure(ClipFigure):
 #        print('SpectrogramClipFigure._on_key_release', event.key)
         
         
-def _get_longest_event(events):
-    lengths = np.array([_get_event_duration(e) for e in events])
-    i = np.argmax(lengths)
-    return events[i]
-
-
-def _get_event_duration(event):
-    start_time, end_time = event
-    return end_time - start_time
-
-
 def _show_event(e, prefix):
     if hasattr(e, 'x'):
         print(prefix, e.name, e.x, e.y, e.xdata, e.ydata)

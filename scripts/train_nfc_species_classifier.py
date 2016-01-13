@@ -16,15 +16,16 @@ from vesper.archive.archive import Archive
 from vesper.util.bunch import Bunch
 import vesper.util.data_windows as data_windows
 import vesper.util.nfc_classification_utils as nfc_classification_utils
+import vesper.util.nfc_detection_utils as nfc_detection_utils
 import vesper.util.signal_utils as signal_utils
 
 
-# NOTE: The C and gamma SVM hyperparameter values for both the coarse
-# and species classifiers were chosen by brief hand experimentation.
-# While this was quick it is probably suboptimal, and it is also
-# methodologically unsound to report test results on data that were
-# used for the hyperparameter value selection. We should revise our
-# training and test procedure to:
+# NOTE: Various hyperparameter values (including spectrogram parameter
+# values and SVM C and gamma values), for both the coarse and species
+# classifiers were chosen by brief hand experimentation. While this was
+# quick it is probably suboptimal, and it is also methodologically unsound
+# to report test results on data that were used for the hyperparameter
+# value selection. We should revise our training and test procedure to:
 #
 # (1) Divide data into training and test set.
 #
@@ -45,12 +46,11 @@ _CONFIGS = {
             
     'Tseep': Bunch(
         detector_name = 'Tseep',
-#        clip_class_names = ['Call.WIWA', 'Call.CHSP'],
-#        clip_class_names = [
-#            'Call.WIWA', 'Call.CHSP', 'Call.WCSP', 'Call.VESP', 'Call.SAVS'],
+#         clip_class_names = [
+#             'Call.CHSP', 'Call.DoubleUp', 'Call.SAVS', 'Call.VESP',
+#             'Call.WCSP', 'Call.WIWA'],
         clip_class_names = [
-            'Call.WIWA', 'Call.DoubleUp', 'Call.CHSP', 'Call.WCSP',
-            'Call.VESP', 'Call.SAVS'],
+            'Call.CHSP', 'Call.SAVS', 'Call.WCSP', 'Call.WIWA'],
         segment_duration = .12,
         num_cross_validation_folds=10,
         spectrogram_params=Bunch(
@@ -134,7 +134,10 @@ def _get_clips_from_archive(config):
     clips = clips[clips['station'].isin(station_names)]
     clips = clips[clips['detector'] == 'Tseep']
     clips = clips[clips['clip_class'] != 'Noise']
-    clips = clips[clips['selection'].notnull()]
+    
+    # We don't do this when we rely on automatic detection rather than
+    # manual selection to identify the portion of a clip to classify.
+    # clips = clips[clips['selection'].notnull()]
     
     return clips
     
@@ -196,15 +199,14 @@ def _extract_clip_segments(clips, config):
     
 def _extract_clip_segment(clip, duration):
     
-    if clip['selection'] is None:
-        return None
+    selection = _get_selection(clip)
     
-    else:
+    if selection is not None:
         
-        selection_start_index, selection_length = clip['selection']
-        selection_center_index = selection_start_index + selection_length // 2
+        start_index, end_index = selection
+        center_index = (start_index + end_index - 1) // 2
         length = signal_utils.seconds_to_frames(duration, clip['sample_rate'])
-        start_index = selection_center_index - length // 2
+        start_index = center_index - length // 2
         
         if start_index < 0:
             return None
@@ -219,6 +221,40 @@ def _extract_clip_segment(clip, duration):
             
             else:
                 return samples[start_index:end_index]
+
+
+def _get_selection(clip):
+    
+    c = Bunch(
+        sound=Bunch(
+            samples=clip['samples'],
+            sample_rate=clip['sample_rate']))
+    
+    selections = nfc_detection_utils.detect_tseeps(c)
+    selection = nfc_detection_utils.get_longest_selection(selections)
+    
+    if selection is None:
+        return None
+    
+    else:
+        start_time, end_time = selection
+        sample_rate = float(clip['sample_rate'])
+        start_index = _time_to_index(start_time, sample_rate)
+        end_index = _time_to_index(end_time, sample_rate)
+        return (start_index, end_index)
+    
+    # This uses manual selection to indicate the portion of a clip
+    # to classify.
+#     if clip['selection'] is None:
+#         return None
+#     
+#     else:
+#         start_index, length = clip['selection']
+#         return (start_index, start_index + length)
+    
+    
+def _time_to_index(time, sample_rate):
+    return int(round(time * sample_rate))
 
 
 def _compute_segment_features(clips, config):

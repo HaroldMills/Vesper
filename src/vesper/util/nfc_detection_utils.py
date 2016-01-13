@@ -5,10 +5,50 @@ import numpy as np
 
 from vesper.util.bunch import Bunch
 from vesper.util.spectrogram import Spectrogram
+import vesper.util.data_windows as data_windows
 import vesper.util.measurements as measurements
 
 
-def find_clip_events(clip, config):
+_WINDOW_TYPE_NAME = 'Hann'
+_WINDOW_SIZE = 128
+_WINDOW = data_windows.create_window(_WINDOW_TYPE_NAME, _WINDOW_SIZE)
+_SPECTROGRAM_PARAMS = Bunch(
+    window=_WINDOW,
+    hop_size=32,
+    dft_size=128,
+    ref_power=1)
+_DETECTOR_CONFIG = Bunch(
+    spectrogram_params=_SPECTROGRAM_PARAMS,
+    start_freq=6000,
+    end_freq=10000,
+    typical_background_percentile=50,
+    small_background_percentile=10,
+    bit_threshold_factor=5,
+    min_event_duration=.01,
+    max_event_duration=.2,
+    min_event_separation=.02,
+    min_event_density=50)
+
+
+def get_longest_selection(selections):
+    if len(selections) == 0:
+        return None
+    else:
+        lengths = np.array([_get_selection_duration(s) for s in selections])
+        i = np.argmax(lengths)
+        return selections[i]
+
+
+def _get_selection_duration(selection):
+    start_time, end_time = selection
+    return end_time - start_time
+
+
+def detect_tseeps(clip):
+    return detect_events(clip, _DETECTOR_CONFIG)
+
+
+def detect_events(clip, config):
     
     spectrogram = Spectrogram(clip.sound, config.spectrogram_params)
     
@@ -37,9 +77,9 @@ def find_clip_events(clip, config):
             min_event_separation=min_event_separation,
             min_event_density=config.min_event_density)
         
-        events, _ = detect(-x, detector_config)
+        selections, _ = _detect(-x, detector_config)
         
-        return [_convert_event(e, times[0], period) for e in events]
+        return [_convert_selection(s, times[0], period) for s in selections]
         
 
 def _to_frames(duration, frame_period):
@@ -47,8 +87,8 @@ def _to_frames(duration, frame_period):
     return num_frames if num_frames >= 1 else 1
 
 
-def _convert_event(event, time_offset, frame_period):
-    start_index, end_index = event
+def _convert_selection(selection, time_offset, frame_period):
+    start_index, end_index = selection
     start_time = _to_seconds(start_index, time_offset, frame_period)
     end_time = _to_seconds(end_index - 1, time_offset, frame_period)
     return (start_time, end_time)
@@ -58,7 +98,7 @@ def _to_seconds(i, time_offset, frame_period):
     return time_offset + i * frame_period
 
             
-def detect(x, config):
+def _detect(x, config):
     
     typical = np.percentile(x, config.typical_background_percentile)
     small = np.percentile(x, config.small_background_percentile)
@@ -66,7 +106,7 @@ def detect(x, config):
     bits = np.zeros_like(x)
     bits[x >= bit_threshold] = 1
     
-    events = []
+    selections = []
     parsing_event_candidate = False
     
     # These are just to keep Python code checkers like PyDev from
@@ -92,7 +132,7 @@ def detect(x, config):
                     candidate_bits = bits[start_index:end_index]
                     
                     if _is_event(candidate_bits, config):
-                        events.append((start_index, end_index))
+                        selections.append((start_index, end_index))
                     
                     parsing_event_candidate = False
                     
@@ -110,9 +150,9 @@ def detect(x, config):
         candidate_bits = bits[start_index:end_index]
         
         if _is_event(candidate_bits, config):
-            events.append((start_index, end_index))
+            selections.append((start_index, end_index))
             
-    return (events, bit_threshold)
+    return (selections, bit_threshold)
             
       
 def _is_event(bits, config):

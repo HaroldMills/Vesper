@@ -65,7 +65,7 @@ class NfcDetectionUtilsTests(TestCase):
                 height = 1 if len(span) == 2 else span[2]
                 x[start_index:end_index] += height
 
-            result, _ = utils.detect(x, _PARAMS)
+            result, _ = utils._detect(x, _PARAMS)
             
             self.assertEqual(result, expected)
             
