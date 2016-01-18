@@ -14,10 +14,11 @@ from sklearn import svm
 
 from vesper.archive.archive import Archive
 from vesper.util.bunch import Bunch
+from vesper.util.nfc_species_classifier import (
+    CompositeSegmentClassifier, NfcSpeciesClassifier, SegmentClassifier)
 import vesper.util.data_windows as data_windows
 import vesper.util.nfc_classification_utils as nfc_classification_utils
-import vesper.util.nfc_detection_utils as nfc_detection_utils
-import vesper.util.signal_utils as signal_utils
+import vesper.util.nfc_species_classifier as nfc_species_classifier
 
 
 # NOTE: Various hyperparameter values (including spectrogram parameter
@@ -46,12 +47,14 @@ _CONFIGS = {
             
     'Tseep': Bunch(
         detector_name = 'Tseep',
+        station_names = frozenset(['Floodplain', 'Ridge', 'Sheep Camp']),
 #         clip_class_names = [
 #             'Call.CHSP', 'Call.DoubleUp', 'Call.SAVS', 'Call.VESP',
 #             'Call.WCSP', 'Call.WIWA'],
         clip_class_names = [
             'Call.CHSP', 'Call.SAVS', 'Call.WCSP', 'Call.WIWA'],
-        segment_duration = .12,
+        find_calls_automatically = True,
+        call_segment_duration = .12,
         num_cross_validation_folds=10,
         spectrogram_params=Bunch(
             window=data_windows.create_window('Hann', 110),
@@ -98,14 +101,16 @@ def _main():
     clips = _get_clips_from_archive(config)
     print('Got {} clips.\n'.format(len(clips)))
     
-    print('Extracting segments...')
-    clips = _extract_clip_segments(clips, config)
-    print('Extracted {} segments.\n'.format(len(clips)))
+    print('Extracting calls...')
+    clips = _extract_calls(clips, config)
+    print('Extracted {} calls.\n'.format(len(clips)))
     
-    print('Computing features...')
-    clips = _compute_segment_features(clips, config)
+    print('Computing call features...')
+    _compute_call_features(clips, config)
     print()
 
+    clips = _create_clips_dataframe(clips, config)
+            
     print('Pickling clips...')    
     _save_clips(clips)
     print()
@@ -127,35 +132,60 @@ def _main():
     
 def _get_clips_from_archive(config):
     
-    clips = _get_clips_list_from_archive(config.detector_name)
-    clips = _create_clips_dataframe(clips, config)
-    
-    station_names = ['Floodplain', 'Sheep Camp', 'Ridge']
-    clips = clips[clips['station'].isin(station_names)]
-    clips = clips[clips['detector'] == 'Tseep']
-    clips = clips[clips['clip_class'] != 'Noise']
-    
-    # We don't do this when we rely on automatic detection rather than
-    # manual selection to identify the portion of a clip to classify.
-    # clips = clips[clips['selection'].notnull()]
-    
-    return clips
-    
-    
-def _get_clips_list_from_archive(detector_name):
     archive_dir_path = _create_full_path(_ARCHIVE_NAME)
     archive = Archive(archive_dir_path)
     archive.open()
     clips = archive.get_clips(
-        detector_name=detector_name, clip_class_name='Call*')
+        detector_name=config.detector_name, clip_class_name='Call*')
     archive.close()
+
+    # Filter clips by station name since we can't yet do this for
+    # multiple stations in `Archive.get_clips`.
+    clips = [c for c in clips if c.station.name in config.station_names]
+        
     return clips
-
-
+    
+    
 def _create_full_path(*parts):
     return os.path.join(_DIR_PATH, *parts)
 
 
+def _extract_calls(clips, config):
+    
+    for clip in clips:
+        
+        # In the following, we assign to `clip.call_selection` rather
+        # than `clip.selection` to avoid attempting to write to the
+        # archive database. The write will fail since the database is
+        # not open at this point, and we don't want to overwrite any
+        # manual selection stored in the database, anyway.
+        
+        if config.find_calls_automatically:
+            clip.call_selection = \
+                nfc_species_classifier.find_call(clip, config)
+                
+        else:
+            # using manual selections
+            
+            clip.call_selection = clip.selection
+            
+        if clip.call_selection is None:
+            clip.call = None
+            
+        else:
+            clip.call = nfc_species_classifier.extract_call(
+                clip, clip.call_selection, config)
+            
+    return [c for c in clips if c.call is not None]
+
+    
+def _compute_call_features(clips, config):
+    
+    for clip in clips:
+        clip.features, clip.spectra, _ = \
+            nfc_classification_utils.get_segment_features(clip.call, config)
+
+    
 def _create_clips_dataframe(clips, config):
     
     data = {
@@ -166,118 +196,20 @@ def _create_clips_dataframe(clips, config):
         'clip_class': [c.clip_class_name for c in clips],
         'samples': [c.sound.samples for c in clips],
         'sample_rate': [c.sound.sample_rate for c in clips],
-        'selection': [c.selection for c in clips]
+        'selection': [c.call_selection for c in clips],
+        'call': [c.call.samples for c in clips],
+        'spectra': [c.spectra for c in clips],
+        'features': [ c.features for c in clips]
     }
     
     columns = [
         'station', 'detector', 'night', 'start_time', 'clip_class',
-        'samples', 'sample_rate', 'selection']
+        'samples', 'sample_rate', 'selection', 'call', 'spectra',
+        'features']
     
     return pd.DataFrame(data, columns=columns)
         
         
-def _extract_clip_segments(clips, config):
-    
-    # I suspect there is a more efficient way to do this with Pandas,
-    # but I haven't found it yet (see the commented-out code below).
-    clips['segment'] = [
-        _extract_clip_segment(clip, config.segment_duration)
-        for _, clip in clips.iterrows()]
-        
-    # Not sure why this doesn't work. The idea is to assign a `Series`
-    # of NumPy arrays to the `'segment'` column. Unfortunately, though,
-    # returning a NumPy array from `_extract_clip_segment` seems to mess
-    # up the number of columns somewhere somehow. 
-#     clips['segment'] = clips.apply(
-#         _extract_clip_segment, axis=1, duration=config.segment_duration)
-    
-    # Eliminate rows of clips that were too short.
-    clips = clips[clips['segment'].notnull()]
-    
-    return clips
-    
-    
-def _extract_clip_segment(clip, duration):
-    
-    selection = _get_selection(clip)
-    
-    if selection is not None:
-        
-        start_index, end_index = selection
-        center_index = (start_index + end_index - 1) // 2
-        length = signal_utils.seconds_to_frames(duration, clip['sample_rate'])
-        start_index = center_index - length // 2
-        
-        if start_index < 0:
-            return None
-        
-        else:
-            
-            samples = clip['samples']
-            end_index = start_index + length
-            
-            if end_index > len(samples):
-                return None
-            
-            else:
-                return samples[start_index:end_index]
-
-
-def _get_selection(clip):
-    
-    c = Bunch(
-        sound=Bunch(
-            samples=clip['samples'],
-            sample_rate=clip['sample_rate']))
-    
-    selections = nfc_detection_utils.detect_tseeps(c)
-    selection = nfc_detection_utils.get_longest_selection(selections)
-    
-    if selection is None:
-        return None
-    
-    else:
-        start_time, end_time = selection
-        sample_rate = float(clip['sample_rate'])
-        start_index = _time_to_index(start_time, sample_rate)
-        end_index = _time_to_index(end_time, sample_rate)
-        return (start_index, end_index)
-    
-    # This uses manual selection to indicate the portion of a clip
-    # to classify.
-#     if clip['selection'] is None:
-#         return None
-#     
-#     else:
-#         start_index, length = clip['selection']
-#         return (start_index, start_index + length)
-    
-    
-def _time_to_index(time, sample_rate):
-    return int(round(time * sample_rate))
-
-
-def _compute_segment_features(clips, config):
-    
-    pairs = [
-        _compute_segment_features_aux(clip, config)
-        for _, clip in clips.iterrows()]
-    
-    spectra, features = zip(*pairs)
-    
-    clips['spectra'] = list(spectra)
-    clips['features'] = list(features)
-    
-    return clips
-
-    
-def _compute_segment_features_aux(clip, config):
-    segment = Bunch(samples=clip['segment'], sample_rate=clip['sample_rate'])
-    features, spectra, _ = \
-        nfc_classification_utils.get_segment_features(segment, config)
-    return (spectra, features)
-
-
 def _save_clips(clips):
     file_path = _create_full_path(_PICKLE_FILE_NAME)
     clips.to_pickle(file_path)
@@ -372,7 +304,7 @@ def _train_one_vs_one_classifier(clips, config):
     classifier = svm.SVC(**config.one_vs_one_svc_params)
     classifier.fit(features, targets)
     clip_class_names = np.unique(targets)
-    return _Classifier(classifier, clip_class_names)
+    return SegmentClassifier(classifier, clip_class_names)
 
 
 def _get_features_array(clips):
@@ -394,11 +326,11 @@ def _get_classifier_targets(clips, clip_class_names):
 
 def _train_one_vs_rest_classifier(clips, config):
     
-    single_species_classifiers = dict(
+    classifiers = dict(
         (name, _train_single_species_classifier(name, clips, config))
         for name in config.clip_class_names)
     
-    return _OneVsRestClassifier(single_species_classifiers)
+    return CompositeSegmentClassifier(classifiers)
 
 
 def _train_single_species_classifier(clip_class_name, clips, config):
@@ -419,7 +351,7 @@ def _test_single_species_cv_classifiers(
         classifier, training_clips, test_clips):
     
     test = _test_single_species_cv_classifier
-    classifiers = classifier.single_species_classifiers
+    classifiers = classifier.classifiers
     clip_class_names = sorted(classifiers.keys())
     
     return dict(
@@ -542,6 +474,9 @@ def _show_cv_results(results):
     
 def _save_classifier(classifier, config):
     
+    # Create clip classifier from call classifier.
+    classifier = NfcSpeciesClassifier(config, classifier)
+
     file_name = '{} Species Classifier.pkl'.format(config.detector_name)
     file_path = _create_full_path(file_name)
     
@@ -551,76 +486,6 @@ def _save_classifier(classifier, config):
         pickle.dump(classifier, file_)
         
     print()
-
-
-class _Classifier(object):
-    
-    
-    def __init__(self, classifier, clip_class_names):
-        super(_Classifier, self).__init__()
-        self._classifier = classifier
-        self._clip_class_names = sorted(clip_class_names)
-        
-    
-    @property
-    def clip_class_names(self):
-        return list(self._clip_class_names)
-    
-    
-    def predict(self, features):
-        return self._classifier.predict(features)
-    
-    
-class _OneVsRestClassifier(object):
-    
-    
-    def __init__(self, single_species_classifiers):
-        super(_OneVsRestClassifier, self).__init__()
-        self.single_species_classifiers = single_species_classifiers
-        
-    
-    @property
-    def clip_class_names(self):
-        names = sorted(self.single_species_classifiers.keys())
-        return names + ['Unclassified']
-    
-    
-    def predict(self, features):
-        
-        num_predictions = len(features)
-        
-        classifiers = self.single_species_classifiers
-        num_species = len(classifiers)
-        
-        clip_class_names = sorted(classifiers.keys())
-        clip_class_names.sort()
-        
-        species_predictions = \
-            np.zeros((num_species, num_predictions), dtype='int32')
-        for i, clip_class_name in enumerate(clip_class_names):
-            classifier = classifiers[clip_class_name]
-            species_predictions[i] = classifier.predict(features)
-            
-        # Transpose species predictions so `species_predictions[i, j]` is
-        # prediction of classifier `j` for clip `i`.
-        species_predictions = species_predictions.transpose()
-            
-        # Get booleans indicating which clips were positive for
-        # exactly one species.
-        indicators = species_predictions.sum(axis=1) == 1
-        
-        # Get predictions as integers in the range [1, num_species].
-        # A prediction of zero indicates no species.
-        integer_codes = np.arange(num_species) + 1
-        predictions = species_predictions * integer_codes
-        predictions = predictions.sum(axis=1)
-        predictions[~indicators] = 0
-        
-        # Get predictions as clip class names.
-        clip_class_names = np.array(['Unclassified'] + clip_class_names)
-        predictions = clip_class_names[predictions]
-
-        return predictions        
 
 
 if __name__ == '__main__':
