@@ -2,8 +2,8 @@
 
 
 from __future__ import print_function
-
 import argparse
+import os
 import sys
 
 from PyQt4.QtGui import QApplication
@@ -45,7 +45,8 @@ def _parse_args():
     parser = argparse.ArgumentParser(description='Vesper Viewer')
     
     parser.add_argument(
-        '--archive', help='the name of the archive to view')
+        '--archive',
+        help='the directory path of the archive to view')
     
     parser.add_argument(
         '--classification-commands',
@@ -58,37 +59,14 @@ def _parse_args():
 
 def _get_archive_dir_path(args, prefs):
     
-    name = args.archive
-    if name is None:
-        name = prefs.get('archive')
-        
-    if name is None:
-        _handle_init_error(
-            'No archive name specified. Please specify one either via an '
-            '"--archive" command line argument or the "archive" preference.')
-        
-    archives = prefs.get('archives')
-    
-    if archives is None:
-        _handle_init_error(
-            'No "archives" preference found. This preference is required '
-            'and should be a JSON object whose member names and values '
-            'are archive names and directory paths, respectively.')
-
-    path = archives.get(name)
+    path = args.archive
     
     if path is None:
-        f = 'No archive "{:s}" found in "archives" preference.'
-        _handle_init_error(f.format(name))
-        
-    return path
+        return os.getcwd()
+    else:
+        return path
     
     
-def _handle_init_error(message):
-    print(message, file=sys.stderr)
-    sys.exit(1)
-
-
 def _get_commands_preset_name(args, prefs):
     
     name = args.classification_commands

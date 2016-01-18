@@ -236,11 +236,19 @@ class Archive(object):
     
     
     def open(self, cache_db=False):
+        self._check_archive_dir()
         self._open_db(cache_db)
         self._create_dicts()
         self._clip_dir_paths = set()
 
 
+    def _check_archive_dir(self):
+        if not os.path.exists(self._archive_dir_path):
+            raise ValueError(
+                'Archive directory "{}" does not exist.'.format(
+                    self._archive_dir_path))
+        
+        
     def _open_db(self, cache_db=False):
         
         self._open_manifest_file()

@@ -200,13 +200,7 @@ def write_file(path, contents):
 
 def read_yaml_file(path):
 
-    try:
-        contents = read_file(path)
-        
-    except Exception as e:
-        raise OSError(
-            'Could not read file "{:s}". Error message was: {:s}'.format(
-                path, str(e)))
+    contents = read_file(path)
     
     try:
         return yaml.load(contents)
