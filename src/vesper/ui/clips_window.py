@@ -2,7 +2,6 @@ from __future__ import print_function
 
 from collections import defaultdict
 import math
-import sys
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -160,14 +159,23 @@ class ClipsWindow(QMainWindow):
             if classes is None:
                 # no clip class names include fragment
                 
+                pass
+            
                 # TODO: Implement a proper logging facility.
-                print((
-                    'Warning: Unrecognized clip class name fragment "{}" '
-                    'for command "{}" in {} preset "{}". Command will be '
-                    'ignored.').format(
-                        fragment, command_name, commands_preset.type_name,
-                        commands_preset.name),
-                    file=sys.stderr)
+                # Commented the following out since it doesn't work to
+                # validate all command sets against the clip classes of
+                # an arbitrary archive. There are different types of
+                # archives with different sets of clip classes, and
+                # different command sets are designed for use with
+                # different archives. Need to rethink command set
+                # validation.
+#                 print((
+#                     'Warning: Unrecognized clip class name fragment "{}" '
+#                     'for command "{}" in {} preset "{}". Command will be '
+#                     'ignored.').format(
+#                         fragment, command_name, commands_preset.type_name,
+#                         commands_preset.name),
+#                     file=sys.stderr)
             
             elif len(classes) != 1:
                 # more than one clip class name includes fragment
@@ -181,14 +189,23 @@ class ClipsWindow(QMainWindow):
                 if clip_class is None:
                     # no clip class has name equal to fragment
                     
+                    pass
+                
                     # TODO: Implement a proper logging facility.
-                    print((
-                        'Warning: Clip class name fragment "{}" for '
-                        'command "{}" in {} preset "{}" is ambiguous. '
-                        'Command will be ignored.').format(
-                            fragment, command_name, commands_preset.type_name,
-                            commands_preset.name),
-                        file=sys.stderr)
+                    # Commented the following out since it doesn't work to
+                    # validate all command sets against the clip classes of
+                    # an arbitrary archive. There are different types of
+                    # archives with different sets of clip classes, and
+                    # different command sets are designed for use with
+                    # different archives. Need to rethink command set
+                    # validation.
+#                     print((
+#                         'Warning: Clip class name fragment "{}" for '
+#                         'command "{}" in {} preset "{}" is ambiguous. '
+#                         'Command will be ignored.').format(
+#                             fragment, command_name, commands_preset.type_name,
+#                             commands_preset.name),
+#                         file=sys.stderr)
                 
                 else:
                     # one clip class has name equal to fragment
