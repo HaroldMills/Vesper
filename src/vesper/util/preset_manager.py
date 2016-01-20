@@ -6,7 +6,13 @@ from __future__ import print_function
 import os
 import sys
 
+from vesper.util.classification_commands_preset import \
+    ClassificationCommandsPreset
+import vesper.util.vesper_path_utils as vesper_path_utils
 
+
+_PRESETS_DIR_NAME = 'Presets'
+_PRESET_TYPES = {ClassificationCommandsPreset}
 _TEXT_FILE_NAME_EXTENSION = '.txt'
 
 
@@ -246,3 +252,12 @@ def _copy_preset_data(data):
     presets, subdirs_data = data
     return (presets, dict((k, _copy_preset_data(v))
                           for k, v in subdirs_data.iteritems()))
+
+
+def _create_preset_manager():
+    app_data_dir_path = vesper_path_utils.get_path('App Data')
+    presets_dir_path = os.path.join(app_data_dir_path, _PRESETS_DIR_NAME)
+    return PresetManager(presets_dir_path, _PRESET_TYPES)
+    
+    
+preset_manager = _create_preset_manager()

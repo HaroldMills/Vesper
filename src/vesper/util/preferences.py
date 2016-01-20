@@ -7,15 +7,10 @@ import json
 import os
 import sys
 
-from vesper.util.classification_commands_preset import \
-    ClassificationCommandsPreset
-from vesper.util.preset_manager import PresetManager
 import vesper.util.vesper_path_utils as vesper_path_utils
         
             
 _DEFAULT_PREFERENCES_FILE_NAME = 'Preferences.json'
-_PRESETS_DIR_NAME = 'Presets'
-_PRESET_TYPES = {ClassificationCommandsPreset}
 
 
 _preferences = {}
@@ -69,15 +64,4 @@ def _handle_error(message):
     
 def get(name, default=None):
     return _preferences.get(name, default)
-
-
-def _create_preset_manager():
-    app_data_dir_path = vesper_path_utils.get_path('App Data')
-    presets_dir_path = os.path.join(app_data_dir_path, _PRESETS_DIR_NAME)
-    return PresetManager(presets_dir_path, _PRESET_TYPES)
-    
-    
-# TODO: Move this out of here. Presets should be handled by the preset
-# manager, not by the preferences manager.
-preset_manager = _create_preset_manager()
 

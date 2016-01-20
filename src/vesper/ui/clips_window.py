@@ -19,7 +19,7 @@ from vesper.ui.multiselection import Multiselection
 from vesper.ui.spectrogram_clip_figure import \
     SpectrogramClipFigure as ClipFigure
 from vesper.util.bunch import Bunch
-from vesper.util.preferences import preset_manager
+from vesper.util.preset_manager import preset_manager
 import vesper.util.classification_command_utils as command_utils
 import vesper.util.preferences as prefs
 
