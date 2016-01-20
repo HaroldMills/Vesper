@@ -11,6 +11,11 @@ from vesper.util.classification_commands_preset import \
 import vesper.util.vesper_path_utils as vesper_path_utils
 
 
+# TODO: Do away with `PresetManager` class, since we appear to need only
+# one preset manager. Make preset types and data module attributes and
+# convert methods to module-level functions.
+
+
 _PRESETS_DIR_NAME = 'Presets'
 _PRESET_TYPES = {ClassificationCommandsPreset}
 _TEXT_FILE_NAME_EXTENSION = '.txt'
