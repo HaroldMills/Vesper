@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 from vesper.archive.archive import Archive
-from vesper.util.preferences import preferences as prefs
+import vesper.util.preferences as prefs
 
 
 '''
@@ -26,7 +26,7 @@ existing `get_clip_counts` method?
 
 def main():
     
-    archive = Archive.open(prefs['archiveDirPath'])
+    archive = Archive.open(prefs.get('archiveDirPath'))
     
     print('getting call clips...')
     

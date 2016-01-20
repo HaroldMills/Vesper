@@ -18,12 +18,12 @@ from vesper.archive.station import Station
 from vesper.util.audio_file_utils import \
     WAVE_FILE_NAME_EXTENSION as _CLIP_FILE_NAME_EXTENSION
 from vesper.util.bunch import Bunch
-from vesper.util.preferences import preferences as prefs
 from vesper.util.instantaneous_frequency_analysis import \
     InstantaneousFrequencyAnalysis
 from vesper.util.spectrogram import Spectrogram
 import vesper.util.data_windows as data_windows
 import vesper.util.os_utils as os_utils
+import vesper.util.preferences as prefs
 import vesper.util.sound_utils as sound_utils
 import vesper.util.time_utils as time_utils
 
@@ -1146,14 +1146,26 @@ def _get_name_components(clip_classes):
 # `clips_window` module. This can happen after we figure out how to
 # support clients that use spectrograms computed with different
 # parameters.
-_window_type_name = prefs['clipFigure.spectrogram.windowType']
-_window_size = prefs['clipFigure.spectrogram.windowSize']
-_window = data_windows.create_window(_window_type_name, _window_size)
-SPECTROGRAM_PARAMS = Bunch(
-    window=_window,
-    hop_size=prefs['clipFigure.spectrogram.hopSize'],
-    dft_size=prefs['clipFigure.spectrogram.dftSize'],
-    ref_power=1)
+
+_spectrogram_params = None
+
+def _get_spectrogram_params():
+    
+    global _spectrogram_params
+    
+    if _spectrogram_params is None:
+        
+        window_type_name = prefs.get('clipFigure.spectrogram.windowType')
+        window_size = prefs.get('clipFigure.spectrogram.windowSize')
+        window = data_windows.create_window(window_type_name, window_size)
+        
+        _spectrogram_params = Bunch(
+            window=window,
+            hop_size=prefs.get('clipFigure.spectrogram.hopSize'),
+            dft_size=prefs.get('clipFigure.spectrogram.dftSize'),
+            ref_power=1)
+        
+    return _spectrogram_params
 
 
 _MIN_CLIP_DURATION = .05
@@ -1256,7 +1268,8 @@ class _Clip(object):
         if self._spectrogram is None:
             # have not yet computed spectrogram
             
-            self._spectrogram = Spectrogram(self.sound, SPECTROGRAM_PARAMS)
+            params = _get_spectrogram_params()
+            self._spectrogram = Spectrogram(self.sound, params)
                 
         return self._spectrogram
         
@@ -1267,8 +1280,9 @@ class _Clip(object):
         if self._instantaneous_frequencies is None:
             # have not yet computed instantaneous frequencies
         
+            params = _get_spectrogram_params()
             self._instantaneous_frequencies = \
-                InstantaneousFrequencyAnalysis(self.sound, SPECTROGRAM_PARAMS)
+                InstantaneousFrequencyAnalysis(self.sound, params)
                 
         return self._instantaneous_frequencies
         

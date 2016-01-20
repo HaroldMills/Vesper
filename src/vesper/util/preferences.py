@@ -13,24 +13,35 @@ from vesper.util.preset_manager import PresetManager
 import vesper.util.vesper_path_utils as vesper_path_utils
         
             
-_PREFS_FILE_NAME = 'Preferences.json'
+_DEFAULT_PREFERENCES_FILE_NAME = 'Preferences.json'
 _PRESETS_DIR_NAME = 'Presets'
 _PRESET_TYPES = {ClassificationCommandsPreset}
 
 
-def _load_preferences():
+_preferences = {}
+
+
+def load_preferences(file_name=_DEFAULT_PREFERENCES_FILE_NAME):
     
-    app_data_dir_path = vesper_path_utils.get_path('App Data')
-    prefs_file_path = os.path.join(app_data_dir_path, _PREFS_FILE_NAME)
+    print('load_preferences')
+    
+    file_path = _get_preferences_file_path(file_name)
+        
+    global _preferences
     
     try:
-        return _read_json_file(prefs_file_path)
+        _preferences = _read_json_file(file_path)
+        
     except Exception as e:
         f = 'An error occurred while loading application preferences: {:s}'
         _handle_error(f.format(str(e)))
 
 
-# TODO: Put this in a JSON utility module?
+def _get_preferences_file_path(file_name):
+    app_data_dir_path = vesper_path_utils.get_path('App Data')
+    return os.path.join(app_data_dir_path, file_name)
+
+
 def _read_json_file(path):
     
     if not os.path.exists(path):
@@ -56,12 +67,17 @@ def _handle_error(message):
     sys.exit(1)
     
     
+def get(name, default=None):
+    return _preferences.get(name, default)
+
+
 def _create_preset_manager():
     app_data_dir_path = vesper_path_utils.get_path('App Data')
     presets_dir_path = os.path.join(app_data_dir_path, _PRESETS_DIR_NAME)
     return PresetManager(presets_dir_path, _PRESET_TYPES)
     
     
-preferences = _load_preferences()
+# TODO: Move this out of here. Presets should be handled by the preset
+# manager, not by the preferences manager.
 preset_manager = _create_preset_manager()
 

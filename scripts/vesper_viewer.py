@@ -9,14 +9,15 @@ import sys
 from PyQt4.QtGui import QApplication
     
 from vesper.ui.main_window import MainWindow
-from vesper.util.preferences import preferences as prefs
+import vesper.util.preferences as prefs
 
 
 def _main():
     
     args = _parse_args()
-    archive_dir_path = _get_archive_dir_path(args, prefs)
-    commands_preset_name = _get_commands_preset_name(args, prefs)
+    _load_preferences(args.preferences)
+    archive_dir_path = _get_archive_dir_path(args)
+    commands_preset_name = _get_commands_preset_name(args)
 
     # This must happen before any other QT operations, including
     # creating the main window.
@@ -24,9 +25,9 @@ def _main():
     
     window = MainWindow(
         archive_dir_path,
-        prefs['mainWindow.initialStation'],
-        prefs['mainWindow.initialDetector'],
-        prefs['mainWindow.initialClipClass'],
+        prefs.get('mainWindow.initialStation'),
+        prefs.get('mainWindow.initialDetector'),
+        prefs.get('mainWindow.initialClipClass'),
         commands_preset_name)
     
     _set_geometry(window, app.desktop().availableGeometry())
@@ -45,6 +46,10 @@ def _parse_args():
     parser = argparse.ArgumentParser(description='Vesper Viewer')
     
     parser.add_argument(
+        '--preferences',
+        help='the name of the preferences file to use')
+    
+    parser.add_argument(
         '--archive',
         help='the directory path of the archive to view')
     
@@ -57,7 +62,14 @@ def _parse_args():
     return args
 
 
-def _get_archive_dir_path(args, prefs):
+def _load_preferences(file_name):
+    if file_name is not None:
+        prefs.load_preferences(file_name)
+    else:
+        prefs.load_preferences()
+
+
+def _get_archive_dir_path(args):
     
     path = args.archive
     
@@ -67,7 +79,7 @@ def _get_archive_dir_path(args, prefs):
         return path
     
     
-def _get_commands_preset_name(args, prefs):
+def _get_commands_preset_name(args):
     
     name = args.classification_commands
     if name is None:

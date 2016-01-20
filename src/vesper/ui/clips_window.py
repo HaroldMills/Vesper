@@ -19,9 +19,9 @@ from vesper.ui.multiselection import Multiselection
 from vesper.ui.spectrogram_clip_figure import \
     SpectrogramClipFigure as ClipFigure
 from vesper.util.bunch import Bunch
-from vesper.util.preferences import preferences as prefs
 from vesper.util.preferences import preset_manager
 import vesper.util.classification_command_utils as command_utils
+import vesper.util.preferences as prefs
 
 
 _SPACING_ASPECT_RATIO = 2
@@ -73,9 +73,9 @@ class ClipsWindow(QMainWindow):
         self._rug_plot = ClipTimesRugPlot(parent, self.move_to_page)
         
         config = Bunch(
-            clips_area_width=prefs['clipsWindow.duration'],
-            clip_spacing=prefs['clipsWindow.spacing'],
-            num_rows=prefs['clipsWindow.numRows'],
+            clips_area_width=prefs.get('clipsWindow.duration'),
+            clip_spacing=prefs.get('clipsWindow.spacing'),
+            num_rows=prefs.get('clipsWindow.numRows'),
             min_clip_height=40,
             selection_rect_thickness=3,
             selection_rect_color='red'
@@ -570,7 +570,7 @@ class _FiguresFrame(QWidget):
                 
             self._classify(intervals, new_name)
             
-            if prefs['clipsWindow.advanceAfterClassification']:
+            if prefs.get('clipsWindow.advanceAfterClassification'):
                 self._advance_after_classification(scope)
                 
                             

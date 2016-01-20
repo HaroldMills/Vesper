@@ -33,6 +33,6 @@ def create_window(name, N):
     try:
         window_type = _WINDOW_TYPES[name]
     except KeyError:
-        raise ValueError('Unrecognized window type "{:s}".')
+        raise ValueError('Unrecognized window type "{:s}".'.format(name))
     
     return window_type(N)

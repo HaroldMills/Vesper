@@ -11,10 +11,10 @@ import os.path
 from vesper.archive.archive import Archive
 from vesper.ui.clip_figure import ClipFigure
 from vesper.ui.clip_figure_play_button import ClipFigurePlayButton
-from vesper.util.preferences import preferences as prefs
+import vesper.util.measurements as measurements
 import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
 import vesper.util.nfc_detection_utils as nfc_detection_utils
-import vesper.util.measurements as measurements
+import vesper.util.preferences as prefs
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
@@ -397,7 +397,7 @@ class SpectrogramClipFigure(ClipFigure):
             
             pos = self._get_mouse_pos(event)
             
-            if prefs['clipFigure.showMouseLocation'] and pos is not None:
+            if prefs.get('clipFigure.showMouseLocation') and pos is not None:
                 x, y = pos
                 text = '{:.3f} s  {:d} Hz'.format(x, int(round(y)))
                 
@@ -571,8 +571,8 @@ def _show_event(e, prefix):
 
 def _create_clip_text(axes):
     # TODO: Allow control of font name?
-    color = prefs['clipFigure.clipTextColor']
-    size = prefs['clipFigure.clipTextFontSize']
+    color = prefs.get('clipFigure.clipTextColor')
+    size = prefs.get('clipFigure.clipTextFontSize')
     return axes.text(
         .5, .02, '', color=color, size=size, ha='center',
         transform=axes.transAxes)
@@ -582,7 +582,7 @@ def _get_clip_text(clip):
     
     name = _get_clip_class_display_name(clip.clip_class_name)
     
-    if prefs['clipFigure.showClipTimes']:
+    if prefs.get('clipFigure.showClipTimes'):
         time = _format_clip_time(clip)
     else:
         time = None
@@ -599,7 +599,7 @@ def _get_clip_text(clip):
 
 def _get_clip_class_display_name(name):
     
-    if prefs['clipFigure.showClipClassNames']:
+    if prefs.get('clipFigure.showClipClassNames'):
         
         if name is None:
             return Archive.CLIP_CLASS_NAME_UNCLASSIFIED

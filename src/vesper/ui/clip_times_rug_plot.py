@@ -10,7 +10,7 @@ from matplotlib.figure import Figure
 from PyQt4.QtGui import QSizePolicy
 import numpy as np
 
-from vesper.util.preferences import preferences as prefs
+import vesper.util.preferences as prefs
 import vesper.util.time_utils as time_utils
 
 
