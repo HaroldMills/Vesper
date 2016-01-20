@@ -18,8 +18,6 @@ _preferences = {}
 
 def load_preferences(file_name=_DEFAULT_PREFERENCES_FILE_NAME):
     
-    print('load_preferences')
-    
     file_path = _get_preferences_file_path(file_name)
         
     global _preferences
