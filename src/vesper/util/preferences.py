@@ -1,16 +1,16 @@
-"""Module containing Vesper viewer preferences."""
+"""Module for accessing Vesper viewer preferences."""
 
 
 from __future__ import print_function
 
-import json
 import os
 import sys
 
+import vesper.util.os_utils as os_utils
 import vesper.util.vesper_path_utils as vesper_path_utils
         
             
-_DEFAULT_PREFERENCES_FILE_NAME = 'Preferences.json'
+_DEFAULT_PREFERENCES_FILE_NAME = 'Preferences.yaml'
 
 
 _preferences = {}
@@ -18,48 +18,24 @@ _preferences = {}
 
 def load_preferences(file_name=_DEFAULT_PREFERENCES_FILE_NAME):
     
-    file_path = _get_preferences_file_path(file_name)
+    # Get preferences file path.
+    dir_path = vesper_path_utils.get_path('App Data')
+    file_path = os.path.join(dir_path, file_name)
         
     global _preferences
     
     try:
-        _preferences = _read_json_file(file_path)
+        _preferences = os_utils.read_yaml_file(file_path)
         
-    except Exception as e:
-        f = 'An error occurred while loading application preferences: {:s}'
-        _handle_error(f.format(str(e)))
+    except OSError as e:
+        # TODO: Handle `OSError` exceptions at call sites rather than here.
+        # TODO: Maybe we should use default preferences if read fails?
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
 
 
-def _get_preferences_file_path(file_name):
-    app_data_dir_path = vesper_path_utils.get_path('App Data')
-    return os.path.join(app_data_dir_path, file_name)
-
-
-def _read_json_file(path):
-    
-    if not os.path.exists(path):
-        raise ValueError('File "{:s}" does not exist.'.format(path))
-    
-    try:
-        file_ = open(path, 'rU')
-    except:
-        raise IOError('Could not open file "{:s}".'.format(path))
-    
-    try:
-        contents = json.load(file_)
-    except ValueError:
-        file_.close()
-        raise ValueError('Could not load JSON file "{:s}".'.format(path))
-
-    file_.close()
-    return contents
-
-
-def _handle_error(message):
-    print(message, file=sys.stderr)
-    sys.exit(1)
-    
-    
+# TODO: Require default argument? Or perhaps we should require that each
+# preference be registered before use, including a name, type, and default
+# value.
 def get(name, default=None):
     return _preferences.get(name, default)
-
