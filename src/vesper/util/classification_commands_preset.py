@@ -1,6 +1,9 @@
 """Module containing `ClassificationCommandsPreset` class."""
 
 
+import six
+import yaml
+
 from vesper.util.preset import Preset
 
 
@@ -25,77 +28,181 @@ class ClassificationCommandsPreset(Preset):
 _ALPHABETIC_CHARS = 'abcdefghijklmnopqrstuvwxyz'
 """string of lower-case alphabetic characters."""
 
-_CHARS = frozenset(_ALPHABETIC_CHARS + _ALPHABETIC_CHARS.upper())
+_OTHER_CHARS = ',.;:\'"/?<>'
+
+_CHARS = frozenset(
+    _ALPHABETIC_CHARS + _ALPHABETIC_CHARS.upper() + _OTHER_CHARS)
 """set of recognized command characters."""
 
-_MODIFIER_NAMES = frozenset(['Alt'])
-"""set of recognized command modifier names, excluding shift."""
+_MODIFIERS = frozenset(['Alt'])
+"""set of recognized command modifiers, excluding shift."""
+
+_DEFAULT_ACTION_NAME = 'Classify'
+"""Default clip action name."""
 
 _SCOPES = frozenset(['Selected', 'Page', 'All'])
 """set of recognized command scopes."""
 
+_DEFAULT_SCOPE = 'Selected'
+"""Default command scope."""
+
 
 def _parse_preset(text):
-    lines = [line.strip() for line in text.split('\n')]
-    lines = [line for line in lines if line != '']
-    pairs = [_parse_command_spec(line, i + 1) for i, line in enumerate(lines)]
-    return dict(pairs)
-
-
-def _parse_command_spec(line, lineNum):
     
-    items = line.split()
-    n = len(items)
-    
-    if n < 2 or n > 3:
+    try:
+        commands = yaml.load(text)
+    except Exception as e:
         raise ValueError(
-            ('Bad command specification "{:s}": specification '
-             'must have either two or three components separated '
-             'by spaces.').format(line))
+            'Preset YAML parse failed. Error message was:\n{}'.format(str(e)))
     
-    command = items[0]
-    clip_class_name = items[1]
-    scope = items[2] if n == 3 else 'Selected'
+    if not isinstance(commands, dict):
+        raise ValueError('Preset text is not a YAML mapping.')
     
-    _check_command(command)
-    _check_scope(scope, line)
-    
-    return (command, (clip_class_name, scope))
+    return dict(_parse_command(*item) for item in commands.iteritems())
 
 
-def _check_command(command):
+def _parse_command(name, action):
     
-    parts = command.split('-')
+    try:
+        _check_command_name(name)
+    except ValueError as e:
+        raise ValueError('Bad command name "{}": {}'.format(name, str(e)))
+    
+    try:
+        action = _parse_command_action(action)
+    except ValueError as e:
+        raise ValueError('Bad command "{}": {}'.format(name, str(e)))
+    
+    else:
+        return (name, action)
+
+
+def _check_command_name(name):
+    
+    if not isinstance(name, six.string_types):
+        raise ValueError(
+            'Name is of type {} rather than string.'.format(
+                name.__class__.__name__))
+        
+    parts = name.split('-')
     
     if len(parts) == 1:
-        _check_command_char(parts[0], command)
+        _check_command_char(parts[0])
         
     else:
-        _check_modifiers(parts[:-1], command)
-        _check_command_char(parts[-1], command)
+        _check_modifiers(parts[:-1])
+        _check_command_char(parts[-1])
         
         
-def _check_command_char(char, command):
+def _check_command_char(char):
     
     if len(char) != 1:
-        f = 'Bad command "{:s}": a command must have exactly one character.'
-        raise ValueError(f.format(command))
+        raise ValueError('A command must have exactly one character.')
     
     if char not in _CHARS:
-        f = ('Bad command "{:s}": only alphabetic command characters '
-             'are allowed.')
-        raise ValueError(f.format(char, command))
+        raise ValueError(
+            ('Only alphabetic characters and characters in '
+             '{} can be command characters.'.format(_OTHER_CHARS)))
 
 
-def _check_modifiers(modifiers, command):
+def _check_modifiers(modifiers):
     for m in modifiers:
-        if m not in _MODIFIER_NAMES:
-            f = 'Unrecognized modifier "{:s}" in command "{:s}".'
-            raise ValueError(f.format(m, command))
+        if m not in _MODIFIERS:
+            raise ValueError('Unrecognized modifier "{}".'.format(m))
     
     
-def _check_scope(scope, spec):
+def _parse_command_action(spec):
+    
+    if isinstance(spec, six.string_types):
+        spec = {'class': spec, }
+        
+    elif not isinstance(spec, dict):
+        raise ValueError(
+            'Action must be either clip class name or mapping.')
+        
+    clip_action = _parse_clip_action(spec)
+    scope = _parse_command_scope(spec)
+    
+    return (clip_action, scope)
+
+
+def _parse_clip_action(spec):
+    
+    action_name = spec.get('action', _DEFAULT_ACTION_NAME)
+    
+    if action_name == 'None':
+        return _EmptyAction()
+    
+    elif action_name == 'Classify':
+        return _create_classify_action(spec)
+    
+    else:
+        raise ValueError(
+            ('Unrecognized action "{}". Action must be either '
+             '"Classify" or "None".').format(action_name))
+
+
+def _parse_command_scope(spec):
+    
+    scope = spec.get('scope', _DEFAULT_SCOPE)
+    
     if scope not in _SCOPES:
-        f = ('Bad command specification "{:s}": third component '
-             'must be "Selected", "Page", or "All".')
-        raise ValueError(f.format(spec))
+        raise ValueError(
+            ('Unrecognized scope "{}". Scope must be "Selected", '
+             '"Page", or "All".').format(scope))
+            
+    return scope
+        
+
+def _create_classify_action(spec):
+    
+    if spec.has_key('class') and spec.has_key('classifier'):
+        raise ValueError(
+            'Action cannot include both "class" and "classifier" keys.')
+
+    elif spec.has_key('class'):
+        classifier = _FixedClassifier(spec['class'])
+        return _ClassifyAction(classifier)
+    
+    elif spec.has_key('classifier'):
+        # classifier_name = spec['classifier']
+        # TODO: Get classifier from extensions manager.
+        classifier = lambda clip: None
+        return _ClassifyAction(classifier)
+    
+    else:
+        raise ValueError(
+            'Action must include either "class" key or "classifier" key.')
+    
+    
+class _EmptyAction(object):
+    def execute(self, clip):
+        pass
+    
+    
+class _FixedClassifier(object):
+    
+    def __init__(self, clip_class_name):
+        self._clip_class_name = clip_class_name
+        
+    def classify(self, clip):
+        return self._clip_class_name
+    
+    
+class _ClassifyAction(object):
+    
+    
+    def __init__(self, classify):
+        self._classify = classify
+        
+        
+    def execute(self, clip):
+        
+        clip_class_name = self._classify(clip)
+        
+        if clip_class_name is not None:
+            
+            if clip_class_name == 'Unclassified':
+                clip_class_name = None
+                
+            clip.clip_class_name = clip_class_name

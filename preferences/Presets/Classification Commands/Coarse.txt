@@ -1,9 +1,0 @@
-c Call
-C Call Page
-Alt-C Call All
-n Noise
-N Noise Page
-Alt-N Noise All
-u Unclassified
-U Unclassified Page
-Alt-U Unclassified All

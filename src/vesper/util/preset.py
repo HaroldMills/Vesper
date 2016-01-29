@@ -31,14 +31,7 @@ class Preset(Named):
     by the preset manager from the persistent store.
     
     The initializer of a preset class should always invoke the initializer
-    of its superclass before doing anything else. For subclasses of the
-    `Preset` class, this means invoking the
-    
-        def __init__(self, name):
-            ...
-            
-    initializer of the `Named` class, since the `Preset` class does
-    not define an initializer itself.
+    of its superclass before doing anything else.
     """
 
 
@@ -50,3 +43,7 @@ class Preset(Named):
     name of the subdirectory of the presets directory that contains
     presets of this type.
     """
+    
+    
+    def __init__(self, name):
+        super(Preset, self).__init__(name)

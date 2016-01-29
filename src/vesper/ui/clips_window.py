@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-from collections import defaultdict
 import math
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
@@ -11,7 +10,6 @@ from PyQt4.QtGui import (
     QMainWindow, QPainter, QVBoxLayout, QWidget)
 import numpy as np
 
-from vesper.archive.archive import Archive
 from vesper.ui.clip_times_rug_plot import ClipTimesRugPlot
 from vesper.ui.flow_layout import FlowLayout
 from vesper.ui.multiselection import Multiselection
@@ -128,117 +126,16 @@ class ClipsWindow(QMainWindow):
         self._update_classification_dict(index)
         
         
-    def _update_classification_dict(self, index):
+    def _update_commands_preset(self, index):
         preset = self._commands_presets[index]
-        self._classification_dict = \
-            self._create_classification_dict(preset)
+        self._commands = preset.commands
         
         
-    def _create_classification_dict(self, commands_preset):
-        
-        """
-        Creates a mapping from command names to clip classes for the
-        specified commands preset.
-        
-        The mapping is the composition of the preset's commands dictionary,
-        which maps command names to clip class name fragments, and a mapping
-        from clip class name fragments to clip classes. For each clip class
-        name fragment of a command, there must be exactly one clip class
-        whose name ends with that fragment.
-        """
-        
-        commands = commands_preset.commands
-        classes = self._archive.clip_classes
-        classes_dict = self._create_fragment_to_classes_dict(classes)
-        classification_dict = {}
-        
-        for command_name, (fragment, all_) in commands.iteritems():
-            
-            classes = classes_dict.get(fragment)
-            
-            if classes is None:
-                # no clip class names include fragment
-                
-                pass
-            
-                # TODO: Implement a proper logging facility.
-                # Commented the following out since it doesn't work to
-                # validate all command sets against the clip classes of
-                # an arbitrary archive. There are different types of
-                # archives with different sets of clip classes, and
-                # different command sets are designed for use with
-                # different archives. Need to rethink command set
-                # validation.
-#                 print((
-#                     'Warning: Unrecognized clip class name fragment "{}" '
-#                     'for command "{}" in {} preset "{}". Command will be '
-#                     'ignored.').format(
-#                         fragment, command_name, commands_preset.type_name,
-#                         commands_preset.name),
-#                     file=sys.stderr)
-            
-            elif len(classes) != 1:
-                # more than one clip class name includes fragment
-                
-                # Look for clip class whose entire name is fragment.
-                clip_class = None
-                for c in classes:
-                    if c.name == fragment:
-                        clip_class = c
-                        
-                if clip_class is None:
-                    # no clip class has name equal to fragment
-                    
-                    pass
-                
-                    # TODO: Implement a proper logging facility.
-                    # Commented the following out since it doesn't work to
-                    # validate all command sets against the clip classes of
-                    # an arbitrary archive. There are different types of
-                    # archives with different sets of clip classes, and
-                    # different command sets are designed for use with
-                    # different archives. Need to rethink command set
-                    # validation.
-#                     print((
-#                         'Warning: Clip class name fragment "{}" for '
-#                         'command "{}" in {} preset "{}" is ambiguous. '
-#                         'Command will be ignored.').format(
-#                             fragment, command_name, commands_preset.type_name,
-#                             commands_preset.name),
-#                         file=sys.stderr)
-                
-                else:
-                    # one clip class has name equal to fragment
-                    
-                    classification_dict[command_name] = (clip_class, all_)
-            
-            else:
-                # exactly one clip class for specified fragment
-                
-                classification_dict[command_name] = (classes[0], all_)
-            
-        return classification_dict
-        
-        
-    def _create_fragment_to_classes_dict(self, clip_classes):
-        d = defaultdict(list)
-        d[Archive.CLIP_CLASS_NAME_UNCLASSIFIED].append(None)
-        for c in clip_classes:
-            for f in self._get_clip_class_name_fragments(c.name):
-                d[f].append(c)
-        return d
-    
-    
-    def _get_clip_class_name_fragments(self, name):
-        sep = Archive.CLIP_CLASS_NAME_COMPONENT_SEPARATOR
-        parts = name.split(sep)
-        n = len(parts)
-        return [sep.join(parts[i:n]) for i in xrange(n)]
-    
-    
     def _init_commands(self, preset_name):
         
         if self._commands_combo_box is not None:
+            
+            self._clip_classes = self._create_clip_classes_dict()
             
             index = 0
             
@@ -252,7 +149,7 @@ class ClipsWindow(QMainWindow):
                     pass
                     
             if self._commands_combo_box.currentIndex() == index:
-                self._update_classification_dict(index)
+                self._update_commands_preset(index)
                 
             else:
                 self._commands_combo_box.setCurrentIndex(index)
@@ -263,6 +160,10 @@ class ClipsWindow(QMainWindow):
             self._classification_dict = {}
         
         
+    def _create_clip_classes_dict(self):
+        return dict((c.name, c) for c in self._archive.clip_classes)
+    
+    
     def set_clips(self, station_name, detector_name, date, clip_class_name):
 
         # TODO: Does this make sense? Think about what `None` arguments
@@ -339,14 +240,15 @@ class ClipsWindow(QMainWindow):
         
     def keyPressEvent(self, e):
         
-        command = command_utils.get_command_from_key_event(e)
+        command_name = command_utils.get_command_from_key_event(e)
         
-        if command is not None:
+        if command_name is not None:
+
+            command = self._commands.get(command_name)
             
-            pair = self._classification_dict.get(command)
-        
-            if pair is not None:
-                self.classify(*pair)
+            if command is not None:
+                self._figures_frame.execute_command(command)
+                self._update_title()
                 
             else:
                 # key is not a classification command
@@ -385,16 +287,6 @@ class ClipsWindow(QMainWindow):
             super(ClipsWindow, self).keyPressEvent(e)
 
     
-    @property
-    def classification_dict(self):
-        return self._classification_dict
-        
-        
-    def classify(self, clip_class, scope):
-        self._figures_frame.classify(clip_class, scope)
-        self._update_title()
-        
-
     def move_down_one_page(self):
         self._figures_frame.move_down_one_page()
         self._update_title()
@@ -565,13 +457,13 @@ class _FiguresFrame(QWidget):
                 self.page_start_indices, clip_num, side='right') - 1
             
             
-    def classify(self, clip_class, scope):
+    def execute_command(self, command):
         
-        new_name = clip_class.name if clip_class is not None else None
+        action, scope = command
         
         if scope == 'All':
             intervals = ((0, len(self._clips) - 1),)
-            self._classify(intervals, new_name)
+            self._execute_action(action, intervals)
             
         else:
             
@@ -585,13 +477,13 @@ class _FiguresFrame(QWidget):
             else:
                 intervals = _shift(self.selection.selected_intervals, first)
                 
-            self._classify(intervals, new_name)
+            self._execute_action(action, intervals)
             
             if prefs.get('clipsWindow.advanceAfterClassification'):
                 self._advance_after_classification(scope)
                 
                             
-    def _classify(self, intervals, new_name):
+    def _execute_action(self, action, intervals):
         
         first = self.first_visible_clip_num
             
@@ -601,24 +493,19 @@ class _FiguresFrame(QWidget):
                 
                 clip = self._clips[k]
                 
-                old_name = clip.clip_class_name
+                action.execute(clip)
                 
-                if new_name != old_name:
-                    
-                    clip.clip_class_name = new_name
-                    
-                    if k >= first and k < first + self.num_visible_clips:
-                    
-                        # This is very naughty. The figures frame should not
-                        # be rooting around in clip frames' private parts and
-                        # telling their clip figures to update their clip text.
-                        # Instead, clips (as models) should probably support
-                        # observers and clip figures (as views of clips) should
-                        # update themselves when they are notified that their
-                        # clips' classifications have changed.
-                        frame = self._active_clip_frames[k - first]
-                        figure = frame._clip_figure
-                        figure._update_clip_text()
+                if k >= first and k < first + self.num_visible_clips:
+                
+                    # TODO: Find a better way to update clip frames.
+                    # The figures frame should not access private clip
+                    # frame members as in the code below. Perhaps clips
+                    # should support observers, and a clip frame should
+                    # observe its clip and update its clip text when the
+                    # clip changes.
+                    frame = self._active_clip_frames[k - first]
+                    figure = frame._clip_figure
+                    figure._update_clip_text()
                     
 
     def _advance_after_classification(self, scope):

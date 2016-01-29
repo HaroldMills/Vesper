@@ -1,0 +1,9 @@
+c: Call
+C: {class: Call, scope: Page}
+Alt-C: {class: Call, scope: All}
+n: Noise
+N: {class: Noise, scope: Page}
+Alt-N: {class: Noise, scope: All}
+u: Unclassified
+U: {class: Unclassified, scope: Page}
+Alt-U: {class: Unclassified, scope: All}

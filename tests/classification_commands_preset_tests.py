@@ -7,33 +7,37 @@ class ClassificationCommandsPresetTests(TestCase):
     
     
     def test_parse_preset(self):
-        
+          
         cases = [
-            ('c Call', {'c': ('Call', 'Selected')}),
-            ('c Call Selected', {'c': ('Call', 'Selected')}),
-            ('c Call Page', {'c': ('Call', 'Page')}),
-            ('c Call All', {'c': ('Call', 'All')}),
-            ('C COYE', {'C': ('COYE', 'Selected')}),
-            ('Alt-c CMWA', {'Alt-c': ('CMWA', 'Selected')}),
-            ('Alt-C CSWA', {'Alt-C': ('CSWA', 'Selected')})
+            ('".": {action: None}', {'.': 'Selected'}),
+            ('c: Call', {'c': 'Selected'}),
+            ('c: {class: Call, scope: Selected}', {'c': 'Selected'}),
+            ('c: {class: Call, scope: Page}', {'c': 'Page'}),
+            ('c: {class: Call, scope: All}', {'c': 'All'}),
+            ('c: {classifier: Coarse, scope: Page}', {'c': 'Page'})
         ]
-        
+          
         for text, expected in cases:
             commands = preset_module._parse_preset(text)
+            commands = dict(
+                (name, scope) for name, (_, scope) in commands.iteritems())
             self.assertEqual(commands, expected)
             
             
     def test_parse_preset_errors(self):
-        
+         
         cases = [
-            'c',
-            'c 2 3 4',
-            'ca Call',
-            'Alt-ca Call',
-            '1 Call',
-            'Ctrl-c Call',
-            'c Call Bobo'
+            'bobo',
+            'cc: Call',
+            '~: Call',
+            '-: Call',
+            'Ctrl-c: Call',
+            'c: []',
+            'c: {action: Bobo}',
+            'c: {class: Call, scope: Bobo}',
+            'c: {class: Call, classifier: Bobo}',
+            'c: {action: Classify}'
         ]
-        
+         
         for case in cases:
             self._assert_raises(ValueError, preset_module._parse_preset, case)

@@ -1,11 +1,13 @@
 from __future__ import print_function
 
-import json
 import os
-import unittest
+
+import yaml
 
 from vesper.util.preset import Preset
 from vesper.util.preset_manager import PresetManager
+
+from test_case import TestCase
 
 
 class _Preset(Preset):
@@ -31,10 +33,10 @@ class B(_Preset):
     
     def __init__(self, name, data):
         super(B, self).__init__(name)
-        self.data = json.loads(data)
+        self.data = yaml.load(data)
         
         
-class PresetManagerTests(unittest.TestCase):
+class PresetManagerTests(TestCase):
     
     
     def setUp(self):

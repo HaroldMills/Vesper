@@ -142,19 +142,16 @@ class PresetManager(object):
             maps string subdirectory names to data structures that in
             turn describe the presets that are in those subdirectories.
             Each tuple of presets is sorted by preset name.
-            
-        :Raises ValueError:
-            if the specified preset type is not recognized.
         """
         
         try:
-            return _copy_preset_data(self._preset_data[type_name])
-        
+            data = self._preset_data[type_name]
+            
         except KeyError:
-            f = ('Presets of unrecognized type "{:s}" requested from '
-                 'preset manager.')
-            _log_error(f.format(type_name))
             return ((), {})
+        
+        else:
+            return _copy_preset_data(data)
 
 
 def _load_presets(presets_dir_path, preset_types):
