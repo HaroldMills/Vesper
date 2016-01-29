@@ -123,7 +123,7 @@ class ClipsWindow(QMainWindow):
 
     
     def _on_commands_changed(self, index):
-        self._update_classification_dict(index)
+        self._update_commands_preset(index)
         
         
     def _update_commands_preset(self, index):
