@@ -13,5 +13,5 @@ class TestCase(unittest.TestCase):
         try:
             function(*args, **kwargs)
             
-        except exception_class, e:
+        except exception_class as e:
             print(str(e))
