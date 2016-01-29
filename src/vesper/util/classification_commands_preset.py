@@ -167,7 +167,7 @@ def _create_classify_action(spec):
     elif spec.has_key('classifier'):
         # classifier_name = spec['classifier']
         # TODO: Get classifier from extensions manager.
-        classifier = lambda clip: None
+        classifier = _DummyClassifier()
         return _ClassifyAction(classifier)
     
     else:
@@ -192,13 +192,13 @@ class _FixedClassifier(object):
 class _ClassifyAction(object):
     
     
-    def __init__(self, classify):
-        self._classify = classify
+    def __init__(self, classifier):
+        self._classifier = classifier
         
         
     def execute(self, clip):
         
-        clip_class_name = self._classify(clip)
+        clip_class_name = self._classifier.classify(clip)
         
         if clip_class_name is not None:
             
@@ -206,3 +206,9 @@ class _ClassifyAction(object):
                 clip_class_name = None
                 
             clip.clip_class_name = clip_class_name
+
+
+class _DummyClassifier(object):
+    def classify(self, clip):
+        return None
+    
