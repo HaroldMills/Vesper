@@ -25,9 +25,9 @@ def _main():
     
     window = MainWindow(
         archive_dir_path,
-        prefs.get('mainWindow.initialStation'),
-        prefs.get('mainWindow.initialDetector'),
-        prefs.get('mainWindow.initialClipClass'),
+        prefs.get('main_window.initial_station'),
+        prefs.get('main_window.initial_detector'),
+        prefs.get('main_window.initial_clip_class'),
         commands_preset_name)
     
     _set_geometry(window, app.desktop().availableGeometry())
@@ -83,15 +83,15 @@ def _get_commands_preset_name(args):
     
     name = args.classification_commands
     if name is None:
-        name = prefs.get('clipsWindow.defaultClassificationCommands')
+        name = prefs.get('clips_window.default_classification_commands')
         
     return name
         
     
 def _set_geometry(window, available_rect):
     
-    w = prefs.get('mainWindow.width')
-    h = prefs.get('mainWindow.height')
+    w = prefs.get('main_window.width')
+    h = prefs.get('main_window.height')
     
     if w is not None and h is not None:
         # width and height preferences specified

@@ -119,20 +119,20 @@ class SpectrogramClipFigure(ClipFigure):
         self._play_button = ClipFigurePlayButton(self)
         
         self._show_selections = \
-            prefs.get('clipFigure.showSelections', False)
+            prefs.get('clip_figure.show_selections', False)
             
         if self._show_selections:
             self._selection_polygon = None
             self._selection_event_handler = _SelectionEventHandler(self)
             
         self._show_detection = \
-            prefs.get('clipFigure.showDetection', False)
+            prefs.get('clip_figure.show_detection', False)
             
         if self._show_detection:
             self._detection_polygon = None
             
         self._show_segment_coarse_classifications = \
-            prefs.get('clipFigure.showSegmentCoarseClassifications', False)
+            prefs.get('clip_figure.show_segment_coarse_classifications', False)
             
         if self._show_segment_coarse_classifications:
             self._coarse_classification_line = None
@@ -294,8 +294,8 @@ class SpectrogramClipFigure(ClipFigure):
                 else:
                     spectra = clip.spectrogram.spectra
             
-                min_power = prefs.get('clipFigure.spectrogram.minPower', -20)
-                max_power = prefs.get('clipFigure.spectrogram.maxPower', 80)
+                min_power = prefs.get('clip_figure.spectrogram.min_power', -20)
+                max_power = prefs.get('clip_figure.spectrogram.max_power', 80)
             
             elif _IMAGE_TYPE == 'Instantaneous Frequency':
                 
@@ -397,7 +397,9 @@ class SpectrogramClipFigure(ClipFigure):
             
             pos = self._get_mouse_pos(event)
             
-            if prefs.get('clipFigure.showMouseLocation') and pos is not None:
+            if prefs.get('clip_figure.show_mouse_location') and \
+                    pos is not None:
+                
                 x, y = pos
                 text = '{:.3f} s  {:d} Hz'.format(x, int(round(y)))
                 
@@ -571,8 +573,8 @@ def _show_event(e, prefix):
 
 def _create_clip_text(axes):
     # TODO: Allow control of font name?
-    color = prefs.get('clipFigure.clipTextColor')
-    size = prefs.get('clipFigure.clipTextFontSize')
+    color = prefs.get('clip_figure.clip_text_color')
+    size = prefs.get('clip_figure.clip_text_font_size')
     return axes.text(
         .5, .02, '', color=color, size=size, ha='center',
         transform=axes.transAxes)
@@ -582,7 +584,7 @@ def _get_clip_text(clip):
     
     name = _get_clip_class_display_name(clip.clip_class_name)
     
-    if prefs.get('clipFigure.showClipTimes'):
+    if prefs.get('clip_figure.show_clip_times'):
         time = _format_clip_time(clip)
     else:
         time = None
@@ -599,7 +601,7 @@ def _get_clip_text(clip):
 
 def _get_clip_class_display_name(name):
     
-    if prefs.get('clipFigure.showClipClassNames'):
+    if prefs.get('clip_figure.show_clip_class_names'):
         
         if name is None:
             return Archive.CLIP_CLASS_NAME_UNCLASSIFIED

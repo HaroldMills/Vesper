@@ -68,11 +68,11 @@ class MainWindow(QMainWindow):
             self, self._archive, f.station_name, f.detector_name, date,
             f.clip_class_name, self._commands_preset_name)
         
-        width = prefs.get('clipsWindow.width')
-        height = prefs.get('clipsWindow.height')
+        width = prefs.get('clips_window.width')
+        height = prefs.get('clips_window.height')
         window.setGeometry(100, 100, width, height)
         
-        openMaximized = prefs.get('clipsWindow.maximize')
+        openMaximized = prefs.get('clips_window.maximize')
         if openMaximized:
             window.showMaximized()
         else:

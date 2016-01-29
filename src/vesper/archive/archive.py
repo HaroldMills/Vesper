@@ -1142,7 +1142,7 @@ def _get_name_components(clip_classes):
 # spectrogram parameters. Some sort of general facility for computing
 # and managing derived data (not just spectrograms) for a collection of
 # clips may be the way to go.
-# TODO: Confine code that reads `clipFigure` preferences to the
+# TODO: Confine code that reads `clip_figure` preferences to the
 # `clips_window` module. This can happen after we figure out how to
 # support clients that use spectrograms computed with different
 # parameters.
@@ -1155,14 +1155,14 @@ def _get_spectrogram_params():
     
     if _spectrogram_params is None:
         
-        window_type_name = prefs.get('clipFigure.spectrogram.windowType')
-        window_size = prefs.get('clipFigure.spectrogram.windowSize')
+        window_type_name = prefs.get('clip_figure.spectrogram.window_type')
+        window_size = prefs.get('clip_figure.spectrogram.window_size')
         window = data_windows.create_window(window_type_name, window_size)
         
         _spectrogram_params = Bunch(
             window=window,
-            hop_size=prefs.get('clipFigure.spectrogram.hopSize'),
-            dft_size=prefs.get('clipFigure.spectrogram.dftSize'),
+            hop_size=prefs.get('clip_figure.spectrogram.hop_size'),
+            dft_size=prefs.get('clip_figure.spectrogram.dft_size'),
             ref_power=1)
         
     return _spectrogram_params

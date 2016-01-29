@@ -70,9 +70,9 @@ class ClipsWindow(QMainWindow):
         self._rug_plot = ClipTimesRugPlot(parent, self.move_to_page)
         
         config = Bunch(
-            clips_area_width=prefs.get('clipsWindow.duration'),
-            clip_spacing=prefs.get('clipsWindow.spacing'),
-            num_rows=prefs.get('clipsWindow.numRows'),
+            clips_area_width=prefs.get('clips_window.duration'),
+            clip_spacing=prefs.get('clips_window.spacing'),
+            num_rows=prefs.get('clips_window.num_rows'),
             min_clip_height=40,
             selection_rect_thickness=3,
             selection_rect_color='red'
@@ -479,7 +479,7 @@ class _FiguresFrame(QWidget):
                 
             self._execute_action(action, intervals)
             
-            if prefs.get('clipsWindow.advanceAfterClassification'):
+            if prefs.get('clips_window.advance_after_classification'):
                 self._advance_after_classification(scope)
                 
                             

@@ -222,9 +222,10 @@ class ClipTimesRugPlot(object):
         
         # Configure X axis.
         start_time = prefs.get(
-            'clipsWindow.rugPlot.startTime', _DEFAULT_START_TIME)
-        end_time = prefs.get('clipsWindow.rugPlot.endTime', _DEFAULT_END_TIME)
-        padding = prefs.get('clipsWindow.rugPlot.padding', _DEFAULT_PADDING)
+            'clips_window.rug_plot.start_time', _DEFAULT_START_TIME)
+        end_time = prefs.get(
+            'clips_window.rug_plot.end_time', _DEFAULT_END_TIME)
+        padding = prefs.get('clips_window.rug_plot.padding', _DEFAULT_PADDING)
 
         # If end time is less than start time, assume it is for the
         # following day.
