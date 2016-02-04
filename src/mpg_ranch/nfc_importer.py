@@ -39,8 +39,12 @@ _parse_dur = time_utils.parse_time_delta
 
 
 _STATION_NAMES = {
-                  
+    
     'baldy': 'Baldy NFC',
+    
+    'flam': 'Flam Point 569 SMX-II',
+    
+    'flam-east': 'Flam Point 457 SMX-II',
     
     'flood': 'Floodplain NFC',
     'floodnfc': 'Floodplain NFC',
@@ -51,8 +55,9 @@ _STATION_NAMES = {
     'ridge21c': 'Ridge 21c',
     
     'sheep': 'Sheep Camp NFC',
+    'sheepcamp': 'Sheep Camp NFC',
     'sheepnfc': 'Sheep Camp NFC',
-    'sheep21c': 'Sheep Camp 21c',
+    'sheepsmxii': 'Sheep Camp SMX-II',
     
     'florence': 'Florence 21c',
     
@@ -73,7 +78,7 @@ _FieldFormat = namedtuple(
     
 _FIELD_FORMATS = dict((t[0], _FieldFormat(*t)) for t in (
     ('class', 'clip_class_name', r'([a-zA-Z_]+)', 1, _identity),
-    ('station', 'station_name', r'(baldy|flood|ridge|sheep)', 1,
+    ('station', 'station_name', r'([a-zA-Z0-9\-]+)', 1,
      _parse_station_name),
     ('detector', 'detector_name', r'(Tseep|Thrush|Manual)', 1, _capitalize),
     ('date6', 'monitoring_start_date', r'(\d{2})(\d{2})(\d{2})', 3,
