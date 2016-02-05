@@ -12,6 +12,7 @@ import yaml
 from vesper.util.bunch import Bunch
 from vesper.vcl.clip_visitor import ClipVisitor
 from vesper.vcl.command import CommandExecutionError
+import vesper.util.astro_utils as astro_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
@@ -138,6 +139,38 @@ columns:
               values:
                   true: 'yes'
                   false: 'no'
+                  
+    - name: sunset
+      measurement: Sunset Time
+      format: Time
+      
+    - name: civil_dusk
+      measurement: Civil Dusk Time
+      format: Time
+      
+    - name: nautical_dusk
+      measurement: Nautical Dusk Time
+      format: Time
+      
+    - name: astronomical_dusk
+      measurement: Astronomical Dusk Time
+      format: Time
+      
+    - name: astronomical_dawn
+      measurement: Astronomical Dawn Time
+      format: Time
+      
+    - name: nautical_dawn
+      measurement: Nautical Dawn Time
+      format: Time
+      
+    - name: civil_dawn
+      measurement: Civil Dawn Time
+      format: Time
+      
+    - name: sunrise
+      measurement: Sunrise Time
+      format: Time
       
 ''')
 
@@ -337,6 +370,39 @@ def _create_measurement(column):
     return klass()
 
 
+class AstronomicalDawnMeasurement(object):
+    
+    name = 'Astronomical Dawn Time'
+    
+    def measure(self, clip):
+        return _astro_aux(
+            clip, 'get_astronomical_dawn_time', increment_date=True)
+
+
+class AstronomicalDuskMeasurement(object):
+    
+    name = 'Astronomical Dusk Time'
+    
+    def measure(self, clip):
+        return _astro_aux(clip, 'get_astronomical_dusk_time')
+
+
+class CivilDawnMeasurement(object):
+    
+    name = 'Civil Dawn Time'
+    
+    def measure(self, clip):
+        return _astro_aux(clip, 'get_civil_dawn_time', increment_date=True)
+
+
+class CivilDuskMeasurement(object):
+    
+    name = 'Civil Dusk Time'
+    
+    def measure(self, clip):
+        return _astro_aux(clip, 'get_civil_dusk_time')
+
+
 class ClipClassMeasurement(object):
     
     name = 'Clip Class'
@@ -433,6 +499,22 @@ class FileNameMeasurement(object):
             return os.path.basename(clip.file_path)
     
     
+class NauticalDawnMeasurement(object):
+    
+    name = 'Nautical Dawn Time'
+    
+    def measure(self, clip):
+        return _astro_aux(clip, 'get_nautical_dawn_time', increment_date=True)
+
+
+class NauticalDuskMeasurement(object):
+    
+    name = 'Nautical Dusk Time'
+    
+    def measure(self, clip):
+        return _astro_aux(clip, 'get_nautical_dusk_time')
+
+
 class NightMeasurement(object):
     
     name = 'Night'
@@ -506,18 +588,68 @@ class StationMeasurement(object):
         return clip.station.name
     
     
+class SunriseTimeMeasurement(object):
+    
+    name = 'Sunrise Time'
+    
+    def measure(self, clip):
+        return _astro_aux(clip, 'get_sunrise_time', increment_date=True)
+    
+    
+def _astro_aux(clip, function_name, increment_date=False):
+    
+    date = clip.night
+    if increment_date:
+        date += datetime.timedelta(days=1)
+    
+    station = clip.station
+    
+    lon = station.longitude
+    lat = station.latitude
+    if lon is None or lat is None:
+        return None
+    
+    function = getattr(astro_utils, function_name)
+    
+    try:
+        time = function(date, lon, lat)
+    except ValueError:
+        return None
+    
+    time_zone = station.time_zone
+    time = time.astimezone(time_zone)
+    
+    return time
+
+    
+class SunsetTimeMeasurement(object):
+    
+    name = 'Sunset Time'
+    
+    def measure(self, clip):
+        return _astro_aux(clip, 'get_sunset_time')
+    
+    
 _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
+    AstronomicalDawnMeasurement,
+    AstronomicalDuskMeasurement,
+    CivilDawnMeasurement,
+    CivilDuskMeasurement,
     ClipClassMeasurement,
     DetectorMeasurement,
     DuplicateCallMeasurement,
     ElapsedStartTimeMeasurement,
     FileNameMeasurement,
+    NauticalDawnMeasurement,
+    NauticalDuskMeasurement,
     NightMeasurement,
     RecordingDurationMeasurement,
     RecordingStartTimeMeasurement,
     RoundedStartTimeMeasurement,
     StartTimeMeasurement,
-    StationMeasurement
+    StationMeasurement,
+    SunriseTimeMeasurement,
+    SunsetTimeMeasurement
 ])
 
 
