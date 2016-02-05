@@ -5,7 +5,7 @@ import pytz
 
 from vesper.util.named import Named
 import vesper.archive.archive_shared as archive_shared
-import vesper.util.sun_utils as sun_utils
+import vesper.util.astro_utils as astro_utils
 
 
 def memoize(function):
@@ -97,7 +97,7 @@ class Station(Named):
     @memoize
     def get_sunset_time(self, date):
         lon, lat = self._get_lon_lat()
-        return sun_utils.get_sunset_time(date, lon, lat)
+        return astro_utils.get_sunset_time(date, lon, lat)
         
         
     def _get_lon_lat(self):
@@ -116,4 +116,4 @@ class Station(Named):
     @memoize
     def get_sunrise_time(self, date):
         lon, lat = self._get_lon_lat()
-        return sun_utils.get_sunrise_time(date, lon, lat)
+        return astro_utils.get_sunrise_time(date, lon, lat)

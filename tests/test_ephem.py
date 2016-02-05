@@ -32,10 +32,11 @@ import pytz
 import six
 
 from vesper.util.usno_sun_moon_table import UsnoSunMoonTable
-import vesper.util.sun_utils as sun_utils
+import vesper.util.astro_utils as astro_utils
 
 
-_DATA_DIR_PATH = '/Users/Harold/Desktop/NFC/Data/USNO Tables'
+_DATA_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\USNO Tables'
+# _DATA_DIR_PATH = '/Users/Harold/Desktop/NFC/Data/USNO Tables'
 _CSV_FILE_NAME = 'Rise Set Data.csv'
 _BIG_DIFFS_FILE_NAME = 'Big Differences.txt'
 
@@ -47,17 +48,17 @@ _OUTPUT_HEADER = (
     'Settings Diff 2,Extra Ephem Settings,Extra USNO Settings')
 
 _RISING_FUNCTIONS = {
-    'Sunrise/Sunset': sun_utils.get_sunrise_time,
-    'Civil Twilight': sun_utils.get_civil_dawn_time,
-    'Nautical Twilight': sun_utils.get_nautical_dawn_time,
-    'Astronomical Twilight': sun_utils.get_astronomical_dawn_time
+    'Sunrise/Sunset': astro_utils.get_sunrise_time,
+    'Civil Twilight': astro_utils.get_civil_dawn_time,
+    'Nautical Twilight': astro_utils.get_nautical_dawn_time,
+    'Astronomical Twilight': astro_utils.get_astronomical_dawn_time
 }
 
 _SETTING_FUNCTIONS = {
-    'Sunrise/Sunset': sun_utils.get_sunset_time,
-    'Civil Twilight': sun_utils.get_civil_dusk_time,
-    'Nautical Twilight': sun_utils.get_nautical_dusk_time,
-    'Astronomical Twilight': sun_utils.get_astronomical_dusk_time
+    'Sunrise/Sunset': astro_utils.get_sunset_time,
+    'Civil Twilight': astro_utils.get_civil_dusk_time,
+    'Nautical Twilight': astro_utils.get_nautical_dusk_time,
+    'Astronomical Twilight': astro_utils.get_astronomical_dusk_time
 }
 
 _DISTINCT_EVENTS_DIFF = 10     # minutes

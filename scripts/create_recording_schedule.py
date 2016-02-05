@@ -26,7 +26,7 @@ import datetime
 import pytz
 
 import vesper.util.os_utils as os_utils
-import vesper.util.sun_utils as sun_utils
+import vesper.util.astro_utils as astro_utils
 import vesper.util.time_utils as time_utils
 
 
@@ -67,8 +67,8 @@ OUTPUT_FILE_PATH = 'Schedule.csv'
 
 def _main():
     
-    get_sunset = sun_utils.get_sunset_time
-    get_sunrise = sun_utils.get_sunrise_time
+    get_sunset = astro_utils.get_sunset_time
+    get_sunrise = astro_utils.get_sunrise_time
     night = START_NIGHT
     one_day = datetime.timedelta(days=1)
     sunset_offset = datetime.timedelta(minutes=SUNSET_OFFSET)
