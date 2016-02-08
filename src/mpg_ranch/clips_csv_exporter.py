@@ -172,6 +172,20 @@ columns:
       measurement: Sunrise Time
       format: Time
       
+    - name: moon_altitude
+      measurement: Moon Altitude
+      format:
+          name: Decimal
+          parameters:
+              detail: ".1"
+
+    - name: moon_illumination
+      measurement: Moon Illumination
+      format:
+          name: Decimal
+          parameters:
+              detail: ".1"
+      
 ''')
 
      
@@ -499,6 +513,42 @@ class FileNameMeasurement(object):
             return os.path.basename(clip.file_path)
     
     
+class MoonAltitudeMeasurement(object):
+    
+    name = 'Moon Altitude'
+    
+    def measure(self, clip):
+        
+        time = clip.start_time
+        
+        station = clip.station
+        lon = station.longitude
+        lat = station.latitude
+        
+        if lon is None or lat is None:
+            return None
+        else:
+            return astro_utils.get_moon_altitude(time, lon, lat)
+    
+    
+class MoonIlluminationMeasurement(object):
+    
+    name = 'Moon Illumination'
+    
+    def measure(self, clip):
+        
+        time = clip.start_time
+        
+        station = clip.station
+        lon = station.longitude
+        lat = station.latitude
+        
+        if lon is None or lat is None:
+            return None
+        else:
+            return astro_utils.get_moon_illumination(time, lon, lat)
+    
+    
 class NauticalDawnMeasurement(object):
     
     name = 'Nautical Dawn Time'
@@ -640,6 +690,8 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     DuplicateCallMeasurement,
     ElapsedStartTimeMeasurement,
     FileNameMeasurement,
+    MoonAltitudeMeasurement,
+    MoonIlluminationMeasurement,
     NauticalDawnMeasurement,
     NauticalDuskMeasurement,
     NightMeasurement,
@@ -708,6 +760,20 @@ class CallClipClassFormat(object):
             return self._mapping.get(name, name.lower())
         
            
+class DecimalFormat(object):
+    
+    name = 'Decimal'
+    
+    def __init__(self, parameters=None):
+        if parameters is None:
+            self._format = '{:f}'
+        else:
+            self._format = '{:' + parameters.get('detail', '') + 'f}'
+            
+    def format(self, x):
+        return self._format.format(x)
+    
+        
 class DurationFormat(object):
 
     
@@ -817,6 +883,7 @@ _FORMAT_CLASSES = dict((c.name, c) for c in [
     BirdMigrationSeasonFormat,
     BooleanFormat,
     CallClipClassFormat,
+    DecimalFormat,
     DurationFormat,
     LowerCaseFormat,
     MappingFormat,
