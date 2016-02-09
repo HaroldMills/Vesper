@@ -15,14 +15,14 @@ _DRY_RUN = True
 
 _DIR_PATH = '/Users/Harold/Desktop/NFC/Data/USNO Tables Test'
 
-_GRID_LONS = range(-180, 151, 60)     # 6 longitudes
 _GRID_LATS = range(-80, 81, 20)       # 9 latitudes
+_GRID_LONS = range(-180, 151, 60)     # 6 longitudes
 _GRID_YEARS = range(1990, 2031, 10)   # 5 years
 
 _EXTRA_LOCATION_YEARS = range(1990, 2031, 1)
 _EXTRA_LOCATIONS = (
-    (-76.5, 42.45, -4, 'Ithaca, NY'),
-    (-114.0, 46.70, -6, 'MPG Ranch')
+    (42.45, -76.5, -4, 'Ithaca, NY'),
+    (46.70, -114.0, -6, 'MPG Ranch')
 )
 
 _TABLE_TYPES = (
@@ -43,17 +43,17 @@ def _main():
     
     _wait_until_time(_START_TIME)
     
-    for lon in _GRID_LONS:
+    for table_type in _TABLE_TYPES:
+        
         for lat in _GRID_LATS:
-            for year in _GRID_YEARS:
-                for table_type in _TABLE_TYPES:
-                    _download_table('Grid', table_type, year, lon, lat)
+            for lon in _GRID_LONS:
+                for year in _GRID_YEARS:
+                    _download_table('Grid', table_type, lat, lon, year)
 
-    for lon, lat, utc_offset, place_name in _EXTRA_LOCATIONS:
-        for year in _EXTRA_LOCATION_YEARS:
-            for table_type in _TABLE_TYPES:
+        for lat, lon, utc_offset, place_name in _EXTRA_LOCATIONS:
+            for year in _EXTRA_LOCATION_YEARS:
                 _download_table(
-                    place_name, table_type, year, lon, lat, utc_offset,
+                    place_name, table_type, lat, lon, year, utc_offset,
                     place_name)
             
 
@@ -63,7 +63,7 @@ def _wait_until_time(dt):
         
     
 def _download_table(
-        subdir_name, table_type, year, lon, lat, utc_offset=None,
+        subdir_name, table_type, lat, lon, year, utc_offset=None,
         place_name=None):
     
     _pause(_PAUSE_DURATION)
@@ -73,9 +73,9 @@ def _download_table(
     else:
         type_ = _TABLE_TYPES_DICT.get(table_type, table_type)
         table = UsnoSunMoonTable.download_table_text(
-            type_, year, lon, lat, utc_offset, place_name)
+            type_, lat, lon, year, utc_offset, place_name)
     
-    file_name = _create_table_file_name(table_type, lon, lat, year, place_name)
+    file_name = _create_table_file_name(table_type, lat, lon, year, place_name)
     file_path = os.path.join(_DIR_PATH, subdir_name, table_type, file_name)
     print('writing file "{:s}"...'.format(file_name))
     _write_file(file_path, table)
@@ -86,10 +86,10 @@ def _pause(duration):
         time.sleep(duration)
     
     
-def _create_table_file_name(table_type, lon, lat, year, name=None):
-    lon = _format_angle(lon, '{:05.1f}')
+def _create_table_file_name(table_type, lat, lon, year, name=None):
     lat = _format_angle(lat, '{:05.2f}')
-    prefix = '{:s}_{:s}_{:s}_{:d}'.format(table_type, lon, lat, year)
+    lon = _format_angle(lon, '{:05.1f}')
+    prefix = '{:s}_{:s}_{:s}_{:d}'.format(table_type, lat, lon, year)
     name = ('_' + name) if name is not None else ''
     return prefix + name + '.txt'
 

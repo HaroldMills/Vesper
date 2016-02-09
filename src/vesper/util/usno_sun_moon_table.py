@@ -19,17 +19,17 @@ class UsnoSunMoonTable(object):
     
     @staticmethod
     def download_table_text(
-            table_type, year, lon, lat, utc_offset=None, place_name=None):
+            table_type, lat, lon, year, utc_offset=None, place_name=None):
         
         return _download_table_text(
-            table_type, year, place_name, lon, lat, utc_offset)
+            table_type, place_name, lat, lon, year, utc_offset)
 
     
     def __init__(self, table_text):
         
         self._text = table_text
         
-        (self._type, self._year, self._place_name, self._lon, self._lat,
+        (self._type, self._place_name, self._lat, self._lon, self._year,
          self._utc_offset, self._rising_times, self._setting_times) = \
             _parse_table(self._text)
              
@@ -43,20 +43,20 @@ class UsnoSunMoonTable(object):
         return self._type
     
     @property
-    def year(self):
-        return self._year
-    
-    @property
     def place_name(self):
         return self._place_name
+    
+    @property
+    def lat(self):
+        return self._lat
     
     @property
     def lon(self):
         return self._lon
     
     @property
-    def lat(self):
-        return self._lat
+    def year(self):
+        return self._year
     
     @property
     def utc_offset(self):
@@ -101,9 +101,6 @@ _TABLE_TYPE_NAMES = (
     'Astronomical Twilight'
 )
 
-_YEAR_LINE_NUM = 1
-_YEAR_RE = re.compile(r'(\d\d\d\d)')
-
 _PLACE_NAME_LINE_NUM = 0
 _PLACE_NAME_START_INDEX = 25
 _PLACE_NAME_END_INDEX = 103
@@ -111,6 +108,9 @@ _PLACE_NAME_END_INDEX = 103
 _LOCATION_LINE_NUM = 1
 _LOCATION_RE = re.compile(
     r'Location: ([WE ])(\d\d\d) (\d\d), ([NS ])(\d\d) (\d\d)')
+
+_YEAR_LINE_NUM = 1
+_YEAR_RE = re.compile(r'(\d\d\d\d)')
 
 _UTC_OFFSET_LINE_NUM = 3
 _UTC_OFFSET_RE = re.compile(r'(\d+)(\.\d+)?h (West|East) of Greenwich')
@@ -121,7 +121,7 @@ _SET_OFFSET = 9
 _MONTH_WIDTH = 11
 
 
-def _download_table_text(table_type, year, place_name, lon, lat, utc_offset):
+def _download_table_text(table_type, place_name, lat, lon, year, utc_offset):
     
     try:
         table_type = _TABLE_TYPE_NUMS[table_type]
@@ -131,28 +131,27 @@ def _download_table_text(table_type, year, place_name, lon, lat, utc_offset):
     if place_name is None:
         place_name = ''
         
+    lat_sign, lat_degrees, lat_minutes = _get_angle_data(lat)
+    lon_sign, lon_degrees, lon_minutes = _get_angle_data(lon)
+    
     if utc_offset is None:
         utc_offset = 24 * (lon / 360.)
     
-    lon_sign, lon_degrees, lon_minutes = _get_angle_data(lon)
-    lat_sign, lat_degrees, lat_minutes = _get_angle_data(lat)
-    
     utc_offset_sign = _get_sign(utc_offset)
-    utc_offset = utc_offset_sign * utc_offset
     
     values = {
         'FFX': 2,
-        'xxy': year,
         'type': table_type,
         'place': place_name,
-        'xx0': lon_sign,
-        'xx1': lon_degrees,
-        'xx2': lon_minutes,
         'yy0': lat_sign,
         'yy1': lat_degrees,
         'yy2': lat_minutes,
+        'xx0': lon_sign,
+        'xx1': lon_degrees,
+        'xx2': lon_minutes,
+        'xxy': year,
         'zz0': utc_offset_sign,
-        'zz1': utc_offset,
+        'zz1': abs(utc_offset),
         'ZZZ': 'END'
     }
     
@@ -185,13 +184,13 @@ def _parse_table(text):
     lines = text.split('\n')
     lines = _strip_leading_and_trailing_blank_lines(lines)
     
-    table_type, year, place_name, lon, lat, utc_offset = \
+    table_type, place_name, lat, lon, year, utc_offset = \
         _parse_table_header(lines)
     
     rising_times = _parse_table_times(lines, year, utc_offset, _RISE_OFFSET)
     setting_times = _parse_table_times(lines, year, utc_offset, _SET_OFFSET)
     
-    return (table_type, year, place_name, lon, lat, utc_offset,
+    return (table_type, place_name, lat, lon, year, utc_offset,
             rising_times, setting_times)
 
 
@@ -211,11 +210,11 @@ def _strip_leading_and_trailing_blank_lines(lines):
         
 def _parse_table_header(lines):
     table_type = _parse_table_type(lines)
-    year = _parse_year(lines)
     place_name = _parse_place_name(lines)
-    lon, lat = _parse_location(lines)
+    lat, lon = _parse_location(lines)
+    year = _parse_year(lines)
     utc_offset = _parse_utc_offset(lines)
-    return (table_type, year, place_name, lon, lat, utc_offset)
+    return (table_type, place_name, lat, lon, year, utc_offset)
 
 
 def _parse_table_type(lines):
@@ -237,19 +236,6 @@ def _handle_header_parse_error(name, line_num):
             name, line_num + 1))
 
 
-def _parse_year(lines):
-    
-    line = lines[_YEAR_LINE_NUM]
-    m = _YEAR_RE.search(line)
-    
-    if m is None:
-        _handle_header_parse_error('year', _YEAR_LINE_NUM)
-        
-    year = int(m.group(0))
-    
-    return year
-
-        
 def _parse_place_name(lines):
     line = lines[_PLACE_NAME_LINE_NUM]
     name = line[_PLACE_NAME_START_INDEX:_PLACE_NAME_END_INDEX].strip()
@@ -265,10 +251,10 @@ def _parse_location(lines):
         _handle_header_parse_error('location', _LOCATION_LINE_NUM)
         
     lon_dir, lon_deg, lon_min, lat_dir, lat_deg, lat_min = m.groups()
-    lon = _get_angle(lon_dir, 'E', lon_deg, lon_min)
     lat = _get_angle(lat_dir, 'N', lat_deg, lat_min)
+    lon = _get_angle(lon_dir, 'E', lon_deg, lon_min)
     
-    return (lon, lat)
+    return (lat, lon)
 
 
 def _get_angle(direction, positive_direction, degrees, minutes):
@@ -276,6 +262,19 @@ def _get_angle(direction, positive_direction, degrees, minutes):
     return sign * (int(degrees) + int(minutes) / 60.)
 
 
+def _parse_year(lines):
+    
+    line = lines[_YEAR_LINE_NUM]
+    m = _YEAR_RE.search(line)
+    
+    if m is None:
+        _handle_header_parse_error('year', _YEAR_LINE_NUM)
+        
+    year = int(m.group(0))
+    
+    return year
+
+        
 def _parse_utc_offset(lines):
     
     line = lines[_UTC_OFFSET_LINE_NUM]

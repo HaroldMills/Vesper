@@ -101,17 +101,17 @@ class UsnoSunMoonUtilsTests(TestCase):
         
         
     def test_high_latitude_sun_table(self):
-        header = ('Sunrise/Sunset', 2015, '', 0, 80, 0)
+        header = ('Sunrise/Sunset', '', 80, 0, 2015, 0)
         self._test_table(_HIGH_LATITUDE_SUN_TABLE, header, 101, 101)
         
         
-    def test_zero_lon_lat_sun_table(self):
-        header = ('Sunrise/Sunset', 2000, '', 0, 0, 0)
-        self._test_table(_ZERO_LON_LAT_SUN_TABLE, header, 366, 366)
+    def test_zero_lat_lon_sun_table(self):
+        header = ('Sunrise/Sunset', '', 0, 0, 2000, 0)
+        self._test_table(_ZERO_LAT_LON_SUN_TABLE, header, 366, 366)
         
         
     def test_east_south_sun_table(self):
-        header = ('Sunrise/Sunset', 2015, '', 76.5, -42.45, 4)
+        header = ('Sunrise/Sunset', '', -42.45, 76.5, 2015, 4)
         self._test_table(_EAST_SOUTH_SUN_TABLE, header, 365, 365)
         
         
@@ -119,18 +119,18 @@ class UsnoSunMoonUtilsTests(TestCase):
     # time we run Vesper unit tests.
 #     def test_download_table_text(self):
 #         text = UsnoSunMoonTable.download_table_text(
-#             'Sunrise/Sunset', 2015, -76.5, 42.45, -4, 'Ithaca, NY')
+#             'Sunrise/Sunset', 42.45, -76.5, 2015, -4, 'Ithaca, NY')
 #         self.assertEqual(text, _ITHACA_SUN_TABLE[1:])
         
         
     def _check_header(
-            self, table, table_type, year, place_name, lon, lat, utc_offset):
+            self, table, table_type, place_name, lat, lon, year, utc_offset):
         
         self.assertEqual(table.type, table_type)
-        self.assertEqual(table.year, year)
         self.assertEqual(table.place_name, place_name)
-        self.assertEqual(table.lon, lon)
         self.assertEqual(table.lat, lat)
+        self.assertEqual(table.lon, lon)
+        self.assertEqual(table.year, year)
         self.assertEqual(table.utc_offset, utc_offset)
         
         
@@ -147,7 +147,7 @@ class UsnoSunMoonUtilsTests(TestCase):
         self.assertEqual(time, expected)
         
         
-_ITHACA_HEADER_DATA = (2015, 'ITHACA, NY', -76.5, 42.45, -4)
+_ITHACA_HEADER_DATA = ('ITHACA, NY', 42.45, -76.5, 2015, -4)
 
 
 _ITHACA_SUN_TABLE = '''
@@ -457,7 +457,7 @@ Day Rise  Set  Rise  Set  Rise  Set  Rise  Set  Rise  Set  Rise  Set  Rise  Set 
 (**** object continuously above horizon)                                                      (---- object continuously below horizon)
 '''
 
-_ZERO_LON_LAT_SUN_TABLE = '''
+_ZERO_LAT_LON_SUN_TABLE = '''
              o  ,    o  ,                                                                              Astronomical Applications Dept.
 Location:  000 00,  00 00                          Rise and Set for the Sun for 2000                   U. S. Naval Observatory        
                                                                                                        Washington, DC  20392-5420     

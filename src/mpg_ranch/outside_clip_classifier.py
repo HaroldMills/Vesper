@@ -85,7 +85,7 @@ def _is_clip_outside_monitoring_period(clip):
     
     station = clip.station
     
-    if station.longitude is None or station.latitude is None:
+    if station.latitude is None or station.longitude is None:
         # station location unknown
         
         return False

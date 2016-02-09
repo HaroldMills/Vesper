@@ -38,54 +38,54 @@ _ALMOST_ONE_DAY = \
     datetime.timedelta(days=1) - datetime.timedelta(microseconds=1)
 
 
-def get_sunrise_time(date, lon, lat):
-    return _get_rising_time(date, lon, lat, _SUN, _RISE_SET_HORIZON)
+def get_sunrise_time(lat, lon, date):
+    return _get_rising_time(lat, lon, date, _SUN, _RISE_SET_HORIZON)
 
 
-def get_sunset_time(date, lon, lat):
-    return _get_setting_time(date, lon, lat, _SUN, _RISE_SET_HORIZON)
+def get_sunset_time(lat, lon, date):
+    return _get_setting_time(lat, lon, date, _SUN, _RISE_SET_HORIZON)
 
 
-def get_civil_dawn_time(date, lon, lat):
+def get_civil_dawn_time(lat, lon, date):
     return _get_rising_time(
-        date, lon, lat, _SUN, _CIVIL_HORIZON, use_center=True)
+        lat, lon, date, _SUN, _CIVIL_HORIZON, use_center=True)
 
 
-def get_civil_dusk_time(date, lon, lat):
+def get_civil_dusk_time(lat, lon, date):
     return _get_setting_time(
-        date, lon, lat, _SUN, _CIVIL_HORIZON, use_center=True)
+        lat, lon, date, _SUN, _CIVIL_HORIZON, use_center=True)
 
 
-def get_nautical_dawn_time(date, lon, lat):
+def get_nautical_dawn_time(lat, lon, date):
     return _get_rising_time(
-        date, lon, lat, _SUN, _NAUTICAL_HORIZON, use_center=True)
+        lat, lon, date, _SUN, _NAUTICAL_HORIZON, use_center=True)
 
 
-def get_nautical_dusk_time(date, lon, lat):
+def get_nautical_dusk_time(lat, lon, date):
     return _get_setting_time(
-        date, lon, lat, _SUN, _NAUTICAL_HORIZON, use_center=True)
+        lat, lon, date, _SUN, _NAUTICAL_HORIZON, use_center=True)
 
 
-def get_astronomical_dawn_time(date, lon, lat):
+def get_astronomical_dawn_time(lat, lon, date):
     return _get_rising_time(
-        date, lon, lat, _SUN, _ASTRONOMICAL_HORIZON, use_center=True)
+        lat, lon, date, _SUN, _ASTRONOMICAL_HORIZON, use_center=True)
     
     
-def get_astronomical_dusk_time(date, lon, lat):
+def get_astronomical_dusk_time(lat, lon, date):
     return _get_setting_time(
-        date, lon, lat, _SUN, _ASTRONOMICAL_HORIZON, use_center=True)
+        lat, lon, date, _SUN, _ASTRONOMICAL_HORIZON, use_center=True)
     
     
-def _get_rising_time(date, lon, lat, body, horizon, use_center=False):
+def _get_rising_time(lat, lon, date, body, horizon, use_center=False):
     method = ephem.Observer.next_rising
-    return _get_time(method, date, lon, lat, body, horizon, use_center)
+    return _get_time(method, lat, lon, date, body, horizon, use_center)
 
 
-def _get_time(method, date, lon, lat, body, horizon, use_center):
+def _get_time(method, lat, lon, date, body, horizon, use_center):
     
-    observer = _create_observer(lon, lat, horizon)
+    observer = _create_observer(lat, lon, horizon)
 
-    midnight = _get_midnight_as_ephem_date(date, lon)
+    midnight = _get_midnight_as_ephem_date(lon, date)
     
     try:
         ephem_date = method(
@@ -96,12 +96,12 @@ def _get_time(method, date, lon, lat, body, horizon, use_center):
         return _get_datetime_from_ephem_date(ephem_date)
     
     
-def _create_observer(lon, lat, horizon):
+def _create_observer(lat, lon, horizon):
     observer = ephem.Observer()
-    observer.pressure = 0
-    observer.horizon = horizon
-    observer.lon = _to_radians(lon)
     observer.lat = _to_radians(lat)
+    observer.lon = _to_radians(lon)
+    observer.horizon = horizon
+    observer.pressure = 0
     return observer
 
 
@@ -109,7 +109,7 @@ def _to_radians(degrees):
     return degrees * math.pi / 180.
 
 
-def _get_midnight_as_ephem_date(date, lon):
+def _get_midnight_as_ephem_date(lon, date):
     dt = datetime.datetime(date.year, date.month, date.day)
     dt -= datetime.timedelta(hours=lon * 24. / 360.)
     dt = pytz.utc.localize(dt)
@@ -124,13 +124,13 @@ def _get_datetime_from_ephem_date(ephem_date):
         year, month, day, hour, minute, second, microsecond, pytz.utc)
 
 
-def _get_setting_time(date, lon, lat, body, horizon, use_center=False):
+def _get_setting_time(lat, lon, date, body, horizon, use_center=False):
     method = ephem.Observer.next_setting
-    return _get_time(method, date, lon, lat, body, horizon, use_center)
+    return _get_time(method, lat, lon, date, body, horizon, use_center)
 
 
-def get_moon_altitude(time, lon, lat):
-    moon = _create_moon(time, lon, lat)
+def get_moon_altitude(lat, lon, time):
+    moon = _create_moon(lat, lon, time)
     return _to_degrees(float(moon.alt))
 
 
@@ -138,15 +138,15 @@ def _to_degrees(radians):
     return radians * 180. / math.pi
 
 
-def _create_moon(time, lon, lat):
+def _create_moon(lat, lon, time):
     observer = ephem.Observer()
-    observer.lon = _to_radians(lon)
     observer.lat = _to_radians(lat)
+    observer.lon = _to_radians(lon)
     observer.date = time
     return ephem.Moon(observer)
 
 
-def get_moon_illumination(time, lon, lat):
-    moon = _create_moon(time, lon, lat)
+def get_moon_illumination(lat, lon, time):
+    moon = _create_moon(lat, lon, time)
     return moon.phase
 

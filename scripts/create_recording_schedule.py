@@ -4,7 +4,7 @@ Script that creates a recording schedule.
 To use this script:
 
     1. Change the values of the variables below that have all-caps names
-       (LON, LAT, etc., all near the top of the file) for your use.
+       (LAT, LON, etc., all near the top of the file) for your use.
        
     2. At an operating system command prompt, change to the directory
        containing this script and then run the script with the command:
@@ -31,11 +31,11 @@ import vesper.util.time_utils as time_utils
 
 
 
-# longitude in degrees east
-LON = -114.076499
-
 # latitude in degrees north
 LAT = 46.641042
+
+# longitude in degrees east
+LON = -114.076499
 
 # start night (arguments to datetime.date function are year, month, and day)
 START_NIGHT = datetime.date(2015, 8, 20)
@@ -80,8 +80,8 @@ def _main():
         
         next_day = night + one_day
         
-        start_time = _get_time(get_sunset, night, LON, LAT, sunset_offset)
-        end_time = _get_time(get_sunrise, next_day, LON, LAT, sunrise_offset)
+        start_time = _get_time(get_sunset, LAT, LON, night, sunset_offset)
+        end_time = _get_time(get_sunrise, LAT, LON, next_day, sunrise_offset)
                 
         line = '{:s},{:s},{:s}'.format(str(night), start_time, end_time)
         lines.append(line)
@@ -92,9 +92,9 @@ def _main():
     os_utils.write_file(OUTPUT_FILE_PATH, text)
 
 
-def _get_time(function, date, lon, lat, offset):
+def _get_time(function, lat, lon, date, offset):
     
-    dt = function(date, lon, lat)
+    dt = function(lat, lon, date)
     dt += offset
     dt = time_utils.round_datetime(dt, 60)
     dt = dt.astimezone(TIME_ZONE)

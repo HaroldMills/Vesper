@@ -132,26 +132,26 @@ def _read_table(path):
 def _compare_against_table(table, place_name):
     
     year = table.year
-    lon = table.lon
     lat = table.lat
+    lon = table.lon
     
     if table.type in _RISING_FUNCTIONS:
 
         function = _RISING_FUNCTIONS[table.type]
-        times = _get_times(year, lon, lat, function)
+        times = _get_times(year, lat, lon, function)
         rising_diffs = _compare_times(times, table.rising_times, table)
         
         function = _SETTING_FUNCTIONS[table.type]
-        times = _get_times(year, lon, lat, function)
+        times = _get_times(year, lat, lon, function)
         setting_diffs = _compare_times(times, table.setting_times, table)
         
-        table_data = (table.type, year, lon, lat)
+        table_data = (table.type, year, lat, lon)
         data = (place_name,) + table_data + rising_diffs + setting_diffs
         line = ','.join(_format(d) for d in data)
         return line
         
                 
-def _get_times(year, lon, lat, function):
+def _get_times(year, lat, lon, function):
     
     times = []
     
@@ -162,7 +162,7 @@ def _get_times(year, lon, lat, function):
         for day in xrange(1, month_size + 1):
             
             date = datetime.date(year, month, day)
-            time = function(date, lon, lat)
+            time = function(lat, lon, date)
             
             if time is not None:
                 times.append(time)
@@ -202,7 +202,7 @@ def _compare_times(times, usno_times, table):
             
             elif abs(diff) >= _BIG_DIFF:
                 _big_diffs[diff].append(
-                    (table.type, table.lon, table.lat, time, usno_time))
+                    (table.type, table.lat, table.lon, time, usno_time))
                 diff_counts[_sign(diff) * _BIG_DIFF] += 1
                 
             else:
@@ -227,10 +227,6 @@ def _round_datetime(dt):
     return rounded_time
 
 
-def _get_table_info(table):
-    return (table.type, table.year, table.lon, table.lat)
-
-
 def _compare_times_carefully(times, usno_times, table):
     
     diff_counts = np.zeros(2 * _BIG_DIFF + 1, dtype=np.int32)
@@ -248,7 +244,7 @@ def _compare_times_carefully(times, usno_times, table):
             
             if abs(diff) >= _BIG_DIFF:
                 _big_diffs[diff].append(
-                    (table.type, table.lon, table.lat, time, usno_time))
+                    (table.type, table.lat, table.lon, time, usno_time))
                 diff_counts[_sign(diff) * _BIG_DIFF] += 1
                 
             else:

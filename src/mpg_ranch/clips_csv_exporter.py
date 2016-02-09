@@ -522,13 +522,13 @@ class MoonAltitudeMeasurement(object):
         time = clip.start_time
         
         station = clip.station
-        lon = station.longitude
         lat = station.latitude
+        lon = station.longitude
         
-        if lon is None or lat is None:
+        if lat is None or lon is None:
             return None
         else:
-            return astro_utils.get_moon_altitude(time, lon, lat)
+            return astro_utils.get_moon_altitude(lat, lon, time)
     
     
 class MoonIlluminationMeasurement(object):
@@ -540,13 +540,13 @@ class MoonIlluminationMeasurement(object):
         time = clip.start_time
         
         station = clip.station
-        lon = station.longitude
         lat = station.latitude
+        lon = station.longitude
         
-        if lon is None or lat is None:
+        if lat is None or lon is None:
             return None
         else:
-            return astro_utils.get_moon_illumination(time, lon, lat)
+            return astro_utils.get_moon_illumination(lat, lon, time)
     
     
 class NauticalDawnMeasurement(object):
@@ -654,15 +654,15 @@ def _astro_aux(clip, function_name, increment_date=False):
     
     station = clip.station
     
-    lon = station.longitude
     lat = station.latitude
-    if lon is None or lat is None:
+    lon = station.longitude
+    if lat is None or lon is None:
         return None
     
     function = getattr(astro_utils, function_name)
     
     try:
-        time = function(date, lon, lat)
+        time = function(lat, lon, date)
     except ValueError:
         return None
     
