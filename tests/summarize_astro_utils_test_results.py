@@ -1,4 +1,4 @@
-"""Summarizes PyEphem test results."""
+"""Summarizes `astro_utils` test results."""
 
 
 from __future__ import print_function
@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 
 
-_DATA_DIR_PATH = '/Users/Harold/Desktop/NFC/Data/USNO Tables'
+_DATA_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\USNO Tables'
+# _DATA_DIR_PATH = '/Users/Harold/Desktop/NFC/Data/USNO Tables'
 _CSV_FILE_NAME = 'Rise Set Data.csv'
 
 

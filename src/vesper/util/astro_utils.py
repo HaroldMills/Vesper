@@ -142,6 +142,7 @@ def _create_moon(lat, lon, time):
     observer = ephem.Observer()
     observer.lat = _to_radians(lat)
     observer.lon = _to_radians(lon)
+    observer.pressure = 0
     observer.date = time
     return ephem.Moon(observer)
 

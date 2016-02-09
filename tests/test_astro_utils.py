@@ -1,22 +1,26 @@
 """
-Tests the PyEphem module for calculating sunrise and sunset times.
+Tests the `astro_utils` module.
 
 This script compares sunrise and sunset times as well as civil, nautical,
-and astronomical dawn and dusk times computed by PyEphem to ones calculated
-by the United States Naval Observatory (USNO). The tests use USNO tables
-downloaded from http://aa.usno.navy.mil/data/docs/RS_OneYear.php by the
-script `download_usno_sun_tables`. The tests compare thousands of times
+and astronomical dawn and dusk times computed by the `astro_utils` module
+to ones calculated by the United States Naval Observatory (USNO). The tests
+use USNO tables downloaded from
+http://aa.usno.navy.mil/data/docs/RS_OneYear.php by the script
+`download_usno_sun_tables`. The tests compare thousands of times
 computed for locations on a global grid for years from 1990 to 2030.
 Test results are written to the CSV file "Rise Set Data.csv" and to the
 text file "Big Differences.txt". The script `summarize_ephem_test_results`
 computes some summary statistics from the test results.
 
-For latitudes below the polar circles, the comparisons find no PyEphem
-times that differ from the corresponding USNO times (the PyEphem times
+For latitudes below the polar circles, the comparisons find no `astro_utils`
+times that differ from the corresponding USNO times (the `astro_utils` times
 are rounded to the nearest minute prior to comparison, since the USNO
 times are rounded that way) by more than one minute. A small number of
-PyEphem dawn and dusk times for locations above the polar circles
+`astro_utils` dawn and dusk times for locations above the polar circles
 differ from the corresponding USNO times up to five minutes.
+
+The `astro_utils` module relies on PyEphem (see http://rhodesmill.org/pyephem)
+for its astronomical calculations.
 """
 
 
