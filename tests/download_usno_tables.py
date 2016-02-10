@@ -1,5 +1,5 @@
 """
-Downloads sunrise/sunset tables from the United States Naval Observatory.
+Downloads rise/set tables from the United States Naval Observatory.
 """
 
 
@@ -8,7 +8,7 @@ import datetime
 import os
 import time
 
-from vesper.util.usno_sun_moon_table import UsnoSunMoonTable
+from vesper.util.usno_rise_set_table import UsnoRiseSetTable
 
 
 _DRY_RUN = True
@@ -72,7 +72,7 @@ def _download_table(
         table = str(datetime.datetime.now()) + '\n'
     else:
         type_ = _TABLE_TYPES_DICT.get(table_type, table_type)
-        table = UsnoSunMoonTable.download_table_text(
+        table = UsnoRiseSetTable.download_table_text(
             type_, lat, lon, year, utc_offset, place_name)
     
     file_name = _create_table_file_name(table_type, lat, lon, year, place_name)

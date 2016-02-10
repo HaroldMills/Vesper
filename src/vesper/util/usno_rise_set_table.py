@@ -1,7 +1,4 @@
-"""
-Utility functions for retrieving and parsing sun and moon data from the
-United States Naval Observatory (USNO).
-"""
+"""Module containing `UsnoRiseSetTable` class."""
 
 
 from __future__ import print_function
@@ -14,8 +11,22 @@ import urllib2
 import pytz
 
 
-class UsnoSunMoonTable(object):
+class UsnoRiseSetTable(object):
     
+    """
+    Table of USNO rise and set times for the sun or moon.
+    
+    Tables come from the United States Naval Observatory (USNO) web site.
+    You can use the `download_table_text` static method to download them.
+    
+    Five different types of rise/set tables are available:
+    
+        - Sunrise/Sunset
+        - Moonrise/Moonset
+        - Civil Twilight
+        - Nautical Twilight
+        - Astronomical Twilight
+    """
     
     @staticmethod
     def download_table_text(

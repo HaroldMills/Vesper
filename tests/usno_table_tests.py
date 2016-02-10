@@ -4,10 +4,10 @@ import datetime
 import pytz
 
 from test_case import TestCase
-from vesper.util.usno_sun_moon_table import UsnoSunMoonTable
+from vesper.util.usno_rise_set_table import UsnoRiseSetTable
 
 
-class UsnoSunMoonUtilsTests(TestCase):
+class UsnoTableTests(TestCase):
 
 
     def test_ithaca_sun_table(self):
@@ -35,7 +35,7 @@ class UsnoSunMoonUtilsTests(TestCase):
             self, table, expected_header, expected_num_risings,
             expected_num_settings, expected_times=None):
         
-        table = UsnoSunMoonTable(table)
+        table = UsnoRiseSetTable(table)
         
         self._check_header(table, *expected_header)
         
