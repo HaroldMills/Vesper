@@ -35,7 +35,7 @@ import numpy as np
 import pytz
 import six
 
-from vesper.util.usno_sun_moon_table import UsnoSunMoonTable
+from vesper.util.usno_rise_set_table import UsnoRiseSetTable
 import vesper.util.astro_utils as astro_utils
 
 
@@ -130,7 +130,7 @@ def _read_table(path):
     with open(path, 'rU') as file_:
         text = file_.read()
         
-    return UsnoSunMoonTable(text)
+    return UsnoRiseSetTable(text)
     
     
 def _compare_against_table(table, place_name):

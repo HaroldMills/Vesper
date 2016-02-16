@@ -7,7 +7,7 @@ from test_case import TestCase
 from vesper.util.usno_rise_set_table import UsnoRiseSetTable
 
 
-class UsnoTableTests(TestCase):
+class UsnoRiseSetTableTests(TestCase):
 
 
     def test_ithaca_sun_table(self):

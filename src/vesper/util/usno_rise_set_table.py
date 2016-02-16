@@ -3,12 +3,13 @@
 
 from __future__ import print_function
 import datetime
-import math
 import re
 import urllib
 import urllib2
 
 import pytz
+
+import usno_utils
 
 
 class UsnoRiseSetTable(object):
@@ -16,8 +17,12 @@ class UsnoRiseSetTable(object):
     """
     Table of USNO rise and set times for the sun or moon.
     
-    Tables come from the United States Naval Observatory (USNO) web site.
-    You can use the `download_table_text` static method to download them.
+    A `UsnoRiseSetTable` contains rise and set times for the sun or moon
+    for a single latitude, longitude, and year.
+    
+    Table data come from the United States Naval Observatory (USNO) web
+    site. You can use the `download_table_text` static method to download
+    a table.
     
     Five different types of rise/set tables are available:
     
@@ -137,18 +142,15 @@ def _download_table_text(table_type, place_name, lat, lon, year, utc_offset):
     try:
         table_type = _TABLE_TYPE_NUMS[table_type]
     except KeyError:
-        raise ValueError('Unrecognized table type "{:s}".'.format(table_type))
+        raise ValueError('Unrecognized table type "{}".'.format(table_type))
     
     if place_name is None:
         place_name = ''
-        
-    lat_sign, lat_degrees, lat_minutes = _get_angle_data(lat)
-    lon_sign, lon_degrees, lon_minutes = _get_angle_data(lon)
-    
-    if utc_offset is None:
-        utc_offset = 24 * (lon / 360.)
-    
-    utc_offset_sign = _get_sign(utc_offset)
+
+    lat_sign, lat_degrees, lat_minutes = usno_utils.get_angle_data(lat)
+    lon_sign, lon_degrees, lon_minutes = usno_utils.get_angle_data(lon)
+    utc_offset_sign, utc_offset = \
+        usno_utils.get_utc_offset_data(utc_offset, lon)
     
     values = {
         'FFX': 2,
@@ -162,7 +164,7 @@ def _download_table_text(table_type, place_name, lat, lon, year, utc_offset):
         'xx2': lon_minutes,
         'xxy': year,
         'zz0': utc_offset_sign,
-        'zz1': abs(utc_offset),
+        'zz1': utc_offset,
         'ZZZ': 'END'
     }
     
@@ -178,18 +180,6 @@ def _download_table_text(table_type, place_name, lat, lon, year, utc_offset):
     return text
     
     
-def _get_angle_data(x):
-    sign = _get_sign(x)
-    x = sign * x
-    degrees = int(math.floor(x))
-    minutes = int(round(60 * (x - degrees)))
-    return (sign, degrees, minutes)
-
-
-def _get_sign(x):
-    return 1 if x >= 0 else -1
-
-
 def _parse_table(text):
     
     lines = text.split('\n')
@@ -243,7 +233,7 @@ def _parse_table_type(lines):
     
 def _handle_header_parse_error(name, line_num):
     raise ValueError(
-        'Could not find {:s} in table header line {:d}.'.format(
+        'Could not find {} in table header line {}.'.format(
             name, line_num + 1))
 
 
