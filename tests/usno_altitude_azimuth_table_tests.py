@@ -3,6 +3,7 @@ import datetime
 
 from test_case import TestCase
 from vesper.util.usno_altitude_azimuth_table import UsnoAltitudeAzimuthTable
+import vesper.util.usno_utils as usno_utils
 
 
 class UsnoAltitudeAzimuthTableTests(TestCase):
@@ -12,26 +13,28 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
     # time we run Vesper unit tests.
 #     def test_download_table_text(self):
 #         text = UsnoAltitudeAzimuthTable.download_table_text(
-#             'Sun', 42.45, -76.5, datetime.date(2016, 2, 10), 10, -5,
+#             'Sun', 42.45, -76.5, datetime.date(2016, 2, 17), 119, -4,
 #             'Ithaca, NY')
-#         pass
+#         self.assertEqual(text.strip(), _ITHACA_SUN_TABLE.strip())
         
         
     def test_ithaca_sun_table(self):
         header = ('Sun',) + _ITHACA_HEADER_DATA
-        self._test_table(_ITHACA_SUN_TABLE, header)
+        data = (
+            ('07:56', -1.6, 104.9),
+            ('17:51', 7.8, 246.0)
+        )
+        self._test_table(_ITHACA_SUN_TABLE, header, 6, data)
+         
+         
+    def _test_table(
+            self, table, expected_header, expected_size, expected_data):
         
-        
-    def _test_table(self, table, expected_header):
         table = UsnoAltitudeAzimuthTable(table)
         self._check_header(table, *expected_header)
-        
-        
-    def test_ithaca_moon_table(self):
-        header = ('Moon',) + _ITHACA_HEADER_DATA
-        self._test_table(_ITHACA_MOON_TABLE, header)
-                
-        
+        self._check_body(table, expected_size, expected_data)
+         
+         
     def _check_header(
             self, table, table_type, place_name, lat, lon, date, utc_offset):
         
@@ -40,26 +43,95 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
         self.assertEqual(table.lat, lat)
         self.assertEqual(table.lon, lon)
         self.assertEqual(table.date, date)
+        
+        utc_offset = datetime.timedelta(hours=utc_offset)
         self.assertEqual(table.utc_offset, utc_offset)
         
         
+    def _check_body(self, table, expected_size, expected_data):
+        
+        data = dict((d[0], d[1:]) for d in table.data)
+        
+        self.assertEqual(len(data), expected_size)
+        
+        for e_d in expected_data:
+            time = usno_utils.parse_time(e_d[0], table.date, table.utc_offset)
+            d = data.get(time)
+            self.assertNotEqual(d, None)
+            self.assertEqual(d, e_d[1:])
+        
+        
+    def test_ithaca_moon_table(self):
+        header = ('Moon',) + _ITHACA_HEADER_DATA
+        data = (
+            ('04:00', -.1, 294.5, .72),
+            ('14:00', -1.6, 64.2, .76)
+        )
+        self._test_table(_ITHACA_MOON_TABLE, header, 8, data)
+                
+        
+    def test_ithaca_sun_utc_table(self):
+        header = ('Sun',) + _ITHACA_HEADER_DATA[:-1] + (0,)
+        data = (
+            ('12:00', -.9, 105.6),
+            ('22:00', 6.3, 247.6)
+        )
+        self._test_table(_ITHACA_SUN_UTC_TABLE, header, 6, data)
+         
+         
+    def test_zero_lat_lon_sun_table(self):
+        header = ('Sun', '', 0, 0, datetime.date(2016, 2, 1), 0)
+        data = (
+            ('06:00', -3.2, 107.3),
+            ('18:00', 3.4, 252.9)
+        )
+        self._test_table(_ZERO_LAT_LON_SUN_TABLE, header, 7, data)
+         
+         
+    def test_high_latitude_sun_table(self):
+        header = ('Sun', '', 85, -120, datetime.date(2016, 12, 20), 0)
+        self._test_table(_HIGH_LATITUDE_SUN_TABLE, header, 0, ())
+        
+        
+    def test_single_digit_lat_lon_sun_table(self):
+        header = ('Sun', '', 5, -5, datetime.date(2016, 12, 20), 0)
+        data = (
+            ('06:00', -6, 113.1),
+            ('18:00', 2.4, 246.3)
+        )
+        self._test_table(_SINGLE_DIGIT_LAT_LON_SUN_TABLE, header, 7, data)
+         
+         
+    def test_east_south_sun_table(self):
+        header = ('Sun', '', -42.45, 76.5, datetime.date(2016, 2, 17), 4)
+        data = (
+            ('04:00', -3.9, 110.5),
+            ('18:00', -1.2, 252.4)
+        )
+        self._test_table(_EAST_SOUTH_SUN_TABLE, header, 8, data)
+        
+        
 _ITHACA_HEADER_DATA = \
-    ('ITHACA, NY', 42.45, -76.5, datetime.date(2016, 2, 10), -5)
+    ('ITHACA, NY', 42.45, -76.5, datetime.date(2016, 2, 17), -4)
 
 
+# Note that this table has an interval of 119 minutes rather than the
+# 120 minutes of all of the other tables. This ensures that the minutes
+# digits of the times in the table are not all zero so that we can
+# adequately test our time parsing code.
 _ITHACA_SUN_TABLE = '''
 Astronomical Applications Dept.                                               
 U.S. Naval Observatory                                                        
 Washington, DC 20392-5420
                                                     
-ITHACA, NY                                                                   
+ITHACA, NY                                                                    
    o  ,    o  ,                                                               
 W 76 30, N42 27
                                                               
 Altitude and Azimuth of the Sun                                               
-Feb 10, 2016
+Feb 17, 2016
                                                                  
-Zone:  5h West of Greenwich
+Zone:  4h West of Greenwich
                                                   
           Altitude    Azimuth                                                 
                       (E of N)
@@ -67,81 +139,12 @@ Zone:  5h West of Greenwich
  h  m         o           o                                                   
                                                                               
                                                                               
-06:10      -11.6        99.1
-06:20       -9.7       100.7
-06:30       -7.9       102.4
-06:40       -6.1       104.0
-06:50       -4.3       105.6
-07:00       -2.6       107.3
-07:10       -0.8       109.0
-07:20        1.3       110.6
-07:30        2.9       112.4
-07:40        4.5       114.1
-07:50        6.1       115.8
-08:00        7.8       117.6
-08:10        9.4       119.4
-08:20       11.0       121.3
-08:30       12.5       123.2
-08:40       14.0       125.1
-08:50       15.5       127.1
-09:00       17.0       129.1
-09:10       18.4       131.2
-09:20       19.7       133.3
-09:30       21.1       135.4
-09:40       22.3       137.7
-09:50       23.5       139.9
-10:00       24.7       142.3
-10:10       25.8       144.6
-10:20       26.8       147.1
-10:30       27.8       149.6
-10:40       28.7       152.1
-10:50       29.5       154.7
-11:00       30.3       157.4
-11:10       30.9       160.1
-11:20       31.5       162.8
-11:30       32.0       165.6
-11:40       32.5       168.4
-11:50       32.8       171.3
-12:00       33.0       174.2
-12:10       33.2       177.0
-12:20       33.2       179.9
-12:30       33.2       182.8
-12:40       33.0       185.7
-12:50       32.8       188.6
-13:00       32.5       191.4
-13:10       32.1       194.3
-13:20       31.6       197.1
-13:30       31.0       199.8
-13:40       30.3       202.5
-13:50       29.6       205.2
-14:00       28.8       207.8
-14:10       27.9       210.3
-14:20       26.9       212.8
-14:30       25.9       215.3
-14:40       24.8       217.7
-14:50       23.6       220.0
-15:00       22.4       222.3
-15:10       21.2       224.5
-15:20       19.9       226.7
-15:30       18.5       228.8
-15:40       17.1       230.9
-15:50       15.7       232.9
-16:00       14.2       234.9
-16:10       12.7       236.8
-16:20       11.1       238.7
-16:30        9.5       240.6
-16:40        7.9       242.4
-16:50        6.3       244.2
-17:00        4.7       245.9
-17:10        3.0       247.7
-17:20        1.4       249.4
-17:30       -0.1       251.1
-17:40       -2.4       252.7
-17:50       -4.2       254.4
-18:00       -5.9       256.1
-18:10       -7.7       257.7
-18:20       -9.6       259.3
-18:30      -11.4       261.0
+07:56       -1.6       104.9
+09:55       18.1       126.6
+11:54       32.1       155.0
+13:53       35.1       189.9
+15:52       25.4       221.8
+17:51        7.8       246.0
 '''
 
 
@@ -155,9 +158,9 @@ ITHACA, NY
 W 76 30, N42 27
                                                               
 Altitude and Azimuth of the Moon                                              
-Feb 10, 2016
+Feb 17, 2016
                                                                  
-Zone:  5h West of Greenwich
+Zone:  4h West of Greenwich
                                                   
           Altitude    Azimuth    Fraction                                     
                       (E of N)  Illuminated
@@ -165,88 +168,157 @@ Zone:  5h West of Greenwich
  h  m         o           o                                                   
                                                                               
                                                                               
-07:20      -11.0        87.3       0.05
-07:30       -9.2        88.9       0.05
-07:40       -7.4        90.5       0.05
-07:50       -5.6        92.1       0.05
-08:00       -3.8        93.7       0.05
-08:10       -2.0        95.3       0.05
-08:20        0.3        96.9       0.05
-08:30        1.9        98.5       0.05
-08:40        3.5       100.1       0.05
-08:50        5.3       101.8       0.05
-09:00        7.0       103.4       0.05
-09:10        8.7       105.1       0.05
-09:20       10.4       106.8       0.05
-09:30       12.1       108.5       0.05
-09:40       13.8       110.3       0.05
-09:50       15.5       112.0       0.06
-10:00       17.2       113.9       0.06
-10:10       18.8       115.7       0.06
-10:20       20.4       117.6       0.06
-10:30       22.0       119.6       0.06
-10:40       23.6       121.6       0.06
-10:50       25.1       123.6       0.06
-11:00       26.6       125.7       0.06
-11:10       28.1       127.9       0.06
-11:20       29.5       130.2       0.06
-11:30       30.9       132.5       0.06
-11:40       32.2       134.9       0.06
-11:50       33.5       137.3       0.06
-12:00       34.7       139.9       0.06
-12:10       35.8       142.5       0.06
-12:20       36.9       145.2       0.06
-12:30       37.9       148.0       0.06
-12:40       38.9       150.8       0.06
-12:50       39.7       153.7       0.06
-13:00       40.5       156.8       0.06
-13:10       41.2       159.8       0.06
-13:20       41.8       163.0       0.06
-13:30       42.3       166.2       0.06
-13:40       42.7       169.5       0.06
-13:50       43.1       172.7       0.06
-14:00       43.3       176.1       0.06
-14:10       43.4       179.4       0.07
-14:20       43.4       182.8       0.07
-14:30       43.3       186.1       0.07
-14:40       43.0       189.4       0.07
-14:50       42.7       192.7       0.07
-15:00       42.3       196.0       0.07
-15:10       41.8       199.2       0.07
-15:20       41.2       202.3       0.07
-15:30       40.5       205.4       0.07
-15:40       39.7       208.4       0.07
-15:50       38.8       211.4       0.07
-16:00       37.9       214.2       0.07
-16:10       36.9       217.0       0.07
-16:20       35.8       219.7       0.07
-16:30       34.7       222.3       0.07
-16:40       33.4       224.9       0.07
-16:50       32.2       227.3       0.07
-17:00       30.9       229.7       0.07
-17:10       29.5       232.1       0.07
-17:20       28.1       234.3       0.07
-17:30       26.6       236.5       0.07
-17:40       25.2       238.6       0.07
-17:50       23.6       240.7       0.07
-18:00       22.1       242.7       0.08
-18:10       20.5       244.7       0.08
-18:20       18.9       246.6       0.08
-18:30       17.3       248.5       0.08
-18:40       15.6       250.3       0.08
-18:50       14.0       252.2       0.08
-19:00       12.3       253.9       0.08
-19:10       10.6       255.7       0.08
-19:20        8.9       257.4       0.08
-19:30        7.2       259.1       0.08
-19:40        5.5       260.8       0.08
-19:50        3.8       262.5       0.08
-20:00        2.2       264.1       0.08
-20:10        0.6       265.8       0.08
-20:20       -1.6       267.5       0.08
-20:30       -3.4       269.1       0.08
-20:40       -5.1       270.8       0.08
-20:50       -6.9       272.4       0.08
-21:00       -8.6       274.1       0.08
-21:10      -10.4       275.7       0.08
+00:00       41.1       255.0       0.70
+02:00       19.9       275.8       0.71
+04:00       -0.1       294.5       0.72
+
+14:00       -1.6        64.2       0.76
+16:00       18.9        82.9       0.76
+18:00       40.2       103.4       0.77
+20:00       59.1       135.9       0.78
+22:00       64.7       196.2       0.79
+'''
+
+
+_ITHACA_SUN_UTC_TABLE = '''
+Astronomical Applications Dept.                                               
+U.S. Naval Observatory                                                        
+Washington, DC 20392-5420
+                                                    
+ITHACA, NY                                                                    
+   o  ,    o  ,                                                               
+W 76 30, N42 27
+                                                              
+Altitude and Azimuth of the Sun                                               
+Feb 17, 2016
+                                                                 
+Universal Time
+                                                               
+          Altitude    Azimuth                                                 
+                      (E of N)
+                                               
+ h  m         o           o                                                   
+                                                                              
+                                                                              
+12:00       -0.9       105.6
+14:00       18.9       127.7
+16:00       32.5       156.6
+18:00       34.8       191.9
+20:00       24.4       223.7
+22:00        6.3       247.6
+'''
+
+
+_ZERO_LAT_LON_SUN_TABLE = '''
+Astronomical Applications Dept.                                               
+U.S. Naval Observatory                                                        
+Washington, DC 20392-5420
+                                                    
+                                                                              
+   o  ,    o  ,                                                               
+   0 00,   0 00
+                                                              
+Altitude and Azimuth of the Sun                                               
+Feb 1, 2016
+                                                                  
+Universal Time
+                                                               
+          Altitude    Azimuth                                                 
+                      (E of N)
+                                               
+ h  m         o           o                                                   
+                                                                              
+                                                                              
+06:00       -3.2       107.3
+08:00       25.4       109.1
+10:00       52.9       119.4
+12:00       72.5       169.2
+14:00       58.7       235.4
+16:00       31.7       249.7
+18:00        3.4       252.9
+'''
+
+
+_HIGH_LATITUDE_SUN_TABLE = '''
+Astronomical Applications Dept.                                               
+U.S. Naval Observatory                                                        
+Washington, DC 20392-5420
+                                                    
+                                                                              
+   o  ,    o  ,                                                               
+W120 00, N85 00
+                                                              
+Altitude and Azimuth of the Sun                                               
+Dec 20, 2016
+                                                                 
+Universal Time
+                                                               
+          Altitude    Azimuth                                                 
+                      (E of N)
+                                               
+ h  m         o           o                                                   
+                                                                              
+                                                                              
+OBJECT IS CONTINUOUSLY BELOW THE HORIZON.
+'''
+
+
+_SINGLE_DIGIT_LAT_LON_SUN_TABLE = '''
+Astronomical Applications Dept.                                               
+U.S. Naval Observatory                                                        
+Washington, DC 20392-5420
+                                                    
+                                                                              
+   o  ,    o  ,                                                               
+W  5 00, N 5 00
+                                                              
+Altitude and Azimuth of the Sun                                               
+Dec 20, 2016
+                                                                 
+Universal Time
+                                                               
+          Altitude    Azimuth                                                 
+                      (E of N)
+                                               
+ h  m         o           o                                                   
+                                                                              
+                                                                              
+06:00       -6.0       113.1
+08:00       21.1       117.5
+10:00       46.0       131.7
+12:00       61.2       171.5
+14:00       52.2       220.2
+16:00       28.9       239.7
+18:00        2.4       246.3
+'''
+
+
+_EAST_SOUTH_SUN_TABLE = '''
+Astronomical Applications Dept.                                               
+U.S. Naval Observatory                                                        
+Washington, DC 20392-5420
+                                                    
+                                                                              
+   o  ,    o  ,                                                               
+E 76 30, S42 27
+                                                              
+Altitude and Azimuth of the Sun                                               
+Feb 17, 2016
+                                                                 
+Zone:  4h East of Greenwich
+                                                  
+          Altitude    Azimuth                                                 
+                      (E of N)
+                                               
+ h  m         o           o                                                   
+                                                                              
+                                                                              
+04:00       -3.9       110.5
+06:00       17.8        90.5
+08:00       39.4        67.7
+10:00       56.3        31.0
+12:00       57.7       335.7
+14:00       42.0       296.2
+16:00       20.7       272.4
+18:00       -1.2       252.4
 '''

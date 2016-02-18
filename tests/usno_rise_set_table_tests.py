@@ -1,126 +1,123 @@
 from __future__ import print_function
 import datetime
 
-import pytz
-
 from test_case import TestCase
 from vesper.util.usno_rise_set_table import UsnoRiseSetTable
+import vesper.util.usno_utils as usno_utils
 
 
 class UsnoRiseSetTableTests(TestCase):
 
 
+    # I have commented this out so we don't hit the USNO web site every
+    # time we run Vesper unit tests.
+#     def test_download_table_text(self):
+#         text = UsnoRiseSetTable.download_table_text(
+#             'Sunrise/Sunset', 42.45, -76.5, 2015, -4, 'Ithaca, NY')
+#         self.assertEqual(text.strip(), _ITHACA_SUN_TABLE.strip())
+        
+        
     def test_ithaca_sun_table(self):
-        
+          
         header = ('Sunrise/Sunset',) + _ITHACA_HEADER_DATA
-        
+          
         times = {
-                 
+                   
             'rise': (
                 (0, '2015-01-01 08:36:00'),
                 (364, '2015-12-31 08:35:00')
             ),
-            
+              
             'set': (
                 (0, '2015-01-01 17:44:00'),
                 (364, '2015-12-31 17:43:00')
             ),
-                             
+                               
         }
-        
+          
         self._test_table(_ITHACA_SUN_TABLE, header, 365, 365, times)
-        
-        
+          
+          
     def _test_table(
             self, table, expected_header, expected_num_risings,
             expected_num_settings, expected_times=None):
-        
+          
         table = UsnoRiseSetTable(table)
-        
+          
         self._check_header(table, *expected_header)
-        
-        offset = datetime.timedelta(hours=table.utc_offset)
-
+          
         if expected_times is not None:
-            
+              
             times = expected_times
-            
+              
             self._assert_times(
                 table.rising_times, expected_num_risings, times['rise'],
-                offset)
-            
+                table.utc_offset)
+              
             self._assert_times(
                 table.setting_times, expected_num_settings, times['set'],
-                offset)
-        
-        
+                table.utc_offset)
+          
+          
     def test_ithaca_moon_table(self):
-        
+          
         header = ('Moonrise/Moonset',) + _ITHACA_HEADER_DATA
-        
+          
         times = {
-                          
+                            
             'rise': (
                 (0, '2015-01-01 15:17:00'),
                 (351, '2015-12-30 23:21:00')
             ),
-            
+              
             'set': (
                 (0, '2015-01-01 04:59:00'),
                 (352, '2015-12-31 12:10:00')
             ),
-                                      
+                                        
         }
-        
+          
         self._test_table(_ITHACA_MOON_TABLE, header, 352, 353, times)
-
-
+  
+  
     def test_ithaca_civil_twilight_table(self):
         self._test_ithaca_twilight_table('Civil', _ITHACA_CIVIL_TWILIGHT_TABLE)
-        
-        
+          
+          
     def _test_ithaca_twilight_table(self, twilight_type, table):
-        title = '{:s} Twilight'.format(twilight_type)
+        title = '{} Twilight'.format(twilight_type)
         header = (title,) + _ITHACA_HEADER_DATA
         self._test_table(table, header, 365, 365)
-        
-        
+          
+          
     def test_ithaca_nautical_twilight_table(self):
         self._test_ithaca_twilight_table(
             'Nautical', _ITHACA_NAUTICAL_TWILIGHT_TABLE)
-        
-        
+          
+          
     def test_ithaca_astronomical_twilight_table(self):
         self._test_ithaca_twilight_table(
             'Astronomical', _ITHACA_ASTRONOMICAL_TWILIGHT_TABLE)
-        
-        
+          
+          
     def test_ithaca_sun_utc_table(self):
         header = ('Sunrise/Sunset',) + _ITHACA_HEADER_DATA[:-1] + (0,)
         self._test_table(_ITHACA_SUN_UTC_TABLE, header, 365, 365)
-        
-        
+          
+          
     def test_high_latitude_sun_table(self):
         header = ('Sunrise/Sunset', '', 80, 0, 2015, 0)
         self._test_table(_HIGH_LATITUDE_SUN_TABLE, header, 101, 101)
-        
-        
+          
+          
     def test_zero_lat_lon_sun_table(self):
         header = ('Sunrise/Sunset', '', 0, 0, 2000, 0)
         self._test_table(_ZERO_LAT_LON_SUN_TABLE, header, 366, 366)
-        
-        
+          
+          
     def test_east_south_sun_table(self):
         header = ('Sunrise/Sunset', '', -42.45, 76.5, 2015, 4)
         self._test_table(_EAST_SOUTH_SUN_TABLE, header, 365, 365)
-        
-        
-    # I have commanted this out so we don't hit the USNO web site every
-    # time we run Vesper unit tests.
-#     def test_download_table_text(self):
-#         text = UsnoSunMoonTable.download_table_text(
-#             'Sunrise/Sunset', 42.45, -76.5, 2015, -4, 'Ithaca, NY')
-#         self.assertEqual(text, _ITHACA_SUN_TABLE[1:])
         
         
     def _check_header(
@@ -131,6 +128,8 @@ class UsnoRiseSetTableTests(TestCase):
         self.assertEqual(table.lat, lat)
         self.assertEqual(table.lon, lon)
         self.assertEqual(table.year, year)
+        
+        utc_offset = datetime.timedelta(hours=utc_offset)
         self.assertEqual(table.utc_offset, utc_offset)
         
         
@@ -142,8 +141,7 @@ class UsnoRiseSetTableTests(TestCase):
         
     def _assert_time(self, time, expected, utc_offset):
         expected = datetime.datetime.strptime(expected, '%Y-%m-%d %H:%M:%S')
-        expected -= utc_offset
-        expected = pytz.utc.localize(expected)
+        expected = usno_utils.naive_to_utc(expected, utc_offset)
         self.assertEqual(time, expected)
         
         

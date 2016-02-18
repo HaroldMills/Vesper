@@ -4,10 +4,6 @@
 from __future__ import print_function
 import datetime
 import re
-# import urllib
-# import urllib2
-
-import pytz
 
 import usno_utils
 
@@ -87,7 +83,7 @@ _PLACE_NAME_LINE_NUM = 4
 
 _LOCATION_LINE_NUM = 6
 _LOCATION_RE = re.compile(
-    r'^([WE])([\d ]\d\d) (\d\d), ([NS])(\d\d) (\d\d)$')
+    r'(^[WE ])(\d\d\d| \d\d|  \d) (\d\d| \d), ([NS ])(\d\d| \d) (\d\d| \d)$')
 
 _TABLE_TYPE_LINE_NUM = 8
 _TABLE_TYPES = {
@@ -102,7 +98,6 @@ _DATE_RE = re.compile(
 _MONTH_NUMS = dict((name, i + 1) for i, name in enumerate(_MONTHS.split()))
 
 _UTC_OFFSET_LINE_NUM = 11
-_UTC_OFFSET_RE = re.compile(r'(\d+)(\.\d+)?h (West|East) of Greenwich')
 
 _HEADER_SIZE = 19
 
@@ -169,61 +164,18 @@ def _parse_table(text):
     return (table_type, place_name, lat, lon, date, utc_offset, data)
   
   
-'''
-Astronomical Applications Dept.                                               
-U.S. Naval Observatory                                                        
-Washington, DC 20392-5420
-                                                    
-SHEEP CAMP                                                                    
-   o  ,    o  ,                                                               
-W114 01, N46 42
-                                                              
-Altitude and Azimuth of the Sun                                               
-Jun 10, 2014
-                                                                 
-Zone:  7h West of Greenwich
-                                                  
-          Altitude    Azimuth                                                 
-                      (E of N)
-                                               
- h  m         o           o                                                   
-                                                                              
-                                                                              
-'''
 def _parse_table_header(lines):
     place_name = _parse_place_name(lines)
-    lat, lon = _parse_location(lines)
+    lat, lon = usno_utils.parse_location(
+        lines, _LOCATION_LINE_NUM, _LOCATION_RE)
     table_type = _parse_table_type(lines)
     date = _parse_date(lines)
-    utc_offset = _parse_utc_offset(lines)
+    utc_offset = usno_utils.parse_utc_offset(lines, _UTC_OFFSET_LINE_NUM)
     return (table_type, place_name, lat, lon, date, utc_offset)
   
   
 def _parse_place_name(lines):
     return lines[_PLACE_NAME_LINE_NUM].strip()
-  
-  
-# TODO: Move this to `usno_utils`? Note that the `_LOCATION_RE` here
-# differs from that of `usno_rise_set_table`. Can one expression serve
-# for both?
-def _parse_location(lines):
-      
-    line = lines[_LOCATION_LINE_NUM]
-    m = _LOCATION_RE.search(line)
-      
-    if m is None:
-        _handle_header_parse_error('location', _LOCATION_LINE_NUM)
-          
-    lon_dir, lon_deg, lon_min, lat_dir, lat_deg, lat_min = m.groups()
-    lat = _get_angle(lat_dir, 'N', lat_deg, lat_min)
-    lon = _get_angle(lon_dir, 'E', lon_deg, lon_min)
-      
-    return (lat, lon)
-  
-  
-def _get_angle(direction, positive_direction, degrees, minutes):
-    sign = 1 if direction == ' ' or direction == positive_direction else -1
-    return sign * (int(degrees) + int(minutes) / 60.)
   
   
 def _parse_table_type(lines):
@@ -234,7 +186,8 @@ def _parse_table_type(lines):
         return _TABLE_TYPES[line]
     
     except KeyError:
-        _handle_header_parse_error('table type', _TABLE_TYPE_LINE_NUM)
+        usno_utils.handle_header_parse_error(
+            'table type', _TABLE_TYPE_LINE_NUM)
       
       
 def _parse_date(lines):
@@ -243,7 +196,7 @@ def _parse_date(lines):
     m = _DATE_RE.match(line)
     
     if m is None:
-        _handle_header_parse_error('date', _DATE_LINE_NUM)
+        usno_utils.handle_header_parse_error('date', _DATE_LINE_NUM)
         
     month = _MONTH_NUMS[m.group(1)]
     day = int(m.group(2))
@@ -253,37 +206,7 @@ def _parse_date(lines):
     return date
 
 
-def _handle_header_parse_error(name, line_num):
-    raise ValueError(
-        'Could not find {} in table header line {}.'.format(
-            name, line_num + 1))
-  
-  
-# TODO: Move this to `usno_utils`?
-def _parse_utc_offset(lines):
-      
-    line = lines[_UTC_OFFSET_LINE_NUM]
-      
-    if line.find('Universal Time') != -1:
-        return 0.
-      
-    m = _UTC_OFFSET_RE.search(line)
-      
-    if m is None:
-        _handle_header_parse_error('UTC offset', _UTC_OFFSET_LINE_NUM)
-          
-    hour, fraction, direction = m.groups()
-    sign = 1 if direction == 'East' else -1
-    hour = int(hour)
-    fraction = 0. if fraction is None else float(fraction)
-    offset = sign * (hour + fraction)
-      
-    return offset
-          
-      
 def _parse_table_data(lines, table_type, date, utc_offset):
-    
-    utc_offset = datetime.timedelta(hours=utc_offset)
     
     i = _HEADER_SIZE
     n = len(lines)
@@ -298,7 +221,18 @@ def _parse_table_data(lines, table_type, date, utc_offset):
             
             parts = line.split()
             
-            time = _parse_time(parts[0], date, utc_offset)
+            try:
+                time = usno_utils.parse_time(parts[0], date, utc_offset)
+                
+            except ValueError:
+                # line does not start with time
+            
+                # Some tables include lines after the data lines, for
+                # example to indicate that there are no such lines for
+                # an empty table. We assume that the first such line
+                # will not begin with a time.
+                break
+            
             altitude = float(parts[1])
             azimuth = float(parts[2])
             
@@ -310,13 +244,3 @@ def _parse_table_data(lines, table_type, date, utc_offset):
                 data.append((time, altitude, azimuth, illumination))
        
     return tuple(data)
-
-
-def _parse_time(hhmm, date, utc_offset):
-    hour, minute = hhmm.split(':')
-    hour = int(hour)
-    minute = int(minute)
-    time = datetime.datetime(date.year, date.month, date.day, hour, minute)
-    time -= utc_offset
-    time = pytz.utc.localize(time)
-    return time

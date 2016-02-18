@@ -4,10 +4,6 @@
 from __future__ import print_function
 import datetime
 import re
-import urllib
-import urllib2
-
-import pytz
 
 import usno_utils
 
@@ -104,9 +100,7 @@ _TABLE_TYPES = (
 
 _TABLE_TYPE_NUMS = dict((name, i) for i, name in enumerate(_TABLE_TYPES))
 
-_USNO_TABLE_GENERATOR_URL = 'http://aa.usno.navy.mil/cgi-bin/aa_rstablew.pl'
-_PRE_BEGIN = '<pre>'
-_PRE_END = '</pre>'
+_TABLE_GENERATOR_URL = 'http://aa.usno.navy.mil/cgi-bin/aa_rstablew.pl'
 
 _TABLE_TYPE_LINE_NUM = 1
 _TABLE_TYPE_NAMES = (
@@ -129,7 +123,6 @@ _YEAR_LINE_NUM = 1
 _YEAR_RE = re.compile(r'(\d\d\d\d)')
 
 _UTC_OFFSET_LINE_NUM = 3
-_UTC_OFFSET_RE = re.compile(r'(\d+)(\.\d+)?h (West|East) of Greenwich')
 
 _HEADER_SIZE = 9
 _RISE_OFFSET = 4
@@ -152,32 +145,23 @@ def _download_table_text(table_type, place_name, lat, lon, year, utc_offset):
     utc_offset_sign, utc_offset = \
         usno_utils.get_utc_offset_data(utc_offset, lon)
     
-    values = {
-        'FFX': 2,
-        'type': table_type,
-        'place': place_name,
-        'yy0': lat_sign,
-        'yy1': lat_degrees,
-        'yy2': lat_minutes,
-        'xx0': lon_sign,
-        'xx1': lon_degrees,
-        'xx2': lon_minutes,
-        'xxy': year,
-        'zz0': utc_offset_sign,
-        'zz1': utc_offset,
-        'ZZZ': 'END'
-    }
+    values = (
+        ('FFX', 2),
+        ('type', table_type),
+        ('place', place_name),
+        ('yy0', lat_sign),
+        ('yy1', lat_degrees),
+        ('yy2', lat_minutes),
+        ('xx0', lon_sign),
+        ('xx1', lon_degrees),
+        ('xx2', lon_minutes),
+        ('xxy', year),
+        ('zz0', utc_offset_sign),
+        ('zz1', utc_offset),
+        ('ZZZ', 'END')
+    )
     
-    data = urllib.urlencode(values)
-    request = urllib2.Request(_USNO_TABLE_GENERATOR_URL, data)
-    response = urllib2.urlopen(request)
-    html = response.read()
-    
-    start = html.find(_PRE_BEGIN) + len(_PRE_BEGIN)
-    end = html.find(_PRE_END)
-    text = html[start:end].strip('\n') + '\n'
-    
-    return text
+    return usno_utils.download_table(_TABLE_GENERATOR_URL, values)
     
     
 def _parse_table(text):
@@ -212,9 +196,10 @@ def _strip_leading_and_trailing_blank_lines(lines):
 def _parse_table_header(lines):
     table_type = _parse_table_type(lines)
     place_name = _parse_place_name(lines)
-    lat, lon = _parse_location(lines)
+    lat, lon = usno_utils.parse_location(
+        lines, _LOCATION_LINE_NUM, _LOCATION_RE)
     year = _parse_year(lines)
-    utc_offset = _parse_utc_offset(lines)
+    utc_offset = usno_utils.parse_utc_offset(lines, _UTC_OFFSET_LINE_NUM)
     return (table_type, place_name, lat, lon, year, utc_offset)
 
 
@@ -228,39 +213,13 @@ def _parse_table_type(lines):
         
     # If we get here, we couldn't find any of the known table type
     # names in the table type line.
-    _handle_header_parse_error('table type', _TABLE_TYPE_LINE_NUM)
+    usno_utils.handle_header_parse_error('table type', _TABLE_TYPE_LINE_NUM)
     
     
-def _handle_header_parse_error(name, line_num):
-    raise ValueError(
-        'Could not find {} in table header line {}.'.format(
-            name, line_num + 1))
-
-
 def _parse_place_name(lines):
     line = lines[_PLACE_NAME_LINE_NUM]
     name = line[_PLACE_NAME_START_INDEX:_PLACE_NAME_END_INDEX].strip()
     return name
-
-
-def _parse_location(lines):
-    
-    line = lines[_LOCATION_LINE_NUM]
-    m = _LOCATION_RE.search(line)
-    
-    if m is None:
-        _handle_header_parse_error('location', _LOCATION_LINE_NUM)
-        
-    lon_dir, lon_deg, lon_min, lat_dir, lat_deg, lat_min = m.groups()
-    lat = _get_angle(lat_dir, 'N', lat_deg, lat_min)
-    lon = _get_angle(lon_dir, 'E', lon_deg, lon_min)
-    
-    return (lat, lon)
-
-
-def _get_angle(direction, positive_direction, degrees, minutes):
-    sign = 1 if direction == ' ' or direction == positive_direction else -1
-    return sign * (int(degrees) + int(minutes) / 60.)
 
 
 def _parse_year(lines):
@@ -269,37 +228,14 @@ def _parse_year(lines):
     m = _YEAR_RE.search(line)
     
     if m is None:
-        _handle_header_parse_error('year', _YEAR_LINE_NUM)
+        usno_utils.handle_header_parse_error('year', _YEAR_LINE_NUM)
         
     year = int(m.group(0))
     
     return year
 
         
-def _parse_utc_offset(lines):
-    
-    line = lines[_UTC_OFFSET_LINE_NUM]
-    
-    if line.find('Universal Time') != -1:
-        return 0.
-    
-    m = _UTC_OFFSET_RE.search(line)
-    
-    if m is None:
-        _handle_header_parse_error('UTC offset', _UTC_OFFSET_LINE_NUM)
-        
-    hour, fraction, direction = m.groups()
-    sign = 1 if direction == 'East' else -1
-    hour = int(hour)
-    fraction = 0. if fraction is None else float(fraction)
-    offset = sign * (hour + fraction)
-    
-    return offset
-        
-    
 def _parse_table_times(lines, year, utc_offset, time_column_offset):
-    
-    utc_offset = datetime.timedelta(hours=utc_offset)
     
     i = _HEADER_SIZE
     n = len(lines)
@@ -341,8 +277,7 @@ def _parse_table_times(lines, year, utc_offset, time_column_offset):
             
                 minute = int(time[2:])
                 time = datetime.datetime(year, month, day, hour, minute)
-                time -= utc_offset
-                time = pytz.utc.localize(time)
+                time = usno_utils.naive_to_utc(time, utc_offset)
                 times.append(time)
                
     # Put times in increasing order.

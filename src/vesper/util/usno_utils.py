@@ -3,13 +3,19 @@ Utility functions concerning United States Naval Observatory (USNO) data.
 """
 
 
+import datetime
 import math
+import re
 import urllib
 import urllib2
+
+import pytz
 
 
 _PRE_BEGIN = '<pre>'
 _PRE_END = '</pre>'
+
+_UTC_OFFSET_RE = re.compile(r'(\d+)(\.\d+)?h (West|East) of Greenwich')
 
 
 def get_angle_data(x):
@@ -34,49 +40,25 @@ def get_utc_offset_data(utc_offset, lon):
 
 def download_table(url, values):
     
-    data = urllib.urlencode(values)
+    # We append the values to the URL as a query rather than passing
+    # them separately as the `data` argument of the `urllib2.Request`
+    # initializer to make the request a GET rather than a POST. (A
+    # `urllib2.Request` initialized with a non-`None` `data` argument
+    # is a POST, while one initialized without a `data` argument is a
+    # GET. See the documentation for the `urllib2.Request` class at
+    # https://docs.python.org/2/library/urllib2.html#module-urllib2
+    # for details.)
+    #
+    # We have found (as of 2016-02-17) that altitude/azimuth tables
+    # must be retrieved with GET requests, while rise/set tables can
+    # be retrieved with either GET or POST. When we attempt to retrieve
+    # an altitude/azimuth table with a POST request the response has
+    # status code 200 but instead of a table the response text
+    # contains the message "Error:  Location/coordinates not defined".
+    query = urllib.urlencode(values)
+    url += '?' + query
     
-    # While this function downloads sun and moon rise/set tables just fine,
-    # I have not been able to download sun and moon altitude/azimuth tables
-    # with it. Whenever I try to download and altitude/azimuth table, I get
-    # an HTTP response with code 200 that contains the error message:
-    # "Error:  Location/coordinates not defined".
-    #
-    # An example (with added line wrapping) of the URL of a Python request
-    # that fails is:
-    #
-    #     http://aa.usno.navy.mil/cgi-bin/aa_altazw.pl?
-    #         form=2&body=10&place=Ithaca%2C+NY&year=2016&month=2&day=10&
-    #         intv_mag=10&lat_sign=1&lat_deg=42&lat_min=27&
-    #         lon_sign=-1&lon_deg=76&lon_min=30&tz_sign=-1&tz=5
-    #
-    # When I fetch the same URL by pasting it into the Chrome address bar,
-    # I get the expected altitude/azimuth table.
-    #
-    # I am not sure why HTTP requests that I send from Python result in
-    # different responses than the requests that Chrome sends for the same
-    # URL. I tried making my Python HTTP request headers identical to those
-    # of Chrome's requests (see the commented-out code below), but that did
-    # not help.
-    
-#     headers = {
-#         'Accept': (
-#             'text/html,application/xhtml+xml,application/xml;q=0.9,'
-#             'image/webp,*/*;q=0.8'),
-#         'Accept-Encoding': 'gzip, deflate, sdch',
-#         'Accept-Language': 'en-US,en;q=0.8,es;q=0.6',
-#         'Connection': 'keep-alive',
-#         'Host': 'aa.usno.navy.mil',
-#         'Referer': 'http://aa.usno.navy.mil/data/docs/AltAz.php',
-#         'Upgrade-Insecure-Requests': '1',
-#         'User-Agent': (
-#             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) '
-#             'AppleWebKit/537.36 (KHTML, like Gecko) '
-#             'Chrome/48.0.2564.109 Safari/537.36')
-#     }
-    headers = {}
-    
-    request = urllib2.Request(url, data, headers)
+    request = urllib2.Request(url)
     response = urllib2.urlopen(request)
     html = response.read()
     
@@ -85,3 +67,64 @@ def download_table(url, values):
     text = html[start:end].strip('\n') + '\n'
      
     return text
+
+
+def parse_location(lines, line_num, location_re):
+    
+    line = lines[line_num]
+    m = location_re.search(line)
+    
+    if m is None:
+        handle_header_parse_error('location', line_num)
+        
+    lon_dir, lon_deg, lon_min, lat_dir, lat_deg, lat_min = m.groups()
+    lat = _get_angle(lat_dir, 'N', lat_deg, lat_min)
+    lon = _get_angle(lon_dir, 'E', lon_deg, lon_min)
+    
+    return (lat, lon)
+
+
+def _get_angle(direction, positive_direction, degrees, minutes):
+    sign = 1 if direction == ' ' or direction == positive_direction else -1
+    return sign * (int(degrees) + int(minutes) / 60.)
+
+
+def parse_utc_offset(lines, line_num):
+    
+    line = lines[line_num]
+    
+    if line.find('Universal Time') != -1:
+        return datetime.timedelta(hours=0)
+    
+    m = _UTC_OFFSET_RE.search(line)
+    
+    if m is None:
+        handle_header_parse_error('UTC offset', line_num)
+        
+    hour, fraction, direction = m.groups()
+    sign = 1 if direction == 'East' else -1
+    hour = int(hour)
+    fraction = 0. if fraction is None else float(fraction)
+    hours = sign * (hour + fraction)
+    
+    return datetime.timedelta(hours=hours)
+
+
+def handle_header_parse_error(name, line_num):
+    raise ValueError(
+        'Could not find {} in table header line {}.'.format(
+            name, line_num + 1))
+
+
+def parse_time(hhmm, date, utc_offset):
+    s = '{:4d}-{:02d}-{:02d} {}'.format(date.year, date.month, date.day, hhmm)
+    try:
+        time = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M')
+    except ValueError:
+        raise ValueError('Bad time "{}".'.format(hhmm))
+    return naive_to_utc(time, utc_offset)
+
+
+def naive_to_utc(time, utc_offset):
+    time -= utc_offset
+    return pytz.utc.localize(time)
