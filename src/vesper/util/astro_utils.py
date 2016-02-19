@@ -98,15 +98,11 @@ def _get_time(method, lat, lon, date, body, horizon, use_center):
     
 def _create_observer(lat, lon, horizon):
     observer = ephem.Observer()
-    observer.lat = _to_radians(lat)
-    observer.lon = _to_radians(lon)
+    observer.lat = math.radians(lat)
+    observer.lon = math.radians(lon)
     observer.horizon = horizon
     observer.pressure = 0
     return observer
-
-
-def _to_radians(degrees):
-    return degrees * math.pi / 180.
 
 
 def _get_midnight_as_ephem_date(lon, date):
@@ -131,17 +127,13 @@ def _get_setting_time(lat, lon, date, body, horizon, use_center=False):
 
 def get_moon_altitude(lat, lon, time):
     moon = _create_moon(lat, lon, time)
-    return _to_degrees(float(moon.alt))
-
-
-def _to_degrees(radians):
-    return radians * 180. / math.pi
+    return math.degrees(float(moon.alt))
 
 
 def _create_moon(lat, lon, time):
     observer = ephem.Observer()
-    observer.lat = _to_radians(lat)
-    observer.lon = _to_radians(lon)
+    observer.lat = math.radians(lat)
+    observer.lon = math.radians(lon)
     observer.pressure = 0
     observer.date = time
     return ephem.Moon(observer)
@@ -150,4 +142,3 @@ def _create_moon(lat, lon, time):
 def get_moon_illumination(lat, lon, time):
     moon = _create_moon(lat, lon, time)
     return moon.phase
-
