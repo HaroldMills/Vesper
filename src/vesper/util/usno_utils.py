@@ -31,10 +31,18 @@ def get_sign(x):
 
 
 def get_utc_offset_data(utc_offset, lon):
+    
     if utc_offset is None:
-        utc_offset = 24 * (lon / 360.)
+        utc_offset = int(round(24 * (lon / 360.)))
+        
     sign = get_sign(utc_offset)
     offset = abs(utc_offset)
+    
+    # We format the offset as a string with up to two digits after
+    # the decimal point. The USNO site accepts that, but rejects an
+    # offset with too many digits after the decimal point.
+    offset = '{:.2g}'.format(offset)
+    
     return (sign, offset)
 
 

@@ -13,8 +13,8 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
     # time we run Vesper unit tests.
 #     def test_download_table_text(self):
 #         text = UsnoAltitudeAzimuthTable.download_table_text(
-#             'Sun', 42.45, -76.5, datetime.date(2016, 2, 17), 119, -4,
-#             'Ithaca, NY')
+#             'Sun Altitude/Azimuth', 42.45, -76.5,
+#             datetime.date(2016, 2, 17), 119, -4, 'Ithaca, NY')
 #         self.assertEqual(text.strip(), _ITHACA_SUN_TABLE.strip())
         
         

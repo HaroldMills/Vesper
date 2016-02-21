@@ -27,7 +27,7 @@ class UsnoAltitudeAzimuthTable(object):
             place_name=None):
         
         return _download_table_text(
-            table_type, place_name, lat, lon, date, utc_offset, interval)
+            table_type, lat, lon, date, interval, utc_offset, place_name)
 
     
     def __init__(self, table_text):
@@ -73,8 +73,8 @@ class UsnoAltitudeAzimuthTable(object):
     
     
 _BODY_NUMS = {
-    'Sun': 10,
-    'Moon': 11
+    'Sun Altitude/Azimuth': 10,
+    'Moon Altitude/Azimuth': 11
 }
 
 _TABLE_GENERATOR_URL = 'http://aa.usno.navy.mil/cgi-bin/aa_altazw.pl'
@@ -102,21 +102,9 @@ _UTC_OFFSET_LINE_NUM = 11
 _HEADER_SIZE = 19
 
 
-'''
-http://aa.usno.navy.mil/cgi-bin/aa_altazw.pl?
-    form=2&
-    body=11&
-    year=2014&month=6&day=10&
-    intv_mag=10&
-    place=Sheep+Camp&
-    lon_sign=-1&lon_deg=114&lon_min=01&
-    lat_sign=1&lat_deg=46&lat_min=42&
-    tz=7&tz_sign=-1
-'''
-
-
 def _download_table_text(
-        table_type, place_name, lat, lon, date, utc_offset, interval):
+        table_type, lat, lon, date, interval, utc_offset=None,
+        place_name=None):
     
     try:
         body = _BODY_NUMS[table_type]

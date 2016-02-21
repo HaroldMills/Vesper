@@ -34,7 +34,7 @@ class UsnoRiseSetTable(object):
             table_type, lat, lon, year, utc_offset=None, place_name=None):
         
         return _download_table_text(
-            table_type, place_name, lat, lon, year, utc_offset)
+            table_type, lat, lon, year, utc_offset, place_name)
 
     
     def __init__(self, table_text):
@@ -130,7 +130,7 @@ _SET_OFFSET = 9
 _MONTH_WIDTH = 11
 
 
-def _download_table_text(table_type, place_name, lat, lon, year, utc_offset):
+def _download_table_text(table_type, lat, lon, year, utc_offset, place_name):
     
     try:
         table_type = _TABLE_TYPE_NUMS[table_type]
