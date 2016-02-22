@@ -5,7 +5,7 @@ from __future__ import print_function
 import datetime
 import re
 
-import usno_utils
+import usno_table_class_utils as utils
 
 
 class UsnoRiseSetTable(object):
@@ -41,8 +41,9 @@ class UsnoRiseSetTable(object):
         
         self._text = table_text
         
-        (self._type, self._place_name, self._lat, self._lon, self._year,
-         self._utc_offset, self._rising_times, self._setting_times) = \
+        (self._type, self._body, self._place_name, self._lat, self._lon,
+         self._year, self._utc_offset, self._rising_times,
+         self._setting_times) = \
             _parse_table(self._text)
              
     
@@ -53,6 +54,10 @@ class UsnoRiseSetTable(object):
     @property
     def type(self):
         return self._type
+    
+    @property
+    def body(self):
+        return self._body
     
     @property
     def place_name(self):
@@ -140,10 +145,9 @@ def _download_table_text(table_type, lat, lon, year, utc_offset, place_name):
     if place_name is None:
         place_name = ''
 
-    lat_sign, lat_degrees, lat_minutes = usno_utils.get_angle_data(lat)
-    lon_sign, lon_degrees, lon_minutes = usno_utils.get_angle_data(lon)
-    utc_offset_sign, utc_offset = \
-        usno_utils.get_utc_offset_data(utc_offset, lon)
+    lat_sign, lat_degrees, lat_minutes = utils.get_angle_data(lat)
+    lon_sign, lon_degrees, lon_minutes = utils.get_angle_data(lon)
+    utc_offset_sign, utc_offset = utils.get_utc_offset_data(utc_offset, lon)
     
     values = (
         ('FFX', 2),
@@ -161,7 +165,7 @@ def _download_table_text(table_type, lat, lon, year, utc_offset, place_name):
         ('ZZZ', 'END')
     )
     
-    return usno_utils.download_table(_TABLE_GENERATOR_URL, values)
+    return utils.download_table(_TABLE_GENERATOR_URL, values)
     
     
 def _parse_table(text):
@@ -169,13 +173,13 @@ def _parse_table(text):
     lines = text.split('\n')
     lines = _strip_leading_and_trailing_blank_lines(lines)
     
-    table_type, place_name, lat, lon, year, utc_offset = \
+    table_type, body, place_name, lat, lon, year, utc_offset = \
         _parse_table_header(lines)
     
     rising_times = _parse_table_times(lines, year, utc_offset, _RISE_OFFSET)
     setting_times = _parse_table_times(lines, year, utc_offset, _SET_OFFSET)
     
-    return (table_type, place_name, lat, lon, year, utc_offset,
+    return (table_type, body, place_name, lat, lon, year, utc_offset,
             rising_times, setting_times)
 
 
@@ -195,12 +199,12 @@ def _strip_leading_and_trailing_blank_lines(lines):
         
 def _parse_table_header(lines):
     table_type = _parse_table_type(lines)
+    body = 'Moon' if table_type == 'Moonrise/Moonset' else 'Sun'
     place_name = _parse_place_name(lines)
-    lat, lon = usno_utils.parse_location(
-        lines, _LOCATION_LINE_NUM, _LOCATION_RE)
+    lat, lon = utils.parse_location(lines, _LOCATION_LINE_NUM, _LOCATION_RE)
     year = _parse_year(lines)
-    utc_offset = usno_utils.parse_utc_offset(lines, _UTC_OFFSET_LINE_NUM)
-    return (table_type, place_name, lat, lon, year, utc_offset)
+    utc_offset = utils.parse_utc_offset(lines, _UTC_OFFSET_LINE_NUM)
+    return (table_type, body, place_name, lat, lon, year, utc_offset)
 
 
 def _parse_table_type(lines):
@@ -213,7 +217,7 @@ def _parse_table_type(lines):
         
     # If we get here, we couldn't find any of the known table type
     # names in the table type line.
-    usno_utils.handle_header_parse_error('table type', _TABLE_TYPE_LINE_NUM)
+    utils.handle_header_parse_error('table type', _TABLE_TYPE_LINE_NUM)
     
     
 def _parse_place_name(lines):
@@ -228,7 +232,7 @@ def _parse_year(lines):
     m = _YEAR_RE.search(line)
     
     if m is None:
-        usno_utils.handle_header_parse_error('year', _YEAR_LINE_NUM)
+        utils.handle_header_parse_error('year', _YEAR_LINE_NUM)
         
     year = int(m.group(0))
     
@@ -277,7 +281,7 @@ def _parse_table_times(lines, year, utc_offset, time_column_offset):
             
                 minute = int(time[2:])
                 time = datetime.datetime(year, month, day, hour, minute)
-                time = usno_utils.naive_to_utc(time, utc_offset)
+                time = utils.naive_to_utc(time, utc_offset)
                 times.append(time)
                
     # Put times in increasing order.

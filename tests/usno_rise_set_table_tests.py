@@ -3,7 +3,7 @@ import datetime
 
 from test_case import TestCase
 from vesper.util.usno_rise_set_table import UsnoRiseSetTable
-import vesper.util.usno_utils as usno_utils
+import vesper.util.usno_table_class_utils as utils
 
 
 class UsnoRiseSetTableTests(TestCase):
@@ -19,7 +19,7 @@ class UsnoRiseSetTableTests(TestCase):
         
     def test_ithaca_sun_table(self):
           
-        header = ('Sunrise/Sunset',) + _ITHACA_HEADER_DATA
+        header = ('Sunrise/Sunset', 'Sun') + _ITHACA_HEADER_DATA
           
         times = {
                    
@@ -43,9 +43,30 @@ class UsnoRiseSetTableTests(TestCase):
             expected_num_settings, expected_times=None):
           
         table = UsnoRiseSetTable(table)
+        self._check_table_header(table, *expected_header)
+        self._check_table_body(
+            table, expected_num_risings, expected_num_settings, expected_times)
           
-        self._check_header(table, *expected_header)
           
+    def _check_table_header(
+            self, table, table_type, body, place_name, lat, lon, year,
+            utc_offset):
+        
+        self.assertEqual(table.type, table_type)
+        self.assertEqual(table.body, body)
+        self.assertEqual(table.place_name, place_name)
+        self.assertEqual(table.lat, lat)
+        self.assertEqual(table.lon, lon)
+        self.assertEqual(table.year, year)
+        
+        utc_offset = datetime.timedelta(hours=utc_offset)
+        self.assertEqual(table.utc_offset, utc_offset)
+        
+        
+    def _check_table_body(
+            self, table, expected_num_risings, expected_num_settings,
+            expected_times):
+        
         if expected_times is not None:
               
             times = expected_times
@@ -59,9 +80,21 @@ class UsnoRiseSetTableTests(TestCase):
                 table.utc_offset)
           
           
+    def _assert_times(self, times, length, expected_times, utc_offset):
+        self.assertEqual(len(times), length)
+        for i, expected in expected_times:
+            self._assert_time(times[i], expected, utc_offset)
+        
+        
+    def _assert_time(self, time, expected, utc_offset):
+        expected = datetime.datetime.strptime(expected, '%Y-%m-%d %H:%M:%S')
+        expected = utils.naive_to_utc(expected, utc_offset)
+        self.assertEqual(time, expected)
+        
+        
     def test_ithaca_moon_table(self):
           
-        header = ('Moonrise/Moonset',) + _ITHACA_HEADER_DATA
+        header = ('Moonrise/Moonset', 'Moon') + _ITHACA_HEADER_DATA
           
         times = {
                             
@@ -86,7 +119,7 @@ class UsnoRiseSetTableTests(TestCase):
           
     def _test_ithaca_twilight_table(self, twilight_type, table):
         title = '{} Twilight'.format(twilight_type)
-        header = (title,) + _ITHACA_HEADER_DATA
+        header = (title, 'Sun') + _ITHACA_HEADER_DATA
         self._test_table(table, header, 365, 365)
           
           
@@ -101,48 +134,23 @@ class UsnoRiseSetTableTests(TestCase):
           
           
     def test_ithaca_sun_utc_table(self):
-        header = ('Sunrise/Sunset',) + _ITHACA_HEADER_DATA[:-1] + (0,)
+        header = ('Sunrise/Sunset', 'Sun') + _ITHACA_HEADER_DATA[:-1] + (0,)
         self._test_table(_ITHACA_SUN_UTC_TABLE, header, 365, 365)
           
           
     def test_high_latitude_sun_table(self):
-        header = ('Sunrise/Sunset', '', 80, 0, 2015, 0)
+        header = ('Sunrise/Sunset', 'Sun', '', 80, 0, 2015, 0)
         self._test_table(_HIGH_LATITUDE_SUN_TABLE, header, 101, 101)
           
           
     def test_zero_lat_lon_sun_table(self):
-        header = ('Sunrise/Sunset', '', 0, 0, 2000, 0)
+        header = ('Sunrise/Sunset', 'Sun', '', 0, 0, 2000, 0)
         self._test_table(_ZERO_LAT_LON_SUN_TABLE, header, 366, 366)
           
           
     def test_east_south_sun_table(self):
-        header = ('Sunrise/Sunset', '', -42.45, 76.5, 2015, 4)
+        header = ('Sunrise/Sunset', 'Sun', '', -42.45, 76.5, 2015, 4)
         self._test_table(_EAST_SOUTH_SUN_TABLE, header, 365, 365)
-        
-        
-    def _check_header(
-            self, table, table_type, place_name, lat, lon, year, utc_offset):
-        
-        self.assertEqual(table.type, table_type)
-        self.assertEqual(table.place_name, place_name)
-        self.assertEqual(table.lat, lat)
-        self.assertEqual(table.lon, lon)
-        self.assertEqual(table.year, year)
-        
-        utc_offset = datetime.timedelta(hours=utc_offset)
-        self.assertEqual(table.utc_offset, utc_offset)
-        
-        
-    def _assert_times(self, times, length, expected_times, utc_offset):
-        self.assertEqual(len(times), length)
-        for i, expected in expected_times:
-            self._assert_time(times[i], expected, utc_offset)
-        
-        
-    def _assert_time(self, time, expected, utc_offset):
-        expected = datetime.datetime.strptime(expected, '%Y-%m-%d %H:%M:%S')
-        expected = usno_utils.naive_to_utc(expected, utc_offset)
-        self.assertEqual(time, expected)
         
         
 _ITHACA_HEADER_DATA = ('ITHACA, NY', 42.45, -76.5, 2015, -4)

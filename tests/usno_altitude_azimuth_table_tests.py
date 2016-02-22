@@ -3,7 +3,7 @@ import datetime
 
 from test_case import TestCase
 from vesper.util.usno_altitude_azimuth_table import UsnoAltitudeAzimuthTable
-import vesper.util.usno_utils as usno_utils
+import vesper.util.usno_table_class_utils as utils
 
 
 class UsnoAltitudeAzimuthTableTests(TestCase):
@@ -19,7 +19,7 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
         
         
     def test_ithaca_sun_table(self):
-        header = ('Sun',) + _ITHACA_HEADER_DATA
+        header = ('Sun Altitude/Azimuth', 'Sun') + _ITHACA_HEADER_DATA
         data = (
             ('07:56', -1.6, 104.9),
             ('17:51', 7.8, 246.0)
@@ -31,14 +31,16 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
             self, table, expected_header, expected_size, expected_data):
         
         table = UsnoAltitudeAzimuthTable(table)
-        self._check_header(table, *expected_header)
-        self._check_body(table, expected_size, expected_data)
+        self._check_table_header(table, *expected_header)
+        self._check_table_body(table, expected_size, expected_data)
          
          
-    def _check_header(
-            self, table, table_type, place_name, lat, lon, date, utc_offset):
+    def _check_table_header(
+            self, table, table_type, body, place_name, lat, lon, date,
+            utc_offset):
         
         self.assertEqual(table.type, table_type)
+        self.assertEqual(table.body, body)
         self.assertEqual(table.place_name, place_name)
         self.assertEqual(table.lat, lat)
         self.assertEqual(table.lon, lon)
@@ -48,21 +50,21 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
         self.assertEqual(table.utc_offset, utc_offset)
         
         
-    def _check_body(self, table, expected_size, expected_data):
+    def _check_table_body(self, table, expected_size, expected_data):
         
         data = dict((d[0], d[1:]) for d in table.data)
         
         self.assertEqual(len(data), expected_size)
         
         for e_d in expected_data:
-            time = usno_utils.parse_time(e_d[0], table.date, table.utc_offset)
+            time = utils.parse_time(e_d[0], table.date, table.utc_offset)
             d = data.get(time)
             self.assertNotEqual(d, None)
             self.assertEqual(d, e_d[1:])
         
         
     def test_ithaca_moon_table(self):
-        header = ('Moon',) + _ITHACA_HEADER_DATA
+        header = ('Moon Altitude/Azimuth', 'Moon') + _ITHACA_HEADER_DATA
         data = (
             ('04:00', -.1, 294.5, .72),
             ('14:00', -1.6, 64.2, .76)
@@ -71,7 +73,8 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
                 
         
     def test_ithaca_sun_utc_table(self):
-        header = ('Sun',) + _ITHACA_HEADER_DATA[:-1] + (0,)
+        header = ('Sun Altitude/Azimuth', 'Sun') + \
+                 _ITHACA_HEADER_DATA[:-1] + (0,)
         data = (
             ('12:00', -.9, 105.6),
             ('22:00', 6.3, 247.6)
@@ -80,7 +83,8 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
          
          
     def test_zero_lat_lon_sun_table(self):
-        header = ('Sun', '', 0, 0, datetime.date(2016, 2, 1), 0)
+        date = datetime.date(2016, 2, 1)
+        header = ('Sun Altitude/Azimuth', 'Sun', '', 0, 0, date, 0)
         data = (
             ('06:00', -3.2, 107.3),
             ('18:00', 3.4, 252.9)
@@ -89,12 +93,14 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
          
          
     def test_high_latitude_sun_table(self):
-        header = ('Sun', '', 85, -120, datetime.date(2016, 12, 20), 0)
+        date = datetime.date(2016, 12, 20)
+        header = ('Sun Altitude/Azimuth', 'Sun', '', 85, -120, date, 0)
         self._test_table(_HIGH_LATITUDE_SUN_TABLE, header, 0, ())
         
         
     def test_single_digit_lat_lon_sun_table(self):
-        header = ('Sun', '', 5, -5, datetime.date(2016, 12, 20), 0)
+        date = datetime.date(2016, 12, 20)
+        header = ('Sun Altitude/Azimuth', 'Sun', '', 5, -5, date, 0)
         data = (
             ('06:00', -6, 113.1),
             ('18:00', 2.4, 246.3)
@@ -103,7 +109,8 @@ class UsnoAltitudeAzimuthTableTests(TestCase):
          
          
     def test_east_south_sun_table(self):
-        header = ('Sun', '', -42.45, 76.5, datetime.date(2016, 2, 17), 4)
+        date = datetime.date(2016, 2, 17)
+        header = ('Sun Altitude/Azimuth', 'Sun', '', -42.45, 76.5, date, 4)
         data = (
             ('04:00', -3.9, 110.5),
             ('18:00', -1.2, 252.4)

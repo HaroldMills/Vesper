@@ -1,6 +1,4 @@
-"""
-Utility functions concerning United States Naval Observatory (USNO) data.
-"""
+"""Utility functions for use in USNO table classes."""
 
 
 import datetime

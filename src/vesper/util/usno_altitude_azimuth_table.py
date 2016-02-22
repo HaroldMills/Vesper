@@ -5,7 +5,7 @@ from __future__ import print_function
 import datetime
 import re
 
-import usno_utils
+import usno_table_class_utils as utils
 
 
 class UsnoAltitudeAzimuthTable(object):
@@ -46,7 +46,11 @@ class UsnoAltitudeAzimuthTable(object):
     @property
     def type(self):
         return self._type
-     
+    
+    @property
+    def body(self):
+        return _BODY_NAMES[self._type]
+    
     @property
     def place_name(self):
         return self._place_name
@@ -77,6 +81,11 @@ _BODY_NUMS = {
     'Moon Altitude/Azimuth': 11
 }
 
+_BODY_NAMES = {
+    'Sun Altitude/Azimuth': 'Sun',
+    'Moon Altitude/Azimuth': 'Moon'
+}
+
 _TABLE_GENERATOR_URL = 'http://aa.usno.navy.mil/cgi-bin/aa_altazw.pl'
 
 _PLACE_NAME_LINE_NUM = 4
@@ -87,8 +96,8 @@ _LOCATION_RE = re.compile(
 
 _TABLE_TYPE_LINE_NUM = 8
 _TABLE_TYPES = {
-    'Altitude and Azimuth of the Sun': 'Sun',
-    'Altitude and Azimuth of the Moon': 'Moon'
+    'Altitude and Azimuth of the Sun': 'Sun Altitude/Azimuth',
+    'Altitude and Azimuth of the Moon': 'Moon Altitude/Azimuth'
 }
 
 _DATE_LINE_NUM = 9
@@ -114,10 +123,9 @@ def _download_table_text(
     if place_name is None:
         place_name = ''
         
-    lat_sign, lat_degrees, lat_minutes = usno_utils.get_angle_data(lat)
-    lon_sign, lon_degrees, lon_minutes = usno_utils.get_angle_data(lon)
-    utc_offset_sign, utc_offset = \
-        usno_utils.get_utc_offset_data(utc_offset, lon)
+    lat_sign, lat_degrees, lat_minutes = utils.get_angle_data(lat)
+    lon_sign, lon_degrees, lon_minutes = utils.get_angle_data(lon)
+    utc_offset_sign, utc_offset = utils.get_utc_offset_data(utc_offset, lon)
     
     values = (
         ('form', 2),
@@ -137,7 +145,7 @@ def _download_table_text(
         ('tz', utc_offset)
     )
     
-    return usno_utils.download_table(_TABLE_GENERATOR_URL, values)
+    return utils.download_table(_TABLE_GENERATOR_URL, values)
     
     
 def _parse_table(text):
@@ -154,11 +162,10 @@ def _parse_table(text):
   
 def _parse_table_header(lines):
     place_name = _parse_place_name(lines)
-    lat, lon = usno_utils.parse_location(
-        lines, _LOCATION_LINE_NUM, _LOCATION_RE)
+    lat, lon = utils.parse_location(lines, _LOCATION_LINE_NUM, _LOCATION_RE)
     table_type = _parse_table_type(lines)
     date = _parse_date(lines)
-    utc_offset = usno_utils.parse_utc_offset(lines, _UTC_OFFSET_LINE_NUM)
+    utc_offset = utils.parse_utc_offset(lines, _UTC_OFFSET_LINE_NUM)
     return (table_type, place_name, lat, lon, date, utc_offset)
   
   
@@ -174,8 +181,7 @@ def _parse_table_type(lines):
         return _TABLE_TYPES[line]
     
     except KeyError:
-        usno_utils.handle_header_parse_error(
-            'table type', _TABLE_TYPE_LINE_NUM)
+        utils.handle_header_parse_error('table type', _TABLE_TYPE_LINE_NUM)
       
       
 def _parse_date(lines):
@@ -184,7 +190,7 @@ def _parse_date(lines):
     m = _DATE_RE.match(line)
     
     if m is None:
-        usno_utils.handle_header_parse_error('date', _DATE_LINE_NUM)
+        utils.handle_header_parse_error('date', _DATE_LINE_NUM)
         
     month = _MONTH_NUMS[m.group(1)]
     day = int(m.group(2))
@@ -210,7 +216,7 @@ def _parse_table_data(lines, table_type, date, utc_offset):
             parts = line.split()
             
             try:
-                time = usno_utils.parse_time(parts[0], date, utc_offset)
+                time = utils.parse_time(parts[0], date, utc_offset)
                 
             except ValueError:
                 # line does not start with time
@@ -224,7 +230,7 @@ def _parse_table_data(lines, table_type, date, utc_offset):
             altitude = float(parts[1])
             azimuth = float(parts[2])
             
-            if table_type == 'Sun':
+            if table_type == 'Sun Altitude/Azimuth':
                 data.append((time, altitude, azimuth))
                 
             else:

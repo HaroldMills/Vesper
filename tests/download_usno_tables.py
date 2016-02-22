@@ -10,27 +10,13 @@ import os
 import random
 import time as time_module
 
-from vesper.util.usno_altitude_azimuth_table import UsnoAltitudeAzimuthTable
-from vesper.util.usno_rise_set_table import UsnoRiseSetTable
+import vesper.util.usno_table_utils as utils
 
 
 _TABLES_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\USNO Tables Test'
 
-_YEAR_TABLE_TYPES = (
-    'Sunrise/Sunset',
-    'Moonrise/Moonset',
-    'Civil Twilight',
-    'Nautical Twilight',
-    'Astronomical Twilight'
-)
-
-_DAY_TABLE_TYPES = (
-    'Sun Altitude/Azimuth',
-    'Moon Altitude/Azimuth'
-)
-
 _YEAR_RANGE = (1990, 2030)
-_DAY_TABLE_INTERVAL = 10
+_AA_TABLE_INTERVAL = 10
 
 _SPECIFIC_LOCATIONS = (
     (42.45, -76.5, -4, 'Ithaca, NY'),
@@ -38,8 +24,8 @@ _SPECIFIC_LOCATIONS = (
 )
 _NUM_SPECIFIC_LOCATION_DATES = 300
 
-_NUM_RANDOM_YEAR_TABLES = 10 # 1000
-_NUM_RANDOM_DAY_TABLES = 10 # 1000
+_NUM_RANDOM_RS_TABLES = 10 # 1000
+_NUM_RANDOM_AA_TABLES = 10 # 1000
 _RANDOM_LAT_RANGE = (-80, 80)
 
 _DRY_RUN = False
@@ -48,25 +34,6 @@ _START_TIME = datetime.datetime(2016, 2, 20, 19, 42)
 
 _PAUSE_DURATION = 10
 """Duration of pause that precedes each file download, in seconds."""
-
-_RISE_SET = UsnoRiseSetTable.download_table_text
-_ALTITUDE_AZIMUTH = UsnoAltitudeAzimuthTable.download_table_text
-_DOWNLOAD_FUNCTIONS = {
-    'Sunrise/Sunset': _RISE_SET,
-    'Moonrise/Moonset': _RISE_SET,
-    'Civil Twilight': _RISE_SET,
-    'Nautical Twilight': _RISE_SET,
-    'Astronomical Twilight': _RISE_SET,
-    'Sun Altitude/Azimuth': _ALTITUDE_AZIMUTH,
-    'Moon Altitude/Azimuth': _ALTITUDE_AZIMUTH
-}
-
-_FILE_NAME_TABLE_TYPES = {
-    'Sunrise/Sunset': 'Sunrise Sunset',
-    'Moonrise/Moonset': 'Moonrise Moonset',
-    'Sun Altitude/Azimuth': 'Sun Altitude Azimuth',
-    'Moon Altitude/Azimuth': 'Moon Altitude Azimuth'
-}
 
 
 def _main():
@@ -84,27 +51,27 @@ def _wait_until_time(dt):
         
     
 def _download_specific_location_tables():
-    for data in _generate_specific_locations_year_table_data():
+    for data in _generate_specific_locations_rs_table_data():
         _download_table(*data)
-    for data in _generate_specific_locations_day_table_data():
+    for data in _generate_specific_locations_aa_table_data():
         _download_table(*data)
         
         
-def _generate_specific_locations_year_table_data():
+def _generate_specific_locations_rs_table_data():
     start_year, end_year = _YEAR_RANGE
     years = range(start_year, end_year + 1)
-    for table_type in _YEAR_TABLE_TYPES:
+    for table_type in utils.RISE_SET_TABLE_TYPES:
         for lat, lon, utc_offset, place_name in _SPECIFIC_LOCATIONS:
             for year in years:
                 yield (table_type, lat, lon, year, utc_offset, place_name)
             
 
-def _generate_specific_locations_day_table_data():
+def _generate_specific_locations_aa_table_data():
     _seed_random_number_generator()
     for date in _get_random_dates(_NUM_SPECIFIC_LOCATION_DATES, *_YEAR_RANGE):
-        for table_type in _DAY_TABLE_TYPES:
+        for table_type in utils.ALTITUDE_AZIMUTH_TABLE_TYPES:
             for lat, lon, utc_offset, place_name in _SPECIFIC_LOCATIONS:
-                yield (table_type, lat, lon, date, _DAY_TABLE_INTERVAL,
+                yield (table_type, lat, lon, date, _AA_TABLE_INTERVAL,
                        utc_offset, place_name)
         
         
@@ -132,16 +99,16 @@ def _get_num_days_in_year_range(start_year, end_year):
 
 
 def _download_random_tables():
-    for data in _generate_random_year_table_data():
+    for data in _generate_random_rs_table_data():
         _download_table(*data)
-    for data in _generate_random_day_table_data():
+    for data in _generate_random_aa_table_data():
         _download_table(*data)
         
         
-def _generate_random_year_table_data():
+def _generate_random_rs_table_data():
     _seed_random_number_generator()
-    for _ in xrange(_NUM_RANDOM_YEAR_TABLES):
-        table_type = random.choice(_YEAR_TABLE_TYPES)
+    for _ in xrange(_NUM_RANDOM_RS_TABLES):
+        table_type = random.choice(utils.RISE_SET_TABLE_TYPES)
         lat = _get_random_latitude()
         lon = _get_random_longitude()
         year = random.randint(*_YEAR_RANGE)
@@ -163,14 +130,14 @@ def _get_random_longitude():
     return random.uniform(-180, 180)
 
 
-def _generate_random_day_table_data():
+def _generate_random_aa_table_data():
     _seed_random_number_generator()
-    for _ in xrange(_NUM_RANDOM_DAY_TABLES):
-        table_type = random.choice(_DAY_TABLE_TYPES)
+    for _ in xrange(_NUM_RANDOM_AA_TABLES):
+        table_type = random.choice(utils.ALTITUDE_AZIMUTH_TABLE_TYPES)
         lat = _get_random_latitude()
         lon = _get_random_longitude()
         date = _get_random_date(*_YEAR_RANGE)
-        yield (table_type, lat, lon, date, _DAY_TABLE_INTERVAL)
+        yield (table_type, lat, lon, date, _AA_TABLE_INTERVAL)
         
         
 def _get_random_date(start_year, end_year):
@@ -188,12 +155,8 @@ def _download_table(table_type, lat, lon, time, *args):
         
     if _DRY_RUN:
         table = str(datetime.datetime.now()) + '\n'
-        
     else:
-        # not a dry run
-        
-        function = _DOWNLOAD_FUNCTIONS[table_type]
-        table = function(table_type, lat, lon, time, *args)
+        table = utils.download_table(table_type, lat, lon, time, *args)
     
     file_name = _create_table_file_name(table_type, lat, lon, time)
     file_path = os.path.join(_TABLES_DIR_PATH, file_name)
@@ -203,7 +166,7 @@ def _download_table(table_type, lat, lon, time, *args):
     
 def _create_table_file_name(table_type, lat, lon, time):
     
-    table_type = _FILE_NAME_TABLE_TYPES.get(table_type, table_type)
+    table_type = utils.get_file_name_table_type(table_type)
     lat = _format_angle(lat, '{:05.2f}')
     lon = _format_angle(lon, '{:05.1f}')
     
