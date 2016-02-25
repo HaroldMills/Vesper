@@ -1,11 +1,18 @@
 """
-Utility functions that calculate sunrise and sunset times.
+Utility functions related to sun and moon ephemerides.
 
-This module includes functions for calculating sunrise and sunset times
-as well as civil, nautical, and astronomical dawn and dusk times. The
-module relies on PyEphem (http://rhodesmill.org/pyephem) to calculate
-these times.
+This module includes functions that calculate:
 
+- sunrise and sunset times
+- civil, nautical, and astronomical dawn and dusk times
+- moonrise and moonset times
+- sun and moon altitudes and azimuths
+- moon illumination.
+
+The module relies on PyEphem (http://rhodesmill.org/pyephem) to calculate
+these data.
+
+[The following is no longer inaccurate and should be updated.]
 See comments in the `test_ephem` script for the results of an extensive
 comparison of times computed by PyEphem to times from tables computed
 by the United States Naval Observatory (USNO). In short, thousands of
@@ -26,15 +33,24 @@ import ephem
 import pytz
 
 
-_SUN = ephem.Sun()
+# We use the following since for some reason PyDev marks `ephem.Sun`
+# (but not `ephem.Moon`!) as undefined.
+_EPHEM_SUN = getattr(ephem, 'Sun')
+
+_SUN = _EPHEM_SUN()
 _MOON = ephem.Moon()
+
+_BODY_FACTORIES = {
+    'Sun': _EPHEM_SUN,
+    'Moon': ephem.Moon
+}
 
 _RISE_SET_HORIZON = '-0:34'
 _CIVIL_HORIZON = '-6'
 _NAUTICAL_HORIZON = '-12'
 _ASTRONOMICAL_HORIZON = '-18'
 
-_RISE_SET_DATA = {
+_EVENT_DATA = {
     'Sunrise': ('Rise', _SUN, _RISE_SET_HORIZON, False),
     'Sunset': ('Set', _SUN, _RISE_SET_HORIZON, False),
     'Civil Dawn': ('Rise', _SUN, _CIVIL_HORIZON, True),
@@ -48,10 +64,10 @@ _RISE_SET_DATA = {
 }
 
 
-def get_rise_set_time(lat, lon, date, event):
+def get_event_time(event, lat, lon, date):
     
     try:
-        rise_set, body, horizon, use_center = _RISE_SET_DATA[event]
+        rise_set, body, horizon, use_center = _EVENT_DATA[event]
     except KeyError:
         raise ValueError('Unrecognized event "{}".'.format(event))
 
@@ -60,45 +76,7 @@ def get_rise_set_time(lat, lon, date, event):
     return function(lat, lon, date, body, horizon, use_center)
 
     
-def get_sunrise_time(lat, lon, date):
-    return _get_rising_time(lat, lon, date, _SUN, _RISE_SET_HORIZON)
-
-
-def get_sunset_time(lat, lon, date):
-    return _get_setting_time(lat, lon, date, _SUN, _RISE_SET_HORIZON)
-
-
-def get_civil_dawn_time(lat, lon, date):
-    return _get_rising_time(
-        lat, lon, date, _SUN, _CIVIL_HORIZON, use_center=True)
-
-
-def get_civil_dusk_time(lat, lon, date):
-    return _get_setting_time(
-        lat, lon, date, _SUN, _CIVIL_HORIZON, use_center=True)
-
-
-def get_nautical_dawn_time(lat, lon, date):
-    return _get_rising_time(
-        lat, lon, date, _SUN, _NAUTICAL_HORIZON, use_center=True)
-
-
-def get_nautical_dusk_time(lat, lon, date):
-    return _get_setting_time(
-        lat, lon, date, _SUN, _NAUTICAL_HORIZON, use_center=True)
-
-
-def get_astronomical_dawn_time(lat, lon, date):
-    return _get_rising_time(
-        lat, lon, date, _SUN, _ASTRONOMICAL_HORIZON, use_center=True)
-    
-    
-def get_astronomical_dusk_time(lat, lon, date):
-    return _get_setting_time(
-        lat, lon, date, _SUN, _ASTRONOMICAL_HORIZON, use_center=True)
-    
-    
-def _get_rising_time(lat, lon, date, body, horizon, use_center=False):
+def _get_rising_time(lat, lon, date, body, horizon, use_center):
     method = ephem.Observer.next_rising
     return _get_time(method, lat, lon, date, body, horizon, use_center)
 
@@ -142,46 +120,37 @@ def _get_datetime_from_ephem_date(ephem_date):
         year, month, day, hour, minute, second, microsecond, pytz.utc)
 
 
-def _get_setting_time(lat, lon, date, body, horizon, use_center=False):
+def _get_setting_time(lat, lon, date, body, horizon, use_center):
     method = ephem.Observer.next_setting
     return _get_time(method, lat, lon, date, body, horizon, use_center)
 
 
-def get_sun_altitude(lat, lon, time):
-    return _get_body_altitude(ephem.Sun, lat, lon, time)
-
-
-def _get_body_altitude(cls, lat, lon, time):
-    body = _create_body(cls, lat, lon, time)
+def get_altitude(body, lat, lon, time):
+    body = _create_body(body, lat, lon, time)
     return math.degrees(float(body.alt))
 
 
-def _create_body(cls, lat, lon, time):
+def _create_body(body, lat, lon, time):
+    
+    try:
+        factory = _BODY_FACTORIES[body]
+    except KeyError:
+        raise ValueError('Unrecognized body "{}".'.format(body))
+    
     observer = ephem.Observer()
     observer.lat = math.radians(lat)
     observer.lon = math.radians(lon)
     observer.pressure = 0
     observer.date = time
-    return cls(observer)
+    
+    return factory(observer)
 
 
-def get_sun_azimuth(lat, lon, time):
-    return _get_body_azimuth(ephem.Sun, lat, lon, time)
-
-
-def _get_body_azimuth(cls, lat, lon, time):
-    body = _create_body(cls, lat, lon, time)
+def get_azimuth(body, lat, lon, time):
+    body = _create_body(body, lat, lon, time)
     return math.degrees(float(body.az))
 
 
-def get_moon_altitude(lat, lon, time):
-    return _get_body_altitude(ephem.Moon, lat, lon, time)
-
-
-def get_moon_azimuth(lat, lon, time):
-    return _get_body_azimuth(ephem.Moon, lat, lon, time)
-
-
-def get_moon_illumination(lat, lon, time):
-    moon = _create_body(ephem.Moon, lat, lon, time)
-    return moon.phase
+def get_illumination(body, lat, lon, time):
+    body = _create_body(body, lat, lon, time)
+    return body.phase

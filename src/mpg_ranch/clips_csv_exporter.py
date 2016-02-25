@@ -12,7 +12,7 @@ import yaml
 from vesper.util.bunch import Bunch
 from vesper.vcl.clip_visitor import ClipVisitor
 from vesper.vcl.command import CommandExecutionError
-import vesper.util.astro_utils as astro_utils
+import vesper.util.ephem_utils as ephem_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
@@ -389,16 +389,39 @@ class AstronomicalDawnMeasurement(object):
     name = 'Astronomical Dawn Time'
     
     def measure(self, clip):
-        return _astro_aux(
-            clip, 'get_astronomical_dawn_time', increment_date=True)
+        return _get_time(clip, 'Astronomical Dawn', increment_date=True)
 
 
+def _get_time(clip, event, increment_date=False):
+    
+    date = clip.night
+    if increment_date:
+        date += datetime.timedelta(days=1)
+    
+    station = clip.station
+    
+    lat = station.latitude
+    lon = station.longitude
+    if lat is None or lon is None:
+        return None
+    
+    try:
+        time = ephem_utils.get_event_time(event, lat, lon, date)
+    except ValueError:
+        return None
+    
+    time_zone = station.time_zone
+    time = time.astimezone(time_zone)
+    
+    return time
+
+    
 class AstronomicalDuskMeasurement(object):
     
     name = 'Astronomical Dusk Time'
     
     def measure(self, clip):
-        return _astro_aux(clip, 'get_astronomical_dusk_time')
+        return _get_time(clip, 'Astronomical Dusk')
 
 
 class CivilDawnMeasurement(object):
@@ -406,7 +429,7 @@ class CivilDawnMeasurement(object):
     name = 'Civil Dawn Time'
     
     def measure(self, clip):
-        return _astro_aux(clip, 'get_civil_dawn_time', increment_date=True)
+        return _get_time(clip, 'Civil Dawn', increment_date=True)
 
 
 class CivilDuskMeasurement(object):
@@ -414,7 +437,7 @@ class CivilDuskMeasurement(object):
     name = 'Civil Dusk Time'
     
     def measure(self, clip):
-        return _astro_aux(clip, 'get_civil_dusk_time')
+        return _get_time(clip, 'Civil Dusk')
 
 
 class ClipClassMeasurement(object):
@@ -518,17 +541,27 @@ class MoonAltitudeMeasurement(object):
     name = 'Moon Altitude'
     
     def measure(self, clip):
-        
-        time = clip.start_time
-        
-        station = clip.station
-        lat = station.latitude
-        lon = station.longitude
-        
-        if lat is None or lon is None:
-            return None
-        else:
-            return astro_utils.get_moon_altitude(lat, lon, time)
+        return _get_ephem(ephem_utils.get_altitude, 'Moon', clip)
+    
+    
+def _get_ephem(function, body, clip):
+    
+    station = clip.station
+    lat = station.latitude
+    lon = station.longitude
+    
+    if lat is None or lon is None:
+        return None
+    else:
+        return function(body, lat, lon, clip.start_time)
+    
+    
+class MoonAzimuthMeasurement(object):
+    
+    name = 'Moon Azimuth'
+    
+    def measure(self, clip):
+        return _get_ephem(ephem_utils.get_azimuth, 'Moon', clip)
     
     
 class MoonIlluminationMeasurement(object):
@@ -536,17 +569,7 @@ class MoonIlluminationMeasurement(object):
     name = 'Moon Illumination'
     
     def measure(self, clip):
-        
-        time = clip.start_time
-        
-        station = clip.station
-        lat = station.latitude
-        lon = station.longitude
-        
-        if lat is None or lon is None:
-            return None
-        else:
-            return astro_utils.get_moon_illumination(lat, lon, time)
+        return _get_ephem(ephem_utils.get_illumination, 'Moon', clip)
     
     
 class NauticalDawnMeasurement(object):
@@ -554,7 +577,7 @@ class NauticalDawnMeasurement(object):
     name = 'Nautical Dawn Time'
     
     def measure(self, clip):
-        return _astro_aux(clip, 'get_nautical_dawn_time', increment_date=True)
+        return _get_time(clip, 'Nautical Dawn', increment_date=True)
 
 
 class NauticalDuskMeasurement(object):
@@ -562,7 +585,7 @@ class NauticalDuskMeasurement(object):
     name = 'Nautical Dusk Time'
     
     def measure(self, clip):
-        return _astro_aux(clip, 'get_nautical_dusk_time')
+        return _get_time(clip, 'Nautical Dusk')
 
 
 class NightMeasurement(object):
@@ -598,9 +621,7 @@ class RecordingStartTimeMeasurement(object):
             return recording.start_time.astimezone(time_zone)
     
     
-# TODO: Implement more general time rounding in `time_utils`.
-
-
+# TODO: Use time rounding function of `time_utils`?
 class RoundedStartTimeMeasurement(object):
     
     
@@ -638,46 +659,36 @@ class StationMeasurement(object):
         return clip.station.name
     
     
+class SunAltitudeMeasurement(object):
+    
+    name = 'Sun Altitude'
+    
+    def measure(self, clip):
+        return _get_ephem(ephem_utils.get_altitude, 'Sun', clip)
+    
+    
+class SunAzimuthMeasurement(object):
+    
+    name = 'Sun Azimuth'
+    
+    def measure(self, clip):
+        return _get_ephem(ephem_utils.get_azimuth, 'Sun', clip)
+    
+    
 class SunriseTimeMeasurement(object):
     
     name = 'Sunrise Time'
     
     def measure(self, clip):
-        return _astro_aux(clip, 'get_sunrise_time', increment_date=True)
+        return _get_time(clip, 'Sunrise', increment_date=True)
     
-    
-def _astro_aux(clip, function_name, increment_date=False):
-    
-    date = clip.night
-    if increment_date:
-        date += datetime.timedelta(days=1)
-    
-    station = clip.station
-    
-    lat = station.latitude
-    lon = station.longitude
-    if lat is None or lon is None:
-        return None
-    
-    function = getattr(astro_utils, function_name)
-    
-    try:
-        time = function(lat, lon, date)
-    except ValueError:
-        return None
-    
-    time_zone = station.time_zone
-    time = time.astimezone(time_zone)
-    
-    return time
-
     
 class SunsetTimeMeasurement(object):
     
     name = 'Sunset Time'
     
     def measure(self, clip):
-        return _astro_aux(clip, 'get_sunset_time')
+        return _get_time(clip, 'Sunset')
     
     
 _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
@@ -691,6 +702,7 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     ElapsedStartTimeMeasurement,
     FileNameMeasurement,
     MoonAltitudeMeasurement,
+    MoonAzimuthMeasurement,
     MoonIlluminationMeasurement,
     NauticalDawnMeasurement,
     NauticalDuskMeasurement,
@@ -700,6 +712,8 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     RoundedStartTimeMeasurement,
     StartTimeMeasurement,
     StationMeasurement,
+    SunAltitudeMeasurement,
+    SunAzimuthMeasurement,
     SunriseTimeMeasurement,
     SunsetTimeMeasurement
 ])

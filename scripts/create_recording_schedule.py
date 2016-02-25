@@ -26,7 +26,7 @@ import datetime
 import pytz
 
 import vesper.util.os_utils as os_utils
-import vesper.util.astro_utils as astro_utils
+import vesper.util.ephem_utils as ephem_utils
 import vesper.util.time_utils as time_utils
 
 
@@ -67,8 +67,6 @@ OUTPUT_FILE_PATH = 'Schedule.csv'
 
 def _main():
     
-    get_sunset = astro_utils.get_sunset_time
-    get_sunrise = astro_utils.get_sunrise_time
     night = START_NIGHT
     one_day = datetime.timedelta(days=1)
     sunset_offset = datetime.timedelta(minutes=SUNSET_OFFSET)
@@ -80,8 +78,8 @@ def _main():
         
         next_day = night + one_day
         
-        start_time = _get_time(get_sunset, LAT, LON, night, sunset_offset)
-        end_time = _get_time(get_sunrise, LAT, LON, next_day, sunrise_offset)
+        start_time = _get_time('Sunset', LAT, LON, night, sunset_offset)
+        end_time = _get_time('Sunrise', LAT, LON, next_day, sunrise_offset)
                 
         line = '{:s},{:s},{:s}'.format(str(night), start_time, end_time)
         lines.append(line)
@@ -92,9 +90,9 @@ def _main():
     os_utils.write_file(OUTPUT_FILE_PATH, text)
 
 
-def _get_time(function, lat, lon, date, offset):
+def _get_time(event, lat, lon, date, offset):
     
-    dt = function(lat, lon, date)
+    dt = ephem_utils.get_event_time(event, lat, lon, date)
     dt += offset
     dt = time_utils.round_datetime(dt, 60)
     dt = dt.astimezone(TIME_ZONE)

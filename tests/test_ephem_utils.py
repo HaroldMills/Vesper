@@ -5,8 +5,7 @@ import os
 
 import pytz
 
-from test_case import TestCase
-import vesper.util.astro_utils as astro_utils
+import vesper.util.ephem_utils as ephem_utils
 
 
 _DATA_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data'
@@ -76,7 +75,13 @@ Input data at latitudes whose magnitudes exceed the limit are ignored.
 """
 
 
-class ArchiveTests(TestCase):
+def _main():
+    tester = _Tester()
+    tester.test_rs_times()
+    tester.test_aa_data()
+
+
+class _Tester(object):
     
     
     def test_rs_times(self):
@@ -107,8 +112,7 @@ class ArchiveTests(TestCase):
         
         d = usno_data
         
-        time = astro_utils.get_rise_set_time(
-            d.lat, d.lon, d.local_date, d.event)
+        time = ephem_utils.get_event_time(d.event, d.lat, d.lon, d.local_date)
         
         # TODO: Perhaps we should report when PyEphem does not
         # provide rise/set events that the USNO does. This happens
@@ -116,13 +120,13 @@ class ArchiveTests(TestCase):
         
         if time is not None:
         
-            diff = (time - d.utc_time).total_seconds()
+            diff = (time - d.time).total_seconds()
             
             if abs(diff) > _RS_DIFF_REPORTING_THRESHOLD:
                 
                 self.diffs_writer.writerow((
                     self.num_diffs, d.lat, d.lon, d.local_date, d.event,
-                    d.utc_time, time, diff))
+                    d.time, time, diff))
                 
                 self.num_diffs += 1
             
@@ -155,17 +159,14 @@ class ArchiveTests(TestCase):
         
         d = usno_data
         
+        args = (d.body, d.lat, d.lon, d.time)
+        altitude = ephem_utils.get_altitude(*args)
+        azimuth = ephem_utils.get_azimuth(*args)
         if d.body == 'Sun':
-            altitude = astro_utils.get_sun_altitude(d.lat, d.lon, d.time)
-            azimuth = astro_utils.get_sun_azimuth(d.lat, d.lon, d.time)
             illumination = None
-            
         else:
-            altitude = astro_utils.get_moon_altitude(d.lat, d.lon, d.time)
-            azimuth = astro_utils.get_moon_azimuth(d.lat, d.lon, d.time)
-            illumination = \
-                astro_utils.get_moon_illumination(d.lat, d.lon, d.time)
-            
+            illumination = ephem_utils.get_illumination(*args)
+        
         rounded_altitude = round(altitude * 10) / 10.
         diff = rounded_altitude - d.altitude
         if _altitude_diff_exceeds_reporting_threshold(diff, d.altitude):
@@ -184,13 +185,13 @@ class ArchiveTests(TestCase):
                     d, 'Illumination', usno_illumination, illumination,
                     diff)
                 
-
+    
     def _report_aa_diff(self, d, name, usno_value, ephem_value, diff):
         self.diffs_writer.writerow((
             self.num_diffs, d.lat, d.lon, d.time, d.body,
             name, usno_value, ephem_value, diff))
-
-
+    
+    
 def _altitude_diff_exceeds_reporting_threshold(diff, altitude):
     if altitude >= 0 and altitude < 10:
         if abs(diff) > _AA_SMALL_ALTITUDE_DIFF_REPORTING_THRESHOLD:
@@ -203,14 +204,14 @@ def _altitude_diff_exceeds_reporting_threshold(diff, altitude):
 
 class _UsnoRiseSetData():
     
-    def __init__(self, lat, lon, local_date, event, utc_time):
+    def __init__(self, lat, lon, local_date, event, time):
         strptime = datetime.datetime.strptime
         self.lat = float(lat)
         self.lon = float(lon)
         self.local_date = strptime(local_date, '%Y-%m-%d').date()
         self.event = event
-        dt = strptime(utc_time, '%Y-%m-%d %H:%M')
-        self.utc_time = pytz.utc.localize(dt)
+        dt = strptime(time, '%Y-%m-%d %H:%M')
+        self.time = pytz.utc.localize(dt)
 
 
 class _UsnoAltitudeAzimuthData():
@@ -235,3 +236,8 @@ class _UsnoAltitudeAzimuthData():
         
 def _include_test_case(usno_data):
     return abs(usno_data.lat) <= _LAT_LIMIT
+
+
+if __name__ == '__main__':
+    _main()
+    
