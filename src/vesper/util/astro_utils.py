@@ -34,10 +34,32 @@ _CIVIL_HORIZON = '-6'
 _NAUTICAL_HORIZON = '-12'
 _ASTRONOMICAL_HORIZON = '-18'
 
-_ALMOST_ONE_DAY = \
-    datetime.timedelta(days=1) - datetime.timedelta(microseconds=1)
+_RISE_SET_DATA = {
+    'Sunrise': ('Rise', _SUN, _RISE_SET_HORIZON, False),
+    'Sunset': ('Set', _SUN, _RISE_SET_HORIZON, False),
+    'Civil Dawn': ('Rise', _SUN, _CIVIL_HORIZON, True),
+    'Civil Dusk': ('Set', _SUN, _CIVIL_HORIZON, True),
+    'Nautical Dawn': ('Rise', _SUN, _NAUTICAL_HORIZON, True),
+    'Nautical Dusk': ('Set', _SUN, _NAUTICAL_HORIZON, True),
+    'Astronomical Dawn': ('Rise', _SUN, _ASTRONOMICAL_HORIZON, True),
+    'Astronomical Dusk': ('Set', _SUN, _ASTRONOMICAL_HORIZON, True),
+    'Moonrise': ('Rise', _MOON, _RISE_SET_HORIZON, False),
+    'Moonset': ('Set', _MOON, _RISE_SET_HORIZON, False)
+}
 
 
+def get_rise_set_time(lat, lon, date, event):
+    
+    try:
+        rise_set, body, horizon, use_center = _RISE_SET_DATA[event]
+    except KeyError:
+        raise ValueError('Unrecognized event "{}".'.format(event))
+
+    function = _get_rising_time if rise_set == 'Rise' else _get_setting_time
+    
+    return function(lat, lon, date, body, horizon, use_center)
+
+    
 def get_sunrise_time(lat, lon, date):
     return _get_rising_time(lat, lon, date, _SUN, _RISE_SET_HORIZON)
 
@@ -125,20 +147,41 @@ def _get_setting_time(lat, lon, date, body, horizon, use_center=False):
     return _get_time(method, lat, lon, date, body, horizon, use_center)
 
 
-def get_moon_altitude(lat, lon, time):
-    moon = _create_moon(lat, lon, time)
-    return math.degrees(float(moon.alt))
+def get_sun_altitude(lat, lon, time):
+    return _get_body_altitude(ephem.Sun, lat, lon, time)
 
 
-def _create_moon(lat, lon, time):
+def _get_body_altitude(cls, lat, lon, time):
+    body = _create_body(cls, lat, lon, time)
+    return math.degrees(float(body.alt))
+
+
+def _create_body(cls, lat, lon, time):
     observer = ephem.Observer()
     observer.lat = math.radians(lat)
     observer.lon = math.radians(lon)
     observer.pressure = 0
     observer.date = time
-    return ephem.Moon(observer)
+    return cls(observer)
+
+
+def get_sun_azimuth(lat, lon, time):
+    return _get_body_azimuth(ephem.Sun, lat, lon, time)
+
+
+def _get_body_azimuth(cls, lat, lon, time):
+    body = _create_body(cls, lat, lon, time)
+    return math.degrees(float(body.az))
+
+
+def get_moon_altitude(lat, lon, time):
+    return _get_body_altitude(ephem.Moon, lat, lon, time)
+
+
+def get_moon_azimuth(lat, lon, time):
+    return _get_body_azimuth(ephem.Moon, lat, lon, time)
 
 
 def get_moon_illumination(lat, lon, time):
-    moon = _create_moon(lat, lon, time)
+    moon = _create_body(ephem.Moon, lat, lon, time)
     return moon.phase

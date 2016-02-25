@@ -21,17 +21,19 @@ _TABLES_DIR_PATH = os.path.join(_DATA_DIR_PATH, 'USNO Tables Test')
 _RS_CSV_FILE_PATH = os.path.join(_DATA_DIR_PATH, 'USNO Rise Set Data.csv')
 _AA_CSV_FILE_PATH = os.path.join(
     _DATA_DIR_PATH, 'USNO Altitude Azimuth Data.csv')
+_RS_COLUMN_NAMES = (
+    'Latitude', 'Longitude', 'Local Date', 'Event', 'UTC Time')
+_AA_COLUMN_NAMES = (
+    'Latitude', 'Longitude', 'UTC Time', 'Body', 'Altitude', 'Azimuth',
+    'Illumination')
 _RS_TABLE_TYPES = frozenset(utils.RISE_SET_TABLE_TYPES)
 _AA_TABLE_TYPES = frozenset(utils.ALTITUDE_AZIMUTH_TABLE_TYPES)
 
 
 def _main():
     
-    rs_file = open(_RS_CSV_FILE_PATH, 'wb')
-    rs_writer = csv.writer(rs_file)
-    
-    aa_file = open(_AA_CSV_FILE_PATH, 'wb')
-    aa_writer = csv.writer(aa_file)
+    rs_file, rs_writer = _open_csv_file(_RS_CSV_FILE_PATH, _RS_COLUMN_NAMES)
+    aa_file, aa_writer = _open_csv_file(_AA_CSV_FILE_PATH, _AA_COLUMN_NAMES)
     
     for (dir_path, _, file_names) in os.walk(_TABLES_DIR_PATH):
         
@@ -50,6 +52,13 @@ def _main():
     aa_file.close()
 
     
+def _open_csv_file(file_path, column_names):
+    file_ = open(file_path, 'wb')
+    writer = csv.writer(file_)
+    writer.writerow(column_names)
+    return (file_, writer)
+    
+
 def _create_table(dir_path, file_name):
     
     file_name_table_type = file_name.split('_')[0]
@@ -65,18 +74,18 @@ def _create_table(dir_path, file_name):
 _RISE_EVENTS = {
     'Sunrise/Sunset': 'Sunrise',
     'Moonrise/Moonset': 'Moonrise',
-    'Civil Twilight': 'Civil Dusk',
-    'Nautical Twilight': 'Nautical Dusk',
-    'Astronomical Twilight': 'Astronomical Dusk'
+    'Civil Twilight': 'Civil Dawn',
+    'Nautical Twilight': 'Nautical Dawn',
+    'Astronomical Twilight': 'Astronomical Dawn'
 }
 
 
 _SET_EVENTS = {
     'Sunrise/Sunset': 'Sunset',
     'Moonrise/Moonset': 'Moonset',
-    'Civil Twilight': 'Civil Dawn',
-    'Nautical Twilight': 'Nautical Dawn',
-    'Astronomical Twilight': 'Astronomical Dawn'
+    'Civil Twilight': 'Civil Dusk',
+    'Nautical Twilight': 'Nautical Dusk',
+    'Astronomical Twilight': 'Astronomical Dusk'
 }
 
 
@@ -106,7 +115,7 @@ def _append_rows(rows, lat, lon, event, times):
 
 def _get_naive_local_time(time, lon):
     utc_offset = datetime.timedelta(hours=lon * 24. / 360.)
-    return (time - utc_offset).replace(tzinfo=None)
+    return (time + utc_offset).replace(tzinfo=None)
 
 
 def _append_aa_table_data(table, writer):
