@@ -4,6 +4,7 @@ Downloads rise/set tables from the United States Naval Observatory.
 
 
 from __future__ import print_function
+import argparse
 import datetime
 import math
 import os
@@ -28,7 +29,7 @@ _NUM_RANDOM_RS_TABLES = 10 # 1000
 _NUM_RANDOM_AA_TABLES = 10 # 1000
 _RANDOM_LAT_RANGE = (-80, 80)
 
-_DRY_RUN = False
+_DRY_RUN = True
 
 _START_TIME = datetime.datetime(2016, 2, 20, 19, 42)
 
@@ -38,6 +39,8 @@ _PAUSE_DURATION = 10
 
 def _main():
     
+    args = _parse_args()
+    
     if not _DRY_RUN:
         _wait_until_time(_START_TIME)
         
@@ -45,6 +48,43 @@ def _main():
     _download_random_tables()
     
     
+def _parse_args():
+    
+    parser = argparse.ArgumentParser(
+        description='''
+            This script downloads rise/set and altitude/azimuth tables
+            from the United States Naval Observatory (USNO).''')
+    
+    date_format = 'YYYY-MM-DD'
+    
+    parser.add_argument(
+        '--tables-dir_path', default=None,
+        help='the directory to which to download tables.')
+    
+    parser.add_argument(
+        '--dry-run', action='store_true', default=False,
+        help=(
+            'run but do not actually download tables. Write table '
+            'files but store the date and time of writing in each '
+            'file rather than a USNO table.'))
+    
+    parser.add_argument(
+        '--start-time', default=None, metavar='YYYY-MM-DD HH:MM',
+        help=(
+            'the time at which to begin downloading tables. If no '
+            'time is specified, downloading begins immediately.'))
+    
+    parser.add_argument(
+        '--pause-duration', type=int, default=None,
+        help=(
+            'the duration in seconds of the pause between consecutive '
+            'table downloads'))
+    
+    args = parser.parse_args()
+    
+    return args
+
+
 def _wait_until_time(dt):
     while datetime.datetime.now() < dt:
         time_module.sleep(5)
