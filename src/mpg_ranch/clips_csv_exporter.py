@@ -142,35 +142,59 @@ columns:
                   
     - name: sunset
       measurement: Sunset Time
-      format: Time
+      format:
+          name: Time
+          parameters:
+              format: "%m/%d/%y %H:%M:%S"
       
     - name: civil_dusk
       measurement: Civil Dusk Time
-      format: Time
+      format:
+          name: Time
+          parameters:
+              format: "%m/%d/%y %H:%M:%S"
       
     - name: nautical_dusk
       measurement: Nautical Dusk Time
-      format: Time
+      format:
+          name: Time
+          parameters:
+              format: "%m/%d/%y %H:%M:%S"
       
     - name: astronomical_dusk
       measurement: Astronomical Dusk Time
-      format: Time
+      format:
+          name: Time
+          parameters:
+              format: "%m/%d/%y %H:%M:%S"
       
     - name: astronomical_dawn
       measurement: Astronomical Dawn Time
-      format: Time
+      format:
+          name: Time
+          parameters:
+              format: "%m/%d/%y %H:%M:%S"
       
     - name: nautical_dawn
       measurement: Nautical Dawn Time
-      format: Time
+      format:
+          name: Time
+          parameters:
+              format: "%m/%d/%y %H:%M:%S"
       
     - name: civil_dawn
       measurement: Civil Dawn Time
-      format: Time
+      format:
+          name: Time
+          parameters:
+              format: "%m/%d/%y %H:%M:%S"
       
     - name: sunrise
       measurement: Sunrise Time
-      format: Time
+      format:
+          name: Time
+          parameters:
+              format: "%m/%d/%y %H:%M:%S"
       
     - name: moon_altitude
       measurement: Moon Altitude
