@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import (
     QBrush, QColor, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QMainWindow, QPainter, QVBoxLayout, QWidget)
+    QMainWindow, QPainter, QStatusBar, QVBoxLayout, QWidget)
 import numpy as np
 
 from vesper.ui.clip_times_rug_plot import ClipTimesRugPlot
@@ -79,6 +79,8 @@ class ClipsWindow(QMainWindow):
         )
         self._figures_frame = _FiguresFrameWithFlowLayout(parent, config)
         
+        self._status_bar = QStatusBar()
+        
         
     def _lay_out_ui_components(self, parent):
         
@@ -120,6 +122,7 @@ class ClipsWindow(QMainWindow):
         box.setContentsMargins(margins)
 
         self.setCentralWidget(parent)
+        self.setStatusBar(self._status_bar)
 
     
     def _on_commands_changed(self, index):

@@ -389,39 +389,30 @@ class SpectrogramClipFigure(ClipFigure):
 
     def _update_clip_text(self, event=None):
         
-        if self.clip is None:
-            text = ''
-            
-        else:
-            # clip is not `None`
-            
-            pos = self._get_mouse_pos(event)
-            
-            if prefs.get('clip_figure.show_mouse_location') and \
-                    pos is not None:
-                
-                x, y = pos
-                text = '{:.3f} s  {:d} Hz'.format(x, int(round(y)))
-                
-            else:
-                text = _get_clip_text(self.clip)
-        
-        self._clip_text.set_text(text)
-        
+        figure_text = _get_clip_figure_clip_text(self.clip, event)
+        self._clip_text.set_text(figure_text)
         self.canvas.draw()
         
+        status_text = _get_status_bar_clip_text(self.clip, event)
+        self._set_status_text(status_text)
         
-    def _get_mouse_pos(self, event):
         
-        if event is not None and hasattr(event, 'xdata') and \
-           event.xdata is not None:
-            
-            return (event.xdata, event.ydata)
+    def _set_status_text(self, text):
+        # The following is a bad way to update text in the application's
+        # status bar, since a clip figure should not know so much about
+        # its ancestors in the widget containment hierarchy. At the point
+        # of this writing, however, we plan to replace this GUI with a
+        # web-based one within a matter of months, and hence want to
+        # minimize time spent maintaining this code. If this code winds
+        # up living longer than expected, we should use the observer
+        # pattern to allow instances of this class to notify other
+        # interested objects of clip figure events that might interest
+        # them. Note that there are other, similar violations of good
+        # practice in this class, for example in the  `_on_button_release`
+        # and `_update_aux_figure*` methods.
+        self.parent.parent().parent().parent()._status_bar.showMessage(text)
         
-        else:
-            return None
         
-            
     def _on_figure_enter(self, event):
         self._update_clip_text(event)
         self._play_button._on_figure_enter(event)
@@ -580,43 +571,68 @@ def _create_clip_text(axes):
         transform=axes.transAxes)
 
 
-def _get_clip_text(clip):
+def _get_clip_figure_clip_text(clip, event):
     
-    name = _get_clip_class_display_name(clip.clip_class_name)
-    
-    if prefs.get('clip_figure.show_clip_times'):
-        time = _format_clip_time(clip)
-    else:
-        time = None
-    
-    if name is not None and time is not None:
-        return name + ' ' + time
-    elif name is not None:
-        return name
-    elif time is not None:
-        return time
-    else:
+    if clip is None:
         return ''
-
-
+    
+    else:
+        
+        pos = _get_mouse_pos(event)
+        
+        if pos is None:
+            # mouse is not in clip figure
+            
+            if prefs.get('clip_figure.show_clip_class_names'):
+                name = _get_clip_class_display_name(clip.clip_class_name)
+            else:
+                name = None
+            
+            if prefs.get('clip_figure.show_clip_times'):
+                time = _format_clip_time(clip)
+            else:
+                time = None
+            
+            if name is not None and time is not None:
+                return name + ' ' + time
+            elif name is not None:
+                return name
+            elif time is not None:
+                return time
+            else:
+                return ''
+        
+        else:
+            # mouse is in clip figure
+            
+            if prefs.get('clip_figure.show_mouse_location'):
+                return _format_mouse_pos(pos)
+            else:
+                return ''
+            
+            
+def _get_mouse_pos(event):
+    
+    if event is not None and hasattr(event, 'xdata') and \
+       event.xdata is not None:
+        
+        return (event.xdata, event.ydata)
+    
+    else:
+        return None
+        
+            
 def _get_clip_class_display_name(name):
     
-    if prefs.get('clip_figure.show_clip_class_names'):
+    if name is None:
+        return Archive.CLIP_CLASS_NAME_UNCLASSIFIED
         
-        if name is None:
-            return Archive.CLIP_CLASS_NAME_UNCLASSIFIED
-            
-        # TODO: Move this to some sort of classification scheme module.
-        elif name.startswith('Call.'):
-            return name[len('Call.'):]
-            
-        else:
-            return name
+    # TODO: Move this to some sort of classification scheme module.
+    elif name.startswith('Call.'):
+        return name[len('Call.'):]
         
     else:
-        # not displaying clip class names
-        
-        return None
+        return name
         
             
 def _format_clip_time(clip):
@@ -631,6 +647,26 @@ def _format_clip_time(clip):
     time_zone = time.strftime('%Z')
     
     return hms + '.' + milliseconds + ' ' + time_zone
+
+
+def _format_mouse_pos(pos):
+    x, y = pos
+    return '{:.3f} s  {:d} Hz'.format(x, int(round(y)))
+
+
+def _get_status_bar_clip_text(clip, event):
+    
+    pos = _get_mouse_pos(event)
+    
+    if clip is None or pos is None:
+        return ''
+    
+    else:
+
+        name = clip.clip_class_name
+        time = _format_clip_time(clip)
+        pos = _format_mouse_pos(pos)
+        return name + '   ' + time + '   ' + pos
 
 
 # TODO: This class was needed for PySide, but is it needed for PyQt4?
