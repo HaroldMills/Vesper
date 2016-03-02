@@ -18,6 +18,11 @@ import vesper.util.calendar_utils as calendar_utils
 import vesper.util.preferences as prefs
 
 
+_UNVISITED_DAY_COLOR = (0, 0, 1, .2)
+_VISITED_DAY_COLOR = (.5, .5, .5, .2)
+_HIGHLIGHTED_DAY_COLOR = (0, 1, 0, .2)
+
+
 class ClipCountMonthCalendar(QFrame):
     
     
@@ -98,10 +103,12 @@ class ClipCountMonthCalendar(QFrame):
     
     def _update_day_colors(self, index):
           
-        num_days = len(self._x)
-        colors = [(0, 0, 1, .2)] * num_days
+        colors = [
+            _VISITED_DAY_COLOR if self._visited[i] else _UNVISITED_DAY_COLOR
+            for i in xrange(len(self._visited))]
+        
         if index is not None:
-            colors[index] = (0, 1, 0, .2)
+            colors[index] = _HIGHLIGHTED_DAY_COLOR
         
         self._path_collection.set_facecolors(colors)
         
@@ -127,8 +134,9 @@ class ClipCountMonthCalendar(QFrame):
         # respond to events from the primary mouse button.
         e = e.mouseevent
         if e.name == 'button_press_event' and e.button == 1:
-            day = self._get_path_index(e) + 1
-            date = datetime.date(self.year, self.month, day)
+            index = self._get_path_index(e)
+            self._visited[index] = True
+            date = datetime.date(self.year, self.month, index + 1)
             self._notifier.notify_listeners(date)
             self._pick_enabled = False
         
@@ -226,11 +234,12 @@ class ClipCountMonthCalendar(QFrame):
                     sizes[i] = 500 + count
                 
             self._path_collection = axes.scatter(
-                x, y, s=sizes, alpha=.2, clip_on=False, pickradius=0,
-                picker=True)
+                x, y, s=sizes, c=_UNVISITED_DAY_COLOR, alpha=.2,
+                clip_on=False, pickradius=0, picker=True)
             self._x = x
             self._y = y
             self._mouse_index = None
+            self._visited = [False] * num_days
             
             for i in xrange(num_days):
                 axes.text(x[i], y[i], str(i + 1), ha='center', va='center')
