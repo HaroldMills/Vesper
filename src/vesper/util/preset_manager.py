@@ -18,7 +18,7 @@ import vesper.util.vesper_path_utils as vesper_path_utils
 
 _PRESETS_DIR_NAME = 'Presets'
 _PRESET_TYPES = {ClassificationCommandsPreset}
-_TEXT_FILE_NAME_EXTENSION = '.txt'
+_YAML_FILE_NAME_EXTENSIONS = ('.yaml', '.yml')
 
 
 class PresetManager(object):
@@ -213,10 +213,13 @@ def _load_presets_aux(dir_path, preset_type):
         
         
 def _get_preset_name(file_name):
-    if file_name.endswith(_TEXT_FILE_NAME_EXTENSION):
-        return file_name[:-len(_TEXT_FILE_NAME_EXTENSION)]
-    else:
-        return file_name
+    
+    for extension in _YAML_FILE_NAME_EXTENSIONS:
+        if file_name.endswith(extension):
+            return file_name[:-len(extension)]
+        
+    # If we get here, the file did not have a YAML file name extension.
+    return file_name
     
     
 def _parse_preset(file_path, preset_name, preset_type):
