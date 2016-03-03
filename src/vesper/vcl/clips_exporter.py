@@ -75,8 +75,8 @@ class _ClipVisitor(ClipVisitor):
         
     def begin_visits(self):
         try:
-            os_utils.assert_directory(self._output_dir_path)
-        except AssertionError as e:
+            os_utils.create_directory(self._output_dir_path)
+        except OSError as e:
             raise CommandExecutionError(str(e))
         
         
