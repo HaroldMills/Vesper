@@ -267,9 +267,9 @@ def get_clip_query(keyword_args):
     station_names = get_station_names(keyword_args)
     detector_names = get_detector_names(keyword_args)
     clip_class_names = get_clip_class_names(keyword_args)
-    start_date, end_date = get_dates(keyword_args)
-    return (station_names, detector_names, clip_class_names, start_date,
-            end_date)
+    start_night, end_night = get_nights(keyword_args)
+    return (station_names, detector_names, clip_class_names, start_night,
+            end_night)
         
     
 def get_station_names(keyword_args):
@@ -333,40 +333,28 @@ def get_clip_class_names(keyword_args):
     return _get_arg_values(keyword_args, 'clip-class', 'clip-classes')
     
     
-def get_dates(keyword_args):
-    
-    # TODO: Support "dates" keyword argument. It should allow the
-    # specification of multiple dates and date ranges. A range is
-    # specified by joining two dates with a colon, for example
-    # "2015-06-01:2015-06-10".
-    #
-    # The dates of a query can be represented as a sequence of ranges
-    # (where some ranges may contain only one date) ordered by
-    # increasing start date. A simple algorithm to merge overlapping
-    # and consecutive date ranges merges consecutive pairs of ranges
-    # whenever possible, beginning at the top of the list and
-    # advancing downward until reaching the end of the list.
+def get_nights(keyword_args):
     
     args = keyword_args
     
-    if 'date' in args and 'start-date' in args:
-        _handle_exclusivity_error('date', 'start-date')
+    if 'night' in args and 'start-night' in args:
+        _handle_exclusivity_error('night', 'start-night')
         
-    elif 'date' in args and 'end-date' in args:
-        _handle_exclusivity_error('date', 'end-date')
+    elif 'night' in args and 'end-night' in args:
+        _handle_exclusivity_error('night', 'end-night')
         
-    elif 'date' in args:
-        date = _get_date(args, 'date')
-        return (date, date)
+    elif 'night' in args:
+        night = _get_night(args, 'night')
+        return (night, night)
     
     else:
-        start_date = _get_date(args, 'start-date')
-        end_date = _get_date(args, 'end-date')
-        _check_date_order(start_date, end_date)
-        return (start_date, end_date)
+        start_night = _get_night(args, 'start-night')
+        end_night = _get_night(args, 'end-night')
+        _check_night_order(start_night, end_night)
+        return (start_night, end_night)
         
     
-def _get_date(args, name):
+def _get_night(args, name):
     
     try:
         values = args[name]
@@ -409,17 +397,17 @@ def _handle_bad_date(value):
     raise CommandSyntaxError('Bad date "{:s}"'.format(value))
 
 
-def _check_date_order(start_date, end_date):
+def _check_night_order(start_night, end_night):
     
-    if start_date is not None and \
-            end_date is not None and \
-            start_date > end_date:
+    if start_night is not None and \
+            end_night is not None and \
+            start_night > end_night:
         
         # TODO: This isn't really a syntax error. Should we change
         # the exception class name to `CommandParseError`?
         raise CommandSyntaxError(
-            'Start date "{:s}" follows end date "{:s}".'.format(
-                format_date(start_date), format_date(end_date)))
+            'Start night "{:s}" follows end night "{:s}".'.format(
+                format_date(start_night), format_date(end_night)))
         
         
 def format_date(date):

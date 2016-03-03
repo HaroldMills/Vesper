@@ -27,7 +27,7 @@ class ClipVisitor(Visitor):
         super(ClipVisitor, self).__init__(positional_args, keyword_args)
         
         self._station_names, self._detector_names, self._clip_class_names, \
-            self._start_date, self._end_date = \
+            self._start_night, self._end_night = \
             vcl_utils.get_clip_query(keyword_args)
                 
     
@@ -36,19 +36,19 @@ class ClipVisitor(Visitor):
         # TODO: Provide more control of the order in which clips are visited,
         # perhaps with a "--clip-order" keyword argument.
         
-        (station_names, detector_names, clip_class_names, dates) = \
+        (station_names, detector_names, clip_class_names, nights) = \
             _get_clip_query_tuples(
                 self._station_names, self._detector_names,
-                self._clip_class_names, self._start_date, self._end_date,
+                self._clip_class_names, self._start_night, self._end_night,
                 self._archive)
             
         for station_name in station_names:
             for detector_name in detector_names:
                 for clip_class_name in clip_class_names:
-                    for date in dates:
+                    for night in nights:
                         
                         clips = self._archive.get_clips(
-                            station_name, detector_name, date,
+                            station_name, detector_name, night,
                             clip_class_name)
                         
                         # Clips come from the archive sorted by start time.
@@ -65,8 +65,8 @@ class ClipVisitor(Visitor):
 
 
 def _get_clip_query_tuples(
-        station_names, detector_names, clip_class_names, start_date, end_date,
-        archive):
+        station_names, detector_names, clip_class_names, start_night,
+        end_night, archive):
     
     # When station names and/or detector names are not specified, we
     # return a list of all of them. When clip class names are not
@@ -85,19 +85,19 @@ def _get_clip_query_tuples(
         
     clip_class_names = _get(clip_class_names, (None,))
     
-    start_date = _get(start_date, archive.start_night)
-    end_date = _get(end_date, archive.end_night)
-    end_date += datetime.timedelta(days=1)
-    dates = _get_dates(start_date, end_date)
+    start_night = _get(start_night, archive.start_night)
+    end_night = _get(end_night, archive.end_night)
+    end_night += datetime.timedelta(days=1)
+    nights = _get_dates(start_night, end_night)
     
-    return station_names, detector_names, clip_class_names, dates
+    return station_names, detector_names, clip_class_names, nights
     
     
-def _get(arg, none_result):
-    return none_result if arg is None else arg
+def _get(arg, default):
+    return default if arg is None else arg
 
 
 def _get_dates(start_date, end_date):
-    num_days = int((end_date - start_date).days)
+    num_dates = int((end_date - start_date).days)
     days = lambda i: datetime.timedelta(days=i)
-    return tuple(start_date + days(i) for i in xrange(num_days))
+    return tuple(start_date + days(i) for i in xrange(num_dates))

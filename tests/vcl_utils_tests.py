@@ -79,52 +79,52 @@ class VclUtilsTests(TestCase):
             'clip-class', 'clip-classes', vcl_utils.get_clip_class_names)
         
         
-    def test_get_dates(self):
+    def test_get_nights(self):
         
         d = _parse_date
         
         cases = [
             ({}, (None, None)),
-            ({'date': ('2015-06-01',)}, ('2015-06-01', '2015-06-01')),
-            ({'start-date': ('2015-06-01',)}, ('2015-06-01', None)),
-            ({'end-date': ('2015-06-01',)}, (None, '2015-06-01')),
-            ({'start-date': ('2015-06-01',), 'end-date': ('2015-06-01',)},
+            ({'night': ('2015-06-01',)}, ('2015-06-01', '2015-06-01')),
+            ({'start-night': ('2015-06-01',)}, ('2015-06-01', None)),
+            ({'end-night': ('2015-06-01',)}, (None, '2015-06-01')),
+            ({'start-night': ('2015-06-01',), 'end-night': ('2015-06-01',)},
              ('2015-06-01', '2015-06-01')),
-            ({'start-date': ('2015-06-01',), 'end-date': ('2015-06-10',)},
+            ({'start-night': ('2015-06-01',), 'end-night': ('2015-06-10',)},
              ('2015-06-01', '2015-06-10'))
         ]
         
         for args, expected in cases:
-            result = vcl_utils.get_dates(args)
+            result = vcl_utils.get_nights(args)
             expected = (d(expected[0]), d(expected[1]))
             self.assertEqual(result, expected)
             
             
-    def test_get_dates_errors(self):
+    def test_get_nights_errors(self):
         
         cases = [
                  
-            {'date': ()},
-            {'date': ('2015-06-01', '2015-06-02')},
-            {'date': ('bobo',)},
+            {'night': ()},
+            {'night': ('2015-06-01', '2015-06-02')},
+            {'night': ('bobo',)},
             
-            {'start-date': ()},
-            {'start-date': ('2015-06-01', '2015-06-02')},
-            {'start-date': ('bobo',)},
+            {'start-night': ()},
+            {'start-night': ('2015-06-01', '2015-06-02')},
+            {'start-night': ('bobo',)},
             
-            {'end-date': ()},
-            {'end-date': ('2015-06-01', '2015-06-02')},
-            {'end-date': ('bobo',)},
+            {'end-night': ()},
+            {'end-night': ('2015-06-01', '2015-06-02')},
+            {'end-night': ('bobo',)},
             
-            {'date': ('2015-06-01',), 'start-date': ('2015-06-01',)},
-            {'date': ('2015-06-01',), 'end-date': ('2015-06-01',)},
+            {'night': ('2015-06-01',), 'start-night': ('2015-06-01',)},
+            {'night': ('2015-06-01',), 'end-night': ('2015-06-01',)},
             
-            {'start-date': ('2015-06-01',), 'end-date': ('2015-05-31',)}
+            {'start-night': ('2015-06-01',), 'end-night': ('2015-05-31',)}
             
         ]
         
         for args in cases:
-            self._assert_raises(CommandSyntaxError, vcl_utils.get_dates, args)
+            self._assert_raises(CommandSyntaxError, vcl_utils.get_nights, args)
             
         
     def test_parse_date(self):
