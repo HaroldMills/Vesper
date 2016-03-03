@@ -1,5 +1,5 @@
 """
-Tests the `astro_utils` module.
+Tests the `ephem_utils` module.
 
 This script compares sunrise and sunset times as well as civil, nautical,
 and astronomical dawn and dusk times computed by the `astro_utils` module
@@ -36,7 +36,7 @@ import pytz
 import six
 
 from vesper.util.usno_rise_set_table import UsnoRiseSetTable
-import vesper.util.astro_utils as astro_utils
+import vesper.util.ephem_utils as ephem_utils
 
 
 _DATA_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\USNO Tables'
@@ -51,18 +51,18 @@ _OUTPUT_HEADER = (
     'Settings Diff -2,Settings Diff -1,Settings Diff 0,Settings Diff 1,'
     'Settings Diff 2,Extra Ephem Settings,Extra USNO Settings')
 
-_RISING_FUNCTIONS = {
-    'Sunrise/Sunset': astro_utils.get_sunrise_time,
-    'Civil Twilight': astro_utils.get_civil_dawn_time,
-    'Nautical Twilight': astro_utils.get_nautical_dawn_time,
-    'Astronomical Twilight': astro_utils.get_astronomical_dawn_time
+_RISING_EVENTS = {
+    'Sunrise/Sunset': 'Sunrise',
+    'Civil Twilight': 'Civil Dawn',
+    'Nautical Twilight': 'Nautical Dawn',
+    'Astronomical Twilight': 'Astronomical Dawn'
 }
 
-_SETTING_FUNCTIONS = {
-    'Sunrise/Sunset': astro_utils.get_sunset_time,
-    'Civil Twilight': astro_utils.get_civil_dusk_time,
-    'Nautical Twilight': astro_utils.get_nautical_dusk_time,
-    'Astronomical Twilight': astro_utils.get_astronomical_dusk_time
+_SETTING_EVENTS = {
+    'Sunrise/Sunset': 'Sunset',
+    'Civil Twilight': 'Civil Dusk',
+    'Nautical Twilight': 'Nautical Dusk',
+    'Astronomical Twilight': 'Astronomical Dusk'
 }
 
 _DISTINCT_EVENTS_DIFF = 10     # minutes
@@ -139,14 +139,14 @@ def _compare_against_table(table, place_name):
     lat = table.lat
     lon = table.lon
     
-    if table.type in _RISING_FUNCTIONS:
+    if table.type in _RISING_EVENTS:
 
-        function = _RISING_FUNCTIONS[table.type]
-        times = _get_times(year, lat, lon, function)
+        event = _RISING_EVENTS[table.type]
+        times = _get_times(event, year, lat, lon)
         rising_diffs = _compare_times(times, table.rising_times, table)
         
-        function = _SETTING_FUNCTIONS[table.type]
-        times = _get_times(year, lat, lon, function)
+        event = _SETTING_EVENTS[table.type]
+        times = _get_times(event, year, lat, lon)
         setting_diffs = _compare_times(times, table.setting_times, table)
         
         table_data = (table.type, year, lat, lon)
@@ -155,7 +155,7 @@ def _compare_against_table(table, place_name):
         return line
         
                 
-def _get_times(year, lat, lon, function):
+def _get_times(event, year, lat, lon):
     
     times = []
     
@@ -166,7 +166,7 @@ def _get_times(year, lat, lon, function):
         for day in xrange(1, month_size + 1):
             
             date = datetime.date(year, month, day)
-            time = function(lat, lon, date)
+            time = ephem_utils.get_event_time(event, lat, lon, date)
             
             if time is not None:
                 times.append(time)
@@ -178,9 +178,8 @@ def _compare_times(times, usno_times, table):
     
     global _big_diffs
     
-    utc_offset = datetime.timedelta(hours=table.utc_offset)
-    times = _round_times(times, utc_offset)
-    usno_times = _round_times(usno_times, utc_offset)
+    times = _round_times(times, table.utc_offset)
+    usno_times = _round_times(usno_times, table.utc_offset)
     
     if len(times) != len(usno_times):
         return _compare_times_carefully(times, usno_times, table)
