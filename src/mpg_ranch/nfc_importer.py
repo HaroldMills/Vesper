@@ -78,7 +78,7 @@ _FieldFormat = namedtuple(
     
 _FIELD_FORMATS = dict((t[0], _FieldFormat(*t)) for t in (
     ('class', 'clip_class_name', r'([a-zA-Z_]+)', 1, _identity),
-    ('station', 'station_name', r'([a-zA-Z0-9\-]+)', 1,
+    ('station', 'station_name', r'([a-zA-Z][a-zA-Z0-9\-]+)', 1,
      _parse_station_name),
     ('detector', 'detector_name', r'(Tseep|Thrush|Manual)', 1, _capitalize),
     ('date6', 'monitoring_start_date', r'(\d{2})(\d{2})(\d{2})', 3,
