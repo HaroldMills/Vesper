@@ -1,0 +1,24 @@
+<html>
+    <body>
+        <header><h1>Sounds</h1></header>
+        <main>
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Sound</th> 
+                </tr>
+                {% for name in sound_names %}
+                <tr>
+                    <td><a href="/sounds/{{name}}">{{name}}</a></td>
+                    <td>
+                        <audio controls>
+                            <source src="/sound_files/{{name}}.wav" type="audio/wav">
+                            HTML audio element not available
+                        </audio>
+                    </td>
+                </tr>
+                {% end %}
+            </table>
+        </main>
+    </body>
+</html>

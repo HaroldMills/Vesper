@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Recording Demo</title>
+    <script src="/static/adapter.js"></script>
+    <script src="/static/recorder.js"></script>
+    <script src="/static/recording_demo.js"></script>
+</head>
+
+<body>
+    
+    <header>
+        <h1>Recording Demo</h1>
+        <p>
+            The text below indicates the original goal of this demo,
+            but not its current state. The demo currently records
+            locally but does not save the recorded audio. See the
+            Javascript console for recording messages.
+        </p>
+        <p>
+            This demo shows how you can record audio
+            with a web browser and stream it to a server for archival.
+            The web browser can run either on the server or on a
+            different computer. In either case, however, the recorded
+            audio is archived on the server.
+        </p>
+    </header>
+        
+    <main>
+        
+        <p><button type="button" id="recordButton">Record</button></p>
+            
+        <h2>Recordings</h2>
+            
+        <table>
+            <tr>
+                <th>Start Time</th>
+                <th>Sound</th>
+            </tr>
+            {% for name in sound_names %}
+            <tr>
+                <td>{{name}}</td>
+                <td>
+                    <audio controls>
+                        <source src="/sound_files/{{name}}.wav" type="audio/wav">
+                        HTML audio element not available
+                    </audio>
+                </td>
+            </tr>
+            {% end %}
+        </table>
+            
+    </main>
+        
+</body>
+</html>
