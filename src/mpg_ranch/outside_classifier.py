@@ -1,9 +1,9 @@
 """
-Module containing class `OutsideClipClassifier`.
+Module containing class `OutsideClassifier`.
 
-An `OutsideClipClassifier` assigns the `'Outside'` clip class to a clip
-whose start time is outside of the interval from one hour after sunset
-to one half hour before sunrise, and does nothing otherwise.
+An `OutsideClassifier` assigns the `'Outside'` clip class to a clip if
+the clip's start time is outside of the interval from one hour after
+sunset to one half hour before sunrise, and does nothing otherwise.
 """
 
 
@@ -48,22 +48,22 @@ _START_OFFSET = 60
 _END_OFFSET = -30
 
 
-class OutsideClipClassifier(object):
+class OutsideClassifier(object):
     
     
-    name = 'MPG Ranch Outside Clip Classifier'
+    name = 'MPG Ranch Outside Classifier'
     
     
     @staticmethod
     def get_help(positional_args, keyword_args):
-        name = text_utils.quote_if_needed(OutsideClipClassifier.name)
+        name = text_utils.quote_if_needed(OutsideClassifier.name)
         arg_descriptors = _ClipVisitor.arg_descriptors
         args_help = vcl_utils.create_command_args_help(arg_descriptors)
         return name + ' ' + _HELP + '\n\n' + args_help
 
     
     def __init__(self, positional_args, keyword_args):
-        super(OutsideClipClassifier, self).__init__()
+        super(OutsideClassifier, self).__init__()
         self._clip_visitor = _ClipVisitor(positional_args, keyword_args)
         
         

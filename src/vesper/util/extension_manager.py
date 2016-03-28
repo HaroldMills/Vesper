@@ -36,8 +36,8 @@ def load_extensions():
     from mpg_ranch.clips_csv_exporter \
         import ClipsCsvExporter as MpgRanchClipsCsvExporter
     from mpg_ranch.nfc_importer import NfcImporter as MpgRanchNfcImporter
-    from mpg_ranch.outside_clip_classifier \
-        import OutsideClipClassifier as MpgRanchOutsideClipClassifier
+    from mpg_ranch.outside_classifier \
+        import OutsideClassifier as MpgRanchOutsideClassifier
     from mpg_ranch.nfc_species_classifier import NfcSpeciesClassifier
     from old_bird.detector import Detector as OldBirdDetector
     from vesper.vcl.classify_command import ClassifyCommand
@@ -55,11 +55,11 @@ def load_extensions():
     _extensions = {
             
         'VCL Classifier': (
-            MpgRanchOutsideClipClassifier,
+            MpgRanchOutsideClassifier,
             NfcCoarseClassifier,
             NfcSpeciesClassifier,
         ),
-        
+                   
         'VCL Command': (
             ClassifyCommand,
             CreateCommand,
