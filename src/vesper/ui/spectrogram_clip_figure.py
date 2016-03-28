@@ -664,8 +664,12 @@ def _get_status_bar_clip_text(clip, event):
     else:
 
         name = clip.clip_class_name
+        if name is None:
+            name = Archive.CLIP_CLASS_NAME_UNCLASSIFIED
+            
         time = _format_clip_time(clip)
         pos = _format_mouse_pos(pos)
+        
         return name + '   ' + time + '   ' + pos
 
 
