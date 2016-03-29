@@ -38,7 +38,12 @@ def load_extensions():
     from mpg_ranch.nfc_importer import NfcImporter as MpgRanchNfcImporter
     from mpg_ranch.outside_classifier \
         import OutsideClassifier as MpgRanchOutsideClassifier
-    from mpg_ranch.nfc_species_classifier import NfcSpeciesClassifier
+    from mpg_ranch.outside_classifier \
+        import OutsideClipClassifier as MpgRanchOutsideClipClassifier
+    from mpg_ranch.nfc_species_classifier \
+        import NfcSpeciesClassifier as MpgRanchNfcSpeciesClassifier
+    from mpg_ranch.nfc_species_classifier \
+        import NfcSpeciesClipClassifier as MpgRanchNfcSpeciesClipClassifier
     from old_bird.detector import Detector as OldBirdDetector
     from vesper.vcl.classify_command import ClassifyCommand
     from vesper.vcl.clips_exporter import ClipsExporter
@@ -48,6 +53,7 @@ def load_extensions():
     from vesper.vcl.help_command import HelpCommand
     from vesper.vcl.import_command import ImportCommand
     from vesper.vcl.nfc_coarse_classifier import NfcCoarseClassifier
+    from vesper.vcl.nfc_coarse_classifier import NfcCoarseClipClassifier
     from vesper.vcl.sample_command import SampleCommand
 
     global _extensions
@@ -57,9 +63,15 @@ def load_extensions():
         'VCL Classifier': (
             MpgRanchOutsideClassifier,
             NfcCoarseClassifier,
-            NfcSpeciesClassifier,
+            MpgRanchNfcSpeciesClassifier,
         ),
                    
+        'Clip Classifier': (
+            MpgRanchOutsideClipClassifier,
+            NfcCoarseClipClassifier,
+            MpgRanchNfcSpeciesClipClassifier,
+        ),
+         
         'VCL Command': (
             ClassifyCommand,
             CreateCommand,

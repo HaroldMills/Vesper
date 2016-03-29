@@ -5,35 +5,24 @@ import six
 import yaml
 
 from vesper.util.preset import Preset
+import vesper.util.extension_manager as extension_manager
 
 
 class ClassificationCommandsPreset(Preset):
     
     """Preset for a set of clip classification commands."""
     
-    
     type_name = 'Classification Commands'
-    
     
     def __init__(self, name, data):
         super(ClassificationCommandsPreset, self).__init__(name)
         self._commands = _parse_preset(data)
 
-    
     @property
     def commands(self):
         return dict(self._commands)
         
         
-_ALPHABETIC_CHARS = 'abcdefghijklmnopqrstuvwxyz'
-"""string of lower-case alphabetic characters."""
-
-_OTHER_CHARS = ',.;:\'"/?<>'
-
-_CHARS = frozenset(
-    _ALPHABETIC_CHARS + _ALPHABETIC_CHARS.upper() + _OTHER_CHARS)
-"""set of recognized command characters."""
-
 _MODIFIERS = frozenset(['Alt'])
 """set of recognized command modifiers, excluding shift."""
 
@@ -95,14 +84,8 @@ def _check_command_name(name):
         
         
 def _check_command_char(char):
-    
     if len(char) != 1:
         raise ValueError('A command must have exactly one character.')
-    
-    if char not in _CHARS:
-        raise ValueError(
-            ('Only alphabetic characters and characters in '
-             '{} can be command characters.'.format(_OTHER_CHARS)))
 
 
 def _check_modifiers(modifiers):
@@ -165,9 +148,18 @@ def _create_classify_action(spec):
         return _ClassifyAction(classifier)
     
     elif spec.has_key('classifier'):
-        # classifier_name = spec['classifier']
-        # TODO: Get classifier from extensions manager.
-        classifier = _DummyClassifier()
+        
+        name = spec['classifier']
+        classes = extension_manager.get_extensions('Clip Classifier')
+        
+        try:
+            cls = classes[name]
+        except KeyError:
+            raise ValueError(
+                'Unrecognized clip classifier name "{}".'.format(name))
+            
+        classifier = cls()
+        
         return _ClassifyAction(classifier)
     
     else:
@@ -191,24 +183,13 @@ class _FixedClassifier(object):
     
 class _ClassifyAction(object):
     
-    
     def __init__(self, classifier):
         self._classifier = classifier
         
-        
     def execute(self, clip):
-        
         clip_class_name = self._classifier.classify(clip)
-        
         if clip_class_name is not None:
-            
             if clip_class_name == 'Unclassified':
                 clip_class_name = None
-                
             clip.clip_class_name = clip_class_name
-
-
-class _DummyClassifier(object):
-    def classify(self, clip):
-        return None
     

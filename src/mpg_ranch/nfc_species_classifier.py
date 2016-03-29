@@ -68,7 +68,7 @@ class _ClipVisitor(ClipVisitor):
     
     def __init__(self, positional_args, keyword_args):
         super(_ClipVisitor, self).__init__(positional_args, keyword_args)
-        self._classifiers = _create_classifiers()
+        self._classifier = NfcSpeciesClipClassifier()
         
         
     def visit(self, clip):
@@ -80,8 +80,27 @@ class _ClipVisitor(ClipVisitor):
                     clip.clip_class_name = clip_class_name
                 
 
-def _create_classifiers():
-    return dict((name, _create_classifier(name)) for name in _DETECTOR_NAMES)
+class NfcSpeciesClipClassifier(object):
+    
+    
+    name = 'MPG Ranch NFC Species Clip Classifier'
+    
+    
+    def __init__(self):
+        self._classifiers = {}
+        for name in _DETECTOR_NAMES:
+            classifier = _create_classifier(name)
+            if classifier is not None:
+                self._classifiers[name] = classifier
+        
+        
+    def classify(self, clip):
+        if clip.clip_class_name == 'Call':
+            classifier = self._classifiers.get(clip.detector_name)
+            if classifier is not None:
+                clip_class_name = classifier.classify_clip(clip)
+                if clip_class_name is not None:
+                    clip.clip_class_name = clip_class_name
 
 
 def _create_classifier(name):
@@ -90,6 +109,10 @@ def _create_classifier(name):
     file_name = '{} Species Classifier.pkl'.format(name)
     file_path = os.path.join(package_dir_path, file_name)
 
-    # TODO: Handle load errors.
-    with open(file_path, 'r') as file_:
-        return pickle.load(file_)
+    try:
+        with open(file_path, 'r') as file_:
+            return pickle.load(file_)
+    except Exception as e:
+        raise ValueError(
+            ('Could not create classifier "{}". Error message '
+             'was: {}').format(name, str(e)))

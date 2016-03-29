@@ -62,18 +62,40 @@ class _ClipVisitor(ClipVisitor):
     
     def __init__(self, positional_args, keyword_args):
         super(_ClipVisitor, self).__init__(positional_args, keyword_args)
-        self._classifiers = _create_classifiers()
+        self._classifier = NfcCoarseClipClassifier()
         
         
     def visit(self, clip):
+        self._classifier.classify(clip)
+                
+
+class NfcCoarseClipClassifier(object):
+    
+    
+    name = 'NFC Coarse Clip Classifier'
+    
+    
+    def __init__(self):
+        self._classifiers = {}
+        for name in _DETECTOR_NAMES:
+            classifier = _create_classifier(name)
+            if classifier is not None:
+                self._classifiers[name] = classifier
+        
+        
+    def classify(self, clip):
         if clip.clip_class_name is None:
             classifier = self._classifiers.get(clip.detector_name)
             if classifier is not None:
                 clip_class_name = classifier.classify_clip(clip)
                 if clip_class_name is not None:
                     clip.clip_class_name = clip_class_name
-                
 
-def _create_classifiers():
-    create_classifier = nfc_coarse_classifier.create_classifier
-    return dict((name, create_classifier(name)) for name in _DETECTOR_NAMES)
+
+def _create_classifier(name):
+    try:
+        return nfc_coarse_classifier.create_classifier(name)
+    except Exception as e:
+        raise ValueError(
+            ('Could not create classifier "{}". Error message '
+             'was: {}').format(name, str(e)))

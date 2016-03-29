@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import math
+import operator
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -17,7 +18,6 @@ from vesper.ui.spectrogram_clip_figure import \
     SpectrogramClipFigure as ClipFigure
 from vesper.util.bunch import Bunch
 from vesper.util.preset_manager import preset_manager
-import vesper.util.classification_command_utils as command_utils
 import vesper.util.preferences as prefs
 
 
@@ -243,7 +243,7 @@ class ClipsWindow(QMainWindow):
         
     def keyPressEvent(self, e):
         
-        command_name = command_utils.get_command_from_key_event(e)
+        command_name = _get_command_from_key_event(e)
         
         if command_name is not None:
 
@@ -267,7 +267,7 @@ class ClipsWindow(QMainWindow):
             
     def _key_press_event(self, e):
         
-        is_key = command_utils.is_key
+        is_key = _is_key
         
         if is_key(e, Qt.Key_Space) or is_key(e, Qt.Key_PageDown):
             self.move_down_one_page()
@@ -313,6 +313,50 @@ class ClipsWindow(QMainWindow):
     def move_singleton_selection_backward(self):
         self._figures_frame.move_singleton_selection_backward()
         self._update_title()
+
+
+_MODIFIER_PAIRS = [('Alt', Qt.AltModifier)]
+"""
+list of recognized (modifier name, QT keyboard modifier flag) pairs,
+excluding shift.
+
+Note that we do *not* allow classification commands that use the control
+modifier (i.e. the control key on Linux and Windows and the command key
+on Mac OS X) since they could collide with menu item keyboard accelerators.
+"""
+
+_ALL_MODIFIERS = reduce(
+    operator.or_, [m for _, m in _MODIFIER_PAIRS], Qt.ShiftModifier)
+"""disjunction of recognized command modifiers, including shift."""
+
+
+def _get_command_from_key_event(key_event):
+    
+    char = str(key_event.text())
+    
+    if char == '':
+        return None
+    
+    else:
+        
+        modifiers = key_event.modifiers()
+        
+        if modifiers | _ALL_MODIFIERS != _ALL_MODIFIERS:
+            # unrecognized modifier present
+            return None
+            
+        mods = ''.join(s + '-' for s, m in _MODIFIER_PAIRS if modifiers & m)
+        
+        return mods + char
+    
+    
+def _is_key(key_event, key, modifiers=Qt.NoModifier):
+     
+    if key_event.key() != key:
+        return False
+     
+    else:
+        return key_event.modifiers() == modifiers
 
 
 class _FiguresFrame(QWidget):

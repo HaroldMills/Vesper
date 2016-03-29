@@ -74,38 +74,38 @@ class OutsideClassifier(object):
 class _ClipVisitor(ClipVisitor):
     
     
+    def __init__(self, positional_args, keyword_args):
+        super(_ClipVisitor, self).__init__(positional_args, keyword_args)
+        self._classifier = OutsideClipClassifier()
+        
+        
     def visit(self, clip):
-        if _is_clip_outside_monitoring_period(clip):
-            clip.clip_class_name = 'Outside'
+        self._classifier.classify(clip)
             
 
-def _is_clip_outside_monitoring_period(clip):
+class OutsideClipClassifier(object):
     
-    timedelta = datetime.timedelta
     
-    station = clip.station
+    name = 'MPG Ranch Outside Clip Classifier'
     
-    if station.latitude is None or station.longitude is None:
-        # station location unknown
-        
-        return False
     
-    else:
-        # station location known
-        
-        sunset_time = station.get_sunset_time(clip.night)
-        start_time = sunset_time + timedelta(minutes=_START_OFFSET)
-        
-        sunrise_date = clip.night + timedelta(days=1)
-        sunrise_time = station.get_sunrise_time(sunrise_date)
-        end_time = sunrise_time + timedelta(minutes=_END_OFFSET)
-        
-        time = clip.start_time
-        outside = time < start_time or time > end_time
+    def classify(self, clip):
 
-#         print(clip.start_time,
-#               'sunset', sunset_time, 'start', start_time,
-#               'sunrise', sunrise_time, 'end', end_time,
-#               'outside', outside)
-
-        return outside
+        station = clip.station
+        
+        if station.latitude is not None and station.longitude is not None:
+            # station location known
+            
+            timedelta = datetime.timedelta
+        
+            sunset_time = station.get_sunset_time(clip.night)
+            start_time = sunset_time + timedelta(minutes=_START_OFFSET)
+            
+            sunrise_date = clip.night + timedelta(days=1)
+            sunrise_time = station.get_sunrise_time(sunrise_date)
+            end_time = sunrise_time + timedelta(minutes=_END_OFFSET)
+            
+            time = clip.start_time
+            
+            if time < start_time or time > end_time:
+                clip.clip_class_name = 'Outside'
