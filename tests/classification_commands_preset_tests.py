@@ -14,7 +14,8 @@ class ClassificationCommandsPresetTests(TestCase):
             ('c: {class: Call, scope: Selected}', {'c': 'Selected'}),
             ('c: {class: Call, scope: Page}', {'c': 'Page'}),
             ('c: {class: Call, scope: All}', {'c': 'All'}),
-            ('c: {classifier: Coarse, scope: Page}', {'c': 'Page'})
+            ('c: {classifier: "NFC Coarse Clip Classifier", scope: Page}',
+             {'c': 'Page'})
         ]
           
         for text, expected in cases:
