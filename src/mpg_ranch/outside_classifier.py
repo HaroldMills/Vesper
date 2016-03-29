@@ -12,6 +12,7 @@ from __future__ import print_function
 import datetime
 
 from vesper.vcl.clip_visitor import ClipVisitor
+import vesper.util.ephem_utils as ephem_utils
 import vesper.util.text_utils as text_utils
 import vesper.vcl.vcl_utils as vcl_utils
 
@@ -92,17 +93,20 @@ class OutsideClipClassifier(object):
     def classify(self, clip):
 
         station = clip.station
+        lat = station.latitude
+        lon = station.longitude
         
-        if station.latitude is not None and station.longitude is not None:
+        if lat is not None and lon is not None:
             # station location known
             
+            get_event_time = ephem_utils.get_event_time
             timedelta = datetime.timedelta
         
-            sunset_time = station.get_sunset_time(clip.night)
+            sunset_time = get_event_time('Sunset', lat, lon, clip.night)
             start_time = sunset_time + timedelta(minutes=_START_OFFSET)
             
             sunrise_date = clip.night + timedelta(days=1)
-            sunrise_time = station.get_sunrise_time(sunrise_date)
+            sunrise_time = get_event_time('Sunrise', lat, lon, sunrise_date)
             end_time = sunrise_time + timedelta(minutes=_END_OFFSET)
             
             time = clip.start_time

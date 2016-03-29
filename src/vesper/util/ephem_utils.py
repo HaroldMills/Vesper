@@ -26,6 +26,7 @@ versa.
 """
 
 
+import collections
 import datetime
 import math
 
@@ -64,6 +65,40 @@ _EVENT_DATA = {
 }
 
 
+# TODO: Put this in a separate module and parameterize capacity?
+# TODO: Make caching optional?
+def memoize(function):
+    
+    results_dict = {}
+    results_deque = collections.deque()
+    capacity = 100
+    
+    def aux(self, *args):
+        
+        key = tuple(args)
+        
+        try:
+            return results_dict[key]
+        
+        except KeyError:
+            
+            result = function(self, *args)
+            
+            # Forget oldest result if at capacity.
+            if len(results_deque) == capacity:
+                key, _ = results_deque.popleft()
+                del results_dict[key]
+
+            # Cache new result.
+            results_dict[key] = result
+            results_deque.append((key, result))
+            
+            return result
+    
+    return aux
+
+
+@memoize
 def get_event_time(event, lat, lon, date):
     
     try:

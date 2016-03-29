@@ -5,22 +5,6 @@ import pytz
 
 from vesper.util.named import Named
 import vesper.archive.archive_shared as archive_shared
-import vesper.util.ephem_utils as ephem_utils
-
-
-def memoize(function):
-    
-    results = {}
-    
-    def aux(self, v):
-        try:
-            return results[v]
-        except KeyError:
-            result = function(self, v)
-            results[v] = result
-            return result
-    
-    return aux
 
 
 class Station(Named):
@@ -92,31 +76,3 @@ class Station(Named):
             time = time.astimezone(self.time_zone)
         
         return archive_shared.get_night(time)
-    
-    
-    # TODO: Remove `get_sunset_time` and `get_sunrise_time` from this class.
-    
-    
-    @memoize
-    def get_sunset_time(self, date):
-        lat, lon = self._get_lat_lon()
-        return ephem_utils.get_event_time('Sunset', lat, lon, date)
-        
-        
-    def _get_lat_lon(self):
-        
-        lat = self.latitude
-        lon = self.longitude
-        
-        if lat is None or lon is None:
-            raise ValueError((
-                'Sunset and sunrise times are not available for station '
-                '"{:s}" since its location is unknown.').format(self.name))
-            
-        return (lat, lon)
- 
- 
-    @memoize
-    def get_sunrise_time(self, date):
-        lat, lon = self._get_lat_lon()
-        return ephem_utils.get_event_time('Sunrise', lat, lon, date)
