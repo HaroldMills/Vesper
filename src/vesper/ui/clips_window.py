@@ -7,8 +7,9 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import (
-    QBrush, QColor, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QMainWindow, QPainter, QStatusBar, QVBoxLayout, QWidget)
+    QApplication, QBrush, QColor, QComboBox, QCursor, QFrame, QGridLayout,
+    QHBoxLayout, QLabel, QMainWindow, QPainter, QStatusBar, QVBoxLayout,
+    QWidget)
 import numpy as np
 
 from vesper.ui.clip_times_rug_plot import ClipTimesRugPlot
@@ -250,7 +251,9 @@ class ClipsWindow(QMainWindow):
             command = self._commands.get(command_name)
             
             if command is not None:
+                QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
                 self._figures_frame.execute_command(command)
+                QApplication.restoreOverrideCursor()
                 self._update_title()
                 
             else:
