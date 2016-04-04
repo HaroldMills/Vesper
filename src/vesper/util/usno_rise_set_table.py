@@ -1,11 +1,10 @@
 """Module containing `UsnoRiseSetTable` class."""
 
 
-from __future__ import print_function
 import datetime
 import re
 
-import usno_table_class_utils as utils
+from . import usno_table_class_utils as utils
 
 
 class UsnoRiseSetTable(object):
@@ -262,7 +261,7 @@ def _parse_table_times(lines, year, utc_offset, time_column_offset):
             
             break
         
-        for j in xrange(12):
+        for j in range(12):
             
             month = j + 1
             

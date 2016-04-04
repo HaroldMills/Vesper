@@ -30,7 +30,8 @@ class MultiselectionTests(unittest.TestCase):
         self._assert_selection(s, result)
         
         
-    def _assert_selection(self, s, (intervals, anchor_index)):
+    def _assert_selection(self, s, pair):
+        intervals, anchor_index = pair
         self.assertEqual(s.selected_intervals, tuple(intervals))
         self.assertEqual(s.anchor_index, anchor_index)
         

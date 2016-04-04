@@ -8,7 +8,6 @@ one named "USNO Rise Set Data.csv" and the other named
 """
 
 
-from __future__ import print_function
 import csv
 import datetime
 import os

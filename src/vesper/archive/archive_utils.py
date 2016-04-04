@@ -36,7 +36,7 @@ def _create_wildcard_clip_class_names(names):
         
         if len(components) > 1:
             
-            for i in xrange(len(components) - 1):
+            for i in range(len(components) - 1):
                 t = separator.join(components[:i + 1]) + wildcard
                 wildcard_names.add(t)
                 

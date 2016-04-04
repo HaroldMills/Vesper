@@ -1,9 +1,6 @@
 """Provides access to the extensions of a program."""
 
 
-from __future__ import print_function
-
-
 # TODO: Use a hierarchical name space for extensions?
 
 

@@ -52,7 +52,7 @@ which are not allowed in file names.
 
 
 _REGULAR_TABLE_TYPES = \
-    dict((v, k) for k, v in _FILE_NAME_TABLE_TYPES.iteritems())
+    dict((v, k) for k, v in _FILE_NAME_TABLE_TYPES.items())
 """
 Mapping from the table type names used in file names to regular table type
 names.

@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import calendar
 import datetime
 import platform
@@ -105,7 +103,7 @@ class ClipCountMonthCalendar(QFrame):
           
         colors = [
             _VISITED_DAY_COLOR if self._visited[i] else _UNVISITED_DAY_COLOR
-            for i in xrange(len(self._visited))]
+            for i in range(len(self._visited))]
         
         if index is not None:
             colors[index] = _HIGHLIGHTED_DAY_COLOR
@@ -221,11 +219,11 @@ class ClipCountMonthCalendar(QFrame):
             day_nums = np.tile(np.arange(7, dtype='float'), 6)
             x = day_nums[start_offset:end_offset]
             
-            week_nums = np.hstack([np.repeat(i, 7) for i in xrange(6)])
+            week_nums = np.hstack([np.repeat(i, 7) for i in range(6)])
             y = week_nums[start_offset:end_offset]
             
             sizes = np.zeros(num_days)
-            for i in xrange(num_days):
+            for i in range(num_days):
                 try:
                     count = counts[datetime.date(year, month, i + 1)]
                 except KeyError:
@@ -241,7 +239,7 @@ class ClipCountMonthCalendar(QFrame):
             self._mouse_index = None
             self._visited = [False] * num_days
             
-            for i in xrange(num_days):
+            for i in range(num_days):
                 axes.text(x[i], y[i], str(i + 1), ha='center', va='center')
             
             axes.set_xlim(-.5, 6.5)

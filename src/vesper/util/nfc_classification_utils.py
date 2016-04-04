@@ -76,8 +76,9 @@ def _freq_to_index(freq, sample_rate, dft_size):
     return int(round(freq / bin_size))
 
 
-def _sum_adjacent(x, (m, n)):
+def _sum_adjacent(x, dims):
     
+    m, n = dims
     xm, xn = x.shape
     
     xm = (xm // m) * m

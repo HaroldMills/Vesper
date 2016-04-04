@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import os
 
 import yaml
@@ -72,7 +70,7 @@ class PresetManagerTests(TestCase):
             
         }
         
-        for type_name, expected_data in expected.iteritems():
+        for type_name, expected_data in expected.items():
             preset_data = self.manager.get_presets(type_name)
             self.assertEqual(preset_data, expected_data)
             

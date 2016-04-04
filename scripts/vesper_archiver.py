@@ -1,8 +1,6 @@
 """Adds clips to an archive from an external source directory."""
 
 
-from __future__ import print_function
-
 from collections import defaultdict
 import argparse
 import calendar
@@ -38,7 +36,7 @@ _STATIONS = [Station(*t) for t in [
     ('JAS', 'Jamestown Audubon Society', 'US/Eastern'),
     ('LTU', 'Louisiana Technical University', 'US/Central'),
     ('Minatitlan',
-     u'Minatitl\u00E1n/Coatzacoalcos International Airport',
+     'Minatitl\u00E1n/Coatzacoalcos International Airport',
      'America/Mexico_City'),
     ('NMHS', 'North Manchester High School', 'US/Eastern'),
     ('NSU', 'Northeastern State University', 'US/Central'),
@@ -801,7 +799,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
                 try:
                     sound = sound_utils.read_sound_file(path)
                     
-                except Exception, e:
+                except Exception as e:
                     f = 'Error reading sound file "{:s}": {:s}'
                     self._log(f.format(self._rel(path), str(e)))
                     self.num_unreadable_files += 1
@@ -814,7 +812,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
                             station.name, detector_name, time, sound,
                             clip_class_name)
                     
-                    except Exception, e:
+                    except Exception as e:
                         f = 'Error adding clip from "{:s}": {:s}'
                         self._log(f.format(self._rel(path), str(e)))
                         self.num_add_errors += 1
@@ -993,7 +991,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
 
         
     def _log_space(self, num_lines=2):
-        for _ in xrange(num_lines):
+        for _ in range(num_lines):
             self._log('')
                 
               
@@ -1024,8 +1022,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
             
             self._log(message)
             
-            keys = counts.keys()
-            keys.sort()
+            keys = sorted(counts.keys())
             
             for key in keys:
                 count = counts[key]
@@ -1061,7 +1058,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
         
     def _log_misplaced_file_dir_paths(self):
         
-        paths = self.misplaced_file_counts.keys()
+        paths = sorted(self.misplaced_file_counts.keys())
         
         if len(paths) != 0:
             
@@ -1070,8 +1067,6 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
             f = 'Paths ({:d}) of directories containing misplaced clip files:'
             self._log(f.format(len(paths)))
             
-            paths.sort()
-                      
             for path in paths:
                 
                 num_misplaced_files = self.misplaced_file_counts[path]
@@ -1115,8 +1110,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
                  '{:s} times near DST {:s}:')
             self._log(f.format(len(counts), name, point))
             
-            pairs = counts.items()
-            pairs.sort()
+            pairs = sorted(counts.items())
             
             for path, count in pairs:
                 f = '{:s} ({:d} files)'
@@ -1135,8 +1129,7 @@ class _OldBirdSourceDirectoryVisitor(DirectoryVisitor):
             
             self._log('Examples of resolved times:')
             
-            keys = self.resolved_times.keys()
-            keys.sort()
+            keys = sorted(self.resolved_times.keys())
             
             for key in keys:
                 
@@ -1197,7 +1190,7 @@ def _aggregate_counts(counts, key_predicate=None):
 
     total = 0
             
-    for key, count in counts.iteritems():
+    for key, count in counts.items():
         if key_predicate is None or key_predicate(key):
             total += count
                 

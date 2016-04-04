@@ -1,8 +1,6 @@
 """Module containing class `HelpCommand`."""
 
 
-from __future__ import print_function
-
 from vesper.vcl.command import Command
 import vesper.util.extension_manager as extension_manager
 
@@ -75,8 +73,7 @@ Available commands:
 def _get_general_help():
     
     command_classes = extension_manager.get_extensions('VCL Command')
-    command_names = command_classes.keys()
-    command_names.sort()
+    command_names = sorted(command_classes.keys())
     command_names = '\n'.join(('    ' + n) for n in command_names)
     
     return _GENERAL_HELP_PREFIX + '\n' + command_names

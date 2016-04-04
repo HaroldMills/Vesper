@@ -1,8 +1,6 @@
 """Module containing class `BatImporter`."""
 
 
-from __future__ import print_function
-
 import datetime
 import logging
 import os

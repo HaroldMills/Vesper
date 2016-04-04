@@ -1,8 +1,6 @@
 """Module containing class `NfcImporter`."""
 
 
-from __future__ import print_function
-
 from collections import defaultdict, namedtuple
 import datetime
 import itertools
@@ -447,8 +445,7 @@ class NfcImporter(object):
         
         merge = recording_utils.merge_recordings
         
-        keys = self._encountered_recordings.keys()
-        keys.sort()
+        keys = sorted(self._encountered_recordings.keys())
         
         for key in keys:
             
@@ -456,7 +453,7 @@ class NfcImporter(object):
                 _create_recording(
                     station, start_time, length, sample_rate, file_path)
                 for (start_time, length, sample_rate), (station, file_path)
-                in self._encountered_recordings[key].iteritems()]
+                in self._encountered_recordings[key].items()]
             
             merged_recordings = merge(unmerged_recordings, tolerance=60)
             

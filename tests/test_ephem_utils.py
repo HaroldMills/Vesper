@@ -1,4 +1,3 @@
-from __future__ import print_function
 import csv
 import datetime
 import os
@@ -97,7 +96,7 @@ class _Tester(object):
         input_reader = csv.reader(input_file)
         
         # Skip header.
-        input_reader.next()
+        next(input_reader)
         
         for row in input_reader:
             usno_data = _UsnoRiseSetData(*row)
@@ -144,7 +143,7 @@ class _Tester(object):
         input_reader = csv.reader(input_file)
         
         # Skip header.
-        input_reader.next()
+        next(input_reader)
         
         for row in input_reader:
             usno_data = _UsnoAltitudeAzimuthData(*row)

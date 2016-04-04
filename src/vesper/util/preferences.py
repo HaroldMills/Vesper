@@ -1,8 +1,6 @@
 """Module for accessing Vesper viewer preferences."""
 
 
-from __future__ import print_function
-
 import os
 import sys
 

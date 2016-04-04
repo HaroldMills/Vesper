@@ -1,7 +1,6 @@
 """Module containing `ClassificationCommandsPreset` class."""
 
 
-import six
 import yaml
 
 from vesper.util.preset import Preset
@@ -47,7 +46,7 @@ def _parse_preset(text):
     if not isinstance(commands, dict):
         raise ValueError('Preset text is not a YAML mapping.')
     
-    return dict(_parse_command(*item) for item in commands.iteritems())
+    return dict(_parse_command(*item) for item in commands.items())
 
 
 def _parse_command(name, action):
@@ -68,7 +67,7 @@ def _parse_command(name, action):
 
 def _check_command_name(name):
     
-    if not isinstance(name, six.string_types):
+    if not isinstance(name, str):
         raise ValueError(
             'Name is of type {} rather than string.'.format(
                 name.__class__.__name__))
@@ -96,7 +95,7 @@ def _check_modifiers(modifiers):
     
 def _parse_command_action(spec):
     
-    if isinstance(spec, six.string_types):
+    if isinstance(spec, str):
         spec = {'class': spec, }
         
     elif not isinstance(spec, dict):
@@ -139,15 +138,15 @@ def _parse_command_scope(spec):
 
 def _create_classify_action(spec):
     
-    if spec.has_key('class') and spec.has_key('classifier'):
+    if 'class' in spec and 'classifier' in spec:
         raise ValueError(
             'Action cannot include both "class" and "classifier" keys.')
 
-    elif spec.has_key('class'):
+    elif 'class' in spec:
         classifier = _FixedClassifier(spec['class'])
         return _ClassifyAction(classifier)
     
-    elif spec.has_key('classifier'):
+    elif 'classifier' in spec:
         
         name = spec['classifier']
         classes = extension_manager.get_extensions('Clip Classifier')

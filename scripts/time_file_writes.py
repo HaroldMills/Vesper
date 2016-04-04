@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os.path
 import timeit
 
@@ -14,7 +13,7 @@ _DATA = np.zeros(_FILE_SIZE, dtype='byte')
 
 
 def _time_file_writes(start_index):
-    for i in xrange(_TIMING_BLOCK_SIZE):
+    for i in range(_TIMING_BLOCK_SIZE):
         file_name = '{:06d}'.format(start_index + i)
         file_path = os.path.join(_DIR_PATH, file_name)
         _DATA.tofile(file_path)
@@ -27,7 +26,7 @@ def _main():
     
     start_index = 0
     results = []
-    for i in xrange(num_timings):
+    for i in range(num_timings):
         stmt = '_time_file_writes({})'.format(start_index)
         setup = 'from __main__ import _time_file_writes'
         time = timeit.timeit(stmt=stmt, setup=setup, number=1)

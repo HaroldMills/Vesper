@@ -1,8 +1,6 @@
 """Module containing `PresetManager` class."""
 
 
-from __future__ import print_function
-
 import os
 import sys
 
@@ -58,8 +56,7 @@ class PresetManager(object):
         top_pairs = tuple((name_tuple + (p.name,), p) for p in presets)
         
         # Get subdirectory (name, preset) pairs
-        keys = subdirs_data.keys()
-        keys.sort()
+        keys = sorted(subdirs_data.keys())
         f = PresetManager._flatten_preset_data
         subdir_pair_tuples = \
             [f(subdirs_data[k], name_tuple + (k,)) for k in keys]
@@ -256,7 +253,7 @@ def _log_error(message):
 def _copy_preset_data(data):
     presets, subdirs_data = data
     return (presets, dict((k, _copy_preset_data(v))
-                          for k, v in subdirs_data.iteritems()))
+                          for k, v in subdirs_data.items()))
 
 
 def _create_preset_manager():

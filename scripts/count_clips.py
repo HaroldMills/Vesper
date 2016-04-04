@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from vesper.archive.archive import Archive
 import vesper.util.preferences as prefs
 

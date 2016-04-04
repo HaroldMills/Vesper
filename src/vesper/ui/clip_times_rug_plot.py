@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import math
 
 import matplotlib as mpl
@@ -125,7 +123,7 @@ class ClipTimesRugPlot(object):
         page_indices = page_start_indices
         num_pages = len(page_indices)
 
-        page_times = [clip_times[page_indices[i]] for i in xrange(num_pages)]
+        page_times = [clip_times[page_indices[i]] for i in range(num_pages)]
         
         # Append last page end to page boundary arrays.
         if num_clips > 0:

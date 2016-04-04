@@ -21,7 +21,7 @@ class ClassificationCommandsPresetTests(TestCase):
         for text, expected in cases:
             commands = preset_module._parse_preset(text)
             commands = dict(
-                (name, scope) for name, (_, scope) in commands.iteritems())
+                (name, scope) for name, (_, scope) in commands.items())
             self.assertEqual(commands, expected)
             
             

@@ -24,7 +24,6 @@ for its astronomical calculations.
 """
 
 
-from __future__ import print_function
 from collections import defaultdict
 import bisect
 import calendar
@@ -33,7 +32,6 @@ import os
 
 import numpy as np
 import pytz
-import six
 
 from vesper.util.usno_rise_set_table import UsnoRiseSetTable
 import vesper.util.ephem_utils as ephem_utils
@@ -159,11 +157,11 @@ def _get_times(event, year, lat, lon):
     
     times = []
     
-    for month in xrange(1, 13):
+    for month in range(1, 13):
         
         month_size = calendar.monthrange(year, month)[1]
         
-        for day in xrange(1, month_size + 1):
+        for day in range(1, month_size + 1):
             
             date = datetime.date(year, month, day)
             time = ephem_utils.get_event_time(event, lat, lon, date)
@@ -296,12 +294,12 @@ def _sign(x):
     
     
 def _get_diff_counts_tuple(diff_counts):
-    indices = xrange(-_BIG_DIFF, _BIG_DIFF + 1)
+    indices = range(-_BIG_DIFF, _BIG_DIFF + 1)
     return tuple(diff_counts[indices])
 
 
 def _format(d):
-    if isinstance(d, six.string_types):
+    if isinstance(d, str):
         return '"' + d + '"'
     else:
         return str(d)
@@ -315,8 +313,7 @@ def _write_big_diffs_file():
         
         file_.write('All PyEphem/USNO differences larger than one minute:')
         
-        diffs = _big_diffs.keys()
-        diffs.sort()
+        diffs = sorted(_big_diffs.keys())
         
         for diff in diffs:
             file_.write('\n' + str(diff) + '\n')

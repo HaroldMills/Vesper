@@ -1,7 +1,6 @@
 """Plots NFC coarse classifier training and test results."""
 
 
-from __future__ import print_function
 import os.path
 import sys
 

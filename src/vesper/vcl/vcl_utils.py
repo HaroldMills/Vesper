@@ -41,7 +41,7 @@ def _transform_args(args):
 
 
 def _transform_arg(arg):
-    result = dict((k.replace(' ', '_'), v) for k, v in arg.iteritems())
+    result = dict((k.replace(' ', '_'), v) for k, v in arg.items())
     result['name'] = result['name'].replace(' ', '-')
     return result
                 

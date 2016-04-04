@@ -1,7 +1,6 @@
 """Utility functions for use in Jupyter notebooks."""
 
 
-from __future__ import print_function
 import math
 
 import matplotlib.pyplot as plt

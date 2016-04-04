@@ -1,8 +1,6 @@
 """Module containing `Spectrogram` class."""
 
 
-from __future__ import print_function
-
 from vesper.util.time_frequency_analysis import TimeFrequencyAnalysis
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 

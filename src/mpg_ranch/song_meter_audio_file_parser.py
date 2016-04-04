@@ -38,7 +38,7 @@ def _invert_aliases_dict(aliases):
     
     translations = {}
     
-    for translation, a in aliases.iteritems():
+    for translation, a in aliases.items():
         
         if isinstance(a, list):
             

@@ -1,8 +1,6 @@
 """Module containing `Archive` class."""
 
 
-from __future__ import print_function
-
 from collections import namedtuple
 import datetime
 import os.path

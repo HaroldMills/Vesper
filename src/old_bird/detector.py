@@ -1121,7 +1121,7 @@ class _Detector(Thread):
         try:
             _, start_time = _parse_clip_file_name(file_name)
             
-        except ValueError, e:
+        except ValueError as e:
             logging.error((
                 'Could not parse clip file name at "{:s}". Error '
                 'message was: {:s}').format(file_path, str(e)))

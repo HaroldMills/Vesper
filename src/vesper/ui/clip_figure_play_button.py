@@ -1,8 +1,6 @@
 """Play button for use in clip figures."""
 
 
-from __future__ import print_function
-
 from matplotlib.patches import Polygon
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredDrawingArea
 import numpy as np

@@ -114,16 +114,17 @@ class ArchiverTimeKeeper(object):
             
     def _parse_start_times(self, times):
         return dict(self._parse_start_times_item(*i)
-                    for i in times.iteritems())
+                    for i in times.items())
     
     
     def _parse_start_times_item(self, year, times):
         return (year, dict(self._parse_start_times_item_aux(year, *i)
-                           for i in times.iteritems()))
+                           for i in times.items()))
         
         
-    def _parse_start_times_item_aux(self, year, station_name, (time, dates)):
+    def _parse_start_times_item_aux(self, year, station_name, time_dates_pair):
         
+        time, dates = time_dates_pair
         self._station_name = station_name
         time = _parse_time(time)
         to_utc = self._to_utc
@@ -220,7 +221,7 @@ def _handle_bad_time(s):
 def _get_all_dates(year):
     start = datetime.date(year, 1, 1).toordinal()
     end = datetime.date(year + 1, 1, 1).toordinal()
-    return [datetime.date.fromordinal(i) for i in xrange(start, end)]
+    return [datetime.date.fromordinal(i) for i in range(start, end)]
 
 
 _DATE_RE = re.compile(r'^(\d\d?)-(\d\d?)$')

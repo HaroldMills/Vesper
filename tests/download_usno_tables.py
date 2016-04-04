@@ -3,7 +3,6 @@ Downloads rise/set tables from the United States Naval Observatory.
 """
 
 
-from __future__ import print_function
 import argparse
 import datetime
 import math
@@ -126,7 +125,7 @@ def _get_random_dates(num_dates, start_year, end_year):
     num_days = _get_num_days_in_year_range(start_year, end_year)
     if num_days < num_dates:
         num_dates = num_days
-    day_nums = random.sample(xrange(0, num_days), num_dates)
+    day_nums = random.sample(range(0, num_days), num_dates)
     dates = [start_date + datetime.timedelta(days=n) for n in day_nums]
     return dates
 
@@ -147,7 +146,7 @@ def _download_random_tables():
         
 def _generate_random_rs_table_data():
     _seed_random_number_generator()
-    for _ in xrange(_NUM_RANDOM_RS_TABLES):
+    for _ in range(_NUM_RANDOM_RS_TABLES):
         table_type = random.choice(utils.RISE_SET_TABLE_TYPES)
         lat = _get_random_latitude()
         lon = _get_random_longitude()
@@ -172,7 +171,7 @@ def _get_random_longitude():
 
 def _generate_random_aa_table_data():
     _seed_random_number_generator()
-    for _ in xrange(_NUM_RANDOM_AA_TABLES):
+    for _ in range(_NUM_RANDOM_AA_TABLES):
         table_type = random.choice(utils.ALTITUDE_AZIMUTH_TABLE_TYPES)
         lat = _get_random_latitude()
         lon = _get_random_longitude()

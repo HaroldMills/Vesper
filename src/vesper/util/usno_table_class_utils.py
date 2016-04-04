@@ -5,7 +5,6 @@ import datetime
 import math
 import re
 import urllib
-import urllib2
 
 import pytz
 
@@ -61,11 +60,11 @@ def download_table(url, values):
     # an altitude/azimuth table with a POST request the response has
     # status code 200 but instead of a table the response text
     # contains the message "Error:  Location/coordinates not defined".
-    query = urllib.urlencode(values)
+    query = urllib.parse.urlencode(values)
     url += '?' + query
     
-    request = urllib2.Request(url)
-    response = urllib2.urlopen(request)
+    request = urllib.request.Request(url)
+    response = urllib.request.urlopen(request)
     html = response.read()
     
     start = html.find(_PRE_BEGIN) + len(_PRE_BEGIN)

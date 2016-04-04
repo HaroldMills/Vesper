@@ -1,7 +1,6 @@
 """Module containing class `ClipSegmentsExporter`."""
 
 
-from __future__ import print_function
 import datetime
 import logging
 import os.path
@@ -253,7 +252,7 @@ def _show_hdf5_file(file_path):
         for name in file_:
             s = file_[name]
             print('   ', name, s.shape)
-            for name, value in s.attrs.iteritems():
+            for name, value in s.attrs.items():
                 print('       ', name + ':', value)
         
         file_.close()

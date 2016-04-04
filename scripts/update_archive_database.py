@@ -8,7 +8,6 @@ located in the current directory. The new database file is called
 """
 
 
-from __future__ import print_function
 import sqlite3 as sqlite
 
 

@@ -49,11 +49,11 @@ def apply_measurement_to_spectra(
     
     num_blocks = num_spectra - block_size + 1
     measurements = np.array([_measure(measurement, s, i, block_size)
-                            for i in xrange(num_blocks)])
+                            for i in range(num_blocks)])
     
     t = spectrogram.times
     times = np.array([np.mean(t[i:i + block_size])
-                      for i in xrange(num_blocks)])
+                      for i in range(num_blocks)])
     
     return measurements, times
 

@@ -5,7 +5,6 @@ import calendar
 import datetime
 
 import pytz
-import six
 
 
 _MIN_YEAR = 1900
@@ -53,7 +52,7 @@ def create_utc_datetime(
     
     else:
         
-        if isinstance(time_zone, six.string_types):
+        if isinstance(time_zone, str):
             try:
                 time_zone = pytz.timezone(time_zone)
             except pytz.UnknownTimeZoneError:

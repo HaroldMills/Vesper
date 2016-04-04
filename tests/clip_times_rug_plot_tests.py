@@ -8,7 +8,7 @@ class ClipTimesRugPlotTests(unittest.TestCase):
     
     def test_find_page(self):
         
-        boundary_times = [float(t) for t in xrange(3)]
+        boundary_times = [float(t) for t in range(3)]
         
         cases = [
             (-.0001, None),

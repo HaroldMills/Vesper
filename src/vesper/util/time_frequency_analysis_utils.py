@@ -64,7 +64,7 @@ def compute_stft(samples, window, hop_size, dft_size):
     x = np.zeros(dft_size, dtype='float32')
     stft = np.zeros((num_spectra, dft_size / 2 + 1), dtype='complex64')
     
-    for i in xrange(num_spectra):
+    for i in range(num_spectra):
         x[:window_size] = samples[j:(j + window_size)] * window
         stft[i, :] = np.fft.rfft(x)
         j += hop_size
@@ -89,7 +89,7 @@ def compute_spectrogram(samples, window, hop_size, dft_size):
     x = np.zeros(dft_size, dtype='float32')
     spectrogram = np.zeros((num_spectra, dft_size / 2 + 1), dtype='float32')
     
-    for i in xrange(num_spectra):
+    for i in range(num_spectra):
         x[:window_size] = samples[j:(j + window_size)] * window
         dft = np.fft.rfft(x)
         spectrogram[i, :] = (dft * dft.conj()).real

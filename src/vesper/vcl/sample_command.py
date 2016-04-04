@@ -1,8 +1,6 @@
 """Module containing class `SampleCommand`."""
 
 
-from __future__ import print_function
-
 import logging
 import random
 
@@ -172,9 +170,7 @@ class SampleCommand(Command):
         for station_name in self._station_names:
         
             counts = self._get_clip_counts(station_name)
-                
-            nights = counts.keys()
-            nights.sort()
+            nights = sorted(counts.keys())
             
             for night in nights:
                 
@@ -210,9 +206,7 @@ class SampleCommand(Command):
         for station_name in self._station_names:
         
             counts = self._get_clip_counts(station_name)
-            
-            nights = counts.keys()
-            nights.sort()
+            nights = sorted(counts.keys())
             
             for night in nights:
                 
@@ -220,7 +214,7 @@ class SampleCommand(Command):
                     station_name, self._detector_name, night)
                 
                 n = len(clips)
-                indices = xrange(n)
+                indices = range(n)
                 if n > max_clip_count:
                     indices = random.sample(indices, max_clip_count)
                     n = max_clip_count

@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from PyQt4.QtGui import QHBoxLayout, QComboBox, QFrame, QLabel
 
 import vesper.archive.archive_utils as archive_utils
@@ -84,17 +82,17 @@ class QueryFrame(QFrame):
         
     @property
     def station_name(self):
-        return unicode(self._station_combo_box.currentText())
+        return str(self._station_combo_box.currentText())
 
 
     @property
     def detector_name(self):
-        return unicode(self._detector_combo_box.currentText())
+        return str(self._detector_combo_box.currentText())
 
 
     @property
     def clip_class_name(self):
-        return unicode(self._clip_class_combo_box.currentText())
+        return str(self._clip_class_combo_box.currentText())
     
     
     def _on_station_changed(self, i):
@@ -120,6 +118,6 @@ class QueryFrame(QFrame):
         
 def _set_current_text(combo_box, text):
     if text is not None:
-        for i in xrange(combo_box.count()):
+        for i in range(combo_box.count()):
             if combo_box.itemText(i) == text:
                 combo_box.setCurrentIndex(i)

@@ -63,10 +63,10 @@ class ArchiveTests(TestCase):
             'id', 'name', 'long_name', 'latitude', 'longitude', 'elevation')
         expected_values = [
             ((i + 1,) + STATION_TUPLES[i][:2] + STATION_TUPLES[i][3:])
-            for i in xrange(len(STATION_TUPLES))]
+            for i in range(len(STATION_TUPLES))]
         expected_values.sort(key=lambda t: t[1])
         self._assert_objects(stations, attribute_names, expected_values)
-        for i in xrange(len(STATION_TUPLES)):
+        for i in range(len(STATION_TUPLES)):
             self.assertEqual(stations[i].time_zone.zone, STATION_TUPLES[i][2])
         
         
@@ -94,7 +94,7 @@ class ArchiveTests(TestCase):
         detectors = self.archive.detectors
         attribute_names = ('id', 'name')
         expected_values = [(i + 1, DETECTOR_NAMES[i])
-                           for i in xrange(len(DETECTOR_NAMES))]
+                           for i in range(len(DETECTOR_NAMES))]
         expected_values.sort(key=lambda t: t[1])
         self._assert_objects(detectors, attribute_names, expected_values)
         
@@ -107,7 +107,7 @@ class ArchiveTests(TestCase):
         clip_classes = self.archive.clip_classes
         attribute_names = ('id', 'name')
         expected_values = [(i + 1, CLIP_CLASS_NAMES[i])
-                           for i in xrange(len(CLIP_CLASS_NAMES))]
+                           for i in range(len(CLIP_CLASS_NAMES))]
         expected_values.sort(key=lambda t: t[1])
         self._assert_objects(clip_classes, attribute_names, expected_values)
         
@@ -253,7 +253,7 @@ class ArchiveTests(TestCase):
     def _create_get_counts_case_result(self, result):
         date = datetime.date
         return dict((date(*triple), count)
-                    for (triple, count) in result.iteritems())
+                    for (triple, count) in result.items())
     
     
     def test_get_clips(self):

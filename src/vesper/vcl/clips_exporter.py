@@ -5,7 +5,6 @@ A `ClipsExporter` exports clips from an archive as .wav files.
 """
 
 
-from __future__ import print_function
 import os.path
 
 from vesper.vcl.clip_visitor import ClipVisitor

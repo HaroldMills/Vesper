@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import calendar
 import collections
 
@@ -48,8 +46,7 @@ class ClipCountArchiveCalendar(QFrame):
         
         # Get nights for which there are clips.
         counts = self._archive.get_clip_counts()
-        nights = counts.keys()
-        nights.sort()
+        nights = sorted(counts.keys())
         
         # Get (year, month) pairs for which there are clips.
         pairs = list(frozenset((n.year, n.month) for n in nights))
@@ -84,7 +81,7 @@ class ClipCountArchiveCalendar(QFrame):
 
         
     def _create_month_calendars(self, start_month_num, end_month_num):
-        range_ = xrange(start_month_num, end_month_num + 1)
+        range_ = range(start_month_num, end_month_num + 1)
         pairs = [_to_pair(i) for i in range_]
         return [self._create_month_calendar(*p) for p in pairs]
     

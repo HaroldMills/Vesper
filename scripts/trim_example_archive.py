@@ -12,7 +12,6 @@ can be done through that interface. At that point the script can be
 modified to be independent of archive implementation.
 """
 
-from __future__ import print_function
 
 import os
 import random
@@ -86,14 +85,14 @@ class ArchiveTrimmer(object):
     
     def _get_clip_counts_aux(self, name, arg_name):
         counts = self.archive.get_clip_counts(**{arg_name: name})
-        return sum(c for c in counts.itervalues())
+        return sum(c for c in counts.values())
 
 
     def _delete_zero_count_entities(self, counts, description):
         
         sql = 'delete from {:s} where name = ?'.format(description)
         
-        names = [name for name, count in counts.iteritems() if count == 0]
+        names = [name for name, count in counts.items() if count == 0]
         
         for name in names:
             
@@ -129,7 +128,7 @@ class ArchiveTrimmer(object):
                     station.name, detector.name,
                     clip_class_name=clip_class_name)
                 
-                nights = counts.keys()
+                nights = list(counts.keys())
                 nights.sort()
                 
                 for night in nights:
@@ -204,7 +203,7 @@ class ArchiveTrimmer(object):
                     station.name, detector.name,
                     clip_class_name=clip_class_name)
                 
-                nights = counts.keys()
+                nights = list(counts.keys())
                 nights.sort()
                 
                 for night in nights:
@@ -276,14 +275,14 @@ def _get_clip_counts(archive, items, arg_name, extra_item_names=None):
 
 def _get_clip_counts_aux(archive, name, arg_name):
     counts = archive.get_clip_counts(**{arg_name: name})
-    return sum(c for c in counts.itervalues())
+    return sum(c for c in counts.values())
 
 
 def _show_clip_counts_aux(counts, item_type):
     
     print('Clip counts by {:s}:'.format(item_type))
     
-    names = counts.keys()
+    names = list(counts.keys())
     names.sort()
     
     for name in names:

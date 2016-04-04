@@ -1,7 +1,7 @@
 """Module containing class `NfcCoarseClassifier`."""
 
 
-import cPickle as pickle
+import pickle
 import os.path
 import random
 
@@ -34,7 +34,7 @@ def create_classifier(classifier_name):
     file_path = os.path.join(package_dir_path, file_name)
 
     # TODO: Handle load errors.
-    with open(file_path, 'r') as file_:
+    with open(file_path, 'rb') as file_:
         return pickle.load(file_)
 
 
@@ -146,7 +146,7 @@ class NfcCoarseClassifier(object):
     def _classify_segment(self, segment, config):
         features, _, time = \
             nfc_classification_utils.get_segment_features(segment, config)
-        return (self._segment_classifier.predict(features)[0], time)
+        return (self._segment_classifier.predict([features])[0], time)
 
         
 def _generate_segments(sound, segment_length, hop_size, start_index=0):

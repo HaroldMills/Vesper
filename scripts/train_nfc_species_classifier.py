@@ -1,8 +1,7 @@
 """Trains an NFC species classifier."""
 
 
-from __future__ import print_function
-import cPickle as pickle
+import pickle
 import os.path
 import random
 import sys

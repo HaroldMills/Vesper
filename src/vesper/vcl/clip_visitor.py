@@ -100,4 +100,4 @@ def _get(arg, default):
 def _get_dates(start_date, end_date):
     num_dates = int((end_date - start_date).days)
     days = lambda i: datetime.timedelta(days=i)
-    return tuple(start_date + days(i) for i in xrange(num_dates))
+    return tuple(start_date + days(i) for i in range(num_dates))

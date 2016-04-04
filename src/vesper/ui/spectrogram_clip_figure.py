@@ -1,8 +1,6 @@
 """Clip figure that displays a spectrogram."""
 
 
-from __future__ import print_function
-
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 import numpy as np

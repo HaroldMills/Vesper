@@ -78,7 +78,7 @@ class RecordingUtilsTests(TestCase):
     def _check_subrecordings(self, r, recordings, i, n):
         s = r.subrecordings
         self.assertEqual(len(s), n)
-        for j in xrange(n):
+        for j in range(n):
             self._assert_recordings_equal(s[j], recordings[i + j])
                 
         

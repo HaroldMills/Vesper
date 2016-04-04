@@ -7,8 +7,6 @@ sunset to one half hour before sunrise, and does nothing otherwise.
 """
 
 
-from __future__ import print_function
-
 import datetime
 
 from vesper.vcl.clip_visitor import ClipVisitor

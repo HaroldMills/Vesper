@@ -7,8 +7,6 @@ leaves it unclassified otherwise.
 """
 
 
-from __future__ import print_function
-
 from vesper.vcl.clip_visitor import ClipVisitor
 import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
 import vesper.util.text_utils as text_utils
@@ -96,6 +94,7 @@ def _create_classifier(name):
     try:
         return nfc_coarse_classifier.create_classifier(name)
     except Exception as e:
+        raise
         raise ValueError(
             ('Could not create classifier "{}". Error message '
              'was: {}').format(name, str(e)))

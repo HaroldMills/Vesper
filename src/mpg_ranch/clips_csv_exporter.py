@@ -1,8 +1,6 @@
 """Module containing class `ClipsCsvExporter`."""
 
 
-from __future__ import print_function
-
 import datetime
 import os.path
 

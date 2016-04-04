@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QMainWindow, QScrollArea, QVBoxLayout, QWidget
 

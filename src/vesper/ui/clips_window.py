@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import math
 import operator
 
@@ -20,6 +18,7 @@ from vesper.ui.spectrogram_clip_figure import \
 from vesper.util.bunch import Bunch
 from vesper.util.preset_manager import preset_manager
 import vesper.util.preferences as prefs
+from functools import reduce
 
 
 _SPACING_ASPECT_RATIO = 2
@@ -95,7 +94,7 @@ class ClipsWindow(QMainWindow):
             box.addWidget(self._commands_combo_box)
             grid.addLayout(box, 0, 2, Qt.AlignRight)
             
-        for i in xrange(3):
+        for i in range(3):
             grid.setColumnMinimumWidth(i, 10)
             grid.setColumnStretch(i, 1)
         
@@ -494,7 +493,7 @@ class _FiguresFrame(QWidget):
     @property
     def page_start_indices(self):
         return [self._get_first_clip_num_of_row(i * self.num_rows)
-                for i in xrange(self.num_pages)]
+                for i in range(self.num_pages)]
         
         
     @property
@@ -539,7 +538,7 @@ class _FiguresFrame(QWidget):
             
         for i, j in intervals:
             
-            for k in xrange(i, j + 1):
+            for k in range(i, j + 1):
                 
                 clip = self._clips[k]
                 
@@ -756,12 +755,12 @@ class _FiguresFrameWithFlowLayout(_FiguresFrame):
             print('    creating clip frames...')
             thickness = self._selection_rect_thickness
             color = self._selection_rect_color
-            for _ in xrange(n):
+            for _ in range(n):
                 frame = _FigureFrame(self, thickness, color)
                 inactive_frames.append(frame)
         
         print('    setting clips on frames...')
-        for i in xrange(num_frames):
+        for i in range(num_frames):
             frame = inactive_frames.pop()
             frame.clip = clips[i]
             frame.index = i
@@ -807,7 +806,7 @@ class _FiguresFrameWithFlowLayout(_FiguresFrame):
         frame_num = 0
         border_sizes = []
                 
-        for i in xrange(num_rows):
+        for i in range(num_rows):
             
             row_num = self._first_visible_row_num + i
             
@@ -820,7 +819,7 @@ class _FiguresFrameWithFlowLayout(_FiguresFrame):
             
             clip_widths = [
                 int(round(self._clips[j].duration / seconds_per_pixel))
-                for j in xrange(start_clip_num, start_clip_num + num_clips)]
+                for j in range(start_clip_num, start_clip_num + num_clips)]
             
             # Under this spacing regime, the space between clips is
             # `h_spacing` and the remaining space is divided equally
@@ -853,7 +852,7 @@ class _FiguresFrameWithFlowLayout(_FiguresFrame):
             clip_x = border_size
             y = ys[i]
             
-            for i in xrange(num_clips):
+            for i in range(num_clips):
                 
                 x = int(round(clip_x - self._selection_rect_thickness))
                 width = clip_widths[i]

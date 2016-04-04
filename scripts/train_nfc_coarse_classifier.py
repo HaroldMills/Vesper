@@ -52,8 +52,7 @@ module.
 """
 
 
-from __future__ import print_function
-import cPickle as pickle
+import pickle
 import itertools
 import os.path
 import random

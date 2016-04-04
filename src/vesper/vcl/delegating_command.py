@@ -65,13 +65,11 @@ class DelegatingCommand(Command):
         classes = extension_manager.get_extensions(
             cls.delegate_extension_point_name)
         
-        names = classes.keys()
+        names = sorted(classes.keys())
         
         if len(names) == 0:
             names = '    None.'
-        
         else:
-            names.sort()
             names = '\n'.join(('    ' + n) for n in names)
         
         return prefix + '\n' + names

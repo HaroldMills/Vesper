@@ -10,8 +10,6 @@ batch file wrapper.
 """
 
 
-from __future__ import print_function
-
 import logging
 import os
 import sys
@@ -176,8 +174,7 @@ Usage: vcl <command> [<positional arguments>] [<keyword arguments>]
 Available commands:
 '''.strip()
     
-        command_names = command_classes.keys()
-        command_names.sort()
+        command_names = sorted(command_classes.keys())
         command_names = '\n'.join(('    ' + n) for n in command_names)
         
         text += '\n' + command_names + '\n'

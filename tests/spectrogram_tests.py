@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import unittest
 
 import numpy as np
@@ -50,6 +48,6 @@ class SpectrogramUtilsTests(unittest.TestCase):
                 
                 self.assertEqual(m, len(expected_spectrum))
                 
-                for i in xrange(m):
+                for i in range(m):
                     self.assertAlmostEqual(
                         spectrum[i], expected_spectrum[i], places=6)

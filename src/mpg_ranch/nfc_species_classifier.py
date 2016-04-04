@@ -10,8 +10,7 @@ already classified to subclasses of the `"Call"` class.
 """
 
 
-from __future__ import print_function
-import cPickle as pickle
+import pickle
 import os.path
 
 from vesper.vcl.clip_visitor import ClipVisitor
@@ -110,7 +109,7 @@ def _create_classifier(name):
     file_path = os.path.join(package_dir_path, file_name)
 
     try:
-        with open(file_path, 'r') as file_:
+        with open(file_path, 'rb') as file_:
             return pickle.load(file_)
     except Exception as e:
         raise ValueError(

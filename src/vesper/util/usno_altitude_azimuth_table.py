@@ -1,11 +1,10 @@
 """Module containing `UsnoAltitudeAzimuthTable` class."""
 
 
-from __future__ import print_function
 import datetime
 import re
 
-import usno_table_class_utils as utils
+from . import usno_table_class_utils as utils
 
 
 class UsnoAltitudeAzimuthTable(object):
