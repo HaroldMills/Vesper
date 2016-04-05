@@ -126,7 +126,14 @@ class ClipsWindow(QMainWindow):
 
     
     def _on_commands_changed(self, index):
+        
         self._update_commands_preset(index)
+        
+        # As of 2016-04-05, without the following keyboard input is
+        # sometimes (but not always) not received by the clips window
+        # after the user selects a new commands preset. See GitHub
+        # issue 77.
+        self.setFocus()
         
         
     def _update_commands_preset(self, index):
