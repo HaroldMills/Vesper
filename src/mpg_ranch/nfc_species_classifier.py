@@ -71,12 +71,7 @@ class _ClipVisitor(ClipVisitor):
         
         
     def visit(self, clip):
-        if clip.clip_class_name == 'Call':
-            classifier = self._classifiers.get(clip.detector_name)
-            if classifier is not None:
-                clip_class_name = classifier.classify_clip(clip)
-                if clip_class_name is not None:
-                    clip.clip_class_name = clip_class_name
+        self._classifier.classify(clip)
                 
 
 class NfcSpeciesClipClassifier(object):
