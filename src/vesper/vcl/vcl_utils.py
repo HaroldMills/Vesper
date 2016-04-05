@@ -335,6 +335,8 @@ def get_clip_class_names(keyword_args):
     
 def get_nights(keyword_args):
     
+    _check_for_old_date_args(keyword_args)
+    
     args = keyword_args
     
     if 'night' in args and 'start-night' in args:
@@ -354,6 +356,19 @@ def get_nights(keyword_args):
         return (start_night, end_night)
         
     
+def _check_for_old_date_args(keyword_args):
+    _check_for_renamed_arg(keyword_args, 'date', 'night')
+    _check_for_renamed_arg(keyword_args, 'start-date', 'start-night')
+    _check_for_renamed_arg(keyword_args, 'end-date', 'end-night')
+    
+    
+def _check_for_renamed_arg(keyword_args, old_name, new_name):
+    if old_name in keyword_args:
+        raise CommandSyntaxError(
+            ('The "--{}" argument has been renamed. '
+             'Please use "--{}" instead.').format(old_name, new_name))
+        
+        
 def _get_night(args, name):
     
     try:
