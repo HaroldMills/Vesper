@@ -3,6 +3,7 @@
 
 import datetime
 
+from vesper.archive.archive import Archive
 from vesper.vcl.visitor import Visitor
 import vesper.vcl.vcl_utils as vcl_utils
 
@@ -54,8 +55,7 @@ class ClipVisitor(Visitor):
                         # Clips come from the archive sorted by start time.
                         # Resort by the combination of clip class name and
                         # start time.
-                        clips.sort(
-                            key=lambda c: (c.clip_class_name, c.start_time))
+                        clips.sort(key=_get_clip_sort_key)
                         
                         for clip in clips:
                             yield clip
@@ -64,6 +64,11 @@ class ClipVisitor(Visitor):
     visit_clips = Visitor.visit_objects
 
 
+def _get_clip_sort_key(clip):
+    name = clip.clip_class_name or Archive.CLIP_CLASS_NAME_UNCLASSIFIED
+    return (name, clip.start_time)
+                            
+                            
 def _get_clip_query_tuples(
         station_names, detector_names, clip_class_names, start_night,
         end_night, archive):
