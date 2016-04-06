@@ -87,7 +87,7 @@ def compute_spectrogram(samples, window, hop_size, dft_size):
     
     j = 0
     x = np.zeros(dft_size, dtype='float32')
-    spectrogram = np.zeros((num_spectra, dft_size / 2 + 1), dtype='float32')
+    spectrogram = np.zeros((num_spectra, dft_size // 2 + 1), dtype='float32')
     
     for i in range(num_spectra):
         x[:window_size] = samples[j:(j + window_size)] * window
