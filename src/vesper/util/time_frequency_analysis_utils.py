@@ -44,10 +44,10 @@ def get_dft_freqs(sample_rate, dft_size):
     Gets the frequencies of a DFT analysis.
     
     It is assumed that the analyzed signal is real, so that the
-    analysis will be performed at `dft_size / 2 + 1` frequencies.
+    analysis will be performed at `dft_size // 2 + 1` frequencies.
     """
     
-    num_freqs = dft_size / 2 + 1
+    num_freqs = dft_size // 2 + 1
     spacing = sample_rate / (dft_size - 1.)
     return np.arange(num_freqs) * spacing
 
@@ -62,7 +62,7 @@ def compute_stft(samples, window, hop_size, dft_size):
     
     j = 0
     x = np.zeros(dft_size, dtype='float32')
-    stft = np.zeros((num_spectra, dft_size / 2 + 1), dtype='complex64')
+    stft = np.zeros((num_spectra, dft_size // 2 + 1), dtype='complex64')
     
     for i in range(num_spectra):
         x[:window_size] = samples[j:(j + window_size)] * window

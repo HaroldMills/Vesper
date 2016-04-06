@@ -76,9 +76,9 @@ def _freq_to_index(freq, sample_rate, dft_size):
     return int(round(freq / bin_size))
 
 
-def _sum_adjacent(x, dims):
+def _sum_adjacent(x, block_size):
     
-    m, n = dims
+    m, n = block_size
     xm, xn = x.shape
     
     xm = (xm // m) * m
@@ -86,27 +86,19 @@ def _sum_adjacent(x, dims):
     x = x[:xm, :xn]
     
     # Sum columns.
-    x.shape = (xm, xn / n, n)
+    x.shape = (xm, xn // n, n)
     x = x.sum(2)
-    xn /= n
+    xn //= n
     
     # Sum rows.
     x = x.transpose()
-    x.shape = (xn, xm / m, m)
+    x.shape = (xn, xm // m, m)
     x = x.sum(2)
     x = x.transpose()
     
     return x
     
     
-def _test_sum_adjacent():
-    x = np.arange(24)
-    x.shape = (4, 6)
-    print(x)
-    x = _sum_adjacent(x, 2, 3)
-    print(x)
-
-
 def _normalize(x):
     norm = np.linalg.norm(x)
     return x / norm if norm != 0 else x

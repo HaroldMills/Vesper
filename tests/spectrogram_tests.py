@@ -28,7 +28,7 @@ class SpectrogramUtilsTests(unittest.TestCase):
             samples = np.cos(2 * np.pi * f * np.arange(2 * n) / float(n))
             sound = Bunch(samples=samples, sample_rate=1.)
             
-            hop_size = n / 2
+            hop_size = n // 2
             
             params = Bunch(
                 window=RectangularWindow(n),
