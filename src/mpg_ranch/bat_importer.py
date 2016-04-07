@@ -40,6 +40,15 @@ _ARGS = '''
   documentation: |
       The directory containing the clips to import.
       
+      This directory must contain a "Spreadsheets" subdirectory,
+      and the "Spreadsheets" directory must contain files "id.csv" and
+      "tc_pond_5sec_split_sm2enabled_BatchClassify.txt". These files
+      must contain species IDs output by Kaleidoscope Pro and
+      SonoBat, respectively. This rather arbitrary arrangement is
+      only a placeholder, to be replaced in the future with a more
+      flexible means of providing Kaleidoscope Pro and SonoBat
+      classifications.
+      
 - name: --clip-classes
   required: false
   value description: clip classes
