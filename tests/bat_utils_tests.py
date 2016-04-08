@@ -2,7 +2,7 @@ import pandas as pd
 import pandas.util as pd_util
 
 
-import mpg_ranch.bat_utils as bat_utils
+import vesper.mpg_ranch.bat_utils as bat_utils
 
 from test_case import TestCase
 

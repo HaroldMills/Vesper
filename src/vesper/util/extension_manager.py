@@ -29,19 +29,21 @@ def load_extensions():
     
     # These imports are here rather than at top level to avoid circular
     # import problems.
-    from mpg_ranch.bat_importer import BatImporter as MpgRanchBatImporter
-    from mpg_ranch.clips_csv_exporter \
+    from vesper.mpg_ranch.bat_importer \
+        import BatImporter as MpgRanchBatImporter
+    from vesper.mpg_ranch.clips_csv_exporter \
         import ClipsCsvExporter as MpgRanchClipsCsvExporter
-    from mpg_ranch.nfc_importer import NfcImporter as MpgRanchNfcImporter
-    from mpg_ranch.outside_classifier \
+    from vesper.mpg_ranch.nfc_importer \
+        import NfcImporter as MpgRanchNfcImporter
+    from vesper.mpg_ranch.outside_classifier \
         import OutsideClassifier as MpgRanchOutsideClassifier
-    from mpg_ranch.outside_classifier \
+    from vesper.mpg_ranch.outside_classifier \
         import OutsideClipClassifier as MpgRanchOutsideClipClassifier
-    from mpg_ranch.nfc_species_classifier \
+    from vesper.mpg_ranch.nfc_species_classifier \
         import NfcSpeciesClassifier as MpgRanchNfcSpeciesClassifier
-    from mpg_ranch.nfc_species_classifier \
+    from vesper.mpg_ranch.nfc_species_classifier \
         import NfcSpeciesClipClassifier as MpgRanchNfcSpeciesClipClassifier
-    from old_bird.detector import Detector as OldBirdDetector
+    from vesper.old_bird.detector import Detector as OldBirdDetector
     from vesper.vcl.classify_command import ClassifyCommand
     from vesper.vcl.clips_exporter import ClipsExporter
     from vesper.vcl.create_command import CreateCommand

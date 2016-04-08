@@ -1,6 +1,6 @@
 import datetime
 
-import old_bird.file_name_utils as file_name_utils
+import vesper.old_bird.file_name_utils as file_name_utils
 
 from test_case import TestCase
 

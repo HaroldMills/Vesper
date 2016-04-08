@@ -1,7 +1,8 @@
 import datetime
 import os.path
 
-from mpg_ranch.song_meter_audio_file_parser import SongMeterAudioFileParser
+from vesper.mpg_ranch.song_meter_audio_file_parser \
+    import SongMeterAudioFileParser
 
 from test_case import TestCase
 

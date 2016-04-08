@@ -11,7 +11,7 @@ import pytz
 
 from vesper.util.audio_file_utils import WAVE_FILE_NAME_EXTENSION
 from vesper.vcl.command import CommandSyntaxError
-import mpg_ranch.bat_utils as bat_utils
+import vesper.mpg_ranch.bat_utils as bat_utils
 import vesper.util.sound_utils as sound_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils

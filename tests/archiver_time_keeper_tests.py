@@ -2,9 +2,9 @@ import datetime
 
 import pytz
 
-from old_bird.archiver_time_keeper import (
-    ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
 from vesper.archive.station import Station
+from vesper.old_bird.archiver_time_keeper import (
+    ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
 
 from test_case import TestCase
 

@@ -11,12 +11,12 @@ import time
 
 import yaml
 
-from mpg_ranch.song_meter_audio_file_parser import SongMeterAudioFileParser \
-    as MpgRanchSongMeterAudioFileParser
-from old_bird.file_name_utils import \
-    parse_elapsed_time_clip_file_name as _parse_clip_file_name
 from vesper.archive.recording import Recording
 from vesper.archive.station import Station
+from vesper.mpg_ranch.song_meter_audio_file_parser \
+    import SongMeterAudioFileParser as MpgRanchSongMeterAudioFileParser
+from vesper.old_bird.file_name_utils \
+    import parse_elapsed_time_clip_file_name as _parse_clip_file_name
 from vesper.util.audio_file_utils import read_wave_file as _read_wave_file
 from vesper.util.bunch import Bunch
 from vesper.util.task_serializer import TaskSerializer

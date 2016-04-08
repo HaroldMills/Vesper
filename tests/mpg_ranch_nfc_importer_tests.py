@@ -1,7 +1,7 @@
 from test_case import TestCase
 import datetime
 
-import mpg_ranch.nfc_importer as nfc_importer
+import vesper.mpg_ranch.nfc_importer as nfc_importer
 
 
 '''
