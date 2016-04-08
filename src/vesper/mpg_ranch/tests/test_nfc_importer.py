@@ -1,6 +1,6 @@
-from test_case import TestCase
 import datetime
 
+from vesper.tests.test_case import TestCase
 import vesper.mpg_ranch.nfc_importer as nfc_importer
 
 

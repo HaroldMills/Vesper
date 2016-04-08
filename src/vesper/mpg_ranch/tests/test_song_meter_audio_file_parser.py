@@ -3,12 +3,11 @@ import os.path
 
 from vesper.mpg_ranch.song_meter_audio_file_parser \
     import SongMeterAudioFileParser
+from vesper.tests.test_case import TestCase
+import vesper.tests.test_utils as test_utils
 
-from test_case import TestCase
 
-
-_MODULE_DIR_PATH = os.path.dirname(__file__)
-_DATA_DIR_PATH = os.path.join(_MODULE_DIR_PATH, 'data', __name__)
+_DATA_DIR_PATH = test_utils.get_test_data_dir_path(__file__)
 
 
 class SongMeterSoundFileParserTests(TestCase):

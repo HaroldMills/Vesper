@@ -1,9 +1,8 @@
 import numpy as np
 
+from vesper.tests.test_case import TestCase
 from vesper.util.bunch import Bunch
 import vesper.util.nfc_detection_utils as utils
-
-from test_case import TestCase
 
 
 _PARAMS = Bunch(

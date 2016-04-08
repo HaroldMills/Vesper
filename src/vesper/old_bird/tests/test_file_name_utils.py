@@ -1,8 +1,7 @@
 import datetime
 
+from vesper.tests.test_case import TestCase
 import vesper.old_bird.file_name_utils as file_name_utils
-
-from test_case import TestCase
 
 
 class ClipFileNameUtilsTests(TestCase):

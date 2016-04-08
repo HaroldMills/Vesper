@@ -1,8 +1,7 @@
 import os.path
 
+from vesper.tests.test_case import TestCase
 from vesper.util.vesper_path_utils import get_path
-
-from test_case import TestCase
 
 
 class VesperPathUtilsTests(TestCase):
@@ -27,4 +26,4 @@ class VesperPathUtilsTests(TestCase):
 
 def _get_vesper_home_dir_path():
     d = os.path.dirname
-    return d(d(__file__))
+    return d(d(d(d(d(__file__)))))

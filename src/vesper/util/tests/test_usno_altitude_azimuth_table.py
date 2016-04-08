@@ -1,6 +1,6 @@
 import datetime
 
-from test_case import TestCase
+from vesper.tests.test_case import TestCase
 from vesper.util.usno_altitude_azimuth_table import UsnoAltitudeAzimuthTable
 import vesper.util.usno_table_class_utils as utils
 

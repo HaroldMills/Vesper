@@ -2,14 +2,13 @@ import os.path
 
 import numpy as np
 
+from vesper.tests.test_case import TestCase
+import vesper.tests.test_utils as test_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 
-from test_case import TestCase
 
-
-_MODULE_DIR_PATH = os.path.dirname(__file__)
-_DATA_DIR_PATH = os.path.join(_MODULE_DIR_PATH, 'data', __name__)
+_DATA_DIR_PATH = test_utils.get_test_data_dir_path(__file__)
 _TEST_FILE_NAME = 'test.wav'
 
 _TEST_CASES = [

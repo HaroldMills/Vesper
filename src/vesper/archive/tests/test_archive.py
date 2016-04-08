@@ -7,10 +7,9 @@ from vesper.archive.archive import Archive
 from vesper.archive.clip_class import ClipClass
 from vesper.archive.detector import Detector
 from vesper.archive.station import Station
+from vesper.tests.test_case import TestCase
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
-
-from test_case import TestCase
 
 
 ARCHIVE_NAME = 'Test Archive'

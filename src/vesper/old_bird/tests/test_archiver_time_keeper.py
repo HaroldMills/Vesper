@@ -5,8 +5,7 @@ import pytz
 from vesper.archive.station import Station
 from vesper.old_bird.archiver_time_keeper import (
     ArchiverTimeKeeper, NonexistentTimeError, AmbiguousTimeError)
-
-from test_case import TestCase
+from vesper.tests.test_case import TestCase
 
 
 _STATIONS = [

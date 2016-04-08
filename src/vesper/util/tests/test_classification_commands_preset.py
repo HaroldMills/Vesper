@@ -1,6 +1,5 @@
+from vesper.tests.test_case import TestCase
 import vesper.util.classification_commands_preset as preset_module
-
-from test_case import TestCase
 
 
 class ClassificationCommandsPresetTests(TestCase):

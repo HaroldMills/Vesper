@@ -1,6 +1,6 @@
 import datetime
 
-from test_case import TestCase
+from vesper.tests.test_case import TestCase
 from vesper.util.usno_rise_set_table import UsnoRiseSetTable
 import vesper.util.usno_table_class_utils as utils
 

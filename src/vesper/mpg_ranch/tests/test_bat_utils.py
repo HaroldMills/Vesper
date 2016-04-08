@@ -1,10 +1,8 @@
 import pandas as pd
 import pandas.util as pd_util
 
-
+from vesper.tests.test_case import TestCase
 import vesper.mpg_ranch.bat_utils as bat_utils
-
-from test_case import TestCase
 
 
 class BatUtilsTests(TestCase):

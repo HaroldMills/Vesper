@@ -2,10 +2,9 @@ import datetime
 
 from vesper.archive.recording import Recording
 from vesper.archive.station import Station
+from vesper.tests.test_case import TestCase
 import vesper.archive.recording_utils as recording_utils
 import vesper.util.time_utils as time_utils
-
-from test_case import TestCase
 
 
 class RecordingUtilsTests(TestCase):

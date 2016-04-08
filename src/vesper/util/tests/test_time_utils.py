@@ -2,9 +2,9 @@ import datetime
 
 import pytz
 
-import vesper.util.time_utils as time_utils
 
-from test_case import TestCase
+from vesper.tests.test_case import TestCase
+import vesper.util.time_utils as time_utils
 
 
 _DT = datetime.datetime

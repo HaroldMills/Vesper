@@ -1,9 +1,8 @@
 import datetime
 
+from vesper.tests.test_case import TestCase
 from vesper.vcl.command import CommandSyntaxError
 import vesper.vcl.vcl_utils as vcl_utils
-
-from test_case import TestCase
 
 
 class VclUtilsTests(TestCase):

@@ -1,8 +1,7 @@
 import numpy as np
 
+from vesper.tests.test_case import TestCase
 import vesper.util.nfc_classification_utils as utils
-
-from test_case import TestCase
 
 
 class NfcDetectionUtilsTests(TestCase):
