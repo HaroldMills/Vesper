@@ -1,1 +1,1 @@
-nosetests -w C:\Users\Harold\Documents\Code\Python\Vesper\tests
+python -m unittest discover -b C:\Users\Harold\Documents\Code\Python\Vesper\src\vesper

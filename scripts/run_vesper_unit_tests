@@ -1,2 +1,2 @@
 #!/bin/sh
-nosetests -w /Users/Harold/Documents/Code/Python/Vesper/tests
+python -m unittest discover -b /Users/Harold/Documents/Code/Python/Vesper/src/vesper
