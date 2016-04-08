@@ -8,7 +8,8 @@ import vesper.util.os_utils as os_utils
 from test_case import TestCase
 
 
-_DATA_DIR_PATH = os.path.join('data', 'audio_file_utils Test Files')
+_MODULE_DIR_PATH = os.path.dirname(__file__)
+_DATA_DIR_PATH = os.path.join(_MODULE_DIR_PATH, 'data', __name__)
 _TEST_FILE_NAME = 'test.wav'
 
 _TEST_CASES = [

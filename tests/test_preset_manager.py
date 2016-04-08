@@ -34,13 +34,15 @@ class B(_Preset):
         self.data = yaml.load(data)
         
         
+_MODULE_DIR_PATH = os.path.dirname(__file__)
+_DATA_DIR_PATH = os.path.join(_MODULE_DIR_PATH, 'data', __name__)
+
+
 class PresetManagerTests(TestCase):
     
     
     def setUp(self):
-        path = os.path.dirname(__file__)
-        path = os.path.join(path, 'data', 'Test Presets')
-        self.manager = PresetManager(path, (A, B))
+        self.manager = PresetManager(_DATA_DIR_PATH, (A, B))
 
         
     def test_preset_types(self):

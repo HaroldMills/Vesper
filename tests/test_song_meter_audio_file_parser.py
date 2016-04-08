@@ -7,8 +7,8 @@ from vesper.mpg_ranch.song_meter_audio_file_parser \
 from test_case import TestCase
 
 
-_DATA_DIR_PATH = \
-    os.path.join('data', 'song_meter_audio_file_parser Test Files')
+_MODULE_DIR_PATH = os.path.dirname(__file__)
+_DATA_DIR_PATH = os.path.join(_MODULE_DIR_PATH, 'data', __name__)
 
 
 class SongMeterSoundFileParserTests(TestCase):
