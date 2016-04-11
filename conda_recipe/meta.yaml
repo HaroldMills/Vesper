@@ -21,7 +21,7 @@ build:
     # Would create an entry point called harold_test that calls harold_test.main()
 
     - vcl=vesper.vcl.vcl:main
-    - vesper_viewer=vesper.ui.vesper_viewer.main
+    - vesper_viewer=vesper.ui.vesper_viewer:main
 
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
