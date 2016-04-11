@@ -11,7 +11,7 @@ from vesper.ui.main_window import MainWindow
 import vesper.util.preferences as prefs
 
 
-def _main():
+def main():
     
     args = _parse_args()
     _load_preferences(args.preferences)
@@ -106,4 +106,4 @@ def _set_geometry(window, available_rect):
     
 
 if __name__ == '__main__':
-    _main()
+    main()
