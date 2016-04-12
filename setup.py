@@ -26,10 +26,8 @@ setup(
     ],
       
     entry_points={
-        'console_scripts': [
-            'vcl=vesper.vcl.vcl:main',
-            'vesper_viewer=vesper.ui.vesper_viewer:main'
-        ]
+        'console_scripts': ['vcl=vesper.vcl.vcl:main'],
+        'gui_scripts': ['vesper_viewer=vesper.ui.vesper_viewer:main']
     },
       
     include_package_data=True,
