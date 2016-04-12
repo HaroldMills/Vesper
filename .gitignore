@@ -59,7 +59,3 @@ docs/_build/
 ClipDatabase.db
 
 .ipynb_checkpoints
-
-conda_recipe
-setup.py
-MANIFEST.in
