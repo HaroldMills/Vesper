@@ -226,12 +226,14 @@ def _parse_preset(file_path, preset_name, preset_type):
     except:
         f = 'Preset manager could not open preset file "{:s}".'
         _log_error(f.format(file_path))
+        return
     
     try:
         data = file_.read()
     except:
         f = 'Preset manager could not read preset file "{:s}".'
         _log_error(f.format(file_path))
+        return
     finally:
         file_.close()
         
