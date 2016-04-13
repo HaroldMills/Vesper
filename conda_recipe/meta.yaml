@@ -1,10 +1,10 @@
 package:
   name: vesper
-  version: "0.0.2"
+  version: "0.1.0"
 
 source:
   git_url: https://github.com/HaroldMills/Vesper.git
-  git_rev: ignore-me
+  git_rev: v0.1.0
 
 build:
 
