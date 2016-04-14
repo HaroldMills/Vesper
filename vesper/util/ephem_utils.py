@@ -73,7 +73,7 @@ def memoize(function):
     results_deque = collections.deque()
     capacity = 100
     
-    def aux(self, *args):
+    def aux(*args):
         
         key = tuple(args)
         
@@ -82,7 +82,7 @@ def memoize(function):
         
         except KeyError:
             
-            result = function(self, *args)
+            result = function(*args)
             
             # Forget oldest result if at capacity.
             if len(results_deque) == capacity:
