@@ -13,10 +13,6 @@ To use this script:
            
        With the default value of OUTPUT_FILE_PATH below, the script will
        write its output to the file Schedule.csv in the same directory.
-    
-       Note that the Vesper `src` directory must be on your Python path
-       for this script to be able to find certain Python modules that it
-       depends upon.
 """
 
 
