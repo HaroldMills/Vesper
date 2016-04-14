@@ -188,11 +188,7 @@ def _load_presets_aux(dir_path, preset_type):
     for _, subdir_names, file_names in os.walk(dir_path):
         
         for file_name in file_names:
-            
-            file_path = os.path.join(dir_path, file_name)
-            preset_name = _get_preset_name(file_name)
-            preset = _parse_preset(file_path, preset_name, preset_type)
-            
+            preset = _load_preset(dir_path, file_name, preset_type)
             if preset is not None:
                 presets.append(preset)
                             
@@ -209,6 +205,15 @@ def _load_presets_aux(dir_path, preset_type):
     return (tuple(presets), preset_data)
         
         
+def _load_preset(dir_path, file_name, preset_type):
+    file_path = os.path.join(dir_path, file_name)
+    preset_name = _get_preset_name(file_name)
+    if preset_name is None:
+        return None
+    else:
+        return _parse_preset(file_path, preset_name, preset_type)
+            
+
 def _get_preset_name(file_name):
     
     for extension in _YAML_FILE_NAME_EXTENSIONS:
@@ -216,7 +221,7 @@ def _get_preset_name(file_name):
             return file_name[:-len(extension)]
         
     # If we get here, the file did not have a YAML file name extension.
-    return file_name
+    return None
     
     
 def _parse_preset(file_path, preset_name, preset_type):
