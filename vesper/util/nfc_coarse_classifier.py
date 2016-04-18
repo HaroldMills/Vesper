@@ -135,12 +135,19 @@ class NfcCoarseClassifier(object):
         
         pairs = [self._classify_segment(s, c)
                  for s in _generate_segments(sound, segment_length, hop_size)]
+                
+        if len(pairs) == 0:
+            classifications = np.array([], dtype='int32')
+            start_time = None
+             
+        else:
+            classifications, times = zip(*pairs)
+            classifications = np.array(classifications)
+            start_time = times[0]
         
-        classifications, times = zip(*pairs)
-        frame_rate = sound.sample_rate / hop_size
-        start_time = times[0]
-        
-        return (np.array(classifications), frame_rate, start_time)
+        frame_rate = sample_rate / hop_size
+
+        return (classifications, frame_rate, start_time)
     
     
     def _classify_segment(self, segment, config):
