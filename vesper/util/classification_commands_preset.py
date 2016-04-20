@@ -11,11 +11,19 @@ class ClassificationCommandsPreset(Preset):
     
     """Preset for a set of clip classification commands."""
     
+    
     type_name = 'Classification Commands'
     
+    
+    @staticmethod
+    def parse_command_name(name):
+        return _parse_command_name(name)
+
+
     def __init__(self, name, data):
-        super(ClassificationCommandsPreset, self).__init__(name)
+        super().__init__(name)
         self._commands = _parse_preset(data)
+
 
     @property
     def commands(self):
@@ -54,58 +62,60 @@ def _parse_preset(text):
 
 def _parse_command(name, action):
     
-    try:
-        normalized_name = _normalize_name(name)
-    except ValueError as e:
-        raise ValueError('Bad command name "{}": {}'.format(name, str(e)))
+    _parse_command_name(name)
     
     try:
         action = _parse_command_action(action)
     except ValueError as e:
         raise ValueError('Bad command "{}": {}'.format(name, str(e)))
     
-    else:
-        return (normalized_name, action)
+    return (name, action)
 
 
-def _normalize_name(name):
+def _parse_command_name(name):
+    
+    try:
+        return _parse_command_name_aux(name)
+    
+    except Exception as e:
+        
+        # Quote name if and only if it is a string.
+        if isinstance(name, str):
+            n = '"{}"'.format(name)
+        else:
+            n = str(name)
+            
+        raise ValueError('Bad command name {}: {}'.format(n, str(e)))
+
+
+def _parse_command_name_aux(name):
     
     if not isinstance(name, str):
         raise ValueError(
             'Name is of type {} rather than string.'.format(
                 name.__class__.__name__))
         
-    modifiers, char = _split_name(name)
+    modifiers, char = _split_command_name(name)
     
     _check_modifiers(modifiers)
     _check_command_char(char)
-        
-    if char.isalpha():
-        if char.isupper():
-            modifiers.append('Shift')
-        else:
-            char = char.upper()
-        
-    return _SEPARATOR.join(modifiers + [char])
+    
+    return (modifiers, char)
         
         
-        
-        
-def _split_name(name):
+def _split_command_name(name):
+    
     if len(name) < 2:
         return ([], name)
+    
     elif name.endswith(_SEPARATOR * 2):
         modifiers = name[:-2].split(_SEPARATOR)
         return (modifiers, _SEPARATOR)
+    
     else:
         parts = name.split(_SEPARATOR)
         return (parts[:-1], parts[-1])
-
-
-def _check_command_char(char):
-    if len(char) != 1:
-        raise ValueError('A command must have exactly one character.')
-
+    
 
 def _check_modifiers(modifiers):
     for m in modifiers:
@@ -113,6 +123,11 @@ def _check_modifiers(modifiers):
             raise ValueError('Unrecognized modifier "{}".'.format(m))
     
     
+def _check_command_char(char):
+    if len(char) != 1:
+        raise ValueError('A command must have exactly one character.')
+
+
 def _parse_command_action(spec):
     
     if isinstance(spec, str):

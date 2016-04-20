@@ -1,5 +1,4 @@
 import math
-import operator
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -17,24 +16,15 @@ from vesper.ui.spectrogram_clip_figure import \
     SpectrogramClipFigure as ClipFigure
 from vesper.util.bunch import Bunch
 from vesper.util.preset_manager import preset_manager
+from vesper.util.classification_commands_preset import \
+    ClassificationCommandsPreset
 import vesper.util.preferences as prefs
-from functools import reduce
 
 
 _SPACING_ASPECT_RATIO = 2
 """ratio of vertical clip spacing to minimum horizontal spacing."""
 
 
-class _KeyAction(QAction):
-
-    def __init__(self, key, parent):
-        super().__init__(key, parent, triggered=self._on_key)
-        self.setShortcut(QKeySequence(key))
-
-    def _on_key(self):
-        self.parent()._on_command_key(self.shortcut())
-        
-        
 class ClipsWindow(QMainWindow):
     
     
@@ -59,35 +49,12 @@ class ClipsWindow(QMainWindow):
             self._archive.name, self._station_name, self._detector_name, date)
         self.setWindowTitle(title)
         
-#         self._add_command_key('Q')
-#         self._add_command_key('Shift+Q')
-#         self._add_command_key('Alt+Q')
-#         self._add_command_key('Alt+Shift+Q')
-#         self._add_command_key('1')
-#         self._add_command_key('!')
-#         self._add_command_key('Alt+1')
-#         self._add_command_key('Alt+!')
-#         self._add_command_key('Shift+Tab')
-#         self._add_command_key('Tab')
-#         self._add_command_key('PgDown')
-#         self._add_command_key('Shift+Esc, X')
-#         self._add_command_key('Ctrl+Shift+j')
-#         self._add_command_key('Ctrl+j')
-        
-        
-        
-#     def _add_command_key(self, key):
-#         self.addAction(_KeyAction(key, self))
-        
-                
-#     def _on_command_key(self, key):
-#         print('_on_command_key', key.toString())
-        
         
     def _create_ui(self):
         parent = QWidget(self)
         self._create_ui_components(parent)
         self._lay_out_ui_components(parent)
+        self._init_key_actions()
         
         
     def _create_ui_components(self, parent):
@@ -159,6 +126,32 @@ class ClipsWindow(QMainWindow):
         self.setStatusBar(self._status_bar)
 
     
+    def _init_key_actions(self):
+        
+        add = self._add_key_action
+        
+        # page down
+        add('PgDown', self.move_down_one_page)
+        add('Space', self.move_down_one_page)
+        
+        # page up
+        add('PgUp', self.move_up_one_page)
+        add('Shift+Space', self.move_up_one_page)
+        
+        # selection forward
+        add('Tab', self.move_singleton_selection_forward)
+        
+        # selection backward
+        add('Shift+Tab', self.move_singleton_selection_backward)
+        
+
+    def _add_key_action(self, key, callable_):
+        action = QAction(key, self)
+        action.setShortcut(QKeySequence(key))
+        action.triggered.connect(callable_)
+        self.addAction(action)
+    
+    
     def _on_commands_changed(self, index):
         
         self._update_commands_preset(index)
@@ -171,11 +164,37 @@ class ClipsWindow(QMainWindow):
         
         
     def _update_commands_preset(self, index):
+        self._remove_command_qt_actions()
         preset = self._commands_presets[index]
         self._commands = preset.commands
+        self._add_command_qt_actions()
+        
+        
+    def _remove_command_qt_actions(self):
+        for action in self._command_qt_actions.values():
+            self.removeAction(action)
+        self._command_qt_actions = {}
+                
+                
+    def _add_command_qt_actions(self):
+        for name in self._commands.keys():
+            action = _KeyAction(name, self, self._on_command_key)
+            self.addAction(action)
+            self._command_qt_actions[name] = action
+        
+                
+    def _on_command_key(self, key):
+        command = self._commands[key]
+        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+        self._figures_frame.execute_command(command)
+        QApplication.restoreOverrideCursor()
+        self._update_title()
         
         
     def _init_commands(self, preset_name):
+        
+        self._commands = {}
+        self._command_qt_actions = {}
         
         if self._commands_combo_box is not None:
             
@@ -282,57 +301,6 @@ class ClipsWindow(QMainWindow):
                     self._clip_class_name, first + 1, last + 1, n)
     
         
-    def keyPressEvent(self, e):
-        
-        command_name = _get_command_from_key_event(e)
-        
-        if command_name is not None:
-
-            command = self._commands.get(command_name)
-            
-            if command is not None:
-                QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-                self._figures_frame.execute_command(command)
-                QApplication.restoreOverrideCursor()
-                self._update_title()
-                
-            else:
-                # key is not a classification command
-                
-                self._key_press_event(e)
-                
-        
-        else:
-            # key is not a classification command
-            
-            self._key_press_event(e)
-            
-            
-    def _key_press_event(self, e):
-        
-        is_key = _is_key
-        
-        if is_key(e, Qt.Key_Space) or is_key(e, Qt.Key_PageDown):
-            self.move_down_one_page()
-            
-        elif is_key(e, Qt.Key_Space, Qt.ShiftModifier) or \
-                is_key(e, Qt.Key_PageUp):
-            
-            self.move_up_one_page()
-            
-        elif is_key(e, Qt.Key_Tab):
-            self.move_singleton_selection_forward()
-            
-        # Note that when the user presses the tab key with the shift
-        # key held down, the event we get is for the backtab key
-        # rather than the tab key, with the shift modifier.
-        elif is_key(e, Qt.Key_Backtab, Qt.ShiftModifier):
-            self.move_singleton_selection_backward()
-            
-        else:
-            super(ClipsWindow, self).keyPressEvent(e)
-
-    
     def move_down_one_page(self):
         self._figures_frame.move_down_one_page()
         self._update_title()
@@ -358,49 +326,55 @@ class ClipsWindow(QMainWindow):
         self._update_title()
 
 
-_MODIFIER_PAIRS = [('Alt', Qt.AltModifier)]
-"""
-list of recognized (modifier name, QT keyboard modifier flag) pairs,
-excluding shift.
+class _KeyAction(QAction):
 
-Note that we do *not* allow classification commands that use the control
-modifier (i.e. the control key on Linux and Windows and the command key
-on Mac OS X) since they could collide with menu item keyboard accelerators.
-"""
+    def __init__(self, name, parent, callback):
+        super().__init__(name, parent)
+        self._name = name
+        self._callback = callback
+        self.triggered.connect(self._triggered)
+        shortcut = _get_command_shortcut(name)
+        self.setShortcut(shortcut)
 
-_ALL_MODIFIERS = reduce(
-    operator.or_, [m for _, m in _MODIFIER_PAIRS], Qt.ShiftModifier)
-"""disjunction of recognized command modifiers, including shift."""
-
-
-def _get_command_from_key_event(key_event):
-    
-    char = key_event.text()
-    
-    if char == '':
-        return None
-    
-    else:
+    def _triggered(self):
+        self._callback(self._name)
         
-        modifiers = key_event.modifiers()
         
-        if modifiers | _ALL_MODIFIERS != _ALL_MODIFIERS:
-            # unrecognized modifier present
-            return None
-            
-        mods = ''.join(s + '-' for s, m in _MODIFIER_PAIRS if modifiers & m)
-        
-        return mods + char
+def _get_command_shortcut(command_name):
     
+    """
+    Gets a QAction shortcut for the specified command name.
     
-def _is_key(key_event, key, modifiers=Qt.NoModifier):
-     
-    if key_event.key() != key:
-        return False
-     
-    else:
-        return key_event.modifiers() == modifiers
+    The return value is a `QKeySequence` suitable as the argument of
+    the `setShortcut` method of a `QAction`.
+    """
+    
+    modifiers, char = \
+        ClassificationCommandsPreset.parse_command_name(command_name)
+    
+    # Translate the command name into a Qt key sequence string suitable
+    # as an argument to the `QKeySequence` initializer. This entails
+    # fiddling with letters, capitalizing lower case ones and adding a
+    # shift modifier for upper case ones. Examples of the mapping from
+    # command names to key sequence strings:
+    #
+    #     Command Name             Key Sequence String
+    #     ------------             -------------------
+    #     n                        N
+    #     N                        Shift+N
+    #     Alt+n                    Alt+N
+    #     Alt+N                    Alt+Shift+N
 
+    if char.isalpha():
+        if char.isupper():
+            modifiers.append('Shift')
+        else:
+            char = char.upper()
+        
+    key_sequence = '+'.join(modifiers + [char])
+    
+    return QKeySequence(key_sequence)
+        
 
 class _FiguresFrame(QWidget):
     
