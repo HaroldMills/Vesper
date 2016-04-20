@@ -22,14 +22,17 @@ class ClassificationCommandsPreset(Preset):
         return dict(self._commands)
         
         
+_SEPARATOR = '+'
+"""Command component separator."""
+
 _MODIFIERS = frozenset(['Alt'])
-"""set of recognized command modifiers, excluding shift."""
+"""Set of recognized command modifiers, excluding shift."""
 
 _DEFAULT_ACTION_NAME = 'Classify'
 """Default clip action name."""
 
 _SCOPES = frozenset(['Selected', 'Page', 'All'])
-"""set of recognized command scopes."""
+"""Set of recognized command scopes."""
 
 _DEFAULT_SCOPE = 'Selected'
 """Default command scope."""
@@ -52,7 +55,7 @@ def _parse_preset(text):
 def _parse_command(name, action):
     
     try:
-        _check_command_name(name)
+        normalized_name = _normalize_name(name)
     except ValueError as e:
         raise ValueError('Bad command name "{}": {}'.format(name, str(e)))
     
@@ -62,26 +65,43 @@ def _parse_command(name, action):
         raise ValueError('Bad command "{}": {}'.format(name, str(e)))
     
     else:
-        return (name, action)
+        return (normalized_name, action)
 
 
-def _check_command_name(name):
+def _normalize_name(name):
     
     if not isinstance(name, str):
         raise ValueError(
             'Name is of type {} rather than string.'.format(
                 name.__class__.__name__))
         
-    parts = name.split('-')
+    modifiers, char = _split_name(name)
     
-    if len(parts) == 1:
-        _check_command_char(parts[0])
+    _check_modifiers(modifiers)
+    _check_command_char(char)
         
+    if char.isalpha():
+        if char.isupper():
+            modifiers.append('Shift')
+        else:
+            char = char.upper()
+        
+    return _SEPARATOR.join(modifiers + [char])
+        
+        
+        
+        
+def _split_name(name):
+    if len(name) < 2:
+        return ([], name)
+    elif name.endswith(_SEPARATOR * 2):
+        modifiers = name[:-2].split(_SEPARATOR)
+        return (modifiers, _SEPARATOR)
     else:
-        _check_modifiers(parts[:-1])
-        _check_command_char(parts[-1])
-        
-        
+        parts = name.split(_SEPARATOR)
+        return (parts[:-1], parts[-1])
+
+
 def _check_command_char(char):
     if len(char) != 1:
         raise ValueError('A command must have exactly one character.')
@@ -191,4 +211,3 @@ class _ClassifyAction(object):
             if clip_class_name == 'Unclassified':
                 clip_class_name = None
             clip.clip_class_name = clip_class_name
-    

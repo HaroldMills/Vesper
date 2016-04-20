@@ -5,9 +5,9 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PyQt4.QtCore import Qt
 from PyQt4.QtGui import (
-    QApplication, QBrush, QColor, QComboBox, QCursor, QFrame, QGridLayout,
-    QHBoxLayout, QLabel, QMainWindow, QPainter, QStatusBar, QVBoxLayout,
-    QWidget)
+    QAction, QApplication, QBrush, QColor, QComboBox, QCursor, QFrame,
+    QGridLayout, QHBoxLayout, QKeySequence, QLabel, QMainWindow, QPainter,
+    QStatusBar, QVBoxLayout, QWidget)
 import numpy as np
 
 from vesper.ui.clip_times_rug_plot import ClipTimesRugPlot
@@ -25,6 +25,16 @@ _SPACING_ASPECT_RATIO = 2
 """ratio of vertical clip spacing to minimum horizontal spacing."""
 
 
+class _KeyAction(QAction):
+
+    def __init__(self, key, parent):
+        super().__init__(key, parent, triggered=self._on_key)
+        self.setShortcut(QKeySequence(key))
+
+    def _on_key(self):
+        self.parent()._on_command_key(self.shortcut())
+        
+        
 class ClipsWindow(QMainWindow):
     
     
@@ -49,7 +59,31 @@ class ClipsWindow(QMainWindow):
             self._archive.name, self._station_name, self._detector_name, date)
         self.setWindowTitle(title)
         
+#         self._add_command_key('Q')
+#         self._add_command_key('Shift+Q')
+#         self._add_command_key('Alt+Q')
+#         self._add_command_key('Alt+Shift+Q')
+#         self._add_command_key('1')
+#         self._add_command_key('!')
+#         self._add_command_key('Alt+1')
+#         self._add_command_key('Alt+!')
+#         self._add_command_key('Shift+Tab')
+#         self._add_command_key('Tab')
+#         self._add_command_key('PgDown')
+#         self._add_command_key('Shift+Esc, X')
+#         self._add_command_key('Ctrl+Shift+j')
+#         self._add_command_key('Ctrl+j')
+        
+        
+        
+#     def _add_command_key(self, key):
+#         self.addAction(_KeyAction(key, self))
+        
                 
+#     def _on_command_key(self, key):
+#         print('_on_command_key', key.toString())
+        
+        
     def _create_ui(self):
         parent = QWidget(self)
         self._create_ui_components(parent)
@@ -341,7 +375,7 @@ _ALL_MODIFIERS = reduce(
 
 def _get_command_from_key_event(key_event):
     
-    char = str(key_event.text())
+    char = key_event.text()
     
     if char == '':
         return None
