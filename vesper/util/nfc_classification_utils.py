@@ -1,6 +1,8 @@
 """NFC classification utility functions."""
 
 
+import math
+
 import numpy as np
 
 from vesper.util.spectrogram import Spectrogram
@@ -65,7 +67,7 @@ def get_segment_features(segment, config):
     # the norm, but also leveled off more, so that it looked like the
     # latter might eventually overtake the former.
     if c.include_norm_in_features:
-        norm = np.linalg.norm(spectra)
+        norm = _norm(spectra)
         features = np.hstack([features, norm])
     
     return (features, spectra, time)
@@ -100,6 +102,23 @@ def _sum_adjacent(x, block_size):
     
     
 def _normalize(x):
-    norm = np.linalg.norm(x)
+    
+    # Replaced `np.linalg.norm` with our own norm on 2016-04-21 due to
+    # some odd `np.linalg.norm` behavior on Mac OS X (version 10.10.5,
+    # (NumPy version 1.11.0, Python version 3.5.1) ). When called from this
+    # module, `np.linalg.norm` returned results that were incorrect
+    # (its result for an input of `np.arange(2, dtype='float32')` was zero,
+    # for example, though its result for an input of `np.arange(2)` was one).
+    # When called from a Python interpreter running in a terminal,
+    # `np.linalg.norm` yielded correct results. I was also unable to
+    # reproduce the problem in a script that processed some fake spectra
+    # much like this module, including using this module's `_sum_adjacent`
+    # function.
+    # norm = np.linalg.norm(x)
+    
+    norm = _norm(x)
     return x / norm if norm != 0 else x
 
+
+def _norm(x):
+    return math.sqrt(np.sum(x * x.conj()))
