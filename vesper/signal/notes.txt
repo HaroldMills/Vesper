@@ -14,6 +14,17 @@ to index a sequence relative to its end. The `Signal` and
 indices for all signal axes.
 
 
+Questions:
+
+* IndexedAxis rather than IndexAxis?
+
+* ArrayAxis rather than SampleArrayAxis?
+
+* s.array_axes instead of s.sample_array_axes?
+
+* s.sample_type rather than s.dtype?
+
+
 Signal
 
 * Sequence of n-dimensional sample arrays.
@@ -92,17 +103,17 @@ IndexAxis(Axis)
 Note the asymmetry between the start index and end index: the start index
 is always a nonnegative integer, while the end index is either a
 nonnegative integer or `None`. This is intentional, and reflects the
-fact that the start index and the length of an axis are the authorities
-on the extent of the axis, while the end index is simply a derived
+fact that the start index and the length of an axis determine the
+extent of the axis, while the end index is simply a derived
 quantity provided for convenience. For mutable signals that grow from
 nothing, we want to be able to specify an integer start index (typically
 zero) and a zero length for the time axis at initialization, and then
 increase the length while leaving the start index alone as the signal
-grows. It would be undesirable to be able to set the start index to an
-integer in the initializer, only to have it read `None` because the
+grows. It would be undesirable to set the start index to an integer in
+the initializer, only to have it read `None` because the
 length was zero, and then magically attain the value passed to the
 initializer when the signal length became nonzero. It would also be
-undesirable to not be allowed to initialize the start index to a
+undesirable to not be able to initialize the start index to a
 non-`None` value when the length is zero, and to have to set it to
 the desired non-`None` value later when the length became nonzero.
 
