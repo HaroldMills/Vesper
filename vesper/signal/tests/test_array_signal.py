@@ -1,28 +1,31 @@
 import datetime
 
+import numpy as np
+
 from vesper.signal.amplitude_axis import AmplitudeAxis
+from vesper.signal.array_signal import ArraySignal
 from vesper.signal.linear_mapping import LinearMapping
-from vesper.signal.named_sequence import NamedSequence
 from vesper.signal.sample_array_axis import SampleArrayAxis
-from vesper.signal.signal import Signal
 from vesper.signal.tests.axis_units import FREQ_UNITS, POWER_UNITS
+from vesper.signal.tests.test_signal import SignalTests
 from vesper.signal.time_axis import TimeAxis
 from vesper.tests.test_case import TestCase
 from vesper.util.bunch import Bunch
 
 
-class SignalTests(TestCase):
+class ArraySignalTests(TestCase):
 
 
     @staticmethod
     def assert_signal(
-            s, name, parent, time_axis, sample_array_axes, amplitude_axis):
+            s, name, parent, time_axis, sample_array_axes, amplitude_axis,
+            samples):
         
-        assert s.name == name
-        assert s.parent == parent
-        assert s.time_axis == time_axis
-        assert s.sample_array_axes == NamedSequence(sample_array_axes)
-        assert s.amplitude_axis == amplitude_axis
+        SignalTests.assert_signal(
+            s, name, parent, time_axis, sample_array_axes, amplitude_axis)
+        
+        assert s.dtype == samples.dtype
+        assert np.alltrue(s[:] == samples)
 
         
     def test_init(self):
@@ -50,16 +53,10 @@ class SignalTests(TestCase):
         
         power_axis = AmplitudeAxis(name='Power', units=POWER_UNITS)
         
-        args = (name, parent, time_axis, sample_array_axes, power_axis)
+        samples = np.arange(length * spectrum_size)
         
-        s = Signal(*args)
+        args = (name, parent, time_axis, sample_array_axes, power_axis, samples)
+        
+        s = ArraySignal(*args)
         
         self.assert_signal(s, *args)
-        
-        self.assertEqual(s.axes['Time'], time_axis)
-        self.assertEqual(s.axes['Frequency'], frequency_axis)
-        self.assertEqual(s.axes['Power'], power_axis)
-        self.assertRaises(NotImplementedError, getattr, s, 'dtype')
-        self.assertEqual(s.shape, (length, spectrum_size))
-        self.assertEqual(len(s), length)
-        self.assertRaises(NotImplementedError, s.__getitem__, 0)
