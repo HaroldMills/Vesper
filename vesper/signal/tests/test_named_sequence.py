@@ -1,7 +1,7 @@
 from vesper.tests.test_case import TestCase
 from vesper.util.named import Named
 
-from ..named_sequence import NamedSequence
+from vesper.signal.named_sequence import NamedSequence
 
 
 class _Item(Named):
@@ -13,21 +13,35 @@ class _Item(Named):
         
         
     def __eq__(self, other):
-        if not isinstance(other, _Item):
-            return False
-        else:
-            return self.name == other.name and self.value == other.value
+        return isinstance(other, _Item) and \
+            self.name == other.name and \
+            self.value == other.value
         
         
 class NamedSequenceTests(TestCase):
     
     
-    def test_initialization(self):
+    def test_init(self):
         s = NamedSequence()
         self.assertEqual(len(s), 0)
         self.assertEqual(s.names, ())
         
         
+    def test_eq(self):
+        
+        one = _Item('one', 1)
+        two = _Item('two', 2)
+        three = _Item('three', 3)
+        
+        s = NamedSequence((one, two))
+        
+        t = NamedSequence((one, two))
+        self.assertTrue(s == t)
+        
+        t = NamedSequence((one, three))
+        self.assertFalse(s == t)
+
+
     def test(self):
         
         one = _Item('one', 1)

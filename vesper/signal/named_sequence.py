@@ -14,6 +14,11 @@ class NamedSequence(Sequence):
         self._names = tuple(i.name for i in items)
         
         
+    def __eq__(self, other):
+        return isinstance(other, NamedSequence) and \
+            self._tuple == other._tuple
+            
+            
     def __len__(self):
         return len(self._tuple)
     
