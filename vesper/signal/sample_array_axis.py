@@ -1,8 +1,8 @@
 """Module containing `SampleArrayAxis` class."""
 
 
-from .index_axis import IndexAxis
-from .linear_mapping import LinearMapping
+from vesper.signal.index_axis import IndexAxis
+from vesper.signal.linear_mapping import LinearMapping
 
 
 '''
@@ -37,6 +37,12 @@ class SampleArrayAxis(IndexAxis):
         else:
             self._index_to_value_mapping = index_to_value_mapping
 
+
+    def __eq__(self, other):
+        return isinstance(other, SampleArrayAxis) and \
+            IndexAxis.__eq__(self, other) and \
+            self.index_to_value_mapping == other.index_to_value_mapping
+                   
 
     @property
     def index_to_value_mapping(self):

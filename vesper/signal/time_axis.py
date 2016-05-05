@@ -67,8 +67,15 @@ class TimeAxis(IndexAxis):
             return index_to_time_mapping
 
         
+    def __eq__(self, other):
+        return isinstance(other, TimeAxis) and \
+            IndexAxis.__eq__(self, other) and \
+            self.sample_rate == other.sample_rate and \
+            self.index_to_time_mapping == other.index_to_time_mapping and \
+            self.reference_datetime == other.reference_datetime
+                   
+
     start_index = IndexAxis.start_index
-    length = IndexAxis.length
     
     
     @start_index.setter
@@ -76,6 +83,9 @@ class TimeAxis(IndexAxis):
         self._start_index = i
         
         
+    length = IndexAxis.length
+
+    
     @length.setter
     def length(self, n):
         self._length = n

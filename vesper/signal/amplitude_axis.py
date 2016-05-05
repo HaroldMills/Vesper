@@ -1,7 +1,7 @@
 """Module containing `AmplitudeAxis` class."""
 
 
-from .axis import Axis
+from vesper.signal.axis import Axis
 
 
 '''
@@ -16,3 +16,7 @@ class AmplitudeAxis(Axis):
     
     def __init__(self, name='Amplitude', units=None):
         super().__init__(name, units)
+
+
+    def __eq__(self, other):
+        return isinstance(other, AmplitudeAxis) and Axis.__eq__(self, other)

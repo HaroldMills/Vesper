@@ -28,6 +28,12 @@ class Axis(Named):
             self._units = Bunch(units)
         
         
+    def __eq__(self, other):
+        return isinstance(other, Axis) and \
+            self.name == other.name and \
+            self.units == other.units
+
+
     @property
     def units(self):
         return self._units

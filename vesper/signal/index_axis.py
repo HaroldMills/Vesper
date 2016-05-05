@@ -1,7 +1,7 @@
 """Module containing `IndexAxis` class."""
 
 
-from .axis import Axis
+from vesper.signal.axis import Axis
 
 
 '''
@@ -24,6 +24,13 @@ class IndexAxis(Axis):
         self._length = length
         
         
+    def __eq__(self, other):
+        return isinstance(other, IndexAxis) and \
+            Axis.__eq__(self, other) and \
+            self.start_index == other.start_index and \
+            self.length == other.length
+                   
+                   
     @property
     def start_index(self):
         return self._start_index
