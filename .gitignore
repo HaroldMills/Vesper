@@ -55,7 +55,8 @@ docs/_build/
 # Mac Desktop Services Store files
 .DS_Store
 
-# Local test files
+# Local files
 ClipDatabase.db
+scratch.py
 
 .ipynb_checkpoints
