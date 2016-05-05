@@ -1,10 +1,14 @@
 """Module containing `LinearMapping` class."""
 
 
-class LinearMapping(object):
+from vesper.signal.value_mapping import ValueMapping
+
+
+class LinearMapping(ValueMapping):
     
     
     def __init__(self, a=1, b=0):
+        super().__init__()
         self._a = float(a)
         self._b = float(b)
         

@@ -4,46 +4,71 @@
 from numbers import Number
 import datetime
 
-from .axis import Axis
+from .index_axis import IndexAxis
 from .linear_mapping import LinearMapping
+from vesper.util.bunch import Bunch
 
 
 '''
+a.name                   # e.g. 'Time', 'Frequency'
+a.units                  # `Bunch` with `plural`, `singular`, and
+                         # `abbreviation` attributes
+
+a.start_index            # start of index range
+a.end_index              # end of index range, `None` if length zero
+a.length                 # axis length in indices
+
 a.sample_rate            # hertz
 a.sample_period          # seconds (same as `index_step_size`)
-a.duration               # length times sample period
 
-a.start_time             # seconds
-a.end_time               # seconds
+a.index_to_time_mapping
+a.index_to_time(i)       # indices may be float
+a.time_to_index(t)       # indices are float
 
-a.start_datetime         # `datetime`
-a.end_datetime           # `datetime`
+a.start_time             # time at start index, `None` if length zero
+a.end_time               # time at end index, `None` if length zero
+a.span                   # end time less start time, `None` if length zero
+a.duration               # span plus sample period, zero if length zero
 
-a.index_to_time(indices)         # indices may be float
-a.time_to_index(times)           # indices are float
-a.index_to_datetime(indices)     # indices may be float
-a.datetime_to_index(datetimes)   # indices are float
+a.reference_datetime     # `Bunch` with `index` and `datetime` attributes
+a.index_to_datetime(i)   # indices may be float
+a.datetime_to_index(dt)  # indices are float
+
+a.start_datetime         # `datetime` at start index, `None` if unknown
+a.end_datetime           # `datetime` at start index, `None` if unknown
 '''
 
 
-class TimeAxis(Axis):
+_NAME = 'Time'
+_UNITS = Bunch(plural='seconds', singular='second', abbreviation='S')
+
+
+class TimeAxis(IndexAxis):
     
     
     def __init__(
-            self, start_index=0, length=0, sample_rate=1, origin_time=0,
-            origin_datetime=None):
+            self, start_index=0, length=0, sample_rate=1,
+            index_to_time_mapping=None, reference_datetime=None):
         
-        sample_period = 1 / sample_rate
-        mapping = LinearMapping(sample_period, origin_time)
-        
-        super().__init__('Time', 'seconds', 'S', start_index, length, mapping)
+        super().__init__(_NAME, _UNITS, start_index, length)
         
         self._sample_rate = sample_rate
-        self._origin_datetime = origin_datetime
+        
+        self._index_to_time_mapping = self._get_index_to_time_mapping(
+            index_to_time_mapping, sample_rate)
+            
+        self.reference_datetime = reference_datetime
         
     
-    start_index = Axis.start_index
-    length = Axis.length
+    def _get_index_to_time_mapping(self, index_to_time_mapping, sample_rate):
+        if index_to_time_mapping is None:
+            return LinearMapping(1 / sample_rate)
+        else:
+            return index_to_time_mapping
+
+        
+    start_index = IndexAxis.start_index
+    length = IndexAxis.length
     
     
     @start_index.setter
@@ -67,30 +92,117 @@ class TimeAxis(Axis):
     
     
     @property
+    def index_to_time_mapping(self):
+        return self._index_to_time_mapping
+    
+    
+    def index_to_time(self, indices):
+        return self._index_to_time_mapping.map(indices)
+    
+    
+    def time_to_index(self, times):
+        return self._index_to_time_mapping.invert(times)
+    
+    
+    @property
+    def start_time(self):
+        return self.index_to_time(self.start_index)
+    
+    
+    @property
+    def end_time(self):
+        if self.length == 0:
+            return None
+        else:
+            return self.index_to_time(self.end_index)
+    
+    
+    @property
+    def span(self):
+        if self.length == 0:
+            return None
+        else:
+            return self.end_time - self.start_time
+
+
+    @property
     def duration(self):
-        return self.length * self.sample_period
+        
+        if self.length == 0:
+            return 0
+        
+        else:
+            
+            # We define the duration in terms of the span so the it
+            # will behave well for nonlinear index to time mappings.
+            return self.span + self.sample_period
     
     
     @property
-    def origin_time(self):
-        return self._index_to_value_mapping.b
+    def reference_datetime(self):
+        return self._reference_datetime
     
     
-    @property
-    def origin_datetime(self):
-        return self._origin_datetime
-    
-    
-    start_time = Axis.start_value
-    end_time = Axis.end_value
+    @reference_datetime.setter
+    def reference_datetime(self, reference_datetime):
+        if reference_datetime is None:
+            self._reference_datetime = None
+        else:
+            self._reference_datetime = Bunch(reference_datetime)
+        
+        
+    def index_to_datetime(self, indices):
+        return self._datetime_convert(indices, self._index_to_datetime, Number)
+        
+        
+    def _datetime_convert(self, data, method, type_):
+        
+        ref = self.reference_datetime
+        
+        if ref is not None:
+            
+            # Augment reference date/time with time at reference index.
+            # We do this every time this method is called to allow for
+            # mutable index to time mappings.
+            ref = Bunch(ref, time=self.index_to_time(ref.index))
+            
+        if isinstance(data, type_):
+            return method(data, ref)
+        else:
+            return [method(d, ref) for d in data]
+        
+        
+    def _index_to_datetime(self, index, ref):
+        
+        if ref is None:
+            return None
+        
+        else:
+            time = self.index_to_time(index)
+            delta = time - ref.time
+            td = datetime.timedelta(seconds=delta)
+            return ref.datetime + td
+
+
+    def datetime_to_index(self, datetimes):
+        return self._datetime_convert(
+            datetimes, self._datetime_to_index, datetime.datetime)
+        
+        
+    def _datetime_to_index(self, dt, ref):
+        
+        if ref is None:
+            return None
+        
+        else:
+            td = dt - ref.datetime
+            time = ref.time + td.total_seconds()
+            return self.time_to_index(time)
     
     
     @property
     def start_datetime(self):
-        if self.start_time is None:
-            return None
-        else:
-            return self.index_to_datetime(self.start_index)
+        return self.index_to_datetime(self.start_index)
 
 
     @property
@@ -99,48 +211,3 @@ class TimeAxis(Axis):
             return None
         else:
             return self.index_to_datetime(self.end_index)
-    
-    
-    index_to_time = Axis.index_to_value
-    time_to_index = Axis.value_to_index
-    
-    
-    def index_to_datetime(self, indices):
-        
-        if isinstance(indices, Number):
-            return self._index_to_datetime(indices)
-        
-        else:
-            return [self._index_to_datetime(i) for i in indices]
-        
-        
-    def _index_to_datetime(self, index):
-        
-        if self._origin_datetime is None:
-            return None
-        
-        else:
-            time = self.index_to_time(index)
-            seconds_from_origin = time - self.origin_time
-            td = datetime.timedelta(seconds=seconds_from_origin)
-            return self._origin_datetime + td
-
-
-    def datetime_to_index(self, datetimes):
-        
-        if isinstance(datetimes, datetime.datetime):
-            return self._datetime_to_index(datetimes)
-        
-        else:
-            return [self._datetime_to_index(dt) for dt in datetimes]
-        
-        
-    def _datetime_to_index(self, dt):
-        
-        if self._origin_datetime is None:
-            return None
-        
-        else:
-            td = dt - self._origin_datetime
-            time = self.origin_time + td.total_seconds()
-            return self.time_to_index(time)

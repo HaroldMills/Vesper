@@ -1,10 +1,5 @@
 General points about signals:
 
-* `Signal` and `MultichannelSignal` objects are both fundamentally
-sequences of samples/sample arrays/sample frames. Hence, for
-`s` either a `Signal` or `MultichannelSignal`, `len(s)` should be
-the number of samples, sample arrays, or sample frames in `s`.
-
 * Indexing a `Signal` or a `MultichannelSignal` yields a scalar sample
 or a NumPy array of samples. To the extent possible, indexing a
 `Signal` or a `MultichannelSignal` should behave just like indexing
@@ -21,119 +16,147 @@ indices for all signal axes.
 
 Signal
 
-* sequence of sample arrays
-* indexing yields NumPy array of samples
-* first axis is *time axis*, index specifies sample or sample array
-* other axes are *sample array axes*, indices select portions of sample arrays
-* reading outside of extent returns zeros
-* three levels of mutability: immutable, extendible, and editable
-* need thread synchronization for mutable signals
+* Sequence of n-dimensional sample arrays.
+* All sample arrays of a signal have the same dimensions.
+* Indexing yields NumPy array of samples.
+* First index is for time axis.
+* Other indices are for sample array axes.
+* Time axis has a nonnegative start index and a nonnegative length.
+* Reading outside of extent returns zeros.
+* Three levels of mutability: immutable, extendible, and editable.
+* Need thread synchronization for mutable signals.
 
-s.name
+s.name                   # `str` or `None`
 
-s.axes                   # sequence of axes, indexable by name and number
-s.shape                  # tuple of axis lengths
-len(s)                   # time axis length
+s.parent                 # `MultichannelSignal` or `None`
+
+s.time_axis              # `TimeAxis`
+s.sample_array_axes      # `NamedSequence` of `SampleArrayAxis` objects
+s.amplitude_axis         # `AmplitudeAxis`
 
 s.dtype                  # NumPy `dtype`
+
+s.shape                  # signal shape, an integer tuple
+len(s)                   # time axis length
 
 s[:]                     # all signal samples
 s[0]                     # sample array 0
 s[1]                     # sample array 1
 s[-1]                    # final sample array
-s[0:10]                  # sample arrays 0 up to 10
+s[0:10]                  # sample arrays 0 through 9
 s[0, 10:20]              # part of sample array 0
 s[0, 10:-20]             # part of sample array 0
 
 
+MultichannelSignal.
+
+* Sequence of channels, each a `Signal`.
+* All channels share start index, length, and sample array dimensions.
+* Sequence of sample arrays at a given signal index is a *sample frame*.
+* Indexing yields NumPy array of samples.
+* First index is channel number.
+* Second index is for time axis.
+* Other indices are for sample array axes.
+* Each channel has its own amplitude axis.
+
+s.name
+
+s.channels               # `NamedSequence` of `Signal` objects
+
+s.time_axis              # `TimeAxis`
+s.sample_array_axes      # `NamedSequence` of `SampleArrayAxis` objects
+s.amplitude_axis         # `Axis` (no calibration
+
+s.dtype                  # NumPy `dtype`
+
+s.shape                  # tuple of number of channels and axis lengths
+len(s)                   # number of channels
+
+s[:]                     # all samples of all channels
+s[0]                     # all samples of channel 0
+s[0, 10]                 # sample array 10 of channel 0
+s[0, 10:20]              # sample arrays 10 through 19 of channel 0
+s[:, 10]                 # sample frame 10
+s[:, 10:20]              # sample frames 10 through 19
+
+
 Axis
 
-a.name                   # e.g. "Time", "Frequency", "Bearing"
-a.units                  # e.g. "seconds", "hertz"
-a.units_abbreviation     # e.g. "S", "Hz"
+a.name                   # e.g. 'Time', 'Frequency'
+a.units                  # `Bunch` with `plural`, `singular`, and
+                         # `abbreviation` attributes
 
-a.start_index            # start of index range, `None` if length zero
+
+IndexAxis(Axis)
+
+Note the asymmetry between the start index and end index: the start index
+is always a nonnegative integer, while the end index is either a
+nonnegative integer or `None`. This is intentional, and reflects the
+fact that the start index and the length of an axis are the authorities
+on the extent of the axis, while the end index is simply a derived
+quantity provided for convenience. For mutable signals that grow from
+nothing, we want to be able to specify an integer start index (typically
+zero) and a zero length for the time axis at initialization, and then
+increase the length while leaving the start index alone as the signal
+grows. It would be undesirable to be able to set the start index to an
+integer in the initializer, only to have it read `None` because the
+length was zero, and then magically attain the value passed to the
+initializer when the signal length became nonzero. It would also be
+undesirable to not be allowed to initialize the start index to a
+non-`None` value when the length is zero, and to have to set it to
+the desired non-`None` value later when the length became nonzero.
+
+a.start_index            # start of index range
 a.end_index              # end of index range, `None` if length zero
 a.length                 # axis length in indices
 
-a.start_value            # value at start index, `None` if length zero
-a.end_value              # value at end index, `None` if length zero
-a.span                   # end value less start value, `None` if length zero
 
-a.index_to_value(indices)        # indices may be float
-a.value_to_index(values)         # indices are float
-
-
-TimeAxis
+TimeAxis(IndexAxis)
 
 Axis values have units of seconds. A `TimeAxis` may be *date/time calibrated*,
 in which case the date and time of each sample are known.
 
+Note the asymmetries between the start time and the end time and the
+start datetime and end datetime. These follow from the asymmetry
+between the start index and the end index.
+
 a.sample_rate            # hertz
 a.sample_period          # seconds (same as `index_step_size`)
-a.duration               # length times sample period
 
-a.start_time             # seconds
-a.end_time               # seconds, `None` if length zero
+a.index_to_time_mapping
+a.index_to_time(i)       # indices may be float
+a.time_to_index(t)       # indices are float
 
-a.start_datetime         # `datetime` (or `datetime64`?)
-a.end_datetime           # `datetime` (or `datetime64`?), `None` if length zero
+a.start_time             # time at start index
+a.end_time               # time at end index, `None` if length zero
+a.span                   # end time less start time, `None` if length zero
+a.duration               # span plus sample period, zero if length zero
 
-a.index_to_time(indices)         # indices may be float
-a.time_to_index(times)           # indices are float
-a.index_to_datetime(indices)     # indices may be float
-a.datetime_to_index(datetimes)   # indices are float
+a.reference_datetime     # `Bunch` with `index` and `datetime` attributes
+a.index_to_datetime(i)   # indices may be float
+a.datetime_to_index(dt)  # indices are float
 
-
-MultichannelSignal
-
-* sequence of n signals, each with the same axes and sample type.
-* signal i is *channel i* of the multichannel signal
-* indexing yields NumPy array of samples
-* first index specifies channel
-* other indices correspond to signal axes
-
-s.channels               # `Named` sequence of channel `Signal` objects
-
-s.axes                   # sequence of axes, indexable by name and number
-s.shape                  # tuple of number of channels and axis lengths
-len(s)                   # number of channels
-
-s.dtype                  # NumPy `dtype`
-
-s[:]                     # all samples of all channels
-s[0]                     # all samples of channel zero
-s[0, 10]                 # sample array 10 of channel zero
-s[:, 10]                 # sample frame 10
+a.start_datetime         # `datetime` at start index, `None` if unknown
+a.end_datetime           # `datetime` at start index, `None` if unknown
 
 
-* I think amplitude calibration can be added to signals later as needed.
-  Calibrating a signal boils down to building a mapping from uncalibrated
-  sample values (for example, the sample values read from a sound file,
-  or uncalibrated spectrogram values) to calibrated values. The mapping
-  function takes a single uncalibrated sample value as input, possibly
-  along with the sample's sample array indices, and returns a calibrated
-  sample value. There are a number of different (and not necessarily
-  mutually exclusive) ways in which we could support calibration. We
-  could, for example, keep calibration entirely outside of the `Signal`
-  class, and simply map uncalibrated sample values read from a `Signal`
-  to calibrated values using a separate `Calibration` object. Or we
-  could enhance the `Signal` class to allow setting an optional
-  calibration for it, and provide an extra property from which one
-  could read calibrated rather than raw values:
-  
-      signal.calibration = Calibration(...)
-      values = signal.values[...]
-      
-  Or, finally, we could create calibrated signal classes that would
-  allow us to construct calibrated signals from uncalibrated ones
-  
-      calibrated_signal = CalibratedSignal(uncalibrated_signal, ...)
-      values = calibrated_signal[...]
-      
-  The `CalibratedSignal` class might have a `source` property through
-  which one could access the uncalibrated signal from which a
-  `CalibratedSignal` was constructed if needed.
+SampleArrayAxis(IndexAxis)
+
+a.index_to_value_mapping
+a.index_to_value(i)      # indices may be float
+a.value_to_index(v)      # indices are float
+
+a.start_value            # value at start index
+a.end_value              # value at end index, `None` if length zero
+a.span                   # end value less start value, `None` if length zero
+
+
+AmplitudeAxis(Axis)
+
+For now, `AmplitudeAxis` is just a subclass of `Axis` with a specialized
+initializer and no other methods. It will (probably) eventually provide
+amplitude calibration functionality.
+
 
 * How do we support mutable signals? The two types of mutable signals
   I can think of are *extensible* signals and *editable* signals. The
@@ -153,8 +176,8 @@ s[:, 10]                 # sample frame 10
   observable. Then a `Signal` that wraps another signal can observe
   that signal, so that whenever the latter changes the former can
   notify its observers of how it, in turn, has changed. The
-  notifications would include an indication of where along the time axis
-  the changes occurred.
+  notifications would include an indication of where along the time
+  axis the changes occurred.
   
   [Some signal processors might two or more output signals. For
   example, a spectrograph might offer complex, magnitude, and
@@ -172,3 +195,10 @@ s[:, 10]                 # sample frame 10
   We will also have to concern ourselves with thread synchronization
   for mutable signals. We might just use locks for this, perhaps in
   conjunction with Python's `with` statement.
+  
+  It seems to me that it might be good for the signal classes to
+  explicitly acknowledge the difference between real-time signals,
+  for which change is steady and predictable and places certain
+  constraints on processing, and editable signals, for which change
+  is less predictable but doesn't constrain processing as heavily.
+  The two cases are really quite different.
