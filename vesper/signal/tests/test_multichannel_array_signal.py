@@ -1,14 +1,14 @@
-from vesper.signal.array_multichannel_signal import ArrayMultichannelSignal
+from vesper.signal.multichannel_array_signal import MultichannelArraySignal
 from vesper.signal.tests.test_multichannel_signal import MultichannelSignalTests
 from vesper.tests.test_case import TestCase
 import vesper.signal.tests.utils as utils
 
 
-class ArrayMultichannelSignalTests(TestCase):
+class MultichannelArraySignalTests(TestCase):
 
 
     @staticmethod
-    def assert_array_multichannel_signal(
+    def assert_multichannel_array_signal(
             s, name, channel_names, time_axis, array_axes, amplitude_axis,
             samples):
         
@@ -43,9 +43,9 @@ class ArrayMultichannelSignalTests(TestCase):
             args = ('Signal', channel_names, time_axis, array_axes,
                     amplitude_axis, samples)
             
-            s = ArrayMultichannelSignal(*args)
+            s = MultichannelArraySignal(*args)
             
-            self.assert_array_multichannel_signal(s, *args)
+            self.assert_multichannel_array_signal(s, *args)
 
     
     def test_init_shape_error(self):
@@ -71,5 +71,5 @@ class ArrayMultichannelSignalTests(TestCase):
             args = ('Signal', channel_names, time_axis, array_axes, power_axis,
                     samples)
             
-            self._assert_raises(ValueError, ArrayMultichannelSignal, *args)
+            self._assert_raises(ValueError, MultichannelArraySignal, *args)
         

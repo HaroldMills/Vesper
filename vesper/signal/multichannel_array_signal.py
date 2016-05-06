@@ -1,4 +1,4 @@
-"""Module containing `ArrayMultichannelSignal` class."""
+"""Module containing `MultichannelArraySignal` class."""
 
 
 import numpy as np
@@ -10,7 +10,7 @@ from vesper.signal.multichannel_signal import MultichannelSignal
 from vesper.signal.time_axis import TimeAxis
 
 
-class ArrayMultichannelSignal(MultichannelSignal):
+class MultichannelArraySignal(MultichannelSignal):
     
     
     def __init__(
@@ -40,9 +40,9 @@ class ArrayMultichannelSignal(MultichannelSignal):
         # We check for shape consistency before creating the channel
         # signals since otherwise the `ArraySignal` initializer may
         # detect and report a shape inconsistency itself. It is more
-        # desirable for `ArrayMultichannelSignal` to report the problem,
+        # desirable for `MultichannelArraySignal` to report the problem,
         # since its error message makes more sense in the context of
-        # `ArrayMultichannelSignal` initialization.
+        # `MultichannelArraySignal` initialization.
         self._check_shape_consistency(
             num_channels, time_axis, array_axes, samples)
         
