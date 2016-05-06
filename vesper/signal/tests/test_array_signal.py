@@ -11,6 +11,7 @@ from vesper.signal.tests.utils import FREQ_UNITS, POWER_UNITS
 from vesper.signal.time_axis import TimeAxis
 from vesper.tests.test_case import TestCase
 from vesper.util.bunch import Bunch
+import vesper.signal.tests.utils as utils
 
 
 class ArraySignalTests(TestCase):
@@ -24,7 +25,7 @@ class ArraySignalTests(TestCase):
             s, name, parent, time_axis, array_axes, amplitude_axis)
         
         assert s.dtype == samples.dtype
-        assert np.alltrue(s[:] == samples)
+        utils.assert_arrays_equal(s[:], samples)
 
         
     def test_init(self):

@@ -1,8 +1,8 @@
 import numpy as np
 
+from vesper.signal.linear_mapping import LinearMapping
 from vesper.tests.test_case import TestCase
-
-from ..linear_mapping import LinearMapping
+import vesper.signal.tests.utils as utils
 
 
 class LinearMappingTests(TestCase):
@@ -63,8 +63,8 @@ class LinearMappingTests(TestCase):
         for x, y in cases:
             x = np.array(x)
             y = np.array(y)
-            self.assertTrue(np.alltrue(m.map(x) == y))
-            self.assertTrue(np.alltrue(m.invert(y) == x))
+            utils.assert_arrays_equal(m.map(x), y)
+            utils.assert_arrays_equal(m.invert(y), x)
         
         
     def test_noninvertible_mapping(self):

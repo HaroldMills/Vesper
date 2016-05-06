@@ -1,9 +1,10 @@
 from vesper.signal.axis import Axis
-from vesper.signal.tests.axis_test_case import AxisTestCase
-import vesper.signal.tests.utils as units
+from vesper.signal.tests.utils import DEFAULT_UNITS, TIME_UNITS
+from vesper.tests.test_case import TestCase
+import vesper.signal.tests.utils as utils
 
 
-class AxisTests(AxisTestCase):
+class AxisTests(TestCase):
 
 
     @staticmethod
@@ -13,12 +14,12 @@ class AxisTests(AxisTestCase):
 
 
     def test_init(self):
-        args = ('Time', units.TIME_UNITS)
-        defaults = (None, units.DEFAULT_UNITS)
-        self._test_init(args, defaults, Axis, self.assert_axis)
+        args = ('Time', TIME_UNITS)
+        defaults = (None, DEFAULT_UNITS)
+        utils.test_init(args, defaults, Axis, self.assert_axis)
                
                
     def test_eq(self):
-        args = ('Time', units.TIME_UNITS)
+        args = ('Time', TIME_UNITS)
         changes = ('time', None)
-        self._test_eq(Axis, args, changes)
+        utils.test_eq(Axis, args, changes)

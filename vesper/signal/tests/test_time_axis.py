@@ -3,14 +3,15 @@ import datetime
 import numpy as np
 
 from vesper.signal.linear_mapping import LinearMapping
-from vesper.signal.tests.axis_test_case import AxisTestCase
 from vesper.signal.tests.test_indexed_axis import IndexedAxisTests
 from vesper.signal.tests.utils import TIME_UNITS
 from vesper.signal.time_axis import TimeAxis
+from vesper.tests.test_case import TestCase
 from vesper.util.bunch import Bunch
+import vesper.signal.tests.utils as utils
 
 
-class TimeAxisTests(AxisTestCase):
+class TimeAxisTests(TestCase):
 
 
     @staticmethod
@@ -83,7 +84,7 @@ class TimeAxisTests(AxisTestCase):
         args = (5, 10, 2, LinearMapping(.5), None)
         reference_datetime = Bunch(index=0, datetime=datetime.datetime.now())
         changes = (0, 0, 1, LinearMapping(1), reference_datetime)
-        self._test_eq(TimeAxis, args, changes)
+        utils.test_eq(TimeAxis, args, changes)
         
         
     def test_index_to_time_mapping(self):
@@ -96,7 +97,7 @@ class TimeAxisTests(AxisTestCase):
             (np.array([10, 11]), np.array([5.25, 5.75]))
         ]
            
-        self._test_mapping(a, 'index_to_time', 'time_to_index', cases)
+        utils.test_mapping(a, 'index_to_time', 'time_to_index', cases)
   
       
     def test_index_to_datetime_mapping(self):
@@ -113,4 +114,4 @@ class TimeAxisTests(AxisTestCase):
                  np.array([dt(2016, 4, 29, 1, 2, 5), dt(2016, 4, 29, 1, 2, 6)]))
         ]
            
-        self._test_mapping(a, 'index_to_datetime', 'datetime_to_index', cases)
+        utils.test_mapping(a, 'index_to_datetime', 'datetime_to_index', cases)
