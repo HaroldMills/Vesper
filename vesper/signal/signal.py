@@ -27,7 +27,3 @@ class Signal(SignalBase):
     
     def __len__(self):
         return self.time_axis.length
-    
-    
-    def __getitem__(self, key):
-        raise NotImplementedError()

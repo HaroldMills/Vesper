@@ -30,9 +30,8 @@ class SignalBaseTests(TestCase):
         
         name = 'Signal'
         
-        time_axis, array_axes, power_axis = \
-            utils.create_test_spectrogram_axes(
-                start_index, length, sample_rate, spectrum_size, bin_size)
+        time_axis, array_axes, power_axis = utils.create_spectrogram_axes(
+            start_index, length, sample_rate, spectrum_size, bin_size)
             
         args = (name, time_axis, array_axes, power_axis)
         

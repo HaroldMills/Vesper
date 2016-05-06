@@ -28,9 +28,8 @@ class SignalTests(TestCase):
         # `MultichannelSignal` or `None`. We use a string here for simplicity.
         parent = 'Parent'
         
-        time_axis, array_axes, power_axis = \
-            utils.create_test_spectrogram_axes(
-                start_index, length, sample_rate, spectrum_size, bin_size)
+        time_axis, array_axes, power_axis = utils.create_spectrogram_axes(
+            start_index, length, sample_rate, spectrum_size, bin_size)
         
         args = (name, parent, time_axis, array_axes, power_axis)
         

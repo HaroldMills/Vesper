@@ -65,7 +65,7 @@ def assert_arrays_equal(x, y):
     assert np.alltrue(x == y)
 
 
-def create_test_spectrogram_axes(
+def create_spectrogram_axes(
         start_index, length, sample_rate, spectrum_size, bin_size):
     
     reference = Bunch(index=start_index, datetime=datetime.datetime.now())
@@ -80,3 +80,19 @@ def create_test_spectrogram_axes(
     power_axis = AmplitudeAxis(name='Power', units=POWER_UNITS)
     
     return (time_axis, array_axes, power_axis)
+
+
+def create_samples(shape, factor=100, dtype='int32'):
+    arrays = [
+        _create_samples_aux(shape, factor, dtype, i)
+        for i in range(len(shape))]
+    return sum(arrays)
+    
+    
+def _create_samples_aux(shape, factor, dtype, i):
+    n = len(shape)
+    j = n - 1 - i
+    m = shape[i]
+    s = (factor ** j) * np.arange(m)
+    s.shape = (m,) + (1,) * j
+    return s

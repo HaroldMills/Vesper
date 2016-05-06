@@ -31,6 +31,15 @@ class ArraySignal(Signal):
         super().__init__(name, parent, time_axis, array_axes, amplitude_axis)
         
         self._samples = samples
+        
+        self._check_shape_consistency()
+        
+        
+    def _check_shape_consistency(self):
+        if self._samples.shape != self.shape:
+            raise ValueError((
+                'Shape {} of signal samples differs from shape {} according '
+                'to signal axes.').format(self._samples.shape, self.shape))
 
 
     @property

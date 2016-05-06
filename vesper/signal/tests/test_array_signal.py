@@ -1,16 +1,6 @@
-import datetime
-
-import numpy as np
-
-from vesper.signal.amplitude_axis import AmplitudeAxis
-from vesper.signal.array_axis import ArrayAxis
 from vesper.signal.array_signal import ArraySignal
-from vesper.signal.linear_mapping import LinearMapping
 from vesper.signal.tests.test_signal import SignalTests
-from vesper.signal.tests.utils import FREQ_UNITS, POWER_UNITS
-from vesper.signal.time_axis import TimeAxis
 from vesper.tests.test_case import TestCase
-from vesper.util.bunch import Bunch
 import vesper.signal.tests.utils as utils
 
 
@@ -42,21 +32,44 @@ class ArraySignalTests(TestCase):
         # `MultichannelSignal` or `None`. We use a string here for simplicity.
         parent = 'Parent'
         
-        reference = Bunch(index=start_index, datetime=datetime.datetime.now())
-        time_axis = TimeAxis(
-            start_index, length, sample_rate, reference_datetime=reference)
+        time_axis, array_axes, power_axis = utils.create_spectrogram_axes(
+            start_index, length, sample_rate, spectrum_size, bin_size)
         
-        frequency_axis = ArrayAxis(
-            name='Frequency', units=FREQ_UNITS, length=spectrum_size,
-            index_to_value_mapping=LinearMapping(bin_size))
-        array_axes = [frequency_axis]
-        
-        power_axis = AmplitudeAxis(name='Power', units=POWER_UNITS)
-        
-        samples = np.arange(length * spectrum_size)
+        samples = utils.create_samples((length, spectrum_size))
         
         args = (name, parent, time_axis, array_axes, power_axis, samples)
         
         s = ArraySignal(*args)
         
         self.assert_signal(s, *args)
+
+
+    def test_shape_error(self):
+
+        start_index = 5
+        length = 10
+        sample_rate = 2
+        spectrum_size = 9
+        bin_size = 20
+        
+        name = 'Signal'
+        
+        # In practice the parent of a `Signal` will be either a
+        # `MultichannelSignal` or `None`. We use a string here for simplicity.
+        parent = 'Parent'
+        
+        time_axis, array_axes, power_axis = utils.create_spectrogram_axes(
+            start_index, length, sample_rate, spectrum_size, bin_size)
+        
+        cases = [
+            (length * spectrum_size,),
+            (length + 1, spectrum_size),
+            (length, spectrum_size + 1),
+            (length, spectrum_size, 1)
+        ]
+        
+        for shape in cases:
+            samples = utils.create_samples(shape)
+            args = (name, parent, time_axis, array_axes, power_axis, samples)
+            self.assertRaises(ValueError, ArraySignal, *args)
+        
