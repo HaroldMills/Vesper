@@ -33,6 +33,7 @@ s.parent                 # `MultichannelSignal` or `None`
 s.time_axis              # `TimeAxis`
 s.array_axes             # `NamedSequence` of `ArrayAxis` objects
 s.amplitude_axis         # `AmplitudeAxis`
+s.axes                   # mapping from axis name to axis object
 
 s.dtype                  # NumPy `dtype`
 
@@ -66,6 +67,7 @@ s.channels               # `NamedSequence` of `Signal` objects
 s.time_axis              # `TimeAxis`
 s.array_axes             # `NamedSequence` of `ArrayAxis` objects
 s.amplitude_axis         # `Axis` (no calibration
+s.axes                   # mapping from axis name to axis object
 
 s.dtype                  # NumPy `dtype`
 
