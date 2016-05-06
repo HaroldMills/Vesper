@@ -1,4 +1,4 @@
-"""Module containing `IndexAxis` class."""
+"""Module containing `IndexedAxis` class."""
 
 
 from vesper.signal.axis import Axis
@@ -15,7 +15,7 @@ a.length                 # axis length in indices
 '''
 
 
-class IndexAxis(Axis):
+class IndexedAxis(Axis):
     
     
     def __init__(self, name=None, units=None, start_index=0, length=0):
@@ -25,7 +25,7 @@ class IndexAxis(Axis):
         
         
     def __eq__(self, other):
-        return isinstance(other, IndexAxis) and \
+        return isinstance(other, IndexedAxis) and \
             Axis.__eq__(self, other) and \
             self.start_index == other.start_index and \
             self.length == other.length

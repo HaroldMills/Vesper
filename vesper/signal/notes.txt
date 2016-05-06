@@ -14,17 +14,6 @@ to index a sequence relative to its end. The `Signal` and
 indices for all signal axes.
 
 
-Questions:
-
-* IndexedAxis rather than IndexAxis?
-
-* ArrayAxis rather than SampleArrayAxis?
-
-* s.array_axes instead of s.sample_array_axes?
-
-* s.sample_type rather than s.dtype?
-
-
 Signal
 
 * Sequence of n-dimensional sample arrays.
@@ -42,7 +31,7 @@ s.name                   # `str` or `None`
 s.parent                 # `MultichannelSignal` or `None`
 
 s.time_axis              # `TimeAxis`
-s.sample_array_axes      # `NamedSequence` of `SampleArrayAxis` objects
+s.array_axes             # `NamedSequence` of `ArrayAxis` objects
 s.amplitude_axis         # `AmplitudeAxis`
 
 s.dtype                  # NumPy `dtype`
@@ -75,7 +64,7 @@ s.name
 s.channels               # `NamedSequence` of `Signal` objects
 
 s.time_axis              # `TimeAxis`
-s.sample_array_axes      # `NamedSequence` of `SampleArrayAxis` objects
+s.array_axes             # `NamedSequence` of `ArrayAxis` objects
 s.amplitude_axis         # `Axis` (no calibration
 
 s.dtype                  # NumPy `dtype`
@@ -98,7 +87,7 @@ a.units                  # `Bunch` with `plural`, `singular`, and
                          # `abbreviation` attributes
 
 
-IndexAxis(Axis)
+IndexedAxis(Axis)
 
 Note the asymmetry between the start index and end index: the start index
 is always a nonnegative integer, while the end index is either a
@@ -122,7 +111,7 @@ a.end_index              # end of index range, `None` if length zero
 a.length                 # axis length in indices
 
 
-TimeAxis(IndexAxis)
+TimeAxis(IndexedAxis)
 
 Axis values have units of seconds. A `TimeAxis` may be *date/time calibrated*,
 in which case the date and time of each sample are known.
@@ -151,7 +140,7 @@ a.start_datetime         # `datetime` at start index, `None` if unknown
 a.end_datetime           # `datetime` at start index, `None` if unknown
 
 
-SampleArrayAxis(IndexAxis)
+ArrayAxis(IndexedAxis)
 
 a.index_to_value_mapping
 a.index_to_value(i)      # indices may be float

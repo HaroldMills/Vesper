@@ -4,8 +4,8 @@
 from numbers import Number
 import datetime
 
-from .index_axis import IndexAxis
-from .linear_mapping import LinearMapping
+from vesper.signal.indexed_axis import IndexedAxis
+from vesper.signal.linear_mapping import LinearMapping
 from vesper.util.bunch import Bunch
 
 
@@ -43,7 +43,7 @@ _NAME = 'Time'
 _UNITS = Bunch(plural='seconds', singular='second', abbreviation='S')
 
 
-class TimeAxis(IndexAxis):
+class TimeAxis(IndexedAxis):
     
     
     def __init__(
@@ -69,13 +69,13 @@ class TimeAxis(IndexAxis):
         
     def __eq__(self, other):
         return isinstance(other, TimeAxis) and \
-            IndexAxis.__eq__(self, other) and \
+            IndexedAxis.__eq__(self, other) and \
             self.sample_rate == other.sample_rate and \
             self.index_to_time_mapping == other.index_to_time_mapping and \
             self.reference_datetime == other.reference_datetime
                    
 
-    start_index = IndexAxis.start_index
+    start_index = IndexedAxis.start_index
     
     
     @start_index.setter
@@ -83,7 +83,7 @@ class TimeAxis(IndexAxis):
         self._start_index = i
         
         
-    length = IndexAxis.length
+    length = IndexedAxis.length
 
     
     @length.setter

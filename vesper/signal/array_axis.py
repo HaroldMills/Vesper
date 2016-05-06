@@ -1,7 +1,7 @@
-"""Module containing `SampleArrayAxis` class."""
+"""Module containing `ArrayAxis` class."""
 
 
-from vesper.signal.index_axis import IndexAxis
+from vesper.signal.indexed_axis import IndexedAxis
 from vesper.signal.linear_mapping import LinearMapping
 
 
@@ -24,7 +24,7 @@ a.span                   # end value less start value, `None` if length zero
 '''
 
 
-class SampleArrayAxis(IndexAxis):
+class ArrayAxis(IndexedAxis):
     
     
     def __init__(
@@ -39,8 +39,8 @@ class SampleArrayAxis(IndexAxis):
 
 
     def __eq__(self, other):
-        return isinstance(other, SampleArrayAxis) and \
-            IndexAxis.__eq__(self, other) and \
+        return isinstance(other, ArrayAxis) and \
+            IndexedAxis.__eq__(self, other) and \
             self.index_to_value_mapping == other.index_to_value_mapping
                    
 

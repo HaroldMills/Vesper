@@ -5,7 +5,7 @@ import numpy as np
 from vesper.signal.linear_mapping import LinearMapping
 from vesper.signal.tests.axis_test_case import AxisTestCase
 from vesper.signal.tests.axis_units import TIME_UNITS
-from vesper.signal.tests.test_index_axis import IndexAxisTests
+from vesper.signal.tests.test_indexed_axis import IndexedAxisTests
 from vesper.signal.time_axis import TimeAxis
 from vesper.util.bunch import Bunch
 
@@ -20,7 +20,7 @@ class TimeAxisTests(AxisTestCase):
         
         sample_period = 1 / sample_rate
         
-        IndexAxisTests.assert_axis(a, 'Time', TIME_UNITS, start_index, length)
+        IndexedAxisTests.assert_axis(a, 'Time', TIME_UNITS, start_index, length)
         
         assert a.sample_rate == sample_rate
         assert a.sample_period == sample_period

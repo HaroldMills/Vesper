@@ -1,11 +1,11 @@
-from vesper.signal.index_axis import IndexAxis
+from vesper.signal.indexed_axis import IndexedAxis
 from vesper.signal.tests.axis_test_case import AxisTestCase
 from vesper.signal.tests.axis_units import DEFAULT_UNITS, TIME_UNITS
 from vesper.signal.tests.test_axis import AxisTests
 from vesper.util.bunch import Bunch
 
 
-class IndexAxisTests(AxisTestCase):
+class IndexedAxisTests(AxisTestCase):
 
 
     @staticmethod
@@ -27,10 +27,10 @@ class IndexAxisTests(AxisTestCase):
         
         defaults = (None, DEFAULT_UNITS, 0, 0)
         
-        self._test_init(args, defaults, IndexAxis, self.assert_axis)
+        self._test_init(args, defaults, IndexedAxis, self.assert_axis)
             
             
     def test_eq(self):
         args = ('Time', TIME_UNITS, 5, 10)
         changes = ('time', None, 0, 0)
-        self._test_eq(IndexAxis, args, changes)
+        self._test_eq(IndexedAxis, args, changes)

@@ -9,17 +9,17 @@ class Signal(Named):
     
     
     def __init__(
-            self, name, parent, time_axis, sample_array_axes, amplitude_axis):
+            self, name, parent, time_axis, array_axes, amplitude_axis):
         
         super(Signal, self).__init__(name)
         
         self._parent = parent
         
         self._time_axis = time_axis
-        self._sample_array_axes = NamedSequence(sample_array_axes)
+        self._array_axes = NamedSequence(array_axes)
         self._amplitude_axis = amplitude_axis
         
-        self._index_axes = (time_axis,) + tuple(sample_array_axes)
+        self._index_axes = (time_axis,) + tuple(array_axes)
         axes = self._index_axes + (amplitude_axis,)
         self._axes = dict((a.name, a) for a in axes)
         
@@ -35,8 +35,8 @@ class Signal(Named):
     
     
     @property
-    def sample_array_axes(self):
-        return self._sample_array_axes
+    def array_axes(self):
+        return self._array_axes
     
     
     @property

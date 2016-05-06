@@ -1,9 +1,9 @@
 import datetime
 
 from vesper.signal.amplitude_axis import AmplitudeAxis
+from vesper.signal.array_axis import ArrayAxis
 from vesper.signal.linear_mapping import LinearMapping
 from vesper.signal.named_sequence import NamedSequence
-from vesper.signal.sample_array_axis import SampleArrayAxis
 from vesper.signal.signal import Signal
 from vesper.signal.tests.axis_units import FREQ_UNITS, POWER_UNITS
 from vesper.signal.time_axis import TimeAxis
@@ -16,12 +16,12 @@ class SignalTests(TestCase):
 
     @staticmethod
     def assert_signal(
-            s, name, parent, time_axis, sample_array_axes, amplitude_axis):
+            s, name, parent, time_axis, array_axes, amplitude_axis):
         
         assert s.name == name
         assert s.parent == parent
         assert s.time_axis == time_axis
-        assert s.sample_array_axes == NamedSequence(sample_array_axes)
+        assert s.array_axes == NamedSequence(array_axes)
         assert s.amplitude_axis == amplitude_axis
 
         
@@ -43,14 +43,14 @@ class SignalTests(TestCase):
         time_axis = TimeAxis(
             start_index, length, sample_rate, reference_datetime=reference)
         
-        frequency_axis = SampleArrayAxis(
+        frequency_axis = ArrayAxis(
             name='Frequency', units=FREQ_UNITS, length=spectrum_size,
             index_to_value_mapping=LinearMapping(bin_size))
-        sample_array_axes = [frequency_axis]
+        array_axes = [frequency_axis]
         
         power_axis = AmplitudeAxis(name='Power', units=POWER_UNITS)
         
-        args = (name, parent, time_axis, sample_array_axes, power_axis)
+        args = (name, parent, time_axis, array_axes, power_axis)
         
         s = Signal(*args)
         

@@ -3,9 +3,9 @@
 
 import numpy as np
 
-from vesper.signal.signal import Signal
 from vesper.signal.amplitude_axis import AmplitudeAxis
-from vesper.signal.sample_array_axis import SampleArrayAxis
+from vesper.signal.array_axis import ArrayAxis
+from vesper.signal.signal import Signal
 from vesper.signal.time_axis import TimeAxis
 
 
@@ -13,8 +13,8 @@ class ArraySignal(Signal):
     
     
     def __init__(
-            self, name=None, parent=None, time_axis=None,
-            sample_array_axes=None, amplitude_axis=None, samples=None):
+            self, name=None, parent=None, time_axis=None, array_axes=None,
+            amplitude_axis=None, samples=None):
         
         if samples is None:
             samples = np.array([], dtype='int16')
@@ -22,15 +22,13 @@ class ArraySignal(Signal):
         if time_axis is None:
             time_axis = TimeAxis(length=len(samples))
             
-        if sample_array_axes is None:
-            sample_array_axes = tuple(
-                SampleArrayAxis(length=n) for n in samples.shape[1:])
+        if array_axes is None:
+            array_axes = tuple(ArrayAxis(length=n) for n in samples.shape[1:])
                 
         if amplitude_axis is None:
             amplitude_axis = AmplitudeAxis()
             
-        super().__init__(
-            name, parent, time_axis, sample_array_axes, amplitude_axis)
+        super().__init__(name, parent, time_axis, array_axes, amplitude_axis)
         
         self._samples = samples
 

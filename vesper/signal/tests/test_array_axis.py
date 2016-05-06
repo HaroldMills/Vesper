@@ -1,19 +1,19 @@
 import numpy as np
 
+from vesper.signal.array_axis import ArrayAxis
 from vesper.signal.linear_mapping import LinearMapping
-from vesper.signal.sample_array_axis import SampleArrayAxis
 from vesper.signal.tests.axis_test_case import AxisTestCase
 from vesper.signal.tests.axis_units import DEFAULT_UNITS, FREQ_UNITS
-from vesper.signal.tests.test_index_axis import IndexAxisTests
+from vesper.signal.tests.test_indexed_axis import IndexedAxisTests
 
 
-class SampleArrayAxisTests(AxisTestCase):
+class ArrayAxisTests(AxisTestCase):
 
 
     @staticmethod
     def assert_axis(a, name, units, length, mapping):
         
-        IndexAxisTests.assert_axis(a, name, units, 0, length)
+        IndexedAxisTests.assert_axis(a, name, units, 0, length)
         
         if mapping is None:
             mapping = LinearMapping()
@@ -40,18 +40,18 @@ class SampleArrayAxisTests(AxisTestCase):
         defaults = (None, DEFAULT_UNITS, 0, LinearMapping())
         
         self._test_init(
-            all_args, defaults, SampleArrayAxis, self.assert_axis)
+            all_args, defaults, ArrayAxis, self.assert_axis)
         
         
     def test_eq(self):
         args = ('Frequency', FREQ_UNITS, 10, LinearMapping())
         changes = ('frequency', None, 0, LinearMapping(.5))
-        self._test_eq(SampleArrayAxis, args, changes)
+        self._test_eq(ArrayAxis, args, changes)
         
         
     def test_index_to_value_mapping(self):
           
-        a = SampleArrayAxis(index_to_value_mapping=LinearMapping(.5, .25))
+        a = ArrayAxis(index_to_value_mapping=LinearMapping(.5, .25))
            
         cases = [
             (10, 5.25),
