@@ -8,7 +8,6 @@ import numpy as np
 
 from vesper.signal.amplitude_axis import AmplitudeAxis
 from vesper.signal.array_axis import ArrayAxis
-from vesper.signal.linear_mapping import LinearMapping
 from vesper.signal.time_axis import TimeAxis
 from vesper.util.bunch import Bunch
 
@@ -65,21 +64,20 @@ def assert_arrays_equal(x, y):
     assert np.alltrue(x == y)
 
 
-def create_spectrogram_axes(
-        start_index, length, sample_rate, spectrum_size, bin_size):
+def create_signal_axes(shape):
     
-    reference = Bunch(index=start_index, datetime=datetime.datetime.now())
-    time_axis = TimeAxis(
-        start_index, length, sample_rate, reference_datetime=reference)
+    if len(shape) == 0:
+        shape = (0,)
+        
+    reference = Bunch(index=0, datetime=datetime.datetime.now())
+    time_axis = TimeAxis(length=shape[0], reference_datetime=reference)
     
-    frequency_axis = ArrayAxis(
-        name='Frequency', units=FREQ_UNITS, length=spectrum_size,
-        index_to_value_mapping=LinearMapping(bin_size))
-    array_axes = [frequency_axis]
+    lengths = shape[1:]
+    n = len(lengths)
+    array_axes = tuple(
+        ArrayAxis(name='Axis ' + str(i), length=lengths[i]) for i in range(n))
     
-    power_axis = AmplitudeAxis(name='Power', units=POWER_UNITS)
-    
-    return (time_axis, array_axes, power_axis)
+    return (time_axis, array_axes, AmplitudeAxis())
 
 
 def create_samples(shape, factor=100, dtype='int32'):

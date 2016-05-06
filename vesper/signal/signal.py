@@ -21,8 +21,9 @@ class Signal(SignalBase):
     
     @property
     def shape(self):
+        time_axis_length = len(self)
         array_axis_lengths = tuple(a.length for a in self.array_axes)
-        return (len(self),) + array_axis_lengths
+        return (time_axis_length,) + array_axis_lengths
     
     
     def __len__(self):

@@ -38,8 +38,8 @@ class ArraySignal(Signal):
     def _check_shape_consistency(self):
         if self._samples.shape != self.shape:
             raise ValueError((
-                'Shape {} of signal samples differs from shape {} according '
-                'to signal axes.').format(self._samples.shape, self.shape))
+                'Shape {} of samples differs from shape {} required by '
+                'axis lengths.').format(self._samples.shape, self.shape))
 
 
     @property

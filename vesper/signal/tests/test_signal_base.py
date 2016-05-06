@@ -22,24 +22,28 @@ class SignalBaseTests(TestCase):
         
     def test_init(self):
         
-        start_index = 5
-        length = 10
-        sample_rate = 2
-        spectrum_size = 9
-        bin_size = 20
+        shapes = [
+            (0,),
+            (1,),
+            (2,),
+            (2, 0),
+            (2, 1),
+            (2, 3),
+            (2, 3, 4)
+        ]
         
-        name = 'Signal'
-        
-        time_axis, array_axes, power_axis = utils.create_spectrogram_axes(
-            start_index, length, sample_rate, spectrum_size, bin_size)
+        for shape in shapes:
             
-        args = (name, time_axis, array_axes, power_axis)
-        
-        s = SignalBase(*args)
-        
-        self.assert_signal_base(s, *args)
-        
-        self.assertRaises(NotImplementedError, getattr, s, 'dtype')
-        self.assertRaises(NotImplementedError, getattr, s, 'shape')
-        self.assertRaises(NotImplementedError, len, s)
-        self.assertRaises(NotImplementedError, s.__getitem__, 0)
+            time_axis, array_axes, amplitude_axis = \
+                utils.create_signal_axes(shape)
+                
+            args = ('Signal', time_axis, array_axes, amplitude_axis)
+            
+            s = SignalBase(*args)
+            
+            self.assert_signal_base(s, *args)
+            
+            self.assertRaises(NotImplementedError, getattr, s, 'dtype')
+            self.assertRaises(NotImplementedError, getattr, s, 'shape')
+            self.assertRaises(NotImplementedError, len, s)
+            self.assertRaises(NotImplementedError, s.__getitem__, 0)

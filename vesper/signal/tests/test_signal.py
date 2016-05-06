@@ -9,36 +9,47 @@ class SignalTests(TestCase):
 
     @staticmethod
     def assert_signal(s, name, parent, time_axis, array_axes, amplitude_axis):
+        
         SignalBaseTests.assert_signal_base(
             s, name, time_axis, array_axes, amplitude_axis)
+        
         assert s.parent == parent
+
+        time_axis_length = time_axis.length
+        array_shape = tuple(a.length for a in array_axes)
+        shape = (time_axis_length,) + array_shape
+        assert s.shape == shape
+        assert len(s) == time_axis_length
 
         
     def test_init(self):
         
-        start_index = 5
-        length = 10
-        sample_rate = 2
-        spectrum_size = 9
-        bin_size = 20
+        shapes = [
+            (0,),
+            (1,),
+            (2,),
+            (2, 0),
+            (2, 1),
+            (2, 3),
+            (2, 3, 4)
+        ]
         
-        name = 'Signal'
+        for shape in shapes:
+            
+            time_axis, array_axes, amplitude_axis = \
+                utils.create_signal_axes(shape)
         
-        # In practice the parent of a `Signal` will be either a
-        # `MultichannelSignal` or `None`. We use a string here for simplicity.
-        parent = 'Parent'
-        
-        time_axis, array_axes, power_axis = utils.create_spectrogram_axes(
-            start_index, length, sample_rate, spectrum_size, bin_size)
-        
-        args = (name, parent, time_axis, array_axes, power_axis)
-        
-        s = Signal(*args)
-        
-        self.assert_signal(s, *args)
-        
-        self.assertEqual(s.shape, (length, spectrum_size))
-        self.assertEqual(len(s), length)
-        
-        self.assertRaises(NotImplementedError, getattr, s, 'dtype')
-        self.assertRaises(NotImplementedError, s.__getitem__, 0)
+            # In practice the parent of a `Signal` will be either a
+            # `MultichannelSignal` or `None`. We use a string here for
+            # simplicity.
+            args = ('Signal', 'Parent', time_axis, array_axes, amplitude_axis)
+            
+            s = Signal(*args)
+            
+            self.assert_signal(s, *args)
+            
+            self.assertEqual(s.shape, shape)
+            self.assertEqual(len(s), shape[0])
+            
+            self.assertRaises(NotImplementedError, getattr, s, 'dtype')
+            self.assertRaises(NotImplementedError, s.__getitem__, 0)
