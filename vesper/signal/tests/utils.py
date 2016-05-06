@@ -1,11 +1,19 @@
+"""Utility functions and constants for signal class unit tests."""
+
+
 import datetime
 
 from vesper.signal.amplitude_axis import AmplitudeAxis
 from vesper.signal.array_axis import ArrayAxis
 from vesper.signal.linear_mapping import LinearMapping
-from vesper.signal.tests.axis_units import FREQ_UNITS, POWER_UNITS
 from vesper.signal.time_axis import TimeAxis
 from vesper.util.bunch import Bunch
+
+
+DEFAULT_UNITS = Bunch(plural=None, singular=None, abbreviation=None)
+TIME_UNITS = Bunch(plural='seconds', singular='second', abbreviation='S')
+FREQ_UNITS = Bunch(plural='hertz', singular='hertz', abbreviation='Hz')
+POWER_UNITS = Bunch(plural='decibels', singular='decibel', abbreviation='dB')
 
 
 def create_test_spectrogram_axes(

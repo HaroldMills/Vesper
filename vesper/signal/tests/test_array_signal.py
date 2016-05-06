@@ -6,8 +6,8 @@ from vesper.signal.amplitude_axis import AmplitudeAxis
 from vesper.signal.array_axis import ArrayAxis
 from vesper.signal.array_signal import ArraySignal
 from vesper.signal.linear_mapping import LinearMapping
-from vesper.signal.tests.axis_units import FREQ_UNITS, POWER_UNITS
 from vesper.signal.tests.test_signal import SignalTests
+from vesper.signal.tests.utils import FREQ_UNITS, POWER_UNITS
 from vesper.signal.time_axis import TimeAxis
 from vesper.tests.test_case import TestCase
 from vesper.util.bunch import Bunch

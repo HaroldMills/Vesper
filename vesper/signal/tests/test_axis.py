@@ -1,6 +1,6 @@
 from vesper.signal.axis import Axis
 from vesper.signal.tests.axis_test_case import AxisTestCase
-import vesper.signal.tests.axis_units as units
+import vesper.signal.tests.utils as units
 
 
 class AxisTests(AxisTestCase):

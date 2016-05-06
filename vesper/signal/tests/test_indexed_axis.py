@@ -1,7 +1,7 @@
 from vesper.signal.indexed_axis import IndexedAxis
 from vesper.signal.tests.axis_test_case import AxisTestCase
-from vesper.signal.tests.axis_units import DEFAULT_UNITS, TIME_UNITS
 from vesper.signal.tests.test_axis import AxisTests
+from vesper.signal.tests.utils import DEFAULT_UNITS, TIME_UNITS
 from vesper.util.bunch import Bunch
 
 

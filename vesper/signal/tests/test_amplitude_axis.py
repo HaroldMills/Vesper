@@ -1,7 +1,7 @@
 from vesper.signal.amplitude_axis import AmplitudeAxis
 from vesper.signal.tests.axis_test_case import AxisTestCase
-from vesper.signal.tests.axis_units import DEFAULT_UNITS, POWER_UNITS
 from vesper.signal.tests.test_axis import AxisTests
+from vesper.signal.tests.utils import DEFAULT_UNITS, POWER_UNITS
 
 
 class AmplitudeAxisTests(AxisTestCase):

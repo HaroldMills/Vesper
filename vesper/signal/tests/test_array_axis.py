@@ -3,8 +3,8 @@ import numpy as np
 from vesper.signal.array_axis import ArrayAxis
 from vesper.signal.linear_mapping import LinearMapping
 from vesper.signal.tests.axis_test_case import AxisTestCase
-from vesper.signal.tests.axis_units import DEFAULT_UNITS, FREQ_UNITS
 from vesper.signal.tests.test_indexed_axis import IndexedAxisTests
+from vesper.signal.tests.utils import DEFAULT_UNITS, FREQ_UNITS
 
 
 class ArrayAxisTests(AxisTestCase):
