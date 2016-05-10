@@ -91,6 +91,6 @@ def _create_samples_aux(shape, factor, dtype, i):
     n = len(shape)
     j = n - 1 - i
     m = shape[i]
-    s = (factor ** j) * np.arange(m)
+    s = (factor ** j) * np.arange(m, dtype=dtype)
     s.shape = (m,) + (1,) * j
     return s

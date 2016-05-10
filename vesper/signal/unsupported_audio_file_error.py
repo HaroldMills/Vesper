@@ -1,0 +1,2 @@
+class UnsupportedAudioFileError(Exception):
+    pass
