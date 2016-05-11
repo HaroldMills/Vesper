@@ -90,7 +90,7 @@ class WaveAudioFileTests(TestCase):
     def _test_read_file(
             self, file_path, num_channels, length, sample_rate, dtype):
         
-        samples, sample_rate_ = audio_file_utils.read_file(file_path)
+        samples, sample_rate_ = audio_file_utils.read_audio_file(file_path)
         
         self.assertEqual(sample_rate_, sample_rate)
         
@@ -108,7 +108,8 @@ class WaveAudioFileTests(TestCase):
         
         for file_name, num_channels, length, dtype in cases:
             file_path = _create_test_file_path(file_name)
-            samples, _ = audio_file_utils.read_file(file_path, mono_1d=True)
+            samples, _ = \
+                audio_file_utils.read_audio_file(file_path, mono_1d=True)
             shape = (length,) if num_channels == 1 else (num_channels, length)
             expected = utils.create_samples(shape, factor=1000, dtype=dtype)
             self._assert_samples(samples, expected)
@@ -158,4 +159,5 @@ class WaveAudioFileTests(TestCase):
         
         
 def _create_test_file_path(file_name):
-    return os.path.join('data', 'Sound Files', file_name)
+    dir_path = os.path.dirname(__file__)
+    return os.path.join(dir_path, 'data', 'Sound Files', file_name)

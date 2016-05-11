@@ -12,7 +12,7 @@ _AUDIO_FILE_TYPES = (
 )
 
 
-def get_file_type(file_path):
+def get_audio_file_type(file_path):
     
     if not os.path.exists(file_path):
         raise ValueError('File "{}" does not exist.'.format(file_path))
@@ -27,7 +27,7 @@ def get_file_type(file_path):
     
 def _get_file_type(file_path):
     
-    file_type = get_file_type(file_path)
+    file_type = get_audio_file_type(file_path)
     
     if file_type is None:
         raise UnsupportedAudioFileError(
@@ -38,7 +38,7 @@ def _get_file_type(file_path):
         return file_type
         
         
-def read_file(file_path, mono_1d=False):
+def read_audio_file(file_path, mono_1d=False):
     file_type = _get_file_type(file_path)
     with file_type.reader_class(file_path, mono_1d=mono_1d) as reader:
         samples = reader.read()
