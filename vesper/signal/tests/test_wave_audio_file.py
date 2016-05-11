@@ -10,10 +10,6 @@ import vesper.signal.audio_file_utils as audio_file_utils
 import vesper.signal.tests.utils as utils
 
 
-_TEST_FILE_DIR_PATH = os.path.join(
-    os.path.dirname(__file__), 'data', 'Sound Files')
-
-
 class WaveAudioFileTests(TestCase):
 
 
@@ -27,7 +23,7 @@ class WaveAudioFileTests(TestCase):
         
         for file_name, num_channels, length, sample_rate, dtype in cases:
             
-            file_path = os.path.join(_TEST_FILE_DIR_PATH, file_name)
+            file_path = _create_test_file_path(file_name)
             
             self.assertTrue(WaveAudioFileType.is_supported_file(file_path))
             
@@ -46,8 +42,7 @@ class WaveAudioFileTests(TestCase):
                     reader, None, WaveAudioFileType, num_channels, length,
                     sample_rate, dtype)
             
-            # Test reading with `audio_file_utils.read_file`.
-            self._test_read_file(
+            self._test_create_multichannel_array_signal(
                 file_path, num_channels, length, sample_rate, dtype)
                 
             
@@ -67,52 +62,33 @@ class WaveAudioFileTests(TestCase):
             
             # all samples
             samples = reader.read()
-            self._assert_samples(samples, expected)
+            utils.assert_arrays_equal(samples, expected)
             
             # samples from frame 5 on
             samples = reader.read(start_index=5)
-            self._assert_samples(samples, expected[:, 5:])
+            utils.assert_arrays_equal(samples, expected[:, 5:])
             
             # a couple of segments
             for start_index, length in [(0, 5), (5, 5)]:
                 samples = reader.read(start_index, length)
                 stop_index = start_index + length
-                self._assert_samples(
+                utils.assert_arrays_equal(
                     samples, expected[:, start_index:stop_index])
             
             
-    def _assert_samples(self, samples, expected):
-        self.assertEqual(samples.shape, expected.shape)
-        self.assertEqual(samples.dtype, expected.dtype)
-        utils.assert_arrays_equal(samples, expected)
-
-
-    def _test_read_file(
+    def _test_create_multichannel_array_signal(
             self, file_path, num_channels, length, sample_rate, dtype):
         
-        samples, sample_rate_ = audio_file_utils.read_audio_file(file_path)
+        sound = audio_file_utils.create_multichannel_array_signal(file_path)
         
-        self.assertEqual(sample_rate_, sample_rate)
+        self.assertEqual(len(sound), num_channels)
+        self.assertEqual(sound.time_axis.length, length)
+        self.assertEqual(sound.time_axis.sample_rate, sample_rate)
+        self.assertEqual(sound.dtype, dtype)
         
         expected = utils.create_samples(
             (num_channels, length), factor=1000, dtype=dtype)
-        self._assert_samples(samples, expected)
-
-
-    def test_mono_1d_reads(self):
-        
-        cases = [
-            ('One Channel.wav', 1, 100, np.int16),
-            ('Two Channels.wav', 2, 10, np.int16)
-        ]
-        
-        for file_name, num_channels, length, dtype in cases:
-            file_path = _create_test_file_path(file_name)
-            samples, _ = \
-                audio_file_utils.read_audio_file(file_path, mono_1d=True)
-            shape = (length,) if num_channels == 1 else (num_channels, length)
-            expected = utils.create_samples(shape, factor=1000, dtype=dtype)
-            self._assert_samples(samples, expected)
+        utils.assert_arrays_equal(sound[:], expected)
 
 
     def test_nonexistent_file_error(self):

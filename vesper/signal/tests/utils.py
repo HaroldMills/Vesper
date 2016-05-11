@@ -3,6 +3,7 @@
 
 from numbers import Number
 import datetime
+import os.path
 
 import numpy as np
 
@@ -61,6 +62,7 @@ def assert_numbers_or_arrays_equal(x, y):
          
 
 def assert_arrays_equal(x, y):
+    assert x.dtype == y.dtype
     assert np.alltrue(x == y)
 
 
@@ -94,3 +96,8 @@ def _create_samples_aux(shape, factor, dtype, i):
     s = (factor ** j) * np.arange(m, dtype=dtype)
     s.shape = (m,) + (1,) * j
     return s
+
+
+def create_test_audio_file_path(file_name):
+    dir_path = os.path.dirname(__file__)
+    return os.path.join(dir_path, 'data', 'Sound Files', file_name)

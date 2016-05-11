@@ -32,7 +32,7 @@ class MultichannelArraySignal(MultichannelSignal):
             time_axis = TimeAxis(length=length)
             
         if array_axes is None:
-            array_axes = tuple(ArrayAxis(length=n) for n in shape[1:])
+            array_axes = tuple(ArrayAxis(length=n) for n in shape[2:])
                 
         if amplitude_axis is None:
             amplitude_axis = AmplitudeAxis()

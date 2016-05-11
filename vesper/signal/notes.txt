@@ -49,7 +49,7 @@ s[0, 10:20]              # part of sample array 0
 s[0, 10:-20]             # part of sample array 0
 
 
-MultichannelSignal.
+MultichannelSignal
 
 * Sequence of channels, each a `Signal`.
 * All channels share start index, length, and sample array dimensions.
@@ -204,3 +204,13 @@ amplitude calibration functionality.
   constraints on processing, and editable signals, for which change
   is less predictable but doesn't constrain processing as heavily.
   The two cases are really quite different.
+
+  
+Audio File Utils
+  
+u.get_audio_file_type(file_path)
+u.create_multichannel_array_signal(file_)
+u.create_array_signal(file_)
+u.create_multichannel_audio_file_signal(file_)
+u.create_audio_file_signal(file_)
+  
