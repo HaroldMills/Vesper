@@ -58,7 +58,7 @@ class WaveAudioFileTests(TestCase):
             
             expected = utils.create_samples(
                 (num_channels, length), factor=1000, dtype=dtype)
-            utils.assert_arrays_equal(sound[:], expected)
+            utils.assert_arrays_equal(sound[:], expected, strict=True)
         
         
     def test_create_multichannel_array_signal_errors(self):
@@ -91,7 +91,7 @@ class WaveAudioFileTests(TestCase):
             self.assertEqual(sound.dtype, dtype)
             
             expected = utils.create_samples((length,), factor=1000, dtype=dtype)
-            utils.assert_arrays_equal(sound[:], expected)
+            utils.assert_arrays_equal(sound[:], expected, strict=True)
 
 
     def test_create_array_signal_errors(self):

@@ -15,7 +15,7 @@ class ArraySignalTests(TestCase):
             s, name, parent, time_axis, array_axes, amplitude_axis)
         
         assert s.dtype == samples.dtype
-        utils.assert_arrays_equal(s[:], samples)
+        utils.assert_arrays_equal(s[:], samples, strict=True)
 
         
     def test_init(self):

@@ -61,8 +61,9 @@ def assert_numbers_or_arrays_equal(x, y):
         assert_arrays_equal(x, y)
          
 
-def assert_arrays_equal(x, y):
-    assert x.dtype == y.dtype
+def assert_arrays_equal(x, y, strict=False):
+    if strict:
+        assert x.dtype == y.dtype
     assert np.alltrue(x == y)
 
 
@@ -100,4 +101,4 @@ def _create_samples_aux(shape, factor, dtype, i):
 
 def create_test_audio_file_path(file_name):
     dir_path = os.path.dirname(__file__)
-    return os.path.join(dir_path, 'data', 'Sound Files', file_name)
+    return os.path.join(dir_path, 'data', 'Audio Files', file_name)

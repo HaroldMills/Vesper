@@ -1,5 +1,4 @@
 import io
-import os.path
 
 import numpy as np
 
@@ -23,7 +22,7 @@ class WaveAudioFileTests(TestCase):
         
         for file_name, num_channels, length, sample_rate, dtype in cases:
             
-            file_path = _create_test_file_path(file_name)
+            file_path = utils.create_test_audio_file_path(file_name)
             
             self.assertTrue(WaveAudioFileType.is_supported_file(file_path))
             
@@ -62,18 +61,18 @@ class WaveAudioFileTests(TestCase):
             
             # all samples
             samples = reader.read()
-            utils.assert_arrays_equal(samples, expected)
+            utils.assert_arrays_equal(samples, expected, strict=True)
             
             # samples from frame 5 on
             samples = reader.read(start_index=5)
-            utils.assert_arrays_equal(samples, expected[:, 5:])
+            utils.assert_arrays_equal(samples, expected[:, 5:], strict=True)
             
             # a couple of segments
             for start_index, length in [(0, 5), (5, 5)]:
                 samples = reader.read(start_index, length)
                 stop_index = start_index + length
                 utils.assert_arrays_equal(
-                    samples, expected[:, start_index:stop_index])
+                    samples, expected[:, start_index:stop_index], strict=True)
             
             
     def _test_create_multichannel_array_signal(
@@ -88,7 +87,7 @@ class WaveAudioFileTests(TestCase):
         
         expected = utils.create_samples(
             (num_channels, length), factor=1000, dtype=dtype)
-        utils.assert_arrays_equal(sound[:], expected)
+        utils.assert_arrays_equal(sound[:], expected, strict=True)
 
 
     def test_nonexistent_file_error(self):
@@ -96,18 +95,18 @@ class WaveAudioFileTests(TestCase):
         
         
     def test_non_wav_file_error(self):
-        file_path = _create_test_file_path('Empty')
+        file_path = utils.create_test_audio_file_path('Empty')
         self._assert_raises(
             UnsupportedAudioFileError, WaveAudioFileReader, file_path)
         
         
     def test_empty_wav_file_error(self):
-        file_path = _create_test_file_path('Empty.wav')
+        file_path = utils.create_test_audio_file_path('Empty.wav')
         self._assert_raises(OSError, WaveAudioFileReader, file_path)
         
         
     def test_closed_wav_file_read_error(self):
-        file_path = _create_test_file_path('One Channel.wav')
+        file_path = utils.create_test_audio_file_path('One Channel.wav')
         reader = WaveAudioFileReader(file_path)
         reader.close()
         self._assert_raises(OSError, reader.read)
@@ -115,7 +114,7 @@ class WaveAudioFileTests(TestCase):
         
     def test_out_of_range_wav_file_read_errors(self):
         
-        file_path = _create_test_file_path('One Channel.wav')
+        file_path = utils.create_test_audio_file_path('One Channel.wav')
         
         cases = [
             (-10, None),
@@ -129,11 +128,6 @@ class WaveAudioFileTests(TestCase):
         
 
     def test_truncated_wav_file_error(self):
-        file_path = _create_test_file_path('Truncated.wav')
+        file_path = utils.create_test_audio_file_path('Truncated.wav')
         reader = WaveAudioFileReader(file_path)
         self._assert_raises(OSError, reader.read)
-        
-        
-def _create_test_file_path(file_name):
-    dir_path = os.path.dirname(__file__)
-    return os.path.join(dir_path, 'data', 'Sound Files', file_name)
