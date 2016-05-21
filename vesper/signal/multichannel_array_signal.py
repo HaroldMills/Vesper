@@ -1,8 +1,6 @@
 """Module containing `MultichannelArraySignal` class."""
 
 
-import numpy as np
-
 from vesper.signal.amplitude_axis import AmplitudeAxis
 from vesper.signal.array_signal import ArraySignal
 from vesper.signal.array_axis import ArrayAxis
@@ -14,12 +12,11 @@ class MultichannelArraySignal(MultichannelSignal):
     
     
     def __init__(
-            self, name=None, channel_names=None, time_axis=None,
-            array_axes=None, amplitude_axis=None, samples=None):
+            self, samples, name=None, channel_names=None, time_axis=None,
+            array_axes=None, amplitude_axis=None):
         
-        if samples is None:
-            samples = np.array([], dtype='int16')
-            
+        self._samples = samples
+        
         shape = samples.shape
         num_channels = shape[0] if len(shape) > 0 else 0
         
@@ -48,13 +45,11 @@ class MultichannelArraySignal(MultichannelSignal):
         
         channels = tuple(
             ArraySignal(
-                channel_names[i], self, time_axis, array_axes, amplitude_axis,
-                samples[i])
+                samples[i], channel_names[i], self, time_axis, array_axes,
+                amplitude_axis)
             for i in range(num_channels))
             
         super().__init__(name, channels, time_axis, array_axes, amplitude_axis)
-        
-        self._samples = samples
         
         
     def _check_shape_consistency(

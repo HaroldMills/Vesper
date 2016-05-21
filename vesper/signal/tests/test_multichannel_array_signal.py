@@ -14,9 +14,9 @@ class MultichannelArraySignalTests(TestCase):
         
         MultichannelSignalTests.assert_multichannel_signal(
             s, name, channel_names, time_axis, array_axes, amplitude_axis)
-        
-        utils.assert_arrays_equal(s[:], samples, strict=True)
 
+        utils.assert_arrays_equal(s[:], samples, strict=True)
+        
         
     def test_init(self):
         
@@ -32,19 +32,19 @@ class MultichannelArraySignalTests(TestCase):
         
         for shape in shapes:
             
+            samples = utils.create_samples(shape)
+
             channel_names = tuple(str(i) for i in range(shape[0]))
             
             time_axis, array_axes, amplitude_axis = \
                 utils.create_signal_axes(shape[1:])
             
-            samples = utils.create_samples(shape)
-
-            args = ('Signal', channel_names, time_axis, array_axes,
-                    amplitude_axis, samples)
+            args = (samples, 'Signal', channel_names, time_axis, array_axes,
+                    amplitude_axis)
             
             s = MultichannelArraySignal(*args)
             
-            self.assert_multichannel_array_signal(s, *args)
+            self.assert_multichannel_array_signal(s, *(args[1:] + args[:1]))
 
     
     def test_init_shape_error(self):
@@ -67,8 +67,8 @@ class MultichannelArraySignalTests(TestCase):
             
             samples = utils.create_samples(shape)
             
-            args = ('Signal', channel_names, time_axis, array_axes, power_axis,
-                    samples)
+            args = (samples, 'Signal', channel_names, time_axis, array_axes,
+                    power_axis)
             
             self._assert_raises(ValueError, MultichannelArraySignal, *args)
         

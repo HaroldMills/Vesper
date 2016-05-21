@@ -1,8 +1,6 @@
 """Module containing `ArraySignal` class."""
 
 
-import numpy as np
-
 from vesper.signal.amplitude_axis import AmplitudeAxis
 from vesper.signal.array_axis import ArrayAxis
 from vesper.signal.signal import Signal
@@ -13,12 +11,11 @@ class ArraySignal(Signal):
     
     
     def __init__(
-            self, name=None, parent=None, time_axis=None, array_axes=None,
-            amplitude_axis=None, samples=None):
+            self, samples, name=None, parent=None, time_axis=None,
+            array_axes=None, amplitude_axis=None):
         
-        if samples is None:
-            samples = np.array([], dtype='int16')
-            
+        self._samples = samples
+        
         if time_axis is None:
             time_axis = TimeAxis(length=len(samples))
             
@@ -29,8 +26,6 @@ class ArraySignal(Signal):
             amplitude_axis = AmplitudeAxis()
             
         super().__init__(name, parent, time_axis, array_axes, amplitude_axis)
-        
-        self._samples = samples
         
         self._check_shape_consistency()
         
