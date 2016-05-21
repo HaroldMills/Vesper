@@ -131,7 +131,7 @@ class WaveAudioFileReader(AudioFileReader):
             dtype, mono_1d)
         
         
-    def read(self, start_index=0, length=None, mono_1d=None):
+    def read(self, start_index=0, length=None):
         
         if self._reader is None:
             raise OSError('Cannot read from closed {}.'.format(self._name))
@@ -180,7 +180,7 @@ class WaveAudioFileReader(AudioFileReader):
                 'Got fewer samples than expected from read of {}.'.format(
                     self._name))
         
-        if self.num_channels == 1 and (mono_1d or self.mono_1d):
+        if self.num_channels == 1 and self.mono_1d:
             samples = samples.reshape((length,))
         else:
             samples = samples.reshape((length, self.num_channels)).transpose()
