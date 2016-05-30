@@ -72,7 +72,7 @@ def _create_period_name(start, end):
         end_name = _MONTH_NAMES[end.month]
         
         if start.year == end.year:
-            return '{}-{} {}'.format(start_name, end_name, start.year)
+            return '{} - {} {}'.format(start_name, end_name, start.year)
         
         else:
             return '{} {} - {} {}'.format(
