@@ -3,6 +3,7 @@
 
 import calendar
 import datetime
+import json
 
 from vesper.util.bunch import Bunch
 from vesper.util.calendar_month import CalendarMonth
@@ -12,6 +13,41 @@ _CALENDAR_GAP_THRESHOLD = 2
 _MONTH_NAMES = calendar.month_name
 
 
+def get_calendar_periods_json(periods, clip_counts):
+    period_dicts = [_create_period_dict(p, clip_counts) for p in periods]
+    return json.dumps(period_dicts)
+
+
+def _create_period_dict(period, clip_counts):
+    num_months = period.end - period.start + 1
+    months = list(period.start + i for i in range(num_months))
+    month_dicts = [_create_month_dict(m, clip_counts) for m in months]
+    return {
+        'name': period.name,
+        'months': month_dicts
+    }
+
+
+def _create_month_dict(month, clip_counts):
+    day_counts = _create_day_counts_list(month, clip_counts)
+    return {
+        'year': month.year,
+        'month': month.month,
+        'dayCounts': day_counts
+    }
+
+
+def _create_day_counts_list(month, clip_counts):
+    _, num_days = calendar.monthrange(month.year, month.month)
+    day_counts = {}
+    for day in range(1, num_days + 1):
+        date = datetime.date(month.year, month.month, day)
+        count = clip_counts.get(date)
+        if count is not None:
+            day_counts[day] = count
+    return sorted(day_counts.items())
+    
+    
 def get_calendar_periods(dates):
     months = _get_unique_months(dates)
     return _get_calendar_periods(months)
