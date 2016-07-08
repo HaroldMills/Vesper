@@ -18,7 +18,7 @@ function testSelect() {
 
 
 function _testCases(cases) {
-	for (c of cases)
+	for (let c of cases)
 		_testCase(...c);
 }
 

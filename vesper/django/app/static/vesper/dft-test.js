@@ -3,6 +3,13 @@
  */
 
 
+function testDft() {
+	testRealFft();
+	testRealFftSpeed();
+	console.log("DFT tests complete");
+}
+
+
 function testRealFft() {
 	for (let dftSize of [4, 8, 16]) {
 		for (let freq = 0; freq < Math.floor(dftSize / 2) + 1; freq++) {
