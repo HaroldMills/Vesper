@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Clips - {{date}} {{station_name}} {{classification}}</title>
+  {% include "vesper/header-prefix.html" %}
+  <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.0.min.css" type="text/css" />
+  <script type="text/javascript" src="http://cdn.pydata.org/bokeh/release/bokeh-0.12.0.min.js"></script>
+  {{rug_plot_script|safe}}
+  {% load staticfiles %}
+  <script src="{% static 'vesper/dft.js' %}"></script>
+  <script src="{% static 'vesper/spectrogram.js' %}"></script>
+  <script src="{% static 'vesper/multiselection.js' %}"></script>
+  <script>
+    const stationName = "{{station_name}}";
+    const classification = "{{classification}}";
+    const date = "{{date}}";
+    const numClips = {{num_clips}};
+    const pageStartIndex = {{page_start_index}};
+    const pageSize = {{page_size}};
+    const selectedIndex = {{selected_index}}
+    const clips = {{clips_json|safe}};
+    const annotationSchemePresets = {{annotation_scheme_presets_json|safe}}
+    const annotationCommandsPresets = {{annotation_commands_presets_json|safe}}
+  </script>
+  <script src="{% static 'vesper/night.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/night.css' %}">
+</head>
+
+<body>
+  {% include "vesper/navbar.html" %}
+  <div>
+    <h3 id="title" class="clips-title"></h3>
+    <div id="rug-plot">{{rug_plot_div|safe}}</div>
+    
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Dropdown Example
+      <span class="caret"></span></button>
+      <ul class="dropdown-menu">
+        <li><a href="#">HTML</a></li>
+        <li><a href="#">CSS</a></li>
+        <li><a href="#">JavaScript</a></li>
+      </ul>
+    </div>
+    
+    <div id="plots" class="clip-plots"></div>
+  </div>
+</body>
+
+</html>

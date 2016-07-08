@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Spectrogram Test</title>
+  <script src="dft.js"></script>
+  <script src="spectrogram.js"></script>
+  <script src="spectrogramRenderingTest.js"></script>
+  <script>window.onload = testSpectrogramRendering;</script>
+  <style>.spectrogram-canvas { backgroundColor: gray }</style>
+</head>
+
+<body>
+  <canvas id="test-canvas" class="spectrogram-canvas"></canvas>
+  <input type="file" id="file-input"></input>
+  <p>Window size:</p>
+  <input type="range" id="window-size-slider" min="5" max="10" step="0.05"></input>
+</body>

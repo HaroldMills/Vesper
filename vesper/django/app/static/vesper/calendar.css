@@ -1,0 +1,89 @@
+.form-spacing {
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.query-panel {
+  margin-top: 20px;
+  background: rgba(255, 185, 56, .9);
+}
+
+.calendar-title {
+  font-weight: bold;
+  margin-bottom: 50px;
+}
+
+@media screen and (max-width: 767px) {
+  .calendar-title {
+    text-align: center;
+  }
+}
+
+.period {
+  margin-top: 40px;
+}
+
+.period-name {
+  font-weight: bold;
+  margin-top: 0px;
+}
+
+@media screen and (max-width: 767px) {
+  .period-name {
+    text-align: center;
+  }
+}
+
+.row {
+  margin-bottom: 20px;
+  /* background: gray; */
+}
+
+.month {
+  margin-bottom: 0px;
+}
+
+.month-name {
+  text-align: center;
+  /* background: lightgray; */
+}
+
+.month-days {
+  display: flex;
+  flex-wrap: wrap;
+  width: 210px;
+  height: 180px;
+  margin: auto;
+  /* background: lightgray; */
+}
+
+.day {
+  width: 30px;
+  height: 30px;
+  text-align: center;
+  line-height: 30px;
+  position: relative;
+}
+
+.circle {
+  border-radius: 50%;
+  background: orange;
+  opacity: .7;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.day-num {
+  color: black;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;    /* Put dates on top of circles. */
+}
+
+.day-num:visited {
+  color: white;
+}

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Calendar - {{station_name}} {{classification}}</title>
+  {% include "vesper/header-prefix.html" %}
+  {% load staticfiles %}
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/calendar.css' %}">
+  <script>
+    const stationName = "{{station_name}}";
+    const classification = "{{classification}}";
+    const periods = {{periods_json|safe}};
+  </script>
+  <script src="{% static 'vesper/calendar.js' %}"></script>
+</head>
+
+<body>
+
+  {% include "vesper/navbar.html" %}
+  
+  <div id="main-div">
+  
+    {% if stations %}
+      
+      <div class="container">
+      
+      <div class="panel panel-default query-panel">
+    
+        <div class="panel-body">
+      
+          <form class="form-inline" role="form" action="/vesper/calendar" method="get">
+          
+            <div class="form-group form-spacing">
+              <label for="station">Station:</label>
+              <select class="form-control" id="station" name="station">
+                {% for s in stations %}
+                  {% if s.name == station_name %}
+                    <option selected>{{s.name}}</option>
+                  {% else %}
+                    <option>{{s.name}}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="form-group form-spacing">
+              <label for="classification">Classification:</label>
+              <select class="form-control" id="classification" name="classification">
+                {% for c in classifications %}
+                  {% if c == classification %}
+                    <option selected>{{c}}</option>
+                  {% else %}
+                    <option>{{c}}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            
+            <button type="submit" class="btn btn-default form-spacing">Submit</button>
+          
+          </form>
+        
+        </div>
+        
+      </div>
+    
+      <div id="calendar" class="container">
+      
+        <h2 class="calendar-title">{{station_name}} {{classification}} Clips</h2>
+  
+        <div id="periods"></div>
+  
+      </div>
+      
+      </div>
+  
+    {% else %}
+    
+      There are no stations in the archive.
+      
+    {% endif %}
+    
+  </div>
+
+</body>
+
+</html>

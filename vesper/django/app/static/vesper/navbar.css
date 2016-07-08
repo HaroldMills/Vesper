@@ -1,0 +1,41 @@
+.navbar {
+  /* background: rgba(255, 165, 0, .75); */
+  background: rgba(255, 185, 56, .9);
+}
+
+.navbar-default .navbar-brand {
+  color: gray;
+}
+
+.navbar-default .navbar-brand:hover {
+  color: gray;
+}
+
+.navbar-header:hover {
+  color: black;
+}
+
+.nav.navbar-nav li a {
+  color: black;
+}
+
+.nav.navbar-nav li a:hover {
+  color: white;
+  background: transparent;
+}
+
+.nav.navbar-nav li.active a {
+  color: white;
+  background: transparent;
+}
+
+.nav.navbar-nav li.active a:hover {
+  color: white;
+  background: transparent;
+}
+
+body {
+  /* We pad the body at the top to make room for the fixed navbar,
+     which is 50 pixels high. */
+  padding-top: 50px;
+}
