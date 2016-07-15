@@ -7,10 +7,10 @@ urlpatterns = [
     url(r'^$', views.index, name='index'),
     url(r'^calendar$', views.calendar, name='calendar'),
     url(r'^night$', views.night, name='night'),
-#    url(r'^view$', views.view, name='view'),
+    url(r'^test_command$', views.test_command, name='test_command'),
+    url(r'^import$', views.import_recordings, name='import'),
     url(r'^detect$', views.detect, name='detect'),
     url(r'^classify$', views.classify, name='classify'),
-    url(r'^import$', views.import_, name='import'),
     url(r'^export$', views.export, name='export'),
     
     url(r'^stations/$', views.stations, name='stations'),
@@ -27,9 +27,14 @@ urlpatterns = [
 
     url(r'^clips/(?P<clip_id>[0-9]+)/wav$', views.clip_wav, name='clip-wav'),
     
-    url(r'^clips/(?P<clip_id>[0-9]+)/annotations/(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)$', views.annotation, name='annotation'),
+    url(r'^clips/(?P<clip_id>[0-9]+)/annotations/(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)$',
+        views.annotation, name='annotation'),
                
-    url(r'^presets/(?P<preset_type_name>[a-zA-Z0-9_\-\. ]+)/json$', views.presets_json, name='presets-json')
+    url(r'^presets/(?P<preset_type_name>[a-zA-Z0-9_\-\. ]+)/json$',
+        views.presets_json, name='presets-json'),
+
+    url(r'^jobs/(?P<job_id>[0-9]+)$', views.job, name='job'),
+    
 #     url(r'^view/(?P<station_name>[a-zA-Z0-9_\-\.]+)/$',
 #         views.view_station, name='station')
 

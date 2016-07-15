@@ -2,30 +2,35 @@ import datetime
 import json
 import os.path
 
+from django import forms
 from django.conf import settings
 from django.db.models import Max, Min
-from django.http import HttpResponse, HttpResponseNotAllowed
+from django.core.urlresolvers import reverse
+from django.http import (
+    HttpResponse, HttpResponseNotAllowed, HttpResponseRedirect)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 import pytz
 import yaml
 
-from vesper.django.app.models import Annotation, Clip, Station
+from vesper.django.app.import_recordings_form import ImportRecordingsForm
+from vesper.django.app.models import Annotation, Clip, Job, Station
 from vesper.util.bunch import Bunch
 import vesper.django.app.clips_rug_plot as clips_rug_plot
+import vesper.django.app.job_manager as job_manager
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
 
 
 _ACTIONS = [(action.capitalize(), action) for action in
-            ('calendar', 'detect', 'classify', 'import', 'export')]
+            ('calendar', 'import', 'detect', 'classify', 'export')]
 _CLASSIFICATIONS = ('Call', 'Call.WIWA', 'Call.CHSP', 'Unknown')
 _ONE_DAY = datetime.timedelta(days=1)
-_GET_HEAD = ('GET', 'HEAD')
+_GET_AND_HEAD = ('GET', 'HEAD')
 
 
 def index(request):
-    return redirect('/vesper/calendar')
+    return redirect(reverse('calendar'))
 
 
 def detect(request):
@@ -47,8 +52,11 @@ def classify(request):
     
     
 def import_(request):
-    return _render_coming_soon(
-        request, 'Import', 'Imports are coming soon...')
+    context = {
+        'actions': _ACTIONS,
+        'action': 'Import'
+    }
+    return render(request, 'vesper/import.html', context)
     
     
 def export(request):
@@ -124,12 +132,12 @@ def clip_wav(request, clip_id):
 
 def presets_json(request, preset_type_name):
     
-    if request.method in _GET_HEAD:
+    if request.method in _GET_AND_HEAD:
         content = _get_presets_json(preset_type_name)
         return HttpResponse(content, content_type='application/json')
     
     else:
-        return HttpResponseNotAllowed(_GET_HEAD)
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
 
 
 def _get_presets_json(preset_type_name):
@@ -281,7 +289,7 @@ def annotation(request, clip_id, annotation_name):
     
     name = annotation_name
     
-    if request.method in _GET_HEAD:
+    if request.method in _GET_AND_HEAD:
         annotation = get_object_or_404(Annotation, name=name, clip__id=clip_id)
         response = HttpResponse()
         response.write(annotation.value)
@@ -300,7 +308,7 @@ def annotation(request, clip_id, annotation_name):
         return HttpResponse()
 
     else:
-        return HttpResponseNotAllowed(_GET_HEAD)
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
     
 
 def _get_request_body_as_text(request):
@@ -620,6 +628,60 @@ def _get_annotations(station, annotation_name, annotation_value, time_interval):
             value=annotation_value)
 
 
+@csrf_exempt
+def test_command(request):
+    
+    if request.method in _GET_AND_HEAD:
+        form = forms.Form()
+        
+    elif request.method == 'POST':
+        form = forms.Form(request.POST)
+        if form.is_valid():
+            print('form valid')
+            command_spec = {'name': 'test'}
+            job_id = job_manager.start_job(command_spec)
+            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+        else:
+            print('form invalid')
+            
+    else:
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
+    
+    return render(request, 'vesper/test-command.html', {'form': form})
+
+    
+@csrf_exempt
+def import_recordings(request):
+    
+    if request.method in _GET_AND_HEAD:
+        form = ImportRecordingsForm()
+        
+    elif request.method == 'POST':
+        form = ImportRecordingsForm(request.POST)
+        if form.is_valid():
+            print('form valid')
+            command_spec = {'name': 'test'}
+            job_id = job_manager.start_job(command_spec)
+            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+        else:
+            print('form invalid')
+            
+    else:
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
+    
+    return render(request, 'vesper/import-recordings.html', {'form': form})
+    
+    
+def job(request, job_id):
+    job = get_object_or_404(Job, pk=job_id)
+    command_spec = json.loads(job.command)
+    context = {
+        'job': job,
+        'command_name': command_spec['name']
+    }
+    return render(request, 'vesper/job.html', context)
+      
+          
 '''
 Some important queries:
 

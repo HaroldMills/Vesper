@@ -11,6 +11,11 @@ _MIN_YEAR = 1900
 _MAX_YEAR = 2099
 
 
+def get_utc_now():
+    dt = datetime.datetime.utcnow()
+    return pytz.utc.localize(dt)
+
+
 def create_utc_datetime(
         year, month, day, hour=0, minute=0, second=0, microsecond=0,
         time_zone=None, is_dst=None):

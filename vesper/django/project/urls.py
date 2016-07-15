@@ -23,3 +23,4 @@ urlpatterns = [
     url(r'^vesper/', include('vesper.django.app.urls')),
     url(r'^admin/', admin.site.urls),
 ]
+

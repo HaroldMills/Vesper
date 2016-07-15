@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Test Command</title>
+  {% include "vesper/header-prefix.html" %}
+</head>
+
+<body>
+
+  {% include "vesper/navbar.html" %}
+  
+  <h2>Test Command</h2>
+  
+  <form action="/vesper/test_command" method="post">
+    <input type="submit" value="Test">
+  </form>
+  
+</body>
+
+</html>

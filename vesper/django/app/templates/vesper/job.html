@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Job {{job.id}}</title>
+  {% load staticfiles %}
+  <script src="{% static 'vesper/job.js' %}"></script>
+</head>
+
+<body>
+
+  <h1>Job {{job.id}} - Command "{{command_name}}"</h1>
+  
+  <h2>Full command:</h2>
+  <p>{{job.command}}</p>
+  
+  <h2>Start time:</h2>
+  <p>{{job.start_time}}</p>
+  
+  <h2>End time:</h2>
+  <p>{{job.end_time}}
+  
+  <h2>Status:</h2>
+  <p>{{job.status}}</p>
+  
+  <h2>Log:</h2>
+  <textarea id="textarea" rows="20" cols="100" readonly>{{job.log}}</textarea>
+  
+</body>

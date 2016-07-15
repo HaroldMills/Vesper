@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Import Recordings</title>
+  {% include "vesper/header-prefix.html" %}
+</head>
+
+<body>
+
+  {% include "vesper/navbar.html" %}
+  
+  <h2>Import Recordings</h2>
+  
+  <form action="/vesper/import" method="post">
+    {{ form }}
+    <input type="submit" value="Import">
+  </form>
+  
+</body>
+
+</html>

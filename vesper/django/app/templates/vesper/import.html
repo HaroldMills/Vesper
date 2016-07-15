@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Import Recordings</title>
+  {% include "vesper/header-prefix.html" %}
+  {% load staticfiles %}
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/command-form.css' %}">
+</head>
+
+<body>
+
+  {% include "vesper/navbar.html" %}
+  
+  <h2>Import Recordings</h2>
+  
+  <form class="form" role="form" action="/vesper/import-recordings" method="get">
+  
+    <div class="form-group form-spacing command-form-spacing">
+      <label for="path">File or directory path:</label>
+      <input type="text" class="form-control" id="path" name="path">
+      <div class="checkbox">
+        <label class="checkbox"><input type="checkbox" value="">Recursive</label>
+      </div>
+      <p>Specify the server-side path of a .wav file to import that file as
+         a recording. Specify the server-side path of a directory to import
+         all .wav files in that directory as recordings. For directory
+         imports, check <i>Recursive</i> to recursively import files
+         in subdirectories of the specified directory, or uncheck it to
+         exclude such files.</p>
+    </div>
+    
+    <div class="form-group form-spacing command-form-spacing">
+      <label>Import mode:</label>
+      <label class="radio-inline active"><input type="radio" name="mode" checked="">Copy</label>
+      <label class="radio-inline"><input type="radio" name="mode">Move</label>
+      <p>Select *Copy* to copy imported recordings from the specified
+      location into the Vesper data directory, or select *Move* to move
+      them into that directory, deleting the originals.</p>
+    </div>
+    
+    <button type="submit" class="btn btn-default form-spacing command-form-spacing">Import</button>
+  
+  </form>
+  
+  <!--
+  <ul class="nav nav-tabs">
+    <li class="active"><a data-toggle="tab" href="#server">Server</a></li>
+    <li><a data-toggle="tab" href="#client">Client</a></li>
+  </ul>
+  
+  <div class="tab-content">
+    <div id="server" class="tab-pane fade in active">
+      <h3>Import recordings from the server file system.</h3>
+      <p>This type of import is faster than a client import but only works
+         when the recordings to be imported appear in the server file system.
+      </p>
+    </div>
+    <div id="client" class="tab-pane fade">
+      <h3>Import recordings from the client file system.</h3>
+      <p>This type of import is slower than a server import but works in
+         more cases. The client and server only have to be able to talk
+         to each other using the HTTP network protocol. They can be running
+         on the same computer, or on different computers on the same local
+         network, or on different computers on the internet. The recordings
+         to be imported are read from the client file system and copied to
+         the server.</p>
+    </div>
+  </div>
+  -->
+  
+</body>
+
+</html>

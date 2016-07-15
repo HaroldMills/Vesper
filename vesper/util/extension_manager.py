@@ -29,6 +29,7 @@ def load_extensions():
     
     # These imports are here rather than at top level to avoid circular
     # import problems.
+    from vesper.django.app.test_command import TestCommand
     from vesper.mpg_ranch.bat_importer \
         import BatImporter as MpgRanchBatImporter
     from vesper.mpg_ranch.clips_csv_exporter \
@@ -93,6 +94,10 @@ def load_extensions():
         'VCL Importer': (
             MpgRanchBatImporter,
             MpgRanchNfcImporter,
+        ),
+                   
+        'Vesper Command': (
+            TestCommand,
         )
             
     }

@@ -1,20 +1,18 @@
-# from __future__ import unicode_literals
+import logging
 import os.path
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db.models import (
     BigIntegerField, CASCADE, CharField, DateTimeField, FloatField, ForeignKey,
-    IntegerField, ManyToManyField, Model, TextField)
+    IntegerField, ManyToManyField, Model, SET_NULL, TextField)
+
+import vesper.util.os_utils as os_utils
 
 
-# class Archive(Model):
-#     name = CharField(max_length=255, unique=True)
-#     description = TextField(blank=True)
-#     def __str__(self):
-#         return self.name
-#     class Meta:
-#         db_table = 'vesper_archive'
+def _double(*args):
+    return tuple((a, a) for a in args)
 
 
 class DeviceModel(Model):
@@ -200,6 +198,135 @@ class StationDevice(Model):
         db_table = 'vesper_station_device'
 
 
+class Algorithm(Model):
+    type = CharField(max_length=255)
+    name = CharField(max_length=255)
+    version = CharField(max_length=255)
+    description = TextField(blank=True)
+    def __str__(self):
+        return 'Algorithm "{}" "{}" "{}"'.format(
+            self.type, self.name, self.version)
+    class Meta:
+        db_table = 'vesper_algorithm'
+    
+    
+class Bot(Model):
+    name = CharField(max_length=255)
+    description = TextField(blank=True)
+    algorithm = ForeignKey(Algorithm, on_delete=CASCADE, related_name='bots')
+    settings = TextField(blank=True)
+    def __str__(self):
+        return 'Bot "{}" algorithm {} settings "{}"'.format(
+            self.name, str(self.algorithm), self.self.settings)
+    class Meta:
+        db_table = 'vesper_bot'
+        
+    
+class Job(Model):
+    
+    command = TextField()
+    creation_time = DateTimeField()
+    creating_user = ForeignKey(
+        User, null=True, on_delete=CASCADE, related_name='jobs')
+    creating_job = ForeignKey(
+        'Job', null=True, on_delete=CASCADE, related_name='jobs')
+    bot = ForeignKey(Bot, null=True, on_delete=CASCADE, related_name='jobs')
+    start_time = DateTimeField(null=True)
+    end_time = DateTimeField(null=True)
+    status = CharField(max_length=255)
+    
+    def __str__(self):
+        return 'Job {} started {} ended {} command "{}"'.format(
+            self.id, self.start_time, self.end_time, self.command)
+        
+    class Meta:
+        db_table = 'vesper_job'
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._logger = None
+        
+    @property
+    def log_file_path(self):
+        dir_path = _get_job_logs_dir_path()
+        file_name = 'Job {}.log'.format(self.id)
+        return os.path.join(dir_path, file_name)
+        
+    @property
+    def logger(self):
+        if self._logger is None:
+            self._logger = self._create_logger()
+        return self._logger
+    
+    def _create_logger(self):
+        
+        _create_job_logs_dir_if_needed()
+        
+        logger_name = 'Job {}'.format(self.id)
+        logger = logging.getLogger(logger_name)
+        
+        level = 'INFO' if settings.DEBUG else 'INFO'
+        file_path = self.log_file_path
+        
+        config = {
+            'version': 1,
+            'formatters': {
+                'vesper': {
+                    'class': 'logging.Formatter',
+                    'format': '%(asctime)s %(levelname)-8s %(message)s'
+                }
+            },
+            'handlers': {
+                'console': {
+                    'class': 'logging.StreamHandler',
+                    'level': level,
+                    'formatter': 'vesper'
+                },
+                'file': {
+                    'class': 'logging.FileHandler',
+                    'filename': file_path,
+                    'mode': 'w',
+                    'level': level,
+                    'formatter': 'vesper'
+                }
+            },
+            'loggers': {
+                logger_name: {
+                    'handlers': ['console', 'file'],
+                    'level': level,
+                }
+            }
+        }
+        
+        logging.config.dictConfig(config)
+        
+        return logger
+    
+    
+    @property
+    def log(self):
+        return os_utils.read_file(self.log_file_path)
+        
+
+_job_logs_dir_path = None
+
+
+def _get_job_logs_dir_path():
+    
+    global _job_logs_dir_path
+    
+    if _job_logs_dir_path is None:
+        _job_logs_dir_path = \
+            os.path.join(settings.VESPER_DATA_DIR, 'Logs', 'Jobs')
+            
+    return _job_logs_dir_path
+
+
+def _create_job_logs_dir_if_needed():
+    dir_path = _get_job_logs_dir_path()
+    os_utils.create_directory(dir_path)
+    
+    
 # We include an end time field even though it's redundant to accelerate queries.
 class Recording(Model):
     station = ForeignKey(Station, on_delete=CASCADE, related_name='recordings')
@@ -305,13 +432,18 @@ class Clip(Model):
     recorder = ForeignKey(
         Device, on_delete=CASCADE, related_name='clips')
     recording = ForeignKey(
-        Recording, on_delete=CASCADE, related_name='clips', null=True)
+        Recording, null=True, on_delete=SET_NULL, related_name='clips')
     channel_num = IntegerField(null=True)
     start_index = BigIntegerField(null=True)
     length = BigIntegerField()
     sample_rate = FloatField()
     start_time = DateTimeField()
     end_time = DateTimeField()
+    creation_time = DateTimeField(null=True)
+    creating_user = ForeignKey(
+        User, null=True, on_delete=CASCADE, related_name='clips')
+    creating_job = ForeignKey(
+        Job, null=True, on_delete=CASCADE, related_name='clips')
     imported_file_path = CharField(max_length=255, null=True) # long enough?
     file_path = CharField(max_length=255, unique=True, null=True) # long enough?
     
@@ -323,13 +455,11 @@ class Clip(Model):
     class Meta:
         db_table = 'vesper_clip'
         
-        
     @property
     def wav_file_contents(self):
         # TODO: Handle errors, e.g. no such file.
         with open(self.wav_file_path, 'rb') as file_:
             return file_.read()
-        
         
     @property
     def wav_file_path(self):
@@ -342,9 +472,6 @@ class Clip(Model):
     def wav_file_url(self):
         return reverse('clip-wav', args=(self.id,))
 
-
-# TODO: Don't hard code this.
-#_CLIPS_DIR_PATH = r'C:\Users\Harold\Documents\Code\Python\Vesper Django\Clips'
 
 # TODO: Don't hard code this.
 _CLIPS_DIR_FORMAT = (3, 3)
@@ -425,6 +552,11 @@ class Annotation(Model):
     clip = ForeignKey(Clip, on_delete=CASCADE, related_name='annotations')
     name = CharField(max_length=255)      # e.g. 'Classification', 'Outside'
     value = TextField(blank=True)         # e.g. 'NFC.AMRE', 'True'
+    creation_time = DateTimeField(null=True)
+    creating_user = ForeignKey(
+        User, null=True, on_delete=CASCADE, related_name='annotations')
+    creating_job = ForeignKey(
+        Job, null=True, on_delete=CASCADE, related_name='annotations')
     class Meta:
         unique_together = ('clip', 'name')
         db_table = 'vesper_annotation'
