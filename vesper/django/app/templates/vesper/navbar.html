@@ -1,20 +1,20 @@
 <nav id="navbar" class="navbar navbar-default navbar-fixed-top">
   <div class="container-fluid">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#vesperNavbar">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#vesper-navbar">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span> 
       </button>
       <span class="navbar-brand">Vesper<span>
     </div>
-    <div class="collapse navbar-collapse" id="vesperNavbar">
+    <div class="collapse navbar-collapse" id="vesper-navbar">
       <ul class="nav navbar-nav">
         {% for name, href in actions %}
           {% if name == action %}
-              <li class="active"><a href="{{href}}">{{ name }}</a></li>
+              <li class="active"><a href="{{href}}">{{name}}</a></li>
           {% else %}
-              <li><a href="{{href}}">{{ name }}</a></li>
+              <li><a href="{{href}}">{{name}}</a></li>
           {% endif %}
         {% endfor %}
       </ul>
