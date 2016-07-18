@@ -347,14 +347,14 @@ def _parse_content_type(content_type):
     
 def calendar(request):
     
+    context = {
+        'actions': _ACTIONS,
+        'action': 'Calendar',
+    }
+    
     stations = Station.objects.order_by('name')
     
-    if len(stations) == 0:
-        # no stations (or recordings or clips)
-        
-        context = {}
-        
-    else:
+    if len(stations) != 0:
         # have at least one station
         
         classifications = _add_wildcard_classifications(_CLASSIFICATIONS)
@@ -373,15 +373,13 @@ def calendar(request):
         periods_json = \
             calendar_utils.get_calendar_periods_json(periods, clip_counts)
         
-        context = {
-            'actions': _ACTIONS,
-            'action': 'Calendar',
-            'stations': stations,
-            'station_name': station_name,
-            'classifications': classifications,
-            'classification': classification,
-            'periods_json': periods_json
-        }
+        context.update(
+            stations=stations,
+            station_name=station_name,
+            classifications=classifications,
+            classification=classification,
+            periods_json=periods_json
+        )
             
     return render(request, 'vesper/calendar.html', context)
 

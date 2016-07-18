@@ -6,12 +6,14 @@
   {% include "vesper/header-prefix.html" %}
   {% load staticfiles %}
   <link rel="stylesheet" type="text/css" href="{% static 'vesper/calendar.css' %}">
-  <script>
-    const stationName = "{{station_name}}";
-    const classification = "{{classification}}";
-    const periods = {{periods_json|safe}};
-  </script>
-  <script src="{% static 'vesper/calendar.js' %}"></script>
+  {% if stations %}
+    <script>
+      const stationName = "{{station_name}}";
+      const classification = "{{classification}}";
+      const periods = {{periods_json|safe}};
+    </script>
+    <script src="{% static 'vesper/calendar.js' %}"></script>
+  {% endif %}
 </head>
 
 <body>
