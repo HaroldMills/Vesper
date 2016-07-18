@@ -14,30 +14,54 @@
   
   <h2>Import Recordings</h2>
   
+  <p>
+    Submit this form to import one or more recordings into Vesper.
+    Each recording must comprise one or more .wav files in the Vesper
+    Server file system. The imported files are copied into the Vesper
+    data directory, and are not modified. The import runs as a Vesper
+    job.
+  </p>
+  
   <form class="form" role="form" action="/vesper/import-recordings" method="get">
   
     <div class="form-group form-spacing command-form-spacing">
-      <label for="path">File or directory path:</label>
-      <input type="text" class="form-control" id="path" name="path">
+      <label for="paths">File and/or directory paths:</label>
+      <textarea class="form-control" rows="5" id="paths" name="paths"></textarea>
+      <p>
+        Specify the paths of one or more .wav files and/or directories
+        containing .wav files to import those files as recordings. Each
+        path should be specified on a separate line. Multi-file recordings
+        are automatically recognized from the stations, start times, and
+        durations of their files.
+      </p>
+    </div>
+    <div>
+      <label for="recursive">Recursive:</label>
+      <input type="checkbox" value="">
+      <p>
+        Check <i>Recursive</i> to recursively include .wav files in
+        subdirectories of any specified directories, or uncheck it to exclude
+        such files.
+      </p>
+      <!--
       <div class="checkbox">
         <label class="checkbox"><input type="checkbox" value="">Recursive</label>
       </div>
-      <p>Specify the server-side path of a .wav file to import that file as
-         a recording. Specify the server-side path of a directory to import
-         all .wav files in that directory as recordings. For directory
-         imports, check <i>Recursive</i> to recursively import files
-         in subdirectories of the specified directory, or uncheck it to
-         exclude such files.</p>
+      -->
     </div>
     
+    <!--
     <div class="form-group form-spacing command-form-spacing">
       <label>Import mode:</label>
       <label class="radio-inline active"><input type="radio" name="mode" checked="">Copy</label>
       <label class="radio-inline"><input type="radio" name="mode">Move</label>
-      <p>Select *Copy* to copy imported recordings from the specified
-      location into the Vesper data directory, or select *Move* to move
-      them into that directory, deleting the originals.</p>
+      <p>
+        Select *Copy* to copy imported .wav files from the specified
+        locations into the Vesper data directory, leaving the originals
+        intact, or select *Move* to move the files, deleting the originals.
+      </p>
     </div>
+    -->
     
     <button type="submit" class="btn btn-default form-spacing command-form-spacing">Import</button>
   

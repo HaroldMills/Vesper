@@ -658,16 +658,22 @@ def import_recordings(request):
         form = ImportRecordingsForm(request.POST)
         if form.is_valid():
             print('form valid')
-            command_spec = {'name': 'test'}
-            job_id = job_manager.start_job(command_spec)
-            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+#             command_spec = {'name': 'test'}
+#             job_id = job_manager.start_job(command_spec)
+#             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
         else:
             print('form invalid')
             
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
     
-    return render(request, 'vesper/import-recordings.html', {'form': form})
+    context = {
+        'actions': _ACTIONS,
+        'action': 'Import',
+        'form': form
+    }
+    
+    return render(request, 'vesper/import-recordings.html', context)
     
     
 def job(request, job_id):

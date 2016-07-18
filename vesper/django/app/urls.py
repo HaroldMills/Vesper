@@ -8,6 +8,7 @@ urlpatterns = [
     url(r'^calendar$', views.calendar, name='calendar'),
     url(r'^night$', views.night, name='night'),
     url(r'^test_command$', views.test_command, name='test_command'),
+    # url(r'^import$', views.import_, name='import'),
     url(r'^import$', views.import_recordings, name='import'),
     url(r'^detect$', views.detect, name='detect'),
     url(r'^classify$', views.classify, name='classify'),

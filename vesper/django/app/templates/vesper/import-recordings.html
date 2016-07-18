@@ -4,19 +4,53 @@
 <head>
   <title>Import Recordings</title>
   {% include "vesper/header-prefix.html" %}
+  {% load staticfiles %}
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/command-form.css' %}">
 </head>
 
-<body>
+<body class="command-form-body">
 
   {% include "vesper/navbar.html" %}
-  
+
   <h2>Import Recordings</h2>
   
-  <form action="/vesper/import" method="post">
-    {{ form }}
-    <input type="submit" value="Import">
-  </form>
+  <p class="command-form-help">
+    Submit this form to import one or more recordings into Vesper.
+    Each recording must comprise one or more .wav files in the Vesper
+    Server file system. The imported files are copied into the Vesper
+    data directory, and the original files are not modified. The import
+    runs as a Vesper job.
+  </p>
   
+  <form class="form" role="form" action="/vesper/import" method="post">
+  
+    <div class="form-group form-spacing command-form-spacing">
+      <label for="{{form.paths.id_for_label}}">File and/or directory paths:</label>
+      <p class="command-form-help">
+        Specify the paths of one or more .wav files and/or directories
+        containing .wav files to import those files as recordings. Each
+        path should be specified on a separate line. Multi-file recordings
+        are automatically recognized from the stations, start times, and
+        durations of the imported files.
+      </p>
+      {{form.paths}}
+      {{form.paths.errors}}
+    </div>
+
+    <div class="form-group form-spacing command-form-spacing">
+      {{form.recursive}}
+      <label for="{{form.recursive.id_for_label}}">Recursive</label>
+      <p class="command-form-help">
+        Check the box to recursively include .wav files in subdirectories
+        of any specified directories. Uncheck the box to exclude such files.
+      </p>
+      {{form.recursive.errors}}
+    </div>
+    
+    <button type="submit" class="btn btn-default form-spacing command-form-spacing">Import</button>
+    
+  </form>
+
 </body>
 
 </html>
