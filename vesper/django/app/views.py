@@ -22,8 +22,48 @@ import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
 
 
-_ACTIONS = [(action.capitalize(), action) for action in
-            ('calendar', 'import', 'detect', 'classify', 'export')]
+def _create_navbar_items(data, ancestors=()):
+    return tuple(_create_navbar_item(d, ancestors) for d in data)
+
+
+def _create_navbar_item(data, ancestors):
+    if isinstance(data, str):
+        return _create_navbar_link_item(data, ancestors)
+    else:
+        return _create_navbar_dropdown_item(data[0], data[1:], ancestors)
+    
+
+def _create_navbar_link_item(name, ancestors):
+    href = _create_navbar_href(name, ancestors)
+    return Bunch(type='link', name=name.title(), href=href)
+
+
+def _create_navbar_dropdown_item(name, data, ancestors):
+    subitems = _create_navbar_items(data, ancestors + (name,))
+    return Bunch(type='dropdown', name=name.title(), subitems=subitems)
+
+
+def _create_navbar_href(name, ancestors):
+    parts = tuple(_create_navbar_href_aux(a) for a in ancestors) + \
+        (_create_navbar_href_aux(name),)
+    return '_'.join(parts)
+    
+    
+def _create_navbar_href_aux(s):
+    return '_'.join(s.split())
+
+
+# Note that as of 2016-07-19, nested havbar dropdowns do not work.
+# The generated HTML looks right to me so the problem may be a
+# Bootstrap limitation.
+_NAVBAR_ITEMS = _create_navbar_items((
+    'calendar',
+    ('import', 'archive data', 'recordings'),
+    'detect',
+    'classify',
+    'export'
+))
+
 _CLASSIFICATIONS = ('Call', 'Call.WIWA', 'Call.CHSP', 'Unknown')
 _ONE_DAY = datetime.timedelta(days=1)
 _GET_AND_HEAD = ('GET', 'HEAD')
@@ -39,8 +79,8 @@ def detect(request):
     
 def _render_coming_soon(request, action, message):
     context = {
-        'actions': _ACTIONS,
-        'action': action,
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': action,
         'message': message
     }
     return render(request, 'vesper/coming-soon.html', context)
@@ -53,10 +93,15 @@ def classify(request):
     
 def import_(request):
     context = {
-        'actions': _ACTIONS,
-        'action': 'Import'
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Import'
     }
     return render(request, 'vesper/import.html', context)
+    
+    
+def import_archive_data(request):
+    return _render_coming_soon(
+        request, 'Import Archive Data', 'Archive data import is coming soon...')
     
     
 def export(request):
@@ -348,8 +393,8 @@ def _parse_content_type(content_type):
 def calendar(request):
     
     context = {
-        'actions': _ACTIONS,
-        'action': 'Calendar',
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Calendar',
     }
     
     stations = Station.objects.order_by('name')
@@ -438,8 +483,8 @@ def night(request):
             _get_presets_json('Annotation Commands')
 
         context = {
-            'actions': _ACTIONS,
-            'action': '',
+            'navbar_items': _NAVBAR_ITEMS,
+            'active_navbar_item': '',
             'station_name': station_name,
             'classification': classification,
             'date': date,
@@ -668,14 +713,31 @@ def import_recordings(request):
         return HttpResponseNotAllowed(_GET_AND_HEAD)
     
     context = {
-        'actions': _ACTIONS,
-        'action': 'Import',
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Import',
         'form': form
     }
     
     return render(request, 'vesper/import-recordings.html', context)
     
     
+'''
+commands needed:
+
+import archive data:
+    stations
+    device models
+    devices
+    station devices (does this take care of device connections?)
+
+import recordings
+
+run detectors
+
+run classifiers
+'''
+
+
 def job(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
     command_spec = json.loads(job.command)

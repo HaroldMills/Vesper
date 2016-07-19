@@ -2,7 +2,11 @@
 <html lang="en">
 
 <head>
-  <title>Calendar - {{station_name}} {{classification}}</title>
+  {% if stations %}
+    <title>Calendar - {{station_name}} {{classification}} - Vesper</title>
+  {% else %}
+    <title>Calendar - Vesper</title>
+  {% endif %}
   {% include "vesper/header-prefix.html" %}
   {% load staticfiles %}
   <link rel="stylesheet" type="text/css" href="{% static 'vesper/calendar.css' %}">

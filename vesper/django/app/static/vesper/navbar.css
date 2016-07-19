@@ -1,5 +1,19 @@
+/*
+With the exception of the body rule, I've given up on this CSS for the time
+being. It was taking too long to find all the rules needed to override the
+Bootstrap rules affecting the navbar.
+ */
+ 
+body {
+  /* The extra 50 pixels of the top margin are for the navbar. */
+  margin-top: 70px;
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-bottom: 20px;
+}
+
+/*
 .navbar {
-  /* background: rgba(255, 165, 0, .75); */
   background: rgba(255, 185, 56, .9);
 }
 
@@ -34,8 +48,13 @@
   background: transparent;
 }
 
-body {
-  /* We pad the body at the top to make room for the fixed navbar,
-     which is 50 pixels high. */
-  padding-top: 50px;
+.navbar-default .nav.navbar-nav .open .dropdown-toggle {
+  color: white;
+  background: rgb(255, 192, 76);
 }
+
+.dropdown-menu {
+  color: white;
+  background: rgb(255, 192, 76);
+}
+*/
