@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 import pytz
 import yaml
 
+from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import Annotation, Clip, Job, Station
 from vesper.util.bunch import Bunch
@@ -97,11 +98,6 @@ def import_(request):
         'active_navbar_item': 'Import'
     }
     return render(request, 'vesper/import.html', context)
-    
-    
-def import_archive_data(request):
-    return _render_coming_soon(
-        request, 'Import Archive Data', 'Archive data import is coming soon...')
     
     
 def export(request):
@@ -692,6 +688,44 @@ def test_command(request):
     
     return render(request, 'vesper/test-command.html', {'form': form})
 
+    
+@csrf_exempt
+def import_archive_data(request):
+    
+    if request.method in _GET_AND_HEAD:
+        form = ImportArchiveDataForm()
+        
+    elif request.method == 'POST':
+        form = ImportArchiveDataForm(request.POST)
+        if form.is_valid():
+            print('form valid')
+            command_spec = {
+                'name': 'import',
+                'arguments': {
+                    'importer': {
+                        'name': 'Archive Data Importer',
+                        'arguments': {
+                            'archive_data': form.cleaned_data['archive_data']
+                        }
+                    }
+                }
+            }
+            job_id = job_manager.start_job(command_spec)
+            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+        else:
+            print('form invalid')
+            
+    else:
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
+    
+    context = {
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Import',
+        'form': form
+    }
+    
+    return render(request, 'vesper/import-archive-data.html', context)
+    
     
 @csrf_exempt
 def import_recordings(request):

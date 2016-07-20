@@ -12,6 +12,7 @@ from threading import RLock
 
 from vesper.django.app.job_thread import JobThread
 from vesper.util.repeating_timer import RepeatingTimer
+from vesper.vcl.command import CommandSyntaxError
 import vesper.util.extension_manager as extension_manager
 
 
@@ -35,8 +36,8 @@ multiple threads.
 """
 
 
-def start_job(command):
-    thread = _create_job_thread(command)
+def start_job(command_spec):
+    thread = _create_job_thread(command_spec)
     job_id = thread.job.id
     with _lock:
         _job_threads[job_id] = thread
@@ -49,16 +50,18 @@ def _create_job_thread(command_spec):
     try:
         command_name = command_spec['name']
     except KeyError:
-        raise ValueError('Command specification contains no "name" item.')
+        raise CommandSyntaxError(
+            'Command specification contains no "name" item.')
         
     try:
         command_class = _command_classes[command_name]
     except KeyError:
-        raise ValueError(
+        raise CommandSyntaxError(
             'Unrecognized command "{}".'.format(command_name))
         
-    # TODO: How does error handling work here?
-    command = command_class(command_spec)
+    command_args = command_spec.get('arguments', {})
+    
+    command = command_class(command_args)
     
     return JobThread(command)
     

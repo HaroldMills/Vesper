@@ -29,6 +29,8 @@ def load_extensions():
     
     # These imports are here rather than at top level to avoid circular
     # import problems.
+    from vesper.django.app.archive_data_importer import ArchiveDataImporter
+    from vesper.django.app.import_command import ImportCommand
     from vesper.django.app.test_command import TestCommand
     from vesper.mpg_ranch.bat_importer \
         import BatImporter as MpgRanchBatImporter
@@ -51,7 +53,7 @@ def load_extensions():
     from vesper.vcl.detect_command import DetectCommand
     from vesper.vcl.export_command import ExportCommand
     from vesper.vcl.help_command import HelpCommand
-    from vesper.vcl.import_command import ImportCommand
+    from vesper.vcl.import_command import ImportCommand as ImportCommandOld
     from vesper.vcl.nfc_coarse_classifier import NfcCoarseClassifier
     from vesper.vcl.nfc_coarse_classifier import NfcCoarseClipClassifier
     from vesper.vcl.sample_command import SampleCommand
@@ -78,7 +80,7 @@ def load_extensions():
             DetectCommand,
             ExportCommand,
             HelpCommand,
-            ImportCommand,
+            ImportCommandOld,
             SampleCommand,
         ),
         
@@ -97,7 +99,12 @@ def load_extensions():
         ),
                    
         'Vesper Command': (
+            ImportCommand,
             TestCommand,
+        ),
+                   
+        'Importer': (
+            ArchiveDataImporter,
         )
             
     }

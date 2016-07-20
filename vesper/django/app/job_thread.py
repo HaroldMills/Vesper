@@ -3,6 +3,7 @@
 
 from threading import Event, Thread
 import json
+import pprint
 import traceback
 
 from vesper.django.app.models import Job, User
@@ -12,11 +13,11 @@ import vesper.util.time_utils as time_utils
 '''
 Job status values:
 
-not started
-running
-complete
-stopped by request
-raised exception
+Not Started
+Running
+Complete
+Interrupted
+Raised Exception
 '''
 
 
@@ -26,14 +27,19 @@ class JobThread(Thread):
     @staticmethod
     def _create_job(command):
         
+        command_spec = {
+            'name': command.name,
+            'arguments': command.arguments
+        }
+        
         # TODO: This should be the logged-in user.
         user = User.objects.get(username='Harold')
         
         job = Job(
-            command=json.dumps(command.spec),
+            command=json.dumps(command_spec),
             creation_time = time_utils.get_utc_now(),
             creating_user=user,
-            status='not started')
+            status='Not Started')
         job.save()
         
         return job
@@ -54,10 +60,14 @@ class JobThread(Thread):
         # the job thread to avoid a race condition that could result in the
         # job end information being written before the job start information.
         job.start_time = time_utils.get_utc_now()
-        job.status = 'running'
+        job.status = 'Running'
         job.save()
         
-        job.logger.info('Job started. Command is: {}'.format(job.command))
+        command_args = pprint.pformat(self.command.arguments, indent=1)
+        command_args = _indent_lines(command_args, 4)
+        job.logger.info(
+            'Job started for command "{}" with arguments:\n{}'.format(
+                self.command.name, command_args))
         
         super().start()
         
@@ -66,13 +76,14 @@ class JobThread(Thread):
         
         job = self.job
         
+        context = _CommandContext(self)
+        
         try:
-            context = _CommandContext(self)
             complete = self.command.execute(context)
             
         except Exception:
             job.end_time = time_utils.get_utc_now()
-            job.status = 'raised exception'
+            job.status = 'Raised Exception'
             job.save()
             job.logger.error('Job raised exception.\n' + traceback.format_exc())
             
@@ -81,12 +92,12 @@ class JobThread(Thread):
             job.end_time = time_utils.get_utc_now()
             
             if complete:
-                job.status = 'complete'
+                job.status = 'Complete'
                 log_message = 'Job complete.'
                 
             else:
-                job.status = 'stopped by request'
-                log_message = 'Job stopped by request before completion.'
+                job.status = 'Interrupted'
+                log_message = 'Job interrupted.'
                 
             job.save()
             job.logger.info(log_message)
@@ -98,6 +109,13 @@ class JobThread(Thread):
         
     def _stop_requested(self):
         return self._stop_event.is_set()
+
+
+def _indent_lines(text, num_spaces):
+    prefix = ' ' * num_spaces
+    lines = text.split('\n')
+    indented_lines = [prefix + line for line in lines]
+    return '\n'.join(indented_lines)
 
 
 class _CommandContext(object):

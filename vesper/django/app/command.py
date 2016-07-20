@@ -12,10 +12,10 @@ class Command(object):
     """
     
     
-    def __init__(self, spec):
-        self.spec = spec
-        
-        
+    def __init__(self, arguments):
+        self.arguments = arguments
+    
+    
     def execute(self, context):
         
         """
