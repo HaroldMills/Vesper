@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db.models import (
     BigIntegerField, CASCADE, CharField, DateTimeField, FloatField, ForeignKey,
-    IntegerField, ManyToManyField, Model, SET_NULL, TextField)
+    IntegerField, ManyToManyField, Model, TextField)
 
 import vesper.util.os_utils as os_utils
 
@@ -352,9 +352,6 @@ class StationDevice(Model):
         db_table = 'vesper_station_device'
 
 
-# TODO: Do we need this table? Perhaps we should have only the processor
-# table, with `algorithm_name`, `algorithm_version`, and `algorithm_settings`
-# columns.
 class Algorithm(Model):
     
     type = CharField(max_length=255)
@@ -494,11 +491,18 @@ def _create_job_logs_dir_if_needed():
     os_utils.create_directory(dir_path)
     
     
-# We include an end time field even though it's redundant to accelerate queries.
+# We include the `end_time` field even though it's redundant to accelerate
+# queries.
+#
+# An alternative to making the `recorder` field a `StationDevice` would be
+# to have a `station` field that is a `Station` and a `recorder` field
+# that is a `Device`. However, the latter introduces a redundancy between
+# the recorders indicated in the `StationDevice` table and the recorders
+# indicated in the `Recording` table. The former eliminates this redundancy.
 class Recording(Model):
     
-    station = ForeignKey(Station, on_delete=CASCADE, related_name='recordings')
-    recorder = ForeignKey(Device, on_delete=CASCADE, related_name='recordings')
+    station_recorder = ForeignKey(
+        StationDevice, on_delete=CASCADE, related_name='recordings')
     num_channels = IntegerField()
     length = BigIntegerField()
     sample_rate = FloatField()
@@ -511,7 +515,7 @@ class Recording(Model):
             self.length, self.sample_rate, self.start_time)
         
     class Meta:
-        unique_together = ('station', 'recorder', 'start_time')
+        unique_together = ('station_recorder', 'start_time')
         db_table = 'vesper_recording'
         
         
@@ -521,7 +525,6 @@ class RecordingFile(Model):
     file_num = IntegerField()
     start_index = BigIntegerField()
     length = BigIntegerField()
-    imported_file_path = CharField(max_length=255, null=True) # long enough?
     file_path = CharField(max_length=255, unique=True, null=True) # long enough?
     
     class Meta:
@@ -529,109 +532,53 @@ class RecordingFile(Model):
         db_table = 'vesper_recording_file'
 
 
-# The station and recorder of a clip must always be specified. I don't
-# think this will be a problem since people almost always know where
-# their data came from. One could create a special "Unknown" station
-# or recorder if needed.
+# After much deliberation, I have decided to require that every clip
+# refer to a recording. I considered allowing so-called *orphaned clips*
+# that did not refer to a recording, but it seems to me that doing this
+# would be more trouble than it's worth. It would complicate the database
+# schema, code that uses the database, and the Vesper user interface and
+# documentation, all for a situation that is uncommon. Note that we do
+# *not* require that the samples of a clip's recording be available, only
+# the recording's metadata, including its station, recorder, number of
+# channels, start time, and length. In cases where somebody wants to import
+# a set of clips for which some recording metadata (start times and lengths,
+# for example) are not available, made-up metadata will have to be supplied,
+# and the fact that the information is made up will have to be noted.
 #
-# One can have no knowledge, partial knowledge, or complete knowledge
-# of the parent recording of a clip. For example, if one ran a detector
-# years ago on live audio input that was not saved, and one didn't
-# record when monitoring started and ended, or if for whatever reason
-# one cannot locate the recording from which a clip came, one may have
-# no knowledge of the parent recording. In this case the `recording`,
-# `channel_num`, and `start_index` fields of a clip can be `None`.
+# The station, recorder, and sample rate of a clip are the station,
+# recorder, and sample rate of its recording.
 #
-# In other cases one might know when monitoring started and ended for
-# each station and night, but one might not have saved the audio samples
-# themselves. Or, one might have the recordings but not want to store
-# them on a server. In this case an archive will contain recording
-# metadata but not the audio samples. The recording metadata are stored
-# in a `Recording` object, but there are no corresponding `RecordingFile`
-# objects. The `recording` and `channel_num` fields of a clip from such
-# a recording will not be `None`. The `start_index` field of a clip from
-# such a recording may or may not be `None`, according to whether or not
-# the exact start index of the clip in the recording is known.
-#
-# A recording whose samples are archived will have both a `Recording`
-# object and associated `RecordingFile` objects in an archive.
-#
-# When the metadata for a clip's recording are available (regardless of
-# whether or not the recording's audio samples are available), the
-# `station` and `recorder` fields of the clip are redundant since both
-# are also available via the recording. We require them anyway for
-# consistency with the case when a recording's metadata are not available.
-#
-# The `length`, `sample_rate`, `start_time`, and `end_time` fields of a
-# `Clip` object must always be set. The `sample_rate` field is redundant
-# since it can always be obtained either from the parent recording of a
-# clip or from the clip's sound file. We include it, however, to accelerate
-# certain types of queries, especially ones that would otherwise require
-# accessing a clip's sound file. Given that the sample rate is available
-# the `end_time` field is also redundant, but we include it anyway to
-# accelerate certain types of queries. For example, we will want to be
+# The `end_time` field of a clip is redundant, since it can be computed
+# from the clip's start time, length, and sample rate. We include it anyway
+# to accelerate certain types of queries. For example, we will want to be
 # able to find all of the clips whose time intervals intersect a specified
 # recording subinterval.
 #
-# The `file_path` field of a `Clip` object should be `None` if and only
-# if the clip samples are available as part of the clip's recording, and
-# the clip is not itself stored in its own file. In some cases the samples
-# of a clip may be available both as part of the clip's recording and in
-# an extracted clip file. In this case the `file_path` field should be
-# set to the path of the extracted clip file.
+# The `file_path` field of a clip should be `None` if and only if the clip
+# samples are available as part of the clip's recording, and the clip is not
+# itself stored in its own file. In some cases the samples of a clip may be
+# available both as part of the clip's recording and in an extracted clip
+# file. In this case the `file_path` field should be the path of the extracted
+# clip file.
 #
-# A concise (but redundant, given the above) summary of field redundancies:
-#
-# * The redundant `station` and `recorder` fields are included to support
-#   the common case of orphaned clips.
-#
-# * The redundant `sample_rate` field is included to accelerate certain
-#   types of queries.
-#
-# * The redundant `end_time` field is included to accelerate certain types
-#   of interval queries.
-#
-# TODO: Add `creator` field with the creating agent (person or algorithm).
-# TODO: Keep track of edit history, e.g. bounds adjustments?
-#
-# TODO: Should we try to help ensure that the start index and start
-# time are consistent, or just leave that up to code that constructs
-# and modifies clips?
-#
-# TODO: Add uniqueness constraints to prevent creation of duplicate clips.
-# Multiple constraints will be needed for the different recording/clip
-# scenarios that we want to support. We may need to add a `creating_processor`
-# column to be able to enforce uniqueness of the combination of recording,
-# channel number, start time, length, and creating processor. The
-# `creating_processor` column would be redundant with the `creating_job`
-# column, since the processor of the creating job would be the creating
-# processor, but I don't believe we can specify uniqueness constraints
-# on joins.
-#
-# TODO: Don't allow null values in the `recording` column, but do allow
-# recordings to have unknown start times and lengths? If we do this,
-# perhaps we can eliminate the redundant `station` and `recorder`
-# columns?
+# We include a multi-column unique constraint to prevent duplicate clips
+# from being created by accidentally running a particular detector on a
+# particular recording more than once.
 class Clip(Model):
     
-    station = ForeignKey(
-        Station, on_delete=CASCADE, related_name='clips')
-    recorder = ForeignKey(
-        Device, on_delete=CASCADE, related_name='clips')
-    recording = ForeignKey(
-        Recording, null=True, on_delete=SET_NULL, related_name='clips')
-    channel_num = IntegerField(null=True)
+    recording = ForeignKey(Recording, on_delete=CASCADE, related_name='clips')
+    channel_num = IntegerField()
     start_index = BigIntegerField(null=True)
     length = BigIntegerField()
-    sample_rate = FloatField()
     start_time = DateTimeField()
     end_time = DateTimeField()
-    creation_time = DateTimeField(null=True)
+    creation_time = DateTimeField()
     creating_user = ForeignKey(
         User, null=True, on_delete=CASCADE, related_name='clips')
+    creating_processor = ForeignKey(
+        Processor, null=True, on_delete=CASCADE, related_name='clips')
     creating_job = ForeignKey(
         Job, null=True, on_delete=CASCADE, related_name='clips')
-    imported_file_path = CharField(max_length=255, null=True) # long enough?
     file_path = CharField(max_length=255, unique=True, null=True) # long enough?
     
     def __str__(self):
@@ -640,8 +587,23 @@ class Clip(Model):
             self.length, self.start_time, self.file_path)
         
     class Meta:
+        unique_together = (
+            'recording', 'channel_num', 'start_time', 'length',
+            'creating_processor')
         db_table = 'vesper_clip'
         
+    @property
+    def station(self):
+        return self.recording.station
+    
+    @property
+    def recorder(self):
+        return self.recording.recorder
+    
+    @property
+    def sample_rate(self):
+        return self.recording.sample_rate
+    
     @property
     def wav_file_contents(self):
         # TODO: Handle errors, e.g. no such file.
@@ -690,42 +652,6 @@ def _get_clip_id_parts(num, format_):
     return parts
     
     
-# This is an old `Clip` model that did not allow `None` values for the
-# `recording` or `channel_num` fields, and that did not include `station`
-# and `recording` fields.
-# class Clip(Model):
-#     recording = ForeignKey(Recording, on_delete=CASCADE, related_name='clips')
-#     channel_num = IntegerField()
-#     start_index = BigIntegerField(null=True)
-#     length = BigIntegerField()
-#     start_time = DateTimeField()
-#     end_time = DateTimeField()
-#     file_path = CharField(max_length=255, unique=True, null=True) # Long enough?
-#     def __str__(self):
-#         return 'Clip {} {} {} {} {} "{}"'.format(
-#             str(self.recording), self.channel_num, self.start_index,
-#             self.length, self.start_time, self.file_path)
-#     class Meta:
-#         db_table = 'vesper_clip'
-    
-    
-# This is an old model devoted specifically to clips without parent
-# recordings. It is subsumed by the most recent `Clip` model.
-# class OrphanedClip(Model):
-#     station = ForeignKey(
-#         Station, on_delete=CASCADE, related_name='orphaned_clips')
-#     recorder = ForeignKey(
-#         Device, on_delete=CASCADE, related_name='orphaned_clips')
-#     channel_num = IntegerField()
-#     length = BigIntegerField()
-#     sample_rate = FloatField()
-#     start_time = DateTimeField()
-#     end_time = DateTimeField()
-#     class Meta:
-#         db_table = 'vesper_orphaned_clips'
-
-
-# TODO: Automatically track annotation creator and edit history.
 class Annotation(Model):
     
     clip = ForeignKey(Clip, on_delete=CASCADE, related_name='annotations')

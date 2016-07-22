@@ -128,7 +128,9 @@ def station_clips(request, station_name):
 
     
 def _get_station_clip_start_time_extrema(station):
-    clips = Clip.objects.filter(station__name=station.name)
+    # TODO: How expensive is the clip query below? I believe it requires a
+    # join on three tables, namely Clip, Recording, and StationDevice.
+    clips = Clip.objects.filter(recording__station_recorder__station=station)
     times = clips.aggregate(
         first_time=Min('start_time'),
         last_time=Max('start_time'))
@@ -606,17 +608,21 @@ def _get_night_range(station, time_zone, annotation_name, annotation_value):
 def _get_clip_start_time_extrema_for_annotation(
         station, annotation_name, annotation_value):
     
+    # TODO: How expensive are the queries in this function? I believe they
+    # require a join on four tables, namely Annotation, Clip, Recording,
+    # and StationDevice.
+    
     if annotation_value.endswith('*'):
         
         annotations = Annotation.objects.filter(
-            clip__station__name=station.name,
+            clip__recording__station_recorder__station=station,
             name=annotation_name,
             value__startswith=annotation_value[:-1])
         
     else:
         
         annotations = Annotation.objects.filter(
-            clip__station__name=station.name,
+            clip__recording__station_recorder__station=station,
             name=annotation_name,
             value=annotation_value)
         
@@ -650,10 +656,14 @@ def _get_local_noon_as_utc_time(date, time_zone):
 
 def _get_annotations(station, annotation_name, annotation_value, time_interval):
     
+    # TODO: How expensive are the queries in this function? I believe they
+    # require a join on four tables, namely Annotation, Clip, Recording,
+    # and StationDevice.
+    
     if annotation_value.endswith('*'):
         
         return Annotation.objects.filter(
-            clip__station=station,
+            clip__recording__station_recording__station=station,
             clip__start_time__range=time_interval,
             name=annotation_name,
             value__startswith=annotation_value[:-1])
@@ -661,7 +671,7 @@ def _get_annotations(station, annotation_name, annotation_value, time_interval):
     else:
         
         return Annotation.objects.filter(
-            clip__station=station,
+            clip__recording__station_recording__station=station,
             clip__start_time__range=time_interval,
             name=annotation_name,
             value=annotation_value)
@@ -734,12 +744,19 @@ def import_recordings(request):
         form = ImportRecordingsForm()
         
     elif request.method == 'POST':
+        
         form = ImportRecordingsForm(request.POST)
+        
         if form.is_valid():
+            
             print('form valid')
-#             command_spec = {'name': 'test'}
-#             job_id = job_manager.start_job(command_spec)
-#             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+            
+            paths = form.cleaned_data['paths']
+            
+            print('paths:')
+            for path in paths:
+                print('    ' + path)
+                
         else:
             print('form invalid')
             
