@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import json
 import os.path
 
@@ -752,10 +753,13 @@ def import_recordings(request):
             print('form valid')
             
             paths = form.cleaned_data['paths']
+            recursive = form.cleaned_data['recursive']
             
-            print('paths:')
-            for path in paths:
-                print('    ' + path)
+            recordings = _get_recordings(paths, recursive)
+            
+            print('recordings:')
+            for recording in recordings:
+                print('    ' + recording)
                 
         else:
             print('form invalid')
@@ -771,6 +775,46 @@ def import_recordings(request):
     
     return render(request, 'vesper/import-recordings.html', context)
     
+    
+def _get_recordings(paths, recursive):
+    recordings = list(itertools.chain.from_iterable(
+        _get_path_recordings(path, recursive) for path in paths))
+    return _merge_recordings(recordings)
+
+
+def _get_path_recordings(path, recursive):
+    
+    if os.path.isdir(path):
+        return _get_dir_recordings(path, recursive)
+    
+    else:
+        return _create_recording(path)
+    
+    
+def _get_dir_recordings(path, recursive):
+    
+    recordings = []
+        
+    for (dir_path, dir_names, file_names) in os.walk(path):
+        
+        for file_name in file_names:
+            file_path = os.path.join(dir_path, file_name)
+            recordings.append(_create_recording(file_path))
+            
+        if not recursive:
+            # Stop `os.walk` from descending into subdirectories.
+            del dir_names[:]
+            
+    return recordings
+            
+            
+def _create_recording(file_path):
+    return file_path
+
+
+def _merge_recordings(recordings):
+    return recordings
+            
     
 '''
 commands needed:
