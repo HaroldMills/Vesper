@@ -2,6 +2,7 @@
 
 
 from threading import Event, Thread
+import datetime
 import json
 import pprint
 import traceback
@@ -36,7 +37,7 @@ class JobThread(Thread):
         user = User.objects.get(username='Harold')
         
         job = Job(
-            command=json.dumps(command_spec),
+            command=json.dumps(command_spec, default=_json_date_serializer),
             creation_time = time_utils.get_utc_now(),
             creating_user=user,
             status='Not Started')
@@ -130,4 +131,14 @@ class _CommandContext(object):
     @property
     def job(self):
         return self._job_thread.job
+    
+
+def _json_date_serializer(obj):
+    
+    """Date serializer for `json.dumps`."""
+    
+    if isinstance(obj, datetime.date):
+        return str(obj)
+    else:
+        raise TypeError('{} is not JSON serializable'.format(repr(obj)))
     

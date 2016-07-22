@@ -1,12 +1,14 @@
 from django.contrib import admin
 
 from .models import (
-    Algorithm, Bot, Device, DeviceConnection, DeviceInput, DeviceModel,
-    DeviceModelInput, DeviceModelOutput, DeviceOutput, Station, StationDevice)
+    Algorithm, Device, DeviceConnection, DeviceInput, DeviceModel,
+    DeviceModelInput, DeviceModelOutput, DeviceOutput, Processor,
+    Station, StationDevice)
 
 classes = (
-    Algorithm, Bot, Device, DeviceConnection, DeviceInput, DeviceModel,
-    DeviceModelInput, DeviceModelOutput, DeviceOutput, Station, StationDevice)
+    Algorithm, Device, DeviceConnection, DeviceInput, DeviceModel,
+    DeviceModelInput, DeviceModelOutput, DeviceOutput, Processor,
+    Station, StationDevice)
                              
 for cls in classes:
     admin.site.register(cls)

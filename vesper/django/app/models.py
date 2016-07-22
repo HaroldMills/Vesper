@@ -16,119 +16,257 @@ def _double(*args):
 
 
 class DeviceModel(Model):
+    
+    type = CharField(max_length=255)
     manufacturer = CharField(max_length=255)
     model = CharField(max_length=255)
-    type = CharField(max_length=255)
     short_name = CharField(max_length=255, blank=True)
     description = TextField(blank=True)
-    def __str__(self):
+    
+    @property
+    def long_name(self):
         return '{} {} {}'.format(self.manufacturer, self.model, self.type)
+    
+    def __str__(self):
+        return self.long_name
+    
     class Meta:
         unique_together = ('manufacturer', 'model')
         db_table = 'vesper_device_model'
     
     
 class DeviceModelInput(Model):
+    
     model = ForeignKey(DeviceModel, on_delete=CASCADE, related_name='inputs')
     name = CharField(max_length=255)
     description = TextField(blank=True)
+    
+    @property
+    def long_name(self):
+        return self.model.long_name + ' ' + self.name
+    
+    @property
+    def short_name(self):
+        return self.model.short_name + ' ' + self.name
+    
     def __str__(self):
-        return self.name
+        return self.long_name
+    
     class Meta:
         unique_together = ('model', 'name')
         db_table = 'vesper_device_model_input'
 
 
 class DeviceModelOutput(Model):
+    
     model = ForeignKey(DeviceModel, on_delete=CASCADE, related_name='outputs')
     name = CharField(max_length=255)
     description = TextField(blank=True)
+    
+    @property
+    def long_name(self):
+        return self.model.long_name + ' ' + self.name
+    
+    @property
+    def short_name(self):
+        return self.model.short_name + ' ' + self.name
+    
     def __str__(self):
-        return self.name
+        return self.long_name
+    
     class Meta:
         unique_together = ('model', 'name')
         db_table = 'vesper_device_model_output'
 
 
 class DeviceModelSetting(Model):
+    
     model = ForeignKey(DeviceModel, on_delete=CASCADE, related_name='settings')
     name = CharField(max_length=255)
     description = TextField(blank=True)
+    
+    @property
+    def long_name(self):
+        return self.model.long_name + ' ' + self.name
+    
+    @property
+    def short_name(self):
+        return self.model.short_name + ' ' + self.name
+    
+    def __str__(self):
+        return self.long_name
+    
     class Meta:
         unique_together = ('model', 'name')
         db_table = 'vesper_device_model_setting'
         
         
 class Device(Model):
+    
     model = ForeignKey(DeviceModel, on_delete=CASCADE, related_name='instances')
     serial_number = CharField(max_length=255)
-    name = CharField(max_length=255, blank=True)
     description = TextField(blank=True)
+    
+    @property
+    def long_name(self):
+        return self.model.long_name + ' ' + self.serial_number
+    
+    @property
+    def short_name(self):
+        return self.model.short_name + ' ' + self.serial_number
+    
     def __str__(self):
-        return str(self.model) + ' ' + self.serial_number
+        return self.long_name
+    
     class Meta:
         unique_together = ('model', 'serial_number')
         db_table = 'vesper_device'
 
 
 class DeviceInput(Model):
+    
+    device = ForeignKey(Device, on_delete=CASCADE, related_name='inputs')
     model_input = ForeignKey(
         DeviceModelInput, on_delete=CASCADE, related_name='instances')
-    device = ForeignKey(Device, on_delete=CASCADE, related_name='inputs')
-    def __str__(self):
+    
+    @property
+    def name(self):
         return self.model_input.name
+    
+    @property
+    def long_name(self):
+        return self.device.long_name + ' ' + self.name
+    
+    @property
+    def short_name(self):
+        return self.device.short_name + ' ' + self.name
+    
+    def __str__(self):
+        return self.long_name
+    
     class Meta:
-        unique_together = ('model_input', 'device')
+        unique_together = ('device', 'model_input')
         db_table = 'vesper_device_input'
         
         
 class DeviceOutput(Model):
+    
+    device = ForeignKey(Device, on_delete=CASCADE, related_name='outputs')
     model_output = ForeignKey(
         DeviceModelOutput, on_delete=CASCADE, related_name='instances')
-    device = ForeignKey(Device, on_delete=CASCADE, related_name='outputs')
-    def __str__(self):
+    
+    @property
+    def name(self):
         return self.model_output.name
+    
+    @property
+    def long_name(self):
+        return self.device.long_name + ' ' + self.name
+    
+    @property
+    def short_name(self):
+        return self.device.short_name + ' ' + self.name
+    
+    def __str__(self):
+        return self.long_name
+    
     class Meta:
-        unique_together = ('model_output', 'device')
+        unique_together = ('device', 'model_output')
         db_table = 'vesper_device_output'
         
         
+class DeviceSetting(Model):
+    
+    device = ForeignKey(Device, on_delete=CASCADE, related_name='settings')
+    model_setting = ForeignKey(
+        DeviceModelSetting, on_delete=CASCADE, related_name='instances')
+    value = CharField(max_length=255)
+    start_time = DateTimeField()
+    end_time = DateTimeField()
+    
+    @property
+    def name(self):
+        return self.model_setting.name
+    
+    @property
+    def long_name(self):
+        return '{} {} = {} from {} to {}'.format(
+            self.device.long_name, self.name, self.value,
+            str(self.start_time), str(self.end_time))
+    
+    @property
+    def short_name(self):
+        return '{} {} = {} from {} to {}'.format(
+            self.device.short_name, self.name, self.value,
+            str(self.start_time), str(self.end_time))
+    
+    def __str__(self):
+        return self.long_name
+        
+    class Meta:
+        unique_together = (
+            'device', 'model_setting', 'value', 'start_time', 'end_time')
+        db_table = 'vesper_device_setting'
+    
+    
 class DeviceConnection(Model):
+    
     output = ForeignKey(
         DeviceOutput, on_delete=CASCADE, related_name='connections')
     input = ForeignKey(
         DeviceInput, on_delete=CASCADE, related_name='connections')
     start_time = DateTimeField()
     end_time = DateTimeField()
+    
+    @property
+    def long_name(self):
+        return '{} -> {} from {} to {}'.format(
+            self.output.long_name, self.input.long_name,
+            str(self.start_time), str(self.end_time))
+    
+    @property
+    def short_name(self):
+        return '{} -> {} from {} to {}'.format(
+            self.output.short_name, self.input.short_name,
+            str(self.start_time), str(self.end_time))
+    
     def __str__(self):
-        return('{} {} -> {} {} from {} to {}'.format(
-            str(self.output.device), str(self.output),
-            str(self.input.device), str(self.input),
-            str(self.start_time), str(self.end_time)))
+        return self.long_name
+        
     class Meta:
+        unique_together = ('output', 'input', 'start_time', 'end_time')
         db_table = 'vesper_device_connection'
     
     
 class RecorderChannelAssignment(Model):
+    
     recorder = ForeignKey(
         Device, on_delete=CASCADE, related_name='channel_assignments')
-    input_name = CharField(max_length=255)
+    input = ForeignKey(
+        DeviceInput, on_delete=CASCADE, related_name='channel_assignments')
     channel_num = IntegerField()
     start_time = DateTimeField()
     end_time = DateTimeField()
+    
+    @property
+    def long_name(self):
+        return '{} -> {} from {} to {}'.format(
+            self.input.long_name, self.channel_num,
+            str(self.start_time), str(self.end_time))
+    
+    @property
+    def short_name(self):
+        return '{} -> {} from {} to {}'.format(
+            self.input.short_name, self.channel_num,
+            str(self.start_time), str(self.end_time))
+    
+    def __str__(self):
+        return self.long_name
+        
     class Meta:
+        unique_together = (
+            'recorder', 'input', 'channel_num', 'start_time', 'end_time')
         db_table = 'vesper_recorder_channel_assignment'
-    
-    
-class DeviceSetting(Model):
-    model_setting = ForeignKey(
-        DeviceModelSetting, on_delete=CASCADE, related_name='instances')
-    device = ForeignKey(Device, on_delete=CASCADE, related_name='settings')
-    value = CharField(max_length=255)
-    start_time = DateTimeField()
-    end_time = DateTimeField()
-    class Meta:
-        db_table = 'vesper_device_setting'
     
     
 # Many stations have a fixed location, in which case the location can
@@ -143,6 +281,7 @@ class DeviceSetting(Model):
 # be accomplished with `DeviceTrack` and `DeviceLocation` models similar
 # to the commented-out `StationTrack` and `StationLocation` models below.
 class Station(Model):
+    
     name = CharField(max_length=255, unique=True)
     description = TextField(blank=True)
     latitude = FloatField(null=True)
@@ -150,10 +289,10 @@ class Station(Model):
     elevation = FloatField(null=True)
     time_zone = CharField(max_length=255)
     devices = ManyToManyField(Device, through='StationDevice')
+    
     def __str__(self):
-        return '{} {} {} {} {}'.format(
-            self.name, self.latitude, self.longitude, self.elevation,
-            self.time_zone)
+        return self.name
+    
     class Meta:
         db_table = 'vesper_station'
     
@@ -185,43 +324,70 @@ class Station(Model):
     
     
 class StationDevice(Model):
+    
     station = ForeignKey(
         Station, on_delete=CASCADE, related_name='device_associations')
     device = ForeignKey(
         Device, on_delete=CASCADE, related_name='station_associations')
     start_time = DateTimeField()
     end_time = DateTimeField()
-    def __str__(self):
+    
+    @property
+    def long_name(self):
         return '{} at {} from {} to {}'.format(
-            str(self.device), self.station.name, self.start_time, self.end_time)
+            self.device.long_name, self.station.name,
+            str(self.start_time), str(self.end_time))
+        
+    @property
+    def short_name(self):
+        return '{} at {} from {} to {}'.format(
+            self.device.short_name, self.station.name,
+            str(self.start_time), str(self.end_time))
+        
+    def __str__(self):
+        return self.long_name
+        
     class Meta:
+        unique_together = ('station', 'device', 'start_time', 'end_time')
         db_table = 'vesper_station_device'
 
 
+# TODO: Do we need this table? Perhaps we should have only the processor
+# table, with `algorithm_name`, `algorithm_version`, and `algorithm_settings`
+# columns.
 class Algorithm(Model):
+    
     type = CharField(max_length=255)
     name = CharField(max_length=255)
     version = CharField(max_length=255)
     description = TextField(blank=True)
+    
     def __str__(self):
-        return 'Algorithm "{}" "{}" "{}"'.format(
-            self.type, self.name, self.version)
+        return self.name + ' ' + self.version
+    
     class Meta:
+        unique_together = ('type', 'name', 'version')
         db_table = 'vesper_algorithm'
     
     
-class Bot(Model):
+class Processor(Model):
+    
     name = CharField(max_length=255)
     description = TextField(blank=True)
-    algorithm = ForeignKey(Algorithm, on_delete=CASCADE, related_name='bots')
+    algorithm = ForeignKey(
+        Algorithm, on_delete=CASCADE, related_name='processors')
     settings = TextField(blank=True)
+    
     def __str__(self):
-        return 'Bot "{}" algorithm {} settings "{}"'.format(
-            self.name, str(self.algorithm), self.self.settings)
+        return self.name
+    
     class Meta:
-        db_table = 'vesper_bot'
+        unique_together = ('algorithm', 'name')
+        db_table = 'vesper_processor'
         
     
+# A *command* is a specification of something to be executed, possibly
+# more than once. A *job* is a particular execution of a command.
 class Job(Model):
     
     command = TextField()
@@ -230,7 +396,8 @@ class Job(Model):
         User, null=True, on_delete=CASCADE, related_name='jobs')
     creating_job = ForeignKey(
         'Job', null=True, on_delete=CASCADE, related_name='jobs')
-    bot = ForeignKey(Bot, null=True, on_delete=CASCADE, related_name='jobs')
+    processor = ForeignKey(
+        Processor, null=True, on_delete=CASCADE, related_name='jobs')
     start_time = DateTimeField(null=True)
     end_time = DateTimeField(null=True)
     status = CharField(max_length=255)
@@ -329,6 +496,7 @@ def _create_job_logs_dir_if_needed():
     
 # We include an end time field even though it's redundant to accelerate queries.
 class Recording(Model):
+    
     station = ForeignKey(Station, on_delete=CASCADE, related_name='recordings')
     recorder = ForeignKey(Device, on_delete=CASCADE, related_name='recordings')
     num_channels = IntegerField()
@@ -336,22 +504,28 @@ class Recording(Model):
     sample_rate = FloatField()
     start_time = DateTimeField()
     end_time = DateTimeField()
+    
     def __str__(self):
         return 'Recording "{}" "{}" {} {} {} {}'.format(
             self.station.name, str(self.recorder), self.num_channels,
             self.length, self.sample_rate, self.start_time)
+        
     class Meta:
+        unique_together = ('station', 'recorder', 'start_time')
         db_table = 'vesper_recording'
         
         
 class RecordingFile(Model):
+    
     recording = ForeignKey(Recording, on_delete=CASCADE, related_name='files')
     file_num = IntegerField()
     start_index = BigIntegerField()
     length = BigIntegerField()
     imported_file_path = CharField(max_length=255, null=True) # long enough?
     file_path = CharField(max_length=255, unique=True, null=True) # long enough?
+    
     class Meta:
+        unique_together = ('recording', 'file_num')
         db_table = 'vesper_recording_file'
 
 
@@ -424,7 +598,20 @@ class RecordingFile(Model):
 # time are consistent, or just leave that up to code that constructs
 # and modifies clips?
 #
-# TODO: Add uniqueness constraint to prevent creation of duplicate clips.
+# TODO: Add uniqueness constraints to prevent creation of duplicate clips.
+# Multiple constraints will be needed for the different recording/clip
+# scenarios that we want to support. We may need to add a `creating_processor`
+# column to be able to enforce uniqueness of the combination of recording,
+# channel number, start time, length, and creating processor. The
+# `creating_processor` column would be redundant with the `creating_job`
+# column, since the processor of the creating job would be the creating
+# processor, but I don't believe we can specify uniqueness constraints
+# on joins.
+#
+# TODO: Don't allow null values in the `recording` column, but do allow
+# recordings to have unknown start times and lengths? If we do this,
+# perhaps we can eliminate the redundant `station` and `recorder`
+# columns?
 class Clip(Model):
     
     station = ForeignKey(
@@ -538,17 +725,9 @@ def _get_clip_id_parts(num, format_):
 #         db_table = 'vesper_orphaned_clips'
 
 
-# For common annotations this table allows you to associate a description
-# with the annotation name.
-class AnnotationInfo(Model):
-    name = CharField(max_length=255, unique=True) # e.g. 'Classification'
-    description = TextField(blank=True)
-    class Meta:
-        db_table = 'vesper_annotation_info'
-    
-    
 # TODO: Automatically track annotation creator and edit history.
 class Annotation(Model):
+    
     clip = ForeignKey(Clip, on_delete=CASCADE, related_name='annotations')
     name = CharField(max_length=255)      # e.g. 'Classification', 'Outside'
     value = TextField(blank=True)         # e.g. 'NFC.AMRE', 'True'
@@ -557,6 +736,7 @@ class Annotation(Model):
         User, null=True, on_delete=CASCADE, related_name='annotations')
     creating_job = ForeignKey(
         Job, null=True, on_delete=CASCADE, related_name='annotations')
+    
     class Meta:
         unique_together = ('clip', 'name')
         db_table = 'vesper_annotation'
