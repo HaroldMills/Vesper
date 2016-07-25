@@ -32,72 +32,11 @@ def load_extensions():
     from vesper.django.app.archive_data_importer import ArchiveDataImporter
     from vesper.django.app.import_command import ImportCommand
     from vesper.django.app.test_command import TestCommand
-    from vesper.mpg_ranch.bat_importer \
-        import BatImporter as MpgRanchBatImporter
-    from vesper.mpg_ranch.clips_csv_exporter \
-        import ClipsCsvExporter as MpgRanchClipsCsvExporter
-    from vesper.mpg_ranch.nfc_importer \
-        import NfcImporter as MpgRanchNfcImporter
-    from vesper.mpg_ranch.outside_classifier \
-        import OutsideClassifier as MpgRanchOutsideClassifier
-    from vesper.mpg_ranch.outside_classifier \
-        import OutsideClipClassifier as MpgRanchOutsideClipClassifier
-    from vesper.mpg_ranch.nfc_species_classifier \
-        import NfcSpeciesClassifier as MpgRanchNfcSpeciesClassifier
-    from vesper.mpg_ranch.nfc_species_classifier \
-        import NfcSpeciesClipClassifier as MpgRanchNfcSpeciesClipClassifier
-    from vesper.old_bird.detector import Detector as OldBirdDetector
-    from vesper.vcl.classify_command import ClassifyCommand
-    from vesper.vcl.clips_exporter import ClipsExporter
-    from vesper.vcl.create_command import CreateCommand
-    from vesper.vcl.detect_command import DetectCommand
-    from vesper.vcl.export_command import ExportCommand
-    from vesper.vcl.help_command import HelpCommand
-    from vesper.vcl.import_command import ImportCommand as ImportCommandOld
-    from vesper.vcl.nfc_coarse_classifier import NfcCoarseClassifier
-    from vesper.vcl.nfc_coarse_classifier import NfcCoarseClipClassifier
-    from vesper.vcl.sample_command import SampleCommand
 
     global _extensions
     
     _extensions = {
-            
-        'VCL Classifier': (
-            MpgRanchOutsideClassifier,
-            NfcCoarseClassifier,
-            MpgRanchNfcSpeciesClassifier,
-        ),
-                   
-        'Clip Classifier': (
-            MpgRanchOutsideClipClassifier,
-            NfcCoarseClipClassifier,
-            MpgRanchNfcSpeciesClipClassifier,
-        ),
-         
-        'VCL Command': (
-            ClassifyCommand,
-            CreateCommand,
-            DetectCommand,
-            ExportCommand,
-            HelpCommand,
-            ImportCommandOld,
-            SampleCommand,
-        ),
-        
-        'VCL Detector': (
-            OldBirdDetector,
-        ),
-                   
-        'VCL Exporter': (
-            ClipsExporter,
-            MpgRanchClipsCsvExporter,
-        ),
-                   
-        'VCL Importer': (
-            MpgRanchBatImporter,
-            MpgRanchNfcImporter,
-        ),
-                   
+                               
         'Vesper Command': (
             ImportCommand,
             TestCommand,

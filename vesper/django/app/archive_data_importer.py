@@ -3,10 +3,10 @@ import datetime
 from django.db import transaction
 import pytz
 
+from vesper.django.app.command import CommandSyntaxError
 from vesper.django.app.models import (
     Device, DeviceConnection, DeviceInput, DeviceModel, DeviceModelInput,
     DeviceModelOutput, DeviceOutput, Station, StationDevice)
-from vesper.vcl.command import CommandSyntaxError
 import vesper.django.app.command_utils as command_utils
 
 

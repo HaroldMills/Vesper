@@ -10,7 +10,6 @@ from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
-import vesper.util.vesper_path_utils as vesper_path_utils
 
 
 _INPUT_FILE_NAME_RE_1 = \
@@ -114,7 +113,7 @@ class SongMeterAudioFileParser(object):
         
     def _get_preferences(self):
         
-        app_data_dir_path = vesper_path_utils.get_path('App Data')
+        app_data_dir_path = r'C:\Users\Harold\Vesper'
         file_path = os.path.join(
             app_data_dir_path, 'Preferences', 'MPG Ranch',
             'Song Meter Audio File Parser.yaml')

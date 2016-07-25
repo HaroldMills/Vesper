@@ -369,10 +369,10 @@ class Algorithm(Model):
     
 class Processor(Model):
     
-    name = CharField(max_length=255)
-    description = TextField(blank=True)
     algorithm = ForeignKey(
         Algorithm, on_delete=CASCADE, related_name='processors')
+    name = CharField(max_length=255)
+    description = TextField(blank=True)
     settings = TextField(blank=True)
     
     def __str__(self):
@@ -509,10 +509,19 @@ class Recording(Model):
     start_time = DateTimeField()
     end_time = DateTimeField()
     
+    @property
+    def station(self):
+        return self.station_recorder.station
+    
+    @property
+    def recorder(self):
+        return self.station_recorder.device
+    
     def __str__(self):
         return 'Recording "{}" "{}" {} {} {} {}'.format(
-            self.station.name, str(self.recorder), self.num_channels,
-            self.length, self.sample_rate, self.start_time)
+            self.station_recorder.station.name,
+            self.station_recorder.device.long_name,
+            self.num_channels, self.length, self.sample_rate, self.start_time)
         
     class Meta:
         unique_together = ('station_recorder', 'start_time')
@@ -662,6 +671,9 @@ class Annotation(Model):
         User, null=True, on_delete=CASCADE, related_name='annotations')
     creating_job = ForeignKey(
         Job, null=True, on_delete=CASCADE, related_name='annotations')
+    
+    def __str__(self):
+        return '({}, {})'.format(self.name, self.value)
     
     class Meta:
         unique_together = ('clip', 'name')

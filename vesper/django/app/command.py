@@ -1,6 +1,18 @@
 """Module containing class `Command`."""
 
 
+class CommandError(Exception):
+    pass
+
+
+class CommandSyntaxError(CommandError):
+    pass
+
+
+class CommandExecutionError(CommandError):
+    pass
+
+
 class Command(object):
     
     

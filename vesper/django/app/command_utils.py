@@ -1,4 +1,4 @@
-from vesper.vcl.command import CommandSyntaxError
+from vesper.django.app.command import CommandSyntaxError
 
 
 def get_required_arg(name, args):

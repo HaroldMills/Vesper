@@ -664,7 +664,7 @@ def _get_annotations(station, annotation_name, annotation_value, time_interval):
     if annotation_value.endswith('*'):
         
         return Annotation.objects.filter(
-            clip__recording__station_recording__station=station,
+            clip__recording__station_recorder__station=station,
             clip__start_time__range=time_interval,
             name=annotation_name,
             value__startswith=annotation_value[:-1])
@@ -672,7 +672,7 @@ def _get_annotations(station, annotation_name, annotation_value, time_interval):
     else:
         
         return Annotation.objects.filter(
-            clip__recording__station_recording__station=station,
+            clip__recording__station_recorder__station=station,
             clip__start_time__range=time_interval,
             name=annotation_name,
             value=annotation_value)

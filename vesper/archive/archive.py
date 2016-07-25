@@ -5,7 +5,6 @@ from collections import namedtuple
 import datetime
 import os.path
 
-import numpy as np
 import pytz
 import sqlite3 as sqlite
 
@@ -16,13 +15,7 @@ from vesper.archive.station import Station
 from vesper.util.audio_file_utils import \
     WAVE_FILE_NAME_EXTENSION as _CLIP_FILE_NAME_EXTENSION
 from vesper.util.bunch import Bunch
-from vesper.util.instantaneous_frequency_analysis import \
-    InstantaneousFrequencyAnalysis
-from vesper.util.spectrogram import Spectrogram
-import vesper.util.data_windows as data_windows
 import vesper.util.os_utils as os_utils
-import vesper.util.preferences as prefs
-import vesper.util.sound_utils as sound_utils
 import vesper.util.time_utils as time_utils
 
 
@@ -570,104 +563,6 @@ class Archive(object):
         return recording
 
         
-    def add_clip(
-            self, station_name, detector_name, start_time, sound,
-            clip_class_name=None):
-        
-        """
-        Adds a clip to this archive.
-        
-        :Parameters:
-        
-            station_name : `str`
-                the name of the station of the clip.
-                
-            detector_name : `str`
-                the name of the detector of the clip.
-                
-            start_time : `datetime`
-                the UTC start time of the clip.
-                
-                To help ensure archive data quality, the start time is
-                required to have the `pytz.utc` time zone.
-                
-            sound : `object`
-                the clip sound.
-                
-                The clip sound must include a `samples` attribute
-                whose value is a NumPy array containing the 16-bit
-                two's complement samples of the sound, and a
-                `sample_rate` attribute specifying the sample rate
-                of the sound in hertz.
-                
-            clip_class_name : `str`
-                the clip class name, or `None` if the class is not known.
-                
-        :Returns:
-            the inserted clip, of type `Clip`.
-            
-        :Raises ValueError:
-            if the specified station name, detector name, or clip
-            class name is not recognized, or if there is already a
-            clip in the archive with the specified station name,
-            detector name, and start time.
-        """
-        
-        
-        station_id = self._check_station_name(station_name)
-        detector_id = self._check_detector_name(detector_name)
-        clip_class_id = self._check_clip_class_name(clip_class_name)
-        
-        if start_time.tzinfo is not pytz.utc:
-            raise ValueError('Clip time zone must be `pytz.utc`.')
-        
-        station = self._stations[station_id]
-        night = _date_to_int(station.get_night(start_time))
-        
-        duration = len(sound.samples) / float(sound.sample_rate)
-        ids = self._get_clip_class_name_component_ids(clip_class_name)
-        
-        clip_tuple = _ClipTuple(
-            id=None,
-            station_id=station_id,
-            detector_id=detector_id,
-            start_time=_format_time(start_time),
-            night=night,
-            duration=duration,
-            selection_start_index=None,
-            selection_length=None,
-            clip_class_id=clip_class_id,
-            clip_class_name_0_id=ids[0],
-            clip_class_name_1_id=ids[1],
-            clip_class_name_2_id=ids[2])
-    
-        try:
-            self._cursor.execute(_INSERT_CLIP_SQL, clip_tuple)
-            
-        except sqlite.IntegrityError:
-            f = ('There is already a clip in the archive for station "{:s}", '
-                 'detector "{:s}", and UTC start time {:s}.')
-            t = _format_time(start_time)
-            raise ValueError(f.format(station_name, detector_name, t))
-        
-        clip_id = self._cursor.lastrowid
-        selection = None
-        
-        clip = _Clip(
-            self, clip_id, station, detector_name, start_time, duration,
-            selection, clip_class_name)
-        
-        self._create_clip_dir_if_needed(clip.file_path)
-         
-        sound_utils.write_sound_file(clip.file_path, sound)
-        
-        # We wait until here to commit since we don't want to commit if
-        # the sound file write fails.
-        self._conn.commit()
-                    
-        return clip
-
-
     def _get_clip_class_name_component_ids(self, class_name):
         components = class_name.split('.') if class_name is not None else []
         ids = [self._clip_class_name_component_ids[c] for c in components]
@@ -1135,37 +1030,6 @@ def _get_name_components(clip_classes):
     return components
     
     
-# TODO: Figure out a better way to manage clip spectrograms, especially
-# one that supports clients that use spectrograms computed with different
-# spectrogram parameters. Some sort of general facility for computing
-# and managing derived data (not just spectrograms) for a collection of
-# clips may be the way to go.
-# TODO: Confine code that reads `clip_figure` preferences to the
-# `clips_window` module. This can happen after we figure out how to
-# support clients that use spectrograms computed with different
-# parameters.
-
-_spectrogram_params = None
-
-def _get_spectrogram_params():
-    
-    global _spectrogram_params
-    
-    if _spectrogram_params is None:
-        
-        window_type_name = prefs.get('clip_figure.spectrogram.window_type')
-        window_size = prefs.get('clip_figure.spectrogram.window_size')
-        window = data_windows.create_window(window_type_name, window_size)
-        
-        _spectrogram_params = Bunch(
-            window=window,
-            hop_size=prefs.get('clip_figure.spectrogram.hop_size'),
-            dft_size=prefs.get('clip_figure.spectrogram.dft_size'),
-            ref_power=1)
-        
-    return _spectrogram_params
-
-
 _MIN_CLIP_DURATION = .05
 """
 the minimum clip duration in seconds.
@@ -1238,53 +1102,28 @@ class _Clip(object):
             return None
         
         
-    @property
-    def sound(self):
-        
-        if self._sound is None:
-            # sound not yet read from file
-            
-            self._sound = sound_utils.read_sound_file(self.file_path)
-            
-            # Pad sound with zeros to make it at least `_MIN_CLIP_DURATION`
-            # seconds long. This is part of a temporary "fix" to GitHub
-            # issue 30.
-            if self._duration < _MIN_CLIP_DURATION:
-                min_length = \
-                    int(round(_MIN_CLIP_DURATION * self._sound.sample_rate))
-                n = min_length - len(self._sound.samples)
-                if n > 0:
-                    self._sound.samples = \
-                        np.hstack((self._sound.samples, np.zeros(n)))
-                
-        return self._sound
+#     @property
+#     def sound(self):
+#         
+#         if self._sound is None:
+#             # sound not yet read from file
+#             
+#             self._sound = sound_utils.read_sound_file(self.file_path)
+#             
+#             # Pad sound with zeros to make it at least `_MIN_CLIP_DURATION`
+#             # seconds long. This is part of a temporary "fix" to GitHub
+#             # issue 30.
+#             if self._duration < _MIN_CLIP_DURATION:
+#                 min_length = \
+#                     int(round(_MIN_CLIP_DURATION * self._sound.sample_rate))
+#                 n = min_length - len(self._sound.samples)
+#                 if n > 0:
+#                     self._sound.samples = \
+#                         np.hstack((self._sound.samples, np.zeros(n)))
+#                 
+#         return self._sound
     
     
-    @property
-    def spectrogram(self):
-        
-        if self._spectrogram is None:
-            # have not yet computed spectrogram
-            
-            params = _get_spectrogram_params()
-            self._spectrogram = Spectrogram(self.sound, params)
-                
-        return self._spectrogram
-        
-    
-    @property
-    def instantaneous_frequencies(self):
-        
-        if self._instantaneous_frequencies is None:
-            # have not yet computed instantaneous frequencies
-        
-            params = _get_spectrogram_params()
-            self._instantaneous_frequencies = \
-                InstantaneousFrequencyAnalysis(self.sound, params)
-                
-        return self._instantaneous_frequencies
-        
- 
     @property
     def duration(self):
         return max(self._duration, _MIN_CLIP_DURATION)
@@ -1301,8 +1140,8 @@ class _Clip(object):
         self._clip_class_name = name
 
 
-    def play(self):
-        sound_utils.play_sound_file(self.file_path)
+#     def play(self):
+#         sound_utils.play_sound_file(self.file_path)
         
         
     @property

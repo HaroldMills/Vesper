@@ -1,1 +1,0 @@
-vcl detect "Old Bird" --detectors Tseep Thrush --input-mode File --detection-handler "MPG Ranch Renamer" --inputs "..\data\Detector Test Recordings\Short"

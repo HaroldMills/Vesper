@@ -10,9 +10,9 @@ requests that a running job stop.
 
 from threading import RLock
 
+from vesper.django.app.command import CommandSyntaxError
 from vesper.django.app.job_thread import JobThread
 from vesper.util.repeating_timer import RepeatingTimer
-from vesper.vcl.command import CommandSyntaxError
 import vesper.util.extension_manager as extension_manager
 
 
