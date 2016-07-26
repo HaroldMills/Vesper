@@ -9,6 +9,7 @@ from django.db.models import (
     IntegerField, ManyToManyField, Model, TextField)
 
 import vesper.util.os_utils as os_utils
+import vesper.util.vesper_path_utils as vesper_path_utils
 
 
 def _double(*args):
@@ -480,8 +481,7 @@ def _get_job_logs_dir_path():
     global _job_logs_dir_path
     
     if _job_logs_dir_path is None:
-        _job_logs_dir_path = \
-            os.path.join(settings.VESPER_DATA_DIR, 'Logs', 'Jobs')
+        _job_logs_dir_path = vesper_path_utils.get_path('Logs', 'Jobs')
             
     return _job_logs_dir_path
 
@@ -641,7 +641,7 @@ def _create_clip_file_path(clip):
     id_ = ' '.join(id_parts)
     file_name = 'Clip {}.wav'.format(id_)
     path_parts.append(file_name)
-    return os.path.join(settings.VESPER_DATA_DIR, 'Clips', *path_parts)
+    return vesper_path_utils.get_path('Clips', *path_parts)
 
 
 def _get_clip_id_parts(num, format_):

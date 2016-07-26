@@ -1,49 +1,61 @@
 """Provides access to the extensions of a program."""
 
 
-# TODO: Use a hierarchical name space for extensions?
+import importlib
+
+import yaml
 
 
-# TODO: Don't hard-code extensions. They should specified from outside
-# somehow. One possibility is that they could be specified in plug-in
-# manifest files. It would also be desirable to be able to specify
-# different subsets of installed extensions to work with at different
-# times, say for different analysis projects.
+# Note that even though the `ExtensionManager` class is typically used as a
+# singleton, we make it a class rather than a module to facilitate testing.
+#
+# Note also that rather than loading extensions in the `__init__` method,
+# we defer the loading until the first call to the `get_extensions` method.
+# Otherwise importing the `extension_manager` module would cause an import
+# cycle, since the `extension_manager` would attempt to import extension
+# modules before its import had completed, some of which would in turn
+# attempt to import the `extension_manager` module. Deferring the extension
+# module imports allows the import of the `extension_manager` module to
+# complete before they begin.
 
 
-_extensions = None
+# TODO: Discover extension points and extensions in plugins rather than
+# specifying them in a YAML extensions specification. Note, however, that
+# it might still be desirable to be able to specify different subsets of
+# installed extensions to work with at different times, say for differen
+# analysis projects.
+
+# TODO: Use a hierarchical name space for plugins, extension points, and
+# extensions?
 
 
-def get_extensions(extension_point_name):
-    _initialize_if_needed()
-    extensions = _extensions.get(extension_point_name, ())
-    return dict((e.name, e) for e in extensions)
+class ExtensionManager(object):
     
     
-def _initialize_if_needed():
-    if _extensions is None:
-        load_extensions()
+    def __init__(self, extensions_spec):
+        self._extensions_spec = extensions_spec
+        self._extensions = None
         
         
-def load_extensions():
-    
-    # These imports are here rather than at top level to avoid circular
-    # import problems.
-    from vesper.django.app.archive_data_importer import ArchiveDataImporter
-    from vesper.django.app.import_command import ImportCommand
-    from vesper.django.app.test_command import TestCommand
-
-    global _extensions
-    
-    _extensions = {
-                               
-        'Vesper Command': (
-            ImportCommand,
-            TestCommand,
-        ),
-                   
-        'Importer': (
-            ArchiveDataImporter,
-        )
+    def get_extensions(self, extension_point_name):
+        self._load_extensions_if_needed()
+        extensions = self._extensions.get(extension_point_name, ())
+        return dict((e.name, e) for e in extensions)
             
-    }
+            
+    def _load_extensions_if_needed(self):
+        if self._extensions is None:
+            spec = yaml.load(self._extensions_spec)
+            self._extensions = dict(
+                (type_name, _load_extension_classes(module_class_names))
+                for type_name, module_class_names in spec.items())
+    
+    
+def _load_extension_classes(module_class_names):
+    return [_load_extension_class(name) for name in module_class_names]
+
+
+def _load_extension_class(module_class_name):
+    module_name, class_name = module_class_name.rsplit('.', 1)
+    module = importlib.import_module(module_name)
+    return getattr(module, class_name)

@@ -1,6 +1,9 @@
 from vesper.django.app.command import CommandSyntaxError
 
 
+# TODO: Add type checking.
+
+
 def get_required_arg(name, args):
     try:
         return args[name]

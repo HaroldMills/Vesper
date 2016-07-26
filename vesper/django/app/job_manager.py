@@ -1,97 +1,111 @@
-"""
-Singleton that manages Vesper jobs.
-
-A Vesper job executes one Vesper command. Each job runs in its own thread,
-which may or may not start additional threads. The `start_job` function of
-this module starts a job for a specified command, and the `stop_job` function
-requests that a running job stop.
-"""
+"""Module containing `JobManager` class."""
 
 
 from threading import RLock
+import logging
 
 from vesper.django.app.command import CommandSyntaxError
 from vesper.django.app.job_thread import JobThread
 from vesper.util.repeating_timer import RepeatingTimer
-import vesper.util.extension_manager as extension_manager
 
 
-_command_classes = extension_manager.get_extensions('Vesper Command')
-"""Mapping from Vesper command names to command classes."""
+class JobManager(object):
+    
+    """
+    Manager of Vesper jobs.
 
-_job_threads = {}
-"""
-Mapping from job IDs to job threads.
-
-A job thread is added to this dictionary when the job thread is started.
-It is removed from the dictionary when it is no longer running. The
-deletion is performed by the `_delete_terminated_job_threads` function,
-which runs off a repeating timer.
-"""
-
-_lock = RLock()
-"""
-Lock used to synchronize access to the `_job_threads` dictionary from
-multiple threads.
-"""
-
-
-def start_job(command_spec):
-    thread = _create_job_thread(command_spec)
-    job_id = thread.job.id
-    with _lock:
-        _job_threads[job_id] = thread
-    thread.start()
-    return job_id
+    A Vesper job executes one Vesper command. Each job runs in its own
+    thread, which may or may not start additional threads. The `start_job`
+    method of this class starts a job for a specified command, and the
+    `stop_job` method requests that a running job stop. A job is not
+    required to honor a stop request, but most jobs should, especially
+    longer-running ones.
+    """
     
     
-def _create_job_thread(command_spec):
-    
-    try:
-        command_name = command_spec['name']
-    except KeyError:
-        raise CommandSyntaxError(
-            'Command specification contains no "name" item.')
+    def __init__(self, command_classes):
         
-    try:
-        command_class = _command_classes[command_name]
-    except KeyError:
-        raise CommandSyntaxError(
-            'Unrecognized command "{}".'.format(command_name))
-        
-    command_args = command_spec.get('arguments', {})
-    
-    command = command_class(command_args)
-    
-    return JobThread(command)
-    
+        self._command_classes = command_classes.copy()
+        """Mapping from Vesper command names to command classes."""
 
-def stop_job(job_id):
-    with _lock:
+        self._job_threads = {}
+        """
+        Mapping from job IDs to job threads.
+        
+        A job thread is added to this dictionary when the job thread is
+        started. It is removed from the dictionary when it is no longer
+        running. The removal is performed by the
+        `_delete_terminated_job_threads` method, which runs off a
+        repeating timer.
+        """
+
+        self._lock = RLock()
+        """
+        Lock used to synchronize access to the `_job_threads` dictionary
+        from multiple threads.
+        """
+
+        self._timer = RepeatingTimer(10, self._delete_terminated_job_threads)
+        """
+        Repeating timer that deletes terminated job threads from
+        `_job_threads`.
+        """
+        
+        self._timer.start()
+
+
+    def start_job(self, command_spec):
+        thread = self._create_job_thread(command_spec)
+        job_id = thread.job.id
+        with self._lock:
+            self._job_threads[job_id] = thread
+        thread.start()
+        return job_id
+        
+        
+    def _create_job_thread(self, command_spec):
+        
         try:
-            thread = _job_threads[job_id]
+            command_name = command_spec['name']
         except KeyError:
-            return
-        else:
-            thread.stop()
+            raise CommandSyntaxError(
+                'Command specification contains no "name" item.')
+            
+        try:
+            command_class = self._command_classes[command_name]
+        except KeyError:
+            raise CommandSyntaxError(
+                'Unrecognized command "{}".'.format(command_name))
+            
+        command_args = command_spec.get('arguments', {})
+        
+        command = command_class(command_args)
+        
+        return JobThread(command)
         
     
-def _delete_terminated_job_threads():
-    
-    terminated_threads = set()
-    
-    with _lock:
+    def stop_job(self, job_id):
+        with self._lock:
+            try:
+                thread = self._job_threads[job_id]
+            except KeyError:
+                return
+            else:
+                thread.stop()
+            
         
-        for thread in _job_threads.values():
-            if not thread.is_alive():
-                terminated_threads.add(thread)
-                
-        for thread in terminated_threads:
-            job_id = thread.job.id
-            print('JobManager: removing thread for job {}'.format(job_id))
-            del _job_threads[job_id]
-
-
-# Start repeating timer that deletes terminated job threads from `_job_threads`.
-_timer = RepeatingTimer(10, _delete_terminated_job_threads)
-_timer.start()
+    def _delete_terminated_job_threads(self):
+        
+        terminated_threads = set()
+        
+        with self._lock:
+            
+            for thread in self._job_threads.values():
+                if not thread.is_alive():
+                    terminated_threads.add(thread)
+                    
+            for thread in terminated_threads:
+                job_id = thread.job.id
+                logging.info(
+                    'JobManager: removing thread for job {}'.format(job_id))
+                del self._job_threads[job_id]

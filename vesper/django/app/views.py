@@ -1,10 +1,8 @@
 import datetime
-import itertools
 import json
 import os.path
 
 from django import forms
-from django.conf import settings
 from django.db.models import Max, Min
 from django.core.urlresolvers import reverse
 from django.http import (
@@ -17,11 +15,12 @@ import yaml
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import Annotation, Clip, Job, Station
+from vesper.singletons import job_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.clips_rug_plot as clips_rug_plot
-import vesper.django.app.job_manager as job_manager
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
+import vesper.util.vesper_path_utils as vesper_path_utils
 
 
 def _create_navbar_items(data, ancestors=()):
@@ -262,8 +261,7 @@ def _get_presets_json(preset_type_name):
     #         []    # no preset files in directory "Annotation Commands"
     #     ]
         
-    dir_path = os.path.join(
-        settings.VESPER_DATA_DIR, 'Presets', preset_type_name)
+    dir_path = vesper_path_utils.get_path('Presets', preset_type_name)
     
     if not os.path.exists(dir_path):
         presets = [preset_type_name, [], []]
@@ -707,9 +705,13 @@ def import_archive_data(request):
         form = ImportArchiveDataForm()
         
     elif request.method == 'POST':
+        
         form = ImportArchiveDataForm(request.POST)
+        
         if form.is_valid():
+            
             print('form valid')
+            
             command_spec = {
                 'name': 'import',
                 'arguments': {
@@ -721,8 +723,11 @@ def import_archive_data(request):
                     }
                 }
             }
+            
             job_id = job_manager.start_job(command_spec)
+            
             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+        
         else:
             print('form invalid')
             
@@ -752,15 +757,11 @@ def import_recordings(request):
             
             print('form valid')
             
-            paths = form.cleaned_data['paths']
-            recursive = form.cleaned_data['recursive']
+            command_spec = _create_import_recordings_command_spec(form)
             
-            recordings = _get_recordings(paths, recursive)
-            
-            print('recordings:')
-            for recording in recordings:
-                print('    ' + recording)
-                
+            job_id = job_manager.start_job(command_spec)
+            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+        
         else:
             print('form invalid')
             
@@ -776,46 +777,32 @@ def import_recordings(request):
     return render(request, 'vesper/import-recordings.html', context)
     
     
-def _get_recordings(paths, recursive):
-    recordings = list(itertools.chain.from_iterable(
-        _get_path_recordings(path, recursive) for path in paths))
-    return _merge_recordings(recordings)
+def _create_import_recordings_command_spec(form):
+    
+    data = form.cleaned_data
+    data['station_name_aliases_preset'] = 'bobo'
+    
+    return {
+        'name': 'import',
+        'arguments': {
+            'importer': {
+                'name': 'Recording Importer',
+                'arguments': {
+                    'paths': data['paths'],
+                    'recursive': data['recursive'],
+                    'recording_file_parser': {
+                        'name': 'MPG Ranch Recording File Parser',
+                        'arguments': {
+                            'station_name_aliases_preset':
+                                data['station_name_aliases_preset']
+                        }
+                    }
+                }
+            }
+        }
+    }
 
 
-def _get_path_recordings(path, recursive):
-    
-    if os.path.isdir(path):
-        return _get_dir_recordings(path, recursive)
-    
-    else:
-        return _create_recording(path)
-    
-    
-def _get_dir_recordings(path, recursive):
-    
-    recordings = []
-        
-    for (dir_path, dir_names, file_names) in os.walk(path):
-        
-        for file_name in file_names:
-            file_path = os.path.join(dir_path, file_name)
-            recordings.append(_create_recording(file_path))
-            
-        if not recursive:
-            # Stop `os.walk` from descending into subdirectories.
-            del dir_names[:]
-            
-    return recordings
-            
-            
-def _create_recording(file_path):
-    return file_path
-
-
-def _merge_recordings(recordings):
-    return recordings
-            
-    
 '''
 commands needed:
 

@@ -2,8 +2,8 @@
 
 
 from vesper.django.app.command import Command, CommandSyntaxError
+from vesper.singletons import extension_manager
 import vesper.django.app.command_utils as command_utils
-import vesper.util.extension_manager as extension_manager
 
 
 class ImportCommand(Command):
