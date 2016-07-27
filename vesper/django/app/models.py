@@ -7,8 +7,10 @@ from django.core.urlresolvers import reverse
 from django.db.models import (
     BigIntegerField, CASCADE, CharField, DateTimeField, FloatField, ForeignKey,
     IntegerField, ManyToManyField, Model, TextField)
+import pytz
 
 import vesper.util.os_utils as os_utils
+import vesper.util.time_utils as time_utils
 import vesper.util.vesper_path_utils as vesper_path_utils
 
 
@@ -296,6 +298,18 @@ class Station(Model):
     
     class Meta:
         db_table = 'vesper_station'
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._time_zone = pytz.timezone(self.time_zone)
+        
+    def local_to_utc(self, dt, is_dst=None):
+        return time_utils.create_utc_datetime(
+            dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second,
+            dt.microsecond, self._time_zone, is_dst)
+        
+    def utc_to_local(self, dt):
+        return dt.astimezone(pytz.utc)
     
     
 # The `StationTrack` and `StationLocation` models will store tracks of mobile

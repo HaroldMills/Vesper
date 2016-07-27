@@ -1,16 +1,13 @@
-"""Module containing class `RecordingFileParser`."""
+"""Module containing `RecordingFileParser` class."""
 
 
 import os.path
 import re
 
-import yaml
-
+from vesper.django.app.models import Station
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
-import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
-import vesper.util.vesper_path_utils as vesper_path_utils
 
 
 _INPUT_FILE_NAME_RE_1 = \
@@ -22,74 +19,17 @@ _INPUT_FILE_NAME_RE_2 = \
         r'^([^_]+)_(\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)_(\d{6})(_.+)?\.wav$')
     
     
-def _get_station_name_translations(prefs):
-    
-    # TODO: We assume here that if the YAML parses the result has a
-    # certain structure, but it might not. We need a general way to
-    # validate the structure of parsed YAML. Perhaps we could use
-    # declarative YAML descriptions of the required structure, or
-    # perhaps somebody has already implemented something like this?
-    
-    aliases = prefs.get('station_name_aliases', {})
-    return _invert_aliases_dict(aliases)
-
-
-def _invert_aliases_dict(aliases):
-    
-    translations = {}
-    
-    for translation, a in aliases.items():
-        
-        if isinstance(a, list):
-            
-            for alias in a:
-                
-                if alias in translations:
-                    
-                    raise ValueError(
-                        ('Alias "{:s}" specified for both "{:s}" '
-                         'and "{:s}".').format(
-                            str(alias), str(translations[alias]),
-                            str(translation)))
-                    
-                else:
-                    translations[alias] = translation
-                    
-        else:
-            translations[a] = translation
-            
-    return translations
-            
-        
-def _get_channel_microphone_names(prefs, file_path):
-    
-    # TODO: We assume here that if the YAML parses the result has a
-    # certain structure, but it might not. We need a general way to
-    # validate the structure of parsed YAML. Perhaps we could use
-    # declarative YAML descriptions of the required structure, or
-    # perhaps somebody has already implemented something like this?
-    
-    key = 'channel_microphone_names'
-    try:
-        return prefs[key]
-    except KeyError:
-        raise ValueError(
-            'Required preference "{}" is missing from file "{}".'.format(
-                key, file_path))
-        
-
-class RecordingFileParser(object):
-    
+class RecordingFileParser:
     
     """
     Parses recording files.
     
     This class provides information about an audio file that contains
     part or all of a recording. Some of the information, including the
-    station name and the recording start time, is obtained by parsing
-    the recording file name. The station name obtained from the file
-    name may optionally be transformed according to a specified
-    Station Name Aliases preset.
+    station and the recording start time, is obtained by parsing the
+    recording file name. The station name obtained from the file name
+    may optionally be transformed according to a specified Station Name
+    Aliases preset.
     
     The rest of the information, including the length of the recording
     in sample frames and the recording sample rate, is obtained from
@@ -97,61 +37,30 @@ class RecordingFileParser(object):
     """
     
     
-    def __init__(self, station_name_aliases_preset=None):
-        self._parse_station_name_aliases_preset(station_name_aliases_preset)
-        
-        
-    def _parse_station_name_aliases_preset(self, preset_name):
-        
-    def _get_preferences(self):
-        
-        app_data_dir_path = vesper_path_utils.get_path('App Data')
-        file_path = os.path.join(
-            app_data_dir_path, 'Preferences', 'MPG Ranch',
-            'Song Meter Audio File Parser.yaml')
-        
-        try:
-            text = os_utils.read_file(file_path)
-        except Exception as e:
-            raise ValueError((
-                'Could not read preferences file "{}". Error message '
-                'was: {}').format(file_path, str(e)))
-            
-        try:
-            prefs = yaml.load(text)
-        except Exception as e:
-            raise ValueError((
-                'Could not parse YAML from preferences file "{}". '
-                'Error message was: {}').format(file_path, str(e)))
-            
-        self._station_name_translations = _get_station_name_translations(prefs)
-        
-        self._channel_microphone_names = \
-            _get_channel_microphone_names(prefs, file_path)
-        
-        
-    def get_file_info(self, file_path):
+    name = 'MPG Ranch Recording File Parser'
     
-        station_name, start_time = self._parse_file_name(file_path)
+    
+    def __init__(self, station_name_aliases=None):
         
-        mic_names = self._get_channel_microphone_names(
-            station_name, start_time)
-        
-        num_channels, sample_rate, length = \
-            self._get_audio_file_info(file_path)
-        
-        if num_channels != len(mic_names):
-            raise ValueError((
-                'Number of file channels ({:d}) does not match number of '
-                'channel microphone names ({:d}).').format(
-                    num_channels, len(mic_names)))
+        if station_name_aliases is None:
+            station_name_aliases = {}
             
+        self._stations = _create_stations_dict(station_name_aliases)
+        
+        
+    def parse_file(self, file_path):
+    
+        station, start_time = self._parse_file_name(file_path)
+        
+        num_channels, length, sample_rate = self._get_audio_file_info(file_path)
+        
         return Bunch(
-            station_name=station_name,
-            channel_microphone_names=mic_names,
-            start_time=start_time,
+            station=station,
+            num_channels=num_channels,
             length=length,
-            sample_rate=sample_rate)
+            sample_rate=sample_rate,
+            start_time=start_time,
+            file_path=file_path)
         
     
     def _parse_file_name(self, file_path):
@@ -170,12 +79,14 @@ class RecordingFileParser(object):
             else:
                 # parse succeeded
             
-                station_name = self._translate_station_name(station_name)
+                station = self._get_station(station_name)
                 
-                start_time = self._parse_file_name_date_time(
+                local_start_time = self._parse_file_name_date_time(
                     year, month, day, hour, minute, second)
         
-                return station_name, start_time
+                utc_start_time = station.local_to_utc(local_start_time)
+                
+                return station, utc_start_time
                 
         # If we get here, the form of the file name was not recognized
         # by any of the parse methods.
@@ -208,9 +119,12 @@ class RecordingFileParser(object):
             raise ValueError()
         
 
-    def _translate_station_name(self, station_name):
-        name = station_name.lower()
-        return self._station_name_translations.get(name, name)
+    def _get_station(self, station_name):
+        try:
+            return self._stations[station_name.lower()]
+        except KeyError:
+            raise ValueError(
+                'Unrecognized station name "{}".'.format(station_name))
 
 
     def _parse_file_name_date_time(
@@ -219,42 +133,49 @@ class RecordingFileParser(object):
         try:
             return time_utils.parse_date_time(
                 year, month, day, hour, minute, second)
+            
         except ValueError as e:
             raise ValueError(
-                'Could not parse file name date and time: {:s}'.format(str(e)))
+                'Could not parse file name date and time: {}'.format(str(e)))
         
 
-    def _get_channel_microphone_names(self, station_name, start_time):
-        
-        mic_dicts = self._channel_microphone_names.get(station_name)
-        
-        if mic_dicts is None:
-            raise ValueError(
-                'Unrecognized station name "{:s}".'.format(station_name))
-            
-        night = start_time.date()
-        
-        for d in mic_dicts:
-            if d['start_night'] <= night and night <= d['end_night']:
-                return d['microphones']
-            
-        # If we get here, the microphone names dictionary does not
-        # have microphone names for the specified station and night.
-        night = night.strftime('%Y-%m-%d')
-        raise ValueError((
-            'No channel microphone names found for station "{:s}" and '
-            'night "{:s}".').format(station_name, night))
-    
-    
     def _get_audio_file_info(self, file_path):
 
         try:
             (num_channels, _, sample_rate, length, _) = \
                 audio_file_utils.get_wave_file_info(file_path)
+                
         except Exception as e:
             raise ValueError((
                 'Attempt to read audio file metadata failed with message: '
-                '{:s}').format(str(e)))
+                '{}').format(str(e)))
            
-        return num_channels, sample_rate, length
+        return num_channels, length, sample_rate
 
+
+def _create_stations_dict(station_name_aliases):
+    
+    stations = dict((s.name, s) for s in Station.objects.all())
+    
+    result = {}
+    
+    for station_name, aliases in station_name_aliases.items():
+        
+        try:
+            station = stations[station_name]
+        except KeyError:
+            raise ValueError(
+                'Unrecognized station name "{}".'.format(station_name))
+            
+        if isinstance(aliases, list):
+            for alias in aliases:
+                result[alias] = station
+                    
+        else:
+            result[alias] = station
+            
+    # Always map the lower case version of each station name to that station.
+    for station in stations.values():
+        result[station.name.lower()] = station
+            
+    return result

@@ -72,6 +72,29 @@ class PresetManagerTests(TestCase):
         for type_name, expected_data in expected.items():
             preset_data = self.manager.get_presets(type_name)
             self.assertEqual(preset_data, expected_data)
+
+
+    def test_get_preset(self):
+        
+        cases = [
+                 
+            ('A', '1', A('1', 'one')),
+            ('A', ('2',), A('2', 'two')),
+            ('A', ('x', 'y', '3'), A('3', 'three')),
+            ('A', ('x', 'z', '4'), A('4', 'four')),
+            
+            ('B', '1', B('1', '1')),
+            ('B', '2', B('2', '2')),
+            
+            ('A', 'bobo', None),
+            ('A', ('bobo',), None),
+            ('X', 'bobo', None)
+            
+        ]
+        
+        for type_name, path, expected in cases:
+            preset = self.manager.get_preset(type_name, path)
+            self.assertEqual(preset, expected)
             
             
     def test_flatten_preset_data(self):
@@ -94,3 +117,4 @@ class PresetManagerTests(TestCase):
             preset_data = self.manager.get_presets(type_name)
             flattened_data = self.manager.flatten_preset_data(preset_data)
             self.assertEqual(flattened_data, expected_data)
+            

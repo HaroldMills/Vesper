@@ -21,11 +21,11 @@ class PresetManager(object):
     def flatten_preset_data(preset_data):
         
         """
-        Flattens preset data returned by the `get_preset_data` method.
+        Flattens preset data returned by the `get_presets` method.
         
         :Parameters:
             preset_data : tuple of length two
-                preset data as returned by the `get_preset_data` method.
+                preset data as returned by the `get_presets` method.
                 
         :Returns:
             flattened version of the specified preset data.
@@ -82,6 +82,14 @@ class PresetManager(object):
         self._preset_data = _load_presets(preset_dir_path, self._preset_types)
         """Mapping from preset type names to collections of presets."""
         
+        self._preset_dicts = dict(
+            (type_name, dict(self.flatten_preset_data(preset_data)))
+            for type_name, preset_data in self._preset_data.items())
+        """
+        Mapping from preset type names to mappings from preset paths to
+        presets.
+        """
+        
 
     @property
     def preset_types(self):
@@ -132,6 +140,35 @@ class PresetManager(object):
             return _copy_preset_data(data)
 
 
+    def get_preset(self, type_name, preset_path):
+        
+        """
+        Gets the specified preset.
+        
+        :Parameters:
+            type_name : str
+                the name of the preset type.
+                
+            preset_path : str or str tuple
+               the path of the specified preset.
+               
+               If the path has just one component, the component can
+               be supplied as a string, rather than as a tuple.
+               
+        :Returns:
+            the specified preset, or `None` if there is no such preset.
+        """
+        
+        presets = self._preset_dicts.get(type_name)
+        
+        if presets is None:
+            return None
+        else:
+            if isinstance(preset_path, str):
+                preset_path = (preset_path,)
+            return presets.get(preset_path)
+        
+        
 def _get_preset_types(preset_types):
         
     # Sort preset types by name.

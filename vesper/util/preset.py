@@ -46,4 +46,4 @@ class Preset(Named):
     
     
     def __init__(self, name):
-        super(Preset, self).__init__(name)
+        super().__init__(name)

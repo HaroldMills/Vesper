@@ -37,7 +37,7 @@ def _create_importer(importer_spec):
 
 
 def _get_importer_class(name):
-    classes = extension_manager.get_extensions('Importer')
+    classes = extension_manager.instance.get_extensions('Importer')
     try:
         return classes[name]
     except KeyError:

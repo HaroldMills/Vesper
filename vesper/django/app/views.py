@@ -687,7 +687,7 @@ def test_command(request):
         if form.is_valid():
             print('form valid')
             command_spec = {'name': 'test'}
-            job_id = job_manager.start_job(command_spec)
+            job_id = job_manager.instance.start_job(command_spec)
             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
         else:
             print('form invalid')
@@ -724,7 +724,7 @@ def import_archive_data(request):
                 }
             }
             
-            job_id = job_manager.start_job(command_spec)
+            job_id = job_manager.instance.start_job(command_spec)
             
             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
         
@@ -759,7 +759,7 @@ def import_recordings(request):
             
             command_spec = _create_import_recordings_command_spec(form)
             
-            job_id = job_manager.start_job(command_spec)
+            job_id = job_manager.instance.start_job(command_spec)
             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
         
         else:
@@ -780,7 +780,9 @@ def import_recordings(request):
 def _create_import_recordings_command_spec(form):
     
     data = form.cleaned_data
-    data['station_name_aliases_preset'] = 'bobo'
+    
+    # TODO: Put select element on form for station name aliases preset.
+    data['station_name_aliases_preset'] = 'Station Name Aliases'
     
     return {
         'name': 'import',
