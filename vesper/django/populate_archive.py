@@ -12,7 +12,7 @@ import pytz
 
 from vesper.archive.archive import Archive
 from vesper.django.app.models import (
-    Annotation, Clip, Device, DeviceModel, Recording, Station, StationDevice)
+    Annotation, Clip, Device, DeviceModel, Recording, Station)
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
@@ -80,50 +80,22 @@ def _get_recording_station_recorder(recording):
     start_time = recording.start_time
     end_time = recording.end_time
     
-    # The following raised a django.core.exceptions.FieldError exception
-    # with the message "Unsupported lookup 'le' for DateTimeField or join
-    # on the field not permitted.". I'm not sure why Django would not
-    # support le (or ge) lookups on date/time fields.
-#     for sd in StationDevice.objects.filter(
-#             station=station,
-#             start_time__le=start_time,
-#             end_time__ge=end_time):
-#         return (station, sd.device)
-
-    for sd in StationDevice.objects.filter(station=station):
-        if sd.device.model.type == 'Audio Recorder' and \
-                sd.start_time <= start_time and \
-                sd.end_time >= end_time:
-            return sd
+    station_recorders = \
+        station.get_station_devices('Audio Recorder', start_time, end_time)
         
-    raise ValueError(
-        'Could not find recorder for station "{}".'.format(station.name))
+    if len(station_recorders) == 0:
+        raise ValueError(
+            'Could not find recorder for station "{}".'.format(station.name))
+    
+    elif len(station_recorders) > 1:
+        raise ValueError(
+            'Found more than one recorder for station "{}".'.format(
+                station.name))
+        
+    else:
+        return station_recorders[0]
     
 
-# def _get_recording_recorder(recording):
-#     
-#     station = _get_recording_station(recording)
-#     start_time = recording.start_time
-#     end_time = recording.end_time
-#     
-#     # The following raised a django.core.exceptions.FieldError exception
-#     # with the message "Unsupported lookup 'le' for DateTimeField or join
-#     # on the field not permitted.". I'm not sure why Django would not
-#     # support le (or ge) lookups on date/time fields.
-# #     for sd in station.device_associations.filter(
-# #             start_time__le=start_time, end_time__ge=end_time):
-# #         return sd.device
-# 
-#     for sd in station.device_associations.all():
-#         if sd.device.model.type == 'Audio Recorder' and \
-#                 sd.start_time <= start_time and \
-#                 sd.end_time >= end_time:
-#             return sd.device
-#         
-#     raise ValueError(
-#         'Could not find recorder for station "{}".'.format(station.name))
-        
-        
 def _add_clips():
     archive = Archive(_ARCHIVE_DIR_PATH)
     archive.open()

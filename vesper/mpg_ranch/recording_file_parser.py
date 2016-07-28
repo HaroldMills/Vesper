@@ -7,6 +7,7 @@ import re
 from vesper.django.app.models import Station
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
+import vesper.util.signal_utils as signal_utils
 import vesper.util.time_utils as time_utils
 
 
@@ -54,8 +55,13 @@ class RecordingFileParser:
         
         num_channels, length, sample_rate = self._get_audio_file_info(file_path)
         
+        end_time = signal_utils.get_end_time(start_time, length, sample_rate)
+        end_time = station.local_to_utc(end_time)
+        station_recorder = \
+            self._get_station_recorder(station, start_time, end_time)
+            
         return Bunch(
-            station=station,
+            station_recorder=station_recorder,
             num_channels=num_channels,
             length=length,
             sample_rate=sample_rate,
@@ -139,6 +145,21 @@ class RecordingFileParser:
                 'Could not parse file name date and time: {}'.format(str(e)))
         
 
+    def _get_station_recorder(self, station, start_time, end_time):
+        
+        station_recorders = station.get_station_devices(
+            'Audio Recorder', start_time, end_time)
+        
+        if len(station_recorders) == 0:
+            raise ValueError('Could not find recorder for file.')
+        
+        elif len(station_recorders) > 1:
+            raise ValueError('Found more than one possible recorder for file.')
+        
+        else:
+            return station_recorders[0]            
+        
+        
     def _get_audio_file_info(self, file_path):
 
         try:

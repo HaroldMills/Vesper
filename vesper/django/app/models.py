@@ -311,6 +311,28 @@ class Station(Model):
     def utc_to_local(self, dt):
         return dt.astimezone(pytz.utc)
     
+    def get_station_devices(self, device_type, start_time, end_time):
+        
+        """
+        Gets all station devices of the specified type that were in use
+        at this station throughout the specified period.
+        """
+        
+        # The following would seem to be a better way to implement this
+        # method (or perhaps obviate it), but unfortunately it raises a
+        # django.core.exceptions.FieldError exception with the message
+        # "Unsupported lookup 'le' for DateTimeField or join on the field
+        # not permitted.". I'm not sure why Django would not support le
+        # (or ge) lookups on date/time fields.
+        # return StationDevice.objects.filter(
+        #    station=self, start_time__le=start_time, end_time__ge=end_time)
+    
+        return [
+            sd for sd in StationDevice.objects.filter(station=self)
+            if sd.device.model.type == device_type and \
+                    sd.start_time <= start_time and \
+                    sd.end_time >= end_time]
+    
     
 # The `StationTrack` and `StationLocation` models will store tracks of mobile
 # stations. When we want the location of a station at a specified time, we

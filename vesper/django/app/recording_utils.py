@@ -14,15 +14,15 @@ def group_recording_files(files, tolerance=1):
     
     This function groups audio files according to the recordings to
     which they belong. More specifically, the function first sorts the
-    files by station name, number of channels, sample rate, and start
-    time. It then inspects the files in order, grouping consecutive
-    subsequences of them into recordings.
+    files by station name, recorder name, number of channels, sample
+    rate, and start time. It then inspects the files in order, grouping
+    consecutive subsequences of them into recordings.
     
     As files are being grouped into recordings, the next file is added
     to the current recording if either the recording is empty or:
     
-        1. The file has the same station, number of channels, and
-           sample rate as the recording.
+        1. The file has the same station, recorder, number of channels,
+           and sample rate as the recording.
     
         2. The absolute value of the difference between the start time
            of the file and the end time of the recording does not
@@ -95,7 +95,7 @@ class _FileGrouper:
 
 
     def _start_recording(self, f):
-        self.station = f.station
+        self.station_recorder = f.station_recorder
         self.num_channels = f.num_channels
         self.length = f.length
         self.sample_rate = f.sample_rate
@@ -110,7 +110,7 @@ class _FileGrouper:
         delta = abs((f.start_time - end_time).total_seconds())
         threshold = max(1, duration * self.tolerance / 3600)
         
-        return f.station == self.station and \
+        return f.station_recorder == self.station_recorder and \
             f.num_channels == self.num_channels and \
             f.sample_rate == self.sample_rate and \
             delta <= threshold
@@ -123,7 +123,7 @@ class _FileGrouper:
 
     def _end_recording(self):
         return Bunch(
-            station=self.station,
+            station_recorder=self.station_recorder,
             num_channels=self.num_channels,
             length=self.length,
             sample_rate=self.sample_rate,
@@ -132,4 +132,8 @@ class _FileGrouper:
 
 
 def _create_sort_key(f):
-    return (f.station.name, f.num_channels, f.sample_rate, f.start_time)
+    station = f.station_recorder.station
+    recorder = f.station_recorder.device
+    return (
+        station.name, recorder.long_name, f.num_channels, f.sample_rate,
+        f.start_time)

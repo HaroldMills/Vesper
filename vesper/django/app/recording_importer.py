@@ -7,10 +7,12 @@ import os
 from django.db import transaction
 
 from vesper.django.app.command import CommandExecutionError
+from vesper.django.app.models import Recording, RecordingFile
 from vesper.singletons import extension_manager, preset_manager
 import vesper.django.app.command_utils as command_utils
 import vesper.django.app.recording_utils as recording_utils
 import vesper.util.audio_file_utils as audio_file_utils
+import vesper.util.signal_utils as signal_utils
 
 
 class RecordingImporter(object):
@@ -105,31 +107,50 @@ class RecordingImporter(object):
         log = self._logger.info
         log('recordings:')
         for r in recordings:
-            log('    {} {} {} {} {}'.format(
-                r.station.name, r.num_channels, r.length,
-                r.sample_rate, str(r.start_time)))
+            station = r.station_recorder.station
+            recorder = r.station_recorder.device
+            log('    {} {} {} {} {} {}'.format(
+                station.name, recorder.short_name,
+                r.num_channels, r.length, r.sample_rate, str(r.start_time)))
             for f in r.files:
-                log('        {} {} {} {} {} {}'.format(
-                    f.file_path, f.station.name, f.num_channels, f.length,
-                    f.sample_rate, str(f.start_time)))
+                station = f.station_recorder.station
+                recorder = f.station_recorder.device
+                log('        {} {} {} {} {} {} {}'.format(
+                    f.file_path, station.name, recorder.short_name,
+                    f.num_channels, f.length, f.sample_rate, str(f.start_time)))
 
 
     def _add_recordings(self, recordings):
-        pass
     
-#         for r in recordings:
-#             
-#             station = Station.objects.get(name=r.station_name)
-#             start_time = station.local_to_utc(r.start_time)
-#             end_time = station.local_to_utc(r.end_time)
-#             recording = Recording(
-#                 station_recorder = None,
-#                 num_channels = r.num_channels,
-#                 length = r.length,
-#                 sample_rate = r.sample_rate,
-#                 start_time = start_time,
-#                 end_time = end_time)
-#             recording.save()
+        for r in recordings:
+             
+            end_time = signal_utils.get_end_time(
+                r.start_time, r.length, r.sample_rate)
+            
+            recording = Recording(
+                station_recorder=r.station_recorder,
+                num_channels=r.num_channels,
+                length=r.length,
+                sample_rate=r.sample_rate,
+                start_time=r.start_time,
+                end_time=end_time)
+            
+            recording.save()
+            
+            start_index = 0
+            
+            for i, f in enumerate(r.files):
+                
+                file = RecordingFile(
+                    recording=recording,
+                    file_num=i,
+                    start_index=start_index,
+                    length=f.length,
+                    file_path=f.file_path)
+                
+                file.save()
+                
+                start_index += f.length
             
             
 def _create_file_parser(spec):
