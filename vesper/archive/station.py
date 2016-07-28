@@ -1,10 +1,11 @@
 """Module containing `Station` class."""
 
 
+import datetime
+
 import pytz
 
 from vesper.util.named import Named
-import vesper.archive.archive_shared as archive_shared
 
 
 class Station(Named):
@@ -75,4 +76,7 @@ class Station(Named):
             # convert time to station time zone
             time = time.astimezone(self.time_zone)
         
-        return archive_shared.get_night(time)
+        if time.hour < 12:
+            time -= datetime.timedelta(hours=12)
+            
+        return time.date()
