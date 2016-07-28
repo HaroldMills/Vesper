@@ -1,3 +1,6 @@
+"""Populates a Vesper web app archive from an old desktop app archive."""
+
+
 from collections import defaultdict
 import datetime
 import os
