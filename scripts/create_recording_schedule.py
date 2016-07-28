@@ -20,8 +20,8 @@ import datetime
 
 import pytz
 
+import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.os_utils as os_utils
-import vesper.util.ephem_utils as ephem_utils
 import vesper.util.time_utils as time_utils
 
 

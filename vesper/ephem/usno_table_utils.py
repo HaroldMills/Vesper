@@ -3,8 +3,8 @@ Utility functions concerning United States Naval Observatory (USNO) tables.
 """
 
 
-from vesper.util.usno_altitude_azimuth_table import UsnoAltitudeAzimuthTable
-from vesper.util.usno_rise_set_table import UsnoRiseSetTable
+from vesper.ephem.usno_altitude_azimuth_table import UsnoAltitudeAzimuthTable
+from vesper.ephem.usno_rise_set_table import UsnoRiseSetTable
 
 
 RISE_SET_TABLE_TYPES = (

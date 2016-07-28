@@ -33,8 +33,8 @@ import os
 import numpy as np
 import pytz
 
-from vesper.util.usno_rise_set_table import UsnoRiseSetTable
-import vesper.util.ephem_utils as ephem_utils
+from vesper.ephem.usno_rise_set_table import UsnoRiseSetTable
+import vesper.ephem.ephem_utils as ephem_utils
 
 
 _DATA_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\USNO Tables'

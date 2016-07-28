@@ -7,7 +7,7 @@ from bokeh.plotting import Figure
 import pytz
 
 from vesper.util.bunch import Bunch
-import vesper.util.ephem_utils as ephem_utils
+import vesper.ephem.ephem_utils as ephem_utils
 
 
 _ONE_DAY = datetime.timedelta(days=1)

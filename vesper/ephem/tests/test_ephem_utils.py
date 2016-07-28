@@ -1,8 +1,8 @@
 import datetime
 
 from vesper.tests.test_case import TestCase
-from .. import ephem_utils
-from .. import time_utils
+import vesper.ephem.ephem_utils as ephem_utils
+import vesper.util.time_utils as time_utils
 
 
 _LAT = 42.45

@@ -1,8 +1,8 @@
 import datetime
 
+from vesper.ephem.usno_altitude_azimuth_table import UsnoAltitudeAzimuthTable
 from vesper.tests.test_case import TestCase
-from vesper.util.usno_altitude_azimuth_table import UsnoAltitudeAzimuthTable
-import vesper.util.usno_table_class_utils as utils
+import vesper.ephem.usno_table_class_utils as utils
 
 
 class UsnoAltitudeAzimuthTableTests(TestCase):

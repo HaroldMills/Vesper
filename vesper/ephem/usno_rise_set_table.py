@@ -4,7 +4,7 @@
 import datetime
 import re
 
-from . import usno_table_class_utils as utils
+import vesper.ephem.usno_table_class_utils as utils
 
 
 class UsnoRiseSetTable(object):

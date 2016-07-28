@@ -12,7 +12,7 @@ import csv
 import datetime
 import os
 
-import vesper.util.usno_table_utils as utils
+import vesper.ephem.usno_table_utils as utils
 
 
 _DATA_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data'

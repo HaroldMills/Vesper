@@ -4,7 +4,7 @@ import os
 
 import pytz
 
-import vesper.util.ephem_utils as ephem_utils
+import vesper.ephem.ephem_utils as ephem_utils
 
 
 _DATA_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data'

@@ -1,8 +1,8 @@
 import datetime
 
+from vesper.ephem.usno_rise_set_table import UsnoRiseSetTable
 from vesper.tests.test_case import TestCase
-from vesper.util.usno_rise_set_table import UsnoRiseSetTable
-import vesper.util.usno_table_class_utils as utils
+import vesper.ephem.usno_table_class_utils as utils
 
 
 class UsnoRiseSetTableTests(TestCase):

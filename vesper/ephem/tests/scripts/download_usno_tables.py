@@ -10,7 +10,7 @@ import os
 import random
 import time as time_module
 
-import vesper.util.usno_table_utils as utils
+import vesper.ephem.usno_table_utils as utils
 
 
 _TABLES_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\USNO Tables Test'
