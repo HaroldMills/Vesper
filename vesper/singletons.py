@@ -11,15 +11,15 @@ import vesper.util.vesper_path_utils as vesper_path_utils
 _EXTENSIONS_SPEC = '''
 
 Command:
-    - vesper.django.app.import_command.ImportCommand
-    - vesper.django.app.test_command.TestCommand
+    - vesper.command.import_command.ImportCommand
+    - vesper.command.test_command.TestCommand
     
 Importer:
-    - vesper.django.app.archive_data_importer.ArchiveDataImporter
-    - vesper.django.app.recording_importer.RecordingImporter
+    - vesper.command.archive_data_importer.ArchiveDataImporter
+    - vesper.command.recording_importer.RecordingImporter
 
 Preset:
-    - vesper.django.app.station_name_aliases_preset.StationNameAliasesPreset
+    - vesper.command.station_name_aliases_preset.StationNameAliasesPreset
     
 Recording File Parser:
     - vesper.mpg_ranch.recording_file_parser.RecordingFileParser
