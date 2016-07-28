@@ -1,2 +1,2 @@
 #!/bin/sh
-python -m unittest discover -b /Users/Harold/Documents/Code/Python/Vesper/vesper
+python -m unittest discover -b "/Users/Harold/Documents/Code/Python/Vesper Web App/vesper"
