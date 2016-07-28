@@ -1,7 +1,7 @@
 import datetime
 
-from vesper.django.app.recording import Recording
 from vesper.tests.test_case import TestCase
+from vesper.util.bunch import Bunch
 import vesper.django.app.recording_utils as recording_utils
 import vesper.util.time_utils as time_utils
 
@@ -11,70 +11,70 @@ class RecordingUtilsTests(TestCase):
         
     def test_group_recording_files(self):
         
-        r = create_recording
+        f = create_file
         
         cases = [
                  
             # single file
-            ([r('A', '2015-05-30 20:00:00', '10:00:00')],
-             [(r('A', '2015-05-30 20:00:00', '10:00:00'), 1)]),
+            ([f('A', '2015-05-30 20:00:00', '10:00:00')],
+             [(f('A', '2015-05-30 20:00:00', '10:00:00'), 1)]),
                   
             # two exactly consecutive files
-            ([r('A', '2015-05-30 20:00:00', '05:00:00'),
-              r('A', '2015-05-31 01:00:00', '06:00:00')],
-             [(r('A', '2015-05-30 20:00:00', '11:00:00'), 2)]),
+            ([f('A', '2015-05-30 20:00:00', '05:00:00'),
+              f('A', '2015-05-31 01:00:00', '06:00:00')],
+             [(f('A', '2015-05-30 20:00:00', '11:00:00'), 2)]),
                   
             # three exactly consecutive files
-            ([r('A', '2015-05-30 20:00:00', '01:00:00'),
-              r('A', '2015-05-30 21:00:00', '02:00:00'),
-              r('A', '2015-05-30 23:00:00', '03:00:00')],
-             [(r('A', '2015-05-30 20:00:00', '06:00:00'), 3)]),
+            ([f('A', '2015-05-30 20:00:00', '01:00:00'),
+              f('A', '2015-05-30 21:00:00', '02:00:00'),
+              f('A', '2015-05-30 23:00:00', '03:00:00')],
+             [(f('A', '2015-05-30 20:00:00', '06:00:00'), 3)]),
                   
             # two barely consecutive files, assuming a grouping tolerance
             # of one second per hour
-            ([r('A', '2015-05-30 20:00:00', '05:00:00'),
-              r('A', '2015-05-31 01:00:05', '06:00:00')],
-             [(r('A', '2015-05-30 20:00:00', '11:00:00'), 2)]),
+            ([f('A', '2015-05-30 20:00:00', '05:00:00'),
+              f('A', '2015-05-31 01:00:05', '06:00:00')],
+             [(f('A', '2015-05-30 20:00:00', '11:00:00'), 2)]),
                   
             # two barely non-consecutive files, assuming a grouping tolerance
             # of one second per hour
-            ([r('A', '2015-05-30 20:00:00', '05:00:00'),
-              r('A', '2015-05-31 01:00:06', '06:00:00')],
-             [(r('A', '2015-05-30 20:00:00', '05:00:00'), 1),
-              (r('A', '2015-05-31 01:00:06', '06:00:00'), 1)]),
+            ([f('A', '2015-05-30 20:00:00', '05:00:00'),
+              f('A', '2015-05-31 01:00:06', '06:00:00')],
+             [(f('A', '2015-05-30 20:00:00', '05:00:00'), 1),
+              (f('A', '2015-05-31 01:00:06', '06:00:00'), 1)]),
                  
             # two consecutive short files with a one-second error in
             # the second file's start time
-            ([r('A', '2015-05-30 20:00:00', '00:01:00'),
-              r('A', '2015-05-30 20:00:59', '00:01:00')],
-             [(r('A', '2015-05-30 20:00:00', '00:02:00'), 2)]),
+            ([f('A', '2015-05-30 20:00:00', '00:01:00'),
+              f('A', '2015-05-30 20:00:59', '00:01:00')],
+             [(f('A', '2015-05-30 20:00:00', '00:02:00'), 2)]),
             
             # two non-consecutive files with a two-second error in the
             # second file's start time
-            ([r('A', '2015-05-30 20:00:00', '00:01:00'),
-              r('A', '2015-05-30 20:01:02', '00:01:00')],
-             [(r('A', '2015-05-30 20:00:00', '00:01:00'), 1),
-              (r('A', '2015-05-30 20:01:02', '00:01:00'), 1)]),
+            ([f('A', '2015-05-30 20:00:00', '00:01:00'),
+              f('A', '2015-05-30 20:01:02', '00:01:00')],
+             [(f('A', '2015-05-30 20:00:00', '00:01:00'), 1),
+              (f('A', '2015-05-30 20:01:02', '00:01:00'), 1)]),
                  
             # four consecutive files from two stations
-            ([r('A', '2015-05-30 20:00:00', '01:00:00'),
-              r('A', '2015-05-30 21:00:00', '02:00:00'),
-              r('B', '2015-05-30 23:00:00', '03:00:00'),
-              r('B', '2015-05-31 02:00:00', '04:00:00')],
-             [(r('A', '2015-05-30 20:00:00', '03:00:00'), 2),
-              (r('B', '2015-05-30 23:00:00', '07:00:00'), 2)]),
+            ([f('A', '2015-05-30 20:00:00', '01:00:00'),
+              f('A', '2015-05-30 21:00:00', '02:00:00'),
+              f('B', '2015-05-30 23:00:00', '03:00:00'),
+              f('B', '2015-05-31 02:00:00', '04:00:00')],
+             [(f('A', '2015-05-30 20:00:00', '03:00:00'), 2),
+              (f('B', '2015-05-30 23:00:00', '07:00:00'), 2)]),
                  
             # two consecutive files with different numbers of channels
-            ([r('A', '2015-05-30 20:00:00', '05:00:00', 1),
-              r('A', '2015-05-31 01:00:00', '06:00:00', 2)],
-             [(r('A', '2015-05-30 20:00:00', '05:00:00', 1), 1),
-              (r('A', '2015-05-31 01:00:00', '06:00:00', 2), 1)]),
+            ([f('A', '2015-05-30 20:00:00', '05:00:00', 1),
+              f('A', '2015-05-31 01:00:00', '06:00:00', 2)],
+             [(f('A', '2015-05-30 20:00:00', '05:00:00', 1), 1),
+              (f('A', '2015-05-31 01:00:00', '06:00:00', 2), 1)]),
                  
             # two consecutive files with different sample rates
-            ([r('A', '2015-05-30 20:00:00', '05:00:00', 1, 22050),
-              r('A', '2015-05-31 01:00:00', '06:00:00', 1, 24000)],
-             [(r('A', '2015-05-30 20:00:00', '05:00:00', 1, 22050), 1),
-              (r('A', '2015-05-31 01:00:00', '06:00:00', 1, 24000), 1)]),
+            ([f('A', '2015-05-30 20:00:00', '05:00:00', 1, 22050),
+              f('A', '2015-05-31 01:00:00', '06:00:00', 1, 24000)],
+             [(f('A', '2015-05-30 20:00:00', '05:00:00', 1, 22050), 1),
+              (f('A', '2015-05-31 01:00:00', '06:00:00', 1, 24000), 1)]),
                  
         ]
         
@@ -96,8 +96,8 @@ class RecordingUtilsTests(TestCase):
             
             
     def _assert_recordings_equal(self, a, b):
-        self.assertEqual(a.station_name, b.station_name)
-        # self.assertEqual(a.num_channels, b.num_channels)
+        self.assertEqual(a.station_recorder, b.station_recorder)
+        self.assertEqual(a.num_channels, b.num_channels)
         self.assertEqual(a.length, b.length)
         self.assertEqual(a.sample_rate, b.sample_rate)
         self.assertEqual(a.start_time, b.start_time)
@@ -110,8 +110,7 @@ class RecordingUtilsTests(TestCase):
             self._assert_recordings_equal(f[j], files[i + j])
                 
         
-        
-def create_recording(
+def create_file(
         station_name, start_time, duration, num_channels=1, sample_rate=22050):
     
     t = datetime.datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
@@ -121,7 +120,15 @@ def create_recording(
     h, m, s = duration.split(':')
     delta = datetime.timedelta(hours=int(h), minutes=int(m), seconds=int(s))
     duration = delta.total_seconds()
-    length = duration * sample_rate
+    length = int(duration * sample_rate)
     
-    return Recording(
-        station_name, num_channels, length, sample_rate, start_time)
+    station = Bunch(name=station_name)
+    recorder = Bunch(long_name='R')
+    station_recorder = Bunch(station=station, device=recorder)
+    
+    return Bunch(
+        station_recorder=station_recorder,
+        num_channels=num_channels,
+        length=length,
+        sample_rate=sample_rate,
+        start_time=start_time)
