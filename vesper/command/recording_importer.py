@@ -6,11 +6,11 @@ import os
 
 from django.db import transaction
 
-from vesper.django.app.command import CommandExecutionError
+from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import Recording, RecordingFile, Station
 from vesper.singletons import extension_manager, preset_manager
-import vesper.django.app.command_utils as command_utils
-import vesper.django.app.recording_utils as recording_utils
+import vesper.command.command_utils as command_utils
+import vesper.command.recording_utils as recording_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.signal_utils as signal_utils
 

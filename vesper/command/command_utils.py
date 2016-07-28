@@ -1,4 +1,4 @@
-from vesper.django.app.command import CommandSyntaxError
+from vesper.command.command import CommandSyntaxError
 
 
 # TODO: Add type checking.

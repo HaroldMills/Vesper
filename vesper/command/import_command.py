@@ -1,9 +1,9 @@
 """Module containing class `ImportArchiveDataCommand`."""
 
 
-from vesper.django.app.command import Command, CommandSyntaxError
+from vesper.command.command import Command, CommandSyntaxError
 from vesper.singletons import extension_manager
-import vesper.django.app.command_utils as command_utils
+import vesper.command.command_utils as command_utils
 
 
 class ImportCommand(Command):

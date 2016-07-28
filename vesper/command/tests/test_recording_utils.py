@@ -2,7 +2,7 @@ import datetime
 
 from vesper.tests.test_case import TestCase
 from vesper.util.bunch import Bunch
-import vesper.django.app.recording_utils as recording_utils
+import vesper.command.recording_utils as recording_utils
 import vesper.util.time_utils as time_utils
 
 

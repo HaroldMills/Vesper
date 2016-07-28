@@ -4,8 +4,8 @@
 from threading import RLock
 import logging
 
-from vesper.django.app.command import CommandSyntaxError
-from vesper.django.app.job_thread import JobThread
+from vesper.command.command import CommandSyntaxError
+from vesper.command.job_thread import JobThread
 from vesper.util.repeating_timer import RepeatingTimer
 
 

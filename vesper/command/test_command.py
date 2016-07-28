@@ -3,7 +3,7 @@
 
 import time
 
-from vesper.django.app.command import Command
+from vesper.command.command import Command
 
 
 class TestCommand(Command):

@@ -1,7 +1,7 @@
 """Module containing Vesper singleton objects."""
 
 
-from vesper.django.app.job_manager import JobManager
+from vesper.command.job_manager import JobManager
 from vesper.util.extension_manager import ExtensionManager
 from vesper.util.preset_manager import PresetManager
 from vesper.util.singleton import Singleton
