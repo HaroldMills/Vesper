@@ -7,7 +7,7 @@ import os
 from django.db import transaction
 
 from vesper.django.app.command import CommandExecutionError
-from vesper.django.app.models import Recording, RecordingFile
+from vesper.django.app.models import Recording, RecordingFile, Station
 from vesper.singletons import extension_manager, preset_manager
 import vesper.django.app.command_utils as command_utils
 import vesper.django.app.recording_utils as recording_utils
@@ -155,6 +155,9 @@ class RecordingImporter(object):
             
 def _create_file_parser(spec):
     
+    # Get stations.
+    stations = [s for s in Station.objects.all()]
+    
     # Get station name aliases.
     parser_classes = \
         extension_manager.instance.get_extensions('Recording File Parser')
@@ -165,4 +168,4 @@ def _create_file_parser(spec):
         preset_manager.instance.get_preset('Station Name Aliases', preset_name)
     station_name_aliases = preset.data
     
-    return parser_class(station_name_aliases)
+    return parser_class(stations, station_name_aliases)

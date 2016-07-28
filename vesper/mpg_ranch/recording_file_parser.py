@@ -4,7 +4,6 @@
 import os.path
 import re
 
-from vesper.django.app.models import Station
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.signal_utils as signal_utils
@@ -41,16 +40,56 @@ class RecordingFileParser:
     name = 'MPG Ranch Recording File Parser'
     
     
-    def __init__(self, station_name_aliases=None):
+    def __init__(self, stations, station_name_aliases=None):
+        
+        """
+        Initializes this parser for the specified stations and aliases.
+        
+        :Parameters:
+        
+            stations : collection of `Station` objects
+                the stations whose recording files will be parsed.
+                
+            station_name_aliases: mapping from `str` to `str`
+                mapping from station names to station name aliases.
+                
+                The station name aliases appear in file names and will
+                be translated by the parser into regular station names.
+                The capitalization of aliases is inconsequential since
+                the parser will compare them to the station names that
+                appear in file names only after both are converted to
+                lower case.
+        """
         
         if station_name_aliases is None:
             station_name_aliases = {}
             
-        self._stations = _create_stations_dict(station_name_aliases)
+        self._stations = _create_stations_dict(stations, station_name_aliases)
         
         
     def parse_file(self, file_path):
     
+        """
+        Parses the specified recording file for recording information.
+        
+        Some information is obtained from the file path, while other
+        information is obtained from within the file.
+        
+        :Parameters:
+            file_path : `str`
+                the path of the file to parse.
+                
+        :Returns:
+            a `Bunch` with the following attributes:
+            
+            `station_recorder` - the `StationRecorder` of the recording.
+            `num_channels` - the number of channels of the file.
+            `length` - the length of the file in sample frames.
+            `sample_rate` - the sample rate of the file in Hertz.
+            `start_time` - the UTC start time of the file.
+            `file_path` - the path of the file.
+        """
+        
         station, start_time = self._parse_file_name(file_path)
         
         num_channels, length, sample_rate = self._get_audio_file_info(file_path)
@@ -174,9 +213,9 @@ class RecordingFileParser:
         return num_channels, length, sample_rate
 
 
-def _create_stations_dict(station_name_aliases):
+def _create_stations_dict(stations, station_name_aliases):
     
-    stations = dict((s.name, s) for s in Station.objects.all())
+    stations = dict((s.name, s) for s in stations)
     
     result = {}
     
