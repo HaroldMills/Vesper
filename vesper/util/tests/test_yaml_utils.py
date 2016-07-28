@@ -3,7 +3,7 @@ import unittest
 
 import pytz
 
-import vesper.django.app.yaml_utils as yaml_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 _DT = datetime.datetime
