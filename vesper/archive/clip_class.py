@@ -1,4 +1,4 @@
-"""Module containing `ClipClass` class."""
+"""Module containing class `ClipClass`."""
 
 
 from vesper.util.named import Named

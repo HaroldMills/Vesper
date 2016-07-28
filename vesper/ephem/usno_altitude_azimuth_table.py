@@ -1,4 +1,4 @@
-"""Module containing `UsnoAltitudeAzimuthTable` class."""
+"""Module containing class `UsnoAltitudeAzimuthTable`."""
 
 
 import datetime

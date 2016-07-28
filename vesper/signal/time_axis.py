@@ -1,4 +1,4 @@
-"""Module containing `TimeAxis` class."""
+"""Module containing class `TimeAxis`."""
 
 
 from numbers import Number

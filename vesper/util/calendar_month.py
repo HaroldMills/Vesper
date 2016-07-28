@@ -1,4 +1,4 @@
-"""Module containing `CalendarMonth` class."""
+"""Module containing class `CalendarMonth`."""
 
 
 import functools

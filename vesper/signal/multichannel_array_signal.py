@@ -1,4 +1,4 @@
-"""Module containing `MultichannelArraySignal` class."""
+"""Module containing class `MultichannelArraySignal`."""
 
 
 from vesper.signal.amplitude_axis import AmplitudeAxis

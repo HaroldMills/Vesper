@@ -1,4 +1,4 @@
-"""Module containing `ValueMapping` class."""
+"""Module containing class `ValueMapping`."""
 
 
 class ValueMapping:

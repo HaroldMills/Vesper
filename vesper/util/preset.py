@@ -1,4 +1,4 @@
-"""Module containing `Preset` class."""
+"""Module containing class `Preset`."""
 
 
 from vesper.util.named import Named

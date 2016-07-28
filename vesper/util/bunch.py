@@ -1,4 +1,4 @@
-"""Module containing `Bunch` class."""
+"""Module containing class `Bunch`."""
 
 
 class Bunch:

@@ -1,5 +1,5 @@
 """
-Module containing `Named` class.
+Module containing class `Named`.
 
 A `Named` object is just an object with a name.
 """

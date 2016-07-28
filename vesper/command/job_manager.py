@@ -1,4 +1,4 @@
-"""Module containing `JobManager` class."""
+"""Module containing class `JobManager`."""
 
 
 from threading import RLock

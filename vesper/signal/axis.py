@@ -1,4 +1,4 @@
-"""Module containing `Axis` class."""
+"""Module containing class `Axis`."""
 
 
 from vesper.util.bunch import Bunch

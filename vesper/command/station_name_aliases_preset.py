@@ -1,4 +1,4 @@
-"""Module containing `StationNameAliasesPreset` class."""
+"""Module containing class `StationNameAliasesPreset`."""
 
 
 from vesper.util.yaml_preset import YamlPreset

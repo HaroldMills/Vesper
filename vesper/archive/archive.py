@@ -1,4 +1,4 @@
-"""Module containing `Archive` class."""
+"""Module containing class `Archive`."""
 
 
 from collections import namedtuple

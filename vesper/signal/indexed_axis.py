@@ -1,4 +1,4 @@
-"""Module containing `IndexedAxis` class."""
+"""Module containing class `IndexedAxis`."""
 
 
 from vesper.signal.axis import Axis

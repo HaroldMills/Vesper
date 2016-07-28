@@ -1,4 +1,4 @@
-"""Module containing `RecordingImporter` class."""
+"""Module containing class `RecordingImporter`."""
 
 
 import itertools

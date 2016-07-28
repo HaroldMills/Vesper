@@ -1,4 +1,4 @@
-"""Module containing `LinearMapping` class."""
+"""Module containing class `LinearMapping`."""
 
 
 from vesper.signal.value_mapping import ValueMapping

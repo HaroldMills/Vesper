@@ -1,4 +1,4 @@
-"""Module containing `Singleton` class."""
+"""Module containing class `Singleton`."""
 
 
 class Singleton:

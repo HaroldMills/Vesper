@@ -1,4 +1,4 @@
-"""Module containing `RecordingFileParser` class."""
+"""Module containing class `RecordingFileParser`."""
 
 
 import os.path

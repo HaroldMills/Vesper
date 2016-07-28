@@ -1,4 +1,4 @@
-"""Module containing `YamlPreset` class."""
+"""Module containing class `YamlPreset`."""
 
 
 import yaml

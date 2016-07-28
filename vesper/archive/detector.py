@@ -1,4 +1,4 @@
-"""Module containing `Detector` class."""
+"""Module containing class `Detector`."""
 
 
 from vesper.util.named import Named

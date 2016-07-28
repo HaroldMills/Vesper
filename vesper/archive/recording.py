@@ -1,4 +1,4 @@
-"""Module containing `Recording` class."""
+"""Module containing class `Recording`."""
 
 
 import datetime

@@ -1,4 +1,4 @@
-"""Module containing `UsnoRiseSetTable` class."""
+"""Module containing class `UsnoRiseSetTable`."""
 
 
 import datetime
