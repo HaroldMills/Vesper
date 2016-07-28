@@ -17,7 +17,7 @@ class Station(Named):
             self, name, long_name, time_zone_name,
             latitude=None, longitude=None, elevation=None):
         
-        super(Station, self).__init__(name)
+        super().__init__(name)
         self._long_name = long_name
         self._time_zone = pytz.timezone(time_zone_name)
         self._latitude = latitude

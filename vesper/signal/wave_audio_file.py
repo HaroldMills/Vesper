@@ -16,14 +16,14 @@ audio_file_utils:
     write_audio_file(file_path, waveform)
     
     
-class AudioFileType(object):
+class AudioFileType:
     name
     reader_class
     writer_class
     is_recognized_file(file_path)
     
     
-class AudioFileReader(object):
+class AudioFileReader:
 
     file_type
     
@@ -37,7 +37,7 @@ class AudioFileReader(object):
     close()
 
 
-class AudioFileWriter(object):
+class AudioFileWriter:
 
     file_type
     
@@ -197,7 +197,7 @@ class WaveAudioFileReader(AudioFileReader):
             self._reader = None
 
 
-class WaveAudioFileType(object):
+class WaveAudioFileType:
     
 
     name = 'WAV Audio File Type'

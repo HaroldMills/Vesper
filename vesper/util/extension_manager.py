@@ -29,7 +29,7 @@ import yaml
 # extensions?
 
 
-class ExtensionManager(object):
+class ExtensionManager:
     
     
     def __init__(self, extensions_spec):

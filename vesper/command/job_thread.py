@@ -119,7 +119,7 @@ def _indent_lines(text, num_spaces):
     return '\n'.join(indented_lines)
 
 
-class _CommandContext(object):
+class _CommandContext:
     
     def __init__(self, job_thread):
         self._job_thread = job_thread

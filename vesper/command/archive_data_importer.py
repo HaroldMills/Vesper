@@ -17,7 +17,7 @@ import vesper.command.command_utils as command_utils
 # e.g. descriptions.
 
 
-class ArchiveDataImporter(object):
+class ArchiveDataImporter:
     
     
     name = 'Archive Data Importer'

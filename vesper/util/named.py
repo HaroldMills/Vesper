@@ -5,7 +5,7 @@ A `Named` object is just an object with a name.
 """
 
 
-class Named(object):
+class Named:
     
     """Named object."""
     

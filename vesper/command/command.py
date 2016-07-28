@@ -13,7 +13,7 @@ class CommandExecutionError(CommandError):
     pass
 
 
-class Command(object):
+class Command:
     
     
     name = 'command'

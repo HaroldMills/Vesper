@@ -80,7 +80,7 @@ def _main():
     tester.test_aa_data()
 
 
-class _Tester(object):
+class _Tester:
     
     
     def test_rs_times(self):

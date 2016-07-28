@@ -1,7 +1,7 @@
 """Module containing `ValueMapping` class."""
 
 
-class ValueMapping(object):
+class ValueMapping:
     
     
     def map(self, x):

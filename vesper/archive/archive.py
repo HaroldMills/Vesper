@@ -169,7 +169,7 @@ _SET_CLIP_SELECTION_SQL = (
     'where id = ?')
 
 
-class Archive(object):
+class Archive:
     
     
     CLIP_CLASS_NAME_COMPONENT_SEPARATOR = '.'
@@ -1039,7 +1039,7 @@ long enough. This is part of a temporary "fix" to GitHub issue 30.
 """
 
 
-class _Clip(object):
+class _Clip:
     
     
     def __init__(

@@ -12,7 +12,7 @@ _YAML_FILE_NAME_EXTENSION = '.yaml'
 # singleton, we make it a class rather than a module to facilitate testing.
 
 
-class PresetManager(object):
+class PresetManager:
     
     """Preset manager that loads and provides access to presets."""
     

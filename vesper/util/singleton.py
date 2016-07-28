@@ -1,7 +1,7 @@
 """Module containing `Singleton` class."""
 
 
-class Singleton(object):
+class Singleton:
     
     """
     Class an instance of which manages a single instance of another class.

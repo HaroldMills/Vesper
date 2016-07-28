@@ -4,7 +4,7 @@
 import datetime
 
 
-class Recording(object):
+class Recording:
     
     """
     Sound recording.
@@ -15,7 +15,6 @@ class Recording(object):
     
     
     def __init__(self, station, start_time, length, sample_rate):
-        super(Recording, self).__init__()
         self._station = station
         self._start_time = start_time
         self._length = length

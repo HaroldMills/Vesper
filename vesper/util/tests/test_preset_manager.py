@@ -19,7 +19,7 @@ class A(_Preset):
     type_name = 'A'
     
     def __init__(self, name, data):
-        super(A, self).__init__(name)
+        super().__init__(name)
         self.data = data.strip()
         
           
@@ -28,7 +28,7 @@ class B(_Preset):
     type_name = 'B'
     
     def __init__(self, name, data):
-        super(B, self).__init__(name)
+        super().__init__(name)
         self.data = yaml.load(data)
         
         

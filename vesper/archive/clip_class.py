@@ -19,7 +19,7 @@ class ClipClass(Named):
     
     
     def __init__(self, name):
-        super(ClipClass, self).__init__(name)
+        super().__init__(name)
         self._name_components = tuple(name.split('.'))
         
         

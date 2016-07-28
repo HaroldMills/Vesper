@@ -9,7 +9,7 @@ from vesper.command.job_thread import JobThread
 from vesper.util.repeating_timer import RepeatingTimer
 
 
-class JobManager(object):
+class JobManager:
     
     """
     Manager of Vesper jobs.

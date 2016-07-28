@@ -7,7 +7,7 @@ import re
 import vesper.ephem.usno_table_class_utils as utils
 
 
-class UsnoAltitudeAzimuthTable(object):
+class UsnoAltitudeAzimuthTable:
     
     """
     Table of USNO altitudes and azimuths for the sun or moon.

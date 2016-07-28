@@ -7,7 +7,7 @@ import re
 import vesper.ephem.usno_table_class_utils as utils
 
 
-class UsnoRiseSetTable(object):
+class UsnoRiseSetTable:
     
     """
     Table of USNO rise and set times for the sun or moon.

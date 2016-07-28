@@ -151,7 +151,7 @@ def list_files(dir_path, pattern=None, recursive=False):
     return visitor.file_paths
 
 
-class _FilePathAccumulator(object):
+class _FilePathAccumulator:
     
     def __init__(self):
         self.file_paths = []

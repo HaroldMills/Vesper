@@ -1,7 +1,7 @@
 """Module containing `Bunch` class."""
 
 
-class Bunch(object):
+class Bunch:
     
     
     def __init__(self, *args, **kwargs):

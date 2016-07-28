@@ -15,7 +15,7 @@ import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.signal_utils as signal_utils
 
 
-class RecordingImporter(object):
+class RecordingImporter:
     
     
     name = 'Recording Importer'

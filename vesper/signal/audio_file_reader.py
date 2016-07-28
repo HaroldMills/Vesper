@@ -1,7 +1,7 @@
 """Module containing class `AudioFileReader`."""
 
 
-class AudioFileReader(object):
+class AudioFileReader:
     
     """Abstract base class for audio file readers."""
     

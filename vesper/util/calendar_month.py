@@ -5,7 +5,7 @@ import functools
 
 
 @functools.total_ordering
-class CalendarMonth(object):
+class CalendarMonth:
     
     """
     A calendar month, with a year and a month.
