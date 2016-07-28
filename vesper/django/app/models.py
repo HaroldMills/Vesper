@@ -555,9 +555,8 @@ class Recording(Model):
     
     def __str__(self):
         return 'Recording "{}" "{}" {} {} {} {}'.format(
-            self.station_recorder.station.name,
-            self.station_recorder.device.long_name,
-            self.num_channels, self.length, self.sample_rate, self.start_time)
+            self.station.name, self.recorder.short_name,
+            self.start_time, self.length, self.num_channels, self.sample_rate)
         
     class Meta:
         unique_together = ('station_recorder', 'start_time')
@@ -572,6 +571,12 @@ class RecordingFile(Model):
     length = BigIntegerField()
     file_path = CharField(max_length=255, unique=True, null=True) # long enough?
     
+    def __str__(self):
+        r = self.recording
+        return 'Recording "{}" "{}" {} File {} "{}"'.format(
+            r.station.name, r.recorder.short_name,
+            r.start_time, self.file_num, self.file_path)
+        
     class Meta:
         unique_together = ('recording', 'file_num')
         db_table = 'vesper_recording_file'
