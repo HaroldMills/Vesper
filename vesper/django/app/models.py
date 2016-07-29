@@ -569,7 +569,7 @@ class RecordingFile(Model):
     file_num = IntegerField()
     start_index = BigIntegerField()
     length = BigIntegerField()
-    file_path = CharField(max_length=255, unique=True, null=True) # long enough?
+    file_path = CharField(max_length=255, unique=True, null=True)
     
     def __str__(self):
         r = self.recording
@@ -629,7 +629,7 @@ class Clip(Model):
         Processor, null=True, on_delete=CASCADE, related_name='clips')
     creating_job = ForeignKey(
         Job, null=True, on_delete=CASCADE, related_name='clips')
-    file_path = CharField(max_length=255, unique=True, null=True) # long enough?
+    file_path = CharField(max_length=255, unique=True, null=True)
     
     def __str__(self):
         return 'Clip {} {} {} {} {} "{}"'.format(
