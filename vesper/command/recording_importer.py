@@ -13,6 +13,7 @@ import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.signal_utils as signal_utils
+import vesper.util.time_utils as time_utils
 
 
 class RecordingImporter:
@@ -30,7 +31,8 @@ class RecordingImporter:
     
     def execute(self, context):
         
-        self._logger = context.job.logger
+        self._job = context.job
+        self._logger = self._job.logger
         
         try:
             recordings = self._get_recordings()
@@ -127,13 +129,17 @@ class RecordingImporter:
             end_time = signal_utils.get_end_time(
                 r.start_time, r.length, r.sample_rate)
             
+            creation_time = time_utils.get_utc_now()
+            
             recording = Recording(
                 station_recorder=r.station_recorder,
                 num_channels=r.num_channels,
                 length=r.length,
                 sample_rate=r.sample_rate,
                 start_time=r.start_time,
-                end_time=end_time)
+                end_time=end_time,
+                creation_time=creation_time,
+                creating_job=self._job)
             
             recording.save()
             

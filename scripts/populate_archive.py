@@ -15,7 +15,7 @@ import pytz
 
 from vesper.archive.archive import Archive
 from vesper.django.app.models import (
-    Annotation, Clip, Device, DeviceModel, Recording, Station)
+    Annotation, Clip, Processor, Recording, Station)
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
@@ -31,7 +31,6 @@ _ARCHIVE_DATABASE_FILE_PATH = os.path.join(
 def _main():
     _delete_data()
     _add_data()
-    # _show_data()
     
 
 def _delete_data():
@@ -50,10 +49,16 @@ def _add_recordings():
         station_recorder = _get_recording_station_recorder(r)
         span = (r.length - 1) / r.sample_rate
         end_time = r.start_time + datetime.timedelta(seconds=span)
+        creation_time = time_utils.get_utc_now()
         recording = Recording(
-            station_recorder=station_recorder, num_channels=1, length=r.length,
-            sample_rate=r.sample_rate, start_time=r.start_time,
-            end_time=end_time)
+            station_recorder=station_recorder,
+            num_channels=1,
+            length=r.length,
+            sample_rate=r.sample_rate,
+            start_time=r.start_time,
+            end_time=end_time,
+            creation_time=creation_time,
+            creating_job=None)
         recording.save()
         
     
@@ -107,13 +112,14 @@ def _add_clips():
     end_night = archive.end_night
     one_night = datetime.timedelta(days=1)
     station_recordings = _get_station_recordings()
+    detectors = _get_detectors()
     num_added = 0
     num_rejected = 0
     for station in stations:
         night = start_night
         while night <= end_night:
             clips = archive.get_clips(station_name=station.name, night=night)
-            (m, n) = _add_clips_aux(clips, station_recordings)
+            (m, n) = _add_clips_aux(clips, station_recordings, detectors)
             num_added += m
             num_rejected += n
             night += one_night
@@ -128,7 +134,12 @@ def _get_station_recordings():
     return recordings
         
         
-def _add_clips_aux(clips, station_recordings):
+def _get_detectors():
+    detectors = Processor.objects.filter(algorithm__type='NFC Detector')
+    return dict((d.name, d) for d in detectors)
+
+
+def _add_clips_aux(clips, station_recordings, detectors):
     
     num_added = 0
     num_rejected = 0
@@ -142,6 +153,13 @@ def _add_clips_aux(clips, station_recordings):
             num_rejected += 1
             continue
         
+        try:
+            detector = _get_detector(c, detectors)
+        except ValueError as e:
+            print(str(e))
+            num_rejected += 1
+            continue
+        
         with transaction.atomic():
             
             length = audio_file_utils.get_wave_file_info(c.file_path)[3]
@@ -150,28 +168,23 @@ def _add_clips_aux(clips, station_recordings):
             end_time = start_time + datetime.timedelta(seconds=span)
             creation_time = time_utils.get_utc_now()
             
-            # TODO: Include creating processor (i.e. detector).
             clip = Clip(
-                recording=recording, channel_num=0, start_index=None,
-                length=length, start_time=start_time, end_time=end_time,
-                creation_time=creation_time)
+                recording=recording,
+                channel_num=0,
+                start_index=None,
+                length=length,
+                start_time=start_time,
+                end_time=end_time,
+                creation_time=creation_time,
+                creating_processor=detector)
             clip.save()
             
             _copy_clip_sound_file(c.file_path, clip)
             
-            a = Annotation(clip=clip, name='Detector', value=c.detector_name)
-            a.save()
-            
-            s = c.selection
-            if s is not None:
-                a = Annotation(
-                    clip=clip, name='Selection Start Index', value=s[0])
-                a.save()
-                a = Annotation(clip=clip, name='Selection Length', value=s[1])
-                a.save()
-            
             a = Annotation(
-                clip=clip, name='Classification', value=c.clip_class_name)
+                clip=clip,
+                name='Classification',
+                value=c.clip_class_name)
             a.save()
             
             num_added += 1
@@ -216,6 +229,23 @@ def _get_clip_recording(clip, station_recordings):
         'Could not find recording for clip "{}".'.format(clip.file_path))
     
     
+def _get_detector(clip, detectors):
+    
+    if clip.detector_name == 'Manual':
+        return None
+    
+    else:
+        
+        detector_name = 'Old Bird {} Detector 1.0'.format(clip.detector_name)
+        
+        try:
+            return detectors[detector_name]
+        
+        except KeyError:
+            raise ValueError(
+                'Unrecognized detector "{}".'.format(clip.detector_name))
+        
+        
 def _get_floor_noon(time, station):
     time_zone = pytz.timezone(station.time_zone)
     dt = time.astimezone(time_zone)
@@ -228,70 +258,6 @@ def _get_floor_noon(time, station):
     return noon
 
 
-def _show_data():
-    _show_device_models()
-    print()
-    _show_devices()
-    print()
-    _show_stations()
-    print()
-    _show_recordings()
-    print()
-    _show_clips()
-    
-    
-def _show_device_models():
-    for model in DeviceModel.objects.all():
-        print(model)
-        for input_ in model.inputs.all():
-            print('    ' + str(input_))
-        for output in model.outputs.all():
-            print('    ' + str(output))
-            
-            
-def _show_devices():
-    for device in Device.objects.all():
-        print(device)
-        for input_ in device.inputs.all():
-            print('    ' + str(input_))
-        for output in device.outputs.all():
-            print('    ' + str(output))
-            
-            
-def _show_stations():
-    for station in Station.objects.all():
-        print(station)
-        for sd in station.device_associations.all():
-            print('    ', sd)
-            for output in sd.device.outputs.all():
-                for connection in output.connections.filter(
-                        start_time__range=(sd.start_time, sd.end_time)):
-                    print('        ', connection)
-    
-
-def _show_recordings():
-    for recording in Recording.objects.all():
-        print(recording)
-        
-        
-def _show_clips():
-    for clip in Clip.objects.all():
-        annotations = Annotation.objects.filter(clip=clip)
-        detector = annotations.get(name='Detector').value
-        try:
-            selection_start_index = \
-                annotations.get(name='Selection Start Index').value
-        except Annotation.DoesNotExist:
-            selection_start_index = None
-            selection_length = None
-        else:
-            selection_length = annotations.get(name='Selection Length').value
-        classification = annotations.get(name='Classification').value
-        print('{} {} {} {} {}'.format(
-            str(clip), detector, selection_start_index, selection_length,
-            classification))
-        
-        
 if __name__ == '__main__':
     _main()
     

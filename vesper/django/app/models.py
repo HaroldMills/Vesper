@@ -391,32 +391,31 @@ class StationDevice(Model):
 
 class Algorithm(Model):
     
-    type = CharField(max_length=255)
     name = CharField(max_length=255)
     version = CharField(max_length=255)
+    type = CharField(max_length=255)
     description = TextField(blank=True)
     
     def __str__(self):
         return self.name + ' ' + self.version
     
     class Meta:
-        unique_together = ('type', 'name', 'version')
+        unique_together = ('name', 'version')
         db_table = 'vesper_algorithm'
     
     
 class Processor(Model):
     
+    name = CharField(max_length=255, unique=True)
+    description = TextField(blank=True)
     algorithm = ForeignKey(
         Algorithm, on_delete=CASCADE, related_name='processors')
-    name = CharField(max_length=255)
-    description = TextField(blank=True)
     settings = TextField(blank=True)
     
     def __str__(self):
         return self.name
     
     class Meta:
-        unique_together = ('algorithm', 'name')
         db_table = 'vesper_processor'
         
     
@@ -552,7 +551,7 @@ class Recording(Model):
     sample_rate = FloatField()
     start_time = DateTimeField()
     end_time = DateTimeField()
-    creation_time = DateTimeField(null=True)
+    creation_time = DateTimeField()
     creating_job = ForeignKey(
         Job, null=True, on_delete=CASCADE, related_name='recordings')
     
@@ -613,8 +612,11 @@ class RecordingFile(Model):
 # from being created by accidentally running a particular detector on a
 # particular recording more than once.
 #
-# We include the redundant `creating_processor` field (which is the same
-# as `creating_job.processor` for use in the multi-column unique constraint.
+# Sometimes we know the processor that created a clip, but there is no
+# corresponding job, as when we import clips that were detected outside
+# of Vesper. In this case the processor of the clip is non-null, but the
+# job is null. When both are non-null, the processor of the clip and the
+# processor of the job should be the same.
 #
 # At least for the time being, we require that every clip refer to a
 # recording for which the station, recorder, number of channels, start

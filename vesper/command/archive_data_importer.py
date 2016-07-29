@@ -5,8 +5,9 @@ import pytz
 
 from vesper.command.command import CommandSyntaxError
 from vesper.django.app.models import (
-    Device, DeviceConnection, DeviceInput, DeviceModel, DeviceModelInput,
-    DeviceModelOutput, DeviceOutput, Station, StationDevice)
+    Algorithm, Device, DeviceConnection, DeviceInput, DeviceModel,
+    DeviceModelInput, DeviceModelOutput, DeviceOutput, Processor,
+    Station, StationDevice)
 import vesper.command.command_utils as command_utils
 
 
@@ -37,6 +38,8 @@ class ArchiveDataImporter:
                 self._add_device_models()
                 self._add_devices()
                 self._add_station_devices()
+                self._add_algorithms()
+                self._add_processors()
                 
         except Exception:
             self._logger.error(
@@ -61,7 +64,7 @@ class ArchiveDataImporter:
                 
                 station = Station(
                     name=data['name'],
-                    description=data['description'],
+                    description=data.get('description', ''),
                     latitude=data['latitude'],
                     longitude=data['longitude'],
                     elevation=data['elevation'],
@@ -92,8 +95,8 @@ class ArchiveDataImporter:
             type=data['type'],
             manufacturer=data['manufacturer'],
             model=data['model'],
-            short_name=data['short_name'],
-            description=data['description']
+            short_name=data.get('short_name', ''),
+            description=data.get('description', '')
         )
         
         model.save()
@@ -307,6 +310,50 @@ class ArchiveDataImporter:
             start_time=start_time, end_time=end_time)
         
         connection.save()
+
+
+    def _add_algorithms(self):
+        
+        algorithms_data = self.archive_data.get('algorithms')
+        
+        if algorithms_data is not None:
+            
+            for data in algorithms_data:
+            
+                self._logger.info(
+                    'Adding algorithm "{}"...'.format(data['name']))
+                
+                algorithm = Algorithm(
+                    name=data['name'],
+                    version=data['version'],
+                    type=data['type'],
+                    description=data.get('description', ''))
+                
+                algorithm.save()
+
+
+    def _add_processors(self):
+        
+        processors_data = self.archive_data.get('processors')
+        
+        if processors_data is not None:
+            
+            for data in processors_data:
+            
+                self._logger.info(
+                    'Adding processor "{}"...'.format(data['name']))
+                
+                algorithm = Algorithm.objects.get(
+                    name=data['algorithm_name'],
+                    version=data['algorithm_version'])
+                
+                processor = Processor(
+                    algorithm=algorithm,
+                    name=data['name'],
+                    description=data.get('description', ''),
+                    settings=data.get('settings', ''))
+                
+                processor.save()
 
 
 def _create_objects_dict(cls):
