@@ -422,19 +422,27 @@ class Processor(Model):
     
 # A *command* is a specification of something to be executed, possibly
 # more than once. A *job* is a particular execution of a command.
+#
+# The processor of a job can be null since a job may not have a processor,
+# for example an archive data import.
+#
+# The start and end times of a job can also be null, for example if the
+# job has been created but has not yet started.
+#
+# A job may be started by either a user or another job.
 class Job(Model):
     
     command = TextField()
-    creation_time = DateTimeField()
-    creating_user = ForeignKey(
-        User, null=True, on_delete=CASCADE, related_name='jobs')
-    creating_job = ForeignKey(
-        'Job', null=True, on_delete=CASCADE, related_name='jobs')
     processor = ForeignKey(
         Processor, null=True, on_delete=CASCADE, related_name='jobs')
     start_time = DateTimeField(null=True)
     end_time = DateTimeField(null=True)
     status = CharField(max_length=255)
+    creation_time = DateTimeField()
+    creating_user = ForeignKey(
+        User, null=True, on_delete=CASCADE, related_name='jobs')
+    creating_job = ForeignKey(
+        'Job', null=True, on_delete=CASCADE, related_name='jobs')
     
     def __str__(self):
         return 'Job {} started {} ended {} command "{}"'.format(
@@ -544,6 +552,9 @@ class Recording(Model):
     sample_rate = FloatField()
     start_time = DateTimeField()
     end_time = DateTimeField()
+    creation_time = DateTimeField(null=True)
+    creating_job = ForeignKey(
+        Job, null=True, on_delete=CASCADE, related_name='recordings')
     
     @property
     def station(self):
@@ -582,19 +593,6 @@ class RecordingFile(Model):
         db_table = 'vesper_recording_file'
 
 
-# After much deliberation, I have decided to require that every clip
-# refer to a recording. I considered allowing so-called *orphaned clips*
-# that did not refer to a recording, but it seems to me that doing this
-# would be more trouble than it's worth. It would complicate the database
-# schema, code that uses the database, and the Vesper user interface and
-# documentation, all for a situation that is uncommon. Note that we do
-# *not* require that the samples of a clip's recording be available, only
-# the recording's metadata, including its station, recorder, number of
-# channels, start time, and length. In cases where somebody wants to import
-# a set of clips for which some recording metadata (start times and lengths,
-# for example) are not available, made-up metadata will have to be supplied,
-# and the fact that the information is made up will have to be noted.
-#
 # The station, recorder, and sample rate of a clip are the station,
 # recorder, and sample rate of its recording.
 #
@@ -614,6 +612,18 @@ class RecordingFile(Model):
 # We include a multi-column unique constraint to prevent duplicate clips
 # from being created by accidentally running a particular detector on a
 # particular recording more than once.
+#
+# We include the redundant `creating_processor` field (which is the same
+# as `creating_job.processor` for use in the multi-column unique constraint.
+#
+# At least for the time being, we require that every clip refer to a
+# recording for which the station, recorder, number of channels, start
+# time, and length are known. Thus we do not support clips for which
+# some of this recording information (usually the start time and length)
+# are not accurately known. If supporting such clips turns out to be
+# of great importance, perhaps we can allow null recording lengths,
+# and add flags that indicate whether or not recording start and end
+# times are only approximate.
 class Clip(Model):
     
     recording = ForeignKey(Recording, on_delete=CASCADE, related_name='clips')
@@ -625,10 +635,10 @@ class Clip(Model):
     creation_time = DateTimeField()
     creating_user = ForeignKey(
         User, null=True, on_delete=CASCADE, related_name='clips')
-    creating_processor = ForeignKey(
-        Processor, null=True, on_delete=CASCADE, related_name='clips')
     creating_job = ForeignKey(
         Job, null=True, on_delete=CASCADE, related_name='clips')
+    creating_processor = ForeignKey(
+        Processor, null=True, on_delete=CASCADE, related_name='clips')
     file_path = CharField(max_length=255, unique=True, null=True)
     
     def __str__(self):
@@ -719,3 +729,50 @@ class Annotation(Model):
     class Meta:
         unique_together = ('clip', 'name')
         db_table = 'vesper_annotation'
+
+
+class RecordingJob(Model):
+    
+    recording = ForeignKey(
+        Recording, on_delete=CASCADE, related_name='recording_jobs')
+    job = ForeignKey(Job, on_delete=CASCADE, related_name='recording_jobs')
+    
+    def __str__(self):
+        return '{} {}'.format(str(self.recording), self.job.processor.name)
+    
+    class Meta:
+        unique_together = ('recording', 'job')
+        db_table = 'vesper_recording_job'
+        
+    
+'''
+We might use tables like the following to keep track of which processors
+have been run on which recordings and clips. This information could help
+make it easy for users to, say, identify recordings to run a detector on
+or clips to run a classifier on.
+
+class RecordingJob(Model):
+    recording = ForeignKey(
+        Recording, on_delete=CASCADE, related_name='recording_jobs')
+    job = ForeignKey(Job, on_delete=CASCADE, related_name='recording_jobs')
+    
+# The following gets the recordings on which a certain processor has
+# not been run. It's more complicated than I'd like, but I haven't
+# been able to figure out anything simpler. It's a problem that the
+# set of excluded recordings could be large, and the analogous
+# problem for clips is even worse. It might help to alleviate the
+# problem to limit the time period of the query.
+recording_jobs = RecordingJob.objects.filter(
+    job__processor=processor).select_related('recording')
+excluded_recordings = frozenset(rj.recording for rj in recording_jobs)
+recordings = Recording.objects.exclude(pk__in=excluded_recordings)
+
+# The time-limited query would be as below.
+recording_jobs = RecordingJob.objects.filter(
+    job__processor=processor,
+    recording__start_time__range=start_time_range).select_related('recording')
+excluded_recordings = frozenset(rj.recording for rj in recording_jobs)
+recordings = Recording.objects.filter(
+    start_time__range=start_time_range).exclude(
+        pk__in=excluded_recordings)
+'''
