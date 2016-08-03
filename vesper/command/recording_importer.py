@@ -112,13 +112,13 @@ class RecordingImporter:
             station = r.station_recorder.station
             recorder = r.station_recorder.device
             log('    {} {} {} {} {} {}'.format(
-                station.name, recorder.short_name,
+                station.name, recorder.name,
                 r.num_channels, r.length, r.sample_rate, str(r.start_time)))
             for f in r.files:
                 station = f.station_recorder.station
                 recorder = f.station_recorder.device
                 log('        {} {} {} {} {} {} {}'.format(
-                    f.file_path, station.name, recorder.short_name,
+                    f.file_path, station.name, recorder.name,
                     f.num_channels, f.length, f.sample_rate, str(f.start_time)))
 
 

@@ -135,7 +135,8 @@ def _get_station_recordings():
         
         
 def _get_detectors():
-    detectors = Processor.objects.filter(algorithm__type='NFC Detector')
+    detectors = Processor.objects.filter(
+        algorithm_version__algorithm__type='Detector')
     return dict((d.name, d) for d in detectors)
 
 
@@ -236,11 +237,8 @@ def _get_detector(clip, detectors):
     
     else:
         
-        detector_name = 'Old Bird {} Detector 1.0'.format(clip.detector_name)
-        
         try:
-            return detectors[detector_name]
-        
+            return detectors[clip.detector_name]
         except KeyError:
             raise ValueError(
                 'Unrecognized detector "{}".'.format(clip.detector_name))

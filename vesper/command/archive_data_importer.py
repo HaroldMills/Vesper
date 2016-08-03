@@ -5,17 +5,14 @@ import pytz
 
 from vesper.command.command import CommandSyntaxError
 from vesper.django.app.models import (
-    Algorithm, Device, DeviceConnection, DeviceInput, DeviceModel,
-    DeviceModelInput, DeviceModelOutput, DeviceOutput, Processor,
+    Algorithm, AlgorithmVersion, Device, DeviceConnection, DeviceInput,
+    DeviceModel, DeviceModelInput, DeviceModelOutput, DeviceOutput, Processor,
     Station, StationDevice)
 import vesper.command.command_utils as command_utils
 
 
 # TODO: Recover more gracefully when data are missing, e.g. raise a
 # `CommandSyntaxError` rather than a `KeyError`.
-# TODO: Make sure one can set any field from archive data.
-# TODO: Make sure there are reasonable defaults for various archive data,
-# e.g. descriptions.
 
 
 class ArchiveDataImporter:
@@ -39,6 +36,7 @@ class ArchiveDataImporter:
                 self._add_devices()
                 self._add_station_devices()
                 self._add_algorithms()
+                self._add_algorithm_versions()
                 self._add_processors()
                 
         except Exception:
@@ -59,11 +57,12 @@ class ArchiveDataImporter:
             
             for data in stations_data:
             
-                self._logger.info(
-                    'Adding station "{}"...'.format(data['name']))
+                name = data['name']
+                
+                self._logger.info('Adding station "{}"...'.format(name))
                 
                 station = Station(
-                    name=data['name'],
+                    name=name,
                     description=data.get('description', ''),
                     latitude=data['latitude'],
                     longitude=data['longitude'],
@@ -87,15 +86,20 @@ class ArchiveDataImporter:
             
     def _add_device_model(self, data):
         
+        name = data['name']
+        type_ = data['type']
+        manufacturer = data['manufacturer']
+        model = data['model']
+        
         self._logger.info(
-            'Adding device model "{} {} {}"...'.format(
-                data['manufacturer'], data['model'], data['type']))
+            'Adding device model "{}" "{} {} {}"...'.format(
+                name, manufacturer, model, type_))
         
         model = DeviceModel(
-            type=data['type'],
-            manufacturer=data['manufacturer'],
-            model=data['model'],
-            short_name=data.get('short_name', ''),
+            name=name,
+            type=type_,
+            manufacturer=manufacturer,
+            model=model,
             description=data.get('description', '')
         )
         
@@ -111,10 +115,9 @@ class ArchiveDataImporter:
         for name in names:
             
             self._logger.info(
-                'Adding device model input "{} {}"...'.format(
-                    model.long_name, name))
+                'Adding device model input "{} {}"...'.format(model.name, name))
             
-            input_ = DeviceModelInput(model=model, name=name)
+            input_ = DeviceModelInput(model=model, local_name=name)
             input_.save()
             
     
@@ -147,9 +150,9 @@ class ArchiveDataImporter:
             
             self._logger.info(
                 'Adding device model output "{} {}"...'.format(
-                    model.long_name, name))
+                    model.name, name))
             
-            output = DeviceModelOutput(model=model, name=name)
+            output = DeviceModelOutput(model=model, local_name=name)
             output.save()
             
             
@@ -180,17 +183,18 @@ class ArchiveDataImporter:
 
     def _add_device(self, data, model):
         
+        name = data['name']
         serial_number = data['serial_number']
-        description = data.get('description', '')
         
         self._logger.info(
-            'Adding device "{} {}"...'.format(
-                model.long_name, serial_number))
+            'Adding device "{}" "{} {}"...'.format(
+                name, model.name, serial_number))
         
         device = Device(
+            name=name,
             model=model,
             serial_number=serial_number,
-            description=description)
+            description=data.get('description', ''))
         
         device.save()
         
@@ -203,9 +207,9 @@ class ArchiveDataImporter:
             
             self._logger.info(
                 'Adding device input "{} {}"...'.format(
-                    device.long_name, model_input.name))
+                    device.name, model_input.local_name))
             
-            input_ = DeviceInput(model_input=model_input, device=device)
+            input_ = DeviceInput(device=device, model_input=model_input)
             input_.save()
             
             
@@ -215,9 +219,9 @@ class ArchiveDataImporter:
             
             self._logger.info(
                 'Adding device output "{} {}"...'.format(
-                    device.long_name, model_output.name))
+                    device.name, model_output.local_name))
             
-            output = DeviceOutput(model_output=model_output, device=device)
+            output = DeviceOutput(device=device, model_output=model_output)
             output.save()
 
 
@@ -255,28 +259,27 @@ class ArchiveDataImporter:
         try:
             return Station.objects.get(name=name)
         except Station.DoesNotExist:
-            raise CommandSyntaxError(
-                'Unrecognized station "{}".'.format(name))
+            raise CommandSyntaxError('Unrecognized station "{}".'.format(name))
             
 
     def _get_device(self, name, devices):
         try:
             return devices[name]
         except KeyError:
-            raise CommandSyntaxError(
-                'Unrecognized device "{}".'.format(name))
+            raise CommandSyntaxError('Unrecognized device "{}".'.format(name))
         
 
     def _add_station_device(self, station, device, start_time, end_time):
         
         self._logger.info(
             'Adding station device "{} at {} from {} to {}"...'.format(
-                device.short_name, station.name,
-                str(start_time), str(end_time)))
+                device.name, station.name, str(start_time), str(end_time)))
     
         station_device = StationDevice(
-            station=station, device=device,
-            start_time=start_time, end_time=end_time)
+            station=station,
+            device=device,
+            start_time=start_time,
+            end_time=end_time)
         
         station_device.save()
         
@@ -302,12 +305,13 @@ class ArchiveDataImporter:
         self._logger.info((
             'Adding device connection "{} -> {} '
             'from {} to {}"...').format(
-                output.short_name, input_.short_name,
-                str(start_time), str(end_time)))
+                output.name, input_.name, str(start_time), str(end_time)))
     
         connection = DeviceConnection(
-            output=output, input=input_,
-            start_time=start_time, end_time=end_time)
+            output=output,
+            input=input_,
+            start_time=start_time,
+            end_time=end_time)
         
         connection.save()
 
@@ -320,16 +324,41 @@ class ArchiveDataImporter:
             
             for data in algorithms_data:
             
-                self._logger.info(
-                    'Adding algorithm "{}"...'.format(data['name']))
+                name = data['name']
+
+                self._logger.info('Adding algorithm "{}"...'.format(name))
                 
                 algorithm = Algorithm(
-                    name=data['name'],
-                    version=data['version'],
+                    name=name,
                     type=data['type'],
                     description=data.get('description', ''))
                 
                 algorithm.save()
+
+
+    def _add_algorithm_versions(self):
+        
+        versions_data = self.archive_data.get('algorithm_versions')
+        
+        if versions_data is not None:
+            
+            algorithms = _create_objects_dict(Algorithm)
+            
+            for data in versions_data:
+            
+                algorithm = algorithms[data['algorithm']]
+                version = data['version']
+
+                self._logger.info(
+                    'Adding algorithm version "{} {}"...'.format(
+                        algorithm.name, version))
+                
+                algorithm_version = AlgorithmVersion(
+                    algorithm=algorithm,
+                    version=version,
+                    description=data.get('description', ''))
+                
+                algorithm_version.save()
 
 
     def _add_processors(self):
@@ -338,20 +367,20 @@ class ArchiveDataImporter:
         
         if processors_data is not None:
             
+            algorithm_versions = _create_objects_dict(AlgorithmVersion)
+            
             for data in processors_data:
             
-                self._logger.info(
-                    'Adding processor "{}"...'.format(data['name']))
+                name = data['name']
                 
-                algorithm = Algorithm.objects.get(
-                    name=data['algorithm_name'],
-                    version=data['algorithm_version'])
+                self._logger.info('Adding processor "{}"...'.format(name))
                 
                 processor = Processor(
-                    algorithm=algorithm,
-                    name=data['name'],
-                    description=data.get('description', ''),
-                    settings=data.get('settings', ''))
+                    name=name,
+                    algorithm_version=\
+                        algorithm_versions[data['algorithm_version']],
+                    settings=data.get('settings', ''),
+                    description=data.get('description', ''))
                 
                 processor.save()
 
@@ -359,8 +388,9 @@ class ArchiveDataImporter:
 def _create_objects_dict(cls):
     objects = {}
     for obj in cls.objects.all():
-        objects[obj.long_name] = obj
-        objects[obj.short_name] = obj
+        objects[obj.name] = obj
+        if hasattr(obj, 'long_name'):
+            objects[obj.long_name] = obj
     return objects
 
 

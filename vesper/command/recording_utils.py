@@ -135,5 +135,5 @@ def _create_sort_key(f):
     station = f.station_recorder.station
     recorder = f.station_recorder.device
     return (
-        station.name, recorder.long_name, f.num_channels, f.sample_rate,
+        station.name, recorder.name, f.num_channels, f.sample_rate,
         f.start_time)

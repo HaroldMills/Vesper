@@ -123,7 +123,7 @@ def create_file(
     length = int(duration * sample_rate)
     
     station = Bunch(name=station_name)
-    recorder = Bunch(long_name='R')
+    recorder = Bunch(name='R')
     station_recorder = Bunch(station=station, device=recorder)
     
     return Bunch(
