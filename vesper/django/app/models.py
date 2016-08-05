@@ -42,6 +42,7 @@ class DeviceModelInput(Model):
     
     model = ForeignKey(DeviceModel, on_delete=CASCADE, related_name='inputs')
     local_name = CharField(max_length=255)
+    channel_num = IntegerField()
     description = TextField(blank=True)
     
     @property
@@ -56,7 +57,7 @@ class DeviceModelInput(Model):
         return self.long_name
     
     class Meta:
-        unique_together = ('model', 'local_name')
+        unique_together = (('model', 'local_name'), ('model', 'channel_num'))
         db_table = 'vesper_device_model_input'
 
 
@@ -64,6 +65,7 @@ class DeviceModelOutput(Model):
     
     model = ForeignKey(DeviceModel, on_delete=CASCADE, related_name='outputs')
     local_name = CharField(max_length=255)
+    channel_num = IntegerField()
     description = TextField(blank=True)
     
     @property
@@ -78,7 +80,7 @@ class DeviceModelOutput(Model):
         return self.long_name
     
     class Meta:
-        unique_together = ('model', 'local_name')
+        unique_together = (('model', 'local_name'), ('model', 'channel_num'))
         db_table = 'vesper_device_model_output'
 
 
@@ -107,7 +109,7 @@ class DeviceModelOutput(Model):
 class Device(Model):
     
     name = CharField(max_length=255, unique=True)
-    model = ForeignKey(DeviceModel, on_delete=CASCADE, related_name='instances')
+    model = ForeignKey(DeviceModel, on_delete=CASCADE, related_name='devices')
     serial_number = CharField(max_length=255)
     description = TextField(blank=True)
     
@@ -127,7 +129,7 @@ class DeviceInput(Model):
     
     device = ForeignKey(Device, on_delete=CASCADE, related_name='inputs')
     model_input = ForeignKey(
-        DeviceModelInput, on_delete=CASCADE, related_name='instances')
+        DeviceModelInput, on_delete=CASCADE, related_name='device_inputs')
     
     @property
     def local_name(self):
@@ -141,6 +143,10 @@ class DeviceInput(Model):
     def long_name(self):
         return self.device.long_name + ' ' + self.local_name
     
+    @property
+    def channel_num(self):
+        return self.model_input.channel_num
+    
     def __str__(self):
         return self.long_name
     
@@ -151,9 +157,10 @@ class DeviceInput(Model):
         
 class DeviceOutput(Model):
     
-    device = ForeignKey(Device, on_delete=CASCADE, related_name='outputs')
+    device = ForeignKey(
+        Device, on_delete=CASCADE, related_name='outputs')
     model_output = ForeignKey(
-        DeviceModelOutput, on_delete=CASCADE, related_name='instances')
+        DeviceModelOutput, on_delete=CASCADE, related_name='device_outputs')
     
     @property
     def local_name(self):
@@ -166,6 +173,10 @@ class DeviceOutput(Model):
     @property
     def long_name(self):
         return self.device.long_name + ' ' + self.local_name
+    
+    @property
+    def channel_num(self):
+        return self.model_output.channel_num
     
     def __str__(self):
         return self.long_name
@@ -234,35 +245,35 @@ class DeviceConnection(Model):
         db_table = 'vesper_device_connection'
     
     
-class RecorderChannelAssignment(Model):
-    
-    recorder = ForeignKey(
-        Device, on_delete=CASCADE, related_name='channel_assignments')
-    input = ForeignKey(
-        DeviceInput, on_delete=CASCADE, related_name='channel_assignments')
-    channel_num = IntegerField()
-    start_time = DateTimeField()
-    end_time = DateTimeField()
-    
-    @property
-    def name(self):
-        return '{} -> {} from {} to {}'.format(
-            self.input.name, self.channel_num,
-            str(self.start_time), str(self.end_time))
-    
-    @property
-    def long_name(self):
-        return '{} -> {} from {} to {}'.format(
-            self.input.long_name, self.channel_num,
-            str(self.start_time), str(self.end_time))
-    
-    def __str__(self):
-        return self.long_name
-        
-    class Meta:
-        unique_together = (
-            'recorder', 'input', 'channel_num', 'start_time', 'end_time')
-        db_table = 'vesper_recorder_channel_assignment'
+# class RecorderChannelAssignment(Model):
+#     
+#     recorder = ForeignKey(
+#         Device, on_delete=CASCADE, related_name='channel_assignments')
+#     input = ForeignKey(
+#         DeviceInput, on_delete=CASCADE, related_name='channel_assignments')
+#     channel_num = IntegerField()
+#     start_time = DateTimeField()
+#     end_time = DateTimeField()
+#     
+#     @property
+#     def name(self):
+#         return '{} -> {} from {} to {}'.format(
+#             self.input.name, self.channel_num,
+#             str(self.start_time), str(self.end_time))
+#     
+#     @property
+#     def long_name(self):
+#         return '{} -> {} from {} to {}'.format(
+#             self.input.long_name, self.channel_num,
+#             str(self.start_time), str(self.end_time))
+#     
+#     def __str__(self):
+#         return self.long_name
+#         
+#     class Meta:
+#         unique_together = (
+#             'recorder', 'input', 'channel_num', 'start_time', 'end_time')
+#         db_table = 'vesper_recorder_channel_assignment'
     
     
 # Many stations have a fixed location, in which case the location can
@@ -356,9 +367,9 @@ class Station(Model):
 class StationDevice(Model):
     
     station = ForeignKey(
-        Station, on_delete=CASCADE, related_name='device_associations')
+        Station, on_delete=CASCADE, related_name='station_devices')
     device = ForeignKey(
-        Device, on_delete=CASCADE, related_name='station_associations')
+        Device, on_delete=CASCADE, related_name='station_devices')
     start_time = DateTimeField()
     end_time = DateTimeField()
     
@@ -406,6 +417,10 @@ class AlgorithmVersion(Model):
     def name(self):
         return self.algorithm.name + ' ' + self.version
     
+    @property
+    def type(self):
+        return self.algorithm.type
+    
     def __str__(self):
         return self.name
     
@@ -421,6 +436,10 @@ class Processor(Model):
         AlgorithmVersion, on_delete=CASCADE, related_name='processors')
     settings = TextField(blank=True)
     description = TextField(blank=True)
+    
+    @property
+    def type(self):
+        return self.algorithm_version.type
     
     def __str__(self):
         return self.name
@@ -586,10 +605,11 @@ class Recording(Model):
 class RecordingFile(Model):
     
     recording = ForeignKey(Recording, on_delete=CASCADE, related_name='files')
-    file_num = IntegerField()
+    file_num = IntegerField() # TODO: Change name to "num".
     start_index = BigIntegerField()
     length = BigIntegerField()
     file_path = CharField(max_length=255, unique=True, null=True)
+        # TODO: Change name to "path".
     
     def __str__(self):
         r = self.recording
@@ -602,6 +622,192 @@ class RecordingFile(Model):
         db_table = 'vesper_recording_file'
 
 
+# class RecorderModel(Model):
+#     
+#     name = CharField(max_length=255, unique=True)
+#     manufacturer = CharField(max_length=255)
+#     model = CharField(max_length=255)
+#     num_channels = IntegerField()
+#     description = TextField(blank=True)
+#      
+#     @property
+#     def long_name(self):
+#         return '{} {} Recorder'.format(self.manufacturer, self.model)
+#     
+#     def __str__(self):
+#         return self.long_name
+#      
+#     class Meta:
+#         unique_together = ('manufacturer', 'model')
+#         db_table = 'vesper_recorder_model'
+# 
+# 
+# class RecorderModelChannel(Model):
+#     
+#     model = ForeignKey(
+#         RecorderModel, on_delete=CASCADE, related_name='channels')
+#     num = IntegerField()
+# 
+# 
+# class Recorder(Model):
+#     
+#     name = CharField(max_length=255, unique=True)
+#     model = ForeignKey(
+#         RecorderModel, on_delete=CASCADE, related_name='recorders')
+#     serial_number = CharField(max_length=255)
+#     description = TextField(blank=True)
+#     
+#     @property
+#     def num_channels(self):
+#         return self.model.num_channels
+#     
+#     @property
+#     def long_name(self):
+#         return self.model.long_name + ' ' + self.serial_number
+#         
+#     def __str__(self):
+#         return self.long_name
+#     
+#     class Meta:
+#         unique_together = ('model', 'serial_number')
+#         db_table = 'vesper_recorder'
+# 
+#     
+# class RecorderChannel(Model):
+#     
+#     recorder = ForeignKey(Recorder, on_delete=CASCADE, related_name='channels')
+#     model_channel = ForeignKey(
+#         RecorderModelChannel, on_delete=CASCADE,
+#         related_name='recorder_channels')
+# 
+# 
+# class MicrophoneModel(Model):
+#     
+#     name = CharField(max_length=255, unique=True)
+#     manufacturer = CharField(max_length=255)
+#     model = CharField(max_length=255)
+#     description = TextField(blank=True)
+#      
+#     @property
+#     def long_name(self):
+#         return '{} {} Microphone'.format(self.manufacturer, self.model)
+#     
+#     def __str__(self):
+#         return self.long_name
+#      
+#     class Meta:
+#         unique_together = ('manufacturer', 'model')
+#         db_table = 'vesper_microphone_model'
+# 
+# 
+# class MicrophoneModelOutput(Model):
+#     
+#     local_name = CharField(max_length=255, blank=True)
+#     model = ForeignKey(
+#         MicrophoneModel, on_delete=CASCADE, related_name='outputs')
+#     channel_num = IntegerField()
+#     description = TextField(blank=True)
+#     
+#     
+# class Microphone(Model):
+#     
+#     name = CharField(max_length=255, unique=True)
+#     model = ForeignKey(
+#         MicrophoneModel, on_delete=CASCADE, related_name='microphones')
+#     serial_number = CharField(max_length=255)
+#     description = TextField(blank=True)
+#     
+#     @property
+#     def long_name(self):
+#         return self.model.long_name + ' ' + self.serial_number
+#         
+#     def __str__(self):
+#         return self.long_name
+#     
+#     class Meta:
+#         unique_together = ('model', 'serial_number')
+#         db_table = 'vesper_microphone'
+# 
+#     
+# class MicrophoneOutput(Model):
+#     
+#     microphone = ForeignKey(
+#         Microphone, on_delete=CASCADE, related_name='outputs')
+#     model_output = ForeignKey(
+#         MicrophoneModelOutput, on_delete=CASCADE,
+#         related_name='microphone_outputs')
+#     
+#     
+# class StationRecorder(Model):
+#     
+#     station = ForeignKey(
+#         Station, on_delete=CASCADE, related_name='station_recorders')
+#     recorder = ForeignKey(
+#         Recorder, on_delete=CASCADE, related_name='station_recorders')
+#     start_time = DateTimeField()
+#     end_time = DateTimeField()
+#     
+#     @property
+#     def name(self):
+#         return '{} at {} from {} to {}'.format(
+#             self.recorder.name, self.station.name,
+#             str(self.start_time), str(self.end_time))
+#         
+#     @property
+#     def long_name(self):
+#         return '{} at {} from {} to {}'.format(
+#             self.recorder.long_name, self.station.name,
+#             str(self.start_time), str(self.end_time))
+#         
+#     def __str__(self):
+#         return self.long_name
+#         
+#     class Meta:
+#         unique_together = ('station', 'recorder', 'start_time', 'end_time')
+#         db_table = 'vesper_station_recorder'
+# 
+# 
+# class RecorderMicrophoneConnection(Model):
+#     
+#     recorder_channel = ForeignKey(
+#         RecorderChannel, on_delete=CASCADE, related_name='connections')
+#     microphone_output = ForeignKey(
+#         MicrophoneOutput, on_delete=CASCADE, related_name='connections')
+#     start_time = DateTimeField()
+#     end_time = DateTimeField()
+#     
+#     
+# class RecorderMicrophone(Model):
+#     
+#     recorder = ForeignKey(
+#         Recorder, on_delete=CASCADE, related_name='recorder_microphones')
+#     channel_num = IntegerField()
+#     microphone = ForeignKey(
+#         Microphone, on_delete=CASCADE, related_name='recorder_microphones')
+#     start_time = DateTimeField()
+#     end_time = DateTimeField()
+#     
+#     @property
+#     def name(self):
+#         return '{} in {} channel {} from {} to {}'.format(
+#             self.microphone.name, self.recorder.name, self.channel_num,
+#             str(self.start_time), str(self.end_time))
+#         
+#     @property
+#     def long_name(self):
+#         return '{} in {} channel {} from {} to {}'.format(
+#             self.microphone.long_name, self.recorder.name, self.channel_num,
+#             str(self.start_time), str(self.end_time))
+#         
+#     def __str__(self):
+#         return self.long_name
+#         
+#     class Meta:
+#         unique_together = \
+#             ('recorder', 'channel_num', 'microphone', 'start_time', 'end_time')
+#         db_table = 'vesper_recorder_microphone'
+
+    
 # The station, recorder, and sample rate of a clip are the station,
 # recorder, and sample rate of its recording.
 #

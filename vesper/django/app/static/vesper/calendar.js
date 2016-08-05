@@ -9,34 +9,116 @@ let highlightedCircle = null;
 
 function onLoad() {
 	
-	addCalendarPeriods();
+	let stationSelect = document.getElementById("station");
+	stationSelect.onchange = onStationChange;
 	
-	circles = document.querySelectorAll(".circle");
-	
-	// Install mouse motion handler on calendar.
-	const calendar = document.getElementById("calendar");
-	calendar.addEventListener("mousemove", onMouseMove);
+	populateMicrophoneOutputSelect();
+	setCalendarTitle();
+	setCalendarPeriods();
 	
 }
 
 
-function addCalendarPeriods() {
+function onStationChange() {
+	clearMicrophoneOutputSelect();
+	populateMicrophoneOutputSelect();
+}
+
+
+function clearMicrophoneOutputSelect() {
 	
-	// The server provides us with a Javascript array called `periods`,
-	// each element of which describes a calendar period. It also provides
-	// us with an empty <div> element with ID "periods" where the calendar
-	// periods should go. We populate the <div> according to the contents
-	// of the `periods` array.
+	let microphoneOutputSelect = document.getElementById("microphone");
 	
-	let periods_ = document.getElementById("periods");
+	// Remove old station microphone outputs.
+	while (microphoneOutputSelect.length != 0)
+		microphoneOutputSelect.remove(0);
 	
-	if (periods.length != 0)
-		for (let period of periods)
-			addCalendarPeriod(period, periods_);
-		
+}
+
+
+function populateMicrophoneOutputSelect() {
+	
+	// TODO: Query for station microphone outputs with an XHR rather
+	// having the server prepare stationMicrophones for us? It seems
+	// like the former might scale better to lots of stations.
+	
+	const stationSelect = document.getElementById("station");
+	const microphoneOutputSelect = document.getElementById("microphone");
+	
+	for (name of stationMicrophoneOutputs[stationSelect.value]) {
+		const option = document.createElement("option");
+	    option.text = getMicrophoneOutputDisplayName(name)
+	    option.value = name;
+		microphoneOutputSelect.add(option);
+	}
+
+}
+
+
+function getMicrophoneOutputDisplayName(output_name) {
+	
+	// When a microphone output name ends with " Output" we display it
+	// without that suffix.
+	
+	const suffix = ' Output'
+	if (output_name.endsWith(suffix))
+		return output_name.substring(0, output_name.length - suffix.length);
 	else
-		periods_.innerHTML = "There are no such clips in the archive.";
+		return output_name
+		
+}
+
+
+function setCalendarTitle() {
 	
+	const micOutputName = getMicrophoneOutputDisplayName(microphoneOutputName);
+	
+	const title = `${stationName} / ${micOutputName} / ` +
+	              `${detectorName} / ${classification} Clips`;
+	
+	let titleElement = document.getElementById("calendar-title");
+	titleElement.innerHTML = title;
+	
+}
+
+
+function setCalendarPeriods() {
+	
+	let periodsDiv = document.getElementById("periods");
+	
+	if (stationName === "None")
+		periodsDiv.innerHTML = "There are no stations in the archive.";
+			
+	else if (microphoneOutputName === "None")
+		periodsDiv.innerHTML =
+			"There are no microphones associated with station " +
+			`"${stationName}".`;
+	
+	else if (detectorName === "None")
+		periodsDiv.innerHTML = "There are no detectors in the archive.";
+	
+	else if (periods.length == 0)
+		periodsDiv.innerHTML = "There are no such clips in the archive.";
+	
+	else {
+		
+		// The server provides us with a Javascript array called `periods`,
+		// each element of which describes a calendar period. It also provides
+		// us with an empty <div> element with ID "periods" where the calendar
+		// periods should go. We populate the <div> according to the contents
+		// of the `periods` array.
+		
+		for (let period of periods)
+			addCalendarPeriod(period, periodsDiv);
+			
+		circles = document.querySelectorAll(".circle");
+		
+		// Install mouse motion handler on calendar.
+		const calendar = document.getElementById("calendar");
+		calendar.addEventListener("mousemove", onMouseMove);
+		
+	}
+
 }
 
 
@@ -133,7 +215,10 @@ function addMonthDay(day, days_) {
 		let d = day.date;
 		let date = formatDate(d);
 		num_.href = `/vesper/night?station=${stationName}&` +
-				    `classification=${classification}&date=${date}&` +
+				    `microphone_output=${microphoneOutputName}&` +
+				    `detector=${detectorName}&` +
+				    `classification=${classification}&` +
+				    `date=${date}&` +
 				    `start=1&size=${pageSize}`;
 		num_.innerHTML = d.getDate();
 		day_.appendChild(num_);

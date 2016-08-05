@@ -13,6 +13,8 @@
   <script src="{% static 'vesper/multiselection.js' %}"></script>
   <script>
     const stationName = "{{station_name}}";
+    const microphoneOutputName = "{{microphone_output_name}}";
+    const detectorName = "{{detector_name}}";
     const classification = "{{classification}}";
     const date = "{{date}}";
     const numClips = {{num_clips}};
@@ -32,17 +34,6 @@
   <div>
     <h3 id="title" class="clips-title"></h3>
     <div id="rug-plot">{{rug_plot_div|safe}}</div>
-    
-    <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Dropdown Example
-      <span class="caret"></span></button>
-      <ul class="dropdown-menu">
-        <li><a href="#">HTML</a></li>
-        <li><a href="#">CSS</a></li>
-        <li><a href="#">JavaScript</a></li>
-      </ul>
-    </div>
-    
     <div id="plots" class="clip-plots"></div>
   </div>
 </body>

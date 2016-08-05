@@ -769,6 +769,8 @@ function pageUp(selectLastClip) {
 function loadPage(startIndex, selectedIndex) {
 	let query =
 		`station=${stationName}&` +
+		`microphone_output=${microphoneOutputName}&` +
+		`detector=${detectorName}&` +
 		`classification=${classification}&` +
 		`date=${date}&start=${startIndex + 1}&size=${pageSize}`;
 	if (selectedIndex !== null)

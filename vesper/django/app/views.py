@@ -1,4 +1,7 @@
+from collections import defaultdict
 import datetime
+import itertools
+import logging
 import json
 import os.path
 
@@ -14,7 +17,9 @@ import yaml
 
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
-from vesper.django.app.models import Annotation, Clip, Job, Station
+from vesper.django.app.models import (
+    Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station,
+    StationDevice)
 from vesper.singletons import job_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.clips_rug_plot as clips_rug_plot
@@ -389,116 +394,285 @@ def _parse_content_type(content_type):
     
 def calendar(request):
     
+    params = request.GET
+        
+    stations, station_name, station = _get_station_info(params)
+    
+    station_microphone_outputs = \
+        _create_station_microphone_outputs_dict(stations)
+    
+    microphone_outputs, microphone_output_name, microphone_output = \
+        _get_microphone_output_info(station_microphone_outputs, station, params)
+        
+    detectors, detector_name, detector = _get_detector_info(params)
+    
+    classifications, classification = _get_classification_info(params)
+    
+    station_microphone_outputs_json = \
+        _get_station_microphone_outputs_json(station_microphone_outputs)
+        
+    periods_json = _get_periods_json(
+        station, microphone_output, detector, 'Classification', classification)
+    
     context = {
         'navbar_items': _NAVBAR_ITEMS,
         'active_navbar_item': 'Calendar',
+        'stations': stations,
+        'station_name': station_name,
+        'microphone_outputs': microphone_outputs,
+        'microphone_output_name': microphone_output_name,
+        'detectors': detectors,
+        'detector_name': detector_name,
+        'classifications': classifications,
+        'classification': classification,
+        'station_microphone_outputs_json': station_microphone_outputs_json,
+        'periods_json': periods_json
     }
+            
+    return render(request, 'vesper/calendar.html', context)
+    
+    
+def _get_station_info(params):
     
     stations = Station.objects.order_by('name')
     
-    if len(stations) != 0:
-        # have at least one station
+    station_name = params.get('station')
+    if station_name is None and len(stations) != 0:
+        station_name = stations[0].name
         
-        classifications = _add_wildcard_classifications(_CLASSIFICATIONS)
-        
-        params = request.GET
-        station_name = params.get('station', stations[0].name)
-        classification = params.get('classification', classifications[0])
-        
+    if station_name is None:
+        station = None
+    else:
         station = Station.objects.get(name=station_name)
+    
+    return stations, station_name, station
+
+
+def _create_station_microphone_outputs_dict(stations):
+    return dict(
+        _create_station_microphone_outputs_dict_aux(s) for s in stations)
+
+
+def _create_station_microphone_outputs_dict_aux(station):
+    microphone_outputs = _get_station_microphone_outputs(station)
+    return (station.name, microphone_outputs)
+        
+
+def _get_station_microphone_outputs(station):
+    microphones = station.devices.filter(model__type='Microphone')
+    output_iterators = [m.outputs.all() for m in microphones]
+    outputs = list(itertools.chain.from_iterable(output_iterators))
+    outputs.sort(key=lambda o: o.name)
+    return outputs
+
+
+def _get_microphone_output_info(station_microphone_outputs, station, params):
+    
+    if station is None:
+        return [], None, None
+    
+    else:
+        
+        outputs = station_microphone_outputs[station.name]
+
+        output_name = params.get('microphone')
+        if output_name is None and len(outputs) != 0:
+            output_name = outputs[0].name
+            
+        if output_name is None:
+            output = None
+        else:
+            output = _find_object_by_name(outputs, output_name)
+            
+        return outputs, output_name, output
+
+
+def _find_object_by_name(objects, name):
+    for obj in objects:
+        if obj.name == name:
+            return obj
+    return None
+
+    
+def _get_detector_info(params):
+    
+    detectors = Processor.objects.filter(
+        algorithm_version__algorithm__type='Detector').order_by('name')
+    
+    detector_name = params.get('detector')
+    if detector_name is None and len(detectors) != 0:
+        detector_name = detectors[0].name
+        
+    if detector_name is None:
+        detector = None
+    else:
+        detector = Processor.objects.get(name=detector_name)
+
+    return detectors, detector_name, detector
+
+    
+def _get_classification_info(params):
+    classifications = _add_wildcard_classifications(_CLASSIFICATIONS)
+    classification = params.get('classification', classifications[0])
+    return classifications, classification
+
+
+def _get_station_microphone_outputs_json(station_microphone_outputs):
+    station_microphone_output_names = dict(
+        (station_name, [o.name for o in outputs])
+        for station_name, outputs in station_microphone_outputs.items())
+    return json.dumps(station_microphone_output_names)
+
+
+def _get_periods_json(
+        station, microphone_output, detector, annotation_name,
+        annotation_value):
+    
+    if station is None or microphone_output is None or detector is None:
+        return '[]'
+    
+    else:
         
         clip_counts = _get_clip_counts(
-            station, 'Classification', classification)
+            station, microphone_output, detector, annotation_name,
+            annotation_value)
         
         dates = sorted(list(clip_counts.keys()))
         periods = calendar_utils.get_calendar_periods(dates)
-        periods_json = \
-            calendar_utils.get_calendar_periods_json(periods, clip_counts)
         
-        context.update(
-            stations=stations,
-            station_name=station_name,
-            classifications=classifications,
-            classification=classification,
-            periods_json=periods_json
-        )
-            
-    return render(request, 'vesper/calendar.html', context)
-
+        return calendar_utils.get_calendar_periods_json(periods, clip_counts)
     
+
 def night(request):
+      
+    params = request.GET
+      
+    # TODO: Type check and range check query items.
+    station_name = params['station']
+    microphone_output_name = params['microphone_output']
+    detector_name = params['detector']
+    annotation_name = 'Classification'
+    annotation_value = params['classification']
+    date = params['date']
+    page_start_index = int(params['start']) - 1
+    page_size = int(params['size'])
+      
+    selected_index = int(params.get('selected', '0')) - 1
+    if selected_index == -1:
+        selected_index = 'null';
+      
+    station = Station.objects.get(name=station_name)
+    microphone_output = _get_station_microphone_output(
+        station, microphone_output_name)
+    detector = Processor.objects.get(name=detector_name)
+      
+    time_zone = pytz.timezone(station.time_zone)
+    night = time_utils.parse_date(*date.split('-'))
+    time_interval = _get_night_interval(night, time_zone)
+  
+    recordings = Recording.objects.filter(
+        station_recorder__station=station,
+        start_time__range=time_interval)
     
-    stations = Station.objects.order_by('name')
+    annotations = _get_recording_annotations(
+        recordings, microphone_output, detector, annotation_name,
+        annotation_value, time_interval)
     
-    if len(stations) == 0:
-        # no stations (or recordings or clips)
-        
-        context = {}
-        
-    else:
-        # have at least one station
-        
-        classifications = _add_wildcard_classifications(_CLASSIFICATIONS)
-        
-        # TODO: Type check and range check query items.
-        params = request.GET
-        station_name = params.get('station', stations[0].name)
-        classification = params.get('classification', classifications[0])
-        date = params.get('date')
-        page_start_index = int(params.get('start')) - 1
-        page_size = int(params.get('size'))
-        selected_index = int(params.get('selected', '0')) - 1
-        if selected_index == -1:
-            selected_index = 'null';
-        
-        station = Station.objects.get(name=station_name)
-        
-        time_zone = pytz.timezone(station.time_zone)
-        night = time_utils.parse_date(*date.split('-'))
-        time_interval = _get_night_interval(night, time_zone)
-
-        annotations = _get_annotations(
-            station, 'Classification', classification, time_interval)
-        
-        num_clips = len(annotations)
-        page_start_index = _limit_index(page_start_index, 0, num_clips - 1)
-        page_end_index = min(page_start_index + page_size, num_clips)
-        
-        utc_times = [a.clip.start_time for a in annotations]
-        start_times = [t.astimezone(time_zone) for t in utc_times]
-        
-        rug_plot_script, rug_plot_div = \
-            clips_rug_plot.create_rug_plot(station, night, start_times)
-        
-        clips_json = _get_clips_json(
-            annotations, start_times, page_start_index, page_end_index)
-        
-        annotation_schemes_presets_json = \
-            _get_presets_json('Annotation Scheme')
-            
-        annotation_commands_presets_json = \
-            _get_presets_json('Annotation Commands')
-
-        context = {
-            'navbar_items': _NAVBAR_ITEMS,
-            'active_navbar_item': '',
-            'station_name': station_name,
-            'classification': classification,
-            'date': date,
-            'rug_plot_script': rug_plot_script,
-            'rug_plot_div': rug_plot_div,
-            'num_clips': len(annotations),
-            'page_start_index': page_start_index,
-            'page_size': page_size,
-            'selected_index': selected_index,
-            'clips_json': clips_json,
-            'annotation_scheme_presets_json': annotation_schemes_presets_json,
-            'annotation_commands_presets_json': annotation_commands_presets_json
-        }
-        
+    num_clips = len(annotations)
+    page_start_index = _limit_index(page_start_index, 0, num_clips - 1)
+    page_end_index = min(page_start_index + page_size, num_clips)
+      
+    utc_times = [a.clip.start_time for a in annotations]
+    start_times = [t.astimezone(time_zone) for t in utc_times]
+      
+    rug_plot_script, rug_plot_div = \
+        clips_rug_plot.create_rug_plot(station, night, start_times)
+      
+    clips_json = _get_clips_json(
+        annotations, start_times, page_start_index, page_end_index)
+      
+    annotation_schemes_presets_json = \
+        _get_presets_json('Annotation Scheme')
+          
+    annotation_commands_presets_json = \
+        _get_presets_json('Annotation Commands')
+  
+    context = {
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': '',
+        'station_name': station_name,
+        'microphone_output_name': microphone_output_name,
+        'detector_name': detector_name,
+        'classification': annotation_value,
+        'date': date,
+        'rug_plot_script': rug_plot_script,
+        'rug_plot_div': rug_plot_div,
+        'num_clips': len(annotations),
+        'page_start_index': page_start_index,
+        'page_size': page_size,
+        'selected_index': selected_index,
+        'clips_json': clips_json,
+        'annotation_scheme_presets_json': annotation_schemes_presets_json,
+        'annotation_commands_presets_json': annotation_commands_presets_json
+    }
+          
     return render(request, 'vesper/night.html', context)
     
         
+def _get_station_microphone_output(station, microphone_output_name):
+    
+    outputs = _get_station_microphone_outputs(station)
+    for output in outputs:
+        if output.name == microphone_output_name:
+            return output
+        
+    logging.error(
+        'Could not find microphone output "{}" for station "{}".'.format(
+            microphone_output_name, station.name))
+    
+    
+def _get_microphone_output_channel_num(recording, microphone_output):
+      
+    connections = DeviceConnection.objects.filter(
+        output=microphone_output,
+        input__device=recording.station_recorder.device)
+    
+    start_time = recording.start_time
+    for connection in connections:
+        if connection.start_time <= start_time and \
+                connection.end_time >= start_time:
+            return connection.input.channel_num
+    
+    logging.error((
+        'Could not find channel number for microphone output "{}" in '
+        'recording "{}".').format(microphone_output.name, recording.name))
+
+
+def _get_recording_annotations(
+        recordings, microphone_output, detector, annotation_name,
+        annotation_value, time_interval):
+
+    annotation_iterators = [
+        _get_recording_annotations_aux(
+            r, microphone_output, detector, annotation_name, annotation_value,
+            time_interval)
+        for r in recordings]
+    
+    return list(itertools.chain.from_iterable(annotation_iterators))
+    
+    
+def _get_recording_annotations_aux(
+        recording, microphone_output, detector, annotation_name,
+        annotation_value, time_interval):
+
+    channel_num = \
+        _get_microphone_output_channel_num(recording, microphone_output)
+          
+    return _get_annotations(
+        recording, channel_num, detector, annotation_name, annotation_value,
+        time_interval)
+      
+
 def _get_clips_json(annotations, start_times, start_index, end_index):
     all_pairs = list(zip(annotations, start_times))
     page_pairs = all_pairs[start_index:end_index]
@@ -563,75 +737,74 @@ def _add_wildcard_classifications_aux(classification):
     return frozenset(prefixes)
         
         
-def _get_clip_counts(station, annotation_name, annotation_value):
-    
+def _get_clip_counts(
+        station, microphone_output, detector, annotation_name,
+        annotation_value):
+
     time_zone = pytz.timezone(station.time_zone)
+    rm_infos = _get_recorder_microphone_infos(station, microphone_output)
+    microphone_output_id = microphone_output.id
     
-    start_night, end_night = \
-        _get_night_range(station, time_zone, annotation_name, annotation_value)
+    recordings = Recording.objects.filter(station_recorder__station=station)
+    counts = defaultdict(int)
     
-    counts = {}
-    
-    if start_night is not None:
+    for recording in recordings:
         
-        night = start_night
+        start_time = recording.start_time
+        night = _get_night(start_time, time_zone)
+        recorder = recording.station_recorder.device
+        infos = rm_infos[(recorder.id, microphone_output_id)]
         
-        while night <= end_night:
+        for info in infos:
             
-            time_interval = _get_night_interval(night, time_zone)
-            
-            annotations = _get_annotations(
-                station, annotation_name, annotation_value, time_interval)
-            
-            count = len(annotations)
-            
-            if count != 0:
-                counts[night] = count
+            if info.start_time <= start_time and start_time <= info.end_time:
                 
-            night += _ONE_DAY
-        
-    return counts
+                channel_num = info.channel_num
+                time_interval = (start_time, recording.end_time)
+                
+                annotations = _get_annotations(
+                    recording, channel_num, detector, annotation_name,
+                    annotation_value, time_interval)
+            
+                count = len(annotations)
+                
+                if count != 0:
+                    # print('_get_clip_counts', str(recording), count)
+                    counts[night] += count  
+                    
+    return counts          
 
 
-def _get_night_range(station, time_zone, annotation_name, annotation_value):
-    first_time, last_time = _get_clip_start_time_extrema_for_annotation(
-        station, annotation_name, annotation_value)
-    if first_time is None:
-        return (None, None)
-    else:
-        start_night = _get_night(first_time, time_zone)
-        end_night = _get_night(last_time, time_zone)
-        return (start_night, end_night)
-
-
-def _get_clip_start_time_extrema_for_annotation(
-        station, annotation_name, annotation_value):
+def _get_recorder_microphone_infos(station, microphone_output):
     
-    # TODO: How expensive are the queries in this function? I believe they
-    # require a join on four tables, namely Annotation, Clip, Recording,
-    # and StationDevice.
+    # Get recorders that were used at station.
+    station_recorders = StationDevice.objects.filter(
+        station=station,
+        device__model__type='Audio Recorder')
+    recorders = [sr.device for sr in station_recorders]
     
-    if annotation_value.endswith('*'):
+    rm_infos = defaultdict(list)
+    
+    for recorder in recorders:
         
-        annotations = Annotation.objects.filter(
-            clip__recording__station_recorder__station=station,
-            name=annotation_name,
-            value__startswith=annotation_value[:-1])
+        key = (recorder.id, microphone_output.id)
         
-    else:
+        # Get connections from microphone to recorder.
+        connections = DeviceConnection.objects.filter(
+            output=microphone_output,
+            input__device=recorder)
         
-        annotations = Annotation.objects.filter(
-            clip__recording__station_recorder__station=station,
-            name=annotation_name,
-            value=annotation_value)
+        # Remember channel number and time interval of each connection.
+        for connection in connections:
+            info = Bunch(
+                channel_num=connection.input.channel_num,
+                start_time=connection.start_time,
+                end_time=connection.end_time)
+            rm_infos[key].append(info)
+            
+    return rm_infos
         
-    times = annotations.aggregate(
-        first_time=Min('clip__start_time'),
-        last_time=Max('clip__start_time'))
-    
-    return (times['first_time'], times['last_time'])
-    
-    
+        
 def _get_night(utc_time, time_zone):
     local_time = utc_time.astimezone(time_zone)
     night = local_time.date()
@@ -653,16 +826,16 @@ def _get_local_noon_as_utc_time(date, time_zone):
     return dt.astimezone(pytz.utc)
 
 
-def _get_annotations(station, annotation_name, annotation_value, time_interval):
-    
-    # TODO: How expensive are the queries in this function? I believe they
-    # require a join on four tables, namely Annotation, Clip, Recording,
-    # and StationDevice.
+def _get_annotations(
+        recording, channel_num, detector, annotation_name, annotation_value,
+        time_interval):
     
     if annotation_value.endswith('*'):
         
         return Annotation.objects.filter(
-            clip__recording__station_recorder__station=station,
+            clip__recording=recording,
+            clip__channel_num=channel_num,
+            clip__creating_processor=detector,
             clip__start_time__range=time_interval,
             name=annotation_name,
             value__startswith=annotation_value[:-1])
@@ -670,10 +843,35 @@ def _get_annotations(station, annotation_name, annotation_value, time_interval):
     else:
         
         return Annotation.objects.filter(
-            clip__recording__station_recorder__station=station,
+            clip__recording=recording,
+            clip__channel_num=channel_num,
+            clip__creating_processor=detector,
             clip__start_time__range=time_interval,
             name=annotation_name,
             value=annotation_value)
+
+
+# def _get_annotations(station, annotation_name, annotation_value, time_interval):
+#     
+#     # TODO: How expensive are the queries in this function? I believe they
+#     # require a join on four tables, namely Annotation, Clip, Recording,
+#     # and StationDevice.
+#     
+#     if annotation_value.endswith('*'):
+#         
+#         return Annotation.objects.filter(
+#             clip__recording__station_recorder__station=station,
+#             clip__start_time__range=time_interval,
+#             name=annotation_name,
+#             value__startswith=annotation_value[:-1])
+#         
+#     else:
+#         
+#         return Annotation.objects.filter(
+#             clip__recording__station_recorder__station=station,
+#             clip__start_time__range=time_interval,
+#             name=annotation_name,
+#             value=annotation_value)
 
 
 @csrf_exempt
@@ -803,23 +1001,6 @@ def _create_import_recordings_command_spec(form):
             }
         }
     }
-
-
-'''
-commands needed:
-
-import archive data:
-    stations
-    device models
-    devices
-    station devices (does this take care of device connections?)
-
-import recordings
-
-run detectors
-
-run classifiers
-'''
 
 
 def job(request, job_id):

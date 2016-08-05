@@ -10,14 +10,15 @@
   {% include "vesper/header-prefix.html" %}
   {% load staticfiles %}
   <link rel="stylesheet" type="text/css" href="{% static 'vesper/calendar.css' %}">
-  {% if stations %}
-    <script>
-      const stationName = "{{station_name}}";
-      const classification = "{{classification}}";
-      const periods = {{periods_json|safe}};
-    </script>
-    <script src="{% static 'vesper/calendar.js' %}"></script>
-  {% endif %}
+  <script>
+    const stationName = "{{station_name}}";
+    const microphoneOutputName = "{{microphone_output_name}}";
+    const detectorName = "{{detector_name}}";
+    const classification = "{{classification}}";
+    const stationMicrophoneOutputs = {{station_microphone_outputs_json|safe}}
+    const periods = {{periods_json|safe}};
+  </script>
+  <script src="{% static 'vesper/calendar.js' %}"></script>
 </head>
 
 <body>
@@ -26,8 +27,6 @@
   
   <div id="main-div">
   
-    {% if stations %}
-      
       <div class="container">
       
       <div class="panel panel-default query-panel">
@@ -44,6 +43,26 @@
                     <option selected>{{s.name}}</option>
                   {% else %}
                     <option>{{s.name}}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="form-group form-spacing">
+              <label for="microphone">Microphone:</label>
+              <select class="form-control" id="microphone" name="microphone">
+                <!-- This select's options are set by Javascript. -->
+              </select>
+            </div>
+            
+            <div class="form-group form-spacing">
+              <label for="detector">Detector:</label>
+              <select class="form-control" id="detector" name="detector">
+                {% for d in detectors %}
+                  {% if d.name == detector_name %}
+                    <option selected>{{d.name}}</option>
+                  {% else %}
+                    <option>{{d.name}}</option>
                   {% endif %}
                 {% endfor %}
               </select>
@@ -72,19 +91,19 @@
     
       <div id="calendar" class="container">
       
-        <h2 class="calendar-title">{{station_name}} {{classification}} Clips</h2>
+        <h2 id="calendar-title" class="calendar-title">
+          <!-- The title is set by Javascript. -->
+        </h2>
   
         <div id="periods"></div>
   
       </div>
       
       </div>
-  
-    {% else %}
-    
-      There are no stations in the archive.
       
+    {% comment %}
     {% endif %}
+    {% endcomment %}
     
   </div>
 
