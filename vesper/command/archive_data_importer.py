@@ -80,8 +80,8 @@ class ArchiveDataImporter:
             
             for data in device_models_data:
                 model = self._add_device_model(data)
-                self._add_device_model_inputs(model, data)
-                self._add_device_model_outputs(model, data)
+                self._add_ports(model, data, 'input', DeviceModelInput)
+                self._add_ports(model, data, 'output', DeviceModelOutput)
             
             
     def _add_device_model(self, data):
@@ -108,20 +108,25 @@ class ArchiveDataImporter:
         return model
             
 
-    def _add_device_model_inputs(self, model, data):
+    def _add_ports(self, model, data, port_type, port_class):
         
-        names = self._get_port_names(data, 'input')
+        port_data = self._get_port_data(data, port_type)
         
-        for name in names:
+        for local_name, channel_num in port_data:
             
             self._logger.info(
-                'Adding device model input "{} {}"...'.format(model.name, name))
+                'Adding device model {} "{} {} {}"...'.format(
+                    port_type, model.name, local_name, channel_num))
             
-            input_ = DeviceModelInput(model=model, local_name=name)
-            input_.save()
+            port = port_class(
+                model=model,
+                local_name=local_name,
+                channel_num=channel_num)
             
-    
-    def _get_port_names(self, data, port_type):
+            port.save()
+
+
+    def _get_port_data(self, data, port_type):
 
         names = data.get(port_type + 's')
         
@@ -131,31 +136,18 @@ class ArchiveDataImporter:
             num_ports = data.get(key, 0)
             
             if num_ports == 0:
-                return []
+                names = []
                 
             elif num_ports == 1:
-                return [port_type.capitalize()]
+                names = [port_type.capitalize()]
                 
             else:
-                return [
-                    '{} {}'.format(port_type.capitalize(), i)
-                    for i in range(num_ports)]
+                names = ['{} {}'.format(port_type.capitalize(), i)
+                        for i in range(num_ports)]
+                
+        return [(name, i) for i, name in enumerate(names)]
                 
                 
-    def _add_device_model_outputs(self, model, data):
-        
-        names = self._get_port_names(data, 'output')
-        
-        for name in names:
-            
-            self._logger.info(
-                'Adding device model output "{} {}"...'.format(
-                    model.name, name))
-            
-            output = DeviceModelOutput(model=model, local_name=name)
-            output.save()
-            
-            
     def _add_devices(self):
         
         devices_data = self.archive_data.get('devices')
