@@ -13,7 +13,7 @@ function onLoad() {
 	stationSelect.onchange = onStationChange;
 	
 	populateMicrophoneOutputSelect();
-	setCalendarTitle();
+	setTitle();
 	setCalendarPeriods();
 	
 }
@@ -55,29 +55,17 @@ function populateMicrophoneOutputSelect() {
 }
 
 
-function getMicrophoneOutputDisplayName(output_name) {
-	
-	// When a microphone output name ends with " Output" we display it
-	// without that suffix.
-	
-	const suffix = ' Output'
-	if (output_name.endsWith(suffix))
-		return output_name.substring(0, output_name.length - suffix.length);
-	else
-		return output_name
-		
-}
-
-
-function setCalendarTitle() {
+function setTitle() {
 	
 	const micOutputName = getMicrophoneOutputDisplayName(microphoneOutputName);
 	
 	const title = `${stationName} / ${micOutputName} / ` +
 	              `${detectorName} / ${classification} Clips`;
 	
-	let titleElement = document.getElementById("calendar-title");
+	let titleElement = document.getElementById("title");
 	titleElement.innerHTML = title;
+	
+	document.title = `Calendar - ${title}`;
 	
 }
 

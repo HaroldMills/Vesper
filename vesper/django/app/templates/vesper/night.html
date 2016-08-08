@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-  <title>Clips - {{date}} {{station_name}} {{classification}}</title>
+  <title>Clips</title>
   {% include "vesper/header-prefix.html" %}
   <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.0.min.css" type="text/css" />
   <script type="text/javascript" src="http://cdn.pydata.org/bokeh/release/bokeh-0.12.0.min.js"></script>
@@ -25,6 +25,7 @@
     const annotationSchemePresets = {{annotation_scheme_presets_json|safe}}
     const annotationCommandsPresets = {{annotation_commands_presets_json|safe}}
   </script>
+  <script src="{% static 'vesper/ui-utils.js' %}"></script>
   <script src="{% static 'vesper/night.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static 'vesper/night.css' %}">
 </head>
@@ -32,7 +33,9 @@
 <body>
   {% include "vesper/navbar.html" %}
   <div>
-    <h3 id="title" class="clips-title"></h3>
+    <h3 id="title" class="clips-title">
+      <!-- The title is set by Javascript. -->
+    </h3>
     <div id="rug-plot">{{rug_plot_div|safe}}</div>
     <div id="plots" class="clip-plots"></div>
   </div>

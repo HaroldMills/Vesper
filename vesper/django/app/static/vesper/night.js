@@ -39,7 +39,7 @@ let selection = null;
 function onLoad() {
 	showAnnotationSchemes(annotationSchemePresets, '');
 	pageEndIndex = Math.min(pageStartIndex + pageSize, numClips);
-	initTitle();
+	setTitle();
 	createPlots();
 	layOutPlots();
 	initSelection();
@@ -62,11 +62,19 @@ function showAnnotationSchemesAux(info, prefix) {
 }
 
 
-function initTitle() {
-	const title = document.getElementById("title");
-	title.innerHTML =
-	    `${date} ${stationName} ${classification} ` +
-	    `Clips ${pageStartIndex + 1}-${pageEndIndex} of ${numClips}`;
+function setTitle() {
+	
+	const micOutputName = getMicrophoneOutputDisplayName(microphoneOutputName);
+	
+	const title = `${date} ${stationName} / ${micOutputName} / ` +
+	              `${detectorName} / ${classification} Clips ` +
+	              `${pageStartIndex + 1}-${pageEndIndex} of ${numClips}`;
+	
+	let titleElement = document.getElementById("title");
+	titleElement.innerHTML = title;
+	
+	document.title = `Clips - ${title}`;
+	
 }
 
 
