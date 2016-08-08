@@ -26,86 +26,78 @@
 
   {% include "vesper/navbar.html" %}
   
-  <div id="main-div">
+  <div id="main-div" class="container">
   
-      <div class="container">
-      
-      <div class="panel panel-default query-panel">
+    <div class="panel panel-default query-panel">
+  
+      <div class="panel-body">
     
-        <div class="panel-body">
-      
-          <form class="form-inline" role="form" action="/vesper/calendar" method="get">
-          
-            <div class="form-group form-spacing">
-              <label for="station">Station:</label>
-              <select class="form-control" id="station" name="station">
-                {% for s in stations %}
-                  {% if s.name == station_name %}
-                    <option selected>{{s.name}}</option>
-                  {% else %}
-                    <option>{{s.name}}</option>
-                  {% endif %}
-                {% endfor %}
-              </select>
-            </div>
-            
-            <div class="form-group form-spacing">
-              <label for="microphone">Microphone:</label>
-              <select class="form-control" id="microphone" name="microphone">
-                <!-- This select's options are set by Javascript. -->
-              </select>
-            </div>
-            
-            <div class="form-group form-spacing">
-              <label for="detector">Detector:</label>
-              <select class="form-control" id="detector" name="detector">
-                {% for d in detectors %}
-                  {% if d.name == detector_name %}
-                    <option selected>{{d.name}}</option>
-                  {% else %}
-                    <option>{{d.name}}</option>
-                  {% endif %}
-                {% endfor %}
-              </select>
-            </div>
-            
-            <div class="form-group form-spacing">
-              <label for="classification">Classification:</label>
-              <select class="form-control" id="classification" name="classification">
-                {% for c in classifications %}
-                  {% if c == classification %}
-                    <option selected>{{c}}</option>
-                  {% else %}
-                    <option>{{c}}</option>
-                  {% endif %}
-                {% endfor %}
-              </select>
-            </div>
-            
-            <button type="submit" class="btn btn-default form-spacing">Submit</button>
-          
-          </form>
+        <form class="form-inline" role="form" action="/vesper/calendar" method="get">
         
-        </div>
+          <div class="form-group form-spacing">
+            <label for="station">Station:</label>
+            <select class="form-control" id="station" name="station">
+              {% for s in stations %}
+                {% if s.name == station_name %}
+                  <option selected>{{s.name}}</option>
+                {% else %}
+                  <option>{{s.name}}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="form-group form-spacing">
+            <label for="microphone">Microphone:</label>
+            <select class="form-control" id="microphone" name="microphone">
+              <!-- This select's options are set by Javascript. -->
+            </select>
+          </div>
+          
+          <div class="form-group form-spacing">
+            <label for="detector">Detector:</label>
+            <select class="form-control" id="detector" name="detector">
+              {% for d in detectors %}
+                {% if d.name == detector_name %}
+                  <option selected>{{d.name}}</option>
+                {% else %}
+                  <option>{{d.name}}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="form-group form-spacing">
+            <label for="classification">Classification:</label>
+            <select class="form-control" id="classification" name="classification">
+              {% for c in classifications %}
+                {% if c == classification %}
+                  <option selected>{{c}}</option>
+                {% else %}
+                  <option>{{c}}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          
+          <button type="submit" class="btn btn-default form-spacing">Submit</button>
         
+        </form>
+      
       </div>
+      
+    </div>
     
-      <div id="calendar" class="container">
-      
-        <h2 id="title" class="calendar-title">
-          <!-- The title is set by Javascript. -->
-        </h2>
-  
-        <div id="periods"></div>
-  
-      </div>
-      
-      </div>
-      
-    {% comment %}
-    {% endif %}
-    {% endcomment %}
+    <div id="calendar">
     
+      <h2 id="title" class="calendar-title">
+        <!-- The title is set by Javascript. -->
+      </h2>
+
+      <div id="periods"></div>
+
+    </div>
+      
   </div>
 
 </body>
