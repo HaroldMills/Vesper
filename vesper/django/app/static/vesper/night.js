@@ -355,6 +355,7 @@ function drawClipPlot(clip, params) {
 	
 	// Draw spectrogram from clip spectrogram canvas, stretching as needed.
 	const gramCanvas = clip.spectrogramCanvas;
+	const numSpectra = gramCanvas.width;
 	context.imageSmoothingEnabled = params.smoothingEnabled;
 	if (params.timePaddingEnabled) {
 		let [x, width] = getSpectrogramXExtent(
