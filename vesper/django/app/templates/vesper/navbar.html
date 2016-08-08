@@ -19,6 +19,13 @@ right to me so the problem may be a Bootstrap limitation.
           {% include "vesper/navbar-item.html" %}
         {% endfor %}
       </ul>
+      {% if navbar_right_items %}
+        <ul class="nav navbar-nav navbar-right">
+          {% for item in navbar_right_items %}
+            {% include "vesper/navbar-item.html" %}
+          {% endfor %}
+        </ul>
+      {% endif %}
     </div>
   </div>
 </nav>
