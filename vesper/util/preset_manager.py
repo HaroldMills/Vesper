@@ -17,47 +17,6 @@ class PresetManager:
     """Preset manager that loads and provides access to presets."""
     
     
-    @staticmethod
-    def flatten_preset_data(preset_data):
-        
-        """
-        Flattens preset data returned by the `get_presets` method.
-        
-        :Parameters:
-            preset_data : tuple of length two
-                preset data as returned by the `get_presets` method.
-                
-        :Returns:
-            flattened version of the specified preset data.
-            
-            The returned value is a tuple of (<preset path>, <preset>)
-            pairs, where each preset path is a tuple of string path
-            components. For example, the preset path for a preset
-            named "P" that is within subdirectory "D" of the
-            directory for the preset's type is `('D', 'P')`.
-        """
-        
-        return PresetManager._flatten_preset_data(preset_data, ())
-        
-        
-    @staticmethod
-    def _flatten_preset_data(preset_data, name_tuple):
-
-        presets, subdirs_data = preset_data
-        
-        # Get top-level (name, preset) pairs.
-        top_pairs = tuple((name_tuple + (p.name,), p) for p in presets)
-        
-        # Get subdirectory (name, preset) pairs
-        keys = sorted(subdirs_data.keys())
-        f = PresetManager._flatten_preset_data
-        subdir_pair_tuples = \
-            [f(subdirs_data[k], name_tuple + (k,)) for k in keys]
-        subdir_pairs = sum(subdir_pair_tuples, ())
-        
-        return top_pairs + subdir_pairs
-
-
     def __init__(self, preset_types, preset_dir_path):
         
         """
@@ -83,7 +42,7 @@ class PresetManager:
         """Mapping from preset type names to collections of presets."""
         
         self._preset_dicts = dict(
-            (type_name, dict(self.flatten_preset_data(preset_data)))
+            (type_name, dict(_flatten_presets(preset_data)))
             for type_name, preset_data in self._preset_data.items())
         """
         Mapping from preset type names to mappings from preset paths to
@@ -118,8 +77,8 @@ class PresetManager:
             all presets of the specified type.
             
             The presets are returned in a recursive data structure
-            that reflects how the presets are stored in the persistent
-            store. The data structure has the form:
+            that reflects the directory hierarchy for the specified
+            preset type. The data structure has the form:
             
                 <preset data> := ((<preset>), {<subdir_name>: <preset data>})
                 
@@ -140,6 +99,31 @@ class PresetManager:
             return _copy_preset_data(data)
 
 
+    def get_flattened_presets(self, type_name):
+        
+        """
+        Gets all presets of the specified type in a flattened form.
+        
+        :Parameters:
+            type_name : str
+                the name of a preset type.
+                
+        :Returns:
+            all presets of the specified type in a flattened form.
+            
+            The presets are returned as a tuple of (<preset path>, <preset>)
+            pairs. Each preset path is a tuple of the path components of
+            the accompanying preset, i.e. the names of the directories
+            between the directory of the specified preset type and the
+            preset itself. The presets of a directory precede the presets
+            of subdirectories of that directory in the returned tuple,
+            and presets are otherwise ordered lexicographically by path.
+        """
+        
+        presets = self.get_presets(type_name)
+        return _flatten_presets(presets)
+    
+    
     def get_preset(self, type_name, preset_path):
         
         """
@@ -295,3 +279,41 @@ def _copy_preset_data(data):
     presets, subdirs_data = data
     return (presets, dict((k, _copy_preset_data(v))
                           for k, v in subdirs_data.items()))
+
+
+def _flatten_presets(preset_data):
+    
+    """
+    Flattens presets returned by the `PresetManager.get_presets` method.
+    
+    :Parameters:
+        preset_data : tuple of length two
+            preset data as returned by the `PresetManager.get_presets` method.
+            
+    :Returns:
+        flattened version of the specified preset data.
+        
+        The returned value is a tuple of (<preset path>, <preset>)
+        pairs, where each preset path is a tuple of string path
+        components. For example, the preset path for a preset
+        named "P" that is in a subdirectory "D" of the directory
+        for the preset's type is `('D', 'P')`.
+    """
+    
+    return _flatten_presets_aux(preset_data, ())
+    
+    
+def _flatten_presets_aux(preset_data, name_tuple):
+
+    presets, subdirs_data = preset_data
+    
+    # Get top-level (name, preset) pairs.
+    top_pairs = tuple((name_tuple + (p.name,), p) for p in presets)
+    
+    # Get subdirectory (name, preset) pairs
+    keys = sorted(subdirs_data.keys())
+    subdir_pair_tuples = \
+        [_flatten_presets_aux(subdirs_data[k], name_tuple + (k,)) for k in keys]
+    subdir_pairs = sum(subdir_pair_tuples, ())
+    
+    return top_pairs + subdir_pairs

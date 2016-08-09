@@ -49,9 +49,9 @@ class PresetManagerTests(TestCase):
         
     def test_get_presets(self):
         
-        expected = {
+        cases = (
             
-            'A': (
+            ('A', (
                 (A('1', 'one'), A('2', 'two')),
                 {'x': (
                     (),
@@ -62,18 +62,39 @@ class PresetManagerTests(TestCase):
                         (A('4', 'four'),),
                         {})
                      })
-                 }),
+                 })),
                     
-            'B': ((B('1', '1'), B('2', '2')), {}),
-            'X': ((), {})
+            ('B', ((B('1', '1'), B('2', '2')), {})),
+            ('X', ((), {}))
             
-        }
+        )
         
-        for type_name, expected_data in expected.items():
-            preset_data = self.manager.get_presets(type_name)
-            self.assertEqual(preset_data, expected_data)
+        for type_name, expected in cases:
+            presets = self.manager.get_presets(type_name)
+            self.assertEqual(presets, expected)
 
 
+    def test_get_flattened_presets(self):
+        
+        cases = (
+                 
+            ('A', ((('1',), A('1', 'one')),
+                   (('2',), A('2', 'two')),
+                   (('x', 'y', '3'), A('3', 'three')),
+                   (('x', 'z', '4'), A('4', 'four')))),
+                 
+            ('B', ((('1',), B('1', '1')),
+                   (('2',), B('2', '2')))),
+                 
+            ('X', ())
+            
+        )
+        
+        for type_name, expected in cases:
+            presets = self.manager.get_flattened_presets(type_name)
+            self.assertEqual(presets, expected)
+            
+            
     def test_get_preset(self):
         
         cases = [
@@ -95,26 +116,4 @@ class PresetManagerTests(TestCase):
         for type_name, path, expected in cases:
             preset = self.manager.get_preset(type_name, path)
             self.assertEqual(preset, expected)
-            
-            
-    def test_flatten_preset_data(self):
-        
-        cases = [
-                 
-            ('A', ((('1',), A('1', 'one')),
-                   (('2',), A('2', 'two')),
-                   (('x', 'y', '3'), A('3', 'three')),
-                   (('x', 'z', '4'), A('4', 'four')))),
-                 
-            ('B', ((('1',), B('1', '1')),
-                   (('2',), B('2', '2')))),
-                 
-            ('X', ())
-            
-        ]
-        
-        for type_name, expected_data in cases:
-            preset_data = self.manager.get_presets(type_name)
-            flattened_data = self.manager.flatten_preset_data(preset_data)
-            self.assertEqual(flattened_data, expected_data)
             
