@@ -115,9 +115,10 @@ class PresetManager:
             pairs. Each preset path is a tuple of the path components of
             the accompanying preset, i.e. the names of the directories
             between the directory of the specified preset type and the
-            preset itself. The presets of a directory precede the presets
-            of subdirectories of that directory in the returned tuple,
-            and presets are otherwise ordered lexicographically by path.
+            preset itself, followed by the preset name. The presets of
+            a directory precede the presets of subdirectories of that
+            directory in the returned tuple, and presets are otherwise
+            ordered lexicographically by path.
         """
         
         presets = self.get_presets(type_name)
