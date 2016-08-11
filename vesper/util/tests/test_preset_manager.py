@@ -16,7 +16,7 @@ class _Preset(Preset):
     
 class A(_Preset):
     
-    type_name = 'A'
+    extension_name = 'A'
     
     def __init__(self, name, data):
         super().__init__(name)
@@ -25,7 +25,7 @@ class A(_Preset):
           
 class B(_Preset):
     
-    type_name = 'B'
+    extension_name = 'B'
     
     def __init__(self, name, data):
         super().__init__(name)
@@ -43,7 +43,7 @@ class PresetManagerTests(TestCase):
 
         
     def test_preset_types(self):
-        type_names = [t.type_name for t in self.manager.preset_types]
+        type_names = [t.extension_name for t in self.manager.preset_types]
         self.assertEqual(type_names, ['A', 'B'])
         
         
