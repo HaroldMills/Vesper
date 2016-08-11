@@ -3,7 +3,6 @@ import datetime
 import itertools
 import logging
 import json
-import os.path
 
 from django import forms
 from django.db.models import Max, Min
@@ -13,19 +12,17 @@ from django.http import (
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 import pytz
-import yaml
 
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
     Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station,
     StationDevice)
-from vesper.singletons import job_manager
+from vesper.singletons import job_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.clips_rug_plot as clips_rug_plot
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
-import vesper.util.vesper_path_utils as vesper_path_utils
 
 
 def _create_navbar_items(data, ancestors=()):
@@ -190,145 +187,17 @@ def presets_json(request, preset_type_name):
 
 def _get_presets_json(preset_type_name):
     
-    # Gets all presets of the specified type as JSON.
-    #
-    # The presets are read from the preset directory whose name is
-    # `preset_type_name`. If the directory does not exist, this function
-    # returns the same JSON as it would if the directory did exist but
-    # was empty.
-    #
-    # The returned JSON is a hierarchical list whose structure mirrors
-    # the directory structure within the `preset_type_name` directory,
-    # and which contains JSON preset representations. The top-level list
-    # is of the form:
-    #
-    #     [<preset_dir_name>, <preset_subdirs>, <presets>]
-    #
-    # where <preset_dir_name> is `preset_type_name` (i.e. the name of
-    # the top-level preset directory), <preset_subdirs> is a list of lists,
-    # each of which has the same form as the top-level list and recursively
-    # represents a subdirectory of the top-level preset directory, and
-    # <presets> is a list of lists of the form:
-    #
-    #    [<preset_name>, <preset>]
-    #
-    # Where <preset_name> is the name of a preset in the directory
-    # <preset_dir_name> and <preset> is a JSON representation of that
-    # preset. The preset name is obtained from the name of the file
-    # containing the preset by removing its file name extension.
-    #
-    # For example, for the preset directory with this structure:
-    #
-    #     Annotation Commands/
-    #         Bob/
-    #             2015/
-    #                 Coarse.yaml
-    #                 Calls.yaml
-    #             2016/
-    #                 Coarse.yaml
-    #                 Calls.yaml
-    #         Sue/
-    #             Coarse.yaml
-    #             Calls.yaml
-    #
-    # This function will return the following JSON (less the formatting
-    # and comments):
-    #
-    #     ["Annotation Commands",
-    #         [
-    #             ["Bob",
-    #                 [
-    #                     ["2015",
-    #                         [],    # no subdirectories of directory "2015"
-    #                         [
-    #                             ["Coarse", ...],
-    #                             ["Calls", ...]
-    #                         ]
-    #                     ],
-    #                     ["2016",
-    #                         [],    # no subdirectories of directory "2016"
-    #                         [
-    #                             ["Coarse", ...],
-    #                             ["Calls", ...]
-    #                         ]
-    #                     ]
-    #                 ],
-    #                 []    # no preset files in directory "Bob"
-    #             ],
-    #             ["Sue",
-    #                 [],   # no subdirectories of directory "Sue"
-    #                 [
-    #                     ["Coarse", ...],
-    #                     ["Calls", ...]
-    #                 ]
-    #             ]
-    #         ],
-    #         []    # no preset files in directory "Annotation Commands"
-    #     ]
-        
-    dir_path = vesper_path_utils.get_path('Presets', preset_type_name)
+    """
+    Gets all presets of the specified type as JSON.
     
-    if not os.path.exists(dir_path):
-        presets = [preset_type_name, [], []]
-    else:
-        presets = _read_dir_presets(dir_path)
+    The returned JSON is a list of [<preset path>, <preset JSON>]
+    pairs, where the preset path is the path relative to the directory
+    for the preset type.
+    """
         
+    presets = preset_manager.instance.get_flattened_presets(preset_type_name)
+    presets = [(path, preset.data) for path, preset in presets]
     return json.dumps(presets)
-            
-
-def _read_dir_presets(dir_path):
-    
-    dir_name = os.path.basename(dir_path)
-    
-    for _, dir_names, file_names in os.walk(dir_path):
-        
-        dir_names.sort()
-        dirs_list = [_read_dir_presets(os.path.join(dir_path, name))
-                     for name in dir_names]
-        
-        file_names.sort()
-        files_list = [_read_file_preset(dir_path, name) for name in file_names]
-        files_list = [item for item in files_list if item is not None]
-        
-        # Stop walk from descending into subdirectories.
-        del dir_names[:]
-        
-    return [dir_name, dirs_list, files_list]
-        
-        
-def _read_file_preset(dir_path, file_name):
-    
-    # Get preset name from file name.
-    preset_name = _get_preset_name(file_name)
-    if preset_name is None:
-        return None
-    
-    # Read file contents.
-    file_path = os.path.join(dir_path, file_name)
-    try:
-        with open(file_path) as file_:
-            text = file_.read()
-    except Exception:
-        # TODO: Log error.
-        return None
-    
-    # Parse file contents.
-    try:
-        preset = yaml.load(text)
-    except Exception:
-        # TODO: Log error.
-        return None
-    
-    return [preset_name, preset]
-
-    
-_PRESET_FILE_NAME_EXTENSIONS = ('.yaml', '.yml')
-
-
-def _get_preset_name(file_name):
-    for extension in _PRESET_FILE_NAME_EXTENSIONS:
-        if file_name.endswith(extension):
-            return file_name[:-len(extension)]
 
 
 @csrf_exempt
@@ -591,11 +460,9 @@ def night(request):
     clips_json = _get_clips_json(
         annotations, start_times, page_start_index, page_end_index)
       
-    annotation_schemes_presets_json = \
-        _get_presets_json('Annotation Scheme')
-          
-    annotation_commands_presets_json = \
-        _get_presets_json('Annotation Commands')
+    clip_grid_settings_presets_json = _get_presets_json('Clip Grid Settings')
+    annotation_scheme_presets_json = _get_presets_json('Annotation Scheme')
+    annotation_commands_presets_json = _get_presets_json('Annotation Commands')
   
     context = {
         'navbar_items': _NAVBAR_ITEMS,
@@ -612,7 +479,8 @@ def night(request):
         'page_size': page_size,
         'selected_index': selected_index,
         'clips_json': clips_json,
-        'annotation_scheme_presets_json': annotation_schemes_presets_json,
+        'clip_grid_settings_presets_json': clip_grid_settings_presets_json,
+        'annotation_scheme_presets_json': annotation_scheme_presets_json,
         'annotation_commands_presets_json': annotation_commands_presets_json
     }
           

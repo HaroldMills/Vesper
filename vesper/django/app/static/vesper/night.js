@@ -37,28 +37,73 @@ let selection = null;
 
 
 function onLoad() {
-	showAnnotationSchemes(annotationSchemePresets, '');
+	
+	const okButton = document.getElementById('ok-button');
+	okButton.onclick = onOkButtonClick;
+	
+	populateSettingsModalControls();
+	
+	showPresets('Clip Grid Settings', clipGridSettingsPresets);
+	showPresets('Annotation Scheme', annotationSchemePresets);
+	
 	pageEndIndex = Math.min(pageStartIndex + pageSize, numClips);
 	setTitle();
 	createPlots();
 	layOutPlots();
 	initSelection();
+	
 }
 
 
-function showAnnotationSchemes(info) {
-	showAnnotationSchemesAux(info, '')
+function onOkButtonClick() {
+	
+	const clipGridSettingsSelect =
+		document.getElementById('clip-grid-settings');
+	
+	console.log('clip grid settings:', clipGridSettingsSelect.value);
+
+	const annotationSchemeSelect =
+		document.getElementById('annotation-scheme');
+	
+	console.log('annotation schemet:', annotationSchemeSelect.value);
+	
 }
 
 
-function showAnnotationSchemesAux(info, prefix) {
-	let [dirName, subdirInfos, presets] = info;
-	console.log(prefix + dirName);
-	prefix += '    ';
-	for (let subdirInfo of subdirInfos)
-		showAnnotationSchemesAux(subdirInfo, prefix);
-	for (let preset of presets)
-		console.log(prefix + preset[0]);
+function populateSettingsModalControls() {
+	
+	// TODO: Rather than having the server send presets to the client,
+	// perhaps the client should retrieve the presets from the server
+	// with XHRs. We could set up URLs so that a client could request
+	// all presets of a specified type as JSON.
+	
+	const clipGridSettingsSelect =
+		document.getElementById('clip-grid-settings');
+	populatePresetSelect(clipGridSettingsSelect, clipGridSettingsPresets)
+	
+	const annotationSchemeSelect =
+		document.getElementById('annotation-scheme');
+	populatePresetSelect(annotationSchemeSelect, annotationSchemePresets)	
+	
+}
+
+
+function populatePresetSelect(select, info) {
+	
+	for (let [path, preset] of info) {
+		const option = document.createElement("option");
+	    option.text = path.join(' / ')
+	    option.value = preset;
+		select.add(option);
+	}
+	
+}
+
+
+function showPresets(type_name, info) {
+	console.log(`${type_name} presets:`);
+	for (let [path, preset] of info)
+		console.log('    ' + path);
 }
 
 
@@ -133,6 +178,7 @@ function layOutPlots() {
 	    plot.style.width = width + "px";
 	    plot.style.height = clipHeight + "px";
 	    plot.style.margin = y + " " + x + " " + y + " " + x;
+	    plot.style.outlineWidth = clipOutlineWidth + "px";
 	    
 	    // Set canvas width and height to width and height on screen.
 	    // This will help prevent distortion of items drawn on the

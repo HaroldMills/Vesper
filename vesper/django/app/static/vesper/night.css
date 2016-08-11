@@ -1,3 +1,32 @@
+.settings-button {
+  font-size: 1.4em;
+  color: gray;
+  background-color: transparent;
+  border: none;
+  padding: 0 0;
+  position: absolute;
+  top: 55px;
+  right: 5px;
+}
+
+.settings-button:hover {
+  color: #606060;
+}
+
+.settings-button:active {
+  color: black;
+}
+
+/* settings modal control labels */
+.modal-body .form-horizontal .control-label {
+  width: auto;
+}
+
+/* settings modal controls */
+.modal-body .form-horizontal .form-control {
+  width: auto;
+}
+
 .clips-title {
   font-weight: bold;
   text-align: center;
