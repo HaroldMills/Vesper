@@ -19,7 +19,7 @@ import vesper.util.time_utils as time_utils
 class RecordingImporter:
     
     
-    name = 'Recording Importer'
+    extension_name = 'Recording Importer'
     
     
     def __init__(self, args):

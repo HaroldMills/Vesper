@@ -9,7 +9,7 @@ from vesper.command.command import Command
 class TestCommand(Command):
     
     
-    name = 'test'
+    extension_name = 'test'
     
     
     def execute(self, context):

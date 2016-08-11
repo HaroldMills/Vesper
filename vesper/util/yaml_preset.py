@@ -12,9 +12,6 @@ class YamlPreset(Preset):
     """Abstract superclass for YAML presets."""
     
     
-    type_name = None
-    
-    
     def __init__(self, name, data):
         
         super().__init__(name)

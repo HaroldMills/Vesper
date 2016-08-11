@@ -37,7 +37,7 @@ class RecordingFileParser:
     """
     
     
-    name = 'MPG Ranch Recording File Parser'
+    extension_name = 'MPG Ranch Recording File Parser'
     
     
     def __init__(self, stations, station_name_aliases=None):

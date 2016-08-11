@@ -16,16 +16,22 @@ class CommandExecutionError(CommandError):
 class Command:
     
     
-    name = 'command'
+    extension_name = None
     """
     The uncapitalized name of this command.
     
-    This attribute should be overridden in subclasses.
+    The name should be a verb, for example "import" or "detect". This
+    attribute should be overridden in subclasses.
     """
     
     
     def __init__(self, arguments):
         self.arguments = arguments
+    
+    
+    @property
+    def name(self):
+        return self.extension_name
     
     
     def execute(self, context):

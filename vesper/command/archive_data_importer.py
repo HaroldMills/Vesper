@@ -18,7 +18,7 @@ import vesper.command.command_utils as command_utils
 class ArchiveDataImporter:
     
     
-    name = 'Archive Data Importer'
+    extension_name = 'Archive Data Importer'
     
     
     def __init__(self, args):

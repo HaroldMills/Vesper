@@ -35,13 +35,15 @@ class Preset(Named):
     """
 
 
-    type_name = None
+    extension_name = None
     """
-    The name of this preset type.
+    The extension name of this preset type.
     
-    The name should be presentable in user interfaces, and is also the
-    name of the subdirectory of the presets directory that contains
-    presets of this type.
+    A preset type is an extension, and thus must have an extension name.
+    The name should be capitalized and describe the contents of the preset,
+    for example "Annotation Commands" or "Annotation Scheme". The name is
+    presented in user interfaces as the name of a preset type, and is also
+    the name of the directory that contains presets of this type.
     """
     
     

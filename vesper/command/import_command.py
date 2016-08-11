@@ -9,7 +9,7 @@ import vesper.command.command_utils as command_utils
 class ImportCommand(Command):
     
     
-    name = 'import'
+    extension_name = 'import'
     
     
     def __init__(self, args):

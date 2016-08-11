@@ -13,5 +13,5 @@ class StationNameAliasesPreset(YamlPreset):
     to lists of aliases.
     """
     
-    type_name = 'Station Name Aliases'
-        
+    extension_name = 'Station Name Aliases'
+    

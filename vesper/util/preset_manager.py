@@ -157,7 +157,7 @@ def _get_preset_types(preset_types):
         
     # Sort preset types by name.
     types = list(preset_types)
-    types.sort(key=lambda t: t.type_name)
+    types.sort(key=lambda t: t.extension_name)
 
     # Keep preset types as a tuple.
     return tuple(types)
@@ -180,7 +180,7 @@ def _load_presets(preset_dir_path, preset_types):
     else:
         # have preset directory
         
-        preset_types = dict((t.type_name, t) for t in preset_types)
+        preset_types = dict((t.extension_name, t) for t in preset_types)
         preset_data = {}
         
         for _, dir_names, _ in os.walk(preset_dir_path):

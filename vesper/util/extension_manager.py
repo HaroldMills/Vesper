@@ -40,7 +40,7 @@ class ExtensionManager:
     def get_extensions(self, extension_point_name):
         self._load_extensions_if_needed()
         extensions = self._extensions.get(extension_point_name, ())
-        return dict((e.name, e) for e in extensions)
+        return dict((e.extension_name, e) for e in extensions)
             
             
     def _load_extensions_if_needed(self):
