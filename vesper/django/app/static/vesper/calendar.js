@@ -38,9 +38,11 @@ function clearMicrophoneOutputSelect() {
 
 function populateMicrophoneOutputSelect() {
 	
-	// TODO: Query for station microphone outputs with an XHR rather
-	// having the server prepare stationMicrophones for us? It seems
-	// like the former might scale better to lots of stations.
+	// TODO: Rather than having the server send station microphone
+	// outputs to the client, perhaps the client should retrieve the
+	// outputs from the server with an XHR. We could set up URLs so
+	// that a client could request the microphone outputs for a
+	// particular station as JSON.
 	
 	const stationSelect = document.getElementById("station");
 	const microphoneOutputSelect = document.getElementById("microphone");
