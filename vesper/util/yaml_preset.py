@@ -14,10 +14,11 @@ class YamlPreset(Preset):
     
     def __init__(self, name, data):
         
-        super().__init__(name)
-        
+        # Parse YAML into a Python data structure.
         try:
-            self.data = yaml.load(data)
+            data = yaml.load(data)
         except Exception as e:
             raise ValueError(str(e))
+        
+        super().__init__(name, data)
         

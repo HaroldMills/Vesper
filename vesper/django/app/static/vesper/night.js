@@ -1,23 +1,36 @@
 "use strict"
 
 
-// Clip time scale in pixels per second.
-const clipXScale = 1000;
-
-// Clip height in pixels.
-const clipHeight = 100;
-
-// Clip spacing sizes in pixels.
-const clipXSpacing = 20,
-      clipYSpacing = 20;
-
-// Clip outline width in pixels.
-const clipOutlineWidth = 5;
-
-// Spectrogram parameters.
-const spectrogramParams = {
-	"window": createDataWindow("Hann", 100),
-	"hopSize": 25,
+/*
+ * TODO:
+ * 
+ * 1. Add mouse time/freq display.
+ * 
+ * 2. Server should send metadata (ID, start time, duration) for all clips
+ *    of a night to the client. Client performs pagination and display.
+ *    Client retrieves audio data as needed (perhaps anticipating user
+ *    navigation).
+ *    
+ * 3. Client should perform only those display pipeline functions that
+ *    are needed to update the display after a settings change. For
+ *    example, it should not recompute spectrograms after a color map
+ *    or layout change.
+ *   
+ * 4. Client should allow user to specify the page size either as a
+ *    number of rows or as a number of clips. Both types of display have
+ *    their uses. Would it be okay for clips to remain the same size
+ *    when the size of the browser window changes? Perhaps not when the
+ *    number of rows is fixed, since then we would have to repaginate as
+ *    the window size changes. I suspect we will want a third option for
+ *    specifying the page size (number of rows and number of columns) when
+ *    all clips are displayed with the same size.
+ *    
+ * 5. Would it make sense to specify font, button, etc. sizes in terms
+ *    of viewport width? That might help 
+ */
+let clipSpectrogramSettings = {
+	"windowSize": 100,
+	"hopSize": 50,
 	"dftSize": 256,
 	"referencePower": 1,
 	"lowPower": 10,
@@ -26,11 +39,30 @@ const spectrogramParams = {
 	"timePaddingEnabled": false
 }
 
+// All clip layout setting units are pixels except as noted.
+let clipLayoutSettings = {
+	"timeScale": 1000,     // pixels per second
+	"height": 100,
+	"horizontalSpacing": 20,
+	"verticalSpacing": 25,
+	"selectionOutlineWidth": 5
+}
+
+let clipLabelSettings = {
+	"visible": true,
+	"location": "bottom",
+	"color": "white",
+	"size": 1,
+	"classificationIncluded": true,
+	"startTimeIncluded": true,
+	"hiddenClassificationPrefixes": ["Call."],
+}
+
 // The index of the last clip displayed on this page.
 let pageEndIndex = null;
 
-// The clip plots displayed on this page.
-let plots = null;
+// The clip divs displayed on this page.
+let clipDivs = null;
 
 // The selected clips of this page.
 let selection = null;
@@ -43,15 +75,33 @@ function onLoad() {
 	
 	populateSettingsModalControls();
 	
-	showPresets('Clip Grid Settings', clipGridSettingsPresets);
-	showPresets('Annotation Scheme', annotationSchemePresets);
+	// showPresets('Clip Grid Settings', clipGridSettingsPresets);
+	// showPresets('Annotation Scheme', annotationSchemePresets);
+	
+	const settings = clipSpectrogramSettings;
+	settings.window = createDataWindow("Hann", settings.windowSize);
 	
 	pageEndIndex = Math.min(pageStartIndex + pageSize, numClips);
 	setTitle();
-	createPlots();
-	layOutPlots();
+	createClipDivs();
+	layOutClipDivs();
 	initSelection();
 	
+}
+
+
+function recreateClipDivs() {
+	removeClipDivs();
+	createClipDivs();
+	layOutClipDivs();
+	updateSelectionOutlines();
+}
+
+
+function removeClipDivs() {
+	const div = document.getElementById("clips");
+    while (div.firstChild)
+    	div.removeChild(div.firstChild)
 }
 
 
@@ -60,12 +110,19 @@ function onOkButtonClick() {
 	const clipGridSettingsSelect =
 		document.getElementById('clip-grid-settings');
 	
-	console.log('clip grid settings:', clipGridSettingsSelect.value);
-
+	const i = clipGridSettingsSelect.selectedIndex;
+	const preset = clipGridSettingsPresets[i][1];
+	
+	// clipSpectrogramSettings = preset.clipSpectrogramSettings;
+	clipLayoutSettings = preset.clipLayoutSettings;
+	clipLabelSettings = preset.clipLabelSettings;
+	
+	recreateClipDivs();
+	
 	const annotationSchemeSelect =
 		document.getElementById('annotation-scheme');
 	
-	console.log('annotation schemet:', annotationSchemeSelect.value);
+	// console.log('annotation scheme:', annotationSchemeSelect.value);
 	
 }
 
@@ -92,8 +149,7 @@ function populatePresetSelect(select, info) {
 	
 	for (let [path, preset] of info) {
 		const option = document.createElement("option");
-	    option.text = path.join(' / ')
-	    option.value = preset;
+	    option.text = path.join(' / ');
 		select.add(option);
 	}
 	
@@ -126,64 +182,69 @@ function setTitle() {
 function initSelection() {
 	selection = new Multiselection(0, clips.length - 1);
 	if (selectedIndex !== null)
-		selectPlot(selectedIndex - pageStartIndex);
+		selectClip(selectedIndex - pageStartIndex);
 }
 
 
-function createPlots() {
+function createClipDivs() {
 	
 	// The server provides us with a Javascript array called `clips`,
 	// each element of which describes a clip. It also provides us with
-	// an empty <div> element with ID "plots" where clip plots should
-	// go. We populate the <div> according to the contents of the
-	// `clips` array.
+	// an empty <div> element with ID "clips" where clips should be
+	// displayed. We populate the <div> according to the contents of
+	// the `clips` array.
 	
-	const plotsDiv = document.getElementById("plots");
+	const clipsDiv = document.getElementById("clips");
 	
 	if (clips.length != 0) {
 		
-		plots = [];
+		clipDivs = [];
 		
 		for (let i = 0; i != clips.length; ++i) {
 			
 			const clip = clips[i];
 			clip.index = i;
 			
-			const plot = createPlot(clip);
-			clip.plot = plot;
+			const div = createClipDiv(clip);
+			clip.div = div;
 			
-			plotsDiv.appendChild(plot);
-			plots.push(plot);
+			clipsDiv.appendChild(div);
+			clipDivs.push(div);
 		}
 		
 	} else
-		plotsDiv.innerHTML = "There are no clips to display.";
+		clipsDiv.innerHTML = "There are no clips to display.";
 	
 }
 
 
-function layOutPlots() {
+function layOutClipDivs() {
 	
-	const x = Math.max(clipXSpacing / 2, clipOutlineWidth) + "px",
-	      y = Math.max(clipYSpacing / 2, clipOutlineWidth) + "px";
+	const s = clipLayoutSettings;
+	const outlineWidth = s.selectionOutlineWidth;
+	
+	const x = Math.max(s.horizontalSpacing / 2, outlineWidth) + "px";
+	const y = Math.max(s.verticalSpacing / 2, outlineWidth) + "px";
 	
 	let i = 0;
 	
-	for (let plot of plots) {
+	for (let div of clipDivs) {
 		
 		const clip = clips[i++];
 		const span = (clip.length - 1) / clip.sampleRate;
-		const width = span * clipXScale;
-		plot.style.minWidth = width + "px";
-	    plot.style.width = width + "px";
-	    plot.style.height = clipHeight + "px";
-	    plot.style.margin = y + " " + x + " " + y + " " + x;
-	    plot.style.outlineWidth = clipOutlineWidth + "px";
+		const width = span * s.timeScale;
+		div.style.minWidth = width + "px";
+	    div.style.width = width + "px";
+	    div.style.height = s.height + "px";
+	    div.style.margin = y + " " + x + " " + y + " " + x;
+	    div.style.outlineWidth = outlineWidth + "px";
 	    
 	    // Set canvas width and height to width and height on screen.
 	    // This will help prevent distortion of items drawn on the
 	    // canvas, especially text.
-	    const canvas = plot.querySelector(".clip-plot-canvas");
+	    const canvas = div.querySelector(".clip-canvas");
+	    canvas.style.width = "100%";
+	    canvas.style.height = "100%";
 	    canvas.width = canvas.clientWidth;
 	    canvas.height = canvas.clientHeight;
 	    
@@ -192,29 +253,29 @@ function layOutPlots() {
 }
 
 
-function createPlot(clip) {
+function createClipDiv(clip) {
 	
 	const index = clip.index;
 	
-    const plot = document.createElement("div");
-    plot.className = "clip-plot";
-    plot.setAttribute("data-index", index);
+    const div = document.createElement("div");
+    div.className = "clip";
+    div.setAttribute("data-index", index);
     
-    clip.plot = plot;
+    clip.div = div;
     
     const canvas = document.createElement("canvas");
-    canvas.className = "clip-plot-canvas";
+    canvas.className = "clip-canvas";
     canvas.setAttribute("data-index", index);
     canvas.addEventListener("mouseover", onMouseOver);
     canvas.addEventListener("mouseout", onMouseOut);
     canvas.addEventListener("click", onCanvasClick);
-    plot.appendChild(canvas);
+    div.appendChild(canvas);
     
     const button = document.createElement("button");
-    button.className = "clip-plot-play-button";
+    button.className = "clip-play-button";
     button.setAttribute("data-index", index);
     button.addEventListener("click", onPlayButtonClick);
-    plot.appendChild(button);    
+    div.appendChild(button);    
     
     const icon = document.createElement("span");
     icon.className = "glyphicon glyphicon-play";
@@ -241,16 +302,20 @@ function createPlot(clip) {
      */
     
     const audio = document.createElement("audio");
-    audio.className = "clip-plot-audio";
+    audio.className = "clip-audio";
     audio.setAttribute("src", clip.url);
     audio.setAttribute("data-index", index);
     audio.innerHtml =
         "Your browser does not support the <code>audio</code> HTML element."
-    plot.appendChild(audio)
+    div.appendChild(audio)
+    
+    const label = document.createElement("p");
+    label.className = "clip-label"
+    div.appendChild(label);
     
     startAudioDecoding(clip);
     
-    return plot;
+    return div;
 	
 }
 
@@ -279,12 +344,12 @@ function onAudioDecoded(audioBuffer, clip) {
 	// showAudioBufferInfo(audioBuffer);
     clip.samples = audioBuffer.getChannelData(0);
     scaleSamples(clip.samples, 32767);
-    const params = spectrogramParams;
-    clip.spectrogram = computeClipSpectrogram(clip, params);
-    clip.spectrogramCanvas = createSpectrogramCanvas(clip, params);
+    const settings = clipSpectrogramSettings;
+    clip.spectrogram = computeClipSpectrogram(clip, settings);
+    clip.spectrogramCanvas = createSpectrogramCanvas(clip, settings);
     clip.spectrogramImageData = createSpectrogramImageData(clip);
-    drawSpectrogram(clip, params);
-    drawClipPlot(clip, params);
+    drawSpectrogram(clip, settings);
+    drawClip(clip, settings);
 }
 
 
@@ -315,18 +380,18 @@ function scaleSamples(samples, factor) {
 }
 
 
-function computeClipSpectrogram(clip, params) {
+function computeClipSpectrogram(clip, settings) {
 	const samples = clip.samples
-	const spectrogram = allocateSpectrogramStorage(samples.length, params);
-	computeSpectrogram(samples, params, spectrogram);
+	const spectrogram = allocateSpectrogramStorage(samples.length, settings);
+	computeSpectrogram(samples, settings, spectrogram);
 	return spectrogram;
 }
 
 
-function createSpectrogramCanvas(clip, params) {
+function createSpectrogramCanvas(clip, settings) {
 	
 	const gram = clip.spectrogram;
-	const numBins = params.dftSize / 2 + 1;
+	const numBins = settings.dftSize / 2 + 1;
 	const numSpectra = gram.length / numBins;
 	
 	const canvas = document.createElement("canvas");
@@ -350,7 +415,7 @@ function createSpectrogramImageData(clip) {
 }
 
 
-function drawSpectrogram(clip, params) {
+function drawSpectrogram(clip, settings) {
 	
 	const gram = clip.spectrogram;
 
@@ -362,10 +427,10 @@ function drawSpectrogram(clip, params) {
 	const data = imageData.data;
 	
 	// Get scale factor and offset for mapping the range
-	// [params.lowPower, params.highPower] into the range [0, 255].
-	const delta = params.highPower - params.lowPower
+	// [settings.lowPower, settings.highPower] into the range [0, 255].
+	const delta = settings.highPower - settings.lowPower
 	const a = 255 / delta;
-	const b = -255 * params.lowPower / delta;
+	const b = -255 * settings.lowPower / delta;
 
 	// Map spectrogram values to pixel values.
 	let spectrumNum = 0;
@@ -390,9 +455,9 @@ function drawSpectrogram(clip, params) {
 }
 
 
-function drawClipPlot(clip, params) {
+function drawClip(clip, settings) {
 	
-    const canvas = clip.plot.querySelector(".clip-plot-canvas");
+    const canvas = clip.div.querySelector(".clip-canvas");
 	const context = canvas.getContext("2d");
 	
 	// Draw gray background rectangle.
@@ -402,34 +467,25 @@ function drawClipPlot(clip, params) {
 	// Draw spectrogram from clip spectrogram canvas, stretching as needed.
 	const gramCanvas = clip.spectrogramCanvas;
 	const numSpectra = gramCanvas.width;
-	context.imageSmoothingEnabled = params.smoothingEnabled;
-	if (params.timePaddingEnabled) {
+	context.imageSmoothingEnabled = settings.smoothingEnabled;
+	if (settings.timePaddingEnabled) {
 		let [x, width] = getSpectrogramXExtent(
-			params, numSpectra, clip, canvas.width);
+			settings, numSpectra, clip, canvas.width);
 		context.drawImage(gramCanvas, x, 0, width, canvas.height);
 	} else {
 		context.drawImage(gramCanvas, 0, 0, canvas.width, canvas.height);
 	}
 
-	// Draw text overlay.
-	context.font = "1.2em sans-serif";
-	context.fillStyle = "white";
-	context.textAlign = "center";
-	let classification = clip.classification;
-	if (classification.startsWith("Call."))
-		classification = classification.slice(5);
-	const parts = clip.startTime.split(" ");
-	const time = `${parts[1]} ${parts[2]}`;
-	const text = classification + " " + time;
-	context.fillText(text, canvas.width / 2, canvas.height - 5, canvas.width);
+	// Draw label.
+	drawClipLabel(clip, clipLabelSettings);
 	
 }
 
 
-function getSpectrogramXExtent(params, numSpectra, clip, canvasWidth) {
+function getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
 	const sampleRate = clip.sampleRate;
-    const startTime = params.window.length / 2 / sampleRate;
-    const spectrumPeriod = params.hopSize / sampleRate;
+    const startTime = settings.window.length / 2 / sampleRate;
+    const spectrumPeriod = settings.hopSize / sampleRate;
     const endTime = startTime + (numSpectra - 1) * spectrumPeriod;
     const span = (clip.length - 1) / sampleRate;
     const pixelPeriod = span / canvasWidth;
@@ -439,26 +495,119 @@ function getSpectrogramXExtent(params, numSpectra, clip, canvasWidth) {
 }
 
 
+function drawClipLabel(clip, settings) {
+
+	const s = settings;
+	
+	if (s.visible) {
+		
+		let labelParts = [];
+		
+		if (s.classificationIncluded) {
+			
+			let annotation = clip.classification;
+			
+			if (s.hasOwnProperty("hiddenClassificationPrefixes"))
+				for (let prefix of s.hiddenClassificationPrefixes)
+					if (annotation.startsWith(prefix))
+						annotation = annotation.substr(prefix.length);
+			
+	        labelParts.push(annotation);
+	        
+		}
+		
+		if (s.startTimeIncluded) {
+			const parts = clip.startTime.split(" ");
+			labelParts.push(parts[1]);
+		}
+		
+		const button = clip.div.querySelector(".clip-play-button");
+		
+		/*
+		 * I'm not sure why it's necessary to set the left property in
+		 * the following, but without it the play button appears to the
+		 * right of the clip rather than within it.
+		 */
+		button.style.left = "5px";
+    	button.style.top = "5px";
+    	button.style.bottom = "unset";
+		
+		if (labelParts.length != 0) {
+			
+		    const label = clip.div.querySelector(".clip-label");
+		    const loc = s.location;
+		    
+		    // Set label horizontal location.
+		    if (loc.endsWith("left")) {
+		    	label.style.left = "0";
+		    } else if (loc.endsWith("right")) {
+		    	label.style.right = "0";
+		    } else {
+		    	label.style.left = "0";
+		    	label.style.width = "100%";
+		        label.style.textAlign = "center";
+		    }
+		    
+		    // Set label vertical location and padding.
+		    if (loc.startsWith("below")) {
+		    	label.style.top = "100%";
+		    	label.style.padding = "0";
+		    } else if (loc.startsWith("above")) {
+		    	label.style.bottom = "100%";
+		    	label.style.padding = "0"
+		    } else if (loc.startsWith("top")) {
+		    	label.style.top = "0";
+		    	label.style.padding = "0 5px";
+		    } else {
+		    	label.style.bottom = "0";
+		    	label.style.padding = "0 5px";
+		    }
+		    
+		    // Set button location.
+		    if (loc.startsWith("top")) {
+		    	
+				/*
+				 * I'm not sure why it's necessary to set the left property in
+				 * the following, but without it the play button appears to the
+				 * right of the clip rather than within it.
+				 */
+		    	button.style.left = "5px";
+		        button.style.bottom = "5px";
+		        button.style.top = "unset";
+		        
+		    }
+		    
+		    label.style.color = s.color;
+		    label.style.fontSize = `${s.size}em`;
+		    label.innerHTML = labelParts.join(' ');
+		    
+		}
+		
+	}
+	
+}
+
+
 function onMouseOver(e) {
-	const i = getPlotIndex(e.target);
+	const i = getClipIndex(e.target);
 	console.log("mouse over " + i);
 }
 
 
-function getPlotIndex(element) {
+function getClipIndex(element) {
 	return parseInt(element.getAttribute("data-index"));
 }
 
 
 function onMouseOut(e) {
-	const i = getPlotIndex(e.target);
+	const i = getClipIndex(e.target);
 	console.log("mouse out " + i);
 }
 
 
 function onCanvasClick(e) {
 
-	const index = getPlotIndex(e.target);
+	const index = getClipIndex(e.target);
 	
 	if (e.shiftKey)
 		selection.extend(index);
@@ -473,17 +622,17 @@ function onCanvasClick(e) {
 
 
 function updateSelectionOutlines() {
-	for (let i = 0; i < plots.length; ++i) {
+	for (let i = 0; i < clipDivs.length; ++i) {
 		const color = selection.contains(i) ? "orange" : "transparent";
-		plots[i].style.outlineColor = color;
+		clipDivs[i].style.outlineColor = color;
 	}
 }
 
 
 function onPlayButtonClick(e) {
-	const i = getPlotIndex(e.target);
-	const plot = plots[i];
-	const audio = plot.getElementsByClassName("clip-plot-audio")[0];
+	const i = getClipIndex(e.target);
+	const div = clipDivs[i];
+	const audio = div.getElementsByClassName("clip-audio")[0];
 	audio.play();
 }
 
@@ -658,7 +807,7 @@ function onAnnotationPutComplete(xhr, clip, annotationName, annotationValue) {
 	// TODO: Handle non-"Classification" annotations.
 	if (xhr.status === 200) {
 		clip.classification = annotationValue;
-		drawClipPlot(clip, spectrogramParams);
+		drawClip(clip, clipSpectrogramSettings);
 	}
 	
 }
@@ -699,8 +848,8 @@ const annotationCommandInterpreter = new AnnotationCommandInterpreter([
 
 
 function selectFirstClip() {
-	if (plots.length > 0)
-	    selectPlot(0);
+	if (clipDivs.length > 0)
+	    selectClip(0);
 }
 
 
@@ -710,15 +859,15 @@ function maybeSelectNextClip() {
 		
 		const i = selection.selectedIntervals[0][0];
 		
-		if (i === plots.length - 1) {
-			// selected plot is last of page
+		if (i === clipDivs.length - 1) {
+			// selected clip is last of page
 			
 			pageDown(true);
 			
 		} else {
-			// selected plot is not last of page
+			// selected clip is not last of page
 			
-			selectPlot(i + 1);
+			selectClip(i + 1);
 			
 		}
 		
@@ -734,14 +883,14 @@ function maybeSelectPreviousClip() {
 		const i = selection.selectedIntervals[0][0];
 		
 		if (i === 0) {
-			// selected plot is first of page
+			// selected clip is first of page
 			
 			pageUp(true);
 			
 		} else {
-			// selected plot is not first of page
+			// selected clip is not first of page
 			
-			selectPlot(i - 1);
+			selectClip(i - 1);
 			
 		}
 			
@@ -796,10 +945,10 @@ function getPredefinedCommandAction(e) {
 }
 
 
-function selectPlot(i) {
+function selectClip(i) {
     selection.select(i);
     updateSelectionOutlines();
-    scrollToPlotIfNeeded(plots[i]);
+    scrollToClipIfNeeded(clipDivs[i]);
 }
 
 
@@ -851,14 +1000,14 @@ function getNumSelectedClipsAux(acc, interval) {
 }
 
 
-function scrollToPlotIfNeeded(plot) {
+function scrollToClipIfNeeded(clipDiv) {
 	
-    const rect = plot.getBoundingClientRect();
+    const rect = clipDiv.getBoundingClientRect();
     
 	const navbar = document.getElementById("navbar");
 	const navbarHeight = navbar.getBoundingClientRect().height;
 	
-    const yMargin = clipYSpacing / 2;
+    const yMargin = clipLayoutSettings.verticalSpacing / 2;
     
     if (rect.top < navbarHeight + yMargin ||
             rect.bottom > window.innerHeight - yMargin)

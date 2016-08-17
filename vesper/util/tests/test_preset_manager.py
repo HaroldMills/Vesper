@@ -19,8 +19,8 @@ class A(_Preset):
     extension_name = 'A'
     
     def __init__(self, name, data):
-        super().__init__(name)
-        self.data = data.strip()
+        data = data.strip()
+        super().__init__(name, data)
         
           
 class B(_Preset):
@@ -28,8 +28,8 @@ class B(_Preset):
     extension_name = 'B'
     
     def __init__(self, name, data):
-        super().__init__(name)
-        self.data = yaml.load(data)
+        data = yaml.load(data)
+        super().__init__(name, data)
         
         
 _DATA_DIR_PATH = test_utils.get_test_data_dir_path(__file__)

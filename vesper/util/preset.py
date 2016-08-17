@@ -31,7 +31,16 @@ class Preset(Named):
     by the preset manager from the persistent store.
     
     The initializer of a preset class should always invoke the initializer
-    of its superclass before doing anything else.
+    of its superclass.
+    
+    When preset data include key/value pairs where the keys are intended
+    to function as programming language identifiers (when the keys are
+    setting names, for example), the identifiers should be written in
+    snake case. The `camel_case_data` property of a preset gets the preset
+    data with such identifiers translated to camel case. Subclasses that
+    need to perform such translation should define their own
+    `camel_case_data` property. The default implementation of the
+    property returns the preset data with no translation.
     """
 
 
@@ -47,5 +56,11 @@ class Preset(Named):
     """
     
     
-    def __init__(self, name):
+    def __init__(self, name, data):
         super().__init__(name)
+        self.data = data
+        
+        
+    @property
+    def camel_case_data(self):
+        return self.data

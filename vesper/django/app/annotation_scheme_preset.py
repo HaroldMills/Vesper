@@ -2,6 +2,7 @@
 
 
 from vesper.util.yaml_preset import YamlPreset
+import vesper.util.case_utils as case_utils
 
 
 class AnnotationSchemePreset(YamlPreset):
@@ -16,3 +17,8 @@ class AnnotationSchemePreset(YamlPreset):
     """
     
     extension_name = 'Annotation Scheme'
+    
+    
+    @property
+    def camel_case_data(self):
+        return case_utils.snake_to_camel(self.data)

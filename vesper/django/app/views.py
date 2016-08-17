@@ -196,7 +196,7 @@ def _get_presets_json(preset_type_name):
     """
         
     presets = preset_manager.instance.get_flattened_presets(preset_type_name)
-    presets = [(path, preset.data) for path, preset in presets]
+    presets = [(path, preset.camel_case_data) for path, preset in presets]
     return json.dumps(presets)
 
 
