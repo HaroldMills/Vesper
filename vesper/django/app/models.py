@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os.path
 
@@ -276,6 +277,9 @@ class DeviceConnection(Model):
 #         db_table = 'vesper_recorder_channel_assignment'
     
     
+_ONE_DAY = datetime.timedelta(days=1)
+
+
 # Many stations have a fixed location, in which case the location can
 # be recorded using the `latitude`, `longitude`, and `elevation` fields
 # of the `Station` model. Some stations are mobile, however, so we will
@@ -305,16 +309,52 @@ class Station(Model):
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._time_zone = pytz.timezone(self.time_zone)
+        self._tz = pytz.timezone(self.time_zone)
         
+    @property
+    def tz(self):
+        return self._tz
+    
     def local_to_utc(self, dt, is_dst=None):
+        
+        """
+        Converts a station-local time to UTC.
+        
+        The time is assumed to be in this station's local time zone,
+        regardless of its `tzinfo`, if any.
+        """
+        
         return time_utils.create_utc_datetime(
             dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second,
-            dt.microsecond, self._time_zone, is_dst)
+            dt.microsecond, self.tz, is_dst)
         
     def utc_to_local(self, dt):
-        return dt.astimezone(pytz.utc)
+        
+        """
+        Converts a UTC time to an aware time with this station's time zone.
+        
+        The time is assumed to be UTC, regardless of its `tzinfo`, if any.
+        """
+        
+        if dt.tzinfo is None:
+            dt = pytz.utc.localize(dt)
+            
+        return dt.astimezone(self.tz)
     
+    def get_midnight_utc(self, date):
+        midnight = datetime.datetime(date.year, date.month, date.day)
+        return self.local_to_utc(midnight)
+    
+    def get_noon_utc(self, date):
+        noon = datetime.datetime(date.year, date.month, date.day, 12)
+        return self.local_to_utc(noon)
+
+    def get_day_interval_utc(self, start_date, end_date=None):
+        return _get_interval_utc(start_date, end_date, self.get_midnight_utc)
+    
+    def get_night_interval_utc(self, start_date, end_date=None):
+        return _get_interval_utc(start_date, end_date, self.get_noon_utc)
+        
     def get_station_devices(self, device_type, start_time, end_time):
         
         """
@@ -338,6 +378,15 @@ class Station(Model):
                     sd.end_time >= end_time]
     
     
+def _get_interval_utc(start_date, end_date, get_datetime):
+    start_time = get_datetime(start_date)
+    if end_date is None:
+        end_time = start_time + _ONE_DAY
+    else:
+        end_time = get_datetime(end_date + _ONE_DAY)
+    return (start_time, end_time)
+
+
 # The `StationTrack` and `StationLocation` models will store tracks of mobile
 # stations. When we want the location of a station at a specified time, we
 # can look first for a `StationTrack` whose time interval includes that time,
