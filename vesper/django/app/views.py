@@ -18,6 +18,7 @@ from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
     Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station,
     StationDevice)
+from vesper.django.app.detect_form import DetectForm
 from vesper.singletons import job_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.clips_rug_plot as clips_rug_plot
@@ -53,7 +54,7 @@ def _create_navbar_href(name, ancestors):
     
     
 def _create_navbar_href_aux(s):
-    return '_'.join(s.split())
+    return '_'.join(s.lower().split())
 
 
 # Note that as of 2016-07-19, nested havbar dropdowns do not work.
@@ -76,10 +77,48 @@ def index(request):
     return redirect(reverse('calendar'))
 
 
+@csrf_exempt
 def detect(request):
-    return _render_coming_soon(request, 'Detect', 'Detection is coming soon...')
+    
+    if request.method in _GET_AND_HEAD:
+        form = DetectForm()
+        
+    elif request.method == 'POST':
+        
+        form = DetectForm(request.POST)
+        
+        if form.is_valid():
+            command_spec = _create_detect_command_spec(form)
+            job_id = job_manager.instance.start_job(command_spec)
+            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+            
+    else:
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
+    
+    context = {
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Detect',
+        'form': form
+    }
+    
+    return render(request, 'vesper/detect.html', context)
     
     
+def _create_detect_command_spec(form):
+    
+    data = form.cleaned_data
+    
+    return {
+        'name': 'detect',
+        'arguments': {
+            'detectors': data['detectors'],
+            'stations': data['stations'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date']
+        }
+    }
+
+
 def _render_coming_soon(request, action, message):
     context = {
         'navbar_items': _NAVBAR_ITEMS,
@@ -435,9 +474,8 @@ def night(request):
         station, microphone_output_name)
     detector = Processor.objects.get(name=detector_name)
       
-    time_zone = pytz.timezone(station.time_zone)
     night = time_utils.parse_date(*date.split('-'))
-    time_interval = _get_night_interval(night, time_zone)
+    time_interval = station.get_night_interval_utc(night)
   
     recordings = Recording.objects.filter(
         station_recorder__station=station,
@@ -451,8 +489,9 @@ def night(request):
     page_start_index = _limit_index(page_start_index, 0, num_clips - 1)
     page_end_index = min(page_start_index + page_size, num_clips)
       
+    utc_to_local = station.utc_to_local
     utc_times = [a.clip.start_time for a in annotations]
-    start_times = [t.astimezone(time_zone) for t in utc_times]
+    start_times = [utc_to_local(t) for t in utc_times]
       
     rug_plot_script, rug_plot_div = \
         clips_rug_plot.create_rug_plot(station, night, start_times)
@@ -775,27 +814,9 @@ def import_archive_data(request):
         form = ImportArchiveDataForm(request.POST)
         
         if form.is_valid():
-            
-            print('form valid')
-            
-            command_spec = {
-                'name': 'import',
-                'arguments': {
-                    'importer': {
-                        'name': 'Archive Data Importer',
-                        'arguments': {
-                            'archive_data': form.cleaned_data['archive_data']
-                        }
-                    }
-                }
-            }
-            
+            command_spec = _create_import_archive_data_command_spec(form)
             job_id = job_manager.instance.start_job(command_spec)
-            
             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
-        
-        else:
-            print('form invalid')
             
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
@@ -809,6 +830,23 @@ def import_archive_data(request):
     return render(request, 'vesper/import-archive-data.html', context)
     
     
+def _create_import_archive_data_command_spec(form):
+    
+    data = form.cleaned_data
+    
+    return {
+        'name': 'import',
+        'arguments': {
+            'importer': {
+                'name': 'Archive Data Importer',
+                'arguments': {
+                    'archive_data': data['archive_data']
+                }
+            }
+        }
+    }
+            
+
 @csrf_exempt
 def import_recordings(request):
     
@@ -820,16 +858,9 @@ def import_recordings(request):
         form = ImportRecordingsForm(request.POST)
         
         if form.is_valid():
-            
-            print('form valid')
-            
             command_spec = _create_import_recordings_command_spec(form)
-            
             job_id = job_manager.instance.start_job(command_spec)
             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
-        
-        else:
-            print('form invalid')
             
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
