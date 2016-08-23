@@ -27,6 +27,11 @@ _ARCHIVE_DATABASE_FILE_NAME = 'Archive Database.sqlite'
 _ARCHIVE_DATABASE_FILE_PATH = os.path.join(
     _ARCHIVE_DIR_PATH, _ARCHIVE_DATABASE_FILE_NAME)
 
+_DETECTOR_NAME_ALIASES = {
+    'Old Bird Thrush': ['Thrush'],
+    'Old Bird Tseep': ['Tseep']
+}
+
 
 def _main():
     _delete_data()
@@ -135,9 +140,18 @@ def _get_station_recordings():
         
         
 def _get_detectors():
+    
     detectors = Processor.objects.filter(
         algorithm_version__algorithm__type='Detector')
-    return dict((d.name, d) for d in detectors)
+    
+    detectors = dict((d.name, d) for d in detectors)
+    
+    for name, aliases in _DETECTOR_NAME_ALIASES.items():
+        detector = Processor.objects.get(name=name)
+        for alias in aliases:
+            detectors[alias] = detector
+            
+    return detectors
 
 
 def _add_clips_aux(clips, station_recordings, detectors):
