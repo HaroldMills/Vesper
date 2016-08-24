@@ -654,11 +654,10 @@ class Recording(Model):
 class RecordingFile(Model):
     
     recording = ForeignKey(Recording, on_delete=CASCADE, related_name='files')
-    file_num = IntegerField() # TODO: Change name to "num".
+    file_num = IntegerField()
     start_index = BigIntegerField()
     length = BigIntegerField()
     file_path = CharField(max_length=255, unique=True, null=True)
-        # TODO: Change name to "path".
     
     def __str__(self):
         r = self.recording
