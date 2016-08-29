@@ -642,9 +642,8 @@ class Recording(Model):
         return self.station_recorder.device
     
     def __str__(self):
-        return 'Recording "{}" "{}" {} {} {} {}'.format(
-            self.station.name, self.recorder.name,
-            self.start_time, self.length, self.num_channels, self.sample_rate)
+        return '{} / {} / {}'.format(
+            self.station.name, self.recorder.name, self.start_time)
         
     class Meta:
         unique_together = ('station_recorder', 'start_time')
@@ -908,9 +907,9 @@ class Clip(Model):
     file_path = CharField(max_length=255, unique=True, null=True)
     
     def __str__(self):
-        return 'Clip {} {} {} {} {} "{}"'.format(
-            str(self.recording), self.channel_num, self.start_index,
-            self.length, self.start_time, self.file_path)
+        return '{} / {} / {} / {}'.format(
+            self.station.name, self.recorder.name, self.channel_num,
+            self.start_time)
         
     class Meta:
         unique_together = (
