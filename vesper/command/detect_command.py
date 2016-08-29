@@ -4,7 +4,7 @@
 import itertools
 
 from vesper.command.command import Command, CommandExecutionError
-from vesper.django.app.models import Recording, Station
+from vesper.django.app.models import Processor, Recording, Station
 import vesper.command.command_utils as command_utils
 
 
@@ -26,39 +26,61 @@ class DetectCommand(Command):
     def execute(self, context):
         
         self._logger = context.job.logger
-        info = self._logger.info
         
-        info('detectors: {}'.format(str(self._detector_names)))
-        info('stations: {}'.format(str(self._station_names)))
-        info('start date: {}'.format(str(self._start_date)))
-        info('end date: {}'.format(str(self._end_date)))
+        detectors = self._get_detectors()
+        
+        recordings = self._get_recordings()
+            
+        for recording in recordings:
+            self._logger.info(
+                'running detectors on recording {}...'.format(str(recording)))
+            self._run_detectors(detectors, recording)
+            
+        return True
+    
+    
+    def _get_detectors(self):
         
         try:
-            recordings = self._get_recordings()
-            
+            return [self._get_detector(name) for name in self._detector_names]
+        
         except Exception as e:
             self._logger.error((
-                'Collection of recordings to run detector(s) on failed with '
+                'Collection of detectors to run on recordings on failed with '
                     'an exception.\n'
                 'The exception message was:\n'
                 '    {}\n'
                 'The archive was not modified.\n'
                 'See below for exception traceback.').format(str(e)))
             raise
-        
-        info('recordings:')
-        for recording in recordings:
-            info('    {}'.format(str(recording)))
-
-        return True
-    
-    
-    def _get_recordings(self):
-        return itertools.chain.from_iterable(
-            self._get_station_recordings(
-                name, self._start_date, self._end_date)
-            for name in self._station_names)
             
+            
+    def _get_detector(self, name):
+        try:
+            return Processor.objects.get(name=name)
+        except Processor.DoesNotExist:
+            raise CommandExecutionError(
+                'Unrecognized detector "{}".'.format(name))
+            
+            
+    def _get_recordings(self):
+        
+        try:
+            return itertools.chain.from_iterable(
+                self._get_station_recordings(
+                    name, self._start_date, self._end_date)
+                for name in self._station_names)
+            
+        except Exception as e:
+            self._logger.error((
+                'Collection of recordings to run detectors on failed with '
+                    'an exception.\n'
+                'The exception message was:\n'
+                '    {}\n'
+                'The archive was not modified.\n'
+                'See below for exception traceback.').format(str(e)))
+            raise
+
             
     def _get_station_recordings(self, station_name, start_date, end_date):
 
@@ -82,3 +104,8 @@ class DetectCommand(Command):
         return Recording.objects.filter(
             station_recorder__station=station,
             start_time__range=time_interval)
+
+
+    def _run_detectors(self, detectors, recording):
+        pass
+        
