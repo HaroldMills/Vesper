@@ -33,7 +33,7 @@ class DetectCommand(Command):
             
         for recording in recordings:
             self._logger.info(
-                'running detectors on recording {}...'.format(str(recording)))
+                'Running detectors on {}...'.format(str(recording)))
             self._run_detectors(detectors, recording)
             
         return True
