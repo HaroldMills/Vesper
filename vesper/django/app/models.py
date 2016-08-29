@@ -906,7 +906,7 @@ class Clip(Model):
     file_path = CharField(max_length=255, unique=True, null=True)
     
     def __str__(self):
-        return '{} / {} / {} / {}'.format(
+        return '{} / {} / Channel {} / {}'.format(
             self.station.name, self.recorder.name, self.channel_num,
             self.start_time)
         
