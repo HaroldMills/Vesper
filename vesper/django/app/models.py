@@ -660,9 +660,8 @@ class RecordingFile(Model):
     
     def __str__(self):
         r = self.recording
-        return 'Recording "{}" "{}" {} File {} "{}"'.format(
-            r.station.name, r.recorder.name,
-            r.start_time, self.file_num, self.file_path)
+        return '{} / File {} / "{}"'.format(
+            str(r), self.file_num, self.file_path)
         
     class Meta:
         unique_together = ('recording', 'file_num')
