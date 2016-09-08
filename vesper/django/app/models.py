@@ -1,8 +1,6 @@
 import datetime
-import logging
 import os.path
 
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db.models import (
@@ -528,10 +526,6 @@ class Job(Model):
     class Meta:
         db_table = 'vesper_job'
         
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._logger = None
-        
     @property
     def log_file_path(self):
         dir_path = _get_job_logs_dir_path()
@@ -539,61 +533,14 @@ class Job(Model):
         return os.path.join(dir_path, file_name)
         
     @property
-    def logger(self):
-        if self._logger is None:
-            self._logger = self._create_logger()
-        return self._logger
-    
-    def _create_logger(self):
-        
-        _create_job_logs_dir_if_needed()
-        
-        logger_name = 'Job {}'.format(self.id)
-        logger = logging.getLogger(logger_name)
-        
-        level = 'INFO' if settings.DEBUG else 'INFO'
-        file_path = self.log_file_path
-        
-        config = {
-            'version': 1,
-            'formatters': {
-                'vesper': {
-                    'class': 'logging.Formatter',
-                    'format': '%(asctime)s %(levelname)-8s %(message)s'
-                }
-            },
-            'handlers': {
-                'console': {
-                    'class': 'logging.StreamHandler',
-                    'level': level,
-                    'formatter': 'vesper'
-                },
-                'file': {
-                    'class': 'logging.FileHandler',
-                    'filename': file_path,
-                    'mode': 'w',
-                    'level': level,
-                    'formatter': 'vesper'
-                }
-            },
-            'loggers': {
-                logger_name: {
-                    'handlers': ['console', 'file'],
-                    'level': level,
-                }
-            }
-        }
-        
-        logging.config.dictConfig(config)
-        
-        return logger
-    
-    
-    @property
     def log(self):
-        return os_utils.read_file(self.log_file_path)
+        if not os.path.exists(self.log_file_path):
+            return ''
+        else:
+            return os_utils.read_file(self.log_file_path)            
         
 
+# TODO: Why do we defer initialization of `_job_logs_dir_path`?
 _job_logs_dir_path = None
 
 

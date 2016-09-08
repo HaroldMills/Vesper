@@ -22,8 +22,22 @@ import yaml
 # TODO: Discover extension points and extensions in plugins rather than
 # specifying them in a YAML extensions specification. Note, however, that
 # it might still be desirable to be able to specify different subsets of
-# installed extensions to work with at different times, say for differen
+# installed extensions to work with at different times, say for different
 # analysis projects.
+
+# TODO: Actually, it might be best to stick with an explicit extensions
+# configuration. The extension manager can be initialized much more quickly
+# if you know up front what and where all of the extensions are, and this
+# has become newly important since we are running Vesper commands in their
+# own processes. A new extension manager is created in each of these
+# processes, and it is desirable that that creation be fast.
+
+# TODO: In order to make starting the execution of Vesper commands faster,
+# it would be helpful to be able to get a single extension by its
+# extension point name and extension name, importing *exactly the modules
+# needed by that extension* and no others. This need could be addressed
+# by a new extension manager method `get_extension` that gets a single
+# extension.
 
 # TODO: Use a hierarchical name space for plugins, extension points, and
 # extensions?

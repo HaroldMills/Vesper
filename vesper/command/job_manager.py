@@ -1,12 +1,15 @@
 """Module containing class `JobManager`."""
 
 
-from threading import RLock
-import logging
+from multiprocessing import Event, Lock, Process
+import datetime
+import json
 
-from vesper.command.command import CommandSyntaxError
-from vesper.command.job_thread import JobThread
+from vesper.django.app.models import Job, User
+from vesper.util.bunch import Bunch
 from vesper.util.repeating_timer import RepeatingTimer
+import vesper.command.job_runner as job_runner
+import vesper.util.time_utils as time_utils
 
 
 class JobManager:
@@ -15,97 +18,105 @@ class JobManager:
     Manager of Vesper jobs.
 
     A Vesper job executes one Vesper command. Each job runs in its own
-    thread, which may or may not start additional threads. The `start_job`
-    method of this class starts a job for a specified command, and the
-    `stop_job` method requests that a running job stop. A job is not
-    required to honor a stop request, but most jobs should, especially
+    process, which may or may not start additional processes. The
+    `start_job` method of this class starts a job for a specified command,
+    and the `stop_job` method requests that a running job stop. A job is
+    not required to honor a stop request, but most jobs should, especially
     longer-running ones.
     """
     
     
-    def __init__(self, command_classes):
+    def __init__(self):
         
-        self._command_classes = command_classes.copy()
-        """Mapping from Vesper command names to command classes."""
-
-        self._job_threads = {}
+        self._job_infos = {}
         """
-        Mapping from job IDs to job threads.
+        Mapping from job IDs to `Bunch` objects containing job information.
         
-        A job thread is added to this dictionary when the job thread is
-        started. It is removed from the dictionary when it is no longer
-        running. The removal is performed by the
-        `_delete_terminated_job_threads` method, which runs off a
-        repeating timer.
+        An item is added to this dictionary when each job is started.
+        A job's item is removed from the dictionary after the job terminates.
+        The removal is performed by the `_delete_terminated_jobs` method,
+        which runs off a repeating timer.
         """
 
-        self._lock = RLock()
+        self._lock = Lock()
         """
-        Lock used to synchronize access to the `_job_threads` dictionary
-        from multiple threads.
+        Lock used to synchronize access to the `_job_infos` dictionary
+        from multiple threads. (The lock can synchronize access from
+        multiple threads and/or processes, but we access the dictionary
+        only from threads of the main Vesper process.)
         """
 
-        self._timer = RepeatingTimer(10, self._delete_terminated_job_threads)
-        """
-        Repeating timer that deletes terminated job threads from
-        `_job_threads`.
-        """
+        self._timer = RepeatingTimer(10, self._delete_terminated_jobs)
+        """Repeating timer that deletes terminated jobs from `_job_infos`."""
         
         self._timer.start()
 
 
     def start_job(self, command_spec):
-        thread = self._create_job_thread(command_spec)
-        job_id = thread.job.id
+        
+        info = Bunch()
+        info.command_spec = command_spec
+        info.job_id = _create_job(command_spec)
+        info.stop_event = Event()
+
         with self._lock:
-            self._job_threads[job_id] = thread
-        thread.start()
-        return job_id
-        
-        
-    def _create_job_thread(self, command_spec):
-        
-        try:
-            command_name = command_spec['name']
-        except KeyError:
-            raise CommandSyntaxError(
-                'Command specification contains no "name" item.')
+            self._job_infos[info.job_id] = info
             
-        try:
-            command_class = self._command_classes[command_name]
-        except KeyError:
-            raise CommandSyntaxError(
-                'Unrecognized command "{}".'.format(command_name))
-            
-        command_args = command_spec.get('arguments', {})
+        print('JobManager: creating job process')
+        info.process = Process(target=job_runner.run_job, args=(info,))
+        print('JobManager: starting job process')
+        info.process.start()
+        print('JobManager: started process for job {}'.format(info.job_id))
         
-        command = command_class(command_args)
+        return info.job_id
         
-        return JobThread(command)
         
-    
     def stop_job(self, job_id):
         with self._lock:
             try:
-                thread = self._job_threads[job_id]
+                job_info = self._job_infos[job_id]
             except KeyError:
                 return
             else:
-                thread.stop()
+                job_info.stop_event.set()
             
         
-    def _delete_terminated_job_threads(self):
+    def _delete_terminated_jobs(self):
         
-        terminated_threads = set()
+        terminated_job_ids = set()
         
         with self._lock:
             
-            for thread in self._job_threads.values():
-                if not thread.is_alive():
-                    terminated_threads.add(thread)
+            for info in self._job_infos.values():
+                if not info.process.is_alive():
+                    terminated_job_ids.add(info.job_id)
                     
-            for thread in terminated_threads:
-                job_id = thread.job.id
-                logging.info(
-                    'JobManager: removing thread for job {}'.format(job_id))
-                del self._job_threads[job_id]
+            for job_id in terminated_job_ids:
+                print(
+                    'JobManager: removing process for job {}'.format(job_id))
+                del self._job_infos[job_id]
+
+
+def _create_job(command_spec):
+    
+    # TODO: This should be the logged-in user.
+    user = User.objects.get(username='Harold')
+    
+    job = Job(
+        command=json.dumps(command_spec, default=_json_date_serializer),
+        creation_time = time_utils.get_utc_now(),
+        creating_user=user,
+        status='Not Started')
+    job.save()
+    
+    return job.id
+    
+    
+def _json_date_serializer(obj):
+    
+    """Date serializer for `json.dumps`."""
+    
+    if isinstance(obj, datetime.date):
+        return str(obj)
+    else:
+        raise TypeError('{} is not JSON serializable'.format(repr(obj)))

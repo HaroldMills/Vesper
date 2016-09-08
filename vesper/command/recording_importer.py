@@ -32,7 +32,7 @@ class RecordingImporter:
     def execute(self, context):
         
         self._job = context.job
-        self._logger = self._job.logger
+        self._logger = context.logger
         
         try:
             recordings = self._get_recordings()

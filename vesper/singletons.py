@@ -45,8 +45,4 @@ def _create_preset_manager():
 preset_manager = Singleton(_create_preset_manager)
 
 
-def _create_job_manager():
-    command_classes = extension_manager.instance.get_extensions('Command')
-    return JobManager(command_classes)
-
-job_manager = Singleton(_create_job_manager)
+job_manager = Singleton(JobManager)

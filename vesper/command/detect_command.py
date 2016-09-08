@@ -1,11 +1,13 @@
 """Module containing class `DetectCommand`."""
 
 
+from multiprocessing import Process
 import itertools
 
 from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import Processor, Recording, Station
 import vesper.command.command_utils as command_utils
+import vesper.command.detector_runner as detector_runner
 
 
 class DetectCommand(Command):
@@ -25,16 +27,28 @@ class DetectCommand(Command):
         
     def execute(self, context):
         
-        self._logger = context.job.logger
-        
+        self._context = context
+        self._logger = self._context.logger
+
         detectors = self._get_detectors()
-        
         recordings = self._get_recordings()
-            
+                
         for recording in recordings:
-            self._logger.info(
-                'Running detectors on {}...'.format(str(recording)))
-            self._run_detectors(detectors, recording)
+            
+            recording_files = recording.files.all()
+            
+            if len(recording_files) == 0:
+                self._logger.info(
+                    'No file information available for {}.'.format(recording))
+                
+            else:
+                num_channels = recording.num_channels
+                for file_ in recording_files:
+                    for channel_num in range(num_channels):
+                        self._logger.info(
+                            'Running detectors on {} channel {}...'.format(
+                                file_, channel_num))
+                        self._run_detectors(detectors, file_, channel_num)
             
         return True
     
@@ -106,6 +120,32 @@ class DetectCommand(Command):
             start_time__range=time_interval)
 
 
-    def _run_detectors(self, detectors, recording):
-        pass
+    def _run_detectors(self, detectors, recording_file, channel_num):
         
+        # Copy file channel to monaural file required by Old Bird detectors.
+        self._copy_file_channel(recording_file, channel_num)
+        
+        # Start detector processes.
+        processes = [
+            self._start_detector_process(d, recording_file, channel_num)
+            for d in detectors]
+        
+        # Wait for processes to complete.
+        for process in processes:
+            process.join()
+            
+            
+    def _copy_file_channel(self, recording_file, channel_num):
+        pass
+    
+    
+    def _start_detector_process(self, detector, recording_file, channel_num):
+        
+        process = Process(
+            target=detector_runner.run_detector,
+            args=(detector.id, recording_file.id, channel_num,
+                  self._context.logging_info))
+        
+        process.start()
+        
+        return process

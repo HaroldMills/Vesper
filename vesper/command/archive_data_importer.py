@@ -27,7 +27,7 @@ class ArchiveDataImporter:
     
     def execute(self, context):
         
-        self._logger = context.job.logger
+        self._logger = context.logger
         
         try:
             with transaction.atomic():
