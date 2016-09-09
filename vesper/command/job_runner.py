@@ -16,6 +16,7 @@ import traceback
 from vesper.command.command import CommandSyntaxError
 from vesper.command.job_logging_manager import JobLoggingManager
 import vesper.util.django_utils as django_utils
+# import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
 
@@ -84,30 +85,71 @@ def run_job(job_info):
     except Exception:
         
         # Update job status and log error message
+        
         job.end_time = time_utils.get_utc_now()
         job.status = 'Raised Exception'
         job.save()
-        logger.error('Job raised exception.\n' + traceback.format_exc())
+        
+        logger.error(
+            'Job raised exception. See traceback below.\n' +
+            traceback.format_exc())
         
     else:
         
-        # Update job status and log completion or interruption message.
+        # Update job status and log final message.
         
+        status = 'Complete' if complete else 'Interrupted'
+
         job.end_time = time_utils.get_utc_now()
-        
-        if complete:
-            job.status = 'Complete'
-            log_message = 'Job complete.'
-            
-        else:
-            job.status = 'Interrupted'
-            log_message = 'Job interrupted.'
-            
+        job.status = status
         job.save()
-        logger.info(log_message)
+        
+        logger.info('Job {}.'.format(status.lower()))
         
     finally:
+        
+        # The following doesn't work, since there's no way to ensure
+        # that all log records that have been queued by the various
+        # processes of a job have been processed by the record count
+        # handler except for stopping the queue listener. Once we do
+        # that, however, we can't log any more messages!
+        #
+        # Rather than trying to include record counts in the log,
+        # perhaps we should just put them in the database in
+        # additional `Job` model fields. The record counts handler
+        # can update the counts periodically while a job is running,
+        # and also when the job completes, and we can use the counts
+        # in our various log displays. See record counts handler
+        # TODO in `job_logging_manager` module for more detail.
+        
+#         counts = logging_manager.record_counts
+#         message = _create_final_log_message(counts)
+#         logger.info(message)
+
         logging_manager.shut_down_logging()
+
+
+# def _create_final_log_message(counts):
+#     
+#     critical = _create_count_phrase(counts, logging.CRITICAL, 'CRITICAL')
+#     error = _create_count_phrase(counts, logging.ERROR, 'ERROR')
+#     warning = _create_count_phrase(counts, logging.WARNING, 'WARNING')
+#     items = [i for i in [critical, error, warning] if i is not None]
+#     
+#     if len(items) == 0:
+#         return 'Log contains no errors or warnings.'
+#     else:
+#         item_list = text_utils.create_string_item_list(items)
+#         return 'Log contains {}.'.format(item_list)
+    
+    
+def _create_count_phrase(counts, key, name):
+    count = counts.get(key, 0)
+    if count == 0:
+        return None
+    else:
+        suffix = '' if count == 1 else 's'
+        return '{} {} message{}'.format(count, name, suffix)
 
 
 def _create_command(command_spec):
