@@ -1,7 +1,8 @@
 """Module containing class `JobLoggingManager`."""
 
 
-from logging import FileHandler, Formatter, StreamHandler
+from collections import defaultdict
+from logging import FileHandler, Formatter, Handler, StreamHandler
 from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
 import logging
@@ -10,6 +11,19 @@ import os
 import vesper.util.os_utils as os_utils
 
 
+# TODO: Add record count fields to the `Job` model class, and modify
+# the record counts handler to update the fields both while a job is
+# running and upon completion. 
+class _RecordCountsHandler(Handler):
+    
+    def __init__(self):
+        super().__init__()
+        self.record_counts = defaultdict(int)
+        
+    def emit(self, record):
+        self.record_counts[record.levelno] += 1
+        
+        
 class JobLoggingManager:
     
     """
@@ -71,16 +85,23 @@ class JobLoggingManager:
         stderr_handler = StreamHandler()
         stderr_handler.setFormatter(formatter)
         
-        self._handlers = (file_handler, stderr_handler)
+        self._record_counts_handler = _RecordCountsHandler()
         
         # Create logging listener that will run on its own thread and log
         # messages sent to it via the queue.
-        self._listener = QueueListener(self.queue, *self._handlers)
+        self._listener = QueueListener(
+            self.queue, file_handler, stderr_handler,
+            self._record_counts_handler)
         
         
     @property
     def logging_info(self):
         return (self.job.id, self.level, self.queue)
+    
+    
+    @property
+    def record_counts(self):
+        return dict(self._record_counts_handler.record_counts)
     
     
     def start_up_logging(self):
