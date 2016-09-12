@@ -2,12 +2,13 @@
 
 
 import itertools
+import logging
 import os
 
 from django.db import transaction
 
 from vesper.command.command import CommandExecutionError
-from vesper.django.app.models import Recording, RecordingFile, Station
+from vesper.django.app.models import Job, Recording, RecordingFile, Station
 from vesper.singletons import extension_manager, preset_manager
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
@@ -17,6 +18,20 @@ import vesper.util.time_utils as time_utils
 
 
 class RecordingImporter:
+    
+    """
+    Importer for recordings already stored in files on the Vesper server.
+    
+    The recordings to be imported are specified in the `paths` argument
+    as server-side directory and file paths. Files from directories can
+    be imported either recursively or non-recursively according to the
+    `recursive` argument. The import does not copy or move recordings:
+    it stores the existing paths of their files for future reference.
+    
+    The importer obtains recording metadata for imported files with the
+    aid of a recording file parser extension, specified by the
+    `recording_file_parser` argument.
+    """
     
     
     extension_name = 'Recording Importer'
@@ -29,10 +44,10 @@ class RecordingImporter:
         self.file_parser = _create_file_parser(spec)
     
     
-    def execute(self, context):
+    def execute(self, job_info):
         
-        self._job = context.job
-        self._logger = context.logger
+        self._job = Job.objects.get(id=job_info.job_id)
+        self._logger = logging.getLogger()
         
         try:
             recordings = self._get_recordings()

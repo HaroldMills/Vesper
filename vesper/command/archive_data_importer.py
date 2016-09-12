@@ -1,4 +1,8 @@
+"""Module containing class `ArchiveDataImporter`."""
+
+
 import datetime
+import logging
 
 from django.db import transaction
 import pytz
@@ -17,6 +21,15 @@ import vesper.command.command_utils as command_utils
 
 class ArchiveDataImporter:
     
+    """
+    Importer for archive data including stations, devices, etc.
+    
+    The data to be archived are in the `archive_data` command argument.
+    The value of the argument is a mapping from string keys like `'stations'`
+    and `'devices'` to collections of mappings, with each mapping in the
+    collection describing the fields of one archive object.
+    """
+    
     
     extension_name = 'Archive Data Importer'
     
@@ -25,9 +38,9 @@ class ArchiveDataImporter:
         self.archive_data = command_utils.get_required_arg('archive_data', args)
     
     
-    def execute(self, context):
+    def execute(self, job_info):
         
-        self._logger = context.logger
+        self._logger = logging.getLogger()
         
         try:
             with transaction.atomic():
