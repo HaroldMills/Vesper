@@ -35,15 +35,16 @@ Raised Exception
 def run_job(job_info):
     
     """
-    Runs a job in the current process.
+    Runs a job in a new process.
     
     This function is executed by the Vesper job manager each time it
     starts a new job. The function is executed in a new process, called
-    the *main job process* for the job.
+    the *main job process* of the job.
     
-    The function configures the root logger for the main job process,
-    constructs the command to be executed, and invokes the command's
-    `execute` method. Logging is shut down after that method returns.
+    The function sets up Django and configures the root logger for the
+    main job process, constructs the command to be executed, and invokes
+    the command's `execute` method. Logging is shut down after that method
+    returns.
     
     Parameters:
     
@@ -52,7 +53,7 @@ def run_job(job_info):
             
             The information includes the command specification for the
             new job, the ID of the Django Job model instance for the job,
-            the stop event for the job, and the main process for the job.
+            and the stop event for the job.
             
             The information includes the ID of the Django job model
             instance rather than the instance itself so that the job
