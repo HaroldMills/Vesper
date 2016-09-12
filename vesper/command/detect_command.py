@@ -1,13 +1,14 @@
 """Module containing class `DetectCommand`."""
 
 
-from multiprocessing import Process
 import itertools
+import logging
+import os.path
 
 from vesper.command.command import Command, CommandExecutionError
+# from vesper.command.old_bird_detector_runner import OldBirdDetectorRunner
 from vesper.django.app.models import Processor, Recording, Station
 import vesper.command.command_utils as command_utils
-import vesper.command.detector_runner as detector_runner
 
 
 class DetectCommand(Command):
@@ -25,10 +26,14 @@ class DetectCommand(Command):
         self._end_date = get('end_date', args)
         
         
-    def execute(self, context):
+    @property
+    def _logger(self):
+        return logging.getLogger()
+    
+    
+    def execute(self, job_info):
         
-        self._context = context
-        self._logger = self._context.logger
+        self._job_info = job_info
 
         detectors = self._get_detectors()
         recordings = self._get_recordings()
@@ -45,9 +50,6 @@ class DetectCommand(Command):
                 num_channels = recording.num_channels
                 for file_ in recording_files:
                     for channel_num in range(num_channels):
-                        self._logger.info(
-                            'Running detectors on {} channel {}...'.format(
-                                file_, channel_num))
                         self._run_detectors(detectors, file_, channel_num)
             
         return True
@@ -121,31 +123,12 @@ class DetectCommand(Command):
 
 
     def _run_detectors(self, detectors, recording_file, channel_num):
+        file_path = recording_file.file_path
+        file_name = os.path.basename(file_path)
+        self._logger.info(
+            'Running detectors on file "{}" channel {}...'.format(
+                file_name, channel_num))
+#         runner = OldBirdDetectorRunner()
+#         runner.run_detectors(detectors, recording_file, channel_num)
         
-        # Copy file channel to monaural file required by Old Bird detectors.
-        self._copy_file_channel(recording_file, channel_num)
         
-        # Start detector processes.
-        processes = [
-            self._start_detector_process(d, recording_file, channel_num)
-            for d in detectors]
-        
-        # Wait for processes to complete.
-        for process in processes:
-            process.join()
-            
-            
-    def _copy_file_channel(self, recording_file, channel_num):
-        pass
-    
-    
-    def _start_detector_process(self, detector, recording_file, channel_num):
-        
-        process = Process(
-            target=detector_runner.run_detector,
-            args=(detector.id, recording_file.id, channel_num,
-                  self._context.logging_info))
-        
-        process.start()
-        
-        return process

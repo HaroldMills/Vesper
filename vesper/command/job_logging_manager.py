@@ -30,41 +30,38 @@ class JobLoggingManager:
     Manages logging for a Vesper job.
     
     A `JobLoggingManager` manages logging for the processes of a Vesper job.
-    Log records can be submitted by any process of a job using a logger
-    created with the `create_logger` static method. These records are
-    delivered via a multiprocessing queue to a thread running in the main
-    job process, which writes corresponding messages to the job's log file.
+    Log records can be submitted by any process of a job using any logger
+    (typically the root logger) configured with the `configure_logger`
+    static method. A logger so configured writes each log record to a
+    multiprocessing queue that is read by a thread running in the main
+    job process, which in turn writes log messages to the job's log file.
     """
     
     
     @staticmethod
-    def create_logger(logging_info):
+    def configure_logger(logger, logging_config):
         
         """
-        Creates a logger for this job process.
+        Configures the specified logger to write log records to this job's
+        logging queue.
         
-        For the `logging_info` argument, the main job process can pass
-        the `logging_info` attribute of its `JobLoggingManager`. This
-        information is also passed to the `execute` method of the
-        job's command as the `logging_info` attribute of the command's
+        For the `logging_config` argument, the main job process can pass
+        the `logging_config` attribute of its `JobLoggingManager`. This
+        information is also passed to the `execute` method of the job's
+        command as the `logging_config` attribute of the command's
         execution context. The information is picklable, so it can be
         delivered easily to any additional process started by the main
-        job process as an argument to the process's target function.
+        job process as an argument to the process's target function.        
         """
         
-        job_id, level, queue = logging_info
-        
-        logger_name = 'Job {}'.format(job_id)
-        logger = logging.getLogger(logger_name)
+        level, queue = logging_config
         
         logger.setLevel(level)
         
         handler = QueueHandler(queue)
         logger.addHandler(handler)
-        
-        return logger
 
-    
+        
     def __init__(self, job, level):
         
         self.job = job
@@ -95,8 +92,8 @@ class JobLoggingManager:
         
         
     @property
-    def logging_info(self):
-        return (self.job.id, self.level, self.queue)
+    def logging_config(self):
+        return (self.level, self.queue)
     
     
     @property

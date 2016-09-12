@@ -14,6 +14,7 @@ import pprint
 import traceback
 
 from vesper.command.command import CommandSyntaxError
+from vesper.command.job_info import JobInfo
 from vesper.command.job_logging_manager import JobLoggingManager
 import vesper.util.django_utils as django_utils
 # import vesper.util.text_utils as text_utils
@@ -33,6 +34,38 @@ Raised Exception
 
 def run_job(job_info):
     
+    """
+    Runs a job in the current process.
+    
+    This function is executed by the Vesper job manager each time it
+    starts a new job. The function is executed in a new process, called
+    the *main job process* for the job.
+    
+    The function configures the root logger for the main job process,
+    constructs the command to be executed, and invokes the command's
+    `execute` method. Logging is shut down after that method returns.
+    
+    Parameters:
+    
+        job_info : `Bunch`
+            information pertaining to the new job.
+            
+            The information includes the command specification for the
+            new job, the ID of the Django Job model instance for the job,
+            the stop event for the job, and the main process for the job.
+            
+            The information includes the ID of the Django job model
+            instance rather than the instance itself so that the job
+            info can be unpickled in the new process without first
+            setting up Django.
+            
+            This object is *not* of type `vesper.command.job_info.JobInfo`,
+            which contains somewhat different (though overlapping)
+            information. This function invokes the `execute` method of the
+            command of the new job with an argument of type
+            `vesper.command.job_info.JobInfo`.
+    """
+    
     # Set up Django for the main job process. We must do this before we try
     # to use anything Django (e.g. the ORM) in the new process. We perform
     # the setup inside of this function rather than at the top of this module
@@ -45,20 +78,22 @@ def run_job(job_info):
     
     # These imports are here rather than at the top of this module so
     # they will be executed after Django is set up in the main job process.
-    from django.conf import settings as django_settings
+    # from django.conf import settings as django_settings
     from vesper.django.app.models import Job
 
     # Get the Django model instance for this job.
     job = Job.objects.get(id=job_info.job_id)
     
     # Start up logging.
-    level = logging.DEBUG if django_settings.DEBUG else logging.INFO
+    # level = logging.DEBUG if django_settings.DEBUG else logging.INFO
+    level = logging.INFO
     logging_manager = JobLoggingManager(job, level)
     logging_manager.start_up_logging()
     
-    # Create logger for the main job process.
-    logging_info = logging_manager.logging_info
-    logger = JobLoggingManager.create_logger(logging_info)
+    # Configure root logger for the main job process.
+    logger = logging.getLogger()
+    logging_config = logging_manager.logging_config
+    JobLoggingManager.configure_logger(logger, logging_config)
     
     try:
         
@@ -78,9 +113,8 @@ def run_job(job_info):
                 command.name, command_args))
     
         # Execute command.
-        context = _CommandExecutionContext(
-            job, logger, logging_info, job_info.stop_event)
-        complete = command.execute(context)
+        info = JobInfo(job_info.job_id, logging_config, job_info.stop_event)
+        complete = command.execute(info)
         
     except Exception:
         
@@ -108,41 +142,24 @@ def run_job(job_info):
         
     finally:
         
-        # The following doesn't work, since there's no way to ensure
-        # that all log records that have been queued by the various
-        # processes of a job have been processed by the record count
-        # handler except for stopping the queue listener. Once we do
-        # that, however, we can't log any more messages!
+        # At one point this `finally` clause attempted to log a final
+        # message that included counts of the critical, error, and
+        # warning log messages that had been logged for this job.
+        # This didn't work, however, due to a race condition. In
+        # particular, there seemed to be no way for this thread to
+        # ensure that all log records other than the one that it was
+        # preparing had been processed by the logging thread before
+        # this thread read the record counts. If all of the log
+        # records had not been processed, the counts were inaccurate.
         #
-        # Rather than trying to include record counts in the log,
-        # perhaps we should just put them in the database in
-        # additional `Job` model fields. The record counts handler
-        # can update the counts periodically while a job is running,
-        # and also when the job completes, and we can use the counts
-        # in our various log displays. See record counts handler
+        # In the future we may add record count fields to the Django
+        # `Job` class so that accurate log record counts can be
+        # reported in log displays. See record counts handler
         # TODO in `job_logging_manager` module for more detail.
         
-#         counts = logging_manager.record_counts
-#         message = _create_final_log_message(counts)
-#         logger.info(message)
-
         logging_manager.shut_down_logging()
 
 
-# def _create_final_log_message(counts):
-#     
-#     critical = _create_count_phrase(counts, logging.CRITICAL, 'CRITICAL')
-#     error = _create_count_phrase(counts, logging.ERROR, 'ERROR')
-#     warning = _create_count_phrase(counts, logging.WARNING, 'WARNING')
-#     items = [i for i in [critical, error, warning] if i is not None]
-#     
-#     if len(items) == 0:
-#         return 'Log contains no errors or warnings.'
-#     else:
-#         item_list = text_utils.create_string_item_list(items)
-#         return 'Log contains {}.'.format(item_list)
-    
-    
 def _create_count_phrase(counts, key, name):
     count = counts.get(key, 0)
     if count == 0:
@@ -181,33 +198,3 @@ def _indent_lines(text, num_spaces):
     lines = text.split('\n')
     indented_lines = [prefix + line for line in lines]
     return '\n'.join(indented_lines)
-
-
-class _CommandExecutionContext:
-    
-    """
-    Job-related information useful during command execution.
-    
-    This information includes the following attributes:
-    
-        job : the Django model instance for the job
-        
-        logger : a logger for use by the main job process
-        
-        logging_info : a picklable object from which subprocesses of the
-            main job process can create loggers via the
-            `JobLoggingManager.create_logger` static method.
-            
-        stop_requested : `True` if and only if it has been requested
-            that command execution stop without completing.
-    """
-    
-    def __init__(self, job, logger, logging_info, stop_event):
-        self.job = job
-        self.logger = logger
-        self.logging_info = logging_info
-        self._stop_event = stop_event
-        
-    @property
-    def stop_requested(self):
-        return self._stop_event.is_set()
