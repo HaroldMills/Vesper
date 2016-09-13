@@ -177,7 +177,7 @@ def _add_clips_aux(clips, station_recordings, detectors):
         
         with transaction.atomic():
             
-            length = audio_file_utils.get_wave_file_info(c.file_path)[3]
+            length = audio_file_utils.get_wave_file_info(c.file_path).length
             start_time = c.start_time
             span = (length - 1) / recording.sample_rate
             end_time = start_time + datetime.timedelta(seconds=span)

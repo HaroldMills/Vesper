@@ -202,15 +202,14 @@ class RecordingFileParser:
     def _get_audio_file_info(self, file_path):
 
         try:
-            (num_channels, _, sample_rate, length, _) = \
-                audio_file_utils.get_wave_file_info(file_path)
+            info = audio_file_utils.get_wave_file_info(file_path)
                 
         except Exception as e:
             raise ValueError((
                 'Attempt to read audio file metadata failed with message: '
                 '{}').format(str(e)))
            
-        return num_channels, length, sample_rate
+        return info.num_channels, info.length, info.sample_rate
 
 
 def _create_stations_dict(stations, station_name_aliases):

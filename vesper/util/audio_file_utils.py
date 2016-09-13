@@ -8,6 +8,8 @@ For the time being, only .wav files are supported.
 import numpy as np
 import wave
 
+from vesper.util.bunch import Bunch
+
 
 WAVE_FILE_NAME_EXTENSION = '.wav'
 _WAVE_SAMPLE_DTYPE = np.dtype('<i2')
@@ -25,38 +27,31 @@ def is_wave_file_path(path):
     return path.endswith(WAVE_FILE_NAME_EXTENSION)
 
 
-# TODO: Either include compression name in return values or eliminate
-# compression type. Consider implications of adding support for AIFF
-# files to this module.
 def get_wave_file_info(path):
+    with wave.open(path, 'rb') as reader:
+        return _read_header(reader, check_format=False)
+
+
+def _read_header(reader, check_format=True):
     
-    (file_, num_channels, sample_size, sample_rate, num_frames,
-     compression_type, _) = _open_input_file(path, check_format=False)
-    
-    file_.close()
-    
-    return (num_channels, sample_size, sample_rate, num_frames,
-            compression_type)
-    
-    
-def _open_input_file(path, check_format=True):
-    
-    file_ = wave.open(path, 'rb')
-    
-    (num_channels, sample_size, sample_rate, num_frames, compression_type,
-     compression_name) = _call(file_, file_.getparams)
+    p = reader.getparams()
         
-    sample_size *= 8
+    sample_size = p.sampwidth * 8
 
     if check_format:
-        _check_wave_file_format(sample_size, compression_type)
+        _check_wave_file_format(sample_size, p.comptype)
     
-    sample_rate = float(sample_rate)
+    sample_rate = float(p.framerate)
     
-    return (file_, num_channels, sample_size, sample_rate, num_frames,
-            compression_type, compression_name)
-    
-        
+    return Bunch(
+        num_channels=p.nchannels,
+        length=p.nframes,
+        sample_size=sample_size,
+        sample_rate=sample_rate,
+        compression_type=p.comptype,
+        compression_name=p.compname)
+ 
+ 
 def _check_wave_file_format(sample_size, compression_type):
     
     if sample_size != 16:
@@ -72,58 +67,44 @@ def _check_wave_file_format(sample_size, compression_type):
 
 def read_wave_file(path):
     
-    # TODO: Handle file I/O errors.
+    with wave.open(path, 'rb') as reader:
+        info = _read_header(reader)
+        samples = _read_samples(reader, info.length, info.num_channels)
     
-    file_, num_channels, _, sample_rate, num_frames, _, _ = \
-        _open_input_file(path)
-
-    samples = _read_samples(file_, num_frames, num_channels)
-    
-    file_.close()
-    
-    return (samples, sample_rate)
+    return (samples, info.sample_rate)
     
     
-def _read_samples(file_, num_frames, num_channels):
-    string = _call(file_, file_.readframes, num_frames)
+def _read_samples(reader, length, num_channels):
+    string = reader.readframes(length)
     samples = np.frombuffer(string, dtype=_WAVE_SAMPLE_DTYPE)
-    samples = samples.reshape((num_frames, num_channels)).transpose()
+    if num_channels == 1:
+        samples = samples.reshape((num_channels, length))
+    else:
+        samples = samples.reshape((length, num_channels)).transpose()
     return samples
-        
-
-def _call(file_, method, *args, **kwds):
-    try:
-        return method(*args, **kwds)
-    except:
-        file_.close()
-        raise
 
 
 def write_wave_file(path, samples, sample_rate):
-    # TODO: Handle file I/O errors.
     num_channels = samples.shape[0]
-    file_ = _open_output_file(path, num_channels, sample_rate)    
-    _write_samples(file_, samples)
-    file_.close()
-
-
-def _open_output_file(path, num_channels, sample_rate):
-    
-    file_ = wave.open(path, 'wb')
+    with wave.open(path, 'wb') as writer:
+        _write_header(writer, num_channels, sample_rate)
+        _write_samples(writer, samples)
         
+        
+def _write_header(writer, num_channels, sample_rate):
+    
     sample_size = 2
     sample_rate = int(round(sample_rate))
-    num_frames = 0
+    length = 0
     compression_type = 'NONE'
     compression_name = 'not compressed'
-    params = (num_channels, sample_size, sample_rate, num_frames,
-              compression_type, compression_name)
-    _call(file_, file_.setparams, params)
     
-    return file_
-
-
-def _write_samples(file_, samples):
+    writer.setparams((
+        num_channels, sample_size, sample_rate, length,
+        compression_type, compression_name))
+    
+    
+def _write_samples(writer, samples):
     
     num_channels = samples.shape[0]
     
@@ -151,8 +132,8 @@ def _write_samples(file_, samples):
     # see if it is similarly slow. If so, is it slow on Mac OS X?
     # Is it slow on a non-parallels version of Windows? Is it slow
     # if we write the program in C instead of in Python?
-    _call(file_, file_.writeframes, samples)
-    
+    writer.writeframes(samples)
+
 
 _DEFAULT_CHUNK_SIZE = 1000000
 
@@ -164,31 +145,22 @@ def copy_wave_file_channel(
     """Copies one channel of an existing audio file to a new audio file."""
     
     
-    input_file, num_channels, _, sample_rate, num_frames, _, _ = \
-        _open_input_file(input_file_path)
+    with wave.open(input_file_path, 'rb') as reader:
         
-    try:
+        info = _read_header(reader)
         
-        output_file = _open_output_file(output_file_path, 1, sample_rate)
+        with wave.open(output_file_path, 'wb') as writer:
             
-        try:
+            _write_header(writer, 1, info.sample_rate)
             
-            remaining = num_frames
+            remaining = info.length
             
             while remaining != 0:
                 
                 n = min(remaining, chunk_size)
                 
-                samples = _read_samples(input_file, n, num_channels)
+                samples = _read_samples(reader, n, info.num_channels)
                 channel_samples = samples[channel_num]
-                _write_samples(output_file, channel_samples)
+                _write_samples(writer, channel_samples)
                 
                 remaining -= n
-                
-        finally:
-            output_file.close()
-            
-    finally:
-        input_file.close()
-
-    

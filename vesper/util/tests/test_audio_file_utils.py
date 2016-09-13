@@ -12,13 +12,14 @@ _DATA_DIR_PATH = test_utils.get_test_data_dir_path(__file__)
 _TEST_FILE_NAME = 'test.wav'
 
 _TEST_CASES = [
-    ('One Channel.wav', 1, 22050, 100),
-    ('Two Channels.wav', 2, 24000, 10),
-    ('Four Channels.wav', 4, 22050, 100)
+    ('One Channel.wav', 1, 100, 22050),
+    ('Two Channels.wav', 2, 10, 24000),
+    ('Four Channels.wav', 4, 100, 22050)
 ]
 
 _EXPECTED_SAMPLE_SIZE = 16
 _EXPECTED_COMPRESSION_TYPE = 'NONE'
+_EXPECTED_COMPRESSION_NAME = 'not compressed'
 
 
 class AudioFileUtilsTests(TestCase):
@@ -26,19 +27,19 @@ class AudioFileUtilsTests(TestCase):
 
     def test_get_wave_file_info(self):
         
-        for file_name, expected_num_channels, expected_sample_rate, \
-                expected_num_frames in _TEST_CASES:
+        for file_name, expected_num_channels, expected_length, \
+                expected_sample_rate in _TEST_CASES:
             
             path = _create_file_path(file_name)
             
-            num_channels, sample_size, sample_rate, num_frames, \
-                compression_type = audio_file_utils.get_wave_file_info(path)
+            info = audio_file_utils.get_wave_file_info(path)
                 
-            self.assertEqual(num_channels, expected_num_channels)
-            self.assertEqual(sample_size, _EXPECTED_SAMPLE_SIZE)
-            self.assertEqual(sample_rate, expected_sample_rate)
-            self.assertEqual(num_frames, expected_num_frames)
-            self.assertEqual(compression_type, _EXPECTED_COMPRESSION_TYPE)
+            self.assertEqual(info.num_channels, expected_num_channels)
+            self.assertEqual(info.length, expected_length)
+            self.assertEqual(info.sample_size, _EXPECTED_SAMPLE_SIZE)
+            self.assertEqual(info.sample_rate, expected_sample_rate)
+            self.assertEqual(info.compression_type, _EXPECTED_COMPRESSION_TYPE)
+            self.assertEqual(info.compression_name, _EXPECTED_COMPRESSION_NAME)
 
 
     def test_read_wave_file(self):
@@ -47,26 +48,24 @@ class AudioFileUtilsTests(TestCase):
             
             
     def _assert_wave_file(
-            self, file_name, expected_num_channels, expected_sample_rate,
-            expected_num_frames):
+            self, file_name, expected_num_channels, expected_length,
+            expected_sample_rate):
         
         path = _create_file_path(file_name)
         
         samples, sample_rate = audio_file_utils.read_wave_file(path)
         
-        self._assert_samples(
-            samples, expected_num_channels, expected_num_frames)
+        self._assert_samples(samples, expected_num_channels, expected_length)
         self.assertEqual(sample_rate, expected_sample_rate)
             
             
-    def _assert_samples(
-            self, samples, expected_num_channels, expected_num_frames):
+    def _assert_samples(self, samples, expected_num_channels, expected_length):
         
         self.assertEqual(samples.shape[0], expected_num_channels)
-        self.assertEqual(samples.shape[1], expected_num_frames)
+        self.assertEqual(samples.shape[1], expected_length)
         
         expected_samples = _create_samples(
-            expected_num_channels, expected_num_frames)
+            expected_num_channels, expected_length)
         self.assertTrue(np.all(samples == expected_samples))
         
         
@@ -74,14 +73,14 @@ class AudioFileUtilsTests(TestCase):
         
         path = _create_file_path(_TEST_FILE_NAME)
         
-        for _, num_channels, sample_rate, num_frames in _TEST_CASES:
+        for _, num_channels, length, sample_rate in _TEST_CASES:
             
-            samples = _create_samples(num_channels, num_frames)
+            samples = _create_samples(num_channels, length)
             audio_file_utils.write_wave_file(path, samples, sample_rate)
             
             try:
                 self._assert_wave_file(
-                    _TEST_FILE_NAME, num_channels, sample_rate, num_frames)
+                    _TEST_FILE_NAME, num_channels, length, sample_rate)
             finally:
                 os_utils.delete_file(path)
                 
@@ -138,6 +137,6 @@ def _create_file_path(file_name):
     return os.path.join(_DATA_DIR_PATH, file_name)
 
 
-def _create_samples(num_channels, num_frames):
-    samples = np.arange(num_frames)
+def _create_samples(num_channels, length):
+    samples = np.arange(length)
     return np.vstack(samples + i * 1000 for i in range(num_channels))
