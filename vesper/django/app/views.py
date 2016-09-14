@@ -733,6 +733,34 @@ def _get_local_noon_as_utc_time(date, time_zone):
     return dt.astimezone(pytz.utc)
 
 
+# TODO: For the time being, Vesper creates every clip with a
+# `Classification` annotation so that the following function will yield
+# what we want when `annotation_name` is `Classification` and
+# `annotation_value` is `'*'`. But we really want to be able to get both
+# clips that have a `Classification` annotation *and clips that do not*.
+# What is the best way to do this?
+# 
+# Since what we're really after is clips rather than annotations, is there
+# a query that would give us the clips we want directly? For example, would
+# the following yield clips with a specified annotation name and value?
+# 
+#     Clip.objects.filter(
+#         recording=recording,
+#         channel_num=channel_num,
+#         creating_processor=detector,
+#         start_time__range=time_interval,
+#         annotations__name=annotation_name,
+#         annotations__value=annotation_value)
+# 
+# A problem I see with this is that once we have a clip, we have to do
+# something like:
+#
+#     clip.annotations.get(name=annotation_name)
+#
+# in order to get its annotation value, while if we query for annotations
+# instead, the annotation value is right there in the result.
+
+
 def _get_annotations(
         recording, channel_num, detector, annotation_name, annotation_value,
         time_interval):
