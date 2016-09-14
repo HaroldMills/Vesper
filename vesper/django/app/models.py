@@ -597,6 +597,7 @@ class Recording(Model):
         db_table = 'vesper_recording'
         
         
+# TODO: Change `file_path` to `path`.
 class RecordingFile(Model):
     
     recording = ForeignKey(Recording, on_delete=CASCADE, related_name='files')
@@ -613,6 +614,16 @@ class RecordingFile(Model):
     class Meta:
         unique_together = ('recording', 'file_num')
         db_table = 'vesper_recording_file'
+        
+        
+    @property
+    def sample_rate(self):
+        return self.recording.sample_rate
+    
+    
+    @property
+    def duration(self):
+        return self.length / self.sample_rate
 
 
 # class RecorderModel(Model):
@@ -850,6 +861,12 @@ class Clip(Model):
         Job, null=True, on_delete=CASCADE, related_name='clips')
     creating_processor = ForeignKey(
         Processor, null=True, on_delete=CASCADE, related_name='clips')
+    # TODO: Remove `file_path` field, and require that file path be
+    # automatically determinable when needed? We might support various
+    # clip storage strategies (e.g. within recordings, separately in
+    # individual files, or in HDF5 files), but I don't see why all of
+    # them couldn't know given a `Clip` instance without a `file_path`
+    # how to produce the clip's samples.
     file_path = CharField(max_length=255, unique=True, null=True)
     
     def __str__(self):
@@ -884,21 +901,21 @@ class Clip(Model):
     @property
     def wav_file_path(self):
         if self.file_path is None:
-            return _create_clip_file_path(self)
+            return _create_clip_file_path(self.id)
         else:
             return self.file_path
         
     @property
     def wav_file_url(self):
-        return reverse('clip-wav', args=(self.id,))
+        return reverse('clip-wav', args=(self.id,))            
 
 
 # TODO: Don't hard code this.
 _CLIPS_DIR_FORMAT = (3, 3)
 
 
-def _create_clip_file_path(clip):
-    id_parts = _get_clip_id_parts(clip.id, _CLIPS_DIR_FORMAT)
+def _create_clip_file_path(clip_id):
+    id_parts = _get_clip_id_parts(clip_id, _CLIPS_DIR_FORMAT)
     path_parts = id_parts[:-1]
     id_ = ' '.join(id_parts)
     file_name = 'Clip {}.wav'.format(id_)

@@ -3,10 +3,9 @@
 
 import itertools
 import logging
-import os.path
 
 from vesper.command.command import Command, CommandExecutionError
-# from vesper.command.old_bird_detector_runner import OldBirdDetectorRunner
+from vesper.command.old_bird_detector_runner import OldBirdDetectorRunner
 from vesper.django.app.models import Processor, Recording, Station
 import vesper.command.command_utils as command_utils
 
@@ -26,14 +25,10 @@ class DetectCommand(Command):
         self._end_date = get('end_date', args)
         
         
-    @property
-    def _logger(self):
-        return logging.getLogger()
-    
-    
     def execute(self, job_info):
         
         self._job_info = job_info
+        self._logger = logging.getLogger()
 
         detectors = self._get_detectors()
         recordings = self._get_recordings()
@@ -123,12 +118,5 @@ class DetectCommand(Command):
 
 
     def _run_detectors(self, detectors, recording_file, channel_num):
-        file_path = recording_file.file_path
-        file_name = os.path.basename(file_path)
-        self._logger.info(
-            'Running detectors on file "{}" channel {}...'.format(
-                file_name, channel_num))
-#         runner = OldBirdDetectorRunner()
-#         runner.run_detectors(detectors, recording_file, channel_num)
-        
-        
+        runner = OldBirdDetectorRunner(self._job_info)
+        runner.run_detectors(detectors, recording_file, channel_num)
