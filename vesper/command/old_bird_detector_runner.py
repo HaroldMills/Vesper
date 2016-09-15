@@ -53,10 +53,6 @@ entirely eliminate the chance that an error will occur, but it should
 reduce it substantially.
 """
 
-# TODO: Don't hard-code this path. Instead, require only that the detector
-# be on the user's path.
-_DETECTOR_DIR_PATH = r'C:\Program Files (x86)\Old Bird'
-
 
 # TODO: Establish conventions for status reporting and error handling for
 # commands, and implement here.
@@ -215,7 +211,7 @@ class _DetectorMonitor(Thread):
         self._job_info = job_info
         self._job = Job.objects.get(id=self._job_info.job_id)
         
-        self._executable_path = _get_detector_executable_path(name)
+        self._executable_name = _get_detector_executable_name(name)
         self._detector_process = None
         
         self._detector_log_path = _get_detector_log_path(name)
@@ -243,7 +239,7 @@ class _DetectorMonitor(Thread):
         try:
             # Start Old Bird detector executable.
             self._detector_process = subprocess.Popen(
-                [self._executable_path], stderr=subprocess.PIPE)
+                [self._executable_name], stderr=subprocess.PIPE)
             
         except Exception:
             self._logger.error(append_stack_trace(
@@ -486,10 +482,8 @@ class _DetectorMonitor(Thread):
             self._logger.error(str(e))
 
 
-def _get_detector_executable_path(detector_name):
-#     return '{}-x.exe'.format(detector_name)
-    file_name = '{}-x.exe'.format(detector_name)
-    return os.path.join(_DETECTOR_DIR_PATH, file_name)
+def _get_detector_executable_name(detector_name):
+    return '{}-x.exe'.format(detector_name)
 
 
 def _get_detector_log_path(detector_name):
