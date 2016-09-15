@@ -10,7 +10,6 @@
 
 
 function onLoad() {
-	console.log('onLoad');
 	const textArea = document.getElementById('textarea');
 	textArea.scrollTop = textArea.scrollHeight;
 	// intervalId = window.setInterval(onJobInterval, 1000);

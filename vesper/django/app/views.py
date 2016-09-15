@@ -48,27 +48,28 @@ def _create_navbar_dropdown_item(name, data, ancestors):
 
 
 def _create_navbar_href(name, ancestors):
-    parts = tuple(_create_navbar_href_aux(a) for a in ancestors) + \
-        (_create_navbar_href_aux(name),)
-    return '_'.join(parts)
+    parts = tuple(_create_navbar_href_part(a) for a in ancestors) + \
+        (_create_navbar_href_part(name),)
+    return '/vesper/' + '_'.join(parts)
     
     
-def _create_navbar_href_aux(s):
+def _create_navbar_href_part(s):
     return '_'.join(s.lower().split())
 
 
-# Note that as of 2016-07-19, nested havbar dropdowns do not work.
+# Note that as of 2016-07-19, nested navbar dropdowns do not work.
 # The generated HTML looks right to me so the problem may be a
 # Bootstrap limitation.
 _NAVBAR_ITEMS = _create_navbar_items((
     'calendar',
     ('import', 'archive data', 'recordings'),
+    'record',
     'detect',
     'classify',
     'export'
 ))
 
-_CLASSIFICATIONS = ('Call', 'Call.WIWA', 'Call.CHSP', 'Unknown')
+_CLASSIFICATIONS = ('Call', 'Call.CHSP', 'Call.WIWA', 'Noise', 'Unknown')
 _ONE_DAY = datetime.timedelta(days=1)
 _GET_AND_HEAD = ('GET', 'HEAD')
 
@@ -77,6 +78,11 @@ def index(request):
     return redirect(reverse('calendar'))
 
 
+def record(request):
+    return _render_coming_soon(
+        request, 'Record', 'Recording is not yet implemented.')
+    
+    
 @csrf_exempt
 def detect(request):
     
@@ -130,7 +136,7 @@ def _render_coming_soon(request, action, message):
 
 def classify(request):
     return _render_coming_soon(
-        request, 'Classify', 'Classification is coming soon...')
+        request, 'Classify', 'Classification is not yet implemented.')
     
     
 def import_(request):
@@ -143,7 +149,7 @@ def import_(request):
     
 def export(request):
     return _render_coming_soon(
-        request, 'Export', 'Exports are coming soon...')
+        request, 'Export', 'Data export is not yet implemented.')
     
     
 def stations(request):
@@ -934,6 +940,7 @@ def job(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
     command_spec = json.loads(job.command)
     context = {
+        'navbar_items': _NAVBAR_ITEMS,
         'job': job,
         'command_name': command_spec['name']
     }

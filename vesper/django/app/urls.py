@@ -15,6 +15,7 @@ urlpatterns = [
     url(r'^import_recordings$', views.import_recordings,
         name='import_recordings'),
                
+    url(r'^record$', views.record, name='record'),
     url(r'^detect$', views.detect, name='detect'),
     url(r'^classify$', views.classify, name='classify'),
     url(r'^export$', views.export, name='export'),

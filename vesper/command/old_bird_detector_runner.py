@@ -190,10 +190,15 @@ class OldBirdDetectorRunner:
 
 
     def _start_detector(self, detector, recording_file, channel_num):
-        self._logger.info('Starting detector "{}"...'.format(detector.name))
+        
+        name = detector.name.split()[-1]
+        
+        self._logger.info('Starting {} detector...'.format(name))
+        
         monitor = _DetectorMonitor(
-            detector, recording_file, channel_num, self._job_info)
+            name, detector, recording_file, channel_num, self._job_info)
         monitor.start()
+        
         return monitor
     
     
@@ -210,10 +215,8 @@ class _DetectorMonitor(Thread):
     """
     
     
-    def __init__(self, detector, recording_file, channel_num, job_info):
+    def __init__(self, name, detector, recording_file, channel_num, job_info):
         
-        name = detector.name.split()[-1]
-
         super().__init__(name=name)
         
         self._detector = detector
@@ -322,7 +325,7 @@ class _DetectorMonitor(Thread):
         name = self.name
         
         self._logger.info(
-            'Clearing "{}" files from output directory "{}"...'.format(
+            'Clearing {} files from output directory "{}"...'.format(
                 name, _OUTPUT_DIR_PATH))
     
         log_path = self._detector_log_path
@@ -470,7 +473,7 @@ class _DetectorMonitor(Thread):
             return False
         
         else:
-            self._logger.info('Archived clip {}.'.format(clip))
+            self._logger.info('Archived {} clip {}.'.format(self.name, clip))
             return True
 
 
