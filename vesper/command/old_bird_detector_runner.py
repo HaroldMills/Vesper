@@ -54,6 +54,18 @@ reduce it substantially.
 """
 
 
+# TODO: Look into the following error, which occurred while running
+# Tseep and Thrush detectors simultaneously:
+#
+#     2016-09-15 11:15:30,100 ERROR    Attempt to create clip from file
+#         "C:\temp\calls\Tseep_002.48.16_00.wav" failed with message:
+#         database is locked. File will be ignored.
+#
+# The database in question was an SQLite database. Do we need to synchronize
+# access to the database from different detector monitors? From different
+# job processes? If so, maybe it's time to switch to PostgreSQL.
+
+
 # TODO: Establish conventions for status reporting and error handling for
 # commands, and implement here.
 
