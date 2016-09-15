@@ -133,7 +133,7 @@ class RecordingImporter:
                 station = f.station_recorder.station
                 recorder = f.station_recorder.device
                 log('        {} {} {} {} {} {} {}'.format(
-                    f.file_path, station.name, recorder.name,
+                    f.path, station.name, recorder.name,
                     f.num_channels, f.length, f.sample_rate, str(f.start_time)))
 
 
@@ -167,7 +167,7 @@ class RecordingImporter:
                     file_num=i,
                     start_index=start_index,
                     length=f.length,
-                    file_path=f.file_path)
+                    path=f.path)
                 
                 file.save()
                 

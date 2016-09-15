@@ -87,7 +87,7 @@ class RecordingFileParser:
             `length` - the length of the file in sample frames.
             `sample_rate` - the sample rate of the file in Hertz.
             `start_time` - the UTC start time of the file.
-            `file_path` - the path of the file.
+            `path` - the path of the file.
         """
         
         station, start_time = self._parse_file_name(file_path)
@@ -105,7 +105,7 @@ class RecordingFileParser:
             length=length,
             sample_rate=sample_rate,
             start_time=start_time,
-            file_path=file_path)
+            path=file_path)
         
     
     def _parse_file_name(self, file_path):

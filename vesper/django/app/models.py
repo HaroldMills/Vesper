@@ -1,3 +1,6 @@
+"""Vesper Django model classes."""
+
+
 import datetime
 import os.path
 
@@ -10,6 +13,7 @@ import pytz
 
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
+import vesper.util.signal_utils as signal_utils
 import vesper.util.vesper_path_utils as vesper_path_utils
 
 
@@ -495,6 +499,9 @@ class Processor(Model):
         db_table = 'vesper_processor'
         
     
+_JOB_LOGS_DIR_PATH = vesper_path_utils.get_path('Logs', 'Jobs')
+
+
 # A *command* is a specification of something to be executed, possibly
 # more than once. A *job* is a particular execution of a command.
 #
@@ -528,9 +535,8 @@ class Job(Model):
         
     @property
     def log_file_path(self):
-        dir_path = _get_job_logs_dir_path()
         file_name = 'Job {}.log'.format(self.id)
-        return os.path.join(dir_path, file_name)
+        return os.path.join(_JOB_LOGS_DIR_PATH, file_name)
         
     @property
     def log(self):
@@ -540,25 +546,6 @@ class Job(Model):
             return os_utils.read_file(self.log_file_path)            
         
 
-# TODO: Why do we defer initialization of `_job_logs_dir_path`?
-_job_logs_dir_path = None
-
-
-def _get_job_logs_dir_path():
-    
-    global _job_logs_dir_path
-    
-    if _job_logs_dir_path is None:
-        _job_logs_dir_path = vesper_path_utils.get_path('Logs', 'Jobs')
-            
-    return _job_logs_dir_path
-
-
-def _create_job_logs_dir_if_needed():
-    dir_path = _get_job_logs_dir_path()
-    os_utils.create_directory(dir_path)
-    
-    
 # We include the `end_time` field even though it's redundant to accelerate
 # queries.
 #
@@ -597,19 +584,18 @@ class Recording(Model):
         db_table = 'vesper_recording'
         
         
-# TODO: Change `file_path` to `path`.
 class RecordingFile(Model):
     
     recording = ForeignKey(Recording, on_delete=CASCADE, related_name='files')
     file_num = IntegerField()
     start_index = BigIntegerField()
     length = BigIntegerField()
-    file_path = CharField(max_length=255, unique=True, null=True)
+    path = CharField(max_length=255, unique=True, null=True)
     
     def __str__(self):
         r = self.recording
         return '{} / File {} / "{}"'.format(
-            str(r), self.file_num, self.file_path)
+            str(r), self.file_num, self.path)
         
     class Meta:
         unique_together = ('recording', 'file_num')
@@ -623,7 +609,7 @@ class RecordingFile(Model):
     
     @property
     def duration(self):
-        return self.length / self.sample_rate
+        return signal_utils.get_duration(self.length, self.sample_rate)
 
 
 # class RecorderModel(Model):
@@ -815,18 +801,27 @@ class RecordingFile(Model):
 # The station, recorder, and sample rate of a clip are the station,
 # recorder, and sample rate of its recording.
 #
+# Ideally, and in most cases moving forward, we will know the start index
+# of a clip in its parent recording. However, there are many clips that
+# people have collected for which the start time of a clip is known but
+# not its start index in the parent recording, either because the parent
+# recording was not retained or because the detector that created the
+# clip (e.g. the Old Bird Tseep or Thrush detector) was designed to save
+# the start time (perhaps as an elapsed time from the start of the
+# recording) but not the start index. For such clips we allow the
+# start index to be null. We require, however, that every clip have
+# a start time.
+#
 # The `end_time` field of a clip is redundant, since it can be computed
 # from the clip's start time, length, and sample rate. We include it anyway
 # to accelerate certain types of queries. For example, we will want to be
 # able to find all of the clips whose time intervals intersect a specified
 # recording subinterval.
 #
-# The `file_path` field of a clip should be `None` if and only if the clip
-# samples are available as part of the clip's recording, and the clip is not
-# itself stored in its own file. In some cases the samples of a clip may be
-# available both as part of the clip's recording and in an extracted clip
-# file. In this case the `file_path` field should be the path of the extracted
-# clip file.
+# The `file_path` field of a clip show be non-null if and only if the clip
+# is stored in a file and its name cannot simply be computed from clip
+# metadata stored in the database. The norm should be for this field to
+# be null.
 #
 # We include a multi-column unique constraint to prevent duplicate clips
 # from being created by accidentally running a particular detector on a
@@ -861,12 +856,6 @@ class Clip(Model):
         Job, null=True, on_delete=CASCADE, related_name='clips')
     creating_processor = ForeignKey(
         Processor, null=True, on_delete=CASCADE, related_name='clips')
-    # TODO: Remove `file_path` field, and require that file path be
-    # automatically determinable when needed? We might support various
-    # clip storage strategies (e.g. within recordings, separately in
-    # individual files, or in HDF5 files), but I don't see why all of
-    # them couldn't know given a `Clip` instance without a `file_path`
-    # how to produce the clip's samples.
     file_path = CharField(max_length=255, unique=True, null=True)
     
     def __str__(self):
@@ -894,7 +883,6 @@ class Clip(Model):
     
     @property
     def wav_file_contents(self):
-        # TODO: Handle errors, e.g. no such file.
         with open(self.wav_file_path, 'rb') as file_:
             return file_.read()
         
@@ -910,7 +898,20 @@ class Clip(Model):
         return reverse('clip-wav', args=(self.id,))            
 
 
-# TODO: Don't hard code this.
+# TODO: Don't put this here. It should be part of some sort of archive
+# configuration. It would be good to support clip and recording storage
+# policies as Vesper extensions. Some possible examples of clip storage
+# policies:
+#
+#     1. Don't store clips separate from recordings, but rather extract
+#        them from their recordings when needed.
+#
+#     2. Store clips in batches in HDF5 files.
+#
+#     3. Store clips in files in a directory hierarchy organized by clip ID.
+#
+#     4. Store clips in files in a directory hierarchy organized by
+#        clip station and time.
 _CLIPS_DIR_FORMAT = (3, 3)
 
 

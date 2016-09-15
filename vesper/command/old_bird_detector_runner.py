@@ -117,7 +117,7 @@ class OldBirdDetectorRunner:
         
     def _copy_file_channel(self, recording_file, channel_num):
         
-        file_path = recording_file.file_path
+        file_path = recording_file.path
         file_name = os.path.basename(file_path)
         
         self._logger.info((
