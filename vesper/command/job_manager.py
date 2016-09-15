@@ -62,11 +62,8 @@ class JobManager:
         with self._lock:
             self._job_infos[info.job_id] = info
             
-        print('JobManager: creating job process')
         info.process = Process(target=job_runner.run_job, args=(info,))
-        print('JobManager: starting job process')
         info.process.start()
-        print('JobManager: started process for job {}'.format(info.job_id))
         
         return info.job_id
         
@@ -92,8 +89,6 @@ class JobManager:
                     terminated_job_ids.add(info.job_id)
                     
             for job_id in terminated_job_ids:
-                print(
-                    'JobManager: removing process for job {}'.format(job_id))
                 del self._job_infos[job_id]
 
 
