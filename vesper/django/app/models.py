@@ -11,6 +11,7 @@ from django.db.models import (
     IntegerField, ManyToManyField, Model, TextField)
 import pytz
 
+from vesper.django.project.settings import VESPER_CLIPS_DIR_FORMAT
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.signal_utils as signal_utils
@@ -603,25 +604,8 @@ class Clip(Model):
         return reverse('clip-wav', args=(self.id,))            
 
 
-# TODO: Don't put this here. It should be part of some sort of archive
-# configuration. It would be good to support clip and recording storage
-# policies as Vesper extensions. Some possible examples of clip storage
-# policies:
-#
-#     1. Don't store clips separate from recordings, but rather extract
-#        them from their recordings when needed.
-#
-#     2. Store clips in batches in HDF5 files.
-#
-#     3. Store clips in files in a directory hierarchy organized by clip ID.
-#
-#     4. Store clips in files in a directory hierarchy organized by
-#        clip station and time.
-_CLIPS_DIR_FORMAT = (3, 3)
-
-
 def _create_clip_file_path(clip_id):
-    id_parts = _get_clip_id_parts(clip_id, _CLIPS_DIR_FORMAT)
+    id_parts = _get_clip_id_parts(clip_id, VESPER_CLIPS_DIR_FORMAT)
     path_parts = id_parts[:-1]
     id_ = ' '.join(id_parts)
     file_name = 'Clip {}.wav'.format(id_)

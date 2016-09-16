@@ -12,13 +12,29 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 
 import os
 
+
 # Path of directory containing Vesper database, sound files, etc.
 VESPER_DATA_DIR = r'C:\Users\Harold\Vesper Data'
+
+# TODO: It would be good to support clip and recording storage policies
+# as Vesper extensions. Some possible examples of clip storage policies:
+#
+#     1. Don't store clips separate from recordings, but rather extract
+#        them from their recordings when needed.
+#
+#     2. Store clips in batches in HDF5 files.
+#
+#     3. Store clips in files in a directory hierarchy organized by clip ID.
+#
+#     4. Store clips in files in a directory hierarchy organized by
+#        clip station and time.
+VESPER_CLIPS_DIR_FORMAT = (3, 3)
 
 # Number of levels in the clips directory hierarchy. The maximum
 # number of clips that a hierarchy with n levels can support is
 # (10 ** (3 * n)) - 1, e.g. 1e9 - 1 for n = 3.
-VESPER_NUM_CLIPS_DIR_LEVELS = 3
+# VESPER_NUM_CLIPS_DIR_LEVELS = 3
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
