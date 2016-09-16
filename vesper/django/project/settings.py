@@ -13,8 +13,11 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 import os
 
 
-# Path of directory containing Vesper database, sound files, etc.
-VESPER_DATA_DIR = r'C:\Users\Harold\Vesper Data'
+# Path of Vesper archive to be served.
+VESPER_ARCHIVE_DIR_PATH = r'C:\Users\Harold\Vesper Data'
+
+# Archive database file name.
+VESPER_ARCHIVE_DATABASE_FILE_NAME = 'Archive Database.sqlite'
 
 # TODO: It would be good to support clip and recording storage policies
 # as Vesper extensions. Some possible examples of clip storage policies:
@@ -102,8 +105,8 @@ WSGI_APPLICATION = 'vesper.django.project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(VESPER_DATA_DIR, 'sqlite.db'),
-        # 'NAME': os.path.join(BASE_DIR, 'sqlite.db'),
+        'NAME': os.path.join(
+            VESPER_ARCHIVE_DIR_PATH, VESPER_ARCHIVE_DATABASE_FILE_NAME),
     }
 }
 
