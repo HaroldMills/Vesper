@@ -14,7 +14,7 @@ import os
 
 
 # Path of Vesper archive to be served.
-VESPER_ARCHIVE_DIR_PATH = r'C:\Users\Harold\Vesper Data'
+VESPER_ARCHIVE_DIR_PATH = os.getcwd()
 
 # Archive database file name.
 VESPER_ARCHIVE_DATABASE_FILE_NAME = 'Archive Database.sqlite'
