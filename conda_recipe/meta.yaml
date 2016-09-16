@@ -1,6 +1,6 @@
 package:
   name: vesper
-  version: "0.1.3"
+  version: "0.2.0"
 
 source:
   git_url: https://github.com/HaroldMills/Vesper.git
@@ -9,8 +9,7 @@ source:
 build:
 
   entry_points:
-    - vcl=vesper.vcl.vcl:main
-    - vesper_viewer=vesper.ui.vesper_viewer:main
+    - vesper_admin=vesper.django.manage:main
 
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
@@ -19,29 +18,27 @@ build:
 requirements:
 
   build:
-    - python
-    - setuptools
-    - matplotlib
-    - pandas
+    - bokeh
+    - django
     - pyephem
+    - python
     - pyyaml
-    - scikit-learn
+    - setuptools
 
   run:
-    - python
-    - matplotlib
-    - pandas
+    - bokeh
+    - django
     - pyephem
+    - python
     - pyyaml
-    - scikit-learn
 
 test:
 
   imports:
     - vesper
  
-  commands:
-    - vcl help
+  # commands:
+  #   - vcl help
 
 about:
   home: https://github.com/HaroldMills/Vesper
