@@ -1,1 +1,4 @@
+include vesper/django/app/templates/vesper/*.html
+include vesper/django/app/static/vesper/*.css
+include vesper/django/app/static/vesper/*.js
 recursive-include vesper *.pkl
