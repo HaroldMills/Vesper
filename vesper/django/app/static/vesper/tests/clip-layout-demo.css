@@ -1,0 +1,48 @@
+html {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin: 0;
+}
+
+.title {
+  font-weight: bold;
+  text-align: center;
+}
+
+.checkbox {
+  text-align: center;
+}
+
+.clips {
+}
+
+/*
+.clips {
+  display: flex;
+  height: 100%;
+  flex-flow: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: stretch;
+  align-items: stretch;
+  background-color: white;
+}
+*/
+
+.row {
+}
+
+.clip {
+  background-color: gray;
+}
+
+.clip-label {
+  margin: 0;
+}
