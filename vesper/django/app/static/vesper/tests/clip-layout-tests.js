@@ -1,3 +1,6 @@
+'use strict'
+
+
 /**
  * the display width in seconds.
  */
@@ -46,7 +49,7 @@ describe('ResizingVariableWidthClipLayout', () => {
 					
 			const clips = spans.map(_ => ({span: _}))
 			
-			layout = new ResizingVariableWidthClipLayout(
+			const layout = new ResizingVariableWidthClipLayout(
 			    clips, displayWidth, displayHeight, clipSpacing);
 				
 			expect(layout.clips).toEqual(clips);

@@ -14,10 +14,7 @@ class NonresizingVariableWidthClipLayout {
 	 * @param {number} clipHeight - the clip height in pixels.
 	 * @param {number} clipSpacing - the clip spacing in pixels.
 	 */
-	constructor(
-			clips, clipsDiv, pageSize, clipWidthScale, clipHeight,
-			clipSpacing) {
-		
+	constructor(clips, pageSize, clipWidthScale, clipHeight, clipSpacing) {
 		this.clips = clips;
 		this.clipsDiv = clipsDiv;
 		this.pageSize = pageSize;
@@ -25,7 +22,6 @@ class NonresizingVariableWidthClipLayout {
 		this.clipHeight = clipHeight;
 		this.clipSpacing = clipSpacing;
 		this._paginate();
-		
 	}
 	
 	
@@ -57,9 +53,7 @@ class NonresizingVariableWidthClipLayout {
 	}
 	
 	
-	layOutClips(pageNum) {
-		
-		const clipsDiv = this.clipsDiv;
+	layOutClips(clipsDiv, pageNum, clipViewManager) {
 		
 		removeChildren(clipsDiv);
 		
@@ -87,8 +81,7 @@ class NonresizingVariableWidthClipLayout {
 			const span = this.clips[i].span;
 			const width = span * this.clipWidthScale + 'px';
 			
-			// Create clip div.
-			const div = document.createElement('div');
+			const div = clipViewManager.getClipView(i).div;
 		    div.className = 'clip';
 		    div.style.position = 'relative';
 		    div.style.minWidth = width;
@@ -107,9 +100,28 @@ class NonresizingVariableWidthClipLayout {
 			
 		}
 		
+		this._renderViews(pageNum, clipViewManager);
+		
 	}
 	
-
+	
+	_renderViews(pageNum, clipViewManager) {
+		
+		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
+		
+		for (let i = startIndex; i < endIndex; i++) {
+			const view = clipViewManager.getClipView(i);
+			view.render();
+		}
+		
+	}
+	
+	
+	handleClipsViewResize(clipsDiv, pageNum, clipViewManager) {
+		console.log('handleClipsViewResize');
+	}
+	
+	
 }
 
 
@@ -125,9 +137,8 @@ class ResizingVariableWidthClipLayout {
 	 * @param {number} displayHeight - the display height in rows.
 	 * @param {number} clipSpacing - the clip spacing as percent of display width.
 	 */
-	constructor(clips, clipsDiv, displayWidth, displayHeight, clipSpacing) {
+	constructor(clips, displayWidth, displayHeight, clipSpacing) {
 		this.clips = clips;
-		this.clipsDiv = clipsDiv;
 		this.displayWidth = displayWidth;
 		this.displayHeight = displayHeight;
 		this.clipSpacing = clipSpacing;
@@ -213,9 +224,7 @@ class ResizingVariableWidthClipLayout {
 	}
 	
 	
-	layOutClips(pageNum) {
-		
-		clipsDiv = this.clipsDiv;
+	layOutClips(clipsDiv, pageNum, clipViewManager) {
 		
 		removeChildren(clipsDiv);
 		
@@ -258,8 +267,10 @@ class ResizingVariableWidthClipLayout {
 				
 				for (let j = startIndex; j < endIndex; j++) {
 					
-					const clip = this.clips[j];
+					// Get clip view.
+					const view = clipViewManager.getClipView(j);
 					
+					const clip = this.clips[j];
 					const width = 100 * (clip.span / this.displayWidth);
 					
 					if (rowLength == 1 && width > 100) {
@@ -277,10 +288,13 @@ class ResizingVariableWidthClipLayout {
 						
 					}
 					
-					// Create clip div.
-					const div = document.createElement('div');
+					
+					// Style view div.
+					
+					const div = view.div;
 				    div.className = 'clip';
 				    div.style.flex = '0 0 ' + toCssPercent(width);
+				    div.style.position = 'relative';
 				    div.style.margin = margin
 				    
 				    // TODO: Draw selection outlines properly.
@@ -290,11 +304,7 @@ class ResizingVariableWidthClipLayout {
 				    	div.style.outlineColor = 'orange';
 				    }
 				    
-//				    const h = document.createElement('h3');
-//				    h.className = 'clip-label';
-//				    h.innerHTML = (clipNum + 1).toString();
-//				    div.appendChild(h);
-			
+				    
 					rowDiv.appendChild(div);
 					
 				}
@@ -305,9 +315,28 @@ class ResizingVariableWidthClipLayout {
 			
 		}
 		
+		this._renderViews(pageNum, clipViewManager);
+		
 	}
 	
 
+	_renderViews(pageNum, clipViewManager) {
+		
+		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
+		
+		for (let i = startIndex; i < endIndex; i++) {
+			const view = clipViewManager.getClipView(i);
+			view.render();
+		}
+		
+	}
+	
+	
+	handleClipsViewResize(clipsDiv, pageNum, clipViewManager) {
+		this._renderViews(pageNum, clipViewManager);
+	}
+	
+	
 }
 
 

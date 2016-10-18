@@ -22,8 +22,9 @@ const resizableVariableWidthSettings = {
 
 let clips = null;
 let clipsDiv = null;
-let layout = null;
 let pageNum = null;
+let layout = null;
+let clipViewManager = null;
 
 
 function onLoad() {
@@ -54,7 +55,10 @@ function createClips(numClips, minSpan, maxSpan) {
 		if (i === 5)
 			span = 3;
 
-		clips[i] = {span: span};
+		clips[i] = {
+			index: i,
+			span: span
+		};
 		
 	}
 	
@@ -77,18 +81,19 @@ function updateDisplay() {
 		
 		const s = resizableVariableWidthSettings;
 		layout = new ResizingVariableWidthClipLayout(
-			clips, clipsDiv, s.displayWidth, s.displayHeight, s.clipSpacing);
+			clips, s.displayWidth, s.displayHeight, s.clipSpacing);
 		
 	} else {
 		
 		const s = nonresizableVariableWidthSettings;
 		layout = new NonresizingVariableWidthClipLayout(
-			clips, clipsDiv, s.pageSize, s.clipWidthScale, s.clipHeight,
-			s.clipSpacing);
+			clips, s.pageSize, s.clipWidthScale, s.clipHeight, s.clipSpacing);
 		
     }
 	
-	layout.layOutClips(pageNum);
+	clipViewManager = new DemoClipViewManager(clips, document, DemoClipView);
+	
+	layout.layOutClips(clipsDiv, pageNum, clipViewManager);
 	
 	updateTitle();
 	
@@ -101,6 +106,11 @@ function updateTitle() {
 	const numClips = clips.length;
 	title.innerHTML =
 		`Clips ${startIndex + 1} to ${endIndex} of ${numClips}`;
+}
+
+
+function onResize() {
+	layout.handleClipsViewResize(clipsDiv, pageNum, clipViewManager);
 }
 
 
@@ -125,5 +135,106 @@ function onKeyPress(e) {
 }
 
 
+class DemoClipView {
+	
+	
+	constructor(clip, document) {
+		this.clip = clip;
+		this.document = document;
+		this.div = this._createDiv();
+	}
+	
+	
+	_createDiv() {
+		
+		const document = this.document;
+		
+		const div = document.createElement('div');
+		
+		const canvas = document.createElement('canvas');
+		canvas.className = 'clip-canvas';
+		div.appendChild(canvas);
+		this._canvas = canvas;
+		
+	    const h = document.createElement('h3');
+	    h.className = 'clip-label';
+	    h.innerHTML = (this.clip.index + 1).toString();
+	    div.appendChild(h);
+	    
+	    return div;
+
+	}
+	
+	
+	render() {
+		
+		const div = this.div;
+		
+		const canvas = this._canvas;
+		const width = canvas.clientWidth;
+		const height = canvas.clientHeight;
+		
+		canvas.width = width;
+		canvas.height = height;
+		
+		const size = 20;
+		const left = (width - size) / 2;
+		const top = (height - size) / 2;
+		const right = (width + size) / 2;
+		const bottom = (height + size) / 2;
+
+		const context = canvas.getContext('2d');
+		context.beginPath();
+		context.moveTo(left, top);
+		context.lineTo(right, bottom);
+		context.moveTo(right, top);
+		context.lineTo(left, bottom);
+		context.lineWidth = 2;
+		context.stroke()
+		
+		console.log(
+			'render', this.clip.index, div.clientWidth, div.clientHeight);
+		
+	}
+	
+	
+}
+
+
+class DemoClipViewManager {
+	
+	
+	constructor(clips, document, clipViewClass) {
+		
+		this.clips = clips;
+		this._document = document;
+		this.clipViewClass = clipViewClass;
+		
+		this._views = new Array(clips.length);
+		this._views.fill(null);
+		
+	}
+	
+	
+	get document() {
+		return this._document;
+	}
+	
+	
+	getClipView(i) {
+		
+		if (this._views[i] === null)
+			this._views[i] =
+				new this.clipViewClass(this.clips[i], this.document);
+		
+		return this._views[i];
+		
+	}
+	
+	
+}
+
+
 window.onload = onLoad;
+window.onresize = onResize;
 document.onkeypress = onKeyPress;
