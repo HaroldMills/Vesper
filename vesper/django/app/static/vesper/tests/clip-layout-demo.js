@@ -6,22 +6,22 @@ const minClipSpan = .1;        // seconds
 const maxClipSpan = .4;        // seconds
 
 
-const nonresizableVariableWidthSettings = {
+const rigidNonuniformSettings = {
 	pageSize: 70,              // clips
-	clipWidthScale: 800,       // pixels per second
-	clipHeight: 60,            // pixels
-	clipSpacing: 20            // pixels
+	cellWidthScale: 800,       // pixels per second
+	cellHeight: 60,            // pixels
+	cellSpacing: 20            // pixels
 }
 
-const resizableVariableWidthSettings = {
-	displayWidth: 2.5,         // seconds
-	displayHeight: 10,         // rows
-	clipSpacing: 1             // percent of display width
+const elasticNonuniformSettings = {
+	pageWidth: 2.5,            // seconds
+	pageHeight: 10,            // rows
+    cellSpacing: 1             // percent of display width
 }
 
 
 let clips = null;
-let clipsDiv = null;
+let pageDiv = null;
 let pageNum = null;
 let layout = null;
 let clipViewManager = null;
@@ -31,10 +31,10 @@ function onLoad() {
 	
 	clips = createClips(numClips, minClipSpan, maxClipSpan);
 	
-	const checkbox = document.getElementById('resizable-checkbox');
+	const checkbox = document.getElementById('rigid-checkbox');
 	checkbox.onchange = onCheckboxChange;
 	
-	clipsDiv = document.getElementById('clips');
+	pageDiv = document.getElementById('page');
 	
 	pageNum = 0;
 	
@@ -75,25 +75,18 @@ function onCheckboxChange() {
 
 function updateDisplay() {
 	
-	const checkbox = document.getElementById('resizable-checkbox');
+	const checkbox = document.getElementById('rigid-checkbox');
 	
-	if (checkbox.checked) {
-		
-		const s = resizableVariableWidthSettings;
-		layout = new ResizingVariableWidthClipLayout(
-			clips, s.displayWidth, s.displayHeight, s.clipSpacing);
-		
-	} else {
-		
-		const s = nonresizableVariableWidthSettings;
-		layout = new NonresizingVariableWidthClipLayout(
-			clips, s.pageSize, s.clipWidthScale, s.clipHeight, s.clipSpacing);
-		
-    }
+	if (checkbox.checked)
+		layout = new RigidNonuniformCellClipGridLayout(
+			clips, rigidNonuniformSettings);
+	else
+		layout = new ElasticNonuniformCellClipGridLayout(
+			clips, elasticNonuniformSettings);
 	
 	clipViewManager = new DemoClipViewManager(clips, document, DemoClipView);
 	
-	layout.layOutClips(clipsDiv, pageNum, clipViewManager);
+	layout.layOutClips(pageDiv, pageNum, clipViewManager);
 	
 	updateTitle();
 	
@@ -110,7 +103,7 @@ function updateTitle() {
 
 
 function onResize() {
-	layout.handleClipsViewResize(clipsDiv, pageNum, clipViewManager);
+	layout.handleClipsViewResize(pageDiv, pageNum, clipViewManager);
 }
 
 
@@ -191,9 +184,6 @@ class DemoClipView {
 		context.lineTo(left, bottom);
 		context.lineWidth = 2;
 		context.stroke()
-		
-		console.log(
-			'render', this.clip.index, div.clientWidth, div.clientHeight);
 		
 	}
 	

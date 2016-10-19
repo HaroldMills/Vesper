@@ -1,23 +1,14 @@
 'use strict'
 
 
-/**
- * the display width in seconds.
- */
-const displayWidth = 10;
-
-/**
- * the display height in rows.
- */
-const displayHeight = 2;
-
-/**
- * the clip spacing as percent of display width.
- */
-const clipSpacing = 10;
+const settings = {
+	pageWidth: 10,       // seconds
+	pageHeight: 2,       // rows
+	cellSpacing: 10      // percent of page width
+}
 
 
-describe('ResizingVariableWidthClipLayout', () => {
+describe('ElasticNonuniformCellClipGridLayout', () => {
 	
 	
 	it('construction and layout', () => {
@@ -48,14 +39,14 @@ describe('ResizingVariableWidthClipLayout', () => {
 		for (let [spans, expectedPages] of cases) {
 					
 			const clips = spans.map(_ => ({span: _}))
-			
-			const layout = new ResizingVariableWidthClipLayout(
-			    clips, displayWidth, displayHeight, clipSpacing);
+
+			const layout = new ElasticNonuniformCellClipGridLayout(
+			    clips, settings);
 				
 			expect(layout.clips).toEqual(clips);
-			expect(layout.displayWidth).toBe(displayWidth);
-			expect(layout.displayHeight).toBe(displayHeight);
-			expect(layout.clipSpacing).toBe(clipSpacing);
+			expect(layout.pageWidth).toBe(settings.pageWidth);
+			expect(layout.pageHeight).toBe(settings.pageHeight);
+			expect(layout.cellSpacing).toBe(settings.cellSpacing);
 			expect(layout.numPages).toBe(expectedPages.length);
 			
 			// page index bounds and row start indices

@@ -20,26 +20,13 @@ body {
   text-align: center;
 }
 
-.clips {
+.page {
 }
-
-/*
-.clips {
-  display: flex;
-  height: 100%;
-  flex-flow: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-content: stretch;
-  align-items: stretch;
-  background-color: white;
-}
-*/
 
 .row {
 }
 
-.clip {
+.cell {
   background-color: red;
 }
 

@@ -1,26 +1,73 @@
 'use strict'
 
 
-/** Class that lays out clips in nonresizable, variable width cells. */
-class NonresizingVariableWidthClipLayout {
+/*
+
+Clip grid cell varieties:
+    rigid or elastic
+    uniform or nonuniform width
+
+Clip grid cell types:
+
+    Rigid Uniform
+        page_size: clips
+        cell_width: pixels
+        cell_width_scale: pixels per second
+        cell_height: pixels
+        cell_spacing: pixels
+        cell_x_spacing: pixels
+        cell_y_spacing: pixels
+        
+    Elastic Uniform
+        page_width: clips
+        page_height: clips
+        cell_width: seconds
+        cell_spacing: percent of page width
+        cell_x_spacing: percent of page width
+        cell_y_spacing: percent of page width
+
+    Rigid Nonuniform
+        page_size: clips
+        cell_width_scale: pixels per second
+        cell_height: pixels
+        cell_spacing: pixels
+        cell_x_spacing: pixels
+        cell_y_spacing: pixels
+
+    Elastic Nonuniform
+        page_width: seconds
+        page_height: clips
+        cell_spacing: percent of page width
+        cell_x_spacing: percent of page width
+        cell_y_spacing: percent of page width
+
+*/
+
+
+// /** Layout for displaying clips in nonresizable, uniform width cells. */
+// class RigidUniformCellClipGridLayout { }
+
+
+// /** Layout for displaying clips in resizable, uniform width cells. */
+// class ElasticUniformCellClipGridLayout { }
+
+
+/** Layout for displaying clips in nonresizable, nonuniform width cells. */
+class RigidNonuniformCellClipGridLayout {
 	
 	
 	/**
 	 * Creates a layout for the specified clips.
 	 * 
 	 * @param {Clip[]} clips - the clips for which to create a layout.
-	 * @param {number} pageSize - the page size in clips.
-	 * @param {number} clipWidthScale - the clip width scale in pixels per second.
-	 * @param {number} clipHeight - the clip height in pixels.
-	 * @param {number} clipSpacing - the clip spacing in pixels.
+	 * @param {Object} settings - the settings for the layout.
 	 */
-	constructor(clips, pageSize, clipWidthScale, clipHeight, clipSpacing) {
+	constructor(clips, settings) {
 		this.clips = clips;
-		this.clipsDiv = clipsDiv;
-		this.pageSize = pageSize;
-		this.clipWidthScale = clipWidthScale;
-		this.clipHeight = clipHeight;
-		this.clipSpacing = clipSpacing;
+		this.pageSize = settings.pageSize;
+		this.cellWidthScale = settings.cellWidthScale;
+		this.cellHeight = settings.cellHeight;
+		this.cellSpacing = settings.cellSpacing;
 		this._paginate();
 	}
 	
@@ -31,13 +78,12 @@ class NonresizingVariableWidthClipLayout {
 	_paginate() {
 		
 		const numClips = this.clips.length;
-		const maxPageSize = this.pageSize;
-		const numPages = Math.ceil(numClips / maxPageSize);
+		const numPages = Math.ceil(numClips / this.pageSize);
 		
 		const pageBounds = new Array(numPages);
 		let startIndex = 0;
 		for (let i = 0; i < numPages; i++) {
-			const pageSize = Math.min(maxPageSize, numClips - startIndex);
+			const pageSize = Math.min(this.pageSize, numClips - startIndex);
 			pageBounds[i] = [startIndex, startIndex + pageSize];
 			startIndex += pageSize;
 		}
@@ -53,50 +99,51 @@ class NonresizingVariableWidthClipLayout {
 	}
 	
 	
-	layOutClips(clipsDiv, pageNum, clipViewManager) {
+	layOutClips(pageDiv, pageNum, clipViewManager) {
 		
-		removeChildren(clipsDiv);
+		removeChildren(pageDiv);
 		
-		const margin = this.clipSpacing / 2 + 'px';
+		const margin = this.cellSpacing / 2 + 'px';
 
-		// Style the clips div. It is important to set values for pretty
-		// much all of the flexbox properties here since we allow switching
-		// between different layout policies for the same clips div.
-		clipsDiv.className = 'clips';
-		clipsDiv.style.display = 'flex';
-		clipsDiv.style.flexDirection = 'row';
-		clipsDiv.style.flexWrap = 'wrap';
-		clipsDiv.style.flex = '1 1 auto';
-		clipsDiv.style.justifyContent = 'center';
-		clipsDiv.style.alignContent = 'flex-start';
-		clipsDiv.style.alignItems = 'flex-end';
-		clipsDiv.style.width = 'auto';
-		clipsDiv.style.margin = margin;
+		// Style page div. It is important to set values for pretty much
+		// all of the flexbox properties here since we allow switching
+		// between different layouts for the same page div.
+		pageDiv.className = 'page';
+		pageDiv.style.display = 'flex';
+		pageDiv.style.flexDirection = 'row';
+		pageDiv.style.flexWrap = 'wrap';
+		pageDiv.style.flex = '1 1 auto';
+		pageDiv.style.justifyContent = 'center';
+		pageDiv.style.alignContent = 'flex-start';
+		pageDiv.style.alignItems = 'flex-end';
+		pageDiv.style.width = 'auto';
+		pageDiv.style.margin = margin;
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
-		const height = this.clipHeight + 'px';
+		const height = this.cellHeight + 'px';
 		
 		for (let i = startIndex; i < endIndex; i++) {
 			
 			const span = this.clips[i].span;
-			const width = span * this.clipWidthScale + 'px';
+			const width = span * this.cellWidthScale + 'px';
 			
-			const div = clipViewManager.getClipView(i).div;
-		    div.className = 'clip';
-		    div.style.position = 'relative';
-		    div.style.minWidth = width;
-		    div.style.width = width;
-		    div.style.height = height;
-		    div.style.margin = margin;
+			// Style cell div.
+			const cellDiv = clipViewManager.getClipView(i).div;
+		    cellDiv.className = 'cell';
+		    cellDiv.style.position = 'relative';
+		    cellDiv.style.minWidth = width;
+		    cellDiv.style.width = width;
+		    cellDiv.style.height = height;
+		    cellDiv.style.margin = margin;
 		    
 		    // TODO: Draw selection outlines properly.
 		    if (i === 2) {
-		    	div.style.outlineWidth = '5px';
-		    	div.style.outlineStyle = 'solid';
-		    	div.style.outlineColor = 'orange';
+		    	cellDiv.style.outlineWidth = '5px';
+		    	cellDiv.style.outlineStyle = 'solid';
+		    	cellDiv.style.outlineColor = 'orange';
 		    }
 			
-			clipsDiv.appendChild(div);
+			pageDiv.appendChild(cellDiv);
 			
 		}
 		
@@ -117,7 +164,7 @@ class NonresizingVariableWidthClipLayout {
 	}
 	
 	
-	handleClipsViewResize(clipsDiv, pageNum, clipViewManager) {
+	handleClipsViewResize(pageDiv, pageNum, clipViewManager) {
 		console.log('handleClipsViewResize');
 	}
 	
@@ -125,23 +172,21 @@ class NonresizingVariableWidthClipLayout {
 }
 
 
-/** Class that lays out clips in resizable, variable width cells. */
-class ResizingVariableWidthClipLayout {
+/** Layout for displaying clips in resizable, nonuniform width cells. */
+class ElasticNonuniformCellClipGridLayout {
 	
 	
 	/**
 	 * Creates a layout for the specified clips.
 	 * 
 	 * @param {Clip[]} clips - the clips for which to create a layout.
-	 * @param {number} displayWidth - the display width in seconds.
-	 * @param {number} displayHeight - the display height in rows.
-	 * @param {number} clipSpacing - the clip spacing as percent of display width.
+	 * @param {Object} settings - the settings for the layout.
 	 */
-	constructor(clips, displayWidth, displayHeight, clipSpacing) {
+	constructor(clips, settings) {
 		this.clips = clips;
-		this.displayWidth = displayWidth;
-		this.displayHeight = displayHeight;
-		this.clipSpacing = clipSpacing;
+		this.pageWidth = settings.pageWidth;
+		this.pageHeight = settings.pageHeight;
+		this.cellSpacing = settings.cellSpacing;
 		this._paginate();
 	}
 	
@@ -159,19 +204,19 @@ class ResizingVariableWidthClipLayout {
 			
 		} else {
 			
-			const clipSpacing = this.clipSpacing;
-			const maxRowWidth = 100. - clipSpacing;
-			const widthFactor = 100. / this.displayWidth;
+			const cellSpacing = this.cellSpacing;
+			const maxRowWidth = 100. - cellSpacing;
+			const widthFactor = 100. / this.pageWidth;
 			
 			const pages = [];
 			let page = [0];
-		    let rowWidth = widthFactor * clips[0].span + clipSpacing;
+		    let rowWidth = widthFactor * clips[0].span + cellSpacing;
 		    
 		    let i = 1;
 		    
 			for ( ; i < clips.length; i++) {
 				
-				const width = widthFactor * clips[i].span + clipSpacing;
+				const width = widthFactor * clips[i].span + cellSpacing;
 				
 				if (rowWidth + width <= maxRowWidth) {
 					// clip fits on current row
@@ -188,7 +233,7 @@ class ResizingVariableWidthClipLayout {
 					// and the length of row i as page[i + 1] - page[i].
 					page.push(i);
 					
-					if (page.length > this.displayHeight) {
+					if (page.length > this.pageHeight) {
 						// new row will be on new page
 						
 						pages.push(page);
@@ -224,29 +269,29 @@ class ResizingVariableWidthClipLayout {
 	}
 	
 	
-	layOutClips(clipsDiv, pageNum, clipViewManager) {
+	layOutClips(pageDiv, pageNum, clipViewManager) {
 		
-		removeChildren(clipsDiv);
+		removeChildren(pageDiv);
 		
-		const margin = toCssPercent(this.clipSpacing / 2.);
+		const margin = toCssPercent(this.cellSpacing / 2.);
 		
-		// Style the clips div. It is important to set values for pretty
+		// Style the page div. It is important to set values for pretty
 		// much all of the flexbox properties here since we allow switching
-		// between different layout policies for the same clips div.
-		clipsDiv.className = 'clips';
-		clipsDiv.style.display = 'flex';
-		clipsDiv.style.flexDirection = 'column';
-		clipsDiv.style.flexWrap = 'nowrap';
-		clipsDiv.style.flex = '1 1 auto';
-		clipsDiv.style.justifyContent = 'flex-start';
-		clipsDiv.style.alignContent = 'stretch';
-		clipsDiv.style.alignItems = 'stretch';
-		clipsDiv.style.width = 'auto';
-		clipsDiv.style.margin = margin;
+		// between different layouts for the same page div.
+		pageDiv.className = 'page';
+		pageDiv.style.display = 'flex';
+		pageDiv.style.flexDirection = 'column';
+		pageDiv.style.flexWrap = 'nowrap';
+		pageDiv.style.flex = '1 1 auto';
+		pageDiv.style.justifyContent = 'flex-start';
+		pageDiv.style.alignContent = 'stretch';
+		pageDiv.style.alignItems = 'stretch';
+		pageDiv.style.width = 'auto';
+		pageDiv.style.margin = margin;
 
 		const rowStartIndices = this._pages[pageNum];
 		
-		for (let i = 0; i < this.displayHeight; i++) {
+		for (let i = 0; i < this.pageHeight; i++) {
 			
 			// Create row div. We create a separate div for each row so
 			// we can lay out clips whose spans exceed the display width
@@ -271,7 +316,7 @@ class ResizingVariableWidthClipLayout {
 					const view = clipViewManager.getClipView(j);
 					
 					const clip = this.clips[j];
-					const width = 100 * (clip.span / this.displayWidth);
+					const width = 100 * (clip.span / this.pageWidth);
 					
 					if (rowLength == 1 && width > 100) {
 						// row contains a single clip and that clip is
@@ -289,29 +334,28 @@ class ResizingVariableWidthClipLayout {
 					}
 					
 					
-					// Style view div.
-					
-					const div = view.div;
-				    div.className = 'clip';
-				    div.style.flex = '0 0 ' + toCssPercent(width);
-				    div.style.position = 'relative';
-				    div.style.margin = margin
+					// Style cell div.
+					const cellDiv = view.div;
+				    cellDiv.className = 'cell';
+				    cellDiv.style.flex = '0 0 ' + toCssPercent(width);
+				    cellDiv.style.position = 'relative';
+				    cellDiv.style.margin = margin
 				    
 				    // TODO: Draw selection outlines properly.
 				    if (j == 2) {
-				    	div.style.outlineWidth = '5px';
-				    	div.style.outlineStyle = 'solid';
-				    	div.style.outlineColor = 'orange';
+				    	cellDiv.style.outlineWidth = '5px';
+				    	cellDiv.style.outlineStyle = 'solid';
+				    	cellDiv.style.outlineColor = 'orange';
 				    }
 				    
 				    
-					rowDiv.appendChild(div);
+					rowDiv.appendChild(cellDiv);
 					
 				}
 				
 			}
 						
-			clipsDiv.appendChild(rowDiv);
+			pageDiv.appendChild(rowDiv);
 			
 		}
 		
@@ -332,7 +376,7 @@ class ResizingVariableWidthClipLayout {
 	}
 	
 	
-	handleClipsViewResize(clipsDiv, pageNum, clipViewManager) {
+	handleClipsViewResize(pageDiv, pageNum, clipViewManager) {
 		this._renderViews(pageNum, clipViewManager);
 	}
 	
