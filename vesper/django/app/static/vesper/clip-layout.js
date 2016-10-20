@@ -166,7 +166,7 @@ class NonuniformNonresizingCellsLayout {
 	}
 	
 	
-	layOutClips(pageDiv, pageNum, clipCellManager) {
+	layOutClips(pageDiv, pageNum, cellManager) {
 		
 		removeChildren(pageDiv);
 		
@@ -196,7 +196,7 @@ class NonuniformNonresizingCellsLayout {
 			const width = span * s.cellWidthScale + 'px';
 			
 			// Style cell div.
-			const cellDiv = clipCellManager.getCell(i).div;
+			const cellDiv = cellManager.getCell(i).div;
 		    cellDiv.className = 'cell';
 		    cellDiv.style.position = 'relative';
 		    cellDiv.style.minWidth = width;
@@ -215,22 +215,22 @@ class NonuniformNonresizingCellsLayout {
 			
 		}
 		
-		this._renderCells(pageNum, clipCellManager);
+		this._renderCells(pageNum, cellManager);
 		
 	}
 	
 	
-	_renderCells(pageNum, clipCellManager) {
+	_renderCells(pageNum, cellManager) {
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
 		
 		for (let i = startIndex; i < endIndex; i++)
-			clipCellManager.getCell(i).render();
+			cellManager.getCell(i).render();
 		
 	}
 	
 	
-	handlePageResize(pageDiv, pageNum, clipCellManager) {
+	handlePageResize(pageDiv, pageNum, cellManager) {
 		// For this layout resizing is handled by the flexbox layout.
 	}
 	
@@ -354,7 +354,7 @@ class NonuniformResizingCellsLayout {
 	}
 	
 	
-	layOutClips(pageDiv, pageNum, clipCellManager) {
+	layOutClips(pageDiv, pageNum, cellManager) {
 		
 		removeChildren(pageDiv);
 		
@@ -398,7 +398,7 @@ class NonuniformResizingCellsLayout {
 				
 				for (let j = startIndex; j < endIndex; j++) {
 					
-					const cell = clipCellManager.getCell(j);
+					const cell = cellManager.getCell(j);
 					
 					const clip = this.clips[j];
 					const width = 100 * (clip.span / s.pageWidth);
@@ -444,23 +444,23 @@ class NonuniformResizingCellsLayout {
 			
 		}
 		
-		this._renderCells(pageNum, clipCellManager);
+		this._renderCells(pageNum, cellManager);
 		
 	}
 	
 
-	_renderCells(pageNum, clipCellManager) {
+	_renderCells(pageNum, cellManager) {
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
 		
 		for (let i = startIndex; i < endIndex; i++)
-			clipCellManager.getCell(i).render();
+			cellManager.getCell(i).render();
 		
 	}
 	
 	
-	handlePageResize(pageDiv, pageNum, clipCellManager) {
-		this._renderCells(pageNum, clipCellManager);
+	handlePageResize(pageDiv, pageNum, cellManager) {
+		this._renderCells(pageNum, cellManager);
 	}
 	
 	
