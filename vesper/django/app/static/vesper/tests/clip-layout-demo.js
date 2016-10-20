@@ -24,7 +24,7 @@ let clips = null;
 let pageDiv = null;
 let pageNum = null;
 let layout = null;
-let clipViewManager = null;
+let clipCellManager = null;
 
 
 function onLoad() {
@@ -84,9 +84,9 @@ function updateDisplay() {
 		layout = new NonuniformNonresizingCellsLayout(
 				clips, nonuniformNonresizingSettings);
 	
-	clipViewManager = new DemoClipViewManager(clips, document, DemoClipView);
+	clipCellManager = new DemoClipCellManager(clips, document, DemoClipCell);
 	
-	layout.layOutClips(pageDiv, pageNum, clipViewManager);
+	layout.layOutClips(pageDiv, pageNum, clipCellManager);
 	
 	updateTitle();
 	
@@ -103,7 +103,7 @@ function updateTitle() {
 
 
 function onResize() {
-	layout.handleClipsViewResize(pageDiv, pageNum, clipViewManager);
+	layout.handlePageResize(pageDiv, pageNum, clipCellManager);
 }
 
 
@@ -128,7 +128,7 @@ function onKeyPress(e) {
 }
 
 
-class DemoClipView {
+class DemoClipCell {
 	
 	
 	constructor(clip, document) {
@@ -191,17 +191,17 @@ class DemoClipView {
 }
 
 
-class DemoClipViewManager {
+class DemoClipCellManager {
 	
 	
-	constructor(clips, document, clipViewClass) {
+	constructor(clips, document, cellClass) {
 		
 		this.clips = clips;
 		this._document = document;
-		this.clipViewClass = clipViewClass;
+		this.cellClass = cellClass;
 		
-		this._views = new Array(clips.length);
-		this._views.fill(null);
+		this._cells = new Array(clips.length);
+		this._cells.fill(null);
 		
 	}
 	
@@ -211,13 +211,13 @@ class DemoClipViewManager {
 	}
 	
 	
-	getClipView(i) {
+	getCell(i) {
 		
-		if (this._views[i] === null)
-			this._views[i] =
-				new this.clipViewClass(this.clips[i], this.document);
+		if (this._cells[i] === null)
+			this._cells[i] =
+				new this.cellClass(this.clips[i], this.document);
 		
-		return this._views[i];
+		return this._cells[i];
 		
 	}
 	

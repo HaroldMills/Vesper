@@ -140,7 +140,7 @@ class NonuniformNonresizingCellsLayout {
 	}
 	
 	
-	layOutClips(pageDiv, pageNum, clipViewManager) {
+	layOutClips(pageDiv, pageNum, clipCellManager) {
 		
 		removeChildren(pageDiv);
 		
@@ -169,7 +169,7 @@ class NonuniformNonresizingCellsLayout {
 			const width = span * this.cellWidthScale + 'px';
 			
 			// Style cell div.
-			const cellDiv = clipViewManager.getClipView(i).div;
+			const cellDiv = clipCellManager.getCell(i).div;
 		    cellDiv.className = 'cell';
 		    cellDiv.style.position = 'relative';
 		    cellDiv.style.minWidth = width;
@@ -188,25 +188,23 @@ class NonuniformNonresizingCellsLayout {
 			
 		}
 		
-		this._renderViews(pageNum, clipViewManager);
+		this._renderCells(pageNum, clipCellManager);
 		
 	}
 	
 	
-	_renderViews(pageNum, clipViewManager) {
+	_renderCells(pageNum, clipCellManager) {
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
 		
-		for (let i = startIndex; i < endIndex; i++) {
-			const view = clipViewManager.getClipView(i);
-			view.render();
-		}
+		for (let i = startIndex; i < endIndex; i++)
+			clipCellManager.getCell(i).render();
 		
 	}
 	
 	
-	handleClipsViewResize(pageDiv, pageNum, clipViewManager) {
-		console.log('handleClipsViewResize');
+	handlePageResize(pageDiv, pageNum, clipCellManager) {
+		// For this layout resizing is handled by the flexbox layout.
 	}
 	
 	
@@ -310,7 +308,7 @@ class NonuniformResizingCellsLayout {
 	}
 	
 	
-	layOutClips(pageDiv, pageNum, clipViewManager) {
+	layOutClips(pageDiv, pageNum, clipCellManager) {
 		
 		removeChildren(pageDiv);
 		
@@ -353,8 +351,7 @@ class NonuniformResizingCellsLayout {
 				
 				for (let j = startIndex; j < endIndex; j++) {
 					
-					// Get clip view.
-					const view = clipViewManager.getClipView(j);
+					const cell = clipCellManager.getCell(j);
 					
 					const clip = this.clips[j];
 					const width = 100 * (clip.span / this.pageWidth);
@@ -376,7 +373,7 @@ class NonuniformResizingCellsLayout {
 					
 					
 					// Style cell div.
-					const cellDiv = view.div;
+					const cellDiv = cell.div;
 				    cellDiv.className = 'cell';
 				    cellDiv.style.flex = '0 0 ' + toCssPercent(width);
 				    cellDiv.style.position = 'relative';
@@ -400,25 +397,23 @@ class NonuniformResizingCellsLayout {
 			
 		}
 		
-		this._renderViews(pageNum, clipViewManager);
+		this._renderCells(pageNum, clipCellManager);
 		
 	}
 	
 
-	_renderViews(pageNum, clipViewManager) {
+	_renderCells(pageNum, clipCellManager) {
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
 		
-		for (let i = startIndex; i < endIndex; i++) {
-			const view = clipViewManager.getClipView(i);
-			view.render();
-		}
+		for (let i = startIndex; i < endIndex; i++)
+			clipCellManager.getCell(i).render();
 		
 	}
 	
 	
-	handleClipsViewResize(pageDiv, pageNum, clipViewManager) {
-		this._renderViews(pageNum, clipViewManager);
+	handlePageResize(pageDiv, pageNum, clipCellManager) {
+		this._renderCells(pageNum, clipCellManager);
 	}
 	
 	
