@@ -98,33 +98,59 @@ class NonuniformNonresizingCellsLayout {
 	
 	
 	/**
-	 * Creates a layout for the specified clips.
+	 * Creates a layout with the specified settings.
 	 * 
-	 * @param {Clip[]} clips - the clips for which to create a layout.
 	 * @param {Object} settings - the settings for the layout.
+	 * 
+	 * Settings properties are:
+	 *     pageSize {number} - the page size in cells.
+	 *     cellWidthScale {number} - the cell width scale in pixels per second.
+	 *     cellHeight {number} - the cell height in pixels.
+	 *     cellSpacing {number} - the cell spacing in pixels.
 	 */
-	constructor(clips, settings) {
-		this.clips = clips;
-		this.pageSize = settings.pageSize;
-		this.cellWidthScale = settings.cellWidthScale;
-		this.cellHeight = settings.cellHeight;
-		this.cellSpacing = settings.cellSpacing;
+	constructor(settings) {
+		this._settings = settings;
+		this._clips = [];
 		this._paginate();
 	}
 	
 	
+    get settings() {
+    	return this._settings;
+    }
+    
+    
+    set settings(settings) {
+    	this._settings = settings;
+    	this._paginate();
+    }
+    
+    
+    get clips() {
+    	return this._clips;
+    }
+    
+    
+    set clips(clips) {
+    	this._clips = clips;
+    	this._paginate();
+    }
+    
+    
 	/**
 	 * Assigns clips to pages.
 	 */
 	_paginate() {
 		
+		const s = this.settings;
+		
 		const numClips = this.clips.length;
-		const numPages = Math.ceil(numClips / this.pageSize);
+		const numPages = Math.ceil(numClips / s.pageSize);
 		
 		const pageBounds = new Array(numPages);
 		let startIndex = 0;
 		for (let i = 0; i < numPages; i++) {
-			const pageSize = Math.min(this.pageSize, numClips - startIndex);
+			const pageSize = Math.min(s.pageSize, numClips - startIndex);
 			pageBounds[i] = [startIndex, startIndex + pageSize];
 			startIndex += pageSize;
 		}
@@ -144,7 +170,8 @@ class NonuniformNonresizingCellsLayout {
 		
 		removeChildren(pageDiv);
 		
-		const margin = this.cellSpacing / 2 + 'px';
+		const s = this.settings;
+		const margin = s.cellSpacing / 2 + 'px';
 
 		// Style page div. It is important to set values for pretty much
 		// all of the flexbox properties here since we allow switching
@@ -161,12 +188,12 @@ class NonuniformNonresizingCellsLayout {
 		pageDiv.style.margin = margin;
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
-		const height = this.cellHeight + 'px';
+		const height = s.cellHeight + 'px';
 		
 		for (let i = startIndex; i < endIndex; i++) {
 			
 			const span = this.clips[i].span;
-			const width = span * this.cellWidthScale + 'px';
+			const width = span * s.cellWidthScale + 'px';
 			
 			// Style cell div.
 			const cellDiv = clipCellManager.getCell(i).div;
@@ -218,14 +245,32 @@ class NonuniformResizingCellsLayout {
 	/**
 	 * Creates a layout for the specified clips.
 	 * 
-	 * @param {Clip[]} clips - the clips for which to create a layout.
 	 * @param {Object} settings - the settings for the layout.
+	 * 
+	 * 
+	 * Settings properties are:
+	 *     pageWidth {number} - the page width in seconds.
+	 *     pageHeight {number} - the page height in rows.
+	 *     cellSpacing {number} - the cell spacing as a percent of page width.
 	 */
-	constructor(clips, settings) {
-		this.clips = clips;
-		this.pageWidth = settings.pageWidth;
-		this.pageHeight = settings.pageHeight;
-		this.cellSpacing = settings.cellSpacing;
+	constructor(settings) {
+		this._settings = settings;
+		this.clips = [];
+	}
+	
+	
+	get settings() {
+		return this._settings;
+	}
+	
+	
+	get clips() {
+		return this._clips;
+	}
+	
+	
+	set clips(clips) {
+		this._clips = clips;
 		this._paginate();
 	}
 	
@@ -235,6 +280,7 @@ class NonuniformResizingCellsLayout {
 	 */
 	_paginate() {
 		
+		const s = this.settings;
 		const clips = this.clips;
 		
 		if (clips.length == 0) {
@@ -243,9 +289,9 @@ class NonuniformResizingCellsLayout {
 			
 		} else {
 			
-			const cellSpacing = this.cellSpacing;
+			const cellSpacing = s.cellSpacing;
 			const maxRowWidth = 100. - cellSpacing;
-			const widthFactor = 100. / this.pageWidth;
+			const widthFactor = 100. / s.pageWidth;
 			
 			const pages = [];
 			let page = [0];
@@ -272,7 +318,7 @@ class NonuniformResizingCellsLayout {
 					// and the length of row i as page[i + 1] - page[i].
 					page.push(i);
 					
-					if (page.length > this.pageHeight) {
+					if (page.length > s.pageHeight) {
 						// new row will be on new page
 						
 						pages.push(page);
@@ -312,7 +358,8 @@ class NonuniformResizingCellsLayout {
 		
 		removeChildren(pageDiv);
 		
-		const margin = toCssPercent(this.cellSpacing / 2.);
+		const s = this.settings;
+		const margin = toCssPercent(s.cellSpacing / 2.);
 		
 		// Style the page div. It is important to set values for pretty
 		// much all of the flexbox properties here since we allow switching
@@ -330,7 +377,7 @@ class NonuniformResizingCellsLayout {
 
 		const rowStartIndices = this._pages[pageNum];
 		
-		for (let i = 0; i < this.pageHeight; i++) {
+		for (let i = 0; i < s.pageHeight; i++) {
 			
 			// Create row div. We create a separate div for each row so
 			// we can lay out clips whose spans exceed the display width
@@ -354,7 +401,7 @@ class NonuniformResizingCellsLayout {
 					const cell = clipCellManager.getCell(j);
 					
 					const clip = this.clips[j];
-					const width = 100 * (clip.span / this.pageWidth);
+					const width = 100 * (clip.span / s.pageWidth);
 					
 					if (rowLength == 1 && width > 100) {
 						// row contains a single clip and that clip is

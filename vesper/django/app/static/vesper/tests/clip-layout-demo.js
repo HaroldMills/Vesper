@@ -1,4 +1,4 @@
-"use strict"
+'use strict'
 
 
 const numClips = 300;
@@ -78,13 +78,15 @@ function updateDisplay() {
 	const checkbox = document.getElementById('checkbox');
 	
 	if (checkbox.checked)
-		layout = new NonuniformResizingCellsLayout(
-				clips, nonuniformResizingSettings);
+		layout = new NonuniformResizingCellsLayout(nonuniformResizingSettings);
 	else
 		layout = new NonuniformNonresizingCellsLayout(
-				clips, nonuniformNonresizingSettings);
+			nonuniformNonresizingSettings);
 	
-	clipCellManager = new DemoClipCellManager(clips, document, DemoClipCell);
+	layout.clips = clips;
+	
+	clipCellManager = new LazyClipCellManager(document, DemoClipCell);
+	clipCellManager.clips = clips;
 	
 	layout.layOutClips(pageDiv, pageNum, clipCellManager);
 	
@@ -184,40 +186,6 @@ class DemoClipCell {
 		context.lineTo(left, bottom);
 		context.lineWidth = 2;
 		context.stroke()
-		
-	}
-	
-	
-}
-
-
-class DemoClipCellManager {
-	
-	
-	constructor(clips, document, cellClass) {
-		
-		this.clips = clips;
-		this._document = document;
-		this.cellClass = cellClass;
-		
-		this._cells = new Array(clips.length);
-		this._cells.fill(null);
-		
-	}
-	
-	
-	get document() {
-		return this._document;
-	}
-	
-	
-	getCell(i) {
-		
-		if (this._cells[i] === null)
-			this._cells[i] =
-				new this.cellClass(this.clips[i], this.document);
-		
-		return this._cells[i];
 		
 	}
 	

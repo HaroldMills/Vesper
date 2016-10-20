@@ -38,15 +38,16 @@ describe('NonuniformResizingCellsLayout', () => {
 		
 		for (let [spans, expectedPages] of cases) {
 					
-			const clips = spans.map(_ => ({span: _}))
-
-			const layout = new NonuniformResizingCellsLayout(
-			    clips, settings);
+			const layout = new NonuniformResizingCellsLayout(settings);
+			expect(layout.settings).toEqual(settings);
+			expect(layout.clips).toEqual([]);
+			expect(layout.numPages).toEqual(0);
+			
+			const clips = spans.map(span => ({span: span}));
+			layout.clips = clips;
 				
+		    expect(layout.settings).toEqual(settings);
 			expect(layout.clips).toEqual(clips);
-			expect(layout.pageWidth).toBe(settings.pageWidth);
-			expect(layout.pageHeight).toBe(settings.pageHeight);
-			expect(layout.cellSpacing).toBe(settings.cellSpacing);
 			expect(layout.numPages).toBe(expectedPages.length);
 			
 			// page index bounds and row start indices
