@@ -8,7 +8,7 @@ const settings = {
 }
 
 
-describe('ElasticNonuniformCellClipGridLayout', () => {
+describe('NonuniformResizingCellsLayout', () => {
 	
 	
 	it('construction and layout', () => {
@@ -40,7 +40,7 @@ describe('ElasticNonuniformCellClipGridLayout', () => {
 					
 			const clips = spans.map(_ => ({span: _}))
 
-			const layout = new ElasticNonuniformCellClipGridLayout(
+			const layout = new NonuniformResizingCellsLayout(
 			    clips, settings);
 				
 			expect(layout.clips).toEqual(clips);

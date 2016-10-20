@@ -3,57 +3,98 @@
 
 /*
 
-Clip grid cell varieties:
-    rigid or elastic
-    uniform or nonuniform width
+Terms:
+* collection view - displays a collection of items
+* collection view layout - partitions items into pages and lays out pages
+* item - has width and height in item units
+* cell - renders one item into a div reserved exclusively for that item
 
-Clip grid cell types:
+Classes:
+* Clip
+* ClipSpectrogramCell
+* UniformResizingCellsLayout
+* UniformNonresizingCellsLayout
+* NonuniformResizingCellsLayout
+* NonuniformNonresizingCellsLayout
 
-    Rigid Uniform
+Collection view layout options
+    uniform or nonuniform width cells
+    resizing or nonresizing cells
+
+Clip collection view settings by cell type:
+
+    Uniform Nonresizing
+    
+        // layout settings
         page_size: clips
         cell_width: pixels
-        cell_width_scale: pixels per second
         cell_height: pixels
-        cell_spacing: pixels
         cell_x_spacing: pixels
         cell_y_spacing: pixels
         
-    Elastic Uniform
-        page_width: clips
-        page_height: clips
-        cell_width: seconds
-        cell_spacing: percent of page width
+        // cell settings
+        cell_duration: seconds
+        cell_start_freq: hertz
+        cell_end_freq: hertz
+
+
+    Uniform Resizing
+    
+        // layout settings
+        page_width: columns
+        page_height: rows
         cell_x_spacing: percent of page width
         cell_y_spacing: percent of page width
-
-    Rigid Nonuniform
+        
+        // cell settings
+        cell_duration: seconds
+        cell_start_freq: hertz
+        cell_end_freq: hertz
+ 
+ 
+    Nonuniform Nonresizing
+    
+        // layout settings
         page_size: clips
-        cell_width_scale: pixels per second
+        cell_x_scale: pixels per second
         cell_height: pixels
-        cell_spacing: pixels
         cell_x_spacing: pixels
         cell_y_spacing: pixels
-
-    Elastic Nonuniform
+        initial_clip_padding: seconds
+        final_clip_padding: seconds
+        
+        // cell settings
+        cell_start_freq: hertz
+        cell_end_freq: hertz
+        
+        
+    Nonuniform Resizing
+    
+        // layout settings
         page_width: seconds
-        page_height: clips
-        cell_spacing: percent of page width
+        page_height: rows
         cell_x_spacing: percent of page width
         cell_y_spacing: percent of page width
+        initial_clip_padding: seconds
+        final_clip_padding: seconds
+        
+        // cell settings
+        cell_start_freq: hertz
+        cell_end_freq: hertz
 
 */
 
 
-// /** Layout for displaying clips in nonresizable, uniform width cells. */
-// class RigidUniformCellClipGridLayout { }
+// /** Layout for displaying clips in uniform, nonresizing cells. */
+// class UniformNonresizingCellsLayout { }
 
 
-// /** Layout for displaying clips in resizable, uniform width cells. */
-// class ElasticUniformCellClipGridLayout { }
+// /** Layout for displaying clips in uniform, resizing cells. */
+// class UniformResizingCellsLayout { }
 
 
-/** Layout for displaying clips in nonresizable, nonuniform width cells. */
-class RigidNonuniformCellClipGridLayout {
+/** Layout for displaying clips in nonuniform, nonresizing cells. */
+class NonuniformNonresizingCellsLayout {
 	
 	
 	/**
@@ -172,8 +213,8 @@ class RigidNonuniformCellClipGridLayout {
 }
 
 
-/** Layout for displaying clips in resizable, nonuniform width cells. */
-class ElasticNonuniformCellClipGridLayout {
+/** Layout for displaying clips in nonuniform, resizing cells. */
+class NonuniformResizingCellsLayout {
 	
 	
 	/**

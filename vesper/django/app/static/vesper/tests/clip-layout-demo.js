@@ -6,14 +6,14 @@ const minClipSpan = .1;        // seconds
 const maxClipSpan = .4;        // seconds
 
 
-const rigidNonuniformSettings = {
+const nonuniformNonresizingSettings = {
 	pageSize: 70,              // clips
 	cellWidthScale: 800,       // pixels per second
 	cellHeight: 60,            // pixels
 	cellSpacing: 20            // pixels
 }
 
-const elasticNonuniformSettings = {
+const nonuniformResizingSettings = {
 	pageWidth: 2.5,            // seconds
 	pageHeight: 10,            // rows
     cellSpacing: 1             // percent of display width
@@ -31,7 +31,7 @@ function onLoad() {
 	
 	clips = createClips(numClips, minClipSpan, maxClipSpan);
 	
-	const checkbox = document.getElementById('rigid-checkbox');
+	const checkbox = document.getElementById('checkbox');
 	checkbox.onchange = onCheckboxChange;
 	
 	pageDiv = document.getElementById('page');
@@ -75,14 +75,14 @@ function onCheckboxChange() {
 
 function updateDisplay() {
 	
-	const checkbox = document.getElementById('rigid-checkbox');
+	const checkbox = document.getElementById('checkbox');
 	
 	if (checkbox.checked)
-		layout = new RigidNonuniformCellClipGridLayout(
-			clips, rigidNonuniformSettings);
+		layout = new NonuniformResizingCellsLayout(
+				clips, nonuniformResizingSettings);
 	else
-		layout = new ElasticNonuniformCellClipGridLayout(
-			clips, elasticNonuniformSettings);
+		layout = new NonuniformNonresizingCellsLayout(
+				clips, nonuniformNonresizingSettings);
 	
 	clipViewManager = new DemoClipViewManager(clips, document, DemoClipView);
 	
