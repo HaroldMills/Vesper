@@ -4,113 +4,170 @@
 /*
 
 Terms:
-* collection view - displays a collection of items
-* collection view layout - partitions items into pages and lays out pages
-* item - has width and height in item units
-* cell - renders one item into a div reserved exclusively for that item
+* clip collection view - displays a collection of clips
+* clip view - renders one clip into a div reserved exclusively for that clip
+* layout - partitions clips into pages and lays out clip views on a page div
 
 Classes:
 * Clip
-* ClipSpectrogramCell
-* UniformResizingCellsLayout
-* UniformNonresizingCellsLayout
-* NonuniformResizingCellsLayout
-* NonuniformNonresizingCellsLayout
+* SpectrogramClipView
+* UniformResizingClipViewsLayout
+* UniformNonresizingClipViewsLayout
+* NonuniformResizingClipViewsLayout
+* NonuniformNonresizingClipViewsLayout
 
 Collection view layout options
-    uniform or nonuniform width cells
-    resizing or nonresizing cells
+    uniform or nonuniform width clip views
+    resizing or nonresizing clip views
 
-Clip collection view settings by cell type:
+layout = {
 
-    Uniform Nonresizing
+    page: {
+        size: 100
+    }
     
-        // layout settings
-        page_size: clips
-        cell_width: pixels
-        cell_height: pixels
-        cell_x_spacing: pixels
-        cell_y_spacing: pixels
-        
-        // cell settings
-        cell_duration: seconds
-        cell_start_freq: hertz
-        cell_end_freq: hertz
-
-
-    Uniform Resizing
+    clip_view: {
+        width: 300,
+        height: 100,
+        x_spacing: 15,
+        y_spacing: 15,
+        selection_outline_width: 5,
+        duration: .3
+    }
     
-        // layout settings
-        page_width: columns
-        page_height: rows
-        cell_x_spacing: percent of page width
-        cell_y_spacing: percent of page width
+}
+
+page = layout.page;       // enables use of page.size
+cv = layout.clip_view;    // enables use of cv.width, cv.height, etc.
+cl = layout.clip_label;   // enables use of cl.visible, etc.
+
+
+layout.page.size
+layout.clip_view.width
+layout.clip_view.height
+layout.clip_label.visible
+
+
+Clip collection view layout settings by layout type:
+
+    Uniform Nonresizing Clip Views
+    
+        page:
+            size: clips
+            
+        clip_view:
+            width: pixels
+            height: pixels
+            x_spacing: pixels
+            y_spacing: pixels
+            selection_outline_width: pixels
+            duration: seconds
+            
+
+    Uniform Resizing Clip Views
+    
+        page:
+            width: columns
+            height: rows
+            
+        clip_view:
+            x_spacing: percent of page width
+            y_spacing: percent of page width
+            selection_outline_width: pixels
+            duration: seconds
         
-        // cell settings
-        cell_duration: seconds
-        cell_start_freq: hertz
-        cell_end_freq: hertz
  
- 
-    Nonuniform Nonresizing
+    Nonuniform Nonresizing Clip Views
     
-        // layout settings
-        page_size: clips
-        cell_x_scale: pixels per second
-        cell_height: pixels
-        cell_x_spacing: pixels
-        cell_y_spacing: pixels
-        initial_clip_padding: seconds
-        final_clip_padding: seconds
+        page:
+            size: clips
+            
+        clip_view:
+            time_scale: pixels per second
+            height: pixels
+            x_spacing: pixels
+            y_spacing: pixels
+            selection_outline_width: pixels
+            initial_padding: seconds
+            final_padding: seconds
         
-        // cell settings
-        cell_start_freq: hertz
-        cell_end_freq: hertz
         
-        
-    Nonuniform Resizing
+    Nonuniform Resizing Clip Views
     
-        // layout settings
-        page_width: seconds
-        page_height: rows
-        cell_x_spacing: percent of page width
-        cell_y_spacing: percent of page width
-        initial_clip_padding: seconds
-        final_clip_padding: seconds
-        
-        // cell settings
-        cell_start_freq: hertz
-        cell_end_freq: hertz
+        page:
+            width: seconds
+            height: rows
+            
+        clip_view:
+            x_spacing: percent of page width
+            y_spacing: percent of page width
+            selection_outline_width: pixels
+            initial_padding: seconds
+            final_padding: seconds
+
+
+Spectrogram clip view settings:
+    start_freq: hertz
+    end_freq: hertz
+    spectrogram: spectrogram settings
+
+
+Spectrogram settings:
+    window_size: 100
+    hop_size: 25
+    dft_size: 256
+    reference_power: 1
+    low_power: 10
+    high_power: 100
+    smoothing_enabled: true
+    time_padding_enabled: false
+
+
+Clip label settings:
+    visible: true
+    location: bottom
+    color: white
+    size: .8
+    classification_included: true
+    start_time_included: false
+    hidden_classification_prefixes: ["Call."]
+
 
 */
 
 
-// /** Layout for displaying clips in uniform, nonresizing cells. */
-// class UniformNonresizingCellsLayout { }
+// /** Layout that displays uniform, nonresizing clip views. */
+// class UniformNonresizingClipViewsLayout { }
 
 
-// /** Layout for displaying clips in uniform, resizing cells. */
-// class UniformResizingCellsLayout { }
+// /** Layout that displays uniform, resizing clip views. */
+// class UniformResizingClipViewsLayout { }
 
 
-/** Layout for displaying clips in nonuniform, nonresizing cells. */
-class NonuniformNonresizingCellsLayout {
+/** Layout that displays nonuniform, nonresizing clip views. */
+class NonuniformNonresizingClipViewsLayout {
 	
 	
 	/**
 	 * Creates a layout with the specified settings.
 	 * 
-	 * @param {Object} settings - the settings for the layout.
+	 * Settings:
 	 * 
-	 * Settings properties are:
-	 *     pageSize {number} - the page size in cells.
-	 *     cellWidthScale {number} - the cell width scale in pixels per second.
-	 *     cellHeight {number} - the cell height in pixels.
-	 *     cellSpacing {number} - the cell spacing in pixels.
-	 */
-	constructor(settings) {
+	 *     page:
+     *         size: clips
+     *         
+     *     clip_view:
+     *         time_scale: pixels per second
+     *         height: pixels
+     *         x_spacing: pixels
+     *         y_spacing: pixels
+     *         selection_outline_width: pixels
+     *         initial_padding: seconds
+     *         final_padding: seconds
+     */
+	constructor(settings, clips = []) {
 		this._settings = settings;
-		this._clips = [];
+		this._clips = clips;
 		this._paginate();
 	}
 	
@@ -142,22 +199,27 @@ class NonuniformNonresizingCellsLayout {
 	 */
 	_paginate() {
 		
-		const s = this.settings;
+		const pg = this.settings.page;
 		
 		const numClips = this.clips.length;
-		const numPages = Math.ceil(numClips / s.pageSize);
+		const numPages = Math.ceil(numClips / pg.size);
 		
 		const pageBounds = new Array(numPages);
 		let startIndex = 0;
 		for (let i = 0; i < numPages; i++) {
-			const pageSize = Math.min(s.pageSize, numClips - startIndex);
+			const pageSize = Math.min(pg.size, numClips - startIndex);
 			pageBounds[i] = [startIndex, startIndex + pageSize];
 			startIndex += pageSize;
 		}
 		
-		this.numPages = numPages;
+		this._numPages = numPages;
 		this._pageIndexBounds = pageBounds;
 		
+	}
+	
+	
+	get numPages() {
+		return this._numPages;
 	}
 	
 	
@@ -166,12 +228,15 @@ class NonuniformNonresizingCellsLayout {
 	}
 	
 	
-	layOutClips(pageDiv, pageNum, cellManager) {
+	layOutClips(pageDiv, pageNum, clipViewManager) {
 		
 		removeChildren(pageDiv);
 		
-		const s = this.settings;
-		const margin = s.cellSpacing / 2 + 'px';
+		const cv = this.settings.clipView
+		
+		const y_margin = cv.ySpacing / 2;
+		const x_margin = cv.xSpacing / 2;
+		const margin = y_margin + 'px ' + x_margin + 'px ';
 
 		// Style page div. It is important to set values for pretty much
 		// all of the flexbox properties here since we allow switching
@@ -188,49 +253,49 @@ class NonuniformNonresizingCellsLayout {
 		pageDiv.style.margin = margin;
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
-		const height = s.cellHeight + 'px';
+		const height = cv.height + 'px';
 		
 		for (let i = startIndex; i < endIndex; i++) {
 			
 			const span = this.clips[i].span;
-			const width = span * s.cellWidthScale + 'px';
+			const width = span * cv.timeScale + 'px';
 			
-			// Style cell div.
-			const cellDiv = cellManager.getCell(i).div;
-		    cellDiv.className = 'cell';
-		    cellDiv.style.position = 'relative';
-		    cellDiv.style.minWidth = width;
-		    cellDiv.style.width = width;
-		    cellDiv.style.height = height;
-		    cellDiv.style.margin = margin;
+			// Style clip div.
+			const clipDiv = clipViewManager.getClipView(i).div;
+		    clipDiv.className = 'clip';
+		    clipDiv.style.position = 'relative';
+		    clipDiv.style.minWidth = width;
+		    clipDiv.style.width = width;
+		    clipDiv.style.height = height;
+		    clipDiv.style.margin = margin;
 		    
 		    // TODO: Draw selection outlines properly.
 		    if (i === 2) {
-		    	cellDiv.style.outlineWidth = '5px';
-		    	cellDiv.style.outlineStyle = 'solid';
-		    	cellDiv.style.outlineColor = 'orange';
+		    	clipDiv.style.outlineWidth = '5px';
+		    	clipDiv.style.outlineStyle = 'solid';
+		    	clipDiv.style.outlineColor = 'orange';
 		    }
 			
-			pageDiv.appendChild(cellDiv);
+			pageDiv.appendChild(clipDiv);
 			
 		}
 		
-		this._renderCells(pageNum, cellManager);
+		this._renderClipViews(pageNum, clipViewManager);
 		
 	}
 	
 	
-	_renderCells(pageNum, cellManager) {
+	_renderClipViews(pageNum, clipViewManager) {
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
 		
 		for (let i = startIndex; i < endIndex; i++)
-			cellManager.getCell(i).render();
+			clipViewManager.getClipView(i).render();
 		
 	}
 	
 	
-	handlePageResize(pageDiv, pageNum, cellManager) {
+	handlePageResize(pageDiv, pageNum, clipViewManager) {
 		// For this layout resizing is handled by the flexbox layout.
 	}
 	
@@ -238,24 +303,29 @@ class NonuniformNonresizingCellsLayout {
 }
 
 
-/** Layout for displaying clips in nonuniform, resizing cells. */
-class NonuniformResizingCellsLayout {
+/** Layout that displays nonuniform, resizing clip views. */
+class NonuniformResizingClipViewsLayout {
 	
 	
 	/**
 	 * Creates a layout for the specified clips.
 	 * 
-	 * @param {Object} settings - the settings for the layout.
+	 * Settings:
 	 * 
-	 * 
-	 * Settings properties are:
-	 *     pageWidth {number} - the page width in seconds.
-	 *     pageHeight {number} - the page height in rows.
-	 *     cellSpacing {number} - the cell spacing as a percent of page width.
+	 *     page:
+     *         width: seconds
+     *         height: rows
+     *         
+     *     clip_view:
+     *         x_spacing: percent of page width
+     *         y_spacing: percent of page width
+     *         selection_outline_width: pixels
+     *         initial_padding: seconds
+     *         final_padding: seconds
 	 */
-	constructor(settings) {
+	constructor(settings, clips = []) {
 		this._settings = settings;
-		this.clips = [];
+		this.clips = clips;
 	}
 	
 	
@@ -280,7 +350,8 @@ class NonuniformResizingCellsLayout {
 	 */
 	_paginate() {
 		
-		const s = this.settings;
+		const pg = this.settings.page;
+		const cv = this.settings.clipView;
 		const clips = this.clips;
 		
 		if (clips.length == 0) {
@@ -289,19 +360,19 @@ class NonuniformResizingCellsLayout {
 			
 		} else {
 			
-			const cellSpacing = s.cellSpacing;
-			const maxRowWidth = 100. - cellSpacing;
-			const widthFactor = 100. / s.pageWidth;
+			const xSpacing = cv.xSpacing;
+			const maxRowWidth = 100. - xSpacing;
+			const widthFactor = 100. / pg.width;
 			
 			const pages = [];
 			let page = [0];
-		    let rowWidth = widthFactor * clips[0].span + cellSpacing;
+		    let rowWidth = widthFactor * clips[0].span + xSpacing;
 		    
 		    let i = 1;
 		    
 			for ( ; i < clips.length; i++) {
 				
-				const width = widthFactor * clips[i].span + cellSpacing;
+				const width = widthFactor * clips[i].span + xSpacing;
 				
 				if (rowWidth + width <= maxRowWidth) {
 					// clip fits on current row
@@ -318,7 +389,7 @@ class NonuniformResizingCellsLayout {
 					// and the length of row i as page[i + 1] - page[i].
 					page.push(i);
 					
-					if (page.length > s.pageHeight) {
+					if (page.length > pg.height) {
 						// new row will be on new page
 						
 						pages.push(page);
@@ -354,12 +425,16 @@ class NonuniformResizingCellsLayout {
 	}
 	
 	
-	layOutClips(pageDiv, pageNum, cellManager) {
+	layOutClips(pageDiv, pageNum, clipViewManager) {
 		
 		removeChildren(pageDiv);
 		
-		const s = this.settings;
-		const margin = toCssPercent(s.cellSpacing / 2.);
+		const pg = this.settings.page;
+		const cv = this.settings.clipView;
+		
+		const xMargin = toCssPercent(cv.xSpacing / 2.);
+		const yMargin = toCssPercent(cv.ySpacing / 2.);
+		const margin = xMargin + ' ' + yMargin;
 		
 		// Style the page div. It is important to set values for pretty
 		// much all of the flexbox properties here since we allow switching
@@ -377,7 +452,7 @@ class NonuniformResizingCellsLayout {
 
 		const rowStartIndices = this._pages[pageNum];
 		
-		for (let i = 0; i < s.pageHeight; i++) {
+		for (let i = 0; i < pg.height; i++) {
 			
 			// Create row div. We create a separate div for each row so
 			// we can lay out clips whose spans exceed the display width
@@ -398,10 +473,12 @@ class NonuniformResizingCellsLayout {
 				
 				for (let j = startIndex; j < endIndex; j++) {
 					
-					const cell = cellManager.getCell(j);
+					const clipView = clipViewManager.getClipView(j);
 					
 					const clip = this.clips[j];
-					const width = 100 * (clip.span / s.pageWidth);
+					const width = 100 * (clip.span / pg.width);
+					
+					console.log(j, width);
 					
 					if (rowLength == 1 && width > 100) {
 						// row contains a single clip and that clip is
@@ -419,22 +496,22 @@ class NonuniformResizingCellsLayout {
 					}
 					
 					
-					// Style cell div.
-					const cellDiv = cell.div;
-				    cellDiv.className = 'cell';
-				    cellDiv.style.flex = '0 0 ' + toCssPercent(width);
-				    cellDiv.style.position = 'relative';
-				    cellDiv.style.margin = margin
+					// Style clip div.
+					const clipDiv = clipView.div;
+				    clipDiv.className = 'clip';
+				    clipDiv.style.flex = '0 0 ' + toCssPercent(width);
+				    clipDiv.style.position = 'relative';
+				    clipDiv.style.margin = margin
 				    
 				    // TODO: Draw selection outlines properly.
 				    if (j == 2) {
-				    	cellDiv.style.outlineWidth = '5px';
-				    	cellDiv.style.outlineStyle = 'solid';
-				    	cellDiv.style.outlineColor = 'orange';
+				    	clipDiv.style.outlineWidth = '5px';
+				    	clipDiv.style.outlineStyle = 'solid';
+				    	clipDiv.style.outlineColor = 'orange';
 				    }
 				    
 				    
-					rowDiv.appendChild(cellDiv);
+					rowDiv.appendChild(clipDiv);
 					
 				}
 				
@@ -444,23 +521,23 @@ class NonuniformResizingCellsLayout {
 			
 		}
 		
-		this._renderCells(pageNum, cellManager);
+		this._renderClipViews(pageNum, clipViewManager);
 		
 	}
 	
 
-	_renderCells(pageNum, cellManager) {
+	_renderClipViews(pageNum, clipViewManager) {
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
 		
 		for (let i = startIndex; i < endIndex; i++)
-			cellManager.getCell(i).render();
+			clipViewManager.getClipView(i).render();
 		
 	}
 	
 	
-	handlePageResize(pageDiv, pageNum, cellManager) {
-		this._renderCells(pageNum, cellManager);
+	handlePageResize(pageDiv, pageNum, clipViewManager) {
+		this._renderClipViews(pageNum, clipViewManager);
 	}
 	
 	

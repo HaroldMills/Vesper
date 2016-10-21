@@ -2,13 +2,21 @@
 
 
 const settings = {
-	pageWidth: 10,       // seconds
-	pageHeight: 2,       // rows
-	cellSpacing: 10      // percent of page width
+		
+	page: {
+		width: 10,       // seconds
+		height: 2        // rows
+	},
+	
+	clipView: {
+		xSpacing: 10,    // percent of page width
+		ySpacing: 10,    // percent of page width
+	}
+	
 }
 
 
-describe('NonuniformResizingCellsLayout', () => {
+describe('NonuniformResizingClipViewsLayout', () => {
 	
 	
 	it('construction and layout', () => {
@@ -38,7 +46,7 @@ describe('NonuniformResizingCellsLayout', () => {
 		
 		for (let [spans, expectedPages] of cases) {
 					
-			const layout = new NonuniformResizingCellsLayout(settings);
+			const layout = new NonuniformResizingClipViewsLayout(settings);
 			expect(layout.settings).toEqual(settings);
 			expect(layout.clips).toEqual([]);
 			expect(layout.numPages).toEqual(0);

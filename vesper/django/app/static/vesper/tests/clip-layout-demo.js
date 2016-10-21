@@ -7,16 +7,33 @@ const maxClipSpan = .4;        // seconds
 
 
 const nonuniformNonresizingSettings = {
-	pageSize: 70,              // clips
-	cellWidthScale: 800,       // pixels per second
-	cellHeight: 60,            // pixels
-	cellSpacing: 20            // pixels
+		
+	page: {
+		size: 70               // clips
+	},
+	
+    clipView: {
+    	timeScale: 800,        // pixels per second
+    	height: 60,            // pixels
+    	xSpacing: 20,         // pixels
+    	ySpacing: 20          // pixels
+    }
+	
 }
 
+
 const nonuniformResizingSettings = {
-	pageWidth: 2.5,            // seconds
-	pageHeight: 10,            // rows
-    cellSpacing: 1             // percent of display width
+		
+	page: {
+		width: 2.5,            // seconds
+		height: 10             // rows
+	},
+	
+	clipView: {
+		xSpacing: 1,           // percent of display width
+		ySpacing: 1            // percent of display width
+	}
+	
 }
 
 
@@ -24,7 +41,7 @@ let clips = null;
 let pageDiv = null;
 let pageNum = null;
 let layout = null;
-let clipCellManager = null;
+let clipViewManager = null;
 
 
 function onLoad() {
@@ -78,17 +95,18 @@ function updateDisplay() {
 	const checkbox = document.getElementById('checkbox');
 	
 	if (checkbox.checked)
-		layout = new NonuniformResizingCellsLayout(nonuniformResizingSettings);
+		layout = new NonuniformResizingClipViewsLayout(
+			nonuniformResizingSettings);
 	else
-		layout = new NonuniformNonresizingCellsLayout(
+		layout = new NonuniformNonresizingClipViewsLayout(
 			nonuniformNonresizingSettings);
 	
 	layout.clips = clips;
 	
-	clipCellManager = new LazyClipCellManager(document, DemoClipCell);
-	clipCellManager.clips = clips;
+	clipViewManager = new LazyClipViewManager(document, DemoClipView);
+	clipViewManager.clips = clips;
 	
-	layout.layOutClips(pageDiv, pageNum, clipCellManager);
+	layout.layOutClips(pageDiv, pageNum, clipViewManager);
 	
 	updateTitle();
 	
@@ -105,7 +123,7 @@ function updateTitle() {
 
 
 function onResize() {
-	layout.handlePageResize(pageDiv, pageNum, clipCellManager);
+	layout.handlePageResize(pageDiv, pageNum, clipViewManager);
 }
 
 
@@ -130,7 +148,7 @@ function onKeyPress(e) {
 }
 
 
-class DemoClipCell {
+class DemoClipView {
 	
 	
 	constructor(clip, document) {
