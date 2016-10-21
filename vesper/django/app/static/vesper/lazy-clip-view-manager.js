@@ -1,20 +1,20 @@
 'use strict'
 
 
-class LazyClipCellManager {
+class LazyClipViewManager {
 	
 	
-	constructor(document, cellClass) {
+	constructor(document, clipViewClass) {
 		this._document = document;
-		this._cellClass = cellClass;
+		this._clipViewClass = clipViewClass;
 		this._clips = [];
-		this._initCells();
+		this._initClipViews();
 	}
 	
 	
-	_initCells() {
-		this._cells = new Array(this.clips.length);
-		this._cells.fill(null);
+	_initClipViews() {
+		this._clipViews = new Array(this.clips.length);
+		this._clipViews.fill(null);
 	}
 	
 	
@@ -25,18 +25,18 @@ class LazyClipCellManager {
 	
 	set document(document) {
 		this._document = document;
-		this._initCells();
+		this._initClipViews();
 	}
 	
 	
-	get cellClass() {
-		return this._cellClass;
+	get clipViewClass() {
+		return this._clipViewClass;
 	}
 	
 	
-	set cellClass(cellClass) {
-		this._cellClass = cellClass;
-		this._initCells();
+	set clipViewClass(clipViewClass) {
+		this._clipViewClass = clipViewClass;
+		this._initClipViews();
 	}
 	
 	
@@ -47,16 +47,17 @@ class LazyClipCellManager {
 	
 	set clips(clips) {
 		this._clips = clips;
-		this._initCells();
+		this._initClipViews();
 	}
 	
 	
-	getCell(i) {
+	getClipView(i) {
 		
-		if (this._cells[i] === null)
-			this._cells[i] = new this.cellClass(this.clips[i], this.document);
+		if (this._clipViews[i] === null)
+			this._clipViews[i] =
+				new this.clipViewClass(this.clips[i], this.document);
 		
-		return this._cells[i];
+		return this._clipViews[i];
 		
 	}
 	
