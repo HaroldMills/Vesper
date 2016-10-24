@@ -29,7 +29,7 @@ const nonuniformNonresizingSettings = {
 	
 	clipView: {}
 	
-}
+};
 
 
 const nonuniformResizingSettings = {
@@ -54,7 +54,7 @@ const nonuniformResizingSettings = {
 	
 	clipView: {}
 	
-}
+};
 
 
 let clipCollectionView = null;
@@ -68,8 +68,10 @@ function onLoad() {
 	
 	const pageDiv = document.getElementById('page');
 	const clips = createClips(numClips, minClipSpan, maxClipSpan);
+	const clipViewClasses = { 'Demo': DemoClipView };
 	const settings = getSettings();
-	clipCollectionView = new ClipCollectionView(pageDiv, clips, settings);
+	clipCollectionView = new ClipCollectionView(
+		pageDiv, clips, clipViewClasses, settings);
 	
 	updateTitle();
 	

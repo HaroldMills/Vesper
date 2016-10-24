@@ -13,10 +13,10 @@ const settings = {
 		ySpacing: 10,    // percent of page width
 	}
 	
-}
+};
 
 
-describe('NonuniformResizingClipViewsLayout', () => {
+describe('_NonuniformResizingClipViewsLayout', () => {
 	
 	
 	it('construction and layout', () => {
@@ -47,7 +47,7 @@ describe('NonuniformResizingClipViewsLayout', () => {
 		for (let [durations, expectedPages] of cases) {
 					
 			const clipViews = durations.map(d => ({duration: d}));
-			const layout = new NonuniformResizingClipViewsLayout(
+			const layout = new _NonuniformResizingClipViewsLayout(
 				null, clipViews, settings);
 
 			expect(layout.div).toBe(null);
