@@ -3,51 +3,6 @@
 
 /*
 
-Terms:
-* clip collection view - displays a collection of clips
-* clip view - renders one clip into a div reserved exclusively for that clip
-* layout - partitions clips into pages and lays out clip views on a page div
-
-Classes:
-* Clip
-* SpectrogramClipView
-* UniformResizingClipViewsLayout
-* UniformNonresizingClipViewsLayout
-* NonuniformResizingClipViewsLayout
-* NonuniformNonresizingClipViewsLayout
-
-Collection view layout options
-    uniform or nonuniform width clip views
-    resizing or nonresizing clip views
-
-layout = {
-
-    page: {
-        size: 100
-    }
-    
-    clip_view: {
-        width: 300,
-        height: 100,
-        x_spacing: 15,
-        y_spacing: 15,
-        selection_outline_width: 5,
-        duration: .3
-    }
-    
-}
-
-page = layout.page;       // enables use of page.size
-cv = layout.clip_view;    // enables use of cv.width, cv.height, etc.
-cl = layout.clip_label;   // enables use of cl.visible, etc.
-
-
-layout.page.size
-layout.clip_view.width
-layout.clip_view.height
-layout.clip_label.visible
-
-
 Clip collection view layout settings by layout type:
 
     Uniform Nonresizing Clip Views
@@ -105,34 +60,6 @@ Clip collection view layout settings by layout type:
             initial_padding: seconds
             final_padding: seconds
 
-
-Spectrogram clip view settings:
-    start_freq: hertz
-    end_freq: hertz
-    spectrogram: spectrogram settings
-
-
-Spectrogram settings:
-    window_size: 100
-    hop_size: 25
-    dft_size: 256
-    reference_power: 1
-    low_power: 10
-    high_power: 100
-    smoothing_enabled: true
-    time_padding_enabled: false
-
-
-Clip label settings:
-    visible: true
-    location: bottom
-    color: white
-    size: .8
-    classification_included: true
-    start_time_included: false
-    hidden_classification_prefixes: ["Call."]
-
-
 */
 
 
@@ -165,13 +92,24 @@ class NonuniformNonresizingClipViewsLayout {
      *         initial_padding: seconds
      *         final_padding: seconds
      */
-	constructor(settings, clips = []) {
+	constructor(div, clipViews, settings) {
+		this._div = div;
+		this._clipViews = clipViews;
 		this._settings = settings;
-		this._clips = clips;
 		this._paginate();
 	}
 	
 	
+	get div() {
+		return this._div;
+	}
+	
+	
+    get clipViews() {
+    	return this._clipViews;
+    }
+    
+    
     get settings() {
     	return this._settings;
     }
@@ -183,17 +121,6 @@ class NonuniformNonresizingClipViewsLayout {
     }
     
     
-    get clips() {
-    	return this._clips;
-    }
-    
-    
-    set clips(clips) {
-    	this._clips = clips;
-    	this._paginate();
-    }
-    
-    
 	/**
 	 * Assigns clips to pages.
 	 */
@@ -201,7 +128,7 @@ class NonuniformNonresizingClipViewsLayout {
 		
 		const pg = this.settings.page;
 		
-		const numClips = this.clips.length;
+		const numClips = this.clipViews.length;
 		const numPages = Math.ceil(numClips / pg.size);
 		
 		const pageBounds = new Array(numPages);
@@ -228,11 +155,13 @@ class NonuniformNonresizingClipViewsLayout {
 	}
 	
 	
-	layOutClips(pageDiv, pageNum, clipViewManager) {
+	layOutClipViews(pageNum) {
 		
-		removeChildren(pageDiv);
+		const pageDiv = this.div;
 		
-		const cv = this.settings.clipView
+		_removeChildren(pageDiv);
+		
+		const cv = this.settings.clipView;
 		
 		const y_margin = cv.ySpacing / 2;
 		const x_margin = cv.xSpacing / 2;
@@ -257,11 +186,13 @@ class NonuniformNonresizingClipViewsLayout {
 		
 		for (let i = startIndex; i < endIndex; i++) {
 			
-			const span = this.clips[i].span;
-			const width = span * cv.timeScale + 'px';
+			const clipView = this.clipViews[i];
+			const clipDiv = clipView.div;
+			const width = clipView.duration * cv.timeScale + 'px';
 			
-			// Style clip div.
-			const clipDiv = clipViewManager.getClipView(i).div;
+			// Style clip div. It is important to set values for
+			// pretty much all of the sizing properties here since
+			// we reuse clip divs across layouts.
 		    clipDiv.className = 'clip';
 		    clipDiv.style.position = 'relative';
 		    clipDiv.style.minWidth = width;
@@ -280,23 +211,26 @@ class NonuniformNonresizingClipViewsLayout {
 			
 		}
 		
-		this._renderClipViews(pageNum, clipViewManager);
+		this._renderClipViews(pageNum);
 		
 	}
 	
 	
-	_renderClipViews(pageNum, clipViewManager) {
+	// TODO: Reconsider whether or not we need to lay out clip divs
+	// and render their contents in separate stages. If we do retain
+	// the two separate stages, document why.
+	_renderClipViews(pageNum) {
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
 		
 		for (let i = startIndex; i < endIndex; i++)
-			clipViewManager.getClipView(i).render();
+			this.clipViews[i].render();
 		
 	}
 	
 	
-	handlePageResize(pageDiv, pageNum, clipViewManager) {
-		// For this layout resizing is handled by the flexbox layout.
+	onResize(pageNum) {
+		// For this layout type resizes are handled by the flexbox layout.
 	}
 	
 	
@@ -323,28 +257,35 @@ class NonuniformResizingClipViewsLayout {
      *         initial_padding: seconds
      *         final_padding: seconds
 	 */
-	constructor(settings, clips = []) {
+	constructor(div, clipViews, settings) {
+		this._div = div;
+		this._clipViews = clipViews;
 		this._settings = settings;
-		this.clips = clips;
-	}
-	
-	
-	get settings() {
-		return this._settings;
-	}
-	
-	
-	get clips() {
-		return this._clips;
-	}
-	
-	
-	set clips(clips) {
-		this._clips = clips;
 		this._paginate();
 	}
 	
 	
+	get div() {
+		return this._div;
+	}
+	
+	
+    get clipViews() {
+    	return this._clipViews;
+    }
+    
+    
+    get settings() {
+    	return this._settings;
+    }
+    
+    
+    set settings(settings) {
+    	this._settings = settings;
+    	this._paginate();
+    }
+    
+    
 	/**
 	 * Assigns clips to pages and rows.
 	 */
@@ -352,9 +293,9 @@ class NonuniformResizingClipViewsLayout {
 		
 		const pg = this.settings.page;
 		const cv = this.settings.clipView;
-		const clips = this.clips;
+		const clipViews = this.clipViews;
 		
-		if (clips.length == 0) {
+		if (clipViews.length === 0) {
 			
 			this._pages = [];
 			
@@ -366,13 +307,13 @@ class NonuniformResizingClipViewsLayout {
 			
 			const pages = [];
 			let page = [0];
-		    let rowWidth = widthFactor * clips[0].span + xSpacing;
+		    let rowWidth = widthFactor * clipViews[0].duration + xSpacing;
 		    
 		    let i = 1;
 		    
-			for ( ; i < clips.length; i++) {
+			for ( ; i < clipViews.length; i++) {
 				
-				const width = widthFactor * clips[i].span + xSpacing;
+				const width = widthFactor * clipViews[i].duration + xSpacing;
 				
 				if (rowWidth + width <= maxRowWidth) {
 					// clip fits on current row
@@ -425,15 +366,17 @@ class NonuniformResizingClipViewsLayout {
 	}
 	
 	
-	layOutClips(pageDiv, pageNum, clipViewManager) {
+	layOutClipViews(pageNum) {
 		
-		removeChildren(pageDiv);
+		const pageDiv = this.div;
+		
+		_removeChildren(pageDiv);
 		
 		const pg = this.settings.page;
 		const cv = this.settings.clipView;
-		
-		const xMargin = toCssPercent(cv.xSpacing / 2.);
-		const yMargin = toCssPercent(cv.ySpacing / 2.);
+
+		const xMargin = _toCssPercent(cv.xSpacing / 2.);
+		const yMargin = _toCssPercent(cv.ySpacing / 2.);
 		const margin = xMargin + ' ' + yMargin;
 		
 		// Style the page div. It is important to set values for pretty
@@ -451,12 +394,13 @@ class NonuniformResizingClipViewsLayout {
 		pageDiv.style.margin = margin;
 
 		const rowStartIndices = this._pages[pageNum];
-		
+		const clipViews = this.clipViews;
+				
 		for (let i = 0; i < pg.height; i++) {
 			
 			// Create row div. We create a separate div for each row so
-			// we can lay out clips whose spans exceed the display width
-			// in a special way. See below.
+			// we can lay out clip views whose durations exceed the display
+			// width in a special way. See below for details.
 			const rowDiv = document.createElement('div');
 			rowDiv.className = 'row';
 			rowDiv.style.display = 'flex';
@@ -473,16 +417,13 @@ class NonuniformResizingClipViewsLayout {
 				
 				for (let j = startIndex; j < endIndex; j++) {
 					
-					const clipView = clipViewManager.getClipView(j);
+					const clipView = clipViews[j];
 					
-					const clip = this.clips[j];
-					const width = 100 * (clip.span / pg.width);
+					const width = 100 * (clipView.duration / pg.width);
 					
-					console.log(j, width);
-					
-					if (rowLength == 1 && width > 100) {
-						// row contains a single clip and that clip is
-						// wider than the display
+					if (rowLength === 1 && width > 100) {
+						// row contains a single clip view and that clip view
+						// is wider than the display
 						
 						// In this case we change the row div's justify-content
 						// CSS property from center to flex-start so the clip
@@ -496,20 +437,24 @@ class NonuniformResizingClipViewsLayout {
 					}
 					
 					
-					// Style clip div.
+					// Style clip div. It is important to set values for
+					// pretty much all of the sizing properties here since
+					// we reuse clip divs across layouts.
 					const clipDiv = clipView.div;
 				    clipDiv.className = 'clip';
-				    clipDiv.style.flex = '0 0 ' + toCssPercent(width);
 				    clipDiv.style.position = 'relative';
+				    clipDiv.style.flex = '0 0 ' + _toCssPercent(width);
+				    clipDiv.style.minWidth = 'auto';
+				    clipDiv.style.width = 'auto';
+				    clipDiv.style.height = 'auto';
 				    clipDiv.style.margin = margin
 				    
 				    // TODO: Draw selection outlines properly.
-				    if (j == 2) {
+				    if (j === 2) {
 				    	clipDiv.style.outlineWidth = '5px';
 				    	clipDiv.style.outlineStyle = 'solid';
 				    	clipDiv.style.outlineColor = 'orange';
 				    }
-				    
 				    
 					rowDiv.appendChild(clipDiv);
 					
@@ -521,35 +466,39 @@ class NonuniformResizingClipViewsLayout {
 			
 		}
 		
-		this._renderClipViews(pageNum, clipViewManager);
+		this._renderClipViews(pageNum);
 		
 	}
 	
 
-	_renderClipViews(pageNum, clipViewManager) {
+	// TODO: Reconsider whether or not we need to lay out clip divs
+	// and render their contents in separate stages. If we do retain
+	// the two separate stages, document why.
+	_renderClipViews(pageNum) {
 		
 		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
 		
+		const clipViews = this.clipViews;
 		for (let i = startIndex; i < endIndex; i++)
-			clipViewManager.getClipView(i).render();
+			clipViews[i].render();
 		
 	}
 	
 	
-	handlePageResize(pageDiv, pageNum, clipViewManager) {
-		this._renderClipViews(pageNum, clipViewManager);
+	onResize(pageNum) {
+		this._renderClipViews(pageNum);
 	}
 	
 	
 }
 
 
-function removeChildren(div) {
+function _removeChildren(div) {
     while (div.firstChild)
     	div.removeChild(div.firstChild);
 }
 
 
-function toCssPercent(x) {
+function _toCssPercent(x) {
 	return x.toFixed(2) + '%';
 }

@@ -44,18 +44,16 @@ describe('NonuniformResizingClipViewsLayout', () => {
 		    
 		];
 		
-		for (let [spans, expectedPages] of cases) {
+		for (let [durations, expectedPages] of cases) {
 					
-			const layout = new NonuniformResizingClipViewsLayout(settings);
+			const clipViews = durations.map(d => ({duration: d}));
+			const layout = new NonuniformResizingClipViewsLayout(
+				null, clipViews, settings);
+
+			expect(layout.div).toBe(null);
+			expect(layout.clipViews).toEqual(clipViews);
 			expect(layout.settings).toEqual(settings);
-			expect(layout.clips).toEqual([]);
-			expect(layout.numPages).toEqual(0);
 			
-			const clips = spans.map(span => ({span: span}));
-			layout.clips = clips;
-				
-		    expect(layout.settings).toEqual(settings);
-			expect(layout.clips).toEqual(clips);
 			expect(layout.numPages).toBe(expectedPages.length);
 			
 			// page index bounds and row start indices
