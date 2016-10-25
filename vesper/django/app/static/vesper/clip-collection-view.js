@@ -602,7 +602,7 @@ class _NonuniformResizingClipViewsLayout {
 
 		const xMargin = _toCssPercent(cv.xSpacing / 2.);
 		const yMargin = _toCssPercent(cv.ySpacing / 2.);
-		const margin = xMargin + ' ' + yMargin;
+		const margin = yMargin + ' ' + xMargin;
 		
 		// Style the page div. It is important to set values for pretty
 		// much all of the flexbox properties here since we allow switching
