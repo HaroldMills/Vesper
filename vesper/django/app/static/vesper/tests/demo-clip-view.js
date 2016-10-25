@@ -36,6 +36,7 @@ class DemoClipView {
 		return this.clip.span;
 	}
 	
+	
 	get div() {
 		
 		if (this._div === null)
@@ -57,10 +58,10 @@ class DemoClipView {
 		div.appendChild(canvas);
 		this._canvas = canvas;
 		
-	    const h = document.createElement('h3');
-	    h.className = 'clip-label';
-	    h.innerHTML = (this.clip.index + 1).toString();
-	    div.appendChild(h);
+	    const label = document.createElement('p');
+	    label.className = 'clip-label';
+	    label.innerHTML = (this.clip.index + 1).toString();
+	    div.appendChild(label);
 	    
 	    return div;
 
