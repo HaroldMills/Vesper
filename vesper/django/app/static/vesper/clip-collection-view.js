@@ -79,15 +79,17 @@ spectrogram colors).
 class ClipCollectionView {
 	
 	
-	constructor(div, clips, clipViewClasses, settings) {
+	constructor(div, clips, clipViewDelegateClasses, settings) {
 		
 		this._div = div;
 		this._clips = clips;
-		this._clipViewClasses = clipViewClasses;
+		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		this._settings = settings;
 		this._pageNum = 0;
 		
 		this._clipViews = this._createClipViews(settings);
+		
+		this._layoutClasses = this._createLayoutClassesObject();
 		this._layout = this._createLayout(settings);
 		
 		this._update();
@@ -96,15 +98,27 @@ class ClipCollectionView {
 	
 	
 	_createClipViews(settings) {
-		const viewClass = this.clipViewClasses[settings.clipViewType];
-		const viewSettings = _getFullClipViewSettings(settings);
-		const createClipView = clip => new viewClass(this, clip, viewSettings);
+		const viewSettings = settings.clipView;
+		const delegateClass =
+			this.clipViewDelegateClasses[settings.clipViewType];
+		const createClipView =
+		    clip => new ClipView(this, clip, viewSettings, delegateClass);
 		return this.clips.map(createClipView);
 	}
 	
 	
+	_createLayoutClassesObject() {
+		return {
+			'Nonuniform Nonresizing Clip Views':
+				_NonuniformNonresizingClipViewsLayout,
+			'Nonuniform Resizing Clip Views':
+				_NonuniformResizingClipViewsLayout
+		};
+	}
+	
+	
 	_createLayout(settings) {
-		const layoutClass = _layoutClasses[settings.layoutType];
+		const layoutClass = this._layoutClasses[settings.layoutType];
 		return new layoutClass(this.div, this._clipViews, settings.layout);
 	}
 	
@@ -134,8 +148,8 @@ class ClipCollectionView {
 	}
 	
 	
-	get clipViewClasses() {
-		return this._clipViewClasses;
+	get clipViewDelegateClasses() {
+		return this._clipViewDelegateClasses;
 	}
 	
 	
@@ -164,7 +178,7 @@ class ClipCollectionView {
 			// clip view type will not change
 		
 			// TODO: Update view settings only if they have changed.
-			const viewSettings = _getFullClipViewSettings(settings);
+			const viewSettings = settings.clipView;
 			for (let view of this._clipViews) {
 				view.settings = viewSettings;
 			}
@@ -215,14 +229,6 @@ class ClipCollectionView {
 	}
 
 
-}
-
-
-function _getFullClipViewSettings(settings) {
-	// TODO: Augment clip view settings with any relevant ones
-	// from the layout settings, e.g. the time axis duration or
-	// initial and final padding.
-	return settings.clipView;
 }
 
 
@@ -727,9 +733,3 @@ function _removeChildren(div) {
 function _toCssPercent(x) {
 	return x.toFixed(2) + '%';
 }
-
-
-const _layoutClasses = {
-	'Nonuniform Nonresizing Clip Views': _NonuniformNonresizingClipViewsLayout,
-	'Nonuniform Resizing Clip Views': _NonuniformResizingClipViewsLayout
-};

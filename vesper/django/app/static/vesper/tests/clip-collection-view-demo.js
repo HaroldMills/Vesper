@@ -68,10 +68,10 @@ function onLoad() {
 	
 	const pageDiv = document.getElementById('page');
 	const clips = createClips(numClips, minClipSpan, maxClipSpan);
-	const clipViewClasses = { 'Demo': DemoClipView };
+	const clipViewDelegateClasses = { 'Demo': DemoClipViewDelegate };
 	const settings = getSettings();
 	clipCollectionView = new ClipCollectionView(
-		pageDiv, clips, clipViewClasses, settings);
+		pageDiv, clips, clipViewDelegateClasses, settings);
 	
 	updateTitle();
 	
@@ -153,6 +153,57 @@ function onKeyPress(e) {
 function setPageNum(pageNum) {
 	clipCollectionView.pageNum = pageNum;
 	updateTitle();
+}
+
+
+class DemoClipViewDelegate extends ClipViewDelegate {
+	
+	
+	_createDiv() {
+		
+		const document = this.clipView.parent.div.ownerDocument;
+		
+		const div = document.createElement('div');
+		
+		const canvas = document.createElement('canvas');
+		canvas.className = 'clip-canvas';
+		div.appendChild(canvas);
+		this._canvas = canvas;
+		
+	    return div;
+
+	}
+	
+	
+	render() {
+		
+		const div = this.div;
+		
+		const canvas = this._canvas;
+		const width = canvas.clientWidth;
+		const height = canvas.clientHeight;
+		
+		canvas.width = width;
+		canvas.height = height;
+		
+		const size = 20;
+		const left = (width - size) / 2;
+		const top = (height - size) / 2;
+		const right = (width + size) / 2;
+		const bottom = (height + size) / 2;
+
+		const context = canvas.getContext('2d');
+		context.beginPath();
+		context.moveTo(left, top);
+		context.lineTo(right, bottom);
+		context.moveTo(right, top);
+		context.lineTo(left, bottom);
+		context.lineWidth = 2;
+		context.stroke()
+		
+	}
+
+	
 }
 
 
