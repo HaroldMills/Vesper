@@ -1,8 +1,14 @@
 """Module containing functions that parse schedules."""
 
 
+import datetime
+import re
+
+
 '''
-time ::= time_24 | am_pm_time | time_name | event_name | event_relative_time
+time ::= nonrelative_time | relative_time
+
+nonrelative_time ::= time_24 | am_pm_time | time_name | event_name
 
 time_24 ::= h?h:mm:ss (with hour in [0, 23])
 am_pm_time ::=  time_12 am_pm
@@ -14,7 +20,7 @@ event_name = 'sunrise' | 'sunset' | 'civil dawn' | 'civil dusk' |
     'nautical dawn' | 'nautical dusk' | 'astronomical dawn' |
     'astronomical dusk'
     
-event_relative_time ::= offset preposition event_name
+relative_time ::= offset preposition event_name
 offset ::= hhmmss_offset | units_offset
 hhmmss_offset ::= h?h:mm:ss
 units_offset ::= number units (with number 1 if units singular)
@@ -22,7 +28,7 @@ number ::= d+ | d+.d* | .d+
 units ::= 'hours' | 'hour' | 'minutes' | 'minute' | 'seconds' | 'second'
 preposition = 'before' | 'after'
 
-daily_time examples:
+time examples:
     12:34:56
     12 pm
     3:45 am
@@ -35,30 +41,50 @@ daily_time examples:
     30 minutes after civil dusk
     10 seconds before nautical dawn
     
-schedule:
+date_time ::= date time
+date ::= yyyy-mm-dd
+
+date_time examples:
+    2016-11-28 12:34:56
+    2016-11-28 12 pm
+    2016-11-28 noon
+    2016-11-28 sunset
+    2016-11-18 1 hour after sunset
+
+example schedules:
 
     latitude: 42.5
     longitude: -70
     time_zone: EDT
     
-    repeated_interval:
+    repeating_interval:
         start_time: 1 hour after sunset
         end_time: 30 minutes before sunrise
-        filter_start_date_time: 2016-07-15 noon
-        filter_end_date_time: 2016-10-16 noon
+        first_interval_start_date: 2016-07-15
+        last_interval_start_date: 2016-10-15
+        
+    interval:
+        start_date_time: 2016-07-15 1 hour after sunset
+        end_date_time: 2016-07-16 30 minutes before sunrise
 '''
 
 
-import datetime
-import re
+def parse_schedule(s):
+    pass
 
 
-class _RelativeTime:
-    
+class _EventRelativeTime:
     def __init__(self, event_name, offset):
         self.event_name = event_name
         self.offset = offset
         
+        
+class _EventRelativeDateTime:
+    def __init__(self, date, event_name, offset):
+        self.date = date
+        self.event_name = event_name
+        self.offset = offset
+
 
 _HHMMSS = re.compile(r'(\d?\d):(\d\d):(\d\d)')
 _HHMM = re.compile(r'(\d?\d):(\d\d)')
@@ -90,6 +116,8 @@ _UNITS_FACTORS = {
 }
 
 _PREPOSITIONS = frozenset(('before', 'after'))
+
+_DATE = re.compile(r'(\d\d\d\d)-(\d\d)-(\d\d)')
 
 
 def _parse_time_24(s):
@@ -171,11 +199,32 @@ def _parse_time_name(s):
 
 def _parse_event_name(s):
     if s in _EVENT_NAMES:
-        return _RelativeTime(s, datetime.timedelta())
+        return _EventRelativeTime(s, datetime.timedelta())
     else:
         return None
     
     
+_NONRELATIVE_TIME_PARSE_FUNCTIONS = (
+    _parse_time_24, _parse_am_pm_time, _parse_time_name, _parse_event_name)
+
+
+def _parse_nonrelative_time(s):
+    return _parse(s, _NONRELATIVE_TIME_PARSE_FUNCTIONS)
+    
+    
+def _parse(s, parse_functions):
+    
+    for f in parse_functions:
+        
+        result = f(s)
+        
+        if result is not None:
+            return result
+    
+    # If we get here, no parse function could parse `s`.
+    return None
+
+
 def _parse_relative_time(s):
     
     parts = s.split()
@@ -187,7 +236,7 @@ def _parse_relative_time(s):
     except:
         return None
     
-    return _RelativeTime(event_name, offset)
+    return _EventRelativeTime(event_name, offset)
     
     
 def _parse_preposition(parts):
@@ -273,181 +322,44 @@ def _parse_number(s):
     return None
 
 
-_PARSE_FUNCTIONS = (
-    _parse_time_24, _parse_am_pm_time, _parse_time_name,
-    _parse_event_name, _parse_relative_time)
+_TIME_PARSE_FUNCTIONS = (_parse_nonrelative_time, _parse_relative_time)
 
 
 def _parse_time(s):
-    
-    for f in _PARSE_FUNCTIONS:
-        
-        result = f(s)
-        
-        if result is not None:
-            return result
-    
-    # If we get here, no parse function could parse `s`.
-    raise ValueError('Could not parse time "{}".'.format(s))
+    return _parse(s, _TIME_PARSE_FUNCTIONS)
 
 
-def _main():
-    s = '.5 hours before civil dusk'
-    time = _parse_time(s)
-    if isinstance(time, _RelativeTime):
-        print('{}, {}'.format(time.event_name, time.offset.total_seconds()))
+def _parse_date_time(s):
+    
+    parts = s.split(maxsplit=1)
+    
+    if len(parts) != 2:
+        return None
+    
+    date = _parse_date(parts[0])
+    if date is None:
+        return None
+    
+    time = _parse_time(parts[1])
+    if time is None:
+        return None
+    
+    if isinstance(time, datetime.time):
+        return datetime.datetime.combine(date, time)
     else:
-        print(time)
-    
+        return _EventRelativeDateTime(date, time.event_name, time.offset)
 
-if __name__ == '__main__':
-    _main()
     
+def _parse_date(s):
     
-# The code below uses the `pyparsing` module to parse times. It is
-# considerably shorter than the `_parse_time` function and related
-# functions above, but it is less portable to other languages than
-# that code. I chose to write and use the longer code after writing
-# the shorter code because I anticipate wanting to port the code to
-# JavaScript.
-#
-#
-# from pyparsing import (
-#     Group, oneOf, ParseException, Regex, Suppress, White)
-#
-#
-# _ZEROS = ['00', '00']
-# 
-# def _parse_am_pm_time_tokens(tokens):
-#     parts = tokens[0].split(':')
-#     parts += _ZEROS[:3 - len(parts)]
-#     hh, mm, ss = [int(i) for i in parts]
-#     _check_int_range(hh, 1, 12, 'hour')
-#     _check_int_range(mm, 0, 59, 'minute')
-#     _check_int_range(ss, 0, 59, 'second')
-#     if hh == 12:
-#         hh = 0
-#     if tokens[1] == 'pm':
-#         hh += 12
-#     return datetime.time(hh, mm, ss)        
-#     
-# def _parse_hhmmss_time_tokens(tokens):
-#     parts = tokens[0].split(':')
-#     hh, mm, ss = [int(i) for i in parts]
-#     _check_int_range(hh, 0, 23, 'hour')
-#     _check_int_range(mm, 0, 59, 'minute')
-#     _check_int_range(ss, 0, 59, 'second')
-#     return datetime.time(hh, mm, ss)
-#     
-# def _parse_named_time_tokens(tokens):
-#     hh = 12 if tokens[0] == 'noon' else 0
-#     return datetime.time(hh)
-# 
-# _HHMMSS_RE = r'\d?\d:\d\d:\d\d'
-# 
-# _HHMMSS = Regex(_HHMMSS_RE)
-# _HHMM = Regex(r'\d?\d:\d\d')
-# _HH = Regex(r'\d?\d')
-# 
-# _ = Suppress(White(ws=' ', exact=1))
-# 
-# _AM_PM_TIME = \
-#     ((_HHMMSS | _HHMM | _HH) + _ + oneOf('am pm')).setParseAction(
-#         _parse_am_pm_time_tokens)
-# 
-# _HHMMSS_TIME = Regex(_HHMMSS_RE).setParseAction(_parse_hhmmss_time_tokens)
-# 
-# _NAMED_TIME = oneOf('noon midnight').setParseAction(_parse_named_time_tokens)
-# 
-# _TIME_OF_DAY = _AM_PM_TIME | _HHMMSS_TIME | _NAMED_TIME
-# 
-# 
-# def _parse_hhmmss_offset_tokens(tokens):
-#     hh, mm, ss = [int(i) for i in tokens[0].split(':')]
-#     _check_int_range(hh, 0, 24, 'hours')
-#     _check_int_range(mm, 0, 59, 'minutes')
-#     _check_int_range(ss, 0, 59, 'seconds')
-#     return hh * 3600 + mm * 60 + ss
-# 
-# def _check_int_range(i, min, max, units):
-#     if i < min or i > max:
-#         raise ParseException('Bad {} value {}.'.format(units, i))
-#     
-# def _parse_float_token(tokens):
-#     return float(tokens[0])
-# 
-# def _check_units_offset_tokens(tokens):
-#     number, units = tokens[0]
-#     if not units.endswith('s') and number != 1:
-#         raise ParseException('Number with singular time units must be 1.')
-#     
-# _HHMMSS_OFFSET = \
-#     Regex(r'\d?\d:\d\d:\d\d').setParseAction(_parse_hhmmss_offset_tokens)
-# 
-# _NUMBER = \
-#     (Regex(r'\d+\.\d*') | Regex(r'\.\d+') | Regex(r'\d+')).setParseAction(
-#         _parse_float_token)
-#     
-# _UNITS = oneOf(['hours', 'hour', 'minutes', 'minute', 'seconds', 'second'])
-# 
-# _UNITS_OFFSET = \
-#     Group(_NUMBER('number') + _UNITS('units')).setParseAction(
-#         _check_units_offset_tokens)
-#     
-# _PREPOSITION = oneOf('before after')
-# 
-# _EVENT_NAME = oneOf([
-#     'sunrise', 'sunset', 'civil dawn', 'civil dusk', 'nautical dawn',
-#     'nautical dusk', 'astronomical dawn', 'astronomical dusk'])
-# 
-# _HHMMSS_RELATIVE_TIME = \
-#     _HHMMSS_OFFSET('offset') + _ + _PREPOSITION('preposition') + _ + \
-#     _EVENT_NAME('event_name')
-#     
-# _UNITS_RELATIVE_TIME = \
-#     _UNITS_OFFSET('offset') + _ + _PREPOSITION('preposition') + _ + \
-#     _EVENT_NAME('event_name')
-#
-#
-# def _parse_hhmmss_time(s):
-#     return _HHMMSS_TIME.parseString(s)[0]
-#     
-#     
-# def _parse_am_pm_time(s):
-#     return _AM_PM_TIME.parseString(s)[0]
-# 
-# 
-# def _parse_named_time(s):
-#     return _NAMED_TIME.parseString(s)[0]
-# 
-# 
-# def _parse_hhmmss_relative_time(s):
-#     
-#     result = _HHMMSS_RELATIVE_TIME.parseString(s)
-#     
-#     seconds = result.offset
-#     if result.preposition == 'before':
-#         seconds = -seconds
-#     offset = datetime.timedelta(seconds=seconds)
-#         
-#     return RelativeTime(result.event_name, offset)
-#     
-#     
-# def _parse_units_relative_time(s):
-#     
-#     result = _UNITS_RELATIVE_TIME.parseString(s)
-#     
-#     number, units = result.offset
-#     if units.startswith('h'):
-#         seconds = number * 3600
-#     elif units.startswith('m'):
-#         seconds = number * 60
-#     else:
-#         seconds = number
-#         
-#     if result.preposition == 'before':
-#         seconds = -seconds
-#         
-#     offset = datetime.timedelta(seconds=seconds)
-#     
-#     return RelativeTime(result.event_name, offset)
+    m = _DATE.fullmatch(s)
+    
+    if m is None:
+        return None
+    
+    year, month, day = [int(i) for i in m.groups()]
+    
+    try:
+        return datetime.date(year, month, day)
+    except ValueError:
+        return None
