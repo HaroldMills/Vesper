@@ -19,22 +19,11 @@ from vesper.schedule.schedule import Interval, Schedule
 import vesper.ephem.ephem_utils as ephem_utils
 
 
-# Disable pyyaml timestamp parsing. By default pyyaml will parse a string
-# like "2016-12-14 12:00:00" to yield a Python `datetime.datetime` object,
-# but we want to do the parsing ourselves. The constructor we add (i.e. the
-# `lambda` below) leaves the node value a string.
-#
-# See http://pyyaml.org/wiki/PyYAMLDocumentation for documentation for the
-# pyyaml `add_constructor` function,
-# http://stackoverflow.com/questions/13294186/can-pyyaml-parse-iso8601-dates
-# for another example that adds a constructor to parse timestamps, and
-# http://yaml.org/type/index.html for a list of YAML tags, including the
-# one for timestamps.
-yaml.add_constructor(
-    'tag:yaml.org,2002:timestamp', lambda loader, node: node.value)
-
-
 '''
+Grammar for schedule dates and times:
+
+date ::= yyyy-mm-dd
+
 time ::= nonoffset_time | offset_time
 
 nonoffset_time ::= time_24 | am_pm_time | time_name | solar_event_name
@@ -44,7 +33,6 @@ am_pm_time ::=  time_12 am_pm
 time_12 ::= h?h:mm:ss | h?h:mm | h?h (with hour in [1, 12])
 am_pm ::= 'am' | 'pm'
 time_name ::= 'noon' | 'midnight'
-
 solar_event_name = 'sunrise' | 'sunset' | 'civil dawn' | 'civil dusk' |
     'nautical dawn' | 'nautical dusk' | 'astronomical dawn' |
     'astronomical dusk'
@@ -57,7 +45,10 @@ number ::= d+ | d+.d* | .d+
 units ::= 'hours' | 'hour' | 'minutes' | 'minute' | 'seconds' | 'second'
 preposition = 'before' | 'after'
 
-time examples:
+date_time ::= date time
+
+
+Time examples:
     12:34:56
     12 pm
     3:45 am
@@ -70,44 +61,81 @@ time examples:
     30 minutes after civil dusk
     10 seconds before nautical dawn
     
-date_time ::= date time
-date ::= yyyy-mm-dd
-
-date_time examples:
+    
+Date/time examples:
     2016-11-28 12:34:56
     2016-11-28 12 pm
     2016-11-28 noon
     2016-11-28 sunset
     2016-11-18 1 hour after sunset
 
-example schedules:
 
+Example schedules:
+
+    interval:
+        start: 2016-07-15 1 hour after sunset
+        end: 2016-07-16 30 minutes before sunrise
+        
+    intervals:
+        - start: 2016-07-15 noon
+          duration: 1 hour
+        - start: 2016-07-15 2 pm
+          duration: 1 hour
+          
     daily:
         start_time: 1 hour before sunrise
         end_time: 2 hours after sunrise
         start_date: 2016-07-15
         end_date: 2016-10-15
-        period: 2 days
+        
+    union:
+        - intervals
+          ...
+        - daily
+          ...
+         
+          
+Ideas not yet implemented:
+
+    Periodic interval schedules:
+        periodic:
+            duration: 10 minutes
+            period: 1 hour
+            start_date_time: 2016-07-15 noon
+            end_date_time: 2016-07-15 4 pm
+        
+    Day of week/month filtering in daily schedules, such as:
         days: [Monday, Wednesday, Friday]
         days: [Monday 1, Monday 3]
         days: [1, 15]
         
-    interval:
-        start: 2016-07-15 1 hour after sunset
-        end: 2016-07-16 30 minutes before sunrise
-        
-    # I like the idea of allowing nested repeated interval schedules.
-    # Specifying longer intervals on the outside seems more natural
-    # to me.
-    daily:
-        start_time: 1 hour after sunset
-        end_time: 30 minutes before sunrise
-        periodic:
-            duration: 10 minutes
-            period: 1 hour
-        
+    Periodic schedules nested within daily schedules:
+        daily:
+            start_time: sunset
+            end_time: sunrise
+            periodic:
+                duration: 10 minutes
+                period: 1 hour
+            start_date: 2016-07-15
+            end_date: 2016-07-20
+            
+    Filtering of one schedule by another, including intersection.
+    
+    Schedule complementation.
+            
+            
+See Simplenote entry "Recording Schedules, Take 2" for more information
+about schedules.
 '''
 
+
+# There are two sets of functions involved in compiling schedules, the
+# *parse* functions and the *compile* functions. The parse functions
+# parse schedule dates and/or times from strings, while the compile
+# function compile dictionary schedule specifications into `Schedule`
+# objects. The parse functions are lower-level than the compile
+# functions, and are invoked by them.
+ 
 
 _INTERVAL_SCHEMA = yaml.load('''
     type: object
@@ -115,8 +143,8 @@ _INTERVAL_SCHEMA = yaml.load('''
         interval:
             type: object
             properties:
-                start: {type: string}
-                end: {type: string}
+                start: {}
+                end: {}
                 duration: {type: string}
             additionalProperties: false
     required: [interval]
@@ -132,8 +160,8 @@ _INTERVALS_SCHEMA = yaml.load('''
             items:
                 type: object
                 properties:
-                    start: {type: string}
-                    end: {type: string}
+                    start: {}
+                    end: {}
                     duration: {type: string}
                 additionalProperties: false
     required: [intervals]
@@ -159,15 +187,15 @@ _DAILY_SCHEMA = yaml.load('''
                             end: {type: string}
                             duration: {type: string}
                         additionalProperties: false
-                start_date: {type: string}
-                end_date: {type: string}
+                start_date: {}
+                end_date: {}
                 date_intervals:
                     type: array
                     items:
                         type: object
                         properties:
-                            start: {type: string}
-                            end: {type: string}
+                            start: {}
+                            end: {}
                         required: [start, end]
                         additionalProperties: false
             additionalProperties: false
@@ -268,25 +296,38 @@ def _count_non_nones(*args):
     return count
     
     
-def _compile_date_time(dt_text, context, dt_name):
-    
-    dt = _parse_date_time(dt_text)
-    
-    if dt is None:
-        raise ValueError('Bad interval {} "{}".'.format(dt_name, dt_text))
+def _compile_date_time(dt, context, dt_name):
     
     if isinstance(dt, datetime.datetime):
-        _check_context_attribute(
-            context.time_zone, 'time zone', dt_name, dt_text)
-        localized_dt = context.time_zone.localize(dt)
-        return localized_dt.astimezone(pytz.utc)
+        return _naive_to_utc(dt, context, dt_name)
+    
+    elif isinstance(dt, str):
+        
+        dt_text = dt
+        dt = _parse_date_time(dt)
+        
+        if dt is None:
+            raise ValueError('Bad interval {} "{}".'.format(dt_name, dt_text))
+        
+        if isinstance(dt, datetime.datetime):
+            return _naive_to_utc(dt, context, dt_name, dt_text)
+            
+        else:
+            _check_context_attribute(context.lat, 'latitude', dt_name, dt_text)
+            _check_context_attribute(context.lon, 'longitude', dt_name, dt_text)
+            return dt.resolve(context.lat, context.lon)
         
     else:
-        _check_context_attribute(context.lat, 'latitude', dt_name, dt_text)
-        _check_context_attribute(context.lon, 'longitude', dt_name, dt_text)
-        return dt.resolve(context.lat, context.lon)
+        raise ValueError(
+            'Bad interval {} {}.'.format(dt_name, str(dt)))
         
     
+def _naive_to_utc(dt, context, dt_name, dt_text=None):
+    _check_context_attribute(context.time_zone, 'time zone', dt_name, dt_text)
+    localized_dt = context.time_zone.localize(dt)
+    return localized_dt.astimezone(pytz.utc)
+    
+
 def _check_context_attribute(value, name, dt_name, dt_text=None):
     
     if value is None:
@@ -297,7 +338,7 @@ def _check_context_attribute(value, name, dt_name, dt_text=None):
             suffix =  ' "{}"'.format(dt_text)
             
         raise ValueError(
-            'No {} available for resolving interval {}{}.'.format(
+            'No {} available to resolve interval {}{}.'.format(
                 name, dt_name, suffix))
 
 
@@ -425,10 +466,14 @@ def _get_dates(interval):
         
         
 def _compile_date(date, name):
-    result = _parse_date(date)
-    if result is None:
-        raise ValueError('Bad {} date "{}".'.format(name, date))
-    return result
+    if isinstance(date, datetime.date):
+        return date
+    else:
+        if isinstance(date, str):
+            suffix = '"{}"'.format(date)
+        else:
+            suffix = '{}'.format(str(date))
+        raise ValueError('Bad {} date {}.'.format(name, suffix))
     
     
 def _check_daily_time_interval_properties(spec):

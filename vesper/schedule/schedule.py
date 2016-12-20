@@ -6,6 +6,7 @@ import datetime
 import itertools
 
 import pytz
+import yaml
 
 
 Interval = namedtuple('Interval', ('start', 'end'))
@@ -35,7 +36,20 @@ class Schedule:
     
     
     @staticmethod
-    def compile(spec, lat=None, lon=None, time_zone=None):
+    def compile_yaml(spec, lat=None, lon=None, time_zone=None):
+        
+        try:
+            spec = yaml.load(spec)
+        except Exception as e:
+            raise ValueError(
+                'Could not load schedule YAML. Error message was: {}'.format(
+                    e.message))
+            
+        return Schedule.compile_dict(spec, lat, lon, time_zone)
+    
+        
+    @staticmethod
+    def compile_dict(spec, lat=None, lon=None, time_zone=None):
         from vesper.schedule.schedule_compilers import compile_schedule
         context = {'lat': lat, 'lon': lon, 'time_zone': time_zone}
         return compile_schedule(spec, context)
