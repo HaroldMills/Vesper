@@ -2,6 +2,7 @@
 
 
 from collections import namedtuple
+from threading import Event, Thread
 import datetime
 import itertools
 import re
@@ -14,7 +15,7 @@ import vesper.ephem.ephem_utils as ephem_utils
 
 
 Interval = namedtuple('Interval', ('start', 'end'))
-Transition = namedtuple('Transition', ('datetime', 'state'))
+Transition = namedtuple('Transition', ('time', 'state'))
 
 
 class Schedule:
@@ -60,6 +61,8 @@ class Schedule:
     
     def __init__(self, intervals):
         self._intervals = _normalize(intervals)
+        self._listeners = set()
+        self._runner = None
         
         
     def get_intervals(self, start=None, end=None):
@@ -146,7 +149,40 @@ class Schedule:
             return False
         else:
             return self._intervals[i].start <= dt
+        
+        
+    def add_listener(self, listener):
+        self._listeners.add(listener)
     
+    
+    def remove_listener(self, listener):
+        self._listeners.discard(listener)
+    
+    
+    def clear_listeners(self):
+        self._listeners.clear()
+    
+    
+    def _notify_listeners(self, method_name, time, state):
+        for listener in self._listeners:
+            method = getattr(listener, method_name)
+            method(self, time, state)
+            
+            
+    def start(self):
+        if self._runner is None or not self._runner.is_alive():
+            self._runner = _ScheduleRunner(self)
+            self._runner.start()
+            
+            
+    def stop(self):
+        if self._runner is not None:
+            self._runner.stop()
+            
+            
+    def wait(self, timeout=None):
+        self._runner.wait(timeout)
+        
     
 def _normalize(intervals):
     
@@ -195,6 +231,130 @@ def _complete_query_interval(start, end):
     return (start, end)
 
 
+class ScheduleListener:
+    
+    
+    def schedule_run_started(self, schedule, time, state):
+        pass
+    
+    
+    def schedule_state_changed(self, schedule, time, state):
+        pass
+    
+    
+    def schedule_run_stopped(self, schedule, time, state):
+        pass
+    
+    
+    def schedule_run_completed(self, schedule, time, state):
+        pass
+    
+    
+class _ScheduleRunner(Thread):
+    
+    
+    def __init__(self, schedule):
+        super().__init__()
+        self._schedule = schedule
+        self._stop_event = Event()
+        self._terminated_event = Event()
+        
+        
+    def run(self):
+        
+        schedule = self._schedule
+        stop_event = self._stop_event
+        terminated_event = self._terminated_event
+        notify = schedule._notify_listeners
+        
+        now = datetime.datetime.now(pytz.utc)
+        state = schedule.get_state(now)
+        notify('schedule_run_started', now, state)
+        
+        transitions = tuple(schedule.get_transitions(start=now))
+        
+        if len(transitions) == 0:
+            # no schedule transitions remain
+            
+            notify('schedule_run_completed', now, False)
+            
+        else:
+            # schedule transitions remain
+            
+            for i, t in enumerate(transitions):
+                
+                self._wait_for_transition_or_stop(t)
+                
+                if stop_event.is_set():
+                    # stop requested
+                    
+                    now = datetime.datetime.now(pytz.utc)
+                    
+                    # Because there are multiple threads at play, it is
+                    # possible (though unlikely) that `now` follows or
+                    # equals the times of one or more transitions in
+                    # `transitions[i:]`, i.e. that the transitions have
+                    # occurred but the schedule's listeners have not been
+                    # notified of them. We perform the notifications here.
+                    while i < len(transitions) and transitions[i].time <= now:
+                        t = transitions[i]
+                        notify('schedule_state_changed', t.time, t.state)
+                        i += 1
+                        
+                    state = schedule.get_state(now)
+                    notify('schedule_run_stopped', now, state)
+                    
+                    terminated_event.set()
+                    
+                    return
+                
+                else:
+                    notify('schedule_state_changed', t.time, t.state)
+                    
+            # If we get here, the schedule run completed.
+            
+            notify('schedule_run_completed', t.time, False)
+                
+        terminated_event.set()
+        
+        
+    def _wait_for_transition_or_stop(self, t):
+        
+        while True:
+            
+            now = datetime.datetime.now(pytz.utc)
+            seconds = (t.time - now).total_seconds()
+            
+            if seconds <= 0:
+                # transition time reached
+                
+                return
+            
+            else:
+                # transition time not reached
+                
+                # We limit the wait duration to avoid `OverflowError`
+                # exceptions that we have seen (admittedly for very
+                # large numbers of seconds) if we don't. We keep the
+                # maximum wait duration fairly small on the hunch that
+                # doing so might improve the accuracy of schedule
+                # transition notification times, at least on some
+                # platforms.
+                seconds = min(seconds, 5)
+                self._stop_event.wait(seconds)
+                
+                if self._stop_event.is_set():
+                    return
+            
+            
+    def stop(self):
+        self._stop_event.set()
+        
+        
+    def wait(self, timeout=None):
+        self._terminated_event.wait(timeout)
+            
+        
 # The functions below compile schedules from dictionary schedule
 # specifications to `Schedule` objects. There are two sets of functions
 # involved, the *parse* functions and the *compile* functions. The parse
