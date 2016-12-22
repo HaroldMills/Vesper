@@ -253,7 +253,7 @@ def _round_time(time, unit_size):
     The unit size is specified in seconds.
     
     This function returns a number of seconds rather than a `time`
-    since in the return valuewe must be able to distinguish between
+    since in the return value we must be able to distinguish between
     the beginning and the end of a day.
     """
     
