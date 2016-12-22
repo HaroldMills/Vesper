@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <title>Clips New</title>
+  
+  {% include "vesper/header-prefix.html" %}
+  
+  <script>
+    const clipQuery = {
+    	'stationName': '{{station_name}}',
+    	'microphoneOutputName': '{{microphone_output_name}}',
+    	'detectorName': '{{detector_name}}',
+    	'classification': '{{classification}}',
+    	'date': '{{date}}'
+    };
+    const numClips = {{num_clips}};
+    const clips = {{clips_json|safe}};
+    const clipCollectionViewSettingsPresets =
+        {{clip_collection_view_settings_presets_json|safe}}
+    const annotationSchemePresets = {{annotation_scheme_presets_json|safe}}
+    const annotationCommandsPresets = {{annotation_commands_presets_json|safe}}
+  </script>
+  
+  {% load staticfiles %}
+  <script src="{% static 'vesper/dft.js' %}"></script>
+  <script src="{% static 'vesper/spectrogram.js' %}"></script>
+  <script src="{% static 'vesper/multiselection.js' %}"></script>
+  <script src="{% static 'vesper/ui-utils.js' %}"></script>
+  <script src="{% static 'vesper/clip-collection-view.js' %}"></script>
+  <script src="{% static 'vesper/night-new.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/night-new.css' %}">
+  
+</head>
+
+<body>
+
+  {% include "vesper/navbar.html" %}
+  
+  <h3 id="title"></h3>
+  <div id="rug-plot"></div>
+  <div id="clips"></div>
+  <!-- div id='footer'></div> -->
+  
+</body>
+
+</html>

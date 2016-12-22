@@ -68,10 +68,10 @@ function onLoad() {
 	
 	const pageDiv = document.getElementById('page');
 	const clips = createClips(numClips, minClipSpan, maxClipSpan);
-	const clipViewDelegateClasses = { 'Demo': DemoClipViewDelegate };
 	const settings = getSettings();
+	const clipViewDelegateClasses = { 'Demo': DemoClipViewDelegate };
 	clipCollectionView = new ClipCollectionView(
-		pageDiv, clips, clipViewDelegateClasses, settings);
+		pageDiv, clips, settings, clipViewDelegateClasses);
 	
 	updateTitle();
 	

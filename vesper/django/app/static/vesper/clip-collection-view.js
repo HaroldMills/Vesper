@@ -2,7 +2,6 @@
 
 
 /*
-
 settings:
 
     layout_type: Nonuniform Resizing Clip Views
@@ -24,7 +23,7 @@ settings:
 		    visible: true
 		    location: bottom
 		    color: white
-		    size: .8
+		    font_size: .8
 		    classification_included: true
 		    start_time_included: false
 		    hidden_classification_prefixes: ["Call."]
@@ -79,12 +78,12 @@ spectrogram colors).
 class ClipCollectionView {
 	
 	
-	constructor(div, clips, clipViewDelegateClasses, settings) {
+	constructor(elements, clips, settings, clipViewDelegateClasses) {
 		
-		this._div = div;
+		this._elements = elements;
 		this._clips = clips;
-		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		this._settings = settings;
+		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		this._pageNum = 0;
 		
 		this._clipViews = this._createClipViews(settings);
@@ -92,18 +91,27 @@ class ClipCollectionView {
 		this._layoutClasses = this._createLayoutClassesObject();
 		this._layout = this._createLayout(settings);
 		
+		this._selection = this._createSelection();
+		this._audioContext = new window.AudioContext();
+		
 		this._update();
 		
 	}
 	
 	
 	_createClipViews(settings) {
+		
 		const viewSettings = settings.clipView;
 		const delegateClass =
 			this.clipViewDelegateClasses[settings.clipViewType];
-		const createClipView =
-		    clip => new ClipView(this, clip, viewSettings, delegateClass);
-		return this.clips.map(createClipView);
+		
+		const clipViews = new Array(clips.length);
+		for (const [i, clip] of clips.entries())
+			clipViews[i] =
+				new ClipView(this, i, clip, viewSettings, delegateClass);
+		
+		return clipViews;
+		
 	}
 	
 	
@@ -119,7 +127,24 @@ class ClipCollectionView {
 	
 	_createLayout(settings) {
 		const layoutClass = this._layoutClasses[settings.layoutType];
-		return new layoutClass(this.div, this._clipViews, settings.layout);
+		return new layoutClass(
+			this.elements.clipsDiv, this._clipViews, settings.layout);
+	}
+	
+	
+	_createSelection() {
+		
+		if (this.numPages > 0) {
+			
+		    const [startNum, endNum] = this.getPageClipNumRange(this.pageNum);
+		    return new Multiselection(startNum, endNum - 1);
+		    
+		} else {
+			
+			return null;
+			
+		}
+		
 	}
 	
 	
@@ -132,14 +157,83 @@ class ClipCollectionView {
 		} else {
 			
 		    this._layout.layOutClipViews(this.pageNum);
+		    this._updateSelectionOutlines();
 		    
+		}
+		
+		this._updateTitle();
+		
+	}
+	
+	
+	_updateTitle() {
+		
+		const q = clipQuery;
+		
+		const micOutputName =
+			getMicrophoneOutputDisplayName(q.microphoneOutputName);
+			
+		const pageText = this._getTitlePageText();
+		
+		const title = `${q.date} / ${q.stationName} / ${micOutputName} / ` +
+	        `${q.detectorName} / ${q.classification} / ${pageText}`;
+		
+		this.elements.titleHeading.innerHTML = title;
+		
+		document.title = `Clips - ${title}`;
+		
+	}
+	
+	
+	_getTitlePageText() {
+		
+		const numClips = this.clips.length;
+		
+		if (numClips === 0) {
+			
+			return 'No Clips';
+			
+		} else {
+		
+			const numPages = this.numPages;
+			const pageNum = this.pageNum;
+			
+			const pageText = `Page ${pageNum + 1} of ${numPages}`;
+			
+			const [startNum, endNum] = this.getPageClipNumRange(pageNum);
+			
+			const clipsText =
+				endNum - startNum > 1 ?
+				`Clips ${startNum + 1}-${endNum} of ${numClips}` :
+				`Clip ${startNum + 1} of ${numClips}`;
+				
+			return `${pageText} / ${clipsText}`;
+				
+		}
+			
+	}
+	
+	
+	_updateSelectionOutlines() {
+		
+		const clipViews = this._clipViews;
+		const outline = this.settings.clipView.selectionOutline;
+		const selection = this._selection;
+		const startNum = this._selection.minIndex;
+		const endNum = this._selection.maxIndex + 1;
+		
+		for (let i = startNum; i < endNum; i++) {
+			const style = clipViews[i].div.style;
+			const color = selection.contains(i) ? outline.color : 'transparent';
+			style.outlineColor = color;
+			style.outlineWidth = `${outline.width}px`;
 		}
 		
 	}
 	
 	
-	get div() {
-		return this._div;
+	get elements() {
+		return this._elements;
 	}
 	
 	
@@ -148,13 +242,13 @@ class ClipCollectionView {
 	}
 	
 	
-	get clipViewDelegateClasses() {
-		return this._clipViewDelegateClasses;
+	get settings() {
+		return this._settings;
 	}
 	
 	
-	get settings() {
-		return this._settings;
+	get clipViewDelegateClasses() {
+		return this._clipViewDelegateClasses;
 	}
 	
 	
@@ -179,7 +273,7 @@ class ClipCollectionView {
 		
 			// TODO: Update view settings only if they have changed.
 			const viewSettings = settings.clipView;
-			for (let view of this._clipViews) {
+			for (const view of this._clipViews) {
 				view.settings = viewSettings;
 			}
 			
@@ -208,8 +302,8 @@ class ClipCollectionView {
 	}
 	
 	
-	getPageIndexBounds(pageNum) {
-		return this._layout.getPageIndexBounds(pageNum);
+	getPageClipNumRange(pageNum) {
+		return this._layout.getPageClipNumRange(pageNum);
 	}
 
 	
@@ -219,8 +313,10 @@ class ClipCollectionView {
 	
 	
 	set pageNum(pageNum) {
-		this._pageNum = pageNum;
-		this._update();
+		if (pageNum >= 0 && pageNum < this.numPages)
+			this._pageNum = pageNum;
+			this._selection = this._createSelection();
+			this._update();
 	}
 	
 	
@@ -229,6 +325,234 @@ class ClipCollectionView {
 	}
 
 
+	extendSelection(i) {
+		this._selection.extend(i);
+		this._updateSelectionOutlines();
+	}
+	
+	
+	toggleSelection(i) {
+		this._selection.toggle(i);
+		this._updateSelectionOutlines();
+	}
+	
+	
+    onKeyPress(e) {
+    	
+    	// We disallow use of the space key for commands because it is
+    	// already used by all of the main browsers for scrolling.
+    	// We disallow use of the enter key because it does not have a
+    	// single-character string representation.
+    	if (e.key === ' ' || e.key === 'Enter')
+    		return;
+    	
+		console.log(
+			`onKeyPress "${e.key}"`,
+			e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
+		
+		const action = this._getPredefinedCommandAction(e);
+		
+		if (action !== undefined) {
+			
+			// Prevent client from doing whatever it might normally do
+			// in response to the pressed key.
+			e.preventDefault();
+			
+			action();
+				
+		} else {
+		
+		    // this._annotationCommandInterpreter.onKey(e.key);
+		    
+		}
+		
+	}
+
+
+	_getPredefinedCommandAction(e) {
+		
+		if (this._predefinedCommands === undefined)
+			this._predefinedCommands = this._createPredefinedCommands();
+		
+//		let name = e.key;
+//		if (name === ' ' && e.shiftKey)
+//			name = '__SHIFT+SPACE__'
+		
+		console.log('_getPredefinedCommandAction', e.key);
+		
+		return this._predefinedCommands[e.key];
+	
+	}
+
+	
+	_createPredefinedCommands() {
+
+		return {
+			'>': () => this._showNextPage(),
+			'<': () => this._showPreviousPage(),
+			'^': () => this._selectFirstClip(),
+			'.': () => this._selectNextClip(),
+			',': () => this._selectPreviousClip()
+		};
+		
+	}
+	
+	
+	_showNextPage() {
+		this.pageNum += 1;
+	}
+	
+	
+	_showPreviousPage() {
+		this.pageNum -= 1;
+	}
+	
+	
+	_selectFirstClip() {
+		if (this.numPages > 0) {
+			const [startNum, _] = this.getPageClipNumRange(this.pageNum);
+			this.selectClip(startNum);
+			_scrollToTop();
+		}
+	}
+
+	
+	selectClip(i) {
+		if (i >= 0 && i < this.clips.length) {
+			this._selection.select(i);
+			this._updateSelectionOutlines();
+		}
+	}
+	
+	
+	_selectNextClip() {
+		
+		if (this._isSelectionSingleton()) {
+			
+			const i = this._selection.selectedIntervals[0][0];
+			const [_, endClipNum] = this.getPageClipNumRange(this.pageNum);
+			
+			if (i === endClipNum - 1) {
+				// selected clip is last of page
+				
+				if (this.pageNum != this.numPages - 1) {
+					// page is not last
+					
+				    this.pageNum += 1;
+			        this.selectClip(i + 1);
+			        _scrollToTop();
+			        
+				}
+				
+			} else {
+				
+				this.selectClip(i + 1);
+				this._scrollToClipViewIfNeeded(this._clipViews[i + 1]);
+				
+			}
+			
+		}
+		
+	}
+	
+	
+	_isSelectionSingleton() {
+		return this._selection !== null && this._selection.size === 1;
+	}
+
+
+	_scrollToClipViewIfNeeded(clipView) {
+		
+	    const rect = clipView.div.getBoundingClientRect();
+	    
+		const navbar = document.getElementById('navbar');
+		const navbarHeight = navbar.getBoundingClientRect().height;
+		
+		// This is a bit of a kludge. Ideally we would set `yMargin`
+		// to half the y spacing, but I'm not aware of a straightforward
+		// way to get that spacing regardless of the layout. Perhaps
+		// there is some reasonably straightforward method that uses
+		// the bounding client rectangles of the clip views of the
+		// current page?
+	    const yMargin = this._getYMargin();
+	    
+	    if (rect.top < navbarHeight + yMargin ||
+	            rect.bottom > window.innerHeight - yMargin)
+	    	
+	    	window.scrollBy(0, rect.top - navbarHeight - yMargin);
+	    
+	}
+
+
+	/**
+	 * Gets the y clip view margin of this clip collection view in pixels.
+	 * 
+	 * The y clip view margin is half of the y clip view spacing, which
+	 * is specified in the clip view settings. However, the units in
+	 * which the spacing is specified in the settings are not always
+	 * pixels. This method gets the margin in pixels, regardless of the
+	 * units of the settings.
+	 */
+	_getYMargin() {
+		
+		// Get y coordinate of top of clips div.
+		const clipsDivY = this.elements.clipsDiv.getBoundingClientRect().top;
+		
+		// get y coordinate of top of first clip of current page.
+		const [startNum, _] = this.getPageClipNumRange(this.pageNum);
+		const clipDiv = this._clipViews[startNum].div;
+		const clipDivY = clipDiv.getBoundingClientRect().top;
+		
+		const yMargin = clipDivY - clipsDivY;
+		
+		return yMargin;
+		
+	}
+	
+	
+	_showClipViewRects() {
+		console.log('clip view bounding client rectangles:');
+		const r = this.elements.clipsDiv.getBoundingClientRect();
+		console.log(r.left, r.top, r.width, r.height);
+		const [startNum, endNum] = this.getPageClipNumRange(this.pageNum);
+		for (let i = startNum; i < endNum; i++) {
+			const r = this._clipViews[i].div.getBoundingClientRect();
+			console.log(r.left, r.top, r.width, r.height);
+		}
+	}
+	
+	
+	_selectPreviousClip() {
+		
+		if (this._isSelectionSingleton()) {
+			
+			const i = this._selection.selectedIntervals[0][0];
+			const [startClipNum, _] = this.getPageClipNumRange(this.pageNum);
+			
+			if (i === startClipNum) {
+				// selected clip is first of page
+				
+				if (this.pageNum != 0) {
+					// page is not first
+					
+				    this.pageNum -= 1;
+			        this.selectClip(i - 1);
+			        _scrollToBottom();
+			        
+				}
+				
+			} else {
+				
+				this.selectClip(i - 1);
+				this._scrollToClipViewIfNeeded(this._clipViews[i - 1]);
+				
+			}
+			
+		}
+		
+	}
+	
+	
 }
 
 
@@ -302,32 +626,64 @@ Clip collection view layout settings by layout type:
 // class _UniformResizingClipViewsLayout { }
 
 
-/** Layout that displays nonuniform, nonresizing clip views. */
-class _NonuniformNonresizingClipViewsLayout {
+/**
+ * Finds the last element of xs that is less than or equal to x.
+ */
+function _findLastLE(xs, x) {
+	
+	if (x < xs[0])
+		return -1;
+	
+	else {
+		
+		let low = 0;
+		let high = xs.length;
+		let mid;
+		
+		// invariant: result is in [low, high)
+		
+		while (high != low + 1) {
+			
+			mid = Math.floor((low + high) / 2);
+			
+			if (xs[mid] <= x)
+				low = mid;
+			else
+				high = mid;
+				
+		}
+		
+		return low;
+		
+	}
+	
+}
+
+
+function _scrollToTop() {
+	window.scrollTo(0, 0);
+}
+
+
+function _scrollToBottom() {
+	window.scrollTo(0, document.body.scrollHeight);
+}
+
+
+class _ClipViewsLayout {
 	
 	
-	/**
-	 * Creates a layout with the specified settings.
-	 * 
-	 * Settings:
-	 * 
-	 *     page:
-     *         size: clips
-     *         
-     *     clip_view:
-     *         time_scale: pixels per second
-     *         height: pixels
-     *         x_spacing: pixels
-     *         y_spacing: pixels
-     *         selection_outline_width: pixels
-     *         initial_padding: seconds
-     *         final_padding: seconds
-     */
 	constructor(div, clipViews, settings) {
+		
 		this._div = div;
 		this._clipViews = clipViews;
 		this._settings = settings;
-		this._paginate();
+		this._pageStartClipNums = this._paginate();
+		
+		this._numPages = this._pageStartClipNums.length;
+		if (this._numPages > 0)
+			this._numPages -= 1;
+		
 	}
 	
 	
@@ -352,45 +708,122 @@ class _NonuniformNonresizingClipViewsLayout {
     }
     
     
-	/**
-	 * Assigns clips to pages.
-	 */
-	_paginate() {
-		
-		const pg = this.settings.page;
-		
-		const numClips = this.clipViews.length;
-		const numPages = Math.ceil(numClips / pg.size);
-		
-		const pageBounds = new Array(numPages);
-		let startIndex = 0;
-		for (let i = 0; i < numPages; i++) {
-			const pageSize = Math.min(pg.size, numClips - startIndex);
-			pageBounds[i] = [startIndex, startIndex + pageSize];
-			startIndex += pageSize;
-		}
-		
-		this._numPages = numPages;
-		this._pageIndexBounds = pageBounds;
-		
-	}
-	
-	
+    _paginate() {
+		throw new Error('ClipViewsLayout._paginate not implemented');
+    }
+    
+    
 	get numPages() {
 		return this._numPages;
 	}
 	
 	
-	getPageIndexBounds(pageNum) {
-		return this._pageIndexBounds[pageNum];
+	getPageClipNumRange(pageNum) {
+		this._checkPageNum(pageNum);
+		const clipNums = this._pageStartClipNums;
+		return [clipNums[pageNum], clipNums[pageNum + 1]];
+	}
+	
+	
+	_checkPageNum(pageNum) {
+		
+		if (this.numPages === 0)
+			throw new Error(
+				`Page number ${pageNum} is out of range since view has ` +
+				`no pages.`);
+				
+		else if (pageNum < 0 || pageNum >= this.numPages)
+			throw new Error(
+				`Page number ${pageNum} is outside of range ` +
+				`[0, ${this.numPages - 1}].`);
+		
+	}
+	
+	
+	getClipPageNum(clipNum) {
+		this._checkClipNum(clipNum);
+		return _findLastLE(this._pageStartClipNums, clipNum);
+	}
+	
+	
+	_checkClipNum(clipNum) {
+		
+		const numClips = this._clipViews.length;
+		
+		if (numClips === 0)
+			throw new Error(
+				`Clip number ${clipNum} is out of range since view has ` +
+				`no clips.`);
+				
+		else if (clipNum < 0 || clipNum >= numClips)
+			throw new Error(
+				`Clip number ${clipNum} is outside of range ` +
+				`[0, ${numClips - 1}].`);
+		
+	}
+	
+	
+}
+
+
+/** Layout that displays nonuniform, nonresizing clip views. */
+class _NonuniformNonresizingClipViewsLayout extends _ClipViewsLayout {
+	
+	
+	/**
+	 * Settings:
+	 * 
+	 *     page:
+     *         size: clips
+     *         
+     *     clip_view:
+     *         time_scale: pixels per second
+     *         height: pixels
+     *         x_spacing: pixels
+     *         y_spacing: pixels
+     *         selection_outline_width: pixels
+     *         initial_padding: seconds
+     *         final_padding: seconds
+     */
+	
+	
+	/**
+	 * Assigns clips to pages.
+	 */
+	_paginate() {
+		
+		const numClips = this.clipViews.length;
+		
+		if (numClips === 0)
+			return [];
+		
+		else {
+			
+			const pageSize = this.settings.page.size;
+			const numPages = Math.ceil(numClips / pageSize);
+			const pageStartClipNums = new Array(numPages + 1);
+			
+			let startClipNum = 0;
+			for (let i = 0; i < numPages; i++) {
+				pageStartClipNums[i] = startClipNum;
+				startClipNum += Math.min(pageSize, numClips - startClipNum);
+			}
+			pageStartClipNums[numPages] = startClipNum;
+			
+			return pageStartClipNums;
+			
+		}
+		
 	}
 	
 	
 	layOutClipViews(pageNum) {
 		
-		const pageDiv = this.div;
+		this._checkPageNum(pageNum);
 		
-		_removeChildren(pageDiv);
+		const clipsDiv = this.div;
+		
+		_removeChildren(clipsDiv);
 		
 		const cv = this.settings.clipView;
 		
@@ -401,21 +834,20 @@ class _NonuniformNonresizingClipViewsLayout {
 		// Style page div. It is important to set values for pretty much
 		// all of the flexbox properties here since we allow switching
 		// between different layouts for the same page div.
-		pageDiv.className = 'page';
-		pageDiv.style.display = 'flex';
-		pageDiv.style.flexDirection = 'row';
-		pageDiv.style.flexWrap = 'wrap';
-		pageDiv.style.flex = '1 1 auto';
-		pageDiv.style.justifyContent = 'center';
-		pageDiv.style.alignContent = 'flex-start';
-		pageDiv.style.alignItems = 'flex-end';
-		pageDiv.style.width = 'auto';
-		pageDiv.style.margin = margin;
+		clipsDiv.style.display = 'flex';
+		clipsDiv.style.flexDirection = 'row';
+		clipsDiv.style.flexWrap = 'wrap';
+		clipsDiv.style.flex = '1 1 auto';
+		clipsDiv.style.justifyContent = 'center';
+		clipsDiv.style.alignContent = 'flex-start';
+		clipsDiv.style.alignItems = 'flex-end';
+		clipsDiv.style.width = 'auto';
+		clipsDiv.style.margin = margin;
 		
-		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
+		const [startNum, endNum] = this.getPageClipNumRange(pageNum);
 		const height = cv.height + 'px';
 		
-		for (let i = startIndex; i < endIndex; i++) {
+		for (let i = startNum; i < endNum; i++) {
 			
 			const clipView = this.clipViews[i];
 			const clipDiv = clipView.div;
@@ -431,14 +863,7 @@ class _NonuniformNonresizingClipViewsLayout {
 		    clipDiv.style.height = height;
 		    clipDiv.style.margin = margin;
 		    
-		    // TODO: Draw selection outlines properly.
-		    if (i === 2) {
-		    	clipDiv.style.outlineWidth = '5px';
-		    	clipDiv.style.outlineStyle = 'solid';
-		    	clipDiv.style.outlineColor = 'orange';
-		    }
-			
-			pageDiv.appendChild(clipDiv);
+			clipsDiv.appendChild(clipDiv);
 			
 		}
 		
@@ -452,16 +877,20 @@ class _NonuniformNonresizingClipViewsLayout {
 	// the two separate stages, document why.
 	_renderClipViews(pageNum) {
 		
-		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
+		const [startNum, endNum] = this.getPageClipNumRange(pageNum);
 		
-		for (let i = startIndex; i < endIndex; i++)
+		for (let i = startNum; i < endNum; i++)
 			this.clipViews[i].render();
 		
 	}
 	
 	
 	onResize(pageNum) {
+		
+		this._checkPageNum(pageNum);
+		
 		// For this layout type resizes are handled by the flexbox layout.
+		
 	}
 	
 	
@@ -469,12 +898,10 @@ class _NonuniformNonresizingClipViewsLayout {
 
 
 /** Layout that displays nonuniform, resizing clip views. */
-class _NonuniformResizingClipViewsLayout {
+class _NonuniformResizingClipViewsLayout extends _ClipViewsLayout {
 	
 	
 	/**
-	 * Creates a layout for the specified clips.
-	 * 
 	 * Settings:
 	 * 
 	 *     page:
@@ -488,35 +915,8 @@ class _NonuniformResizingClipViewsLayout {
      *         initial_padding: seconds
      *         final_padding: seconds
 	 */
-	constructor(div, clipViews, settings) {
-		this._div = div;
-		this._clipViews = clipViews;
-		this._settings = settings;
-		this._paginate();
-	}
+
 	
-	
-	get div() {
-		return this._div;
-	}
-	
-	
-    get clipViews() {
-    	return this._clipViews;
-    }
-    
-    
-    get settings() {
-    	return this._settings;
-    }
-    
-    
-    set settings(settings) {
-    	this._settings = settings;
-    	this._paginate();
-    }
-    
-    
 	/**
 	 * Assigns clips to pages and rows.
 	 */
@@ -526,17 +926,14 @@ class _NonuniformResizingClipViewsLayout {
 		const cv = this.settings.clipView;
 		const clipViews = this.clipViews;
 		
-		if (clipViews.length === 0) {
-			
-			this._pages = [];
-			
-		} else {
+		const pages = [];
+		
+		if (clipViews.length > 0) {
 			
 			const xSpacing = cv.xSpacing;
 			const maxRowWidth = 100. - xSpacing;
 			const widthFactor = 100. / pg.width;
 			
-			const pages = [];
 			let page = [0];
 		    let rowWidth = widthFactor * clipViews[0].duration + xSpacing;
 		    
@@ -554,9 +951,9 @@ class _NonuniformResizingClipViewsLayout {
 				} else {
 					// clip will start new row
 					
-					// We always append the clip index to the current
-					// page, even if the clip will start a new page,
-					// so that we can obtain an end index for any row
+					// We always append the clip number to the current
+					// page, even if the clip will start a new page, so
+					// that we can obtain an end clip number for any row
 					// i of a page, even the last row, as page[i + 1],
 					// and the length of row i as page[i + 1] - page[i].
 					page.push(i);
@@ -579,29 +976,30 @@ class _NonuniformResizingClipViewsLayout {
 			page.push(i);
 			pages.push(page);
 			
-			this._pages = pages;
-			
+		}
+		
+		this._pages = pages;
+		
+		if (pages.length == 0)
+			return [];
+		
+		else {
+			const pageStartClipNums = pages.map(p => p[0]);
+			const lastPage = pages[pages.length - 1];
+			pageStartClipNums.push(lastPage[lastPage.length - 1]);
+			return pageStartClipNums;
 		}
 
 	}
 	
 	
-	get numPages() {
-		return this._pages.length;
-	}
-	
-	
-	getPageIndexBounds(pageNum) {
-		const page = this._pages[pageNum];
-		return [page[0], page[page.length - 1]];
-	}
-	
-	
 	layOutClipViews(pageNum) {
 		
-		const pageDiv = this.div;
+		this._checkPageNum(pageNum);
 		
-		_removeChildren(pageDiv);
+		const clipsDiv = this.div;
+		
+		_removeChildren(clipsDiv);
 		
 		const pg = this.settings.page;
 		const cv = this.settings.clipView;
@@ -613,18 +1011,17 @@ class _NonuniformResizingClipViewsLayout {
 		// Style the page div. It is important to set values for pretty
 		// much all of the flexbox properties here since we allow switching
 		// between different layouts for the same page div.
-		pageDiv.className = 'page';
-		pageDiv.style.display = 'flex';
-		pageDiv.style.flexDirection = 'column';
-		pageDiv.style.flexWrap = 'nowrap';
-		pageDiv.style.flex = '1 1 auto';
-		pageDiv.style.justifyContent = 'flex-start';
-		pageDiv.style.alignContent = 'stretch';
-		pageDiv.style.alignItems = 'stretch';
-		pageDiv.style.width = 'auto';
-		pageDiv.style.margin = margin;
+		clipsDiv.style.display = 'flex';
+		clipsDiv.style.flexDirection = 'column';
+		clipsDiv.style.flexWrap = 'nowrap';
+		clipsDiv.style.flex = '1 1 auto';
+		clipsDiv.style.justifyContent = 'flex-start';
+		clipsDiv.style.alignContent = 'stretch';
+		clipsDiv.style.alignItems = 'stretch';
+		clipsDiv.style.width = 'auto';
+		clipsDiv.style.margin = margin;
 
-		const rowStartIndices = this._pages[pageNum];
+		const rowStartClipNums = this._pages[pageNum];
 		const clipViews = this.clipViews;
 				
 		for (let i = 0; i < pg.height; i++) {
@@ -633,20 +1030,20 @@ class _NonuniformResizingClipViewsLayout {
 			// we can lay out clip views whose durations exceed the display
 			// width in a special way. See below for details.
 			const rowDiv = document.createElement('div');
-			rowDiv.className = 'row';
+			rowDiv.className = 'clip-row';
 			rowDiv.style.display = 'flex';
 			rowDiv.style.flexDirection = 'row';
 			rowDiv.style.flex = '1 1 1px';
 			rowDiv.style.justifyContent = 'center';
 			
-			if (i < rowStartIndices.length) {
+			if (i < rowStartClipNums.length) {
 				// row contains clips
 				
-				const startIndex = rowStartIndices[i];
-				const endIndex = rowStartIndices[i + 1];
-				const rowLength = endIndex - startIndex
+				const startNum = rowStartClipNums[i];
+				const endNum = rowStartClipNums[i + 1];
+				const rowLength = endNum - startNum
 				
-				for (let j = startIndex; j < endIndex; j++) {
+				for (let j = startNum; j < endNum; j++) {
 					
 					const clipView = clipViews[j];
 					
@@ -667,7 +1064,6 @@ class _NonuniformResizingClipViewsLayout {
 						
 					}
 					
-					
 					// Style clip div. It is important to set values for
 					// pretty much all of the sizing properties here since
 					// we reuse clip divs across layouts.
@@ -679,21 +1075,14 @@ class _NonuniformResizingClipViewsLayout {
 				    clipDiv.style.width = 'auto';
 				    clipDiv.style.height = 'auto';
 				    clipDiv.style.margin = margin
-				    
-				    // TODO: Draw selection outlines properly.
-				    if (j === 2) {
-				    	clipDiv.style.outlineWidth = '5px';
-				    	clipDiv.style.outlineStyle = 'solid';
-				    	clipDiv.style.outlineColor = 'orange';
-				    }
-				    
+					
 					rowDiv.appendChild(clipDiv);
 					
 				}
 				
 			}
 						
-			pageDiv.appendChild(rowDiv);
+			clipsDiv.appendChild(rowDiv);
 			
 		}
 		
@@ -707,16 +1096,17 @@ class _NonuniformResizingClipViewsLayout {
 	// the two separate stages, document why.
 	_renderClipViews(pageNum) {
 		
-		const [startIndex, endIndex] = this.getPageIndexBounds(pageNum);
+		const [startNum, endNum] = this.getPageClipNumRange(pageNum);
 		
 		const clipViews = this.clipViews;
-		for (let i = startIndex; i < endIndex; i++)
+		for (let i = startNum; i < endNum; i++)
 			clipViews[i].render();
 		
 	}
 	
 	
 	onResize(pageNum) {
+		this._checkPageNum(pageNum);
 		this._renderClipViews(pageNum);
 	}
 	
@@ -843,9 +1233,10 @@ Observations and questions:
 class ClipView {
 	
 	
-	constructor(parent, clip, settings, delegateClass) {
+	constructor(parent, clipNum, clip, settings, delegateClass) {
 		
 		this._parent = parent;
+		this._clipNum = clipNum;
 		this._clip = clip;
 		this._settings = settings;
 		
@@ -860,6 +1251,11 @@ class ClipView {
 	
 	get parent() {
 		return this._parent;
+	}
+	
+	
+	get clipNum() {
+		return this._clipNum;
 	}
 	
 	
@@ -893,46 +1289,327 @@ class ClipView {
 	// will mainly come into play when we display clips extracted
 	// on the fly from their parent recordings.
 	get duration() {
-		return this.clip.span;
+		const clip = this.clip;
+		return (clip.length - 1) / clip.sampleRate;
 	}
 	
 	
 	get div() {
 		if (this._div === null) {
-			this._div = this._delegate.div;
-			this._label = this._createLabel();
+			this._div = this._createDiv();
+			this._populateDiv();
 		}
 		return this._div;
 	}
 	
 	
-	_createLabel() {
-		const div = this.div;
-		const document = div.ownerDocument;
+	_createDiv() {
+	    const div = document.createElement('div');
+	    div.className = 'clip';
+	    return div;
+	}
+	    
+	    
+	_populateDiv() {
+	    this._canvas = this._createCanvas();
+		this._label = this._createLabel();
+		this._styleLabel();
+	    this._startClipAudioDataDownload();
+	}
+
+
+	_createCanvas(div) {
+		
+	    const canvas = document.createElement('canvas');
+	    canvas.className = 'clip-canvas';
+	    canvas.addEventListener('mouseover', e => this._onMouseOver(e));
+	    canvas.addEventListener('mouseout', e => this._onMouseOut(e));
+	    canvas.addEventListener('click', e => this._onCanvasClick(e));
+	    this._div.appendChild(canvas);
+	    
+	    return canvas;
+	    
+	}
+	
+	
+	_onMouseOver(e) {
+		console.log("mouse over " + this.clipNum);
+	}
+	
+	
+	_onMouseOut(e) {
+		console.log("mouse out " + this.clipNum);
+	}
+	
+	
+	_onCanvasClick(e) {
+	
+		const parent = this.parent;
+		const clipNum = this.clipNum;
+		
+		if (e.shiftKey)
+			parent.extendSelection(clipNum);
+		else if (e.ctrlKey)
+			parent.toggleSelection(clipNum);
+		else
+			parent.selectClip(clipNum);
+		
+	}
+	
+	
+    _createLabel() {
 	    const label = document.createElement('p');
 	    label.className = 'clip-label';
-	    label.innerHTML = (this.clip.index + 1).toString();
-	    div.appendChild(label);
+	    this._div.appendChild(label);
 	    return label;
 	}
 	
 	
-	render() {
-		this._delegate.render();
+    _styleLabel() {
+    	
+	    const label = this._label.style;
+	    const offset = '2px';
+	    const labelSettings = this.settings.label;
+	    const loc = labelSettings.location;
+	    
+	    // Set label style attributes to defaults.
+	    label.left = 'unset';
+	    label.top = 'unset';
+	    label.right = 'unset';
+	    label.bottom = 'unset';
+	    label.width = 'auto';
+	    label.height = 'auto';
+	    label.margin = '0';
+	    
+	    // Set label horizontal location.
+	    if (loc.endsWith('Left')) {
+	    	label.left = offset;
+	    } else if (loc.endsWith('Right')) {
+	    	label.right = offset;
+	    } else {
+	    	label.width = '100%';
+	    	label.margin = '0 auto';
+	    }
+	    
+	    // Set label vertical location and padding.
+	    if (loc.startsWith('Below')) {
+	    	label.top = '100%';
+	    	label.marginTop = `${this.settings.selectionOutline.width}px`;
+	    } else if (loc.startsWith('Above')) {
+	    	label.bottom = '100%';
+	    	label.marginBottom = `${this.settings.selectionOutline.width}px`;
+	    } else if (loc.startsWith('Top')) {
+	    	label.top = offset;
+	    } else {
+	    	label.bottom = offset;
+	    }
+	    
+	    label.color = labelSettings.color;
+	    label.fontSize = `${labelSettings.fontSize}em`;
+	    
+		label.visibility = labelSettings.visible ? 'visible' : 'hidden';
+			    
+    }
+    
+    
+    _startClipAudioDataDownload() {
+    	
+    	const clip = this.clip;
+		const context = new OfflineAudioContext(1, 1, clip.sampleRate);
+		const xhr = new XMLHttpRequest();
+		xhr.open('GET', clip.url);
+		xhr.responseType = 'arraybuffer';
+		xhr.onload = () =>
+			context.decodeAudioData(xhr.response).then(audioBuffer =>
+		        this._onAudioDataDecoded(audioBuffer));
+		xhr.send();
+		
+		// See comment in _createPlayButton for information regarding
+		// the following.
+//	    const context = new OfflineAudioContext(
+//          1, clip.length, clip.sampleRate);
+//	    const source = context.createMediaElementSource(audio);
+//	    source.connect(context.destination);
+//	    context.startRendering().then(audioBuffer =>
+//	        onAudioDecoded(audioBuffer, clip));
+	
+	}
+
+
+    // TODO: Create a SpectrogramRenderer class that encapsulates the
+    // spectrogram computation and rendering pipeline?
+	_onAudioDataDecoded(audioBuffer) {
+		
+		console.log('got samples for clip', this.clipNum);
+//		_showAudioBufferInfo(audioBuffer);
+		
+		const clip = this.clip;
+		clip.audioBuffer = audioBuffer;
+	    clip.samples = audioBuffer.getChannelData(0);
+	    
+	    // We create the play button for a clip only after its audio data
+	    // are available since it is only then that we can play them from
+	    // this.clip.audioBuffer using the Web Audio API.
+		this._playButton = this._createPlayButton();
+		this._stylePlayButton();
+	    
+	    this._delegate.onClipAudioDataDownloaded()
+	    
+	}
+
+
+	_createPlayButton() {
+		
+	    const button = document.createElement('button');
+	    button.className = 'clip-play-button';
+	    button.addEventListener('click', e => this._onPlayButtonClick(e));
+	    this._div.appendChild(button);    
+	    
+	    const icon = document.createElement('span');
+	    icon.className = 'glyphicon glyphicon-play';
+	    button.appendChild(icon);
+	    
+	    return button;
+	    
+	    /*
+	     * The following comment is outdated, and should be updated.
+	     * 
+	     * TODO: Download each audio file only once rather than twice.
+	     * We currently download an audio file once for its HTML5 audio
+	     * element (for playback) and a second time using an XHR (to get
+	     * its samples so we can compute a spectrogram from them).
+	     * 
+	     * I believe we should be able to use a Web Audio
+	     * MediaElementSourceNode to decode the audio of an audio element
+	     * into the destination AudioBuffer of an offline audio context,
+	     * obviating the XHR, but I have not been able to get this to work.
+	     * The commented code in _startClipSamplesDownload always yields
+	     * all-zero samples.
+	     * 
+	     * Another approach would be use only the XHR, dropping the audio
+	     * element and performing playback using Web Audio. I would prefer
+	     * the other approach, however, since it should allow us to decode
+	     * only portions of the source of an audio element, which would be
+	     * useful in the future for long sounds.
+	     */
+//	    const audio = document.createElement('audio');
+//	    audio.className = 'clip-audio';
+//	    audio.setAttribute('src', clip.url);
+//	    audio.innerHtml =
+//	        'Your browser does not support the <code>audio</code> HTML element.'
+//	    div.appendChild(audio)
+	    
+	}
+    
+
+	_onPlayButtonClick(e) {
+		this._playAudioBuffer(this.clip.audioBuffer);
 	}
 	
 	
+	_playAudioBuffer(buffer) {
+		const context = this.parent._audioContext;
+		const source = context.createBufferSource();
+		source.buffer = buffer;
+		source.connect(context.destination);
+		source.start();
+	}
+	
+	
+    _stylePlayButton() {
+    	
+		const button = this._playButton.style;
+	    const offset = '2px';
+	    const label = this._label.style;
+	    const labelLoc = this.settings.label.location;
+		
+		button.left = offset;
+		button.right = 'unset';
+		
+	    if (label.visibility === 'visible' && labelLoc.startsWith('Top')) {
+	    	// label visible and at top of clip
+	    	
+	    	// Put button at bottom left of clip.
+	        button.top = 'unset';
+	        button.bottom = offset;
+	        
+	    } else {
+	    	// label not visible or at bottom of clip
+	    	
+	    	// Put button at top left of clip.
+	    	button.top = offset;
+	    	button.bottom = 'unset';
+	    	
+	    }
+	    
+			    
+    }
+    
+    
+	render() {
+		this._delegate.render();
+		this._renderLabel();
+	}
+	
+	
+	_renderLabel() {
+
+		const clip = this.clip;
+		const s = this.settings.label;
+	
+		if (s.visible) {
+			
+			let labelParts = [];
+			
+			if (s.classificationIncluded) {
+				
+				let annotation = clip.classification;
+				
+				if (s.hasOwnProperty('hiddenClassificationPrefixes'))
+					for (const prefix of s.hiddenClassificationPrefixes)
+						if (annotation.startsWith(prefix))
+							annotation = annotation.substr(prefix.length);
+				
+				if (annotation === '')
+					annotation = 'Unclassified';
+				
+		        labelParts.push(annotation);
+		        
+			}
+			
+			if (s.startTimeIncluded) {
+				const parts = clip.startTime.split(' ');
+				labelParts.push(parts[1]);
+			}
+			
+			this._label.innerHTML =
+				(labelParts.length !== 0) ? labelParts.join(' ') : ''
+			
+		}
+	
+	}
+
 }
 
 
 class ClipViewDelegate {
 	
 	
+	// TODO: Some clip view delegates will want to respond to mouse
+	// and keyboard events, e.g. to allow clip metadata creation like
+	// call start and end times and/or frequencies or frequency tracks.
+	// Figure out how this will work and create a view delegate that
+	// demonstrates it.
+	
+	// TODO: Can we use BokehJS to plot in a clip view? BokehJS might
+	// create the entire contents, or it might just create an overlay
+	// that is drawn on top of contents that are rendered otherwise.
+	
+	
 	constructor(clipView, clip, settings) {
 		this._clipView = clipView;
 		this._clip = clip;
 		this._settings = settings;
-		this._div = null;
 	}
 	
 	
@@ -956,24 +1633,23 @@ class ClipViewDelegate {
 	}
 	
 	
-	get div() {
-		if (this._div === null)
-			this._div = this._createDiv();
-		return this._div;
-	}
-	
-	
 	/**
-	 * Creates HTML elements for this delegate's clip view.
+	 * Handles the arrival of the clip audio data of this delegate's clip view.
 	 * 
-	 * This method creates the root div element of this delegate's
-	 * clip view as well as the div's descendants, except for the
-	 * label and the play button, which are created by the clip view.
+	 * A clip view creates its HTML components and downloads the clip's
+	 * audio data lazily, or more specifically not until the view's div is
+	 * requested. After the audio data have been downloaded the view invokes
+	 * this method, which should render the clip on the clip view's canvas.
+	 * The canvas is available from this method as `this.clipView._canvas`,
+	 * the decoded audio data are available as `this.clip.audioBuffer`, a
+	 * Web Audio AudioBuffer, and the clip samples are available as
+	 * this.clip.samples, a Float32Array.
 	 */
-	_createDiv() {
-		throw new Error('ClipViewDelegate._createDiv not implemented.');
+	onClipAudioDataDownloaded() {
+		throw new Error(
+			'ClipViewDelegate.onClipAudioDataDownloaded not implemented');
 	}
-
+	
 	
 	/**
 	 * Renders the contents of this delegate's clip view.
@@ -987,4 +1663,522 @@ class ClipViewDelegate {
 	}
 	
 	
+}
+
+
+class SpectrogramClipViewDelegate extends ClipViewDelegate {
+	
+	
+    // TODO: Update view in response to settings changes, recomputing
+	// as little as possible.
+	
+	onClipAudioDataDownloaded() {
+		
+	    const settings = this.settings.spectrogram;
+	    
+	    // Compute spectrogram, offscreen spectrogram canvas, and
+	    // spectrogram image data and put image data to canvas. The
+	    // spectrogram canvas and the spectrogram image data have the
+	    // same size as the spectrogram. 
+	    const clip = this.clipView.clip;
+	    this._spectrogram = _computeSpectrogram(this._clip.samples, settings);
+	    this._spectrogramCanvas =
+	    	_createSpectrogramCanvas(this._spectrogram, settings);
+	    this._spectrogramImageData =
+	    	_createSpectrogramImageData(this._spectrogramCanvas);
+	    _computeSpectrogramImage(
+	    	this._spectrogram, this._spectrogramCanvas,
+	    	this._spectrogramImageData, settings);
+	    
+	    // Draw spectrogram image.
+	    const canvas = this.clipView._canvas;
+	    _drawSpectrogramImage(clip, this._spectrogramCanvas, canvas, settings);
+	    
+	}
+
+	
+	render() {
+		// For the time being we do nothing here, since apparently 
+		// an HTML canvas can resize images that have been drawn to
+		// it automatically. We will need to do something here (or
+		// somewhere, anyway) eventually to handle view settings
+		// changes, for example changes to spectrogram settings
+		// or color map settings.
+	}
+
+	
+}
+
+
+function _showAudioBufferInfo(b) {
+	const samples = b.getChannelData(0);
+    const [min, max] = _getExtrema(samples);
+    console.log(
+        'AudioBuffer', b.numberOfChannels, b.length, b.sampleRate, b.duration,
+        min, max);
+}
+
+
+function _getExtrema(samples) {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (const s of samples) {
+    	if (s < min) min = s;
+        if (s > max) max = s;
+    }
+    return [min, max];	
+}
+
+
+function _scaleSamples(samples, factor) {
+    for (let i = 0; i < samples.length; i++)
+    	samples[i] *= factor;	
+}
+
+
+function _computeSpectrogram(samples, settings) {
+	
+	// TODO: We need to guarantee somehow that if a window is present
+	// it is the correct one, e.g. that it is of the correct type and
+	// size.
+	if (!settings.hasOwnProperty('window'))
+	    settings.window = createDataWindow('Hann', settings.windowSize);
+	
+	const spectrogram = allocateSpectrogramStorage(samples.length, settings);
+	computeSpectrogram(samples, settings, spectrogram);
+	return spectrogram;
+	
+}
+
+
+function _createSpectrogramCanvas(spectrogram, settings) {
+
+	const numBins = settings.dftSize / 2 + 1;
+	const numSpectra = spectrogram.length / numBins;
+	
+	const canvas = document.createElement('canvas');
+	canvas.width = numSpectra;
+	canvas.height = numBins;
+	
+	return canvas;
+
+}
+
+
+function _createSpectrogramImageData(canvas) {
+
+	const numSpectra = canvas.width;
+	const numBins = canvas.height;
+	
+	const context = canvas.getContext('2d');
+	return context.createImageData(numSpectra, numBins);
+
+}
+
+
+function _computeSpectrogramImage(spectrogram, canvas, imageData, settings) {
+
+	const numSpectra = canvas.width;
+	const numBins = canvas.height;
+	const data = imageData.data;
+	
+	// Get scale factor and offset for mapping the range
+	// [settings.lowPower, settings.highPower] into the range [0, 255].
+	const delta = settings.highPower - settings.lowPower
+	const a = 255 / delta;
+	const b = -255 * settings.lowPower / delta;
+	
+	// Map spectrogram values to pixel values.
+	let spectrumNum = 0;
+	let spectrumStride = numBins;
+	let m = 0;
+	for (let i = 0; i < numBins; i++) {
+		let k = numBins - 1 - i
+	    for (let j = 0; j < numSpectra; j++) {
+			const v = 255 - a * spectrogram[k] + b;
+			data[m++] = v;
+			data[m++] = v;
+			data[m++] = v;
+			data[m++] = 255;
+			k += spectrumStride;
+		}
+	}
+	
+	// Write pixel values to spectrogram canvas.
+	const context = canvas.getContext('2d');
+	context.putImageData(imageData, 0, 0);
+
+}
+
+
+function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
+
+	const context = canvas.getContext('2d');
+	
+	// Draw gray background rectangle.
+	context.fillStyle = 'gray';
+	context.fillRect(0, 0, canvas.width, canvas.height);
+	
+	// Draw spectrogram from clip spectrogram canvas, stretching as needed.
+	const gramCanvas = spectrogramCanvas;
+	const numSpectra = gramCanvas.width;
+	context.imageSmoothingEnabled = settings.smoothingEnabled;
+	if (settings.timePaddingEnabled) {
+		let [x, width] = _getSpectrogramXExtent(
+			settings, numSpectra, clip, canvas.width);
+		context.drawImage(gramCanvas, x, 0, width, canvas.height);
+	} else {
+		context.drawImage(gramCanvas, 0, 0, canvas.width, canvas.height);
+	}
+	
+}
+
+
+function _getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
+	const sampleRate = clip.sampleRate;
+	const startTime = settings.window.length / 2 / sampleRate;
+	const spectrumPeriod = settings.hopSize / sampleRate;
+	const endTime = startTime + (numSpectra - 1) * spectrumPeriod;
+	const span = (clip.length - 1) / sampleRate;
+	const pixelPeriod = span / canvasWidth;
+	const x = startTime / pixelPeriod;
+	const width = (endTime - startTime) / pixelPeriod;
+	return [x, width];
+}
+
+
+class _AnnotationCommandInterpreter {
+	
+	
+	constructor(spec) {
+		this._commandNamePrefixes = new Set();
+		this._commandActions = {};
+		this._parseSpec(spec);
+		this._clearCommandNameBuffer();
+	}
+	
+	
+	_parseSpec(spec) {
+		for (const element of spec)
+			this._parseSpecElement(element);
+	}
+	
+	
+	_parseSpecElement(element) {
+		const commands = element.annotation_commands;
+		const commandNames = Object.keys(commands);
+		this._addCommandNamePrefixes(commandNames);
+		this._addCommandActions(element.annotation_name, commands);
+	}
+	
+	
+	_addCommandNamePrefixes(names) {
+		
+		/*
+		 * Adds the nonempty, proper prefixes of the specified command
+		 * names to this._commandNamePrefixes.
+		 */
+		
+		for (const name of names)
+			for (let i = 1; i < name.length; i++)
+				this._commandNamePrefixes.add(name.slice(0, i));
+		
+	}
+	
+	
+	_addCommandActions(annotationName, commands) {
+		const keys = Object.keys(commands);
+		for (const key of keys)
+			this._commandActions[key] =
+				_parseCommandAction(annotationName, commands[key]);
+	}
+	
+	
+	_clearCommandNameBuffer() {
+		this._commandNameBuffer = '';
+	}
+	
+	
+	onKey(key) {
+		
+		if (key === '\\') {
+			
+			this._clearCommandNameBuffer();
+			console.log('Cleared command name buffer.');
+		
+		} else {
+			
+			const name = this._commandNameBuffer + key;
+			
+			let action = this._commandActions[name];
+			
+			if (action !== undefined) {
+				
+				action();
+				this._clearCommandNameBuffer();
+			
+			} else if (this._commandNamePrefixes.has(name)) {
+					
+				// TODO: Show contents of name buffer in UI.
+				console.log(`Command name buffer "${name}".`);
+				this._commandNameBuffer = name;
+			    
+			
+			} else {
+				// nonexistent command
+				
+				// TODO: Notify user of error.
+				console.log(`Unrecognized command name "${name}".`);
+				this._clearCommandNameBuffer();
+				
+			}
+				
+		}
+		
+	}
+	
+}
+
+	
+function _parseCommandAction(annotationName, actionSpec) {
+	
+	let scope = 'Selection';
+	if (actionSpec.startsWith('*')) {
+		scope = 'Page';
+		actionSpec = actionSpec.slice(1);
+	}
+	
+	let annotationValue = null;
+	let annotatorName = null;
+	if (actionSpec.startsWith('@'))
+		annotatorName = actionSpec.slice(1);
+	else
+		annotationValue = actionSpec;
+
+	if (annotationValue !== null)
+		return () => _annotateClips(annotationName, annotationValue, scope);
+	else
+		return () => _runClipAnnotator(annotationName, annotatorName, scope);
+
+}
+
+
+function _annotateClips(name, value, scope) {
+	
+	if (scope === 'Selection') {
+		_annotateSelectedClips(name, value);
+		// TODO: We need access to the clip collection view here.
+		_selectNextClip();
+	}
+	
+	else if (scope === 'Page')
+		_annotateIntervalClips(name, value, [0, clips.length - 1]);
+	
+	else
+		// TODO: Implement 'All' scope.
+		window.alert(`Unrecognized annotation command scope "${scope}".`);
+	
+}
+
+
+function _annotateSelectedClips(name, value) {
+	for (const interval of selection.selectedIntervals)
+		_annotateIntervalClips(name, value, interval);
+}
+
+
+function _annotateIntervalClips(name, value, interval) {
+	
+	for (let i = interval[0]; i <= interval[1]; i++) {
+		
+		const clip = clips[i];
+		const url = `/vesper/clips/${clip.id}/annotations/${name}`;
+		
+		const xhr = new XMLHttpRequest();
+		xhr.onload = () => _onAnnotationPutComplete(xhr, clip, name, value);
+		xhr.open('PUT', url);
+		xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
+		xhr.send(value);
+		
+	}
+
+}
+
+
+function _onAnnotationPutComplete(xhr, clip, annotationName, annotationValue) {
+	
+	console.log(
+		'PUT completed', xhr.status, clip.id, annotationName, annotationValue);
+	
+	// TODO: Notify user on errors.
+	// TODO: Handle non-"Classification" annotations.
+	if (xhr.status === 200) {
+		clip.classification = annotationValue;
+		drawClip(clip, clipSpectrogramSettings);
+	}
+	
+}
+
+
+function _runClipAnnotator(annotationName, annotatorName, scope) {
+	// TODO: Implement this function.
+	console.log(
+		`run annotator "${annotationName}" "${annotatorName}" ${scope}`);
+}
+
+
+// <ArrowLeft>
+// <Shift+ArrowLeft>
+// <ArrowRight>
+// <Shift+ArrowRight>
+
+
+/*
+Questions:
+* What is the relationship between settings and presets?
+* What is the relationship between settings and application preferences?
+*/
+
+
+/*
+Annotation options:
+
+annotate_selected_clips:
+* select_next_clip: Boolean
+* play_next_clip: Boolean
+
+annotate_page_clips:
+* advance_to_next_page: Boolean
+* select_first_clip: Boolean
+* play_first_clip: Boolean
+
+*/
+
+
+/*
+
+
+// What are Unicode arrow code point names?
+
+
+// basic keyboard commands YAML
+commands:
+    '<Shift+ArrowRight>': show_next_page
+    '<Shift+ArrowLeft>': show_previous_page
+    '<ArrowRight>': select_next_clip
+    '<ArrowLeft>': select_previous_clip
+    '^': select_first_clip
+    '/': play_selected_clip
+    
+
+// classification keyboard commands header YAML
+bindings:
+
+    annotation_name: Classification
+    annotation_scope: Selection
+    
+    annotate:
+        args: [value]
+        actions:
+            - [annotate_clips, <<annotation_name>>, <<value>>, <<annotation_scope>>]
+            
+    annotate_page:
+        args: [value]
+        actions:
+            - [annotate_clips, <<annotation_name>>, <<value>>, Page]
+            
+    commands:
+        '#': [bind_temp, annotation_scope, Page]
+        '*': [bind_temp, annotation_scope, All]
+        '_': clear_temp_bindings
+        
+        
+*/
+
+_BASIC_KEYBOARD_COMMANDS = {
+		
+    'commands': {
+    	'<Shift+ArrowRight>': 'show_next_page',
+    	'<Shift+ArrowLeft>': 'show_previous_page',
+    	'<ArrowRight>': 'select_next_clip',
+    	'<ArrowLeft>': 'select_previous_clip',
+    	'^': 'select_first_clip',
+    	'/': 'play_selected_clip'
+    }
+
+};
+
+
+_CLASSIFICATION_KEYBOARD_COMMANDS_HEADER = {
+		
+	'bindings': {
+		
+		'annotation_name': 'Classification',
+		'annotation_scope': 'Selection',
+			
+		'annotate': {
+			'args': ['value'],
+			'actions': [
+			    ['annotate_clips',
+			        '<<annotation_name>>', '<<value>>', '<<annotation_scope>>']
+			]
+		},
+		
+		'annotate_page': {
+		    'args': ['value'],
+		    'actions': [
+		        ['annotate_clips', '<<annotation_name>>', '<<value>>', 'Page']
+		    ]
+		},
+		
+	},
+	
+	'commands': {
+    	'#': ['bind_temp', 'annotation_scope', 'Page'],
+    	'*': ['bind_temp', 'annotation_scope', 'All'],
+    	'_': 'clear_temp_bindings'
+	}
+		
+
+};
+
+
+_CLASSIFICATION_KEYBOARD_COMMANDS = {
+	
+	// Extension merges mapping items like 'bindings' and 'commands'.
+	'extends': [
+	    'basic_keyboard_commands',
+	    'classification_keyboard_commands_header'
+	],
+
+	'settings': {
+        'advance_selection_after_single_clip_annotation': true,
+        'advance_page_after_page_annotation': true,
+        'play_single_clip_selections': true
+	},
+		
+    'commands': {
+    	
+    	'!c': ['bind', {'annotation_name': 'Classification'}],
+    	'!h': ['bind', {'annotation_name': 'Harold Classification'}],
+    	
+    	'c': ['classify_clips', 'Call'],
+    	'C': ['classify_page', 'Call'],
+    	'n': ['classify_clips', 'Noise'],
+    	'N': ['classify_page', 'Noise'],
+    	'x': ['classify_clips', 'Unclassified'],
+    	'X': ['classify_page', 'Unclassified'],
+
+	    '@o': ['auto_classify_clips', 'MPG Ranch Outside Clip Classifier'],
+	    '@O': ['auto_classify_page', 'MPG Ranch Outside Clip Classifier'],
+	    '@c': ['auto_classify_clips', 'NFC Coarse Clip Classifier'],
+	    '@C': ['auto_classify_page', 'NFC Coarse Clip Classifier'],
+	    
+    }
+    
+};
+
+
+function _createExampleCommandInterpreter() {
+	return new _CommandInterpreter(_CLASSIFICATION_KEYBOARD_COMMANDS);
 }

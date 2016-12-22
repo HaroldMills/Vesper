@@ -23,7 +23,7 @@ Preset:
     - vesper.command.station_name_aliases_preset.StationNameAliasesPreset
     - vesper.django.app.annotation_commands_preset.AnnotationCommandsPreset
     - vesper.django.app.annotation_scheme_preset.AnnotationSchemePreset
-    - vesper.django.app.clip_grid_settings_preset.ClipGridSettingsPreset
+    - vesper.django.app.clip_collection_view_settings_preset.ClipCollectionViewSettingsPreset
     
 Recording File Parser:
     - vesper.mpg_ranch.recording_file_parser.RecordingFileParser

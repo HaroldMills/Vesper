@@ -34,6 +34,11 @@ class Multiselection {
 	}
 	
 	
+	get size() {
+		return this._intervals.reduce(_getSizeAux, 0);
+	}
+	
+	
 	contains(index) {
 		return (this._findContainingInterval(index) !== null);
 	}
@@ -211,6 +216,12 @@ class Multiselection {
 	}
 	
     
+}
+
+
+function _getSizeAux(acc, interval) {
+	const [a, b] = interval;
+	return acc + b - a + 1;
 }
 
 

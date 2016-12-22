@@ -457,6 +457,74 @@ def _get_periods_json(
         return calendar_utils.get_calendar_periods_json(periods, clip_counts)
     
 
+def night_new(request):
+      
+    params = request.GET
+      
+    # TODO: Type check and range check query items.
+    station_name = params['station']
+    microphone_output_name = params['microphone_output']
+    detector_name = params['detector']
+    annotation_name = 'Classification'
+    annotation_value = params['classification']
+    date = params['date']
+      
+    selected_index = int(params.get('selected', '0')) - 1
+    if selected_index == -1:
+        selected_index = 'null';
+      
+    station = Station.objects.get(name=station_name)
+    microphone_output = _get_station_microphone_output(
+        station, microphone_output_name)
+    detector = Processor.objects.get(name=detector_name)
+      
+    night = time_utils.parse_date(*date.split('-'))
+    time_interval = station.get_night_interval_utc(night)
+  
+    recordings = Recording.objects.filter(
+        station_recorder__station=station,
+        start_time__range=time_interval)
+    
+    annotations = _get_recording_annotations(
+        recordings, microphone_output, detector, annotation_name,
+        annotation_value, time_interval)
+    
+    utc_to_local = station.utc_to_local
+    utc_times = [a.clip.start_time for a in annotations]
+    start_times = [utc_to_local(t) for t in utc_times]
+      
+    rug_plot_script, rug_plot_div = \
+        clips_rug_plot.create_rug_plot(station, night, start_times)
+      
+    clips_json = _get_clips_json(annotations, start_times)
+      
+    clip_collection_view_settings_presets_json = \
+        _get_presets_json('Clip Collection View Settings')
+    annotation_scheme_presets_json = _get_presets_json('Annotation Scheme')
+    annotation_commands_presets_json = _get_presets_json('Annotation Commands')
+  
+    context = {
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': '',
+        'station_name': station_name,
+        'microphone_output_name': microphone_output_name,
+        'detector_name': detector_name,
+        'classification': annotation_value,
+        'date': date,
+        'rug_plot_script': rug_plot_script,
+        'rug_plot_div': rug_plot_div,
+        'num_clips': len(annotations),
+        'selected_index': selected_index,
+        'clips_json': clips_json,
+        'clip_collection_view_settings_presets_json':
+            clip_collection_view_settings_presets_json,
+        'annotation_scheme_presets_json': annotation_scheme_presets_json,
+        'annotation_commands_presets_json': annotation_commands_presets_json
+    }
+          
+    return render(request, 'vesper/night-new.html', context)
+    
+        
 def night(request):
       
     params = request.GET
@@ -505,7 +573,8 @@ def night(request):
     clips_json = _get_clips_json(
         annotations, start_times, page_start_index, page_end_index)
       
-    clip_grid_settings_presets_json = _get_presets_json('Clip Grid Settings')
+    clip_collection_view_settings_presets_json = \
+        _get_presets_json('Clip Collection View Settings')
     annotation_scheme_presets_json = _get_presets_json('Annotation Scheme')
     annotation_commands_presets_json = _get_presets_json('Annotation Commands')
   
@@ -524,7 +593,8 @@ def night(request):
         'page_size': page_size,
         'selected_index': selected_index,
         'clips_json': clips_json,
-        'clip_grid_settings_presets_json': clip_grid_settings_presets_json,
+        'clip_collection_view_settings_presets_json':
+            clip_collection_view_settings_presets_json,
         'annotation_scheme_presets_json': annotation_scheme_presets_json,
         'annotation_commands_presets_json': annotation_commands_presets_json
     }
@@ -586,13 +656,13 @@ def _get_recording_annotations_aux(
         time_interval)
       
 
-def _get_clips_json(annotations, start_times, start_index, end_index):
-    all_pairs = list(zip(annotations, start_times))
-    page_pairs = all_pairs[start_index:end_index]
-    clip_dicts = [_get_clip_dict(*p) for p in page_pairs]
+def _get_clips_json(annotations, start_times):
+    pairs = list(zip(annotations, start_times))
+    clip_dicts = [_get_clip_dict(*p) for p in pairs]
     return json.dumps(clip_dicts)
     
     
+# TODO: Construct wav file URLs from IDs on client.
 def _get_clip_dict(annotation, start_time):
     clip = annotation.clip
     return {
@@ -608,16 +678,17 @@ def _get_clip_dict(annotation, start_time):
 def _format_start_time(time):
     
     prefix = time.strftime('%Y-%m-%d %H:%M:%S')
+    
     millis = int(round(time.microsecond / 1000.))
     millis = '{:03d}'.format(millis)
     while len(millis) != 0 and millis[-1] == '0':
         millis = millis[:-1]
+    if len(millis) != 0:
+        millis = '.' + millis
+        
     time_zone = time.strftime('%Z')
     
-    if len(millis) == 0:
-        return prefix + ' ' + time_zone
-    else:
-        return prefix + '.' + millis + ' ' + time_zone
+    return prefix + millis + ' ' + time_zone
 
 
 def _limit_index(index, min_index, max_index):

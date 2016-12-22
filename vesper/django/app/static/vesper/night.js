@@ -75,7 +75,8 @@ function onLoad() {
 	
 	populateSettingsModalControls();
 	
-	// showPresets('Clip Grid Settings', clipGridSettingsPresets);
+	// showPresets(
+	//     'Clip Collection View Settings', clipCollectionViewSettingsPresets);
 	// showPresets('Annotation Scheme', annotationSchemePresets);
 	
 	const settings = clipSpectrogramSettings;
@@ -107,11 +108,11 @@ function removeClipDivs() {
 
 function onOkButtonClick() {
 	
-	const clipGridSettingsSelect =
-		document.getElementById('clip-grid-settings');
+	const clipCollectionViewSettingsSelect =
+		document.getElementById('clip-collection-view-settings');
 	
-	const i = clipGridSettingsSelect.selectedIndex;
-	const preset = clipGridSettingsPresets[i][1];
+	const i = clipCollectionViewSettingsSelect.selectedIndex;
+	const preset = clipCollectionViewSettingsPresets[i][1];
 	
 	// clipSpectrogramSettings = preset.clipSpectrogramSettings;
 	clipLayoutSettings = preset.clipLayoutSettings;
@@ -134,9 +135,10 @@ function populateSettingsModalControls() {
 	// with XHRs. We could set up URLs so that a client could request
 	// all presets of a specified type as JSON.
 	
-	const clipGridSettingsSelect =
-		document.getElementById('clip-grid-settings');
-	populatePresetSelect(clipGridSettingsSelect, clipGridSettingsPresets)
+	const clipCollectionViewSettingsSelect =
+		document.getElementById('clip-collection-view-settings');
+	populatePresetSelect(
+		clipCollectionViewSettingsSelect, clipCollectionViewSettingsPresets)
 	
 	const annotationSchemeSelect =
 		document.getElementById('annotation-scheme');

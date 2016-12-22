@@ -94,7 +94,7 @@
 }
 
 .clip-audio {
-    visibility: hidden;
+  visibility: hidden;
 }
 
 .clip-label {
@@ -103,5 +103,3 @@
   position: absolute;
   margin: 0;
 }
-
-
