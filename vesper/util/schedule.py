@@ -11,7 +11,9 @@ import jsonschema
 import pytz
 import yaml
 
+from vesper.util.notifier import Notifier
 import vesper.ephem.ephem_utils as ephem_utils
+import vesper.util.time_utils as time_utils
 
 
 Interval = namedtuple('Interval', ('start', 'end'))
@@ -61,7 +63,7 @@ class Schedule:
     
     def __init__(self, intervals):
         self._intervals = _normalize(intervals)
-        self._listeners = set()
+        self._notifier = Notifier(self)
         self._runner = None
         
         
@@ -152,26 +154,20 @@ class Schedule:
         
         
     def add_listener(self, listener):
-        self._listeners.add(listener)
+        self._notifier.add_listener(listener)
     
     
     def remove_listener(self, listener):
-        self._listeners.discard(listener)
+        self._notiier.remove_listener(listener)
     
     
     def clear_listeners(self):
-        self._listeners.clear()
+        self._notifier.clear_listeners()
     
     
-    def _notify_listeners(self, method_name, time, state):
-        for listener in self._listeners:
-            method = getattr(listener, method_name)
-            method(self, time, state)
-            
-            
     def start(self):
         if self._runner is None or not self._runner.is_alive():
-            self._runner = _ScheduleRunner(self)
+            self._runner = _ScheduleRunner(self, self._notifier)
             self._runner.start()
             
             
@@ -253,9 +249,10 @@ class ScheduleListener:
 class _ScheduleRunner(Thread):
     
     
-    def __init__(self, schedule):
+    def __init__(self, schedule, notifier):
         super().__init__()
         self._schedule = schedule
+        self._notifier = notifier
         self._stop_event = Event()
         self._terminated_event = Event()
         
@@ -265,9 +262,9 @@ class _ScheduleRunner(Thread):
         schedule = self._schedule
         stop_event = self._stop_event
         terminated_event = self._terminated_event
-        notify = schedule._notify_listeners
+        notify = self._notifier.notify_listeners
         
-        now = datetime.datetime.now(pytz.utc)
+        now = time_utils.get_utc_now()
         state = schedule.get_state(now)
         notify('schedule_run_started', now, state)
         
@@ -288,7 +285,7 @@ class _ScheduleRunner(Thread):
                 if stop_event.is_set():
                     # stop requested
                     
-                    now = datetime.datetime.now(pytz.utc)
+                    now = time_utils.get_utc_now()
                     
                     # Because there are multiple threads at play, it is
                     # possible (though unlikely) that `now` follows or
@@ -322,7 +319,7 @@ class _ScheduleRunner(Thread):
         
         while True:
             
-            now = datetime.datetime.now(pytz.utc)
+            now = time_utils.get_utc_now()
             seconds = (t.time - now).total_seconds()
             
             if seconds <= 0:
