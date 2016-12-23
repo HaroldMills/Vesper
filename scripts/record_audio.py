@@ -45,21 +45,21 @@ class _Listener:
         self._audio_file_path = audio_file_path
         
         
-    def recording_starting(self, num_channels, sample_rate):
+    def recording_starting(self, recorder):
         print('recording_starting')
         f = wave.open(self._audio_file_path, 'wb')
-        f.setnchannels(num_channels)
-        f.setframerate(sample_rate)
+        f.setnchannels(recorder.num_channels)
+        f.setframerate(recorder.sample_rate)
         f.setsampwidth(2)
         self._file = f
     
     
-    def samples_arrived(self, samples, buffer_size):
-#         print('samples_arrived', buffer_size)
+    def samples_arrived(self, recorder, samples, buffer_size):
+        print('samples_arrived', buffer_size, type(samples))
         self._file.writeframes(samples)
     
     
-    def recording_stopped(self):
+    def recording_stopped(self, recorder):
         print('recording_stopped')
         self._file.close()
     
