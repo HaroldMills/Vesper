@@ -274,8 +274,6 @@ class _ScheduleRunner(Thread):
             
             self._wait_for_transition_or_stop(t)
             
-            now = time_utils.get_utc_now()
-            
             if stop_event.is_set():
                 # stop requested
                 
@@ -290,6 +288,7 @@ class _ScheduleRunner(Thread):
                     notify('schedule_state_changed', t.time, t.state)
                     i += 1
                     
+                now = time_utils.get_utc_now()
                 state = schedule.get_state(now)
                 notify('schedule_run_stopped', now, state)
                 
@@ -303,6 +302,7 @@ class _ScheduleRunner(Thread):
         # If we get here, the schedule run completed. The schedule is off
         # since we are at or past the end of every interval of the schedule.
         
+        now = time_utils.get_utc_now()
         notify('schedule_run_completed', now, False)
                 
         terminated_event.set()
