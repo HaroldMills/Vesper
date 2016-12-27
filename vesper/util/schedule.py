@@ -270,47 +270,40 @@ class _ScheduleRunner(Thread):
         
         transitions = tuple(schedule.get_transitions(start=now))
         
-        if len(transitions) == 0:
-            # no schedule transitions remain
+        for i, t in enumerate(transitions):
             
-            notify('schedule_run_completed', now, False)
+            self._wait_for_transition_or_stop(t)
             
-        else:
-            # schedule transitions remain
+            now = time_utils.get_utc_now()
             
-            for i, t in enumerate(transitions):
+            if stop_event.is_set():
+                # stop requested
                 
-                self._wait_for_transition_or_stop(t)
-                
-                if stop_event.is_set():
-                    # stop requested
-                    
-                    now = time_utils.get_utc_now()
-                    
-                    # Because there are multiple threads at play, it is
-                    # possible (though unlikely) that `now` follows or
-                    # equals the times of one or more transitions in
-                    # `transitions[i:]`, i.e. that the transitions have
-                    # occurred but the schedule's listeners have not been
-                    # notified of them. We perform the notifications here.
-                    while i < len(transitions) and transitions[i].time <= now:
-                        t = transitions[i]
-                        notify('schedule_state_changed', t.time, t.state)
-                        i += 1
-                        
-                    state = schedule.get_state(now)
-                    notify('schedule_run_stopped', now, state)
-                    
-                    terminated_event.set()
-                    
-                    return
-                
-                else:
+                # Because there are multiple threads at play, it is
+                # possible (though unlikely) that `now` follows or
+                # equals the times of one or more transitions in
+                # `transitions[i:]`, i.e. that the transitions have
+                # occurred but the schedule's listeners have not been
+                # notified of them. We perform the notifications here.
+                while i < len(transitions) and transitions[i].time <= now:
+                    t = transitions[i]
                     notify('schedule_state_changed', t.time, t.state)
+                    i += 1
                     
-            # If we get here, the schedule run completed.
+                state = schedule.get_state(now)
+                notify('schedule_run_stopped', now, state)
+                
+                terminated_event.set()
+                
+                return
             
-            notify('schedule_run_completed', t.time, False)
+            else:
+                notify('schedule_state_changed', t.time, t.state)
+                    
+        # If we get here, the schedule run completed. The schedule is off
+        # since we are at or past the end of every interval of the schedule.
+        
+        notify('schedule_run_completed', now, False)
                 
         terminated_event.set()
         
