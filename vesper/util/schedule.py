@@ -63,8 +63,6 @@ class Schedule:
     
     def __init__(self, intervals):
         self._intervals = _normalize(intervals)
-        self._notifier = Notifier(self)
-        self._runner = None
         
         
     def get_intervals(self, start=None, end=None):
@@ -153,33 +151,6 @@ class Schedule:
             return self._intervals[i].start <= dt
         
         
-    def add_listener(self, listener):
-        self._notifier.add_listener(listener)
-    
-    
-    def remove_listener(self, listener):
-        self._notiier.remove_listener(listener)
-    
-    
-    def clear_listeners(self):
-        self._notifier.clear_listeners()
-    
-    
-    def start(self):
-        if self._runner is None or not self._runner.is_alive():
-            self._runner = _ScheduleRunner(self, self._notifier)
-            self._runner.start()
-            
-            
-    def stop(self):
-        if self._runner is not None:
-            self._runner.stop()
-            
-            
-    def wait(self, timeout=None):
-        self._runner.wait(timeout)
-        
-    
 def _normalize(intervals):
     
     if len(intervals) <= 1:
@@ -227,36 +198,29 @@ def _complete_query_interval(start, end):
     return (start, end)
 
 
-class ScheduleListener:
+class ScheduleRunner(Thread):
     
     
-    def schedule_run_started(self, schedule, time, state):
-        pass
-    
-    
-    def schedule_state_changed(self, schedule, time, state):
-        pass
-    
-    
-    def schedule_run_stopped(self, schedule, time, state):
-        pass
-    
-    
-    def schedule_run_completed(self, schedule, time, state):
-        pass
-    
-    
-class _ScheduleRunner(Thread):
-    
-    
-    def __init__(self, schedule, notifier):
+    def __init__(self, schedule):
         super().__init__()
         self._schedule = schedule
-        self._notifier = notifier
+        self._notifier = Notifier(schedule)
         self._stop_event = Event()
         self._terminated_event = Event()
+            
         
-        
+    def add_listener(self, listener):
+        self._notifier.add_listener(listener)
+    
+    
+    def remove_listener(self, listener):
+        self._notiier.remove_listener(listener)
+    
+    
+    def clear_listeners(self):
+        self._notifier.clear_listeners()
+    
+    
     def run(self):
         
         schedule = self._schedule
@@ -343,8 +307,27 @@ class _ScheduleRunner(Thread):
         
     def wait(self, timeout=None):
         self._terminated_event.wait(timeout)
-            
-        
+
+
+class ScheduleListener:
+    
+    
+    def schedule_run_started(self, schedule, time, state):
+        pass
+    
+    
+    def schedule_state_changed(self, schedule, time, state):
+        pass
+    
+    
+    def schedule_run_stopped(self, schedule, time, state):
+        pass
+    
+    
+    def schedule_run_completed(self, schedule, time, state):
+        pass
+
+
 # The functions below compile schedules from dictionary schedule
 # specifications to `Schedule` objects. There are two sets of functions
 # involved, the *parse* functions and the *compile* functions. The parse

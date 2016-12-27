@@ -4,7 +4,7 @@ import time
 
 import pytz
 
-from vesper.util.schedule import Interval, Schedule, Transition
+from vesper.util.schedule import Interval, Schedule, ScheduleRunner, Transition
 from vesper.tests.test_case import TestCase
 import vesper.util.schedule as schedule
 import vesper.util.time_utils as time_utils
@@ -278,6 +278,96 @@ def _dtize_interval(start, end):
     return Interval(_dt(start), _dt(end))
 
 
+# class ScheduleRunnerTests(TestCase):
+#        
+#        
+#     def test_empty_schedule_run(self):
+#            
+#         # Run should complete immediately, notifying of start and
+#         # completion.
+#            
+#         print('\nrunning empty schedule...')
+#         schedule = Schedule(())
+#         runner = ScheduleRunner(schedule)
+#         runner.add_listener(_ScheduleListener())
+#         runner.start()
+#         runner.wait()
+#            
+#            
+#     def test_always_on_schedule_run(self):
+#              
+#         # Run would continue until `Schedule.MAX_DATETIME` if we let it.
+#         # We stop it after one second.
+#             
+#         print('\nrunning and stopping always-on schedule...')
+#         interval = Interval(Schedule.MIN_DATETIME, Schedule.MAX_DATETIME)
+#         schedule = Schedule((interval,))
+#         runner = ScheduleRunner(schedule)
+#         runner.add_listener(_ScheduleListener())
+#         runner.start()
+#         runner.wait(1)
+#         runner.stop()
+#         runner.wait()
+#             
+#             
+#     def test_completed_schedule_run(self):
+#             
+#         # Schedule should complete immediately, notifying of start
+#         # and completion.
+#             
+#         print('\nrunning completed schedule...')
+#         end = pytz.utc.localize(datetime.datetime(2000, 1, 1))
+#         interval = Interval(Schedule.MIN_DATETIME, end)
+#         schedule = Schedule((interval,))
+#         runner = ScheduleRunner(schedule)
+#         runner.add_listener(_ScheduleListener())
+#         runner.start()
+#         runner.wait()
+#            
+#            
+#     def test_schedule_run(self):
+#             
+#         cases = (
+#             ((1, 2),),
+#             ((1, 2), (2.5, 3.5)),
+#             ((-2, -1), (1, 2)),
+#             ((-2, 2), (3, 4))
+#         )
+#             
+#         for case in cases:
+#                 
+#             print('\nrunning schedule for {}...'.format(case))
+#                 
+#             schedule = _create_schedule(case)
+#             runner = ScheduleRunner(schedule)
+#             runner.add_listener(_ScheduleListener())
+#             runner.start()
+#             runner.wait()
+#                 
+#                 
+#     def test_schedule_stop(self):
+#             
+#         print('\ntesting schedule stop...')
+#             
+#         spec = ((1, 4),)
+#         schedule = _create_schedule(spec)
+#            
+#         runner = ScheduleRunner(schedule)
+#         runner.add_listener(_ScheduleListener())
+#            
+#         runner.start()
+#             
+#         time.sleep(3)
+#             
+#         runner.stop()
+#             
+#         # Second stop should be ignored.
+#         time.sleep(1)
+#         runner.stop()
+#            
+#         runner.wait()
+
+
 class _ScheduleListener:
     
     
@@ -301,98 +391,6 @@ def _show_event(name, time, state):
     print('{} at {} {}'.format(name, time, state))
 
 
-# class ScheduleRunTests(TestCase):
-#       
-#       
-#     def test_empty_schedule_run(self):
-#          
-#         # Run should complete immediately, notifying of start and
-#         # completion.
-#          
-#         print('\nrunning empty schedule...')
-#         schedule = Schedule(())
-#         schedule.add_listener(_ScheduleListener())
-#         schedule.start()
-#         schedule.wait()
-#          
-#          
-#     def test_always_on_schedule_run(self):
-#           
-#         # Run would continue until `Schedule.MAX_DATETIME` if we let it.
-#         # We stop it after one second.
-#          
-#         print('\nrunning and stopping always on schedule...')
-#         interval = Interval(Schedule.MIN_DATETIME, Schedule.MAX_DATETIME)
-#         schedule = Schedule((interval,))
-#         schedule.add_listener(_ScheduleListener())
-#         schedule.start()
-#         schedule.wait(1)
-#         schedule.stop()
-#         schedule.wait()
-#          
-#          
-#     def test_completed_schedule_run(self):
-#          
-#         # Schedule should complete immediately, notifying of start
-#         # and completion.
-#          
-#         print('\nrunning completed schedule...')
-#         end = pytz.utc.localize(datetime.datetime(2000, 1, 1))
-#         interval = Interval(Schedule.MIN_DATETIME, end)
-#         schedule = Schedule((interval,))
-#         schedule.add_listener(_ScheduleListener())
-#         schedule.start()
-#         schedule.wait()
-#          
-#          
-#     def test_schedule_run(self):
-#           
-#         cases = (
-#             ((1, 2),),
-#             ((1, 2), (2.5, 3.5)),
-#             ((-2, -1), (1, 2)),
-#             ((-2, 2), (3, 4))
-#         )
-#           
-#         for case in cases:
-#               
-#             print('\nrunning schedule for {}...'.format(case))
-#               
-#             schedule = _create_schedule(case)
-#              
-#             schedule.add_listener(_ScheduleListener())
-#              
-#             schedule.start()
-#               
-#             # Second start should be ignored.
-#             time.sleep(1)
-#             schedule.start()
-#               
-#             schedule.wait()
-#               
-#               
-#     def test_schedule_stop(self):
-#           
-#         print('\ntesting schedule stop...')
-#           
-#         spec = ((1, 4),)
-#         schedule = _create_schedule(spec)
-#          
-#         schedule.add_listener(_ScheduleListener())
-#          
-#         schedule.start()
-#           
-#         time.sleep(3)
-#           
-#         schedule.stop()
-#           
-#         # Second stop should be ignored.
-#         time.sleep(1)
-#         schedule.stop()
-#          
-#         schedule.wait()
-
-        
 def _create_schedule(interval_offsets):
     
     t = datetime.datetime.now(pytz.utc)
@@ -412,8 +410,8 @@ def _create_interval(time, start_offset, end_offset):
     start = time + datetime.timedelta(seconds=start_offset)
     end = time + datetime.timedelta(seconds=end_offset)
     return Interval(start, end)
-                
-                
+
+
 class ScheduleCompilationTests(TestCase):
     
     
