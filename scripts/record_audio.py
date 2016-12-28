@@ -10,7 +10,7 @@ from vesper.util.audio_recorder import AudioRecorder
 _NUM_CHANNELS = 1
 _SAMPLE_RATE = 22050
 _BUFFER_SIZE = 11025
-_AUDIO_FILE_NAME = 'output.wav'
+_AUDIO_FILE_NAME = 'Vesper.wav'
 _RECORDING_DURATION = 5
 
 
@@ -23,19 +23,17 @@ def _main():
     listener = _Listener(_AUDIO_FILE_NAME)
     recorder.add_listener(listener)
     
-    # Start recording.
+    # Start recorder.
     recorder.start()
     
-    # Wait for recording duration.
-    end_time = time.time() + _RECORDING_DURATION
-    while time.time() < end_time:
-        time.sleep(.1)
+    # Pause for recording duration.
+    time.sleep(_RECORDING_DURATION)
     
-    # Stop recording.
+    # Tell recorder to stop.
     recorder.stop()
     
-    # Wait for stop to complete.
-    time.sleep(1)
+    # Wait for recorder to stop.
+    recorder.wait()
 
 
 class _Listener:
@@ -55,7 +53,7 @@ class _Listener:
     
     
     def samples_arrived(self, recorder, samples, buffer_size):
-        print('samples_arrived', buffer_size, type(samples))
+        # print('samples_arrived', buffer_size)
         self._file.writeframes(samples)
     
     
