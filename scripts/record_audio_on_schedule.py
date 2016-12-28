@@ -1,39 +1,31 @@
 """Records audio to .wav files according to a schedule."""
 
 
+import argparse
 import wave
+
+import pytz
+import yaml
 
 from vesper.util.audio_recorder import AudioRecorder
 from vesper.util.schedule import Schedule
 import vesper.util.time_utils as time_utils
 
 
-_STATION_NAME = 'Vesper'
-_TIME_ZONE = 'US/Eastern'
-_NUM_CHANNELS = 1
-_SAMPLE_RATE = 22050
-_BUFFER_SIZE = 22050
 _FILE_NAME_EXTENSION = '.wav'
-
-_SCHEDULE = '''
-    intervals:
-        - start: 2016-12-28 11:04 am
-          duration: 5 seconds
-'''
 
 
 def _main():
     
-    # Create schedule.
-    schedule = Schedule.compile_yaml(_SCHEDULE, time_zone=_TIME_ZONE)
+    config_file_path = _parse_args()
     
-    # Create recorder.
-    recorder = AudioRecorder(
-        _NUM_CHANNELS, _SAMPLE_RATE, _BUFFER_SIZE, schedule)
+    (station_name, num_channels, sample_rate, buffer_size, schedule) = \
+        _parse_config_file(config_file_path)
+    
+    recorder = AudioRecorder(num_channels, sample_rate, buffer_size, schedule)
      
     # Add listener.
-    listener = _Listener(_STATION_NAME)
-    recorder.add_listener(listener)
+    recorder.add_listener(_Listener(station_name))
      
     # Start recording.
     print('starting recorder...')
@@ -45,6 +37,43 @@ def _main():
     print('schedule completed')
      
  
+def _parse_args():
+    parser = argparse.ArgumentParser(
+        description='Records audio according to a schedule.')
+    parser.add_argument('config_file_path', help='configuration file path')
+    args = parser.parse_args()
+    return args.config_file_path
+
+
+def _parse_config_file(file_path):
+    
+    with open(file_path) as f:
+        config = yaml.load(f)
+        
+    station_name = config['station']
+    
+    lat = config.get('latitude')
+    if lat is not None:
+        lat = float(lat)
+        
+    lon = config.get('longitude')
+    if lon is not None:
+        lon = float(lon)
+        
+    time_zone = config.get('time_zone')
+    if time_zone is not None:
+        time_zone = pytz.timezone(time_zone)
+        
+    num_channels = int(config['num_channels'])
+    sample_rate = int(config['sample_rate'])
+    buffer_size = int(config['buffer_size'])
+    
+    schedule = Schedule.compile_dict(
+        config['schedule'], lat=lat, lon=lon, time_zone=time_zone)
+    
+    return (station_name, num_channels, sample_rate, buffer_size, schedule)
+    
+    
 class _Listener:
     
     
