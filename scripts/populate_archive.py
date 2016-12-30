@@ -23,11 +23,15 @@ import vesper.util.time_utils as time_utils
 
 _ARCHIVE_DIR_PATH = \
     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
+# _ARCHIVE_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive'
 
 _DETECTOR_NAME_ALIASES = {
     'Old Bird Thrush': ['Thrush'],
     'Old Bird Tseep': ['Tseep']
 }
+# _DETECTOR_NAME_ALIASES = {
+#     'Old Bird Tseep': ['Tseep']
+# }
 
 
 def _main():
@@ -64,6 +68,40 @@ def _add_recordings():
         recording.save()
         
     
+# _FAKE_RECORDING_START_HOUR = 19
+# _FAKE_RECORDING_DURATION = 12
+# _FAKE_RECORDING_SAMPLE_RATE = 22050
+#  
+#  
+# def _get_recordings():
+#      
+#     from vesper.archive.recording import Recording as RecordingOld
+#      
+#     archive = Archive(_ARCHIVE_DIR_PATH)
+#     archive.open()
+#     stations = archive.stations
+#     start_night = archive.start_night
+#     end_night = archive.end_night
+#     one_night = datetime.timedelta(days=1)
+#     recordings = set()
+#     for station in stations:
+#         night = start_night
+#         while night <= end_night:
+#             start_time = time_utils.create_utc_datetime(
+#                 night.year, night.month, night.day, _FAKE_RECORDING_START_HOUR,
+#                 time_zone=station.time_zone)
+#             length = \
+#                 _FAKE_RECORDING_DURATION * 3600 * _FAKE_RECORDING_SAMPLE_RATE
+#             recording = RecordingOld(
+#                 station, start_time, length, _FAKE_RECORDING_SAMPLE_RATE)
+#             recordings.add(recording)
+#             night += one_night
+#     archive.close()
+#     recordings = list(recordings)
+#     recordings.sort(key=lambda r: (r.station.name, r.start_time))
+#     return recordings
+
+
 def _get_recordings():
     archive = Archive(_ARCHIVE_DIR_PATH)
     archive.open()
