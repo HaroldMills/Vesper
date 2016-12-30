@@ -23,9 +23,6 @@ import vesper.util.time_utils as time_utils
 
 _ARCHIVE_DIR_PATH = \
     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
-_ARCHIVE_DATABASE_FILE_NAME = 'Archive Database.sqlite'
-_ARCHIVE_DATABASE_FILE_PATH = os.path.join(
-    _ARCHIVE_DIR_PATH, _ARCHIVE_DATABASE_FILE_NAME)
 
 _DETECTOR_NAME_ALIASES = {
     'Old Bird Thrush': ['Thrush'],
