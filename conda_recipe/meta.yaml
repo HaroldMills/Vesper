@@ -1,15 +1,16 @@
 package:
   name: vesper
-  version: "0.2.1"
+  version: "0.2.2"
 
 source:
   git_url: https://github.com/HaroldMills/Vesper.git
-  git_rev: ignore-me
+  git_rev: conda-build
 
 build:
 
   entry_points:
     - vesper_admin=vesper.django.manage:main
+    - vesper_record=vesper.scripts.record:_main
 
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
