@@ -338,7 +338,7 @@ class ClipCollectionView {
 	}
 	
 	
-	toggleSelection(i) {
+	toggleClipSelectionState(i) {
 		this._selection.toggle(i);
 		this._updateSelectionOutlines();
 	}
@@ -1361,7 +1361,7 @@ class ClipView {
 		if (e.shiftKey)
 			parent.extendSelection(clipNum);
 		else if (e.ctrlKey || e.metaKey)
-			parent.toggleSelection(clipNum);
+			parent.toggleClipSelectionState(clipNum);
 		else
 			parent.selectClip(clipNum);
 		
