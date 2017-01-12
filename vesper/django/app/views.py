@@ -21,7 +21,6 @@ from vesper.django.app.models import (
 from vesper.django.app.detect_form import DetectForm
 from vesper.singletons import job_manager, preset_manager
 from vesper.util.bunch import Bunch
-import vesper.django.app.clips_rug_plot as clips_rug_plot
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
@@ -602,8 +601,8 @@ def night(request):
     utc_times = [a.clip.start_time for a in annotations]
     start_times = [utc_to_local(t) for t in utc_times]
       
-    rug_plot_script, rug_plot_div = \
-        clips_rug_plot.create_rug_plot(station, night, start_times)
+#     rug_plot_script, rug_plot_div = \
+#         clips_rug_plot.create_rug_plot(station, night, start_times)
       
     clips_json = _get_clips_json(
         annotations, start_times, page_start_index, page_end_index)
@@ -621,8 +620,8 @@ def night(request):
         'detector_name': detector_name,
         'classification': annotation_value,
         'date': date,
-        'rug_plot_script': rug_plot_script,
-        'rug_plot_div': rug_plot_div,
+#         'rug_plot_script': rug_plot_script,
+#         'rug_plot_div': rug_plot_div,
         'num_clips': len(annotations),
         'page_start_index': page_start_index,
         'page_size': page_size,
