@@ -12,11 +12,18 @@ const _SOLAR_EVENT_NAMES = [
     'astronomicalDawn', 'nauticalDawn', 'civilDawn', 'sunrise'
 ];
 
+const _DAY_COLOR = '#FFFFFF';
+const _CIVIL_TWILIGHT_COLOR = '#999999';
+const _NAUTICAL_TWILIGHT_COLOR = '#666666';
+const _ASTRONOMICAL_TWILIGHT_COLOR = '#333333';
+const _NIGHT_COLOR = '#000000';
+const _CLIP_COLOR = 'orange';
+
 const _UNDERLAY_SPEC = [
-    ['sunset', 'sunrise', '#999999'],
-    ['civilDusk', 'civilDawn', '#666666'],
-    ['nauticalDusk', 'nauticalDawn', '#333333'],
-    ['astronomicalDusk', 'astronomicalDawn', '#000000']
+    ['sunset', 'sunrise', _CIVIL_TWILIGHT_COLOR],
+    ['civilDusk', 'civilDawn', _NAUTICAL_TWILIGHT_COLOR],
+    ['nauticalDusk', 'nauticalDawn', _ASTRONOMICAL_TWILIGHT_COLOR],
+    ['astronomicalDusk', 'astronomicalDawn', _NIGHT_COLOR]
 ];
 
 
@@ -104,6 +111,9 @@ class NightRugPlot {
 		
 		if (this._solarEventTimes !== null) {
 			
+			context.fillStyle = _DAY_COLOR;
+			context.fillRect(0, 0, this._canvasWidth, height);
+			
 			for (const [startName, endName, color] of _UNDERLAY_SPEC) {
 				
 			    const startTime = this._solarEventTimes[startName];
@@ -134,7 +144,7 @@ class NightRugPlot {
 		
 		const context = this._rugCanvas.getContext('2d');
 		
-		context.strokeStyle='orange';
+		context.strokeStyle = _CLIP_COLOR;
 		context.lineWidth = _RES_FACTOR;
 		context.lineStyle = 'solid';
 		
