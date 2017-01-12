@@ -176,8 +176,30 @@ body {
 }
 
 #rug-plot {
+  width: 95%;
+  max-width: 600px;
+  height: 45px;
+  margin: 10px auto 0;
+  padding: 0;
+  background-color: white;
+}
+
+#rug-plot-rug {
+  display: block;    /* default inline display yields space between canvases */
   width: 100%;
-  height: 0px;
+  height: 25px;
+  margin: 0;
+  border: 1px solid black;
+  padding: 0;
+  background-color: transparent;
+}
+
+#rug-plot-axis {
+  display: block;    /* default inline display yields space between canvases */
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  padding: 0;
   background-color: transparent;
 }
 

@@ -78,13 +78,19 @@ spectrogram colors).
 class ClipCollectionView {
 	
 	
-	constructor(elements, clips, settings, clipViewDelegateClasses) {
+	constructor(
+		    elements, clips, solarEventTimes, settings,
+		    clipViewDelegateClasses) {
 		
 		this._elements = elements;
 		this._clips = clips;
+		this._solarEventTimes = solarEventTimes;
 		this._settings = settings;
 		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		this._pageNum = 0;
+		
+		this._rugPlot =
+		    new NightRugPlot(this.elements.rugPlotDiv, clips, solarEventTimes)
 		
 		this._clipViews = this._createClipViews(settings);
 		
@@ -321,7 +327,8 @@ class ClipCollectionView {
 	
 	
 	onResize() {
-		this._layout.onResize(this.pageNum);
+		this._rugPlot.onResize();
+		// this._layout.onResize(this.pageNum);
 	}
 
 
@@ -885,8 +892,10 @@ class _NonuniformNonresizingClipViewsLayout extends _ClipViewsLayout {
 	}
 	
 	
+	// TODO: It seems that this is never called. Should we delete it?
 	onResize(pageNum) {
 		
+		console.log('NonresizingLayout.onResize');
 		this._checkPageNum(pageNum);
 		
 		// For this layout type resizes are handled by the flexbox layout.
@@ -1105,7 +1114,9 @@ class _NonuniformResizingClipViewsLayout extends _ClipViewsLayout {
 	}
 	
 	
+	// TODO: It seems that this is never called. Should we delete it?
 	onResize(pageNum) {
+		console.log('ResizingLayout.onResize');
 		this._checkPageNum(pageNum);
 		this._renderClipViews(pageNum);
 	}
@@ -1578,7 +1589,7 @@ class ClipView {
 			}
 			
 			if (s.startTimeIncluded) {
-				const parts = clip.startTime.split(' ');
+				const parts = clip.localStartTime.split(' ');
 				labelParts.push(parts[1]);
 			}
 			

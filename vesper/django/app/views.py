@@ -22,6 +22,7 @@ from vesper.django.app.detect_form import DetectForm
 from vesper.singletons import job_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.clips_rug_plot as clips_rug_plot
+import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
 
@@ -474,11 +475,13 @@ def night_new(request):
         selected_index = 'null';
       
     station = Station.objects.get(name=station_name)
+    night = time_utils.parse_date(*date.split('-'))
+    
+    solar_event_times_json = _get_solar_event_times_json(station, night)
+
     microphone_output = _get_station_microphone_output(
         station, microphone_output_name)
     detector = Processor.objects.get(name=detector_name)
-      
-    night = time_utils.parse_date(*date.split('-'))
     time_interval = station.get_night_interval_utc(night)
   
     recordings = Recording.objects.filter(
@@ -488,15 +491,8 @@ def night_new(request):
     annotations = _get_recording_annotations(
         recordings, microphone_output, detector, annotation_name,
         annotation_value, time_interval)
-    
-    utc_to_local = station.utc_to_local
-    utc_times = [a.clip.start_time for a in annotations]
-    start_times = [utc_to_local(t) for t in utc_times]
-      
-    rug_plot_script, rug_plot_div = \
-        clips_rug_plot.create_rug_plot(station, night, start_times)
-      
-    clips_json = _get_clips_json(annotations, start_times)
+          
+    clips_json = _get_clips_json(annotations, station)
       
     clip_collection_view_settings_presets_json = \
         _get_presets_json('Clip Collection View Settings')
@@ -511,8 +507,7 @@ def night_new(request):
         'detector_name': detector_name,
         'classification': annotation_value,
         'date': date,
-        'rug_plot_script': rug_plot_script,
-        'rug_plot_div': rug_plot_div,
+        'solar_event_times_json': solar_event_times_json,
         'num_clips': len(annotations),
         'selected_index': selected_index,
         'clips_json': clips_json,
@@ -525,6 +520,46 @@ def night_new(request):
     return render(request, 'vesper/night-new.html', context)
     
         
+def _get_solar_event_times_json(station, night):
+    
+    lat = station.latitude
+    lon = station.longitude
+    
+    if lat is None or lon is None:
+        return 'null'
+    
+    else:
+        # have station latitude and longitude
+        
+        time_zone = pytz.timezone(station.time_zone)
+        
+        times = {}
+        
+        # TODO: Fix issue 85 and then simplify the following code.
+        
+        get = lambda e: _get_solar_event_time(e, lat, lon, night, time_zone)
+        times['sunset'] = get('Sunset')
+        times['civilDusk'] = get('Civil Dusk')
+        times['nauticalDusk'] = get('Nautical Dusk')
+        times['astronomicalDusk'] = get('Astronomical Dusk')
+        
+        next_day = night + _ONE_DAY
+        get = lambda e: _get_solar_event_time(e, lat, lon, next_day, time_zone)
+        times['astronomicalDawn'] = get('Astronomical Dawn')
+        times['nauticalDawn'] = get('Nautical Dawn')
+        times['civilDawn'] = get('Civil Dawn')
+        times['sunrise'] = get('Sunrise')
+        
+        return json.dumps(times)
+
+    
+    
+def _get_solar_event_time(event, lat, lon, date, time_zone):
+    utc_time = ephem_utils.get_event_time(event, lat, lon, date)
+    local_time = utc_time.astimezone(time_zone)
+    return _format_time(local_time)
+
+
 def night(request):
       
     params = request.GET
@@ -656,26 +691,37 @@ def _get_recording_annotations_aux(
         time_interval)
       
 
-def _get_clips_json(annotations, start_times):
-    pairs = list(zip(annotations, start_times))
-    clip_dicts = [_get_clip_dict(*p) for p in pairs]
+def _get_clips_json(annotations, station):
+    utc_to_local = station.utc_to_local
+    clip_dicts = [_get_clip_dict(a, utc_to_local) for a in annotations]
     return json.dumps(clip_dicts)
     
     
-# TODO: Construct wav file URLs from IDs on client.
-def _get_clip_dict(annotation, start_time):
+# Ideally we would simply send the UTC start time from server to client,
+# along with the station's IANA time zone name, and the client would
+# compute the local time from those. According to 
+# https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
+# Global_Objects/Date/toLocaleTimeString (as of 2017-01-11), the Javascript
+# `Date.prototype.toLocaleTimeString()` method is supposed to be able to
+# do this, but this functionality is not yet supported by some common
+# browsers. So until the functionality is more widely supported the server
+# will send both the UTC start time and the local start time to the client.
+def _get_clip_dict(annotation, utc_to_local):
     clip = annotation.clip
+    utc_start_time = _format_time(clip.start_time)
+    local_start_time = _format_time(utc_to_local(clip.start_time))
     return {
         'id': clip.id,
         'url': clip.wav_file_url,
         'length': clip.length,
         'sampleRate': clip.sample_rate,
-        'startTime': _format_start_time(start_time),
+        'utcStartTime': utc_start_time,
+        'localStartTime': local_start_time,
         'classification': annotation.value
     }
 
     
-def _format_start_time(time):
+def _format_time(time):
     
     prefix = time.strftime('%Y-%m-%d %H:%M:%S')
     
@@ -689,7 +735,7 @@ def _format_start_time(time):
     time_zone = time.strftime('%Z')
     
     return prefix + millis + ' ' + time_zone
-
+    
 
 def _limit_index(index, min_index, max_index):
     if index < min_index:

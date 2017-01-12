@@ -17,6 +17,7 @@
     };
     const numClips = {{num_clips}};
     const clips = {{clips_json|safe}};
+    const solarEventTimes = {{solar_event_times_json|safe}};
     const clipCollectionViewSettingsPresets =
         {{clip_collection_view_settings_presets_json|safe}}
     const annotationSchemePresets = {{annotation_scheme_presets_json|safe}}
@@ -28,6 +29,7 @@
   <script src="{% static 'vesper/spectrogram.js' %}"></script>
   <script src="{% static 'vesper/multiselection.js' %}"></script>
   <script src="{% static 'vesper/ui-utils.js' %}"></script>
+  <script src="{% static 'vesper/night-rug-plot.js' %}"></script>
   <script src="{% static 'vesper/clip-collection-view.js' %}"></script>
   <script src="{% static 'vesper/night-new.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static 'vesper/night-new.css' %}">

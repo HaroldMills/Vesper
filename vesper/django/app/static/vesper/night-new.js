@@ -180,8 +180,13 @@ function createClipCollectionView() {
 	};
 		
 	clipCollectionView = new ClipCollectionView(
-		elements, clips, settings, clipViewDelegateClasses);
+		elements, clips, solarEventTimes, settings, clipViewDelegateClasses);
 	
+}
+
+
+function onResize() {
+	clipCollectionView.onResize();
 }
 
 
@@ -468,4 +473,5 @@ function onKeyPress(e) {
 
 
 window.onload = onLoad;
+window.onresize = onResize;
 document.onkeypress = onKeyPress;
