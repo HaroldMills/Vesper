@@ -1360,7 +1360,7 @@ class ClipView {
 		
 		if (e.shiftKey)
 			parent.extendSelection(clipNum);
-		else if (e.ctrlKey)
+		else if (e.ctrlKey || e.metaKey)
 			parent.toggleSelection(clipNum);
 		else
 			parent.selectClip(clipNum);
