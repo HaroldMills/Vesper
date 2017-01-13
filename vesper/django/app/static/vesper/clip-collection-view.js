@@ -87,20 +87,18 @@ class ClipCollectionView {
 		this._solarEventTimes = solarEventTimes;
 		this._settings = settings;
 		this._clipViewDelegateClasses = clipViewDelegateClasses;
-		this._pageNum = 0;
-		
-		this._rugPlot = new NightRugPlot(
-			this, this.elements.rugPlotDiv, clips, solarEventTimes)
 		
 		this._clipViews = this._createClipViews(settings);
 		
 		this._layoutClasses = this._createLayoutClassesObject();
 		this._layout = this._createLayout(settings);
 		
-		this._selection = this._createSelection();
+		this._rugPlot = new NightRugPlot(
+			this, this.elements.rugPlotDiv, clips, solarEventTimes)
+			
 		this._audioContext = new window.AudioContext();
 		
-		this._update();
+		this.pageNum = 0;
 		
 	}
 	
@@ -324,10 +322,14 @@ class ClipCollectionView {
 	
 	
 	set pageNum(pageNum) {
-		if (pageNum >= 0 && pageNum < this.numPages)
+		
+		if (pageNum >= 0 && pageNum < this.numPages) {
 			this._pageNum = pageNum;
 			this._selection = this._createSelection();
 			this._update();
+			this._rugPlot.pageNum = pageNum;
+		}
+			
 	}
 	
 	
@@ -358,9 +360,9 @@ class ClipCollectionView {
     	if (e.key === ' ' || e.key === 'Enter')
     		return;
     	
-		console.log(
-			`onKeyPress "${e.key}"`,
-			e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
+//		console.log(
+//			`onKeyPress "${e.key}"`,
+//			e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
 		
 		const action = this._getPredefinedCommandAction(e);
 		

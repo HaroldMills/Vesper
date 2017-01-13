@@ -3,6 +3,7 @@
 
 const _DEFAULT_PLOT_LIMITS = [17.5, 31.5];
 const _RUG_HEIGHT = 25;              // client pixels, also appears in CSS
+const _CLIP_LINES_MARGIN = 6;        // client pixels
 const _TICK_HEIGHT = 3;              // client pixels
 const _TICK_FONT_SIZE = 12.5;        // client pixels
 const _RES_FACTOR = 2;               // canvas pixels per client pixel
@@ -19,7 +20,8 @@ const _NAUTICAL_TWILIGHT_COLOR = '#666666';
 const _ASTRONOMICAL_TWILIGHT_COLOR = '#333333';
 const _NIGHT_COLOR = '#000000';
 const _CLIP_COLOR = 'orange';
-const _HIGHLIGHTED_CLIP_COLOR = 'red';
+const _MOUSE_PAGE_COLOR = '#00AA00';
+const _CURRENT_PAGE_COLOR = 'magenta';
 
 const _UNDERLAY_SPEC = [
     ['sunset', 'sunrise', _CIVIL_TWILIGHT_COLOR],
@@ -41,6 +43,10 @@ class NightRugPlot {
 		this._solarEventTimeStrings = solarEventTimes;
 		// this._solarEventTimeStrings = null;    // for testing
 		
+		this._rugCanvas = this._createRugCanvas();
+		this._axisCanvas = this._createAxisCanvas();
+		this._lastClientWidth = null;
+		
 		this._clipTimes = this._clips.map(_getClipTime);
 		this._solarEventTimes =
 			_getSolarEventTimes(this._solarEventTimeStrings);
@@ -48,34 +54,14 @@ class NightRugPlot {
 		[this._startTime, this._endTime] = this._getPlotLimits();
 		this._tickTimes = _getTickTimes(this._startTime, this._endTime);
 		
-		this._highlightedPageNum = null;
-		
-		this._rugCanvas = this._createRugCanvas();
-		this._axisCanvas = this._createAxisCanvas();
-		this._lastClientWidth = null;
+		this._pageNum = null;
+		this._mousePageNum = null;
 		
 		this._updateIfNeeded();
 		
 	}
 
 
-	_getPlotLimits() {
-		
-		if (this._solarEventTimes !== null) {
-			
-			const startTime = this._solarEventTimes['sunset'] - 1;
-			const endTime = this._solarEventTimes['sunrise'] + 1;
-			return [startTime, endTime];
-			
-		} else {
-			
-			return _DEFAULT_PLOT_LIMITS;
-			
-		}
-		
-	}
-	
-	
 	_createRugCanvas() {
 		
 	    const canvas = document.createElement('canvas');
@@ -102,10 +88,60 @@ class NightRugPlot {
 	}
 	
 	
+	_getPlotLimits() {
+		
+		if (this._solarEventTimes !== null) {
+			
+			const startTime = this._solarEventTimes['sunset'] - 1;
+			const endTime = this._solarEventTimes['sunrise'] + 1;
+			return [startTime, endTime];
+			
+		} else {
+			
+			return _DEFAULT_PLOT_LIMITS;
+			
+		}
+		
+	}
+	
+	
+	_updateIfNeeded() {
+		
+		const clientWidth = this._rugCanvas.clientWidth;
+		
+		if (clientWidth != this._lastClientWidth) {
+			
+			this._resizeCanvases(clientWidth);
+		    this._draw();
+		    
+		    this._lastClientWidth = clientWidth
+		    
+		}
+		
+	}
+	
+	
+	_resizeCanvases(clientWidth) {
+		
+		// We maintain each canvas at twice its client size to
+		// improve rendering quality.
+
+		this._canvasWidth = _RES_FACTOR * clientWidth;
+		
+		this._rugCanvas.width = this._canvasWidth;
+		this._rugCanvas.height = _RES_FACTOR * this._rugCanvas.clientHeight;
+		
+		this._axisCanvas.width = this._canvasWidth;
+		this._axisCanvas.height = _RES_FACTOR * this._axisCanvas.clientHeight;
+		
+	}
+	
+	
 	_draw() {
 		this._drawUnderlay();
 		this._drawClipLines(0, this._clipTimes.length, _CLIP_COLOR);
-		this._highlightPage(this._highlightedPageNum);
+		this._updatePageLines(this.pageNum);
+		this._updatePageLines(this._mousePageNum);
 		this._drawAxis();
 	}
 	
@@ -152,12 +188,13 @@ class NightRugPlot {
 		
 		context.strokeStyle = color;
 		context.lineWidth = _RES_FACTOR;
+		context.lineCap = 'butt';
 		context.lineStyle = 'solid';
 		
 		context.beginPath();
 
-		const y0 = _lineY(0);
-		const y1 = _lineY(this._rugCanvas.height);
+		const y0 = _lineY(_CLIP_LINES_MARGIN);
+		const y1 = _lineY(this._rugCanvas.clientHeight - _CLIP_LINES_MARGIN);
 				
 	    // We bin clips according to the columns of plot pixels in
 		// which they fall, and then draw vertical lines in those
@@ -218,12 +255,32 @@ class NightRugPlot {
 	}
 	
 		
+	_updatePageLines(pageNum) {
+		
+		if (pageNum !== null) {
+			
+			let color = _CLIP_COLOR;
+			
+			if (pageNum === this._pageNum)
+			    color = _CURRENT_PAGE_COLOR;
+			
+			else if (pageNum === this._mousePageNum)
+				color = _MOUSE_PAGE_COLOR;
+			
+			const [start, end] = this._parent.getPageClipNumRange(pageNum);
+			this._drawClipLines(start, end, color);
+			
+		}
+		
+	}
+	
+	
 	_drawAxis() {
 		
 		const context = this._axisCanvas.getContext('2d');
 		
 		// line properties
-		context.strokeStyle='black';
+		context.strokeStyle = 'black';
 		context.lineWidth = _RES_FACTOR;
 		context.lineStyle = 'solid';
 		
@@ -273,9 +330,31 @@ class NightRugPlot {
 	}
 	
 	
+	get pageNum() {
+		return this._pageNum;
+	}
+	
+	
+	set pageNum(pageNum) {
+		
+		if (pageNum != this._pageNum) {
+			
+			console.log('setting rug plot page num', pageNum);
+			
+			const oldPageNum = this._pageNum;
+			this._pageNum = pageNum;
+			
+			this._updatePageLines(oldPageNum);
+			this._updatePageLines(pageNum);
+
+		}
+		
+	}
+	
+	
     _onMouseEvent(e) {
     	const pageNum = this._getMousePageNum(e);
-    	this._highlightPage(pageNum);
+    	this._setMousePageNum(pageNum);
     }
     
     
@@ -360,39 +439,23 @@ class NightRugPlot {
 	}
 	
 	
-	_getNumPixelsToClip(time, clipNum) {
-		const deltaTime = Math.abs(time - this._clipTimes[clipNum]);
-		const plotWidth = this._endTime - this._startTime;
-		const pixelWidth = plotWidth / this._rugCanvas.clientWidth;
-		return deltaTime / pixelWidth;
-	}
-	
-	
-	_highlightPage(pageNum) {
+	_setMousePageNum(pageNum) {
 		
-		const hpn = this._highlightedPageNum;
-		
-		if (hpn !== null && hpn !== pageNum) {
-			this._setPageColor(hpn, _CLIP_COLOR);
-			this._highlightedPageNum = null;
+		if (pageNum != this._mousePageNum) {
+			
+			const oldPageNum = this._mousePageNum;
+			this._mousePageNum = pageNum;
+			
+			this._updatePageLines(oldPageNum);
+			this._updatePageLines(pageNum);
+			
 		}
 		
-		if (pageNum != null)
-			this._setPageColor(pageNum, _HIGHLIGHTED_CLIP_COLOR);
-		
-		this._highlightedPageNum = pageNum;
-		
-	}
-	
-	
-	_setPageColor(pageNum, color) {
-		const [start, end] = this._parent.getPageClipNumRange(pageNum);
-		this._drawClipLines(start, end, color);
 	}
 	
 	
     _onMouseOut(e) {
-	    this._highlightPage(null);
+	    this._setMousePageNum(null);
     }
     
     
@@ -403,38 +466,6 @@ class NightRugPlot {
     
 	onResize(e) {
 		this._updateIfNeeded();
-	}
-	
-	
-	_updateIfNeeded() {
-		
-		const clientWidth = this._rugCanvas.clientWidth;
-		
-		if (clientWidth != this._lastClientWidth) {
-			
-			this._resizeCanvases(clientWidth);
-		    this._draw();
-		    
-		    this._lastClientWidth = clientWidth
-		    
-		}
-		
-	}
-	
-	
-	_resizeCanvases(clientWidth) {
-		
-		// We maintain each canvas at twice its client size to
-		// improve rendering quality.
-
-		this._canvasWidth = _RES_FACTOR * clientWidth;
-		
-		this._rugCanvas.width = this._canvasWidth;
-		this._rugCanvas.height = _RES_FACTOR * this._rugCanvas.clientHeight;
-		
-		this._axisCanvas.width = this._canvasWidth;
-		this._axisCanvas.height = _RES_FACTOR * this._axisCanvas.clientHeight;
-		
 	}
 	
 	
@@ -556,11 +587,7 @@ function _getTickTimes(startTime, endTime) {
 
 /*
  * Gets the y canvas coordinate of a vertical line end.
- * 
- * The returned value is always odd. Since the sizes of our canvases are
- * twice those of their clients, drawing lines ending at odd coordinates
- * improves rendering quality.
  */
 function _lineY(y) {
-	return _RES_FACTOR * y + 1;
+	return _RES_FACTOR * y;
 }

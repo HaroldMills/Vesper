@@ -380,7 +380,7 @@ function onMouseMove(event) {
 		
 		// Highlight new highlighted circle, if any.
 		if (highlightedCircle != null) {
-		    highlightedCircle.style.backgroundColor = "red";
+		    highlightedCircle.style.backgroundColor = "#00AA00";
 		    highlightedCircle.style.zIndex = "1";
 		}
 		
