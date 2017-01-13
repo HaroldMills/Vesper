@@ -2,10 +2,11 @@
 
 
 const _DEFAULT_PLOT_LIMITS = [17.5, 31.5];
-const _RUG_HEIGHT = 25;          // client pixels, also appears in CSS
-const _TICK_HEIGHT = 3;          // client pixels
-const _TICK_FONT_SIZE = 12.5;    // client pixels
-const _RES_FACTOR = 2;           // canvas pixels per client pixel
+const _RUG_HEIGHT = 25;              // client pixels, also appears in CSS
+const _TICK_HEIGHT = 3;              // client pixels
+const _TICK_FONT_SIZE = 12.5;        // client pixels
+const _RES_FACTOR = 2;               // canvas pixels per client pixel
+const _PAGE_DISTANCE_THRESHOLD = 5;  // client pixels
 
 const _SOLAR_EVENT_NAMES = [
     'sunset', 'civilDusk', 'nauticalDusk', 'astronomicalDusk',
@@ -18,6 +19,7 @@ const _NAUTICAL_TWILIGHT_COLOR = '#666666';
 const _ASTRONOMICAL_TWILIGHT_COLOR = '#333333';
 const _NIGHT_COLOR = '#000000';
 const _CLIP_COLOR = 'orange';
+const _HIGHLIGHTED_CLIP_COLOR = 'red';
 
 const _UNDERLAY_SPEC = [
     ['sunset', 'sunrise', _CIVIL_TWILIGHT_COLOR],
@@ -31,8 +33,9 @@ const _UNDERLAY_SPEC = [
 class NightRugPlot {
 	
 	
-	constructor(div, clips, solarEventTimes) {
+	constructor(parent, div, clips, solarEventTimes) {
 		
+		this._parent = parent;
 		this._div = div;
 		this._clips = clips;
 		this._solarEventTimeStrings = solarEventTimes;
@@ -44,6 +47,8 @@ class NightRugPlot {
 		
 		[this._startTime, this._endTime] = this._getPlotLimits();
 		this._tickTimes = _getTickTimes(this._startTime, this._endTime);
+		
+		this._highlightedPageNum = null;
 		
 		this._rugCanvas = this._createRugCanvas();
 		this._axisCanvas = this._createAxisCanvas();
@@ -99,7 +104,8 @@ class NightRugPlot {
 	
 	_draw() {
 		this._drawUnderlay();
-		this._drawClipLines();
+		this._drawClipLines(0, this._clipTimes.length, _CLIP_COLOR);
+		this._highlightPage(this._highlightedPageNum);
 		this._drawAxis();
 	}
 	
@@ -140,11 +146,11 @@ class NightRugPlot {
 	}
 	
 	
-	_drawClipLines() {
+	_drawClipLines(startClipNum, endClipNum, color) {
 		
 		const context = this._rugCanvas.getContext('2d');
 		
-		context.strokeStyle = _CLIP_COLOR;
+		context.strokeStyle = color;
 		context.lineWidth = _RES_FACTOR;
 		context.lineStyle = 'solid';
 		
@@ -181,7 +187,9 @@ class NightRugPlot {
 		// the shimmering to be much of an issue since I don't expect
 		// that users will resize rug plots very often.
 		
-		for (const x of this._getLineXs()) {
+		const xs = this._getLineXs(startClipNum, endClipNum);
+		
+		for (const x of xs) {
 			context.moveTo(x, y0);
 			context.lineTo(x, y1);
 		}
@@ -192,16 +200,14 @@ class NightRugPlot {
 	
 	
 	/*
-	 * Gets x coordinates of lines to draw.
-	 * 
-	 * This method effectively bins clips according to the columns of
-	 * plot pixels in which they fall, and 
+	 * Gets x coordinates of clip lines.
 	 */
-	_getLineXs() {
+	_getLineXs(startClipNum, endClipNum) {
 		
 		const xs = new Set();
 		
-		for (const time of this._clipTimes) {
+		for (let i = startClipNum; i < endClipNum; i++) {
+			const time = this._clipTimes[i];
 			const x = this._timeToLineX(time);
 			if (x !== null)
 			    xs.add(x);
@@ -267,24 +273,131 @@ class NightRugPlot {
 	}
 	
 	
-	_xToTime(x) {
-		const delta = this._endTime - this._startTime;
-		return this._startTime + x * deltaTime / this._canvasWidth;
-	}
-	
-	
     _onMouseEvent(e) {
-	    console.log('rug plot mouse event');
+    	const pageNum = this._getMousePageNum(e);
+    	this._highlightPage(pageNum);
     }
     
     
+    _getMousePageNum(e) {
+    	
+		if (this._clipTimes.length === 0)
+			// no clips
+			
+			return null;
+    	
+		else {
+			// at least one clip
+			
+	    	const clipTimes = this._clipTimes;
+			const numClips = clipTimes.length;
+	    	const firstClipX = this._timeToClientX(clipTimes[0]);
+	    	const lastClipX = this._timeToClientX(clipTimes[numClips - 1]);
+	    	
+	    	const rect = this._rugCanvas.getBoundingClientRect();
+	    	const mouseX = e.clientX - rect.left;
+	    	
+	    	if (firstClipX - mouseX > _PAGE_DISTANCE_THRESHOLD ||
+	    			mouseX - lastClipX > _PAGE_DISTANCE_THRESHOLD)
+	    		// mouse is too far to left or right of clips
+	    		
+	    		return null;
+	    	
+	    	else {
+	    		// mouse is within clips, or close enough to first or last
+	    		
+		    	const time = this._clientXToTime(mouseX);
+		    	const clipNum = this._findClosestClipNum(time);
+		    	return this._parent.getClipPageNum(clipNum);
+
+	    	}
+	    	
+		}
+	    		
+    }
+    
+    
+	_timeToClientX(time) {
+		const clientWidth = this._rugCanvas.clientWidth
+		const deltaTime = this._endTime - this._startTime;
+		return clientWidth * (time - this._startTime) / deltaTime;
+	}
+	
+	
+	_clientXToTime(x) {
+		const deltaTime = this._endTime - this._startTime;
+		const width = this._rugCanvas.clientWidth;
+		return this._startTime + x * deltaTime / width;
+	}
+	
+	
+	_findClosestClipNum(time) {
+		
+		const clipTimes = this._clipTimes;
+		const numClips = clipTimes.length;
+		
+		if (numClips === 0)
+			return null;
+		
+		else {
+			
+		    const clipNum = findLastLE(clipTimes, time);
+		    
+		    if (clipNum === -1)
+		    	return 0;
+		    
+		    else if (clipNum === numClips - 1)
+		    	return numClips - 1;
+		    
+		    else {
+		    	const d0 = time - clipTimes[clipNum];
+		    	const d1 = clipTimes[clipNum + 1] - time;
+		    	return d0 < d1 ? clipNum : clipNum + 1;
+		    }
+		    	
+		}
+		
+	}
+	
+	
+	_getNumPixelsToClip(time, clipNum) {
+		const deltaTime = Math.abs(time - this._clipTimes[clipNum]);
+		const plotWidth = this._endTime - this._startTime;
+		const pixelWidth = plotWidth / this._rugCanvas.clientWidth;
+		return deltaTime / pixelWidth;
+	}
+	
+	
+	_highlightPage(pageNum) {
+		
+		const hpn = this._highlightedPageNum;
+		
+		if (hpn !== null && hpn !== pageNum) {
+			this._setPageColor(hpn, _CLIP_COLOR);
+			this._highlightedPageNum = null;
+		}
+		
+		if (pageNum != null)
+			this._setPageColor(pageNum, _HIGHLIGHTED_CLIP_COLOR);
+		
+		this._highlightedPageNum = pageNum;
+		
+	}
+	
+	
+	_setPageColor(pageNum, color) {
+		const [start, end] = this._parent.getPageClipNumRange(pageNum);
+		this._drawClipLines(start, end, color);
+	}
+	
+	
     _onMouseOut(e) {
-	    console.log('rug plot mouse out');
+	    this._highlightPage(null);
     }
     
     
     _onClick(e) {
-    	console.log('rug plot mouse click');
+    	this._parent.pageNum = this._getMousePageNum(e);
     }
     
     

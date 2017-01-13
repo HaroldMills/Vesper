@@ -89,8 +89,8 @@ class ClipCollectionView {
 		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		this._pageNum = 0;
 		
-		this._rugPlot =
-		    new NightRugPlot(this.elements.rugPlotDiv, clips, solarEventTimes)
+		this._rugPlot = new NightRugPlot(
+			this, this.elements.rugPlotDiv, clips, solarEventTimes)
 		
 		this._clipViews = this._createClipViews(settings);
 		
@@ -312,6 +312,11 @@ class ClipCollectionView {
 		return this._layout.getPageClipNumRange(pageNum);
 	}
 
+	
+	getClipPageNum(clipNum) {
+		return this._layout.getClipPageNum(clipNum);
+	}
+	
 	
 	get pageNum() {
 		return this._pageNum;
@@ -633,40 +638,6 @@ Clip collection view layout settings by layout type:
 // class _UniformResizingClipViewsLayout { }
 
 
-/**
- * Finds the last element of xs that is less than or equal to x.
- */
-function _findLastLE(xs, x) {
-	
-	if (x < xs[0])
-		return -1;
-	
-	else {
-		
-		let low = 0;
-		let high = xs.length;
-		let mid;
-		
-		// invariant: result is in [low, high)
-		
-		while (high != low + 1) {
-			
-			mid = Math.floor((low + high) / 2);
-			
-			if (xs[mid] <= x)
-				low = mid;
-			else
-				high = mid;
-				
-		}
-		
-		return low;
-		
-	}
-	
-}
-
-
 function _scrollToTop() {
 	window.scrollTo(0, 0);
 }
@@ -749,7 +720,7 @@ class _ClipViewsLayout {
 	
 	getClipPageNum(clipNum) {
 		this._checkClipNum(clipNum);
-		return _findLastLE(this._pageStartClipNums, clipNum);
+		return findLastLE(this._pageStartClipNums, clipNum);
 	}
 	
 	
