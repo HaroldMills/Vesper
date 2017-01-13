@@ -106,6 +106,7 @@ function setCalendarPeriods() {
 		// Install mouse motion handler on calendar.
 		const calendar = document.getElementById("calendar");
 		calendar.addEventListener("mousemove", onMouseMove);
+		calendar.addEventListener("click", onMouseClick);
 		
 	}
 
@@ -188,29 +189,37 @@ function addMonthDay(day, days_) {
 		
 	} else {
 		
+		// Get circle URL.
+		let date = formatDate(day.date);
+		let url = `/vesper/night?station=${stationName}&` +
+				  `microphone_output=${microphoneOutputName}&` +
+				  `detector=${detectorName}&` +
+				  `classification=${classification}&` +
+				  `date=${date}`;
+		
 		// Add count circle.
 		let circle_ = document.createElement("div");
 		circle_.className = "circle";
+		circle_.setAttribute("data-url", url);
 		let radius = getCircleRadius(day.count).toFixed(1);
-		let diameter = 2 * radius;
 		circle_.setAttribute("data-radius", radius);
+		let diameter = 2 * radius;
 		let size = `${diameter}px`;
 		circle_.style.width = size;
 		circle_.style.height = size;
 		day_.appendChild(circle_);
 		
 		// Add day number.
-		let num_ = document.createElement("a");
+		let num_ = null;
+		if (day.count == 0) {
+			num_ = document.createElement("span");
+			num_.innerHTML = day.date.getDate();
+		} else {
+		    num_ = document.createElement("a");
+	        num_.href = url;
+		    num_.innerHTML = day.date.getDate();
+		}
 		num_.className = "day-num";
-		let d = day.date;
-		let date = formatDate(d);
-		num_.href = `/vesper/night?station=${stationName}&` +
-				    `microphone_output=${microphoneOutputName}&` +
-				    `detector=${detectorName}&` +
-				    `classification=${classification}&` +
-				    `date=${date}&` +
-				    `start=1&size=${pageSize}`;
-		num_.innerHTML = d.getDate();
 		day_.appendChild(num_);
 		
 	}
@@ -429,6 +438,20 @@ function getDistance(xa, ya, xb, yb) {
 	let dx = xa - xb;
 	let dy = ya - yb;
 	return Math.sqrt(dx * dx + dy * dy);
+}
+
+
+function onMouseClick(event) {
+
+	let x = event.pageX;
+	let y = event.pageY;
+	
+	let circle = getCircleUnderneath(x, y);
+	let url = circle.getAttribute("data-url");
+	
+	if (url != '')
+	    window.location.href = url;
+	
 }
 
 
