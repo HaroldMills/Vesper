@@ -15,10 +15,11 @@ const _SOLAR_EVENT_NAMES = [
 ];
 
 const _DAY_COLOR = '#FFFFFF';
-const _CIVIL_TWILIGHT_COLOR = '#999999';
-const _NAUTICAL_TWILIGHT_COLOR = '#666666';
-const _ASTRONOMICAL_TWILIGHT_COLOR = '#333333';
+const _CIVIL_TWILIGHT_COLOR = '#CCCCCC';
+const _NAUTICAL_TWILIGHT_COLOR = '#888888';
+const _ASTRONOMICAL_TWILIGHT_COLOR = '#555555';
 const _NIGHT_COLOR = '#000000';
+const _RECORDING_COLOR = 'rgba(255, 165, 0, .3)';
 const _CLIP_COLOR = 'orange';
 const _MOUSE_PAGE_COLOR = '#00AA00';
 const _CURRENT_PAGE_COLOR = 'magenta';
@@ -39,6 +40,7 @@ class NightRugPlot {
 		
 		this._parent = parent;
 		this._div = div;
+		this._recordings = [];
 		this._clips = clips;
 		this._solarEventTimeStrings = solarEventTimes;
 		// this._solarEventTimeStrings = null;    // for testing
@@ -139,6 +141,7 @@ class NightRugPlot {
 	
 	_draw() {
 		this._drawUnderlay();
+		// this._drawRecordingRects();
 		this._drawClipLines(0, this._clipTimes.length, _CLIP_COLOR);
 		this._updatePageLines(this.pageNum);
 		this._updatePageLines(this._mousePageNum);
@@ -179,6 +182,25 @@ class NightRugPlot {
 	_timeToRectX(time) {
 		const x = this._timeToX(time);
 		return _getNearestEvenInt(x);
+	}
+	
+	
+	_drawRecordingRects() {
+		
+		const context = this._rugCanvas.getContext('2d');
+
+		// TODO: When we have actual recording data, draw rects accordingly.
+		// for (recording of this._recordings) { }
+			
+		const x = 20 * _RES_FACTOR;
+		const y = _CLIP_LINES_MARGIN * _RES_FACTOR;
+		const width = this._canvasWidth - 40 * _RES_FACTOR;
+		const height =
+			(_RUG_HEIGHT - 2 * (_CLIP_LINES_MARGIN + 1)) * _RES_FACTOR;
+		
+		context.fillStyle = _RECORDING_COLOR;
+		context.fillRect(x, y, width, height);
+			
 	}
 	
 	
@@ -338,8 +360,6 @@ class NightRugPlot {
 	set pageNum(pageNum) {
 		
 		if (pageNum != this._pageNum) {
-			
-			console.log('setting rug plot page num', pageNum);
 			
 			const oldPageNum = this._pageNum;
 			this._pageNum = pageNum;
