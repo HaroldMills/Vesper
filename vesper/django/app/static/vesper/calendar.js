@@ -392,7 +392,7 @@ function onMouseMove(event) {
 function getCircleUnderneath(x, y) {
 	
 	let circleUnderneath = null;
-	let radiusUnderneath = null;
+	let distanceUnderneath = null;
 	
 	for (let circle of circles) {
 		
@@ -408,12 +408,13 @@ function getCircleUnderneath(x, y) {
 		let distance = getDistance(x, y, centerX, centerY);
 		
 		if (distance <= radius &&
-		        (radiusUnderneath == null || distance < radiusUnderneath)) {
+		        (distanceUnderneath == null || distance < distanceUnderneath)) {
 			    // circle is underneath mouse, and its center is closer
-			    // to the mouse than any other such circle yet encountered
+			    // to the mouse than the center of any other circle yet
+			    // encountered
 			
 			circleUnderneath = circle;
-			radiusUnderneath = radius;
+			distanceUnderneath = distance;
 			
 		}
 		
