@@ -79,12 +79,11 @@ class ClipCollectionView {
 	
 	
 	constructor(
-		    elements, clips, solarEventTimes, settings,
+		    elements, clips, recordings, solarEventTimes, settings,
 		    clipViewDelegateClasses) {
 		
 		this._elements = elements;
 		this._clips = clips;
-		this._solarEventTimes = solarEventTimes;
 		this._settings = settings;
 		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		
@@ -94,7 +93,7 @@ class ClipCollectionView {
 		this._layout = this._createLayout(settings);
 		
 		this._rugPlot = new NightRugPlot(
-			this, this.elements.rugPlotDiv, clips, solarEventTimes)
+			this, this.elements.rugPlotDiv, clips, recordings, solarEventTimes)
 			
 		this._audioContext = new window.AudioContext();
 		
@@ -326,10 +325,11 @@ class ClipCollectionView {
 		if (pageNum >= 0 && pageNum < this.numPages) {
 			this._pageNum = pageNum;
 			this._selection = this._createSelection();
-			this._update();
 			this._rugPlot.pageNum = pageNum;
 		}
 			
+		this._update();
+		
 	}
 	
 	

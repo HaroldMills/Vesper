@@ -180,7 +180,8 @@ function createClipCollectionView() {
 	};
 		
 	clipCollectionView = new ClipCollectionView(
-		elements, clips, solarEventTimes, settings, clipViewDelegateClasses);
+		elements, clips, recordings, solarEventTimes, settings,
+		clipViewDelegateClasses);
 	
 }
 

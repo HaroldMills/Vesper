@@ -2,6 +2,7 @@
 
 
 const _DEFAULT_PLOT_LIMITS = [17.5, 31.5];
+const _PLOT_LIMIT_PADDING = .5;      // hours
 const _RUG_HEIGHT = 25;              // client pixels, also appears in CSS
 const _CLIP_LINES_MARGIN = 6;        // client pixels
 const _TICK_HEIGHT = 3;              // client pixels
@@ -36,12 +37,12 @@ const _UNDERLAY_SPEC = [
 class NightRugPlot {
 	
 	
-	constructor(parent, div, clips, solarEventTimes) {
+	constructor(parent, div, clips, recordings, solarEventTimes) {
 		
 		this._parent = parent;
 		this._div = div;
-		this._recordings = [];
 		this._clips = clips;
+		this._recordings = recordings;
 		this._solarEventTimeStrings = solarEventTimes;
 		// this._solarEventTimeStrings = null;    // for testing
 		
@@ -50,6 +51,7 @@ class NightRugPlot {
 		this._lastClientWidth = null;
 		
 		this._clipTimes = this._clips.map(_getClipTime);
+		this._recordingIntervals = this._recordings.map(_getRecordingInterval);
 		this._solarEventTimes =
 			_getSolarEventTimes(this._solarEventTimeStrings);
 		
@@ -92,10 +94,19 @@ class NightRugPlot {
 	
 	_getPlotLimits() {
 		
-		if (this._solarEventTimes !== null) {
+		const padding = _PLOT_LIMIT_PADDING;
+		
+		if (this._recordingIntervals.length !== 0) {
 			
-			const startTime = this._solarEventTimes['sunset'] - 1;
-			const endTime = this._solarEventTimes['sunrise'] + 1;
+			const intervals = this._recordingIntervals;
+			const startTime = intervals[0].startTime - padding;
+			const endTime = intervals[intervals.length - 1].endTime + padding;
+			return [startTime, endTime];
+			
+		} else if (this._solarEventTimes !== null) {
+			
+			const startTime = this._solarEventTimes['sunset'] - padding;
+			const endTime = this._solarEventTimes['sunrise'] + padding;
 			return [startTime, endTime];
 			
 		} else {
@@ -141,7 +152,7 @@ class NightRugPlot {
 	
 	_draw() {
 		this._drawUnderlay();
-		// this._drawRecordingRects();
+		this._drawRecordingRects();
 		this._drawClipLines(0, this._clipTimes.length, _CLIP_COLOR);
 		this._updatePageLines(this.pageNum);
 		this._updatePageLines(this._mousePageNum);
@@ -160,18 +171,9 @@ class NightRugPlot {
 			context.fillRect(0, 0, this._canvasWidth, height);
 			
 			for (const [startName, endName, color] of _UNDERLAY_SPEC) {
-				
 			    const startTime = this._solarEventTimes[startName];
-			    const startX = this._timeToRectX(startTime);
-			    
 			    const endTime = this._solarEventTimes[endName];
-			    const endX = this._timeToRectX(endTime);
-			    
-			    const width = endX - startX;
-			    
-			    context.fillStyle = color;
-				context.fillRect(startX, 0, width, height);
-				
+				this._drawRect(context, startTime, endTime, 0, height, color);
 			}
 			
 		}
@@ -185,21 +187,29 @@ class NightRugPlot {
 	}
 	
 	
+	_drawRect(context, startTime, endTime, y, height, color) {
+		
+	    const startX = this._timeToRectX(startTime);
+	    const endX = this._timeToRectX(endTime);
+	    const width = endX - startX;
+	    
+	    context.fillStyle = color;
+		context.fillRect(startX, y, width, height);
+		
+	}
+	
+	
 	_drawRecordingRects() {
 		
 		const context = this._rugCanvas.getContext('2d');
-
-		// TODO: When we have actual recording data, draw rects accordingly.
-		// for (recording of this._recordings) { }
-			
-		const x = 20 * _RES_FACTOR;
 		const y = _CLIP_LINES_MARGIN * _RES_FACTOR;
-		const width = this._canvasWidth - 40 * _RES_FACTOR;
 		const height =
 			(_RUG_HEIGHT - 2 * (_CLIP_LINES_MARGIN + 1)) * _RES_FACTOR;
 		
-		context.fillStyle = _RECORDING_COLOR;
-		context.fillRect(x, y, width, height);
+		for (const interval of this._recordingIntervals)
+			this._drawRect(
+				context, interval.startTime, interval.endTime, y, height,
+				_RECORDING_COLOR);
 			
 	}
 	
@@ -492,70 +502,14 @@ class NightRugPlot {
 }
 
 
-function _getSolarEventTimes(solarEventTimeStrings) {
-	
-	if (solarEventTimeStrings !== null) {
-
-		const times = {};
-		
-		for (const eventName of _SOLAR_EVENT_NAMES) {
-			const timeObject = _parseTime(solarEventTimeStrings[eventName]);
-			times[eventName] = _timeObjectToHours(timeObject);
-		}
-		
-		return times;
-		
-	} else {
-		
-		return null;
-		
-	}
-	
-}
-
-
-
-/*
- * Gets the odd integer nearest x.
- * 
- * Since the sizes of our canvases are twice those of their clients, drawing
- * lines at odd coordinates improves rendering quality.
- */
-function _getNearestOddInt(x) {
-	const floor = Math.floor(x);
-	return (floor % _RES_FACTOR == 1) ? floor : (floor + 1);
-}
-
-
-/*
- * Gets the even integer nearest x.
- * 
- * Since the sizes of our canvases are twice those of their clients, filling
- * rectangles at even coordinates improves rendering quality.
- */
-function _getNearestEvenInt(x) {
-	const floor = Math.floor(x);
-	return (floor % _RES_FACTOR == 0) ? floor : (floor + 1);
-}
-
-
 function _getClipTime(clip) {
-	const time = _parseTime(clip.localStartTime);
-	return _timeObjectToHours(time);
+	return _timeStringToHours(clip.localStartTime);
 }
 
 
-/*
- * Converts a time object to a number of hours past midnight of the day
- * on which the night of the clip starts. The description of these units
- * is somewhat complicated, but they are handy for plotting!
- */
-function _timeObjectToHours(t) {
-	const hourOffset = t.hour >= 12 ? 0 : 24;
-	const hour = t.hour + hourOffset;
-	const seconds =
-        hour * 3600 + t.minute * 60 + t.second + t.millisecond / 1000.;
-	return seconds / 3600;
+function _timeStringToHours(timeString) {
+	const timeObject = _parseTime(timeString);
+	return _timeObjectToHours(timeObject);
 }
 
 
@@ -585,6 +539,79 @@ function _parseTime(s) {
 		'timeZone': timeZone
 	};
 	
+}
+
+
+/*
+ * Converts a time object to a number of hours past midnight of the day
+ * on which the night of the clip starts. The description of these units
+ * is somewhat complicated, but they are handy for plotting!
+ */
+function _timeObjectToHours(t) {
+	const hourOffset = t.hour >= 12 ? 0 : 24;
+	const hour = t.hour + hourOffset;
+	const seconds =
+        hour * 3600 + t.minute * 60 + t.second + t.millisecond / 1000.;
+	return seconds / 3600;
+}
+
+
+function _getRecordingInterval(recording) {
+	
+	const startTime = _timeStringToHours(recording.startTime);
+	const endTime = _timeStringToHours(recording.endTime);
+	
+	return {
+		'startTime': startTime,
+		'endTime': endTime
+	};
+	
+}
+
+
+function _getSolarEventTimes(solarEventTimeStrings) {
+	
+	if (solarEventTimeStrings !== null) {
+
+		const times = {};
+		
+		for (const eventName of _SOLAR_EVENT_NAMES) {
+			const timeString = solarEventTimeStrings[eventName];
+			times[eventName] = _timeStringToHours(timeString);
+		}
+		
+		return times;
+		
+	} else {
+		
+		return null;
+		
+	}
+	
+}
+
+
+/*
+ * Gets the odd integer nearest x.
+ * 
+ * Since the sizes of our canvases are twice those of their clients, drawing
+ * lines at odd coordinates improves rendering quality.
+ */
+function _getNearestOddInt(x) {
+	const floor = Math.floor(x);
+	return (floor % _RES_FACTOR == 1) ? floor : (floor + 1);
+}
+
+
+/*
+ * Gets the even integer nearest x.
+ * 
+ * Since the sizes of our canvases are twice those of their clients, filling
+ * rectangles at even coordinates improves rendering quality.
+ */
+function _getNearestEvenInt(x) {
+	const floor = Math.floor(x);
+	return (floor % _RES_FACTOR == 0) ? floor : (floor + 1);
 }
 
 

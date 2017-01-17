@@ -1,7 +1,11 @@
 "use strict"
 
 
-const pageSize = 30;
+const _NONZERO_COUNT_CIRCLE_COLOR = "orange";
+const _ZERO_COUNT_CIRCLE_COLOR = "#A0A0A0";
+const _HIGHLIGHTED_CIRCLE_COLOR = "#00AA00";
+const _MIN_RADIUS = 12.5;
+const _RADIUS_SCALE_FACTOR = 7.5;
 
 let circles = null;
 let highlightedCircle = null;
@@ -197,35 +201,59 @@ function addMonthDay(day, days_) {
 				  `classification=${classification}&` +
 				  `date=${date}`;
 		
-		// Add count circle.
-		let circle_ = document.createElement("div");
-		circle_.className = "circle";
-		circle_.setAttribute("data-url", url);
-		let radius = getCircleRadius(day.count).toFixed(1);
-		circle_.setAttribute("data-radius", radius);
-		let diameter = 2 * radius;
-		let size = `${diameter}px`;
-		circle_.style.width = size;
-		circle_.style.height = size;
-		day_.appendChild(circle_);
 		
 		// Add day number.
+		
 		let num_ = null;
-		if (day.count == 0) {
+		
+		if (day.count === undefined) {
+			// no recordings for this day
+			
 			num_ = document.createElement("span");
-			num_.innerHTML = day.date.getDate();
+			
 		} else {
+			// one or more recordings for this day
+			
 		    num_ = document.createElement("a");
 	        num_.href = url;
-		    num_.innerHTML = day.date.getDate();
+		    
 		}
+		
+		num_.innerHTML = day.date.getDate();
 		num_.className = "day-num";
 		day_.appendChild(num_);
+		
+		
+		// Add count circle.
+		if (day.count !== undefined) {
+			// one or more recordings for this day
+			
+			let circle_ = document.createElement("div");
+			circle_.className = "circle";
+			circle_.setAttribute("data-url", url);
+			circle_.setAttribute("data-count", day.count.toString());
+			let radius = getCircleRadius(day.count).toFixed(1);
+			circle_.setAttribute("data-radius", radius);
+			let diameter = 2 * radius;
+			let size = `${diameter}px`;
+			circle_.style.width = size;
+			circle_.style.height = size;
+			circle_.style.background = getCircleColor(circle_);
+			circle_.style.opacity = .7;
+			day_.appendChild(circle_);
+			
+		}
 		
 	}
 	
 	days_.appendChild(day_);
 	
+}
+
+
+function getCircleColor(circle) {
+	const count = Number.parseInt(circle.getAttribute("data-count"));
+	return count === 0 ? _ZERO_COUNT_CIRCLE_COLOR : _NONZERO_COUNT_CIRCLE_COLOR;
 }
 
 
@@ -319,7 +347,7 @@ function getMonthInfo(month) {
 	    
 	    for (let dayNum = 1; dayNum != length + 1; ++dayNum) {
 	    	let date = new Date(month.year, month.month - 1, dayNum);
-	        let count = dayCounts[dayNum.toString()] || 0;
+	        let count = dayCounts[dayNum.toString()]
 	        days[numInitialEmptyDays + dayNum - 1] =
 	            { "date": date, "count": count }
 	    }
@@ -363,9 +391,9 @@ function getMonthLength(month) {
 
 function getCircleRadius(count) {
 	if (count == 0)
-		return 0;
+		return _MIN_RADIUS;
 	else
-		return (25 + 15 * Math.log10(count)) / 2;
+		return _MIN_RADIUS + _RADIUS_SCALE_FACTOR * Math.log10(count);
 }
 
 
@@ -381,7 +409,8 @@ function onMouseMove(event) {
 		
 		// Unhighlight old highlighted circle, if any.
 		if (highlightedCircle != null) {
-		    highlightedCircle.style.backgroundColor = "orange";
+		    highlightedCircle.style.backgroundColor =
+		    	getCircleColor(highlightedCircle);
 		    highlightedCircle.style.zIndex = "0";
 		}
 		
@@ -389,7 +418,7 @@ function onMouseMove(event) {
 		
 		// Highlight new highlighted circle, if any.
 		if (highlightedCircle != null) {
-		    highlightedCircle.style.backgroundColor = "#00AA00";
+		    highlightedCircle.style.backgroundColor = _HIGHLIGHTED_CIRCLE_COLOR;
 		    highlightedCircle.style.zIndex = "1";
 		}
 		

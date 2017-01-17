@@ -487,6 +487,8 @@ def night_new(request):
         station_recorder__station=station,
         start_time__range=time_interval)
     
+    recordings_json = _get_recordings_json(recordings, station)
+    
     annotations = _get_recording_annotations(
         recordings, microphone_output, detector, annotation_name,
         annotation_value, time_interval)
@@ -507,8 +509,7 @@ def night_new(request):
         'classification': annotation_value,
         'date': date,
         'solar_event_times_json': solar_event_times_json,
-        'num_clips': len(annotations),
-        'selected_index': selected_index,
+        'recordings_json': recordings_json,
         'clips_json': clips_json,
         'clip_collection_view_settings_presets_json':
             clip_collection_view_settings_presets_json,
@@ -530,20 +531,21 @@ def _get_solar_event_times_json(station, night):
     else:
         # have station latitude and longitude
         
-        time_zone = pytz.timezone(station.time_zone)
+        utc_to_local = station.utc_to_local
         
         times = {}
         
         # TODO: Fix issue 85 and then simplify the following code.
         
-        get = lambda e: _get_solar_event_time(e, lat, lon, night, time_zone)
+        get = lambda e: _get_solar_event_time(e, lat, lon, night, utc_to_local)
         times['sunset'] = get('Sunset')
         times['civilDusk'] = get('Civil Dusk')
         times['nauticalDusk'] = get('Nautical Dusk')
         times['astronomicalDusk'] = get('Astronomical Dusk')
         
         next_day = night + _ONE_DAY
-        get = lambda e: _get_solar_event_time(e, lat, lon, next_day, time_zone)
+        get = lambda e: _get_solar_event_time(
+            e, lat, lon, next_day, utc_to_local)
         times['astronomicalDawn'] = get('Astronomical Dawn')
         times['nauticalDawn'] = get('Nautical Dawn')
         times['civilDawn'] = get('Civil Dawn')
@@ -553,9 +555,9 @@ def _get_solar_event_times_json(station, night):
 
     
     
-def _get_solar_event_time(event, lat, lon, date, time_zone):
+def _get_solar_event_time(event, lat, lon, date, utc_to_local):
     utc_time = ephem_utils.get_event_time(event, lat, lon, date)
-    local_time = utc_time.astimezone(time_zone)
+    local_time = utc_to_local(utc_time)
     return _format_time(local_time)
 
 
@@ -665,6 +667,27 @@ def _get_microphone_output_channel_num(recording, microphone_output):
         'recording "{}".').format(microphone_output.name, recording.name))
 
 
+def _get_recordings_json(recordings, station):
+    
+    # Make sure recordings are in order of increasing start time.
+    recordings = sorted(recordings, key=lambda r: r.start_time)
+    
+    utc_to_local = station.utc_to_local
+    recording_dicts = [_get_recording_dict(r, utc_to_local) for r in recordings]
+    return json.dumps(recording_dicts)
+
+    
+def _get_recording_dict(recording, utc_to_local):
+    
+    start_time = _format_time(utc_to_local(recording.start_time))
+    end_time = _format_time(utc_to_local(recording.end_time))
+    
+    return {
+        'startTime': start_time,
+        'endTime': end_time
+    }
+    
+    
 def _get_recording_annotations(
         recordings, microphone_output, detector, annotation_name,
         annotation_value, time_interval):
@@ -796,11 +819,13 @@ def _get_clip_counts(
                     annotation_value, time_interval)
             
                 count = len(annotations)
-                
-                if count != 0:
-                    # print('_get_clip_counts', str(recording), count)
-                    counts[night] += count  
-                    
+                counts[night] += count  
+
+#     print('_get_clip_counts:')
+#     nights = sorted(counts.keys())
+#     for night in nights:
+#         print('   ', night, counts[night])
+        
     return counts          
 
 
