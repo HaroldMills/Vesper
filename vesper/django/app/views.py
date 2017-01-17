@@ -26,6 +26,22 @@ import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
 
 
+# A note about UTC vs. local times on client and server:
+#
+# Our preferred approach to timekeeping is to work with UTC times as
+# much as possible, and to convert those times to local times only
+# when needed, for example for display to the user.
+#
+# At present (January 2017), however, we send only local times from
+# server to client. I would prefer to send UTC times to the client and
+# have it convert them to local times, but it appears that there is not
+# yet a reliable way to do that in some browsers. According to
+# https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
+# Global_Objects/Date/toLocaleTimeString, though, help is on its way.
+# When it becomes easy enough to convert UTC times to local times in
+# all of the major browsers we should switch to that practice.
+
+
 def _create_navbar_items(data, ancestors=()):
     return tuple(_create_navbar_item(d, ancestors) for d in data)
 
@@ -531,6 +547,9 @@ def _get_solar_event_times_json(station, night):
     else:
         # have station latitude and longitude
         
+        # See note near the top of this file about why we send local
+        # instead of UTC times to clients.
+        
         utc_to_local = station.utc_to_local
         
         times = {}
@@ -672,6 +691,9 @@ def _get_recordings_json(recordings, station):
     # Make sure recordings are in order of increasing start time.
     recordings = sorted(recordings, key=lambda r: r.start_time)
     
+    # See note near the top of this file about why we send local
+    # instead of UTC times to clients.
+    
     utc_to_local = station.utc_to_local
     recording_dicts = [_get_recording_dict(r, utc_to_local) for r in recordings]
     return json.dumps(recording_dicts)
@@ -714,31 +736,27 @@ def _get_recording_annotations_aux(
       
 
 def _get_clips_json(annotations, station):
+    
+    # See note near the top of this file about why we send local
+    # instead of UTC times to clients.
+        
     utc_to_local = station.utc_to_local
     clip_dicts = [_get_clip_dict(a, utc_to_local) for a in annotations]
     return json.dumps(clip_dicts)
     
     
-# Ideally we would simply send the UTC start time from server to client,
-# along with the station's IANA time zone name, and the client would
-# compute the local time from those. According to 
-# https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
-# Global_Objects/Date/toLocaleTimeString (as of 2017-01-11), the Javascript
-# `Date.prototype.toLocaleTimeString()` method is supposed to be able to
-# do this, but this functionality is not yet supported by some common
-# browsers. So until the functionality is more widely supported the server
-# will send both the UTC start time and the local start time to the client.
 def _get_clip_dict(annotation, utc_to_local):
+    
     clip = annotation.clip
-    utc_start_time = _format_time(clip.start_time)
-    local_start_time = _format_time(utc_to_local(clip.start_time))
+    
+    # Note about UTC and local times near the top of this file.
+    start_time = _format_time(utc_to_local(clip.start_time))
     return {
         'id': clip.id,
         'url': clip.wav_file_url,
         'length': clip.length,
         'sampleRate': clip.sample_rate,
-        'utcStartTime': utc_start_time,
-        'localStartTime': local_start_time,
+        'startTime': start_time,
         'classification': annotation.value
     }
 

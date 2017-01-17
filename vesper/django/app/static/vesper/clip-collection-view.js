@@ -1562,7 +1562,7 @@ class ClipView {
 			}
 			
 			if (s.startTimeIncluded) {
-				const parts = clip.localStartTime.split(' ');
+				const parts = clip.startTime.split(' ');
 				labelParts.push(parts[1]);
 			}
 			

@@ -503,7 +503,7 @@ class NightRugPlot {
 
 
 function _getClipTime(clip) {
-	return _timeStringToHours(clip.localStartTime);
+	return _timeStringToHours(clip.startTime);
 }
 
 
