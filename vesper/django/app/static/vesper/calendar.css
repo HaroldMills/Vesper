@@ -4,13 +4,12 @@
 }
 
 .query-panel {
-  margin-top: 20px;
   background: rgba(255, 185, 56, .9);
 }
 
 .calendar-title {
   font-weight: bold;
-  margin-bottom: 50px;
+  margin-bottom: 20px;
 }
 
 @media screen and (max-width: 767px) {
@@ -20,12 +19,11 @@
 }
 
 .period {
-  margin-top: 40px;
 }
 
 .period-name {
   font-weight: bold;
-  margin-top: 0px;
+  margin-top: 20px;
 }
 
 @media screen and (max-width: 767px) {
@@ -34,18 +32,21 @@
   }
 }
 
+.period-rule {
+    margin: 0.5em auto;
+    border-style: inset;
+    border-width: 1px;
+}
+
 .row {
   margin-bottom: 20px;
-  /* background: gray; */
 }
 
 .month {
-  margin-bottom: 0px;
 }
 
 .month-name {
   text-align: center;
-  /* background: lightgray; */
 }
 
 .month-days {
@@ -54,7 +55,6 @@
   width: 210px;
   height: 180px;
   margin: auto;
-  /* background: lightgray; */
 }
 
 .day {

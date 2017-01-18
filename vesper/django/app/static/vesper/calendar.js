@@ -123,10 +123,15 @@ function addCalendarPeriod(period, periods_) {
 	period_.className = "period";
 	
 	// Add period name.
-	let name_ = document.createElement("h2");
-	name_.className = "period-name";
-	name_.innerHTML = period.name;
-	period_.appendChild(name_);
+//	let name_ = document.createElement("h2");
+//	name_.className = "period-name";
+//	name_.innerHTML = period.name;
+//	period_.appendChild(name_);
+	
+	// Add horizontal rule.
+	let hr_ = document.createElement("hr");
+	hr_.className = "period-rule";
+	period_.appendChild(hr_);
 	
 	// Add period rows.
 	let rows = getPeriodRows(period);
