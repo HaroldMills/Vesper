@@ -34,7 +34,7 @@ function clearMicrophoneOutputSelect() {
 	const microphoneOutputSelect = document.getElementById('microphone');
 	
 	// Remove old station microphone outputs.
-	while (microphoneOutputSelect.length != 0)
+	while (microphoneOutputSelect.length !== 0)
 		microphoneOutputSelect.remove(0);
 	
 }
@@ -91,7 +91,7 @@ function setCalendarPeriods() {
 	else if (detectorName === 'None')
 		periodsDiv.innerHTML = 'There are no detectors in the archive.';
 	
-	else if (periods.length == 0)
+	else if (periods.length === 0)
 		periodsDiv.innerHTML = 'There are no such clips in the archive.';
 	
 	else {
@@ -161,10 +161,10 @@ function addRowMonth(month, rowDiv) {
 	const monthDiv = document.createElement('div');
 	monthDiv.className = 'col-sm-4 month';
 	
-	if (month != null) {
+	if (month !== null) {
 		
 		// Add month name.
-		if (month.name != null) {
+		if (month.name !== null) {
 		    const nameHeading = document.createElement('h3');
 		    nameHeading.className = 'month-name';
 		    nameHeading.innerHTML = month.name;
@@ -190,7 +190,7 @@ function addMonthDay(day, daysDiv) {
 	const dayDiv = document.createElement('div');
 	dayDiv.className = 'day';
 	
-	if (day == null) {
+	if (day === null) {
 		
 		// Add empty div for layout.
 		const empty = document.createElement('div');
@@ -276,12 +276,12 @@ function formatDate(d) {
 	
 	// Get two-digit month.
 	let mm = (d.getMonth() + 1).toString();
-	if (mm.length == 1)
+	if (mm.length === 1)
 		mm = '0' + mm;
 	
 	// Get two-digit day.
 	let dd = d.getDate().toString();
-	if (dd.length == 1)
+	if (dd.length === 1)
 		dd = '0' + dd;
 	
 	return yyyy + '-' + mm + '-' + dd;
@@ -303,7 +303,7 @@ function getPeriodRows(period) {
 		initialMonths = Array(numInitialEmptyMonths).fill(null);
 		
 		const m = (numInitialEmptyMonths + numMonths) % 3;
-		const numFinalEmptyMonths = m == 0 ? 0 : 3 - m;
+		const numFinalEmptyMonths = m === 0 ? 0 : 3 - m;
 		finalMonths = Array(numFinalEmptyMonths).fill(null);
 		
 	} else {
@@ -317,13 +317,13 @@ function getPeriodRows(period) {
 	months = [].concat(initialMonths, months, finalMonths);
 
 	const rows = [];
-	for (let i = 0; i != months.length; i += 3) {
+	for (let i = 0; i < months.length; i += 3) {
 		const rowMonths = months.slice(i, i + 3);
 		const monthInfos = rowMonths.map(getMonthInfo);
 		rows.push(monthInfos);
 	}
 	
-    if (numMonths == 1) {
+    if (numMonths === 1) {
         // only one month in this period
         
         // Suppress display of month name since it's same as period name.
@@ -338,7 +338,7 @@ function getPeriodRows(period) {
 
 function getMonthInfo(month) {
 	
-	if (month == null) {
+	if (month === null) {
 		
 		return null;
 		
@@ -357,7 +357,7 @@ function getMonthInfo(month) {
 	    
 	    const days = Array(numInitialEmptyDays + length).fill(null);
 	    
-	    for (let dayNum = 1; dayNum != length + 1; ++dayNum) {
+	    for (let dayNum = 1; dayNum <= length; dayNum++) {
 	    	const date = new Date(month.year, month.month - 1, dayNum);
 	        const count = dayCounts[dayNum.toString()]
 	        days[numInitialEmptyDays + dayNum - 1] =
@@ -402,7 +402,7 @@ function getMonthLength(month) {
 
 
 function getCircleRadius(count) {
-	if (count == 0)
+	if (count === 0)
 		return _MIN_RADIUS;
 	else
 		return _MIN_RADIUS + _RADIUS_SCALE_FACTOR * Math.log10(count);
@@ -416,11 +416,11 @@ function onMouseMove(event) {
 	
 	const circle = getCircleUnderneath(x, y);
 	
-	if (circle != highlightedCircle) {
+	if (circle !== highlightedCircle) {
 		// highlighted circle will change
 		
 		// Unhighlight old highlighted circle, if any.
-		if (highlightedCircle != null) {
+		if (highlightedCircle !== null) {
 		    highlightedCircle.style.backgroundColor =
 		    	getCircleColor(highlightedCircle);
 		    highlightedCircle.style.zIndex = '0';
@@ -429,7 +429,7 @@ function onMouseMove(event) {
 		highlightedCircle = circle;
 		
 		// Highlight new highlighted circle, if any.
-		if (highlightedCircle != null) {
+		if (highlightedCircle !== null) {
 		    highlightedCircle.style.backgroundColor = _HIGHLIGHTED_CIRCLE_COLOR;
 		    highlightedCircle.style.zIndex = '1';
 		}
@@ -458,7 +458,7 @@ function getCircleUnderneath(x, y) {
 		const distance = getDistance(x, y, centerX, centerY);
 		
 		if (distance <= radius &&
-		        (distanceUnderneath == null || distance < distanceUnderneath)) {
+		        (distanceUnderneath === null || distance < distanceUnderneath)) {
 			    // circle is underneath mouse, and its center is closer
 			    // to the mouse than the center of any other circle yet
 			    // encountered
@@ -493,7 +493,7 @@ function onMouseClick(event) {
 		
 		const url = circle.getAttribute('data-url');
 		
-		if (url != '')
+		if (url !== '')
 		    window.location.href = url;
 		
 	}
