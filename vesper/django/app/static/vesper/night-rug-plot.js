@@ -4,8 +4,10 @@
 const _DEFAULT_PLOT_LIMITS = [17.5, 31.5];
 const _PLOT_LIMIT_PADDING = .5;      // hours
 const _RUG_HEIGHT = 25;              // client pixels, also appears in CSS
-const _CLIP_LINES_MARGIN = 6;        // client pixels
-const _TICK_HEIGHT = 3;              // client pixels
+const _CLIP_LINE_MARGIN = 6;         // client pixels
+const _TICK_LABEL_MARGIN = 10;       // client pixels
+const _MAJOR_TICK_HEIGHT = 3;        // client pixels
+const _MINOR_TICK_HEIGHT = 2;        // client pixels
 const _TICK_FONT_SIZE = 12.5;        // client pixels
 const _RES_FACTOR = 2;               // canvas pixels per client pixel
 const _PAGE_DISTANCE_THRESHOLD = 5;  // client pixels
@@ -33,7 +35,6 @@ const _UNDERLAY_SPEC = [
 ];
 
 
-
 class NightRugPlot {
 	
 	
@@ -56,7 +57,6 @@ class NightRugPlot {
 			_getSolarEventTimes(this._solarEventTimeStrings);
 		
 		[this._startTime, this._endTime] = this._getPlotLimits();
-		this._tickTimes = _getTickTimes(this._startTime, this._endTime);
 		
 		this._pageNum = null;
 		this._mousePageNum = null;
@@ -202,9 +202,9 @@ class NightRugPlot {
 	_drawRecordingRects() {
 		
 		const context = this._rugCanvas.getContext('2d');
-		const y = _CLIP_LINES_MARGIN * _RES_FACTOR;
+		const y = _CLIP_LINE_MARGIN * _RES_FACTOR;
 		const height =
-			(_RUG_HEIGHT - 2 * (_CLIP_LINES_MARGIN + 1)) * _RES_FACTOR;
+			(_RUG_HEIGHT - 2 * (_CLIP_LINE_MARGIN + 1)) * _RES_FACTOR;
 		
 		for (const interval of this._recordingIntervals)
 			this._drawRect(
@@ -225,8 +225,8 @@ class NightRugPlot {
 		
 		context.beginPath();
 
-		const y0 = _lineY(_CLIP_LINES_MARGIN);
-		const y1 = _lineY(this._rugCanvas.clientHeight - _CLIP_LINES_MARGIN);
+		const y0 = _lineY(_CLIP_LINE_MARGIN);
+		const y1 = _lineY(this._rugCanvas.clientHeight - _CLIP_LINE_MARGIN);
 				
 	    // We bin clips according to the columns of plot pixels in
 		// which they fall, and then draw vertical lines in those
@@ -323,23 +323,42 @@ class NightRugPlot {
 		
 		context.beginPath();
 		
-		const y0 = _lineY(0);
+		const minLabelX = _TICK_LABEL_MARGIN * _RES_FACTOR;
+		const maxLabelX =
+			this._canvasWidth - _TICK_LABEL_MARGIN * _RES_FACTOR - 1;
 		
-		for (const t of this._tickTimes) {
+		const y0 = _lineY(0);
+		const yMajor = _lineY(_MAJOR_TICK_HEIGHT);
+		const yMinor = _lineY(_MINOR_TICK_HEIGHT);
+		
+		for (let t = Math.ceil(this._startTime); t <= this._endTime; t++) {
 			
 			const x = this._timeToLineX(t);
 			
 			if (x !== null) {
-				
-				const y = _lineY(_TICK_HEIGHT);
-				
+		
 				context.moveTo(x, y0);
-				context.lineTo(x, y);
 				
-				const hour = t < 24 ? t : t - 24;
-				const text = hour.toString();
-				context.fillText(text, x, y + fontSize);
-				
+				if (t % 2 == 0) {
+					// major tick
+					
+					context.lineTo(x, yMajor);
+					
+					// We label a major tick only if it is not so close to
+					// the edge of the canvas that the label might be clipped.
+					if (x >= minLabelX && x <= maxLabelX) {
+						const hour = t < 24 ? t : t - 24;
+						const text = hour.toString();
+						context.fillText(text, x, yMajor + fontSize);
+					}
+					
+				} else {
+					// minor tick
+					
+					context.lineTo(x, yMinor);
+					
+				}
+
 			}
 			
 		}
@@ -612,23 +631,6 @@ function _getNearestOddInt(x) {
 function _getNearestEvenInt(x) {
 	const floor = Math.floor(x);
 	return (floor % _RES_FACTOR == 0) ? floor : (floor + 1);
-}
-
-
-/*
- * Gets the even-numbered hours between the specified start and end times.
- */
-function _getTickTimes(startTime, endTime) {
-	
-	const start = startTime / 2;
-	const end = endTime / 2;
-	
-	const times = [];
-	for (let x = Math.ceil(start); x <= end; x++)
-		times.push(2 * x);
-	
-	return times;
-	
 }
 
 
