@@ -489,10 +489,14 @@ function onMouseClick(event) {
 	
 	const circle = getCircleUnderneath(x, y);
 	
-	const url = circle.getAttribute('data-url');
-	
-	if (url != '')
-	    window.location.href = url;
+	if (circle !== null) {
+		
+		const url = circle.getAttribute('data-url');
+		
+		if (url != '')
+		    window.location.href = url;
+		
+	}
 	
 }
 
