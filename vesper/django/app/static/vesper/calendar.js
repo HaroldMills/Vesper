@@ -1,9 +1,9 @@
-"use strict"
+'use strict'
 
 
-const _NONZERO_COUNT_CIRCLE_COLOR = "orange";
-const _ZERO_COUNT_CIRCLE_COLOR = "#A0A0A0";
-const _HIGHLIGHTED_CIRCLE_COLOR = "#00AA00";
+const _NONZERO_COUNT_CIRCLE_COLOR = 'orange';
+const _ZERO_COUNT_CIRCLE_COLOR = '#A0A0A0';
+const _HIGHLIGHTED_CIRCLE_COLOR = '#00AA00';
 const _MIN_RADIUS = 12.5;
 const _RADIUS_SCALE_FACTOR = 7.5;
 
@@ -13,7 +13,7 @@ let highlightedCircle = null;
 
 function onLoad() {
 	
-	let stationSelect = document.getElementById("station");
+	const stationSelect = document.getElementById('station');
 	stationSelect.onchange = onStationChange;
 	
 	populateMicrophoneOutputSelect();
@@ -31,7 +31,7 @@ function onStationChange() {
 
 function clearMicrophoneOutputSelect() {
 	
-	let microphoneOutputSelect = document.getElementById("microphone");
+	const microphoneOutputSelect = document.getElementById('microphone');
 	
 	// Remove old station microphone outputs.
 	while (microphoneOutputSelect.length != 0)
@@ -48,11 +48,11 @@ function populateMicrophoneOutputSelect() {
 	// that a client could request the microphone outputs for a
 	// particular station as JSON.
 	
-	const stationSelect = document.getElementById("station");
-	const microphoneOutputSelect = document.getElementById("microphone");
+	const stationSelect = document.getElementById('station');
+	const microphoneOutputSelect = document.getElementById('microphone');
 	
 	for (name of stationMicrophoneOutputs[stationSelect.value]) {
-		const option = document.createElement("option");
+		const option = document.createElement('option');
 	    option.text = getMicrophoneOutputDisplayName(name)
 	    option.value = name;
 		microphoneOutputSelect.add(option);
@@ -68,7 +68,7 @@ function setTitle() {
 	const title = `${stationName} / ${micOutputName} / ` +
 	              `${detectorName} / ${classification} Clips`;
 	
-	let titleElement = document.getElementById("title");
+	const titleElement = document.getElementById('title');
 	titleElement.innerHTML = title;
 	
 	document.title = `Calendar - ${title}`;
@@ -78,21 +78,21 @@ function setTitle() {
 
 function setCalendarPeriods() {
 	
-	let periodsDiv = document.getElementById("periods");
+	const periodsDiv = document.getElementById('periods');
 	
-	if (stationName === "None")
-		periodsDiv.innerHTML = "There are no stations in the archive.";
+	if (stationName === 'None')
+		periodsDiv.innerHTML = 'There are no stations in the archive.';
 			
-	else if (microphoneOutputName === "None")
+	else if (microphoneOutputName === 'None')
 		periodsDiv.innerHTML =
-			"There are no microphones associated with station " +
+			'There are no microphones associated with station ' +
 			`"${stationName}".`;
 	
-	else if (detectorName === "None")
-		periodsDiv.innerHTML = "There are no detectors in the archive.";
+	else if (detectorName === 'None')
+		periodsDiv.innerHTML = 'There are no detectors in the archive.';
 	
 	else if (periods.length == 0)
-		periodsDiv.innerHTML = "There are no such clips in the archive.";
+		periodsDiv.innerHTML = 'There are no such clips in the archive.';
 	
 	else {
 		
@@ -102,162 +102,169 @@ function setCalendarPeriods() {
 		// periods should go. We populate the <div> according to the contents
 		// of the `periods` array.
 		
-		for (let period of periods)
+		for (const period of periods)
 			addCalendarPeriod(period, periodsDiv);
 			
-		circles = document.querySelectorAll(".circle");
+		circles = document.querySelectorAll('.circle');
 		
 		// Install mouse motion handler on calendar.
-		const calendar = document.getElementById("calendar");
-		calendar.addEventListener("mousemove", onMouseMove);
-		calendar.addEventListener("click", onMouseClick);
+		const calendar = document.getElementById('calendar');
+		calendar.addEventListener('mousemove', onMouseMove);
+		calendar.addEventListener('click', onMouseClick);
 		
 	}
 
 }
 
 
-function addCalendarPeriod(period, periods_) {
+function addCalendarPeriod(period, periodsDiv) {
 	
-	let period_ = document.createElement("div");
-	period_.className = "period";
+	const periodDiv = document.createElement('div');
+	periodDiv.className = 'period';
 	
 	// Add period name.
-//	let name_ = document.createElement("h2");
-//	name_.className = "period-name";
-//	name_.innerHTML = period.name;
-//	period_.appendChild(name_);
+//	const nameHeading = document.createElement('h2');
+//	nameHeading.className = 'period-name';
+//	nameHeading.innerHTML = period.name;
+//	periodDiv.appendChild(nameHeading);
 	
 	// Add horizontal rule.
-	let hr_ = document.createElement("hr");
-	hr_.className = "period-rule";
-	period_.appendChild(hr_);
+	const rule = document.createElement('hr');
+	rule.className = 'period-rule';
+	periodDiv.appendChild(rule);
 	
 	// Add period rows.
-	let rows = getPeriodRows(period);
-	for (let row of rows)
-		addPeriodRow(row, period_);
+	const rows = getPeriodRows(period);
+	for (const row of rows)
+		addPeriodRow(row, periodDiv);
 	
-	periods_.appendChild(period_);
-	
-}
-
-
-function addPeriodRow(row, period_) {
-	
-	let row_ = document.createElement("div");
-	row_.className = "row";
-	
-	for (let month of row)
-		addRowMonth(month, row_);
-	
-	period_.appendChild(row_);
+	periodsDiv.appendChild(periodDiv);
 	
 }
 
 
-function addRowMonth(month, row_) {
+function addPeriodRow(row, periodDiv) {
 	
-	let month_ = document.createElement("div");
-	month_.className = "col-sm-4 month";
+	const rowDiv = document.createElement('div');
+	rowDiv.className = 'row';
+	
+	for (const month of row)
+		addRowMonth(month, rowDiv);
+	
+	periodDiv.appendChild(rowDiv);
+	
+}
+
+
+function addRowMonth(month, rowDiv) {
+	
+	const monthDiv = document.createElement('div');
+	monthDiv.className = 'col-sm-4 month';
 	
 	if (month != null) {
 		
 		// Add month name.
 		if (month.name != null) {
-		    let name_ = document.createElement("h3");
-		    name_.className = "month-name";
-		    name_.innerHTML = month.name;
-		    month_.appendChild(name_)
+		    const nameHeading = document.createElement('h3');
+		    nameHeading.className = 'month-name';
+		    nameHeading.innerHTML = month.name;
+		    monthDiv.appendChild(nameHeading)
 		}
 		
 		// Add month days.
-		let days_ = document.createElement("div");
-		days_.className = "month-days";
-		for (let day of month.days)
-			addMonthDay(day, days_)
-		month_.appendChild(days_);
+		const daysDiv = document.createElement('div');
+		daysDiv.className = 'month-days';
+		for (const day of month.days)
+			addMonthDay(day, daysDiv)
+		monthDiv.appendChild(daysDiv);
 	
 	}
 	
-	row_.appendChild(month_);
+	rowDiv.appendChild(monthDiv);
 	
 }
 
 
-function addMonthDay(day, days_) {
+function addMonthDay(day, daysDiv) {
 	
-	let day_ = document.createElement("div");
-	day_.className = "day";
+	const dayDiv = document.createElement('div');
+	dayDiv.className = 'day';
 	
 	if (day == null) {
 		
 		// Add empty div for layout.
-		let empty = document.createElement("div");
-		day_.appendChild(empty);
+		const empty = document.createElement('div');
+		dayDiv.appendChild(empty);
 		
 	} else {
 		
 		// Get circle URL.
-		let date = formatDate(day.date);
-		let url = `/vesper/night?station=${stationName}&` +
-				  `microphone_output=${microphoneOutputName}&` +
-				  `detector=${detectorName}&` +
-				  `classification=${classification}&` +
-				  `date=${date}`;
+		const date = formatDate(day.date);
+		const url = `/vesper/night?station=${stationName}&` +
+				    `microphone_output=${microphoneOutputName}&` +
+				    `detector=${detectorName}&` +
+				    `classification=${classification}&` +
+				    `date=${date}`;
 		
 		
 		// Add day number.
 		
-		let num_ = null;
+		let num = null;
 		
 		if (day.count === undefined) {
 			// no recordings for this day
 			
-			num_ = document.createElement("span");
+			num = document.createElement('span');
 			
 		} else {
 			// one or more recordings for this day
 			
-		    num_ = document.createElement("a");
-	        num_.href = url;
+		    num = document.createElement('a');
+	        num.href = url;
 		    
 		}
 		
-		num_.innerHTML = day.date.getDate();
-		num_.className = "day-num";
-		day_.appendChild(num_);
+		num.innerHTML = day.date.getDate();
+		num.className = 'day-num';
+		dayDiv.appendChild(num);
 		
 		
 		// Add count circle.
 		if (day.count !== undefined) {
 			// one or more recordings for this day
 			
-			let circle_ = document.createElement("div");
-			circle_.className = "circle";
-			circle_.setAttribute("data-url", url);
-			circle_.setAttribute("data-count", day.count.toString());
-			let radius = getCircleRadius(day.count).toFixed(1);
-			circle_.setAttribute("data-radius", radius);
-			let diameter = 2 * radius;
-			let size = `${diameter}px`;
-			circle_.style.width = size;
-			circle_.style.height = size;
-			circle_.style.background = getCircleColor(circle_);
-			circle_.style.opacity = .7;
-			day_.appendChild(circle_);
+			const circleDiv = document.createElement('div');
+			circleDiv.className = 'circle';
+			
+			// Set circle attributes.
+			circleDiv.setAttribute('data-url', url);
+			circleDiv.setAttribute('data-count', day.count.toString());
+			const radius = getCircleRadius(day.count).toFixed(1);
+			circleDiv.setAttribute('data-radius', radius);
+			
+			// Set circle size.
+			const diameter = 2 * radius;
+			const size = `${diameter}px`;
+			circleDiv.style.width = size;
+			circleDiv.style.height = size;
+			
+			// Set circle color.
+			circleDiv.style.background = getCircleColor(circleDiv);
+			circleDiv.style.opacity = .7;
+			
+			dayDiv.appendChild(circleDiv);
 			
 		}
 		
 	}
 	
-	days_.appendChild(day_);
+	daysDiv.appendChild(dayDiv);
 	
 }
 
 
 function getCircleColor(circle) {
-	const count = Number.parseInt(circle.getAttribute("data-count"));
+	const count = Number.parseInt(circle.getAttribute('data-count'));
 	return count === 0 ? _ZERO_COUNT_CIRCLE_COLOR : _NONZERO_COUNT_CIRCLE_COLOR;
 }
 
@@ -265,17 +272,17 @@ function getCircleColor(circle) {
 function formatDate(d) {
 	
 	// Get four-digit year.
-	let yyyy = d.getFullYear().toString();
+	const yyyy = d.getFullYear().toString();
 	
 	// Get two-digit month.
 	let mm = (d.getMonth() + 1).toString();
 	if (mm.length == 1)
-		mm = "0" + mm;
+		mm = '0' + mm;
 	
 	// Get two-digit day.
 	let dd = d.getDate().toString();
 	if (dd.length == 1)
-		dd = "0" + dd;
+		dd = '0' + dd;
 	
 	return yyyy + '-' + mm + '-' + dd;
 
@@ -285,18 +292,18 @@ function formatDate(d) {
 function getPeriodRows(period) {
 	
 	let months = period.months;
-	let numMonths = months.length;
+	const numMonths = months.length;
 	
 	let initialMonths;
 	let finalMonths;
 	
 	if (numMonths > 3) {
 		
-		let numInitialEmptyMonths = (months[0].month - 1) % 3;
+		const numInitialEmptyMonths = (months[0].month - 1) % 3;
 		initialMonths = Array(numInitialEmptyMonths).fill(null);
 		
-		let m = (numInitialEmptyMonths + numMonths) % 3;
-		let numFinalEmptyMonths = m == 0 ? 0 : 3 - m;
+		const m = (numInitialEmptyMonths + numMonths) % 3;
+		const numFinalEmptyMonths = m == 0 ? 0 : 3 - m;
 		finalMonths = Array(numFinalEmptyMonths).fill(null);
 		
 	} else {
@@ -309,10 +316,10 @@ function getPeriodRows(period) {
 	
 	months = [].concat(initialMonths, months, finalMonths);
 
-	let rows = [];
+	const rows = [];
 	for (let i = 0; i != months.length; i += 3) {
-		let rowMonths = months.slice(i, i + 3);
-		let monthInfos = rowMonths.map(getMonthInfo);
+		const rowMonths = months.slice(i, i + 3);
+		const monthInfos = rowMonths.map(getMonthInfo);
 		rows.push(monthInfos);
 	}
 	
@@ -337,36 +344,36 @@ function getMonthInfo(month) {
 		
 	} else {
 		
-	    let name = getMonthName(month.month) + " " + month.year;
-	    let numInitialEmptyDays = getWeekdayNumOfFirstMonthDay(month);
-	    let length = getMonthLength(month);
+	    const name = getMonthName(month.month) + ' ' + month.year;
+	    const numInitialEmptyDays = getWeekdayNumOfFirstMonthDay(month);
+	    const length = getMonthLength(month);
 	    
 	    // Create `dayCounts` object that maps day numbers (as strings)
 	    // to counts.
-	    let dayCounts = {}
-	    for (let dayCount of month.dayCounts) {
+	    const dayCounts = {}
+	    for (const dayCount of month.dayCounts) {
 	    	dayCounts[dayCount[0].toString()] = dayCount[1];
 	    }
 	    
-	    let days = Array(numInitialEmptyDays + length).fill(null);
+	    const days = Array(numInitialEmptyDays + length).fill(null);
 	    
 	    for (let dayNum = 1; dayNum != length + 1; ++dayNum) {
-	    	let date = new Date(month.year, month.month - 1, dayNum);
-	        let count = dayCounts[dayNum.toString()]
+	    	const date = new Date(month.year, month.month - 1, dayNum);
+	        const count = dayCounts[dayNum.toString()]
 	        days[numInitialEmptyDays + dayNum - 1] =
-	            { "date": date, "count": count }
+	            { 'date': date, 'count': count }
 	    }
 	    
-	    return { "name": name, "days": days }
+	    return { 'name': name, 'days': days }
 	    
 	}
 	
 }
 
 
-let monthNames = [
-    null, "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"];
+const monthNames = [
+    null, 'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
 
 
 /* This really isn't satisfactory since it doesn't support localization.
@@ -404,10 +411,10 @@ function getCircleRadius(count) {
 
 function onMouseMove(event) {
 
-	let x = event.pageX;
-	let y = event.pageY;
+	const x = event.pageX;
+	const y = event.pageY;
 	
-	let circle = getCircleUnderneath(x, y);
+	const circle = getCircleUnderneath(x, y);
 	
 	if (circle != highlightedCircle) {
 		// highlighted circle will change
@@ -416,7 +423,7 @@ function onMouseMove(event) {
 		if (highlightedCircle != null) {
 		    highlightedCircle.style.backgroundColor =
 		    	getCircleColor(highlightedCircle);
-		    highlightedCircle.style.zIndex = "0";
+		    highlightedCircle.style.zIndex = '0';
 		}
 		
 		highlightedCircle = circle;
@@ -424,7 +431,7 @@ function onMouseMove(event) {
 		// Highlight new highlighted circle, if any.
 		if (highlightedCircle != null) {
 		    highlightedCircle.style.backgroundColor = _HIGHLIGHTED_CIRCLE_COLOR;
-		    highlightedCircle.style.zIndex = "1";
+		    highlightedCircle.style.zIndex = '1';
 		}
 		
 	}
@@ -437,18 +444,18 @@ function getCircleUnderneath(x, y) {
 	let circleUnderneath = null;
 	let distanceUnderneath = null;
 	
-	for (let circle of circles) {
+	for (const circle of circles) {
 		
-		let rect = circle.getBoundingClientRect();
-		let left = rect.left + window.scrollX;
-		let top = rect.top + window.scrollY;
+		const rect = circle.getBoundingClientRect();
+		const left = rect.left + window.scrollX;
+		const top = rect.top + window.scrollY;
 		
-		let radius = parseInt(circle.getAttribute("data-radius"));
+		const radius = parseInt(circle.getAttribute('data-radius'));
 		
-		let centerX = left + radius;
-		let centerY = top + radius;
+		const centerX = left + radius;
+		const centerY = top + radius;
 		
-		let distance = getDistance(x, y, centerX, centerY);
+		const distance = getDistance(x, y, centerX, centerY);
 		
 		if (distance <= radius &&
 		        (distanceUnderneath == null || distance < distanceUnderneath)) {
@@ -469,19 +476,20 @@ function getCircleUnderneath(x, y) {
 
 
 function getDistance(xa, ya, xb, yb) {
-	let dx = xa - xb;
-	let dy = ya - yb;
+	const dx = xa - xb;
+	const dy = ya - yb;
 	return Math.sqrt(dx * dx + dy * dy);
 }
 
 
 function onMouseClick(event) {
 
-	let x = event.pageX;
-	let y = event.pageY;
+	const x = event.pageX;
+	const y = event.pageY;
 	
-	let circle = getCircleUnderneath(x, y);
-	let url = circle.getAttribute("data-url");
+	const circle = getCircleUnderneath(x, y);
+	
+	const url = circle.getAttribute('data-url');
 	
 	if (url != '')
 	    window.location.href = url;
