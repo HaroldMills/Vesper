@@ -3,8 +3,11 @@
 
 from queue import Queue
 from threading import Thread
+from datetime import datetime, timezone
+import time
 
 import pyaudio
+from pyaudio import paInputOverflow, paInputUnderflow
 
 from vesper.util.bunch import Bunch
 from vesper.util.notifier import Notifier
@@ -13,11 +16,7 @@ from vesper.util.schedule import ScheduleRunner
 
 # TODO:
 #
-# 1. Give each `AudioRecorder` its own thread that reads audio data from
-#    a `queue`. The audio data are written to the `queue` by the recorder's
-#    PyAudio callback. This will keep the PyAudio callback execution time
-#    to a minimum by moving `AudioRecorderListener` processing from the
-#    callback thread to the recorder thread.
+# 1. Split output into .wav files that are at most 2 GB in size.
 #
 # 2. Review the schedule listener methods and the `AudioRecorder.wait`
 #    method. Are they what we want? How will scheduled recording relate
@@ -45,14 +44,33 @@ class AudioRecorder:
     """Records audio asynchronously."""
     
     
-    # This class uses a lock to ensure that the `start`, `_callback`, and
-    # `stop` methods execute atomically. These methods can run on various
-    # threads, and making them atomic ensures that they have a coherent
-    # view of the state of a recorder.
+    # Most of the work of an `AudioRecorder` is performed by a thread
+    # called the *recorder thread*. The recorder thread is created by
+    # the recorder when it it initialized, and runs as long as the process
+    # in which it was started. The recorder thread receives *commands*
+    # via an associated FIFO *command queue*, and processes the commands
+    # in the order in which they are received. The queue is synchronized,
+    # so commands can safely be written to it by any number of threads,
+    # but only the recorder thread reads the queue and executes the
+    # commands.
+    #
+    # To record audio, an `AudioRecorder` creates a PyAudio stream
+    # configured to invoke a callback function periodically with input
+    # samples. The callback function is invoked on a thread created by
+    # PyAudio, which we refer to as the *callback thread*. The callback
+    # thread is distinct from the recorder thread. The callback function
+    # performs a minimal amount of work to construct a command for the
+    # recorder thread telling it to process the input samples, and then
+    # writes the command to the recorder thread's command queue.
+    #
+    # TODO: Document recording control, both manual and scheduled.
     
 
-    def __init__(self, num_channels, sample_rate, buffer_size, schedule=None):
+    def __init__(
+            self, input_device_index, num_channels, sample_rate, buffer_size,
+            schedule=None):
         
+        self._input_device_index = input_device_index
         self._num_channels = num_channels
         self._sample_rate = sample_rate
         self._buffer_size = buffer_size
@@ -74,6 +92,11 @@ class AudioRecorder:
         else:
             self._schedule_runner = None
             
+    
+    @property
+    def input_device_index(self):
+        return self._input_device_index
+    
     
     @property
     def num_channels(self):
@@ -146,8 +169,10 @@ class AudioRecorder:
         
         while True:
             
+            # Read next command.
             command = self._command_queue.get()
 
+            # Execute command.
             handler_name = '_on_' + command.name
             handler = getattr(self, handler_name)
             handler(command)
@@ -157,32 +182,70 @@ class AudioRecorder:
         
         if not self._recording:
             
-            self._notify_listeners('recording_starting')
+            self._pyaudio = pyaudio.PyAudio()
+            
+            self._notify_listeners('recording_starting', _get_utc_now())
             
             self._recording = True
             self._stop_pending = False
 
-            self._pyaudio = pyaudio.PyAudio()
-            
             self._stream = self._pyaudio.open(
-                format=pyaudio.paInt16,
+                input=True,
+                input_device_index=self.input_device_index,
                 channels=self.num_channels,
                 rate=self.sample_rate,
+                format=pyaudio.paInt16,
                 frames_per_buffer=self.buffer_size,
-                input=True,
                 stream_callback=self._pyaudio_callback)
+            
+            self._notify_listeners('recording_started', _get_utc_now())
     
 
-    def _pyaudio_callback(self, samples, buffer_size, time_info, status):
+    def _pyaudio_callback(self, samples, num_frames, time_info, status_flags):
         
-        # TODO: Should we copy samples before queueing them?
-        
+        # Recording input latency and buffer ADC times as reported by PyAudio
+        # do not appear to be useful, at least as of 2017-01-30 on a Windows
+        # 10 VM running on Parallels 11 on Mac OS X El Capitan.
+        #
+        # Recording input latencies reported by the
+        # `pyaudio.Stream.get_input_latency` method were .5 seconds when
+        # the input buffer size was one second or more, and were the
+        # buffer size when it was one half second or less. These are
+        # unreasonably high, and are not consistent with an upper bound
+        # of tens of milliseconds measured as the time elapsed from just
+        # before an input stream was started to the time when its first
+        # buffer arrived, minus the buffer size of one second.
+        #
+        # Again from tests with various buffer sizes, it appears that the
+        # `'current_time'` value in the `time_info` argument to this method
+        # is always zero, and that the `'input_buffer_adc_time'` is always
+        # the latency reported by `pyaudio.Stream.get_input_latency` minus
+        # the buffer size.
+        #
+        # What we really want is the actual start time of each sample buffer.
+        # Without a simple way to get that time we report to listeners the
+        # times just before and after the input stream starts and the time
+        # at the beginning of each execution of the callback method, and
+        # leave it to them to try to compute more accurate buffer start times
+        # from those data if they wish.
+
         if self._recording:
             
+            # We do this first so the time we get is as early as possible.
+            arrival_time = _get_utc_now()
+            
+            overflow = (status_flags & paInputOverflow) != 0
+            underflow = (status_flags & paInputUnderflow) != 0
+        
+            # TODO: Should we copy samples before queueing them?
+        
             command = Bunch(
                 name='input',
                 samples=samples,
-                buffer_size=buffer_size)
+                num_frames=num_frames,
+                arrival_time=arrival_time,
+                overflow=overflow,
+                underflow=underflow)
             
             self._command_queue.put(command)
             
@@ -194,8 +257,10 @@ class AudioRecorder:
 
     def _on_input(self, command):
         
+        c = command
         self._notify_listeners(
-            'samples_arrived', command.samples, command.buffer_size)
+            'samples_arrived', c.arrival_time, c.samples, c.num_frames,
+            c.overflow, c.underflow)
 
         if self._stop_pending:
             
@@ -206,7 +271,7 @@ class AudioRecorder:
             self._stream.close()
             self._pyaudio.terminate()
             
-            self._notify_listeners('recording_stopped')
+            self._notify_listeners('recording_stopped', _get_utc_now())
 
 
     def _on_stop(self, command):
@@ -224,6 +289,10 @@ class AudioRecorder:
     def wait(self):
         if self._schedule_runner is not None:
             self._schedule_runner.wait()
+
+
+def _get_utc_now():
+    return datetime.fromtimestamp(time.time(), timezone.utc)
 
 
 class _ScheduleListener:
@@ -262,13 +331,18 @@ class AudioRecorderListener:
     """
     
     
-    def recording_starting(self, num_channels, sample_rate):
+    def recording_starting(self, recorder, time):
         pass
     
     
-    def samples_arrived(self, samples, buffer_size):
+    def recording_started(self, recorder, time):
         pass
     
     
-    def recording_stopped(self):
+    def samples_arrived(
+            self, recorder, time, samples, buffer_size, overflow, underflow):
+        pass
+    
+    
+    def recording_stopped(self, recorder, time):
         pass
