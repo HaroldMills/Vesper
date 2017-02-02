@@ -3,7 +3,7 @@
 
 from queue import Queue
 from threading import Thread
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import time
 
 import pyaudio
@@ -37,6 +37,9 @@ from vesper.util.schedule import ScheduleRunner
 # 6. Test local deployment as a Windows service.
 #
 # 7. Test MPG Ranch deployment as a Windows service.
+
+
+_SAMPLE_SIZE = 2     # bytes per sample
 
 
 class AudioRecorder:
@@ -73,6 +76,7 @@ class AudioRecorder:
         self._input_device_index = input_device_index
         self._num_channels = num_channels
         self._sample_rate = sample_rate
+        self._sample_size = _SAMPLE_SIZE
         self._buffer_size = buffer_size
         self._schedule = schedule
         
@@ -106,6 +110,11 @@ class AudioRecorder:
     @property
     def sample_rate(self):
         return self._sample_rate
+    
+    
+    @property
+    def sample_size(self):
+        return self._sample_size
     
     
     @property
@@ -231,8 +240,8 @@ class AudioRecorder:
 
         if self._recording:
             
-            # We do this first so the time we get is as early as possible.
-            arrival_time = _get_utc_now()
+            buffer_duration = timedelta(seconds=num_frames / self.sample_rate)
+            start_time = _get_utc_now() - buffer_duration
             
             overflow = (status_flags & paInputOverflow) != 0
             underflow = (status_flags & paInputUnderflow) != 0
@@ -243,7 +252,7 @@ class AudioRecorder:
                 name='input',
                 samples=samples,
                 num_frames=num_frames,
-                arrival_time=arrival_time,
+                start_time=start_time,
                 overflow=overflow,
                 underflow=underflow)
             
@@ -259,7 +268,7 @@ class AudioRecorder:
         
         c = command
         self._notify_listeners(
-            'samples_arrived', c.arrival_time, c.samples, c.num_frames,
+            'samples_arrived', c.start_time, c.samples, c.num_frames,
             c.overflow, c.underflow)
 
         if self._stop_pending:

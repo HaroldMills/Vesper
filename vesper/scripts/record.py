@@ -2,6 +2,7 @@
 
 
 import argparse
+import math
 import wave
 
 import pyaudio
@@ -13,6 +14,7 @@ from vesper.util.schedule import Schedule
 
 
 _FILE_NAME_EXTENSION = '.wav'
+_MAX_FILE_SIZE = 2**31          # two gigabytes (2**19 is good for testing)
 
 
 def _main():
@@ -170,31 +172,75 @@ class _AudioFileWriter(AudioRecorderListener):
     
     
     def __init__(self, station_name):
-        self._file_namer = _AudioFileNamer(station_name, _FILE_NAME_EXTENSION)
-        self._file_name = None
-        self._file = None
+        self._station_name = station_name
         
         
     def recording_starting(self, recorder, time):
         
-        self._file_name = self._file_namer.create_file_name(time)
+        self._num_channels = recorder.num_channels
+        self._sample_rate = recorder.sample_rate
+        self._sample_size = recorder.sample_size
+        self._frame_size = self._num_channels * self._sample_size
         
-        f = wave.open(self._file_name, 'wb')
-        f.setnchannels(recorder.num_channels)
-        f.setframerate(recorder.sample_rate)
-        f.setsampwidth(2)
-        self._file = f
-    
+        # We set the file size to one less than the largest integral number
+        # of seconds of audio data that fit in the maximum file size. This
+        # assumes that the non-audio data in the file (e.g. the header)
+        # require no more space than than one second of audio data.
+        bytes_per_second = self._sample_rate * self._frame_size
+        max_seconds = int(math.floor(_MAX_FILE_SIZE / bytes_per_second)) - 1
+        self._max_num_file_frames = max_seconds * self._sample_rate
+        
+        self._file_namer = _AudioFileNamer(
+            self._station_name, _FILE_NAME_EXTENSION)
+        
+        self._file = None
+        
     
     def samples_arrived(
             self, recorder, time, samples, num_frames, overflow, underflow):
         
-        # TODO: Write `num_frames` frames.
-        self._file.writeframes(samples)
+        num_frames_remaining = num_frames
+        buffer_index = 0
+        
+        while num_frames_remaining != 0:
+            
+            if self._file is None:
+                self._file = self._open_audio_file(time)
+                self._num_file_frames = 0
+        
+            num_frames = min(
+                num_frames_remaining,
+                self._max_num_file_frames - self._num_file_frames)
+                
+            num_bytes = num_frames * self._frame_size
+            
+            self._file.writeframes(
+                samples[buffer_index:buffer_index + num_bytes])
+            
+            num_frames_remaining -= num_frames
+            self._num_file_frames += num_frames
+            buffer_index += num_bytes
+            
+            if self._num_file_frames == self._max_num_file_frames:
+                self._file.close()
+                self._file = None
     
     
+    def _open_audio_file(self, time):
+        
+        file_name = self._file_namer.create_file_name(time)
+        
+        file_ = wave.open(file_name, 'wb')
+        file_.setnchannels(self._num_channels)
+        file_.setframerate(self._sample_rate)
+        file_.setsampwidth(self._sample_size)
+        
+        return file_
+    
+
     def recording_stopped(self, recorder, time):
-        self._file.close()
+        if self._file is not None:
+            self._file.close()
         
     
 class _AudioFileNamer:
