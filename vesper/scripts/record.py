@@ -3,6 +3,7 @@
 
 import argparse
 import math
+import sys
 import wave
 
 import pyaudio
@@ -19,12 +20,20 @@ _MAX_FILE_SIZE = 2**31          # two gigabytes (2**19 is good for testing)
 
 def _main():
     
+    _show_input_devices()
+    print()
+    
     config_file_path = _parse_args()
     
-    (station_name, input_device_index, num_channels, sample_rate, buffer_size,
-     schedule) = _parse_config_file(config_file_path)
-    
-    print('input device index', input_device_index)
+    try:
+        (station_name, input_device_index, num_channels, sample_rate,
+         buffer_size, schedule) = _parse_config_file(config_file_path)
+         
+    except Exception as e:
+        print(
+            'Could not parse configuration file. Error message was: {}'.format(
+                str(e)), file=sys.stderr)
+        sys.exit(1)
     
     recorder = AudioRecorder(
         input_device_index, num_channels, sample_rate, buffer_size, schedule)
@@ -43,6 +52,35 @@ def _main():
     print('schedule completed')
      
  
+def _show_input_devices():
+    
+    devices = AudioRecorder.get_input_devices()
+    
+    if len(devices) == 0:
+        print('No input devices were found.')
+        
+    else:
+        
+        print('Available input devices:')
+        
+        default_found = False
+        
+        for d in AudioRecorder.get_input_devices():
+            
+            if d.default:
+                prefix = '   *'
+                default_found = True
+            else:
+                prefix = '    '
+                
+            print('{}{} "{}"'.format(prefix, d.index, d.name))
+            
+        if default_found:
+            print('The default device is marked with an asterisk.')
+        else:
+            print('No default device was found.')
+              
+              
 def _parse_args():
     parser = argparse.ArgumentParser(
         description='Records audio according to a schedule.')
@@ -134,12 +172,11 @@ def _get_input_device_index_from_device_name(name):
     
     if len(infos) == 0:
         raise ValueError(
-            'No input device has a name that includes "{}".'.format(name))
+            'No input device name includes "{}".'.format(name))
         
     elif len(infos) > 1:
         raise ValueError(
-            'More than one input device has a name that includes "{}".'.format(
-                name))
+            'More than one input device name includes "{}".'.format(name))
         
     else:
         return infos[0]['index']

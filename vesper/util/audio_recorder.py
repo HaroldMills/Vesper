@@ -16,27 +16,22 @@ from vesper.util.schedule import ScheduleRunner
 
 # TODO:
 #
-# 1. Split output into .wav files that are at most 2 GB in size.
-#
-# 2. Review the schedule listener methods and the `AudioRecorder.wait`
+# 1. Review the schedule listener methods and the `AudioRecorder.wait`
 #    method. Are they what we want? How will scheduled recording relate
 #    to scheduled processing of recordings, e.g. detection followed by
 #    coarse classification?
 #
-# 3. Implement a recorder command that gets a list of available input
-#    devices.
-#
-# 4. Make the `AudioRecorder` configuration mutable. Some state will
+# 2. Make the `AudioRecorder` configuration mutable. Some state will
 #    be mutable only when a recorder is stopped and its schedule is
 #    disabled. As before, synchronize state manipulation with a lock
 #    where needed.
 #
-# 5. Add HTTP access to `AudioRecorder` state. Include a way to get
+# 3. Add HTTP access to `AudioRecorder` state. Include a way to get
 #    a list of available input devices.
 #
-# 6. Test local deployment as a Windows service.
+# 4. Test local deployment as a Windows service.
 #
-# 7. Test MPG Ranch deployment as a Windows service.
+# 5. Test MPG Ranch deployment as a Windows service.
 
 
 _SAMPLE_SIZE = 2     # bytes per sample
@@ -68,6 +63,11 @@ class AudioRecorder:
     #
     # TODO: Document recording control, both manual and scheduled.
     
+
+    @staticmethod
+    def get_input_devices():
+        return _get_input_devices()
+
 
     def __init__(
             self, input_device_index, num_channels, sample_rate, buffer_size,
@@ -299,6 +299,46 @@ class AudioRecorder:
         if self._schedule_runner is not None:
             self._schedule_runner.wait()
 
+
+def _get_input_devices():
+    
+    pa = pyaudio.PyAudio()
+    
+    # Get host APIs.
+    n = pa.get_host_api_count()
+    host_api_infos = [pa.get_host_api_info_by_index(i) for i in range(n)]
+    host_api_names = dict((i['index'], i['name']) for i in host_api_infos)
+        
+    # Get devices.
+    n = pa.get_device_count()
+    device_infos = [pa.get_device_info_by_index(i) for i in range(n)]
+    
+    # Get default input device index.
+    try:
+        default_device_info = pa.get_default_input_device_info()
+    except IOError:
+        default_index = -1
+    else:
+        default_index = default_device_info['index']
+
+    pa.terminate()
+
+    return tuple(
+        _get_input_device(i, default_index, host_api_names)
+        for i in device_infos if i['maxInputChannels'] != 0)
+    
+    
+def _get_input_device(info, default_index, host_api_names):
+    return Bunch(
+        host_api_name=host_api_names[info['hostApi']],
+        index=info['index'],
+        default=info['index'] == default_index,
+        name=info['name'],
+        num_input_channels=info['maxInputChannels'],
+        default_sample_rate=info['defaultSampleRate'],
+        default_low_input_latency=info['defaultLowInputLatency'],
+        default_high_input_latency=info['defaultHighInputLatency'])
+    
 
 def _get_utc_now():
     return datetime.fromtimestamp(time.time(), timezone.utc)
