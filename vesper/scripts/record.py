@@ -1,7 +1,10 @@
 """Records audio to .wav files according to a schedule."""
 
 
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from threading import Thread
 import argparse
+import datetime
 import math
 import sys
 import wave
@@ -11,11 +14,18 @@ import pytz
 import yaml
 
 from vesper.util.audio_recorder import AudioRecorder, AudioRecorderListener
+from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 
 
 _FILE_NAME_EXTENSION = '.wav'
 _MAX_FILE_SIZE = 2**31          # two gigabytes (2**19 is good for testing)
+
+_DEFAULT_STATION_NAME = 'Vesper'
+_DEFAULT_LATITUDE = None
+_DEFAULT_LONGITUDE = None
+_DEFAULT_TIME_ZONE = 'UTC'
+_DEFAULT_PORT_NUM = 8000
 
 
 def _main():
@@ -26,9 +36,9 @@ def _main():
     config_file_path = _parse_args()
     
     try:
-        (station_name, input_device_index, num_channels, sample_rate,
-         buffer_size, schedule) = _parse_config_file(config_file_path)
-         
+        (station_name, lat, lon, time_zone, input_device_index, num_channels,
+         sample_rate, buffer_size, schedule, port_num) = \
+            _parse_config_file(config_file_path)
     except Exception as e:
         print(
             'Could not parse configuration file. Error message was: {}'.format(
@@ -37,19 +47,19 @@ def _main():
     
     recorder = AudioRecorder(
         input_device_index, num_channels, sample_rate, buffer_size, schedule)
-     
-    # Add listeners.
     recorder.add_listener(_Logger())
     recorder.add_listener(_AudioFileWriter(station_name))
      
-    # Start recording.
-    print('starting recorder...')
+    print('Starting recorder...')
     recorder.start()
      
-    # Wait for recording schedule to complete.
-    print('waiting for schedule to complete...')
+    print('Starting recorder HTTP server at port {}...'.format(port_num))
+    server = _HttpServer(port_num, station_name, lat, lon, time_zone, recorder)
+    Thread(target=server.serve_forever).start()
+    
+    print('Waiting for recording schedule to complete...')
     recorder.wait()
-    print('schedule completed')
+    print('Recording schedule completed.')
      
  
 def _show_input_devices():
@@ -94,19 +104,17 @@ def _parse_config_file(file_path):
     with open(file_path) as f:
         config = yaml.load(f)
         
-    station_name = config['station']
+    station_name = config.get('station', _DEFAULT_STATION_NAME)
     
-    lat = config.get('latitude')
+    lat = config.get('latitude', _DEFAULT_LATITUDE)
     if lat is not None:
         lat = float(lat)
         
-    lon = config.get('longitude')
+    lon = config.get('longitude', _DEFAULT_LONGITUDE)
     if lon is not None:
         lon = float(lon)
         
-    time_zone = config.get('time_zone')
-    if time_zone is not None:
-        time_zone = pytz.timezone(time_zone)
+    time_zone = pytz.timezone(config.get('time_zone', _DEFAULT_TIME_ZONE))
         
     input_device_index = _get_input_device_index(config.get('input_device'))
     num_channels = int(config['num_channels'])
@@ -116,9 +124,11 @@ def _parse_config_file(file_path):
     schedule = Schedule.compile_dict(
         config['schedule'], lat=lat, lon=lon, time_zone=time_zone)
     
+    port_num = int(config.get('port_num', _DEFAULT_PORT_NUM))
+    
     return (
-        station_name, input_device_index, num_channels, sample_rate,
-        buffer_size, schedule)
+        station_name, lat, lon, time_zone, input_device_index, num_channels,
+        sample_rate, buffer_size, schedule, port_num)
     
     
 def _get_input_device_index(device):
@@ -298,6 +308,203 @@ def _show_event(name, time, state):
     print('{} at {} {}'.format(name, time, state))
 
 
+class _HttpServer(HTTPServer):
+    
+    
+    def __init__(self, port_num, station_name, lat, lon, time_zone, recorder):
+        
+        address = ('', port_num)
+        super().__init__(address, _HttpRequestHandler)
+        
+        self._recording_data = Bunch(
+            station_name=station_name,
+            lat=lat,
+            lon=lon,
+            time_zone=time_zone,
+            recorder = recorder
+        )
+        
+    
+_PAGE = '''<!DOCTYPE html>
+<html>
+<head>
+<title>Vesper Recorder</title>
+{}
+</head>
+<body>
+
+<h1>Vesper Recorder</h1>
+
+<p>
+Welcome to the Vesper recorder! This page displays information regarding
+your recorder. Refresh the page to update the information.
+</p>
+
+<h2>Recording Status</h2>
+{}
+
+<h2>Available Input Devices</h2>
+{}
+<p>An asterisk marks the configured input device.</p>
+
+<h2>Input Configuration</h2>
+{}
+  
+<h2>Station Configuration</h2>
+{}
+
+<h2>Scheduled Recording Intervals</h2>
+{}
+
+</body>
+</html>
+'''
+
+
+_CSS = '''
+<style>
+h2 {
+    margin-top: 30px;
+    margin-bottom: 5px;
+}
+table {
+    border-collapse: collapse;
+    width: 600px;
+}
+td, th {
+    border: 1px solid #a0a0a0;
+    text-align: left;
+    padding: 8px;
+}
+tr:nth-child(even) {
+    background-color: #d0d0d0;
+}
+</style>
+'''
+        
+        
+class _HttpRequestHandler(BaseHTTPRequestHandler):
+    
+    
+    def do_GET(self):
+        
+        if self.path == '/':
+            body = self._create_status_page_body()
+            self.send_response(200, 'OK')
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(body)
+            
+        else:
+            self.send_response(404, 'Not Found')
+            self.end_headers()
+                    
+        
+    def _create_status_page_body(self):
+        
+        data = self.server._recording_data
+        recorder = data.recorder
+        
+        status_table = self._create_status_table(data, recorder)
+        devices = recorder.get_input_devices()
+        device_table = self._create_device_table(devices)
+        input_table = self._create_input_table(devices)
+        station_table = self._create_station_table(data)
+        interval_table = self._create_interval_table(
+            recorder.schedule, data.time_zone)
+        
+        body = _PAGE.format(
+            _CSS, status_table, device_table, input_table, station_table,
+            interval_table)
+        
+        return body.encode()
+    
+    
+    def _create_status_table(self, data, recorder):
+        time = _format_datetime(datetime.datetime.now(tz=data.time_zone))
+        recording = 'Yes' if recorder.recording else 'No'
+        rows = (
+            ('Time', time),
+            ('Recording', recording)
+        )
+        return _create_table(rows)
+        
+        
+    def _create_device_table(self, devices):
+        recorder = self.server._recording_data.recorder
+        selected_device_index = recorder.input_device_index
+        rows = [
+            self._create_device_table_row(d, selected_device_index)
+            for d in devices]
+        header = ('Index', 'Name', 'Number of Channels')
+        return _create_table(
+            rows, header)
+    
+    
+    def _create_device_table_row(self, device, selected_device_index):
+        prefix = '*' if device.index == selected_device_index else ''
+        return (
+            prefix + str(device.index), device.name, device.num_input_channels)
+    
+    
+    def _create_input_table(self, devices):
+        r = self.server._recording_data.recorder
+        rows = (
+            ('Device Index', r.input_device_index),
+            ('Device Name', devices[r.input_device_index].name),
+            ('Number of Channels', r.num_channels),
+            ('Sample Rate (Hz)', r.sample_rate),
+            ('Buffer Size (samples)', r.buffer_size)
+        )
+        return _create_table(rows)
+    
+    
+    def _create_station_table(self, data):
+        rows = (
+            ('Station Name', data.station_name),
+            ('Latitude (degrees north)', data.lat),
+            ('Longitude (degrees east)', data.lon),
+            ('Time Zone', str(data.time_zone)))
+        return _create_table(rows)
+    
+    
+    def _create_interval_table(self, schedule, time_zone):
+        rows = [
+            self._create_interval_table_row(index, interval, time_zone)
+            for index, interval in enumerate(schedule.get_intervals())]
+        header = ('Index', 'Start Time', 'End Time')
+        return _create_table(rows, header)
+    
+    
+    def _create_interval_table_row(self, index, interval, time_zone):
+        start_time = _format_datetime(interval.start.astimezone(time_zone))
+        end_time = _format_datetime(interval.end.astimezone(time_zone))
+        return (index, start_time, end_time)
+        
+        
+def _format_datetime(dt):
+    return dt.strftime('%Y-%m-%d %H:%M:%S %Z')
+
+
+def _create_table(rows, header=None):
+    header = _create_table_header(header)
+    rows = ''.join(_create_table_row(r) for r in rows)
+    return '<table>\n' + header + rows + '</table>\n'
+
+
+def _create_table_header(items):
+    return _create_table_row(items, 'h') if items is not None else ''
+
+
+def _create_table_row(items, tag_letter='d'):
+    items = ''.join(_create_table_item(i, tag_letter) for i in items)
+    return '  <tr>\n' + items + '  </tr>\n'
+    
+    
+def _create_table_item(item, tag_letter):
+    return '    <t{}>{}</t{}>\n'.format(tag_letter, item, tag_letter)
+    
+    
 if __name__ == '__main__':
     _main()
     
