@@ -198,13 +198,15 @@ class AudioRecorder:
             self._recording = True
             self._stop_pending = False
 
+            num_frames = int(round(self.buffer_size * self.sample_rate))
+            
             self._stream = self._pyaudio.open(
                 input=True,
                 input_device_index=self.input_device_index,
                 channels=self.num_channels,
                 rate=self.sample_rate,
                 format=pyaudio.paInt16,
-                frames_per_buffer=self.buffer_size,
+                frames_per_buffer=num_frames,
                 stream_callback=self._pyaudio_callback)
             
             self._notify_listeners('recording_started', _get_utc_now())
@@ -389,7 +391,7 @@ class AudioRecorderListener:
     
     
     def samples_arrived(
-            self, recorder, time, samples, buffer_size, overflow, underflow):
+            self, recorder, time, samples, num_frames, overflow, underflow):
         pass
     
     

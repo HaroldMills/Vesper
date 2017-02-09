@@ -119,7 +119,7 @@ def _parse_config_file(file_path):
     input_device_index = _get_input_device_index(config.get('input_device'))
     num_channels = int(config['num_channels'])
     sample_rate = int(config['sample_rate'])
-    buffer_size = int(config['buffer_size'])
+    buffer_size = float(config['buffer_size'])
     
     schedule = Schedule.compile_dict(
         config['schedule'], lat=lat, lon=lon, time_zone=time_zone)
@@ -205,7 +205,7 @@ class _Logger(AudioRecorderListener):
         
 #     def samples_arrived(
 #             self, recorder, time, samples, num_frames, overflow, underflow):
-#         
+#           
 #         print(
 #             'samples_arrived,{},{},{},{}'.format(
 #                 time, num_frames, overflow, underflow))
@@ -490,7 +490,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             ('Device Name', devices[r.input_device_index].name),
             ('Number of Channels', r.num_channels),
             ('Sample Rate (Hz)', r.sample_rate),
-            ('Buffer Size (samples)', r.buffer_size)
+            ('Buffer Size (seconds)', r.buffer_size)
         )
         return _create_table(rows)
     
