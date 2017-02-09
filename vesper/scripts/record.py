@@ -25,6 +25,9 @@ _DEFAULT_STATION_NAME = 'Vesper'
 _DEFAULT_LATITUDE = None
 _DEFAULT_LONGITUDE = None
 _DEFAULT_TIME_ZONE = 'UTC'
+_DEFAULT_NUM_CHANNELS = 1
+_DEFAULT_SAMPLE_RATE = 22050
+_DEFAULT_BUFFER_SIZE = 1.
 _DEFAULT_PORT_NUM = 8000
 
 
@@ -117,12 +120,13 @@ def _parse_config_file(file_path):
     time_zone = pytz.timezone(config.get('time_zone', _DEFAULT_TIME_ZONE))
         
     input_device_index = _get_input_device_index(config.get('input_device'))
-    num_channels = int(config['num_channels'])
-    sample_rate = int(config['sample_rate'])
-    buffer_size = float(config['buffer_size'])
+    num_channels = int(config.get('num_channels', _DEFAULT_NUM_CHANNELS))
+    sample_rate = int(config.get('sample_rate', _DEFAULT_SAMPLE_RATE))
+    buffer_size = float(config.get('buffer_size', _DEFAULT_BUFFER_SIZE))
     
+    schedule_dict = config.get('schedule', {})
     schedule = Schedule.compile_dict(
-        config['schedule'], lat=lat, lon=lon, time_zone=time_zone)
+        schedule_dict, lat=lat, lon=lon, time_zone=time_zone)
     
     port_num = int(config.get('port_num', _DEFAULT_PORT_NUM))
     
@@ -205,7 +209,7 @@ class _Logger(AudioRecorderListener):
         
 #     def samples_arrived(
 #             self, recorder, time, samples, num_frames, overflow, underflow):
-#           
+#            
 #         print(
 #             'samples_arrived,{},{},{},{}'.format(
 #                 time, num_frames, overflow, underflow))
