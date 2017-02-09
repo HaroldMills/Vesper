@@ -867,6 +867,8 @@ def _compile_daily_intervals(dates, time_intervals, context):
 
 def _compile_daily_intervals_aux(dates, time_intervals, context):
     
+    # TODO: Update this code after fixing issue #94.
+        
     combine = _combine_date_and_time
     
     for date in dates:
@@ -885,7 +887,7 @@ def _compile_daily_intervals_aux(dates, time_intervals, context):
                 
             else:
                 start = combine(date, interval['start'], context, 'start')
-                end = combine(date, interval['end'], context, 'end')
+                end = _get_daily_interval_end(start, interval['end'], context)
                 yield Interval(start, end)
             
             
@@ -903,6 +905,23 @@ def _combine_date_and_time(date, time, context, name):
         dt = _SolarEventDateTime(date, time.event_name, time.offset)
         return dt.resolve(context.lat, context.lon)
 
+
+def _get_daily_interval_end(start, end_time, context):
+    
+    # TODO: Consider changing this when issue 85 is fixed.
+    
+    combine = _combine_date_and_time
+    date = start.date()
+    
+    end = combine(date, end_time, context, 'end')
+    
+    if end < start:
+        # end time will be on date following start time
+        
+        end = combine(date + _ONE_DAY, end_time, context, 'end')
+        
+    return end
+        
 
 def _compile_union_schedule(spec, context):
     

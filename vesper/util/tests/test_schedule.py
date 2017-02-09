@@ -640,7 +640,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
                  ((2016, 12, 17, 22), (2016, 12, 17, 23), True))
             ),
-                   
+                    
             (
                 '''
                     daily:
@@ -653,7 +653,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
                  ((2016, 12, 17, 22), (2016, 12, 17, 23), True))
             ),
-                   
+                    
             (
                 '''
                     daily:
@@ -666,6 +666,32 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
                  ((2016, 12, 17, 22), (2016, 12, 17, 23), True))
             ),
+                  
+            (
+                '''
+                    daily:
+                        start_date: 2017-02-09
+                        end_date: 2017-02-11
+                        start_time: sunrise
+                        end_time: sunset
+                ''',
+                (((2017, 2, 9, 12, 10), (2017, 2, 9, 22, 31), False),
+                 ((2017, 2, 10, 12, 9), (2017, 2, 10, 22, 32), False),
+                 ((2017, 2, 11, 12, 8), (2017, 2, 11, 22, 33), False))
+            ),
+                 
+            (
+                '''
+                    daily:
+                        start_date: 2017-02-09
+                        end_date: 2017-02-11
+                        start_time: sunset
+                        end_time: sunrise
+                ''',
+                (((2017, 2, 9, 22, 31), (2017, 2, 10, 12, 9), False),
+                 ((2017, 2, 10, 22, 32), (2017, 2, 11, 12, 8), False),
+                 ((2017, 2, 11, 22, 33), (2017, 2, 12, 12, 6), False))
+            ),
                  
             # no time intervals  
             (
@@ -677,7 +703,7 @@ class ScheduleCompilationTests(TestCase):
                 ''',
                 ()
             ),
-                   
+                    
             (
                 '''
                     daily:
@@ -698,7 +724,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
                  ((2016, 12, 17, 0), (2016, 12, 17, 1), True))
             ),
-                   
+                    
             # no date intervals
             (
                 '''
@@ -709,7 +735,7 @@ class ScheduleCompilationTests(TestCase):
                 ''',
                 ()
             ),
-                  
+                   
             (
                 '''
                     daily:
@@ -726,7 +752,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 20, 22), (2016, 12, 20, 23), True),
                  ((2016, 12, 21, 22), (2016, 12, 21, 23), True))
             ),
-                  
+                   
             # no time or date intervals
             (
                 '''
@@ -736,7 +762,7 @@ class ScheduleCompilationTests(TestCase):
                 ''',
                 ()
             ),
-                   
+                    
             (
                 '''
                     daily:
@@ -760,7 +786,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 21, 10), (2016, 12, 21, 11), True),
                  ((2016, 12, 21, 22), (2016, 12, 21, 23), True))
             ),
-                   
+                    
             # intervals out of order
             (
                 '''
