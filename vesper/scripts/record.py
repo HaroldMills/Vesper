@@ -343,6 +343,9 @@ your recorder. Refresh the page to update the information.
 <h2>Recording Status</h2>
 {}
 
+<h2>Station Configuration</h2>
+{}
+
 <h2>Available Input Devices</h2>
 {}
 <p>An asterisk marks the configured input device.</p>
@@ -350,9 +353,6 @@ your recorder. Refresh the page to update the information.
 <h2>Input Configuration</h2>
 {}
   
-<h2>Station Configuration</h2>
-{}
-
 <h2>Scheduled Recordings</h2>
 {}
 
@@ -407,16 +407,16 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         now = datetime.datetime.now(tz=pytz.utc)
                 
         status_table = self._create_status_table(data, recorder, now)
-        devices = recorder.get_input_devices()
-        device_table = self._create_device_table(devices)
-        input_table = self._create_input_table(devices)
         station_table = self._create_station_table(data)
-        interval_table = self._create_interval_table(
+        devices = recorder.get_input_devices()
+        devices_table = self._create_devices_table(devices)
+        input_table = self._create_input_table(devices)
+        recordings_table = self._create_recordings_table(
             recorder.schedule, data.time_zone, now)
         
         body = _PAGE.format(
-            _CSS, status_table, device_table, input_table, station_table,
-            interval_table)
+            _CSS, status_table, station_table, devices_table, input_table,
+            recordings_table)
         
         return body.encode()
     
@@ -457,18 +457,27 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             return None
         
         
-    def _create_device_table(self, devices):
+    def _create_station_table(self, data):
+        rows = (
+            ('Station Name', data.station_name),
+            ('Latitude (degrees north)', data.lat),
+            ('Longitude (degrees east)', data.lon),
+            ('Time Zone', str(data.time_zone)))
+        return _create_table(rows)
+    
+    
+    def _create_devices_table(self, devices):
         recorder = self.server._recording_data.recorder
         selected_device_index = recorder.input_device_index
         rows = [
-            self._create_device_table_row(d, selected_device_index)
+            self._create_devices_table_row(d, selected_device_index)
             for d in devices]
         header = ('Index', 'Name', 'Number of Channels')
         return _create_table(
             rows, header)
     
     
-    def _create_device_table_row(self, device, selected_device_index):
+    def _create_devices_table_row(self, device, selected_device_index):
         prefix = '*' if device.index == selected_device_index else ''
         return (
             prefix + str(device.index), device.name, device.num_input_channels)
@@ -486,24 +495,15 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         return _create_table(rows)
     
     
-    def _create_station_table(self, data):
-        rows = (
-            ('Station Name', data.station_name),
-            ('Latitude (degrees north)', data.lat),
-            ('Longitude (degrees east)', data.lon),
-            ('Time Zone', str(data.time_zone)))
-        return _create_table(rows)
-    
-    
-    def _create_interval_table(self, schedule, time_zone, now):
+    def _create_recordings_table(self, schedule, time_zone, now):
         rows = [
-            self._create_interval_table_row(index, interval, time_zone, now)
+            self._create_recordings_table_row(index, interval, time_zone, now)
             for index, interval in enumerate(schedule.get_intervals())]
         header = ('Index', 'Start Time', 'End Time', 'Status')
         return _create_table(rows, header)
     
     
-    def _create_interval_table_row(self, index, interval, time_zone, now):
+    def _create_recordings_table_row(self, index, interval, time_zone, now):
         start_time = _format_datetime(interval.start, time_zone)
         end_time = _format_datetime(interval.end, time_zone)
         if now > interval.end:
