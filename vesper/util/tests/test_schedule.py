@@ -630,10 +630,10 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
-                        start_time: 5 pm
-                        end_time: 6 pm
                         start_date: 2016-12-15
                         end_date: 2016-12-17
+                        start_time: 5 pm
+                        end_time: 6 pm
                 ''',
                 (((2016, 12, 15, 22), (2016, 12, 15, 23), True),
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
@@ -643,10 +643,10 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
-                        start_time: 5 pm
-                        duration: 1 hour
                         start_date: 2016-12-15
                         end_date: 2016-12-17
+                        start_time: 5 pm
+                        duration: 1 hour
                 ''',
                 (((2016, 12, 15, 22), (2016, 12, 15, 23), True),
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
@@ -656,10 +656,10 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
-                        end_time: 6 pm
-                        duration: 1 hour
                         start_date: 2016-12-15
                         end_date: 2016-12-17
+                        end_time: 6 pm
+                        duration: 1 hour
                 ''',
                 (((2016, 12, 15, 22), (2016, 12, 15, 23), True),
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
@@ -670,9 +670,9 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
-                        time_intervals: []
                         start_date: 2016-12-15
                         end_date: 2016-12-16
+                        time_intervals: []
                 ''',
                 ()
             ),
@@ -680,6 +680,8 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
+                        start_date: 2016-12-15
+                        end_date: 2016-12-16
                         time_intervals:
                             - start: 1 hour before sunrise
                               end: 1 hour after sunrise
@@ -687,8 +689,6 @@ class ScheduleCompilationTests(TestCase):
                               duration: 1 hour
                             - end: 8 pm
                               duration: 1 hour
-                        start_date: 2016-12-15
-                        end_date: 2016-12-16
                 ''',
                 (((2016, 12, 15, 11, 29), (2016, 12, 15, 13, 29), False),
                  ((2016, 12, 15, 22), (2016, 12, 15, 23), True),
@@ -702,9 +702,9 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
+                        date_intervals: []
                         start_time: 5 pm
                         duration: 1 hour
-                        date_intervals: []
                 ''',
                 ()
             ),
@@ -712,13 +712,13 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
-                        start_time: 5 pm
-                        duration: 1 hour
                         date_intervals:
                             - start: 2016-12-15
                               end: 2016-12-16
                             - start: 2016-12-20
                               end: 2016-12-21
+                        start_time: 5 pm
+                        duration: 1 hour
                 ''',
                 (((2016, 12, 15, 22), (2016, 12, 15, 23), True),
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
@@ -730,8 +730,8 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
-                        time_intervals: []
                         date_intervals: []
+                        time_intervals: []
                 ''',
                 ()
             ),
@@ -739,16 +739,16 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
-                        time_intervals:
-                            - start: 5 am
-                              duration: 1 hour
-                            - start: 5 pm
-                              duration: 1 hour
                         date_intervals:
                             - start: 2016-12-15
                               end: 2016-12-16
                             - start: 2016-12-20
                               end: 2016-12-21
+                        time_intervals:
+                            - start: 5 am
+                              duration: 1 hour
+                            - start: 5 pm
+                              duration: 1 hour
                 ''',
                 (((2016, 12, 15, 10), (2016, 12, 15, 11), True),
                  ((2016, 12, 15, 22), (2016, 12, 15, 23), True),
@@ -764,16 +764,16 @@ class ScheduleCompilationTests(TestCase):
             (
                 '''
                     daily:
-                        time_intervals:
-                            - start: 5 pm
-                              duration: 1 hour
-                            - start: 5 am
-                              duration: 1 hour
                         date_intervals:
                             - start: 2016-12-20
                               end: 2016-12-21
                             - start: 2016-12-15
                               end: 2016-12-16
+                        time_intervals:
+                            - start: 5 pm
+                              duration: 1 hour
+                            - start: 5 am
+                              duration: 1 hour
                 ''',
                 (((2016, 12, 15, 10), (2016, 12, 15, 11), True),
                  ((2016, 12, 15, 22), (2016, 12, 15, 23), True),
@@ -812,145 +812,145 @@ class ScheduleCompilationTests(TestCase):
             # bad start time
             '''
                 daily:
-                    start_time: bobo
-                    end_time: 6 pm
                     start_date: 2016-12-15
                     end_date: 2016-12-15
+                    start_time: bobo
+                    end_time: 6 pm
             ''',
              
             # bad start time (in time_invervals)
             '''
                 daily:
+                    start_date: 2016-12-15
+                    end_date: 2016-12-15
                     time_intervals:
                         - start: booboo
                           end: 6 pm
-                    start_date: 2016-12-15
-                    end_date: 2016-12-15
             ''',
              
             # bad end time
             '''
                 daily:
-                    start_time: 5 pm
-                    end_time: bobo
                     start_date: 2016-12-15
                     end_date: 2016-12-15
+                    start_time: 5 pm
+                    end_time: bobo
             ''',
              
             # bad duration
             '''
                 daily:
-                    start_time: 5 pm
-                    duration: bobo
                     start_date: 2016-12-15
                     end_date: 2016-12-15
+                    start_time: 5 pm
+                    duration: bobo
             ''',
              
             # bad start date
             '''
                 daily:
-                    start_time: 5 pm
-                    end_time: 6 pm
                     start_date: bobo
                     end_date: 2016-12-15
+                    start_time: 5 pm
+                    end_time: 6 pm
             ''',
              
             # bad start date (in date_intervals)
             '''
                 daily:
-                    start_time: 5 pm
-                    end_time: 6 pm
                     date_intervals:
                         - start: booboo
                           end: 2016-12-15
+                    start_time: 5 pm
+                    end_time: 6 pm
             ''',
              
             # bad end date
             '''
                 daily:
-                    start_time: 5 pm
-                    end_time: 6 pm
                     start_date: 2016-12-15
                     end_date: bobo
+                    start_time: 5 pm
+                    end_time: 6 pm
             ''',
              
             # start time only
             '''
                 daily:
-                    start_time: 5 pm
                     start_date: 2016-12-15
                     end_date: 2016-12-15
+                    start_time: 5 pm
             ''',
              
             # start time only (in time_intervals)
             '''
                 daily:
-                    time_intervals:
-                        - start: 5 pm
                     start_date: 2016-12-15
                     end_date: 2016-12-15
+                    time_intervals:
+                        - start: 5 pm
             ''',
              
             # end time only
             '''
                 daily:
-                    end_time: 6 pm
                     start_date: 2016-12-15
                     end_date: 2016-12-15
+                    end_time: 6 pm
             ''',
              
             # duration only
             '''
                 daily:
-                    duration: 1 hour
                     start_date: 2016-12-15
                     end_date: 2016-12-15
+                    duration: 1 hour
             ''',
              
             # start date only
             '''
                 daily:
+                    start_date: 2016-12-15
                     start_time: 5 pm
                     end_time: 6 pm
-                    start_date: 2016-12-15
             ''',
              
             # start date only (in date_intervals)
             '''
                 daily:
-                    start_time: 5 pm
-                    end_time: 6 pm
                     date_intervals:
                         - start: 2016-12-15
+                    start_time: 5 pm
+                    end_time: 6 pm
             ''',
              
             # end date only
             '''
                 daily:
+                    end_date: 2016-12-15
                     start_time: 5 pm
                     end_time: 6 pm
-                    end_date: 2016-12-15
             ''',
              
             # start time, end time, and duration
             '''
                 daily:
+                    start_date: 2016-12-15
+                    end_date: 2016-12-15
                     start_time: 5 pm
                     end_time: 6 pm
                     duration: 1 hour
-                    start_date: 2016-12-15
-                    end_date: 2016-12-15
             ''',
              
             # start time, end time, and duration (in time_intervals)
             '''
                 daily:
+                    start_date: 2016-12-15
+                    end_date: 2016-12-15
                     time_intervals:
                         - start: 5 pm
                           end: 6 pm
                           duration: 1 hour
-                    start_date: 2016-12-15
-                    end_date: 2016-12-15
             ''',
              
         )
@@ -968,21 +968,21 @@ class ScheduleCompilationTests(TestCase):
              
             '''
                 daily:
-                    start_time: sunrise
-                    end_time: noon
                     start_date: 2016-12-15
                     end_date: 2016-12-17
+                    start_time: sunrise
+                    end_time: noon
             ''',
              
             '''
                 daily:
+                    start_date: 2016-12-15
+                    end_date: 2016-12-17
                     time_intervals:
                         - start: sunrise
                           duration: 1 hour
                         - start: 5 pm
                           duration: 1 hour
-                    start_date: 2016-12-15
-                    end_date: 2016-12-17
             '''  
              
         )
@@ -1022,10 +1022,10 @@ class ScheduleCompilationTests(TestCase):
                               - start: 2016-12-20 noon
                                 duration: 1 hour
                         - daily:
-                              start_time: noon
-                              duration: 1 hour
                               start_date: 2016-12-21
                               end_date: 2016-12-22
+                              start_time: noon
+                              duration: 1 hour
                         - union:
                             - interval:
                                   start: 2016-12-23 noon
