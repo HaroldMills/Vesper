@@ -4,7 +4,8 @@ import time
 
 import pytz
 
-from vesper.util.schedule import Interval, Schedule, ScheduleRunner, Transition
+from vesper.util.schedule import Interval, Schedule, Transition
+# from vesper.util.schedule import ScheduleRunner
 from vesper.tests.test_case import TestCase
 import vesper.util.schedule as schedule
 import vesper.util.time_utils as time_utils
