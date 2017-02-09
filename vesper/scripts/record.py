@@ -203,12 +203,12 @@ class _Logger(AudioRecorderListener):
         print('recording_started,{}'.format(time))
         
         
-    def samples_arrived(
-            self, recorder, time, samples, num_frames, overflow, underflow):
-        
-        print(
-            'samples_arrived,{},{},{},{}'.format(
-                time, num_frames, overflow, underflow))
+#     def samples_arrived(
+#             self, recorder, time, samples, num_frames, overflow, underflow):
+#         
+#         print(
+#             'samples_arrived,{},{},{},{}'.format(
+#                 time, num_frames, overflow, underflow))
     
     
     def recording_stopped(self, recorder, time):
@@ -353,7 +353,7 @@ your recorder. Refresh the page to update the information.
 <h2>Station Configuration</h2>
 {}
 
-<h2>Scheduled Recording Intervals</h2>
+<h2>Scheduled Recordings</h2>
 {}
 
 </body>
@@ -404,14 +404,15 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         
         data = self.server._recording_data
         recorder = data.recorder
-        
-        status_table = self._create_status_table(data, recorder)
+        now = datetime.datetime.now(tz=pytz.utc)
+                
+        status_table = self._create_status_table(data, recorder, now)
         devices = recorder.get_input_devices()
         device_table = self._create_device_table(devices)
         input_table = self._create_input_table(devices)
         station_table = self._create_station_table(data)
         interval_table = self._create_interval_table(
-            recorder.schedule, data.time_zone)
+            recorder.schedule, data.time_zone, now)
         
         body = _PAGE.format(
             _CSS, status_table, device_table, input_table, station_table,
@@ -420,14 +421,40 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         return body.encode()
     
     
-    def _create_status_table(self, data, recorder):
-        time = _format_datetime(datetime.datetime.now(tz=data.time_zone))
+    def _create_status_table(self, data, recorder, now):
+        
+        time_zone = data.time_zone
+        
+        time = _format_datetime(now, time_zone)
         recording = 'Yes' if recorder.recording else 'No'
+        
+        interval = self._get_status_schedule_interval(recorder.schedule, now)
+        
+        if interval is None:
+            prefix = 'Next'
+            start_time = 'None'
+            end_time = 'None'
+        else:
+            start_time = _format_datetime(interval.start, time_zone)
+            end_time = _format_datetime(interval.end, time_zone)
+            prefix = 'Current' if interval.start <= now else 'Next'
+            
         rows = (
             ('Time', time),
-            ('Recording', recording)
+            ('Recording', recording),
+            (prefix + ' Recording Start Time', start_time),
+            (prefix + ' Recording End Time', end_time)
         )
+        
         return _create_table(rows)
+        
+        
+    def _get_status_schedule_interval(self, schedule, time):
+        intervals = schedule.get_intervals(start=time)
+        try:
+            return next(intervals)
+        except StopIteration:
+            return None
         
         
     def _create_device_table(self, devices):
@@ -468,21 +495,29 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         return _create_table(rows)
     
     
-    def _create_interval_table(self, schedule, time_zone):
+    def _create_interval_table(self, schedule, time_zone, now):
         rows = [
-            self._create_interval_table_row(index, interval, time_zone)
+            self._create_interval_table_row(index, interval, time_zone, now)
             for index, interval in enumerate(schedule.get_intervals())]
-        header = ('Index', 'Start Time', 'End Time')
+        header = ('Index', 'Start Time', 'End Time', 'Status')
         return _create_table(rows, header)
     
     
-    def _create_interval_table_row(self, index, interval, time_zone):
-        start_time = _format_datetime(interval.start.astimezone(time_zone))
-        end_time = _format_datetime(interval.end.astimezone(time_zone))
-        return (index, start_time, end_time)
+    def _create_interval_table_row(self, index, interval, time_zone, now):
+        start_time = _format_datetime(interval.start, time_zone)
+        end_time = _format_datetime(interval.end, time_zone)
+        if now > interval.end:
+            status = 'Past'
+        elif now < interval.start:
+            status = 'Future'
+        else:
+            status = 'Current'
+        return (index, start_time, end_time, status)
         
         
-def _format_datetime(dt):
+def _format_datetime(dt, time_zone=None):
+    if time_zone is not None:
+        dt = dt.astimezone(time_zone)
     return dt.strftime('%Y-%m-%d %H:%M:%S %Z')
 
 
