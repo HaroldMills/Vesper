@@ -1,10 +1,47 @@
-station_name: Vesper
-time_zone: US/Eastern
-num_channels: 1
-sample_rate: 22050
-buffer_size: 22050
-schedule:
-    intervals:
-        - start: 2016-12-28 11:04 am
-          duration: 5 seconds
+# The name of your monitoring station. The name is included in the
+# names of audio files created by the recorder, so it must not contain
+# characters that are not allowed in file names, such as slashes,
+# backslashes, and colons. It also should not contain underscores,
+# since those are used to separate file name components.
+station: Test
 
+# The location of your monitoring station. The location is used to
+# determine the times of solar events (for example, sunrise and sunset)
+# specified in your recording schedule. The latitude should be in degrees
+# north and the longitude in degrees east.
+latitude: 42.5000
+longitude: -76.5000
+
+# The tz database name of your station's time zone, for example
+# "US/Eastern". For a list of tz database time zone names, see
+# https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
+time_zone: US/Eastern
+
+# The index of the input device to record with. The recorder displays
+# a list of input devices, including their indices, on the console when
+# it starts. You can also see the list of devices at the web page of
+# the recorder. The web page is at the URL http://localhost:<port_num>,
+# where <port_num> is as specified below.
+input_device: 1
+
+# The number of channels to record.
+num_channels: 1
+
+# The sample rate at which to record, in hertz.
+sample_rate: 22050
+
+# The recording buffer size, in seconds.
+buffer_size: 1
+
+# The recording schedule.
+schedule:
+    daily:
+        start_date: 2017-04-01
+        end_date: 2017-06-10
+        start_time: 30 minutes before sunset
+        end_time: 30 minutes after sunrise
+
+# The port number of the recorder's web server. When the recorder is
+# running, you can view its status by pointing a web browser at the URL
+# http://localhost:<port_num>.
+port_num: 8001
