@@ -1,3 +1,5 @@
+# Vesper recorder configuration.
+
 # The name of your monitoring station. The name is included in the
 # names of audio files created by the recorder, so it must not contain
 # characters that are not allowed in file names, such as slashes,
