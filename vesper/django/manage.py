@@ -37,8 +37,8 @@ def _check_cwd():
     if not os.path.exists(database_file_path):
         print((
             'The current directory "{}" does not appear to be a Vesper '
-            'archive directory. Please run your command again an archive '
-            'directory.').format(current_dir_path))
+            'archive directory. Please run your command again in an '
+            'archive directory.').format(current_dir_path))
         sys.exit(1)
 
 
