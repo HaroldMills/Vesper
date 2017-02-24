@@ -19,7 +19,6 @@ build:
 requirements:
 
   build:
-    - bokeh
     - django
     - pyephem
     - python
@@ -28,7 +27,6 @@ requirements:
     - setuptools
 
   run:
-    - bokeh
     - django
     - pyephem
     - python
