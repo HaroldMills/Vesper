@@ -19,6 +19,7 @@ setup(
     
     install_requires=[
         'django',
+        'numpy',
         'pyephem',
         'pytz',
         'pyyaml'

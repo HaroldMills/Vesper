@@ -20,6 +20,7 @@ requirements:
 
   build:
     - django
+    - numpy
     - pyephem
     - python
     - pytz
@@ -28,6 +29,7 @@ requirements:
 
   run:
     - django
+    - numpy
     - pyephem
     - python
     - pytz
