@@ -79,7 +79,6 @@ def _create_navbar_href_part(s):
 _NAVBAR_ITEMS = _create_navbar_items((
     'calendar',
     ('import', 'archive data', 'recordings'),
-    'record',
     'detect',
     'classify',
     'export'
@@ -94,11 +93,6 @@ def index(request):
     return redirect(reverse('calendar'))
 
 
-def record(request):
-    return _render_coming_soon(
-        request, 'Record', 'Recording is not yet implemented.')
-    
-    
 @csrf_exempt
 def detect(request):
     
