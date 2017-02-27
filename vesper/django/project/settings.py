@@ -148,3 +148,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+# Directory to which the static files of all of the Django apps of this
+# project are copied by "python manage.py collectstatic". Static files
+# are served from this directory when Vesper is deployed on nginx/uWSGI,
+# but not when it is deployed on the Django development server.
+STATIC_ROOT = '/opt/vesper/static'
