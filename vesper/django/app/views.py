@@ -72,7 +72,7 @@ def _create_navbar_dropdown_item(data):
 _NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
   
 - name: View
-  view: view_clip_calendar
+  view: calendar
     
 - name: Import
   dropdown:
@@ -101,7 +101,7 @@ _GET_AND_HEAD = ('GET', 'HEAD')
 
 
 def index(request):
-    return redirect(reverse('view_clip_calendar'))
+    return redirect(reverse('calendar'))
 
 
 @csrf_exempt
@@ -327,7 +327,7 @@ def _parse_content_type(content_type):
     return Bunch(name=parts[0], params=params)
     
     
-def view_clip_calendar(request):
+def calendar(request):
     
     params = request.GET
         
