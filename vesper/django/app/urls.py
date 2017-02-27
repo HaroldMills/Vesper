@@ -5,7 +5,8 @@ from vesper.django.app import views
 urlpatterns = [
                
     url(r'^$', views.index, name='index'),
-    url(r'^calendar$', views.calendar, name='calendar'),
+    url(r'^view_clip_calendar$', views.view_clip_calendar,
+        name='view_clip_calendar'),
     url(r'^night$', views.night_new, name='night'),
     url(r'^test_command$', views.test_command, name='test_command'),
     

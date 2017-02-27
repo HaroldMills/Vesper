@@ -10,7 +10,7 @@
       {{item.name}}<span class="caret"></span>
     </a>
     <ul class="dropdown-menu">
-      {% for item in item.subitems %}
+      {% for item in item.items %}
         {% include "vesper/navbar-item.html" %}
       {% endfor %}
     </ul>

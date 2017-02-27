@@ -12,6 +12,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 import pytz
+import yaml
 
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
@@ -42,47 +43,57 @@ import vesper.util.time_utils as time_utils
 # all of the major browsers we should switch to that practice.
 
 
-def _create_navbar_items(data, ancestors=()):
-    return tuple(_create_navbar_item(d, ancestors) for d in data)
+def _create_navbar_items(data):
+    return tuple(_create_navbar_item(d) for d in data)
 
 
-def _create_navbar_item(data, ancestors):
-    if isinstance(data, str):
-        return _create_navbar_link_item(data, ancestors)
+def _create_navbar_item(data):
+    if 'view' in data:
+        return _create_navbar_link_item(data)
     else:
-        return _create_navbar_dropdown_item(data[0], data[1:], ancestors)
+        return _create_navbar_dropdown_item(data)
     
 
-def _create_navbar_link_item(name, ancestors):
-    href = _create_navbar_href(name, ancestors)
-    return Bunch(type='link', name=name.title(), href=href)
+def _create_navbar_link_item(data):
+    name = data['name']
+    href = '/vesper/' + data['view']
+    return Bunch(type='link', name=name, href=href)
 
 
-def _create_navbar_dropdown_item(name, data, ancestors):
-    subitems = _create_navbar_items(data, ancestors + (name,))
-    return Bunch(type='dropdown', name=name.title(), subitems=subitems)
-
-
-def _create_navbar_href(name, ancestors):
-    parts = tuple(_create_navbar_href_part(a) for a in ancestors) + \
-        (_create_navbar_href_part(name),)
-    return '/vesper/' + '_'.join(parts)
-    
-    
-def _create_navbar_href_part(s):
-    return '_'.join(s.lower().split())
+def _create_navbar_dropdown_item(data):
+    name = data['name']
+    items = _create_navbar_items(data['dropdown'])
+    return Bunch(type='dropdown', name=name, items=items)
 
 
 # Note that as of 2016-07-19, nested navbar dropdowns do not work.
 # The generated HTML looks right to me so the problem may be a
 # Bootstrap limitation.
-_NAVBAR_ITEMS = _create_navbar_items((
-    'calendar',
-    ('import', 'archive data', 'recordings'),
-    'detect',
-    'classify',
-    'export'
-))
+_NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
+  
+- name: View
+  view: view_clip_calendar
+    
+- name: Import
+  dropdown:
+  
+      - name: Archive Data
+        view: import_archive_data
+        
+      - name: Recordings
+        view: import_recordings
+          
+- name: Detect
+  view: detect
+    
+- name: Classify
+  view: classify
+    
+- name: Export
+  view: export
+  
+'''))
+
 
 _CLASSIFICATIONS = ('Call', 'Call.CHSP', 'Call.WIWA', 'Noise', 'Unknown')
 _ONE_DAY = datetime.timedelta(days=1)
@@ -90,7 +101,7 @@ _GET_AND_HEAD = ('GET', 'HEAD')
 
 
 def index(request):
-    return redirect(reverse('calendar'))
+    return redirect(reverse('view_clip_calendar'))
 
 
 @csrf_exempt
@@ -316,7 +327,7 @@ def _parse_content_type(content_type):
     return Bunch(name=parts[0], params=params)
     
     
-def calendar(request):
+def view_clip_calendar(request):
     
     params = request.GET
         
