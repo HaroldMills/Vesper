@@ -2,10 +2,10 @@
   margin-top: 30px;
 }
 
-.command-form-help {
-  display: none;
+.command-form-wide-input {
+  width: 100%;
 }
 
 .errorlist {
   color: red;
-}
+ }

@@ -7,17 +7,20 @@ urlpatterns = [
     url(r'^$', views.index, name='index'),
     url(r'^calendar$', views.calendar, name='calendar'),
     url(r'^night$', views.night_new, name='night'),
-    url(r'^test_command$', views.test_command, name='test_command'),
+    url(r'^test-command$', views.test_command, name='test-command'),
     
-    url(r'^import_archive_data$', views.import_archive_data,
-        name='import_archive_data'),
+    url(r'^import-archive-data$', views.import_archive_data,
+        name='import-archive-data'),
                
-    url(r'^import_recordings$', views.import_recordings,
-        name='import_recordings'),
+    url(r'^import-recordings$', views.import_recordings,
+        name='import-recordings'),
                
     url(r'^detect$', views.detect, name='detect'),
     url(r'^classify$', views.classify, name='classify'),
-    url(r'^export$', views.export, name='export'),
+    url(r'^export-clip-table$', views.export_clip_table,
+        name='export-clip-table'),
+    url(r'^export-clip-sound-files$', views.export_clip_sound_files,
+        name='export-clip-sound-files'),
     
     url(r'^stations/$', views.stations, name='stations'),
     

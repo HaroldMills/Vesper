@@ -8,8 +8,8 @@ class DetectForm(forms.Form):
 
     detectors = forms.MultipleChoiceField(label='Detectors')
     stations = forms.MultipleChoiceField(label='Stations')
-    start_date = forms.DateField(label='Start Date')
-    end_date = forms.DateField(label='End Date')
+    start_date = forms.DateField(label='Start date')
+    end_date = forms.DateField(label='End date')
     
     
     def __init__(self, *args, **kwargs):

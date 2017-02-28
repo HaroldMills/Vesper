@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-  <title>Detect - Vesper</title>
+  <title>Export Clip Sound Files - Vesper</title>
   {% include "vesper/header-prefix.html" %}
   {% load staticfiles %}
   {% load vesper_extras %}
@@ -13,15 +13,13 @@
 
   {% include "vesper/navbar.html" %}
 
-  <h2>Detect</h2>
+  <h2>Export Clip Sound Files</h2>
   
   <p>
-    Runs the Old Bird Tseep and/or Thrush detectors on one or more recordings.
-    The recordings are specified as a set of one or more stations and a range
-    of dates. Due to a limitation of the Old Bird detectors, the recordings
-    are processed one at a time. If more than one detector is selected,
-    however, the detectors can run simultaneously on a given recording.
-    Detection runs as a Vesper job.
+    Exports clips to .wav files. The clips are specified as a set of one
+    or more station/microhpone pairs, one or more detectors, and a range of
+    dates. The sound files are written to the specified output directory
+    on the server. The export runs as a Vesper job.
   </p>
   
   <!-- 
@@ -30,15 +28,16 @@
     http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
    -->
    
-  <form class="form" role="form" action="/vesper/detect" method="post">
-  
+  <form class="form" role="form" action="/vesper/export-clip-sound-files" method="post">
+
+    {{ form.station_mics|block_form_element }}
     {{ form.detectors|block_form_element }}
-    {{ form.stations|block_form_element }}
     {{ form.start_date|form_element }}
     {{ form.end_date|form_element }}
+    {{ form.output_dir_path|block_form_element }}
 
-    <button type="submit" class="btn btn-default form-spacing command-form-spacing">Detect</button>
-    
+    <button type="submit" class="btn btn-default form-spacing command-form-spacing">Export</button>
+
   </form>
 
 </body>

@@ -8,7 +8,10 @@ class ImportArchiveDataForm(forms.Form):
 
     archive_data = forms.CharField(
         label='Archive data YAML',
-        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': '20'}))
+        widget=forms.Textarea(
+            attrs={
+                'class': 'form-control command-form-wide-input',
+                'rows': '15'}))
 
 
     def clean_archive_data(self):

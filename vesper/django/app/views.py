@@ -20,6 +20,8 @@ from vesper.django.app.models import (
     Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station,
     StationDevice)
 from vesper.django.app.detect_form import DetectForm
+from vesper.django.app.export_clip_sound_files_form import (
+    ExportClipSoundFilesForm)
 from vesper.singletons import job_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.ephem.ephem_utils as ephem_utils
@@ -48,7 +50,7 @@ def _create_navbar_items(data):
 
 
 def _create_navbar_item(data):
-    if 'view' in data:
+    if 'url' in data:
         return _create_navbar_link_item(data)
     else:
         return _create_navbar_dropdown_item(data)
@@ -56,7 +58,7 @@ def _create_navbar_item(data):
 
 def _create_navbar_link_item(data):
     name = data['name']
-    href = '/vesper/' + data['view']
+    href = '/vesper/' + data['url']
     return Bunch(type='link', name=name, href=href)
 
 
@@ -72,25 +74,31 @@ def _create_navbar_dropdown_item(data):
 _NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
   
 - name: View
-  view: calendar
+  url: calendar
     
 - name: Import
   dropdown:
   
       - name: Archive Data
-        view: import_archive_data
+        url: import-archive-data
         
       - name: Recordings
-        view: import_recordings
+        url: import-recordings
           
 - name: Detect
-  view: detect
+  url: detect
     
 - name: Classify
-  view: classify
+  url: classify
     
 - name: Export
-  view: export
+  dropdown:
+  
+      - name: Clip Table
+        url: export-clip-table
+        
+      - name: Clip Sound Files
+        url: export-clip-sound-files
   
 '''))
 
@@ -168,11 +176,42 @@ def import_(request):
     return render(request, 'vesper/import.html', context)
     
     
-def export(request):
+def export_clip_table(request):
     return _render_coming_soon(
-        request, 'Export', 'Data export is not yet implemented.')
+        request, 'Clip Table Export',
+        'Clip table export is not yet implemented.')
+
+
+@csrf_exempt
+def export_clip_sound_files(request):
     
+    if request.method in _GET_AND_HEAD:
+        form = ExportClipSoundFilesForm()
+        
+    elif request.method == 'POST':
+ 
+        form = ExportClipSoundFilesForm(request.POST)
+         
+        if form.is_valid():
+            return _render_coming_soon(
+                request, 'Clip Sound Files Export',
+                'Clip sound files export is not yet implemented.')
+#             command_spec = _create_detect_command_spec(form)
+#             job_id = job_manager.instance.start_job(command_spec)
+#             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+            
+    else:
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
     
+    context = {
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Export',
+        'form': form
+    }
+    
+    return render(request, 'vesper/export-clip-sound-files.html', context)
+
+
 def stations(request):
     stations = Station.objects.order_by('name')
     context = dict(stations=stations)

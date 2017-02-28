@@ -275,7 +275,7 @@ class Station(Model):
     def get_night_interval_utc(self, start_date, end_date=None):
         return _get_interval_utc(start_date, end_date, self.get_noon_utc)
         
-    def get_station_devices(self, device_type, start_time, end_time):
+    def get_station_devices(self, device_type, start_time=None, end_time=None):
         
         """
         Gets all station devices of the specified type that were in use
@@ -294,8 +294,8 @@ class Station(Model):
         return [
             sd for sd in StationDevice.objects.filter(station=self)
             if sd.device.model.type == device_type and \
-                    sd.start_time <= start_time and \
-                    sd.end_time >= end_time]
+                    (start_time is None or sd.start_time <= start_time) and \
+                    (end_time is None or sd.end_time >= end_time)]
     
     
 def _get_interval_utc(start_date, end_date, get_datetime):

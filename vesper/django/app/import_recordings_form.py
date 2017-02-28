@@ -9,9 +9,25 @@ class ImportRecordingsForm(forms.Form):
 
     paths = forms.CharField(
         label='File and/or directory paths',
-        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': '5'}))
+        widget=forms.Textarea(
+            attrs={
+                'class': 'form-control command-form-wide-input',
+                'rows': '5'}),
+        help_text='''
+            Specify the paths of one or more .wav files and/or directories
+            containing .wav files to import those files as recordings. Each
+            path should be specified on a separate line. Multi-file recordings
+            are automatically recognized from the stations, start times, and
+            durations of the imported files.''')
 
-    recursive = forms.BooleanField(label='Recursive', required=False)
+
+    recursive = forms.BooleanField(
+        label='Recursive',
+        required=False,
+        help_text = '''
+            Check the box to recursively include .wav files in subdirectories
+            of any specified directories. Uncheck the box to exclude such
+            files.''')
 
 
     def clean_paths(self):
