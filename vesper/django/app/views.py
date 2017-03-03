@@ -196,7 +196,7 @@ def export_clip_sound_files(request):
             return _render_coming_soon(
                 request, 'Clip Sound Files Export',
                 'Clip sound files export is not yet implemented.')
-#             command_spec = _create_detect_command_spec(form)
+#             command_spec = _create_export_clip_sound_files_command_spec(form)
 #             job_id = job_manager.instance.start_job(command_spec)
 #             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
             
@@ -210,6 +210,31 @@ def export_clip_sound_files(request):
     }
     
     return render(request, 'vesper/export-clip-sound-files.html', context)
+
+
+def _create_export_clip_sound_files_command_spec(form):
+    
+    data = form.cleaned_data
+    
+    return {
+        'name': 'export',
+        'arguments': {
+            'station_microphones': data['station_mics'],
+            'detectors': data['detectors'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
+            'exporter': {
+                'name': 'Clip Exporter',
+                'arguments': {
+                    'output_dir_path': data['output_dir_path'],
+                    'clip_file_name_formatter': {
+                        'name': 'Simple Clip File Name Formatter',
+                        # TODO: Add arguments for format control?
+                    }
+                }
+            }
+        }
+    }
 
 
 def stations(request):

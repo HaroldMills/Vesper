@@ -12,8 +12,12 @@ _EXTENSIONS_SPEC = '''
 
 Command:
     - vesper.command.detect_command.DetectCommand
+    - vesper.command.export_command.ExportCommand
     - vesper.command.import_command.ImportCommand
     - vesper.command.test_command.TestCommand
+    
+Exporter:
+    - vesper.command.clip_exporter.ClipExporter
     
 Importer:
     - vesper.command.archive_data_importer.ArchiveDataImporter
@@ -27,6 +31,9 @@ Preset:
     
 Recording File Parser:
     - vesper.mpg_ranch.recording_file_parser.RecordingFileParser
+    
+Clip File Name Formatter:
+    - vesper.command.clip_exporter.SimpleClipFileNameFormatter
     
 '''
 

@@ -51,10 +51,6 @@ def _get_station_mic_choices(station):
     
     
 def _get_station_mic_choice(sd):
-    station_name = sd.station.name
-    mic_name = sd.device.name
-    choice_yaml = '{{ station_name: {}, microphone_name: {} }}'.format(
-        station_name, mic_name)
-    choice_name = '{} / {}'.format(station_name, mic_name)
-    return (choice_yaml, choice_name)
+    name = '{} / {}'.format(sd.station.name, sd.device.name)
+    return (name, name)
     
