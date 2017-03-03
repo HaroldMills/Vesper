@@ -26,7 +26,7 @@
     here.]
   </p>
   
-  <form class="form" role="form" action="/vesper/import-archive-data" method="post">
+  <form class="form" role="form" action="{% url 'import-archive-data' %}" method="post">
   
     {{ form.archive_data|block_form_element }}
     

@@ -28,7 +28,7 @@
     http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
    -->
    
-  <form class="form" role="form" action="/vesper/export-clip-sound-files" method="post">
+  <form class="form" role="form" action="{% url 'export-clip-sound-files' %}" method="post">
 
     {{ form.station_mics|block_form_element }}
     {{ form.detectors|block_form_element }}

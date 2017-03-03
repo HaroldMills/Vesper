@@ -1,8 +1,8 @@
 {% if item.type == 'link' %}
   {% if item.name == active_navbar_item %}
-    <li class="active"><a href="{{item.href}}">{{item.name}}</a></li>
+    <li class="active"><a href="{% url item.url %}">{{item.name}}</a></li>
   {% else %}
-    <li><a href="{{item.href}}">{{item.name}}</a></li>
+    <li><a href="{% url item.url %}">{{item.name}}</a></li>
   {% endif %}
 {% else %}
   <li class="dropdown">

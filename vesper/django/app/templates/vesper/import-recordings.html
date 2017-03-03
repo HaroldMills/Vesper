@@ -23,7 +23,7 @@
     should not be moved after import. The import runs as a Vesper job.
   </p>
 
-  <form class="form" role="form" action="/vesper/import-recordings" method="post">
+  <form class="form" role="form" action="{% url 'import-recordings' %}" method="post">
   
     {{ form.paths|block_form_element }}
     {{ form.recursive|form_checkbox }}

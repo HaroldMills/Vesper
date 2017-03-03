@@ -30,7 +30,7 @@
     http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
    -->
    
-  <form class="form" role="form" action="/vesper/detect" method="post">
+  <form class="form" role="form" action="{% url 'detect' %}" method="post">
   
     {{ form.detectors|block_form_element }}
     {{ form.stations|block_form_element }}

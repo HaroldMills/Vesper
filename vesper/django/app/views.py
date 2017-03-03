@@ -4,7 +4,7 @@ import itertools
 import logging
 import json
 
-from django import forms
+from django import forms, urls
 from django.db.models import Max, Min
 from django.core.urlresolvers import reverse
 from django.http import (
@@ -58,8 +58,8 @@ def _create_navbar_item(data):
 
 def _create_navbar_link_item(data):
     name = data['name']
-    href = '/vesper/' + data['url']
-    return Bunch(type='link', name=name, href=href)
+    url = data['url']
+    return Bunch(type='link', name=name, url=url)
 
 
 def _create_navbar_dropdown_item(data):
@@ -125,7 +125,7 @@ def detect(request):
         if form.is_valid():
             command_spec = _create_detect_command_spec(form)
             job_id = job_manager.instance.start_job(command_spec)
-            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+            return _create_job_redirect_response(job_id)
             
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
@@ -152,6 +152,11 @@ def _create_detect_command_spec(form):
             'end_date': data['end_date']
         }
     }
+
+
+def _create_job_redirect_response(job_id):
+    url = urls.reverse('job', args=[job_id])
+    return HttpResponseRedirect(url)
 
 
 def _render_coming_soon(request, action, message):
@@ -198,7 +203,7 @@ def export_clip_sound_files(request):
                 'Clip sound files export is not yet implemented.')
 #             command_spec = _create_export_clip_sound_files_command_spec(form)
 #             job_id = job_manager.instance.start_job(command_spec)
-#             return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+#             return _create_job_redirect_response(job_id))
             
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
@@ -978,7 +983,7 @@ def test_command(request):
             print('form valid')
             command_spec = {'name': 'test'}
             job_id = job_manager.instance.start_job(command_spec)
-            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+            return _create_job_redirect_response(job_id)
         else:
             print('form invalid')
             
@@ -1001,7 +1006,7 @@ def import_archive_data(request):
         if form.is_valid():
             command_spec = _create_import_archive_data_command_spec(form)
             job_id = job_manager.instance.start_job(command_spec)
-            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+            return _create_job_redirect_response(job_id)
             
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
@@ -1045,7 +1050,7 @@ def import_recordings(request):
         if form.is_valid():
             command_spec = _create_import_recordings_command_spec(form)
             job_id = job_manager.instance.start_job(command_spec)
-            return HttpResponseRedirect('/vesper/jobs/{}'.format(job_id))
+            return _create_job_redirect_response(job_id)
             
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
