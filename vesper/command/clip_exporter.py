@@ -59,13 +59,13 @@ class ClipExporter:
         return True
             
             
-def _get_clip_query(keyword_args):
-    station_names = get_station_names(keyword_args)
-    detector_names = get_detector_names(keyword_args)
-    clip_class_names = get_clip_class_names(keyword_args)
-    start_night, end_night = get_nights(keyword_args)
-    return (station_names, detector_names, clip_class_names, start_night,
-            end_night)
+# def _get_clip_query(keyword_args):
+#     station_names = get_station_names(keyword_args)
+#     detector_names = get_detector_names(keyword_args)
+#     clip_class_names = get_clip_class_names(keyword_args)
+#     start_night, end_night = get_nights(keyword_args)
+#     return (station_names, detector_names, clip_class_names, start_night,
+#             end_night)
 
 
 def _create_file_name_formatter(spec):
