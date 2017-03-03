@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-  <title>Export Clip Sound Files - Vesper</title>
+  <title>Export Clips - Vesper</title>
   {% include "vesper/header-prefix.html" %}
   {% load staticfiles %}
   {% load vesper_extras %}
@@ -13,7 +13,7 @@
 
   {% include "vesper/navbar.html" %}
 
-  <h2>Export Clip Sound Files</h2>
+  <h2>Export Clips</h2>
   
   <p>
     Exports clips to .wav files. The clips are specified as a set of one
@@ -28,7 +28,7 @@
     http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
    -->
    
-  <form class="form" role="form" action="{% url 'export-clip-sound-files' %}" method="post">
+  <form class="form" role="form" action="{% url 'export-clips' %}" method="post">
 
     {{ form.station_mics|block_form_element }}
     {{ form.detectors|block_form_element }}

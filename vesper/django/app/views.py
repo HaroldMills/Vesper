@@ -20,8 +20,7 @@ from vesper.django.app.models import (
     Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station,
     StationDevice)
 from vesper.django.app.detect_form import DetectForm
-from vesper.django.app.export_clip_sound_files_form import (
-    ExportClipSoundFilesForm)
+from vesper.django.app.export_clips_form import ExportClipsForm
 from vesper.singletons import job_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.ephem.ephem_utils as ephem_utils
@@ -94,11 +93,11 @@ _NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
 - name: Export
   dropdown:
   
-      - name: Clip Table
-        url: export-clip-table
+      - name: Clip Metadata
+        url: export-clip-metadata
         
-      - name: Clip Sound Files
-        url: export-clip-sound-files
+      - name: Clips
+        url: export-clips
   
 '''))
 
@@ -181,27 +180,26 @@ def import_(request):
     return render(request, 'vesper/import.html', context)
     
     
-def export_clip_table(request):
+def export_clip_metadata(request):
     return _render_coming_soon(
-        request, 'Clip Table Export',
-        'Clip table export is not yet implemented.')
+        request, 'Clip Metadata Export',
+        'Clip metadata export is not yet implemented.')
 
 
 @csrf_exempt
-def export_clip_sound_files(request):
+def export_clips(request):
     
     if request.method in _GET_AND_HEAD:
-        form = ExportClipSoundFilesForm()
+        form = ExportClipsForm()
         
     elif request.method == 'POST':
  
-        form = ExportClipSoundFilesForm(request.POST)
+        form = ExportClipsForm(request.POST)
          
         if form.is_valid():
             return _render_coming_soon(
-                request, 'Clip Sound Files Export',
-                'Clip sound files export is not yet implemented.')
-#             command_spec = _create_export_clip_sound_files_command_spec(form)
+                request, 'Clip Export', 'Clip export is not yet implemented.')
+#             command_spec = _create_export_clips_command_spec(form)
 #             job_id = job_manager.instance.start_job(command_spec)
 #             return _create_job_redirect_response(job_id))
             
@@ -214,10 +212,10 @@ def export_clip_sound_files(request):
         'form': form
     }
     
-    return render(request, 'vesper/export-clip-sound-files.html', context)
+    return render(request, 'vesper/export-clips.html', context)
 
 
-def _create_export_clip_sound_files_command_spec(form):
+def _create_export_clips_command_spec(form):
     
     data = form.cleaned_data
     

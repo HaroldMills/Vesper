@@ -5,7 +5,7 @@ from django import forms
 from vesper.django.app.models import Processor, Station
 
 
-class ExportClipSoundFilesForm(forms.Form):
+class ExportClipsForm(forms.Form):
     
 
     station_mics = forms.MultipleChoiceField(
