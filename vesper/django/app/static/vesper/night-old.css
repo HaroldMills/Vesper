@@ -1,0 +1,105 @@
+::selection {
+  background-color: transparent;
+}
+
+.settings-button {
+  background-color: transparent;
+  color: gray;
+  font-size: 1.4em;
+  position: absolute;
+  top: 55px;
+  right: 5px;
+  padding: 0;
+  border: none;
+  outline: none;
+}
+
+.settings-button:hover {
+  color: #606060;
+}
+
+.settings-button:active {
+  color: black;
+}
+
+/* settings modal control labels */
+.modal-body .form-horizontal .control-label {
+  width: auto;
+}
+
+/* settings modal controls */
+.modal-body .form-horizontal .form-control {
+  width: auto;
+}
+
+.clips-title {
+  font-weight: bold;
+  text-align: center;
+}
+
+#rug-plot {
+  max-width: 720px;
+  height: 60px;
+  margin: 0 auto;
+}
+
+.clips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  align-content: flex-start;
+  width: 100%;
+  margin: 0;
+  margin-top: 10px;
+}
+
+.clip {
+  outline-style: solid;
+  outline-color: transparent;
+  background-color: blue;
+  position: relative;
+}
+
+.clip-canvas {
+  background-color: gray;
+}
+
+.clip:hover > button {
+  visibility: visible;
+}
+
+/*
+ * The top and bottom attributes of the play button are set in Javascript,
+ * since they depend on the label location.
+ */
+.clip-play-button {
+  background-color: transparent;
+  color: orange;
+  visibility: hidden;
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  outline: none;
+}
+
+.clip-play-button:hover {
+  color: darkorange;
+}
+
+.glyphicon.glyphicon-play {
+  font-size: 20px;
+}
+
+.clip-audio {
+  visibility: hidden;
+}
+
+.clip-label {
+  white-space: nowrap;
+  background-color: transparent;
+  position: absolute;
+  margin: 0;
+}

@@ -6,7 +6,7 @@ urlpatterns = [
                
     url(r'^$', views.index, name='index'),
     url(r'^calendar$', views.calendar, name='calendar'),
-    url(r'^night$', views.night_new, name='night'),
+    url(r'^night$', views.night, name='night'),
     url(r'^test-command$', views.test_command, name='test-command'),
     
     url(r'^import-archive-data$', views.import_archive_data,

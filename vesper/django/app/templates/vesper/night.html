@@ -2,52 +2,49 @@
 <html lang="en">
 
 <head>
-  <title>Clips</title>
+
+  <title>Clips New</title>
+  
   {% include "vesper/header-prefix.html" %}
-  <link rel="stylesheet" href="http://cdn.pydata.org/bokeh/release/bokeh-0.12.3.min.css" type="text/css" />
-  <script type="text/javascript" src="http://cdn.pydata.org/bokeh/release/bokeh-0.12.3.min.js"></script>
-  {{rug_plot_script|safe}}
+  
+  <script>
+    const clipQuery = {
+    	'stationName': '{{station_name}}',
+    	'microphoneOutputName': '{{microphone_output_name}}',
+    	'detectorName': '{{detector_name}}',
+    	'classification': '{{classification}}',
+    	'date': '{{date}}'
+    };
+    const solarEventTimes = {{solar_event_times_json|safe}};
+    const recordings = {{recordings_json|safe}};
+    const clips = {{clips_json|safe}};
+    const clipCollectionViewSettingsPresets =
+        {{clip_collection_view_settings_presets_json|safe}}
+    const annotationSchemePresets = {{annotation_scheme_presets_json|safe}}
+    const annotationCommandsPresets = {{annotation_commands_presets_json|safe}}
+  </script>
+  
   {% load staticfiles %}
   <script src="{% static 'vesper/dft.js' %}"></script>
   <script src="{% static 'vesper/spectrogram.js' %}"></script>
   <script src="{% static 'vesper/multiselection.js' %}"></script>
-  <script>
-    const stationName = "{{station_name}}";
-    const microphoneOutputName = "{{microphone_output_name}}";
-    const detectorName = "{{detector_name}}";
-    const classification = "{{classification}}";
-    const date = "{{date}}";
-    const numClips = {{num_clips}};
-    const pageStartIndex = {{page_start_index}};
-    const pageSize = {{page_size}};
-    const selectedIndex = {{selected_index}}
-    const clips = {{clips_json|safe}};
-    const clipCollectionViewSettingsPresets = {{clip_collection_view_settings_presets_json|safe}}
-    const annotationSchemePresets = {{annotation_scheme_presets_json|safe}}
-    const annotationCommandsPresets = {{annotation_commands_presets_json|safe}}
-  </script>
+  <script src="{% static 'vesper/array-utils.js' %}"><</script>
   <script src="{% static 'vesper/ui-utils.js' %}"></script>
+  <script src="{% static 'vesper/night-rug-plot.js' %}"></script>
+  <script src="{% static 'vesper/clip-collection-view.js' %}"></script>
   <script src="{% static 'vesper/night.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static 'vesper/night.css' %}">
+  
 </head>
 
 <body>
 
   {% include "vesper/navbar.html" %}
   
-  <button type="button" class="settings-button" data-toggle="modal" data-target="#settings-modal">
-    <span class="glyphicon glyphicon-cog settings-button-span"></span>
-  </button>
-
-  {% include "vesper/night-settings.html" %}
-
-  <div>
-    <h3 id="title" class="clips-title">
-      <!-- The title is set by Javascript. -->
-    </h3>
-    <div id="rug-plot">{{rug_plot_div|safe}}</div>
-    <div id="clips" class="clips"></div>
-  </div>
+  <h3 id="title"></h3>
+  <div id="rug-plot"></div>
+  <div id="clips"></div>
+  <!-- div id='footer'></div> -->
   
 </body>
 

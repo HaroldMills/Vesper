@@ -542,7 +542,7 @@ def _get_periods_json(
         return calendar_utils.get_calendar_periods_json(periods, clip_counts)
     
 
-def night_new(request):
+def night(request):
       
     params = request.GET
       
@@ -602,7 +602,7 @@ def night_new(request):
         'annotation_commands_presets_json': annotation_commands_presets_json
     }
           
-    return render(request, 'vesper/night-new.html', context)
+    return render(request, 'vesper/night.html', context)
     
         
 def _get_solar_event_times_json(station, night):
@@ -649,83 +649,6 @@ def _get_solar_event_time(event, lat, lon, date, utc_to_local):
     return _format_time(local_time)
 
 
-def night(request):
-      
-    params = request.GET
-      
-    # TODO: Type check and range check query items.
-    station_name = params['station']
-    microphone_output_name = params['microphone_output']
-    detector_name = params['detector']
-    annotation_name = 'Classification'
-    annotation_value = params['classification']
-    date = params['date']
-    page_start_index = int(params['start']) - 1
-    page_size = int(params['size'])
-      
-    selected_index = int(params.get('selected', '0')) - 1
-    if selected_index == -1:
-        selected_index = 'null';
-      
-    station = Station.objects.get(name=station_name)
-    microphone_output = _get_station_microphone_output(
-        station, microphone_output_name)
-    detector = Processor.objects.get(name=detector_name)
-      
-    night = time_utils.parse_date(*date.split('-'))
-    time_interval = station.get_night_interval_utc(night)
-  
-    recordings = Recording.objects.filter(
-        station_recorder__station=station,
-        start_time__range=time_interval)
-    
-    annotations = _get_recording_annotations(
-        recordings, microphone_output, detector, annotation_name,
-        annotation_value, time_interval)
-    
-    num_clips = len(annotations)
-    page_start_index = _limit_index(page_start_index, 0, num_clips - 1)
-    page_end_index = min(page_start_index + page_size, num_clips)
-      
-    utc_to_local = station.utc_to_local
-    utc_times = [a.clip.start_time for a in annotations]
-    start_times = [utc_to_local(t) for t in utc_times]
-      
-#     rug_plot_script, rug_plot_div = \
-#         clips_rug_plot.create_rug_plot(station, night, start_times)
-      
-    clips_json = _get_clips_json(
-        annotations, start_times, page_start_index, page_end_index)
-      
-    clip_collection_view_settings_presets_json = \
-        _get_presets_json('Clip Collection View Settings')
-    annotation_scheme_presets_json = _get_presets_json('Annotation Scheme')
-    annotation_commands_presets_json = _get_presets_json('Annotation Commands')
-  
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': '',
-        'station_name': station_name,
-        'microphone_output_name': microphone_output_name,
-        'detector_name': detector_name,
-        'classification': annotation_value,
-        'date': date,
-#         'rug_plot_script': rug_plot_script,
-#         'rug_plot_div': rug_plot_div,
-        'num_clips': len(annotations),
-        'page_start_index': page_start_index,
-        'page_size': page_size,
-        'selected_index': selected_index,
-        'clips_json': clips_json,
-        'clip_collection_view_settings_presets_json':
-            clip_collection_view_settings_presets_json,
-        'annotation_scheme_presets_json': annotation_scheme_presets_json,
-        'annotation_commands_presets_json': annotation_commands_presets_json
-    }
-          
-    return render(request, 'vesper/night.html', context)
-    
-        
 def _get_station_microphone_output(station, microphone_output_name):
     
     outputs = _get_station_microphone_outputs(station)
