@@ -17,8 +17,7 @@ import yaml
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
-    Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station,
-    StationDevice)
+    Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station)
 from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.export_clips_form import ExportClipsForm
 from vesper.singletons import job_manager, preset_manager
@@ -451,6 +450,15 @@ def _get_station_info(params):
 
 
 def _create_station_microphone_outputs_dict(stations):
+    
+    """
+    Gets a mapping from station names to tuples of microphone output names.
+    
+    For each station, the value of the mapping is the tuple of the names of
+    all outputs of all microphones that were used at the station, sorted
+    lexicographically.
+    """
+    
     return dict(
         _create_station_microphone_outputs_dict_aux(s) for s in stations)
 
@@ -465,7 +473,7 @@ def _get_station_microphone_outputs(station):
     output_iterators = [m.outputs.all() for m in microphones]
     outputs = list(itertools.chain.from_iterable(output_iterators))
     outputs.sort(key=lambda o: o.name)
-    return outputs
+    return tuple(outputs)
 
 
 def _get_microphone_output_info(station_microphone_outputs, station, params):
@@ -545,6 +553,130 @@ def _get_periods_json(
         return calendar_utils.get_calendar_periods_json(periods, clip_counts)
     
 
+def _get_recording_channel_num_pairs(
+        station, microphone_output, recorder_microphone_infos,
+        time_interval=None):
+    
+    """
+    Gets (recording, channel number) pairs for the specified station,
+    microphone output, and time interval. Each pair represents a
+    channel of a recording made at the specified station from the
+    specified microphone output whose interval intersects the specified
+    time interval.
+    
+    The time interval may be `None`, in which case all recordings made at
+    the station are returned. The start and/or end times of the time
+    interval may also be `None`, denoting times of minus and plus
+    infinity, respectively.
+    """
+    
+    # Get recordings for the specified station whose time intervals
+    # intersect the specified time interval.
+    recordings = _get_recordings(station, time_interval)
+         
+    # Limit the recordings to those that involved the specified
+    # microphone output.
+    microphone_output_id = microphone_output.id
+    pairs = []
+    for r in recordings:
+        channel_num = _get_microphone_output_channel_num(
+            r, microphone_output_id, recorder_microphone_infos)
+        if channel_num is not None:
+            pairs.append((r, channel_num))
+            
+    return pairs
+        
+
+def _get_recordings(station, time_interval=None):
+    
+    """
+    Gets the recordings made at the specified station whose time intervals
+    intersect the specified time interval.
+    
+    The time interval may be `None`, in which case all recordings made at
+    the station are returned. The start and/or end times of the time
+    interval may also be `None`, denoting times of minus and plus
+    infinity, respectively.
+    """
+    
+    
+    if time_interval is None:
+        # no time interval specified
+        
+        return Recording.objects.filter(station_recorder__station=station)
+    
+    else:
+        
+        start, end = time_interval
+        
+        if start is None and end is None:
+            # neither start nor end time specified
+            
+            return Recording.objects.filter(station_recorder__station=station)
+        
+        elif end is None:
+            # start time specified, but not end time
+            
+            return Recording.objects.filter(
+                station_recorder__station=station).exclude(
+                end_time__lte=start)
+                
+        elif start is None:
+            # end time specified, but not start time
+            
+            return Recording.objects.filter(
+                station_recorder__station=station).exclude(
+                start_time__gte=end)
+                
+        else:
+            # both start and end times specified
+            
+            return Recording.objects.filter(
+                station_recorder__station=station).exclude(
+                end_time__lte=start).exclude(
+                start_time__gte=end)
+
+            
+def _get_microphone_output_channel_num(
+        recording, microphone_output_id, recorder_microphone_infos):
+    
+    """
+    Gets the channel number of the specified microphone output in the
+    specified recording, or `None` if the microphone output was not
+    involved in the recording.
+    
+    `recorder_microphone_infos` is a mapping from
+    `(recorder_id, microphone_output_id)` pairs to lists of
+    `(channel_num, start_time, end_time)` bunches.
+    """
+    
+    # TODO: What should we do a situation in which a single microphone
+    # output is connected to more than one recorder input, for example
+    # with different input gains? In the following, we simply return
+    # the channel number of first input we encounter. Any other inputs
+    # are ignored.
+    
+    recorder = recording.station_recorder.device
+    infos = recorder_microphone_infos[(recorder.id, microphone_output_id)]
+    start_time = recording.start_time
+    
+    for info in infos:
+        
+        if info.start_time <= start_time and start_time < info.end_time:
+            # Microphone output was connected to recorder input
+            # during recording. (We assume that equipment connections
+            # do not change during recordings, so that if a microphone
+            # output was connected to a recording's recorder at the
+            # beginning of the recording it remained connected througout
+            # the recording.)
+            
+            return info.channel_num
+        
+    # If we get here, the specified microphone output was not involved
+    # in the specified recording.
+    return None
+        
+    
 def night(request):
       
     params = request.GET
@@ -571,16 +703,15 @@ def night(request):
     detector = Processor.objects.get(name=detector_name)
     time_interval = station.get_night_interval_utc(night)
   
-    recordings = Recording.objects.filter(
-        station_recorder__station=station,
-        start_time__range=time_interval)
+    rm_infos = _get_recorder_microphone_infos(station, microphone_output)
+    rc_pairs = _get_recording_channel_num_pairs(
+        station, microphone_output, rm_infos, time_interval)
     
+    recordings = [recording for recording, _ in rc_pairs]
     recordings_json = _get_recordings_json(recordings, station)
     
-    annotations = _get_recording_annotations(
-        recordings, microphone_output, detector, annotation_name,
-        annotation_value, time_interval)
-          
+    annotations = _get_rc_pair_annotations(
+        rc_pairs, detector, time_interval, annotation_name, annotation_value)
     clips_json = _get_clips_json(annotations, station)
       
     clip_collection_view_settings_presets_json = \
@@ -608,6 +739,18 @@ def night(request):
     return render(request, 'vesper/night.html', context)
     
         
+def _get_rc_pair_annotations(
+        rc_pairs, detector, time_interval, annotation_name, annotation_value):
+    
+    annotation_iterators = [
+        _get_annotations(
+            recording, channel_num, detector, time_interval,
+            annotation_name, annotation_value)
+        for recording, channel_num in rc_pairs]
+    
+    return list(itertools.chain.from_iterable(annotation_iterators))
+
+
 def _get_solar_event_times_json(station, night):
     
     lat = station.latitude
@@ -645,7 +788,6 @@ def _get_solar_event_times_json(station, night):
         return json.dumps(times)
 
     
-    
 def _get_solar_event_time(event, lat, lon, date, utc_to_local):
     utc_time = ephem_utils.get_event_time(event, lat, lon, date)
     local_time = utc_to_local(utc_time)
@@ -664,21 +806,25 @@ def _get_station_microphone_output(station, microphone_output_name):
             microphone_output_name, station.name))
     
     
-def _get_microphone_output_channel_num(recording, microphone_output):
-      
-    connections = DeviceConnection.objects.filter(
-        output=microphone_output,
-        input__device=recording.station_recorder.device)
-    
-    start_time = recording.start_time
-    for connection in connections:
-        if connection.start_time <= start_time and \
-                connection.end_time >= start_time:
-            return connection.input.channel_num
-    
-    logging.error((
-        'Could not find channel number for microphone output "{}" in '
-        'recording "{}".').format(microphone_output.name, recording.name))
+# def _get_microphone_output_channel_num(recording, microphone_output):
+#       
+#     # TODO: This function seems somewhat redundant with the
+#     # `_get_recording_channel_num_pairs` function. Could they be
+#     # combined?
+#     
+#     connections = DeviceConnection.objects.filter(
+#         output=microphone_output,
+#         input__device=recording.station_recorder.device)
+#     
+#     start_time = recording.start_time
+#     for connection in connections:
+#         if connection.start_time <= start_time and \
+#                 connection.end_time >= start_time:
+#             return connection.input.channel_num
+#     
+#     logging.error((
+#         'Could not find channel number for microphone output "{}" in '
+#         'recording "{}".').format(microphone_output.name, recording.name))
 
 
 def _get_recordings_json(recordings, station):
@@ -705,31 +851,6 @@ def _get_recording_dict(recording, utc_to_local):
     }
     
     
-def _get_recording_annotations(
-        recordings, microphone_output, detector, annotation_name,
-        annotation_value, time_interval):
-
-    annotation_iterators = [
-        _get_recording_annotations_aux(
-            r, microphone_output, detector, annotation_name, annotation_value,
-            time_interval)
-        for r in recordings]
-    
-    return list(itertools.chain.from_iterable(annotation_iterators))
-    
-    
-def _get_recording_annotations_aux(
-        recording, microphone_output, detector, annotation_name,
-        annotation_value, time_interval):
-
-    channel_num = \
-        _get_microphone_output_channel_num(recording, microphone_output)
-          
-    return _get_annotations(
-        recording, channel_num, detector, annotation_name, annotation_value,
-        time_interval)
-      
-
 def _get_clips_json(annotations, station):
     
     # See note near the top of this file about why we send local
@@ -815,25 +936,36 @@ def _get_clip_counts(
     
     for recording in recordings:
         
-        start_time = recording.start_time
-        night = _get_night(start_time, time_zone)
-        recorder = recording.station_recorder.device
-        infos = rm_infos[(recorder.id, microphone_output_id)]
+        channel_num = _get_microphone_output_channel_num(
+            recording, microphone_output_id, rm_infos)
         
-        for info in infos:
+        if channel_num is not None:
             
-            if info.start_time <= start_time and start_time <= info.end_time:
-                
-                channel_num = info.channel_num
-                time_interval = (start_time, recording.end_time)
-                
-                annotations = _get_annotations(
-                    recording, channel_num, detector, annotation_name,
-                    annotation_value, time_interval)
+            # TODO: We assume in this function that a recording starts and
+            # ends the same night. In the future, we may want to support
+            # recordings that span multiple nights. That will look fairly
+            # different from what we do here. This function will be replaced
+            # by a `_get_clip_count` function that accepts the same arguments
+            # as this function plus a `time_interval` argument. The function
+            # will be called once for each night, and the `time_interval`
+            # argument will specify the interval of the night.
+            #
+            # The time interval of an archive will not be determined from
+            # counts for a particular annotation as it is now, but rather
+            # from the intervals of the recordings that are in the archive
+            # for a particular station and microphone output.
             
-                count = len(annotations)
-                counts[night] += count  
-
+            start_time = recording.start_time
+            time_interval = (start_time, recording.end_time)
+            
+            annotations = _get_annotations(
+                recording, channel_num, detector, time_interval,
+                annotation_name, annotation_value)
+        
+            night = _get_night(start_time, time_zone)
+            count = len(annotations)
+            counts[night] += count
+                
 #     print('_get_clip_counts:')
 #     nights = sorted(counts.keys())
 #     for night in nights:
@@ -844,11 +976,13 @@ def _get_clip_counts(
 
 def _get_recorder_microphone_infos(station, microphone_output):
     
+    """
+    Gets a mapping from (recorder_id, microphone_output_id) pairs
+    to lists of (channel_num, start_time, end_time) bunches.
+    """
+    
     # Get recorders that were used at station.
-    station_recorders = StationDevice.objects.filter(
-        station=station,
-        device__model__type='Audio Recorder')
-    recorders = [sr.device for sr in station_recorders]
+    recorders = station.devices.filter(model__type='Audio Recorder')
     
     rm_infos = defaultdict(list)
     
@@ -922,8 +1056,16 @@ def _get_local_noon_as_utc_time(date, time_zone):
 
 
 def _get_annotations(
-        recording, channel_num, detector, annotation_name, annotation_value,
-        time_interval):
+        recording, channel_num, detector, time_interval,
+        annotation_name, annotation_value):
+    
+    # TODO: The queries of this function are not strictly correct, in
+    # that they exlude clips that start before the query time interval
+    # but end after the interval starts. Compare the efficiency of
+    # these queries to correct ones. The correct ones will use two
+    # `exclude` clauses, one that excludes clips that end before the
+    # query interval and another that excludes clips that start after it.
+    # Include a comparison of the SQL generated for each approach.
     
     if annotation_value.endswith('*'):
         
@@ -944,29 +1086,6 @@ def _get_annotations(
             clip__start_time__range=time_interval,
             name=annotation_name,
             value=annotation_value)
-
-
-# def _get_annotations(station, annotation_name, annotation_value, time_interval):
-#     
-#     # TODO: How expensive are the queries in this function? I believe they
-#     # require a join on four tables, namely Annotation, Clip, Recording,
-#     # and StationDevice.
-#     
-#     if annotation_value.endswith('*'):
-#         
-#         return Annotation.objects.filter(
-#             clip__recording__station_recorder__station=station,
-#             clip__start_time__range=time_interval,
-#             name=annotation_name,
-#             value__startswith=annotation_value[:-1])
-#         
-#     else:
-#         
-#         return Annotation.objects.filter(
-#             clip__recording__station_recorder__station=station,
-#             clip__start_time__range=time_interval,
-#             name=annotation_name,
-#             value=annotation_value)
 
 
 @csrf_exempt
