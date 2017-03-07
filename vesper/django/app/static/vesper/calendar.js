@@ -323,13 +323,13 @@ function getPeriodRows(period) {
 		rows.push(monthInfos);
 	}
 	
-    if (numMonths === 1) {
-        // only one month in this period
-        
-        // Suppress display of month name since it's same as period name.
-        rows[0][0].name = null;
-        
-    }
+//    if (numMonths === 1) {
+//        // only one month in this period
+//        
+//        // Suppress display of month name since it's same as period name.
+//        rows[0][0].name = null;
+//        
+//    }
         
 	return rows;
 	
