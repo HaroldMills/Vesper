@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db.models import (
     BigIntegerField, CASCADE, CharField, DateTimeField, FloatField, ForeignKey,
-    IntegerField, ManyToManyField, Model, TextField)
+    IntegerField, ManyToManyField, Model, SET_NULL, TextField)
 import pytz
 
 from vesper.django.project.settings import VESPER_CLIPS_DIR_FORMAT
@@ -630,23 +630,86 @@ def _get_clip_id_parts(num, format_):
     return parts
     
     
-class Annotation(Model):
+# Note that one might implement annotation value constraints as presets.
+# We choose not to do so, however, since the constraints provide important
+# information regarding the annotation values in the archive. We reserve
+# presets for UI configuration information that does not help describe
+# archive contents.
+class AnnotationValueConstraint(Model):
     
-    clip = ForeignKey(Clip, on_delete=CASCADE, related_name='annotations')
-    name = CharField(max_length=255)      # e.g. 'Classification', 'Outside'
-    value = TextField(blank=True)         # e.g. 'NFC.AMRE', 'True'
+    name = CharField(max_length=255, unique=True)
+    description = TextField(blank=True)
+    text = TextField(blank=True)
     creation_time = DateTimeField(null=True)
     creating_user = ForeignKey(
-        User, null=True, on_delete=CASCADE, related_name='annotations')
+        User, null=True, on_delete=CASCADE,
+        related_name='annotation_value_constraints')
     creating_job = ForeignKey(
-        Job, null=True, on_delete=CASCADE, related_name='annotations')
+        Job, null=True, on_delete=CASCADE,
+        related_name='annotation_value_constraints')
     
     def __str__(self):
-        return '({}, {})'.format(self.name, self.value)
+        return self.name
     
     class Meta:
-        unique_together = ('clip', 'name')
+        db_table = 'vesper_annotation_value_constraint'
+    
+    
+class Annotation(Model):
+    
+    TYPE_STRING = 'String'
+    TYPE_CHOICES = ((TYPE_STRING, TYPE_STRING),)
+    
+    name = CharField(max_length=255, unique=True)
+    description = TextField(blank=True)
+    type = CharField(max_length=255, choices=TYPE_CHOICES)
+    constraint = ForeignKey(
+        AnnotationValueConstraint, null=True, on_delete=SET_NULL,
+        related_name='annotations')
+    creation_time = DateTimeField(null=True)
+    creating_user = ForeignKey(
+        User, CASCADE, null=True, related_name='annotations')
+    creating_job = ForeignKey(
+        Job, CASCADE, null=True, related_name='annotations')
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
         db_table = 'vesper_annotation'
+
+    
+class StringAnnotationValue(Model):
+    
+    clip = ForeignKey(Clip, CASCADE)
+    annotation = ForeignKey(Annotation, CASCADE)
+    value = CharField(max_length=255)
+    creation_time = DateTimeField(null=True)
+    creating_user = ForeignKey(
+        User, CASCADE, null=True, related_name='string_annotation_values')
+    creating_job = ForeignKey(
+        Job, CASCADE, null=True, related_name='string_annotation_values')
+    
+    class Meta:
+        unique_together = ('clip', 'annotation')
+        db_table = 'vesper_string_annotation_value'
+    
+    
+class StringAnnotationValueHistory(Model):
+    
+    clip = ForeignKey(Clip, CASCADE)
+    annotation = ForeignKey(Annotation, CASCADE)
+    value = CharField(max_length=255)
+    creation_time = DateTimeField(null=True)
+    creating_user = ForeignKey(
+        User, CASCADE, null=True,
+        related_name='string_annotation_value_histories')
+    creating_job = ForeignKey(
+        Job, CASCADE, null=True,
+        related_name='string_annotation_value_histories')
+    
+    class Meta:
+        db_table = 'vesper_string_annotation_value_history'
 
 
 class RecordingJob(Model):

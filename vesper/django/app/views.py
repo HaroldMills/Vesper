@@ -17,7 +17,8 @@ import yaml
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
-    Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station)
+    Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station,
+    StringAnnotationValue)
 from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.export_clips_form import ExportClipsForm
 from vesper.singletons import job_manager, preset_manager
@@ -1067,24 +1068,26 @@ def _get_annotations(
     # query interval and another that excludes clips that start after it.
     # Include a comparison of the SQL generated for each approach.
     
+    annotation = Annotation.objects.get(name=annotation_name)
+    
     if annotation_value.endswith('*'):
         
-        return Annotation.objects.filter(
+        return StringAnnotationValue.objects.filter(
             clip__recording=recording,
             clip__channel_num=channel_num,
             clip__creating_processor=detector,
             clip__start_time__range=time_interval,
-            name=annotation_name,
+            annotation=annotation,
             value__startswith=annotation_value[:-1])
         
     else:
         
-        return Annotation.objects.filter(
+        return StringAnnotationValue.objects.filter(
             clip__recording=recording,
             clip__channel_num=channel_num,
             clip__creating_processor=detector,
             clip__start_time__range=time_interval,
-            name=annotation_name,
+            annotation=annotation,
             value=annotation_value)
 
 

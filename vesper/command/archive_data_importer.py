@@ -6,13 +6,15 @@ import logging
 
 from django.db import transaction
 import pytz
+import yaml
 
 from vesper.command.command import CommandSyntaxError
 from vesper.django.app.models import (
-    Algorithm, AlgorithmVersion, Device, DeviceConnection, DeviceInput,
-    DeviceModel, DeviceModelInput, DeviceModelOutput, DeviceOutput, Processor,
-    Station, StationDevice)
+    Algorithm, AlgorithmVersion, Annotation, AnnotationValueConstraint, Device,
+    DeviceConnection, DeviceInput, DeviceModel, DeviceModelInput,
+    DeviceModelOutput, DeviceOutput, Job, Processor, Station, StationDevice)
 import vesper.command.command_utils as command_utils
+import vesper.util.time_utils as time_utils
 
 
 # TODO: Recover more gracefully when data are missing, e.g. raise a
@@ -51,6 +53,8 @@ class ArchiveDataImporter:
                 self._add_algorithms()
                 self._add_algorithm_versions()
                 self._add_processors()
+                self._add_annotation_value_constraints(job_info)
+                self._add_annotations(job_info)
                 
         except Exception:
             self._logger.error(
@@ -62,6 +66,69 @@ class ArchiveDataImporter:
         return True
             
             
+    def _add_annotation_value_constraints(self, job_info):
+        
+        constraints_data = self.archive_data.get('annotation_value_constraints')
+        
+        if constraints_data is not None:
+            
+            for data in constraints_data:
+                
+                name = data['name']
+                description = data.get('description', '')
+                text = yaml.dump(data)
+                creation_time = time_utils.get_utc_now()
+                creating_user = None
+                creating_job = Job.objects.get(id=job_info.job_id)
+                
+                constraint = AnnotationValueConstraint(
+                    name=name,
+                    description=description,
+                    text=text,
+                    creation_time=creation_time,
+                    creating_user=creating_user,
+                    creating_job=creating_job)
+                
+                constraint.save()
+                
+                
+    def _add_annotations(self, job_info):
+        
+        annotations_data = self.archive_data.get('annotations')
+        
+        if annotations_data is not None:
+            
+            for data in annotations_data:
+                
+                name = data['name']
+                description = data.get('description', '')
+                type_ = data.get('type', 'String')
+                constraint = self._get_annotation_value_constraint(data)
+                creation_time = time_utils.get_utc_now()
+                creating_user = None
+                creating_job = Job.objects.get(id=job_info.job_id)
+                
+                annotation = Annotation(
+                    name=name,
+                    description=description,
+                    type=type_,
+                    constraint=constraint,
+                    creation_time=creation_time,
+                    creating_user=creating_user,
+                    creating_job=creating_job)
+                
+                annotation.save()              
+    
+    
+    def _get_annotation_value_constraint(self, data):
+        try:
+            name = data['constraint']
+        except KeyError:
+            return None
+        else:
+            return AnnotationValueConstraint.objects.get(name=name)
+    
+        
     def _add_stations(self):
         
         stations_data = self.archive_data.get('stations')

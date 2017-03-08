@@ -15,7 +15,7 @@ import pytz
 
 from vesper.archive.archive import Archive
 from vesper.django.app.models import (
-    Annotation, Clip, Processor, Recording, Station)
+    Annotation, StringAnnotationValue, Clip, Processor, Recording, Station)
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
@@ -153,13 +153,15 @@ def _add_clips():
     one_night = datetime.timedelta(days=1)
     station_recordings = _get_station_recordings()
     detectors = _get_detectors()
+    annotations = _get_annotations()
     num_added = 0
     num_rejected = 0
     for station in stations:
         night = start_night
         while night <= end_night:
             clips = archive.get_clips(station_name=station.name, night=night)
-            (m, n) = _add_clips_aux(clips, station_recordings, detectors)
+            (m, n) = _add_clips_aux(
+                clips, station_recordings, detectors, annotations)
             num_added += m
             num_rejected += n
             night += one_night
@@ -189,7 +191,12 @@ def _get_detectors():
     return detectors
 
 
-def _add_clips_aux(clips, station_recordings, detectors):
+def _get_annotations():
+    annotations = Annotation.objects.all()
+    return dict((a.name, a) for a in annotations)
+
+
+def _add_clips_aux(clips, station_recordings, detectors, annotations):
     
     num_added = 0
     num_rejected = 0
@@ -209,6 +216,8 @@ def _add_clips_aux(clips, station_recordings, detectors):
             print(str(e))
             num_rejected += 1
             continue
+        
+        annotation = _get_annotation('Classification', annotations)
         
         with transaction.atomic():
             
@@ -231,11 +240,11 @@ def _add_clips_aux(clips, station_recordings, detectors):
             
             _copy_clip_sound_file(c.file_path, clip)
             
-            a = Annotation(
+            value = StringAnnotationValue(
                 clip=clip,
-                name='Classification',
+                annotation=annotation,
                 value=c.clip_class_name)
-            a.save()
+            value.save()
             
             num_added += 1
         
@@ -262,6 +271,9 @@ def _get_clip_recording(clip, station_recordings):
     time = clip.start_time
     
     # Django doesn't seem to support this. Not sure why.
+    # Update: I made a mistake by specifying `start_time__le` rather than
+    # `start_time__lte` and `end_time__ge` rather than `end_time__gte`.
+    # That's why my code didn't work!
 #     try:
 #         return station.recordings.get(start_time__le=time, end_time__ge=time)
 #     except Recording.DoesNotExist:
@@ -293,6 +305,14 @@ def _get_detector(clip, detectors):
                 'Unrecognized detector "{}".'.format(clip.detector_name))
         
         
+def _get_annotation(name, annotations):
+    
+    try:
+        return annotations[name]
+    except KeyError:
+        raise ValueError('Unrecognized annotation "{}".'.format(name))
+    
+    
 def _get_floor_noon(time, station):
     time_zone = pytz.timezone(station.time_zone)
     dt = time.astimezone(time_zone)
