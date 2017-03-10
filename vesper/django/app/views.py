@@ -863,7 +863,7 @@ def night(request):
     recordings_json = _get_recordings_json(recordings, station)
     
     annotations = _get_rc_pair_annotations(
-        rc_pairs, detector, time_interval, annotation_name, annotation_value)
+        rc_pairs, time_interval, detector, annotation_name, annotation_value)
     clips_json = _get_clips_json(annotations, station)
       
     clip_collection_view_settings_presets_json = \
@@ -892,11 +892,11 @@ def night(request):
     
         
 def _get_rc_pair_annotations(
-        rc_pairs, detector, time_interval, annotation_name, annotation_value):
+        rc_pairs, time_interval, detector, annotation_name, annotation_value):
     
     annotation_iterators = [
         _get_annotations(
-            recording, channel_num, detector, time_interval,
+            recording, channel_num, time_interval, detector,
             annotation_name, annotation_value)
         for recording, channel_num in rc_pairs]
     
@@ -1111,7 +1111,7 @@ def _get_clip_counts(
             time_interval = (start_time, recording.end_time)
             
             annotations = _get_annotations(
-                recording, channel_num, detector, time_interval,
+                recording, channel_num, time_interval, detector,
                 annotation_name, annotation_value)
         
             night = _get_night(start_time, time_zone)
@@ -1208,7 +1208,7 @@ def _get_local_noon_as_utc_time(date, time_zone):
 
 
 def _get_annotations(
-        recording, channel_num, detector, time_interval,
+        recording, channel_num, time_interval, detector,
         annotation_name, annotation_value):
     
     # TODO: The queries of this function are not strictly correct, in
@@ -1221,25 +1221,41 @@ def _get_annotations(
     
     annotation = Annotation.objects.get(name=annotation_name)
     
-    if annotation_value.endswith('*'):
+    if annotation_value == '*':
+        # querying for any annotation value
         
-        return StringAnnotationValue.objects.filter(
+        queryset = StringAnnotationValue.objects.filter(
             clip__recording=recording,
             clip__channel_num=channel_num,
-            clip__creating_processor=detector,
             clip__start_time__range=time_interval,
+            clip__creating_processor=detector,
+            annotation=annotation)
+        
+    elif annotation_value.endswith('*'):
+        # querying for annotation values with a particular prefix
+        
+        queryset = StringAnnotationValue.objects.filter(
+            clip__recording=recording,
+            clip__channel_num=channel_num,
+            clip__start_time__range=time_interval,
+            clip__creating_processor=detector,
             annotation=annotation,
             value__startswith=annotation_value[:-1])
         
     else:
+        # querying for a single annotation value
         
-        return StringAnnotationValue.objects.filter(
+        queryset = StringAnnotationValue.objects.filter(
             clip__recording=recording,
             clip__channel_num=channel_num,
-            clip__creating_processor=detector,
             clip__start_time__range=time_interval,
+            clip__creating_processor=detector,
             annotation=annotation,
             value=annotation_value)
+
+    print(queryset.query)
+        
+    return queryset
 
 
 @csrf_exempt
