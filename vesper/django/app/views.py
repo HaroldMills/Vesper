@@ -17,8 +17,8 @@ import yaml
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
-    Annotation, Clip, DeviceConnection, Job, Processor, Recording, Station,
-    StringAnnotationValue)
+    Annotation, AnnotationValueConstraint, Clip, DeviceConnection, Job,
+    Processor, Recording, Station, StringAnnotationValue)
 from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.export_clips_form import ExportClipsForm
 from vesper.singletons import job_manager, preset_manager
@@ -523,9 +523,160 @@ def _get_detector_info(params):
 
     
 def _get_classification_info(params):
-    classifications = _add_wildcard_classifications(_CLASSIFICATIONS)
-    classification = params.get('classification', classifications[0])
-    return classifications, classification
+    
+    classifications = _get_string_annotation_values('Classification')
+    
+    if classifications is None:
+        # annotation values not available
+        
+        return (['*'], '*')
+    
+    else:
+        # annotation values available
+        
+        classifications = _add_wildcard_classifications(classifications)
+        classification = params.get('classification', classifications[0])
+        return classifications, classification
+
+
+def _get_string_annotation_values(annotation_name):
+    
+    annotation = Annotation.objects.get(name=annotation_name)
+    
+    constraint_name = annotation.constraint
+    
+    if constraint_name is None:
+        return None
+    
+    else:
+        
+        # We get the annotation values specified by the named constraint
+        # in a two-stage process. In the first stage, we retrieve the
+        # constraint's YAML, and the YAML of all of its ancestors, from
+        # the database, parse it into constraint dictionaries, and
+        # substitute parent constraint dictionaries for parent names.
+        # We also look for inheritance graph cycles in this stage and
+        # raise an exception if one is found.
+        #
+        # In the second stage, we create a flat tuple of annotation
+        # values from the graph of constraint dictionaries produced
+        # by the first stage.
+        #
+        # In retrospect I'm not sure it was really a good idea to
+        # separate the processing into two stages rather than doing
+        # it all in one. I don't think the single-stage processing
+        # would really be any more difficult to write or understand.
+
+        constraint = _get_string_annotation_constraint_dict(constraint_name)
+        values = _get_string_annotation_constraint_values(constraint)
+        return tuple(sorted(values))
+
+
+def _get_string_annotation_constraint_dict(constraint_name):
+    return _get_string_annotation_constraint_dict_aux(constraint_name, [])
+
+
+def _get_string_annotation_constraint_dict_aux(
+        constraint_name, visited_constraint_names):
+    
+    """
+    Gets the specified string annotation value constraint from the
+    database, parses its YAML to produce a constraint dictionary, and
+    recursively substitutes similarly parsed constraint dictionaries for
+    constraint names in the `extends` value (if there is one) of the result.
+    
+    This method detects cycles in constraint inheritance graphs, raising
+    a `ValueError` when one is found.
+    """
+    
+    if constraint_name in visited_constraint_names:
+        # constraint inheritance graph is cyclic
+        
+        i = visited_constraint_names.index(constraint_name)
+        cycle = ' -> '.join(visited_constraint_names[i:] + [constraint_name])
+        raise ValueError(
+            ('Cycle detected in constraint inheritance graph. '
+             'Cycle is: {}.').format(cycle))
+        
+    constraint = AnnotationValueConstraint.objects.get(name=constraint_name)
+    constraint = yaml.load(constraint.text)
+    
+    constraint['parents'] = _get_string_annotation_constraint_parents(
+        constraint, visited_constraint_names)
+    
+    return constraint
+        
+    
+def _get_string_annotation_constraint_parents(
+        constraint, visited_constraint_names):
+    
+    augmented_constraint_names = visited_constraint_names + [constraint['name']]
+    
+    extends = constraint.get('extends')
+    
+    if extends is None:
+        # constraint has no parents
+        
+        return []
+    
+    elif isinstance(extends, str):
+        # `extends` is a parent constraint name
+        
+        return [_get_string_annotation_constraint_dict_aux(
+            extends, augmented_constraint_names)]
+        
+    elif isinstance(extends, list):
+        # `extends` is a list of parent constraint names
+        
+        return [
+            _get_string_annotation_constraint_dict_aux(
+                name, augmented_constraint_names)
+            for name in extends]
+        
+    else:
+        class_name = extends.__class__.__name__
+        raise ValueError(
+            ('Unexpected type "{}" for value of string annotation '
+             'constraint "extends" item.').format(class_name))
+    
+
+def _get_string_annotation_constraint_values(constraint):
+    
+    parent_value_sets = [
+        _get_string_annotation_constraint_values(parent)
+        for parent in constraint['parents']]
+        
+    values = _get_string_annotation_constraint_own_values(constraint['values'])
+    
+    return values.union(*parent_value_sets)
+    
+    
+_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
+
+
+def _get_string_annotation_constraint_own_values(values):
+    
+    flattened_values = set()
+    
+    for value in values:
+        
+        if isinstance(value, str):
+            # value is string
+            
+            flattened_values.add(value)
+            
+        elif isinstance(value, dict):
+            
+            for parent, children in value.items():
+                
+                flattened_children = \
+                    _get_string_annotation_constraint_own_values(children)
+                
+                flattened_values |= set(
+                    parent + _ANNOTATION_VALUE_COMPONENT_SEPARATOR + child
+                    for child in flattened_children)
+                
+    return flattened_values
 
 
 def _get_station_microphone_outputs_json(station_microphone_outputs):
