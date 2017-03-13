@@ -642,6 +642,7 @@ class AnnotationValueConstraint(Model):
         db_table = 'vesper_annotation_value_constraint'
     
     
+# TODO: Don't allow null creation_time? (Check elsewhere, too.)
 class Annotation(Model):
     
     TYPE_STRING = 'String'
