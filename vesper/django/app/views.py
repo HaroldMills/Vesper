@@ -1197,7 +1197,7 @@ def _get_annotations(
     if annotation_value == _WILDCARD:
         # querying for any annotation value
         
-        queryset = StringAnnotationValue.objects.filter(
+        annotations = StringAnnotationValue.objects.filter(
             clip__recording=recording,
             clip__channel_num=channel_num,
             clip__creating_processor=detector,
@@ -1207,7 +1207,7 @@ def _get_annotations(
     elif annotation_value.endswith(_WILDCARD):
         # querying for annotation values with a particular prefix
         
-        queryset = StringAnnotationValue.objects.filter(
+        annotations = StringAnnotationValue.objects.filter(
             clip__recording=recording,
             clip__channel_num=channel_num,
             clip__creating_processor=detector,
@@ -1218,7 +1218,7 @@ def _get_annotations(
     else:
         # querying for a single annotation value
         
-        queryset = StringAnnotationValue.objects.filter(
+        annotations = StringAnnotationValue.objects.filter(
             clip__recording=recording,
             clip__channel_num=channel_num,
             clip__start_time__range=time_interval,
@@ -1227,7 +1227,7 @@ def _get_annotations(
             value=annotation_value
         ).exclude(clip_outside_interval)
 
-    return queryset
+    return annotations
 
 
 @csrf_exempt
