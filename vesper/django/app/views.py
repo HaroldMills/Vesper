@@ -5,7 +5,7 @@ import logging
 import json
 
 from django import forms, urls
-from django.db.models import Max, Min
+from django.db.models import Max, Min, Q
 from django.core.urlresolvers import reverse
 from django.http import (
     HttpResponse, HttpResponseNotAllowed, HttpResponseRedirect)
@@ -102,9 +102,13 @@ _NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
 '''))
 
 
-_CLASSIFICATIONS = ('Call', 'Call.CHSP', 'Call.WIWA', 'Noise', 'Unknown')
 _ONE_DAY = datetime.timedelta(days=1)
 _GET_AND_HEAD = ('GET', 'HEAD')
+
+_WILDCARD = '*'
+_IGNORE_ANNOTATION = '-- Ignore --'
+_NO_ANNOTATION = '-- None --'
+_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
 
 
 def index(request):
@@ -524,19 +528,25 @@ def _get_detector_info(params):
     
 def _get_classification_info(params):
     
+    choices = [
+#        _IGNORE_ANNOTATION,
+#        _NO_ANNOTATION,
+        _WILDCARD
+    ]
+    
     classifications = _get_string_annotation_values('Classification')
     
     if classifications is None:
         # annotation values not available
         
-        return (['*'], '*')
+        return (choices, _WILDCARD)
     
     else:
         # annotation values available
         
-        classifications = _add_wildcard_classifications(classifications)
-        classification = params.get('classification', classifications[0])
-        return classifications, classification
+        choices += _add_wildcard_classifications(classifications)
+        classification = params.get('classification', _WILDCARD)
+        return choices, classification
 
 
 def _get_string_annotation_values(annotation_name):
@@ -651,9 +661,6 @@ def _get_string_annotation_constraint_values(constraint):
     return values.union(*parent_value_sets)
     
     
-_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
-
-
 def _get_string_annotation_constraint_own_values(values):
     
     flattened_values = set()
@@ -1055,23 +1062,22 @@ def _limit_index(index, min_index, max_index):
     
     
 def _add_wildcard_classifications(classifications):
-    prefixes = set('*')
+    prefixes = set()
     for c in classifications:
         prefixes.add(c)
         prefixes |= _add_wildcard_classifications_aux(c)
-    prefixes = list(prefixes)
-    prefixes.sort()
-    return prefixes
+    return sorted(prefixes)
         
         
 def _add_wildcard_classifications_aux(classification):
-    parts = classification.split('.')
+    parts = classification.split(_ANNOTATION_VALUE_COMPONENT_SEPARATOR)
     prefixes = []
     for i in range(1, len(parts)):
-        prefix = '.'.join(parts[:i])
+        prefix = _ANNOTATION_VALUE_COMPONENT_SEPARATOR.join(parts[:i])
         prefixes.append(prefix)
-        prefixes.append(prefix + '*')
-        prefixes.append(prefix + '.*')
+        prefixes.append(prefix + _WILDCARD)
+        prefixes.append(
+            prefix + _ANNOTATION_VALUE_COMPONENT_SEPARATOR + _WILDCARD)
     return frozenset(prefixes)
         
         
@@ -1179,68 +1185,36 @@ def _get_local_noon_as_utc_time(date, time_zone):
     return dt.astimezone(pytz.utc)
 
 
-# TODO: For the time being, Vesper creates every clip with a
-# `Classification` annotation so that the following function will yield
-# what we want when `annotation_name` is `Classification` and
-# `annotation_value` is `'*'`. But we really want to be able to get both
-# clips that have a `Classification` annotation *and clips that do not*.
-# What is the best way to do this?
-# 
-# Since what we're really after is clips rather than annotations, is there
-# a query that would give us the clips we want directly? For example, would
-# the following yield clips with a specified annotation name and value?
-# 
-#     Clip.objects.filter(
-#         recording=recording,
-#         channel_num=channel_num,
-#         creating_processor=detector,
-#         start_time__range=time_interval,
-#         annotations__name=annotation_name,
-#         annotations__value=annotation_value)
-# 
-# A problem I see with this is that once we have a clip, we have to do
-# something like:
-#
-#     clip.annotations.get(name=annotation_name)
-#
-# in order to get its annotation value, while if we query for annotations
-# instead, the annotation value is right there in the result.
-
-
 def _get_annotations(
         recording, channel_num, time_interval, detector,
         annotation_name, annotation_value):
     
-    # TODO: The queries of this function are not strictly correct, in
-    # that they exlude clips that start before the query time interval
-    # but end after the interval starts. Compare the efficiency of
-    # these queries to correct ones. The correct ones will use two
-    # `exclude` clauses, one that excludes clips that end before the
-    # query interval and another that excludes clips that start after it.
-    # Include a comparison of the SQL generated for each approach.
+    start_time, end_time = time_interval
+    clip_outside_interval = \
+        Q(clip__end_time__lte=start_time) | Q(clip__start_time__gte=end_time)
     
     annotation = Annotation.objects.get(name=annotation_name)
     
-    if annotation_value == '*':
+    if annotation_value == _WILDCARD:
         # querying for any annotation value
         
         queryset = StringAnnotationValue.objects.filter(
             clip__recording=recording,
             clip__channel_num=channel_num,
-            clip__start_time__range=time_interval,
             clip__creating_processor=detector,
-            annotation=annotation)
+            annotation=annotation
+        ).exclude(clip_outside_interval)
         
-    elif annotation_value.endswith('*'):
+    elif annotation_value.endswith(_WILDCARD):
         # querying for annotation values with a particular prefix
         
         queryset = StringAnnotationValue.objects.filter(
             clip__recording=recording,
             clip__channel_num=channel_num,
-            clip__start_time__range=time_interval,
             clip__creating_processor=detector,
             annotation=annotation,
-            value__startswith=annotation_value[:-1])
+            value__startswith=annotation_value[:-1]
+        ).exclude(clip_outside_interval)
         
     else:
         # querying for a single annotation value
@@ -1251,7 +1225,8 @@ def _get_annotations(
             clip__start_time__range=time_interval,
             clip__creating_processor=detector,
             annotation=annotation,
-            value=annotation_value)
+            value=annotation_value
+        ).exclude(clip_outside_interval)
 
     print(queryset.query)
         
