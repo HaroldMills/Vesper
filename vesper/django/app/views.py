@@ -1121,8 +1121,7 @@ def _get_clip_counts(
                 annotation_name, annotation_value)
         
             night = _get_night(start_time, time_zone)
-            count = len(annotations)
-            counts[night] += count
+            counts[night] += annotations.count()
                 
 #     print('_get_clip_counts:')
 #     nights = sorted(counts.keys())
@@ -1228,8 +1227,6 @@ def _get_annotations(
             value=annotation_value
         ).exclude(clip_outside_interval)
 
-    print(queryset.query)
-        
     return queryset
 
 
