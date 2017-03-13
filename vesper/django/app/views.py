@@ -5,7 +5,7 @@ import logging
 import json
 
 from django import forms, urls
-from django.db.models import Max, Min, Q
+from django.db.models import Max, Min
 from django.core.urlresolvers import reverse
 from django.http import (
     HttpResponse, HttpResponseNotAllowed, HttpResponseRedirect)
@@ -898,18 +898,6 @@ def night(request):
     return render(request, 'vesper/night.html', context)
     
         
-def _get_rc_pair_annotations(
-        rc_pairs, time_interval, detector, annotation_name, annotation_value):
-    
-    annotation_iterators = [
-        _get_annotations(
-            recording, channel_num, time_interval, detector,
-            annotation_name, annotation_value)
-        for recording, channel_num in rc_pairs]
-    
-    return list(itertools.chain.from_iterable(annotation_iterators))
-
-
 def _get_solar_event_times_json(station, night):
     
     lat = station.latitude
@@ -1010,6 +998,18 @@ def _get_recording_dict(recording, utc_to_local):
     }
     
     
+def _get_rc_pair_annotations(
+        rc_pairs, time_interval, detector, annotation_name, annotation_value):
+    
+    annotation_iterators = [
+        _get_annotations(
+            recording, channel_num, time_interval, detector,
+            annotation_name, annotation_value)
+        for recording, channel_num in rc_pairs]
+    
+    return list(itertools.chain.from_iterable(annotation_iterators))
+
+
 def _get_clips_json(annotations, station):
     
     # See note near the top of this file about why we send local
@@ -1090,7 +1090,7 @@ def _get_clip_counts(
     microphone_output_id = microphone_output.id
     
     recordings = Recording.objects.filter(station_recorder__station=station)
-    counts = defaultdict(int)
+    clip_counts = defaultdict(int)
     
     for recording in recordings:
         
@@ -1112,23 +1112,23 @@ def _get_clip_counts(
             # counts for a particular annotation as it is now, but rather
             # from the intervals of the recordings that are in the archive
             # for a particular station and microphone output.
-            
+                        
             start_time = recording.start_time
-            time_interval = (start_time, recording.end_time)
+            night = _get_night(start_time, time_zone)
             
-            annotations = _get_annotations(
+            time_interval = (start_time, recording.end_time)
+            clip_count = _get_clip_count(
                 recording, channel_num, time_interval, detector,
                 annotation_name, annotation_value)
-        
-            night = _get_night(start_time, time_zone)
-            counts[night] += annotations.count()
+            
+            clip_counts[night] += clip_count
                 
 #     print('_get_clip_counts:')
-#     nights = sorted(counts.keys())
+#     nights = sorted(clip_counts.keys())
 #     for night in nights:
-#         print('   ', night, counts[night])
+#         print('   ', night, clip_counts[night])
         
-    return counts          
+    return clip_counts          
 
 
 def _get_recorder_microphone_infos(station, microphone_output):
@@ -1171,62 +1171,59 @@ def _get_night(utc_time, time_zone):
     return night
 
 
-def _get_night_interval(night, time_zone):
-    start_time = _get_local_noon_as_utc_time(night, time_zone)
-    end_time = _get_local_noon_as_utc_time(night + _ONE_DAY, time_zone)
-    return (start_time, end_time)
+def _get_clip_count(
+        recording, channel_num, time_interval, detector, annotation_name,
+        annotation_value):
     
+    annotations = _get_annotations(
+        recording, channel_num, time_interval, detector,
+         annotation_name, annotation_value)
     
-def _get_local_noon_as_utc_time(date, time_zone):
-    noon = datetime.time(12)
-    dt = datetime.datetime.combine(date, noon)
-    dt = time_zone.localize(dt)
-    return dt.astimezone(pytz.utc)
-
+    return annotations.count()
+            
 
 def _get_annotations(
         recording, channel_num, time_interval, detector,
         annotation_name, annotation_value):
     
+    # Filter annotation values first by clip attributes. This part of the
+    # query is the same regardless of the annotation value.
     start_time, end_time = time_interval
-    clip_outside_interval = \
-        Q(clip__end_time__lte=start_time) | Q(clip__start_time__gte=end_time)
+    annotations = StringAnnotationValue.objects.filter(
+        clip__recording=recording,
+        clip__channel_num=channel_num,
+        clip__start_time__lt=end_time,
+        clip__end_time__gt=start_time,
+        clip__creating_processor=detector)
+
+
+    # Filter annotation values by annotation attributes. This part of the
+    # query varies according to the annotation value.
     
     annotation = Annotation.objects.get(name=annotation_name)
     
     if annotation_value == _WILDCARD:
         # querying for any annotation value
         
-        annotations = StringAnnotationValue.objects.filter(
-            clip__recording=recording,
-            clip__channel_num=channel_num,
-            clip__creating_processor=detector,
-            annotation=annotation
-        ).exclude(clip_outside_interval)
+        annotations = annotations.filter(
+            annotation=annotation)
         
     elif annotation_value.endswith(_WILDCARD):
         # querying for annotation values with a particular prefix
         
-        annotations = StringAnnotationValue.objects.filter(
-            clip__recording=recording,
-            clip__channel_num=channel_num,
-            clip__creating_processor=detector,
+        annotations = annotations.filter(
             annotation=annotation,
-            value__startswith=annotation_value[:-1]
-        ).exclude(clip_outside_interval)
+            value__startswith=annotation_value[:-1])
         
     else:
         # querying for a single annotation value
         
-        annotations = StringAnnotationValue.objects.filter(
-            clip__recording=recording,
-            clip__channel_num=channel_num,
-            clip__start_time__range=time_interval,
-            clip__creating_processor=detector,
+        annotations = annotations.filter(
             annotation=annotation,
-            value=annotation_value
-        ).exclude(clip_outside_interval)
+            value=annotation_value)
 
+#     print(annotations.query)
+    
     return annotations
 
 
