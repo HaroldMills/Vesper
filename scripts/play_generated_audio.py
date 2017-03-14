@@ -1,4 +1,12 @@
-"""PyAudio Example: Play a wave file (callback version)"""
+"""
+Plays chirps repeatedly forever.
+
+Different chirps can be configured for different channels.
+
+I wrote this script to help test the Vesper recorder. Chirp test signals
+should make it relatively easy to spot locations of dropped sample buffers
+in test recording spectrograms.
+"""
 
 
 import math
