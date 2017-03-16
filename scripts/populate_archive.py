@@ -21,6 +21,33 @@ import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 
 
+# TODO: Generalize this and package it as a Vesper importer that can be
+# used in an import command.
+#
+# The importer requires that all stations, devices, processors, and
+# annotations needed by the import are already present in the target
+# archive.
+#
+# The import should be run in a transaction so that if any part of it
+# fails the database can be rolled back to its state prior to the import.
+#
+# Command arguments will include:
+#
+# * The full path of the source archive directory, which must be on the server.
+#
+# * YAML describing:
+#
+#     * A mapping from source archive station names to target archive
+#       (station name, microphone output name) pairs.
+#
+#     * A mapping from source archive detector names to target archive
+#       detector names.
+#
+#     * Recording schedules, if needed. Recording schedules are needed
+#       if and only if the source archive does not include recording
+#       metadata.
+
+
 _ARCHIVE_DIR_PATH = \
     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
 # _ARCHIVE_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive'
@@ -253,6 +280,9 @@ def _add_clips_aux(clips, station_recordings, detectors, annotation_infos):
 
 def _copy_clip_sound_file(file_path, clip):
     
+    # TODO: Would it be significantly faster to copy files via the OS
+    # rather than reading their contents and then writing them?
+    
     with open(file_path, 'rb') as file_:
         contents = file_.read()
          
@@ -273,7 +303,7 @@ def _get_clip_recording(clip, station_recordings):
     # Django doesn't seem to support this. Not sure why.
     # Update: I made a mistake by specifying `start_time__le` rather than
     # `start_time__lte` and `end_time__ge` rather than `end_time__gte`.
-    # That's why my code didn't work!
+    # That's why this code didn't work!
 #     try:
 #         return station.recordings.get(start_time__le=time, end_time__ge=time)
 #     except Recording.DoesNotExist:
@@ -292,6 +322,8 @@ def _get_clip_recording(clip, station_recordings):
     
     
 def _get_detector(clip, detectors):
+    
+    # TODO: Should manual clips be created by a particular user?
     
     if clip.detector_name == 'Manual':
         return None
