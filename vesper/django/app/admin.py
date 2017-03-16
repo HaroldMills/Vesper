@@ -1,18 +1,16 @@
 from django.contrib import admin
 
-from .models import (
-    Algorithm, AlgorithmVersion, Annotation, AnnotationValueConstraint, Clip,
+from vesper.django.app.models import (
+    Algorithm, AlgorithmVersion, AnnotationConstraint, AnnotationInfo, Clip,
     Device, DeviceConnection, DeviceInput, DeviceModel, DeviceModelInput,
     DeviceModelOutput, DeviceOutput, Processor, Recording, RecordingFile,
-    RecordingJob, Station, StationDevice, StringAnnotationValue,
-    StringAnnotationValueHistory)
+    Station, StationDevice, StringAnnotation)
 
 classes = (
-    Algorithm, AlgorithmVersion, Annotation, AnnotationValueConstraint, Clip,
+    Algorithm, AlgorithmVersion, AnnotationConstraint, AnnotationInfo, Clip,
     Device, DeviceConnection, DeviceInput, DeviceModel, DeviceModelInput,
     DeviceModelOutput, DeviceOutput, Processor, Recording, RecordingFile,
-    RecordingJob, Station, StationDevice, StringAnnotationValue,
-    StringAnnotationValueHistory)
+    Station, StationDevice, StringAnnotation)
                              
 for cls in classes:
     admin.site.register(cls)

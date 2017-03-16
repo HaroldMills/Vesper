@@ -17,8 +17,8 @@ import yaml
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
-    Annotation, AnnotationValueConstraint, Clip, DeviceConnection, Job,
-    Processor, Recording, Station, StringAnnotationValue)
+    AnnotationConstraint, AnnotationInfo, Clip, DeviceConnection, Job,
+    Processor, Recording, Station, StringAnnotation)
 from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.export_clips_form import ExportClipsForm
 from vesper.singletons import job_manager, preset_manager
@@ -343,22 +343,24 @@ def annotation(request, clip_id, annotation_name):
     name = annotation_name
     
     if request.method in _GET_AND_HEAD:
-        annotation = get_object_or_404(Annotation, name=name, clip__id=clip_id)
+        info = get_object_or_404(AnnotationInfo, name=name)
+        annotation = get_object_or_404(
+            StringAnnotation, info=info, clip__id=clip_id)
         response = HttpResponse()
         response.write(annotation.value)
         return response
     
-    elif request.method == 'PUT':
-        value = _get_request_body_as_text(request).strip()
-        try:
-            annotation = Annotation.objects.get(clip__id=clip_id, name=name)
-        except Annotation.DoesNotExist:
-            clip = get_object_or_404(Clip, id=clip_id)
-            annotation = Annotation(clip=clip, name=name, value=value)
-        else:
-            annotation.value = value
-        annotation.save()
-        return HttpResponse()
+#     elif request.method == 'PUT':
+#         value = _get_request_body_as_text(request).strip()
+#         try:
+#             annotation = Annotation.objects.get(clip__id=clip_id, name=name)
+#         except Annotation.DoesNotExist:
+#             clip = get_object_or_404(Clip, id=clip_id)
+#             annotation = Annotation(clip=clip, name=name, value=value)
+#         else:
+#             annotation.value = value
+#         annotation.save()
+#         return HttpResponse()
 
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
@@ -529,8 +531,8 @@ def _get_detector_info(params):
 def _get_classification_info(params):
     
     choices = [
-#        _IGNORE_ANNOTATION,
-#        _NO_ANNOTATION,
+#         _IGNORE_ANNOTATION,
+#         _NO_ANNOTATION,
         _WILDCARD
     ]
     
@@ -551,11 +553,14 @@ def _get_classification_info(params):
 
 def _get_string_annotation_values(annotation_name):
     
-    annotation = Annotation.objects.get(name=annotation_name)
+    try:
+        info = AnnotationInfo.objects.get(name=annotation_name)
+    except AnnotationInfo.DoesNotExist:
+        return None
     
-    constraint_name = annotation.constraint
+    constraint = info.constraint
     
-    if constraint_name is None:
+    if constraint is None:
         return None
     
     else:
@@ -577,7 +582,7 @@ def _get_string_annotation_values(annotation_name):
         # it all in one. I don't think the single-stage processing
         # would really be any more difficult to write or understand.
 
-        constraint = _get_string_annotation_constraint_dict(constraint_name)
+        constraint = _get_string_annotation_constraint_dict(constraint.name)
         values = _get_string_annotation_constraint_values(constraint)
         return tuple(sorted(values))
 
@@ -608,7 +613,7 @@ def _get_string_annotation_constraint_dict_aux(
             ('Cycle detected in constraint inheritance graph. '
              'Cycle is: {}.').format(cycle))
         
-    constraint = AnnotationValueConstraint.objects.get(name=constraint_name)
+    constraint = AnnotationConstraint.objects.get(name=constraint_name)
     constraint = yaml.load(constraint.text)
     
     constraint['parents'] = _get_string_annotation_constraint_parents(
@@ -1175,11 +1180,31 @@ def _get_clip_count(
         recording, channel_num, time_interval, detector, annotation_name,
         annotation_value):
     
-    annotations = _get_annotations(
-        recording, channel_num, time_interval, detector,
-         annotation_name, annotation_value)
+    if annotation_value == _IGNORE_ANNOTATION or \
+            annotation_value == _NO_ANNOTATION:
+        
+        start_time, end_time = time_interval
+        
+        clips = Clip.objects.filter(
+            recording=recording,
+            channel_num=channel_num,
+            start_time__lt=end_time,
+            end_time__gt=start_time,
+            creating_processor=detector)
+        
+        if annotation_value == _NO_ANNOTATION:
+            info = AnnotationInfo.objects.get(name=annotation_name)
+            clips = clips.exclude(string_annotation__info=info)
+            
+        return clips.count()
     
-    return annotations.count()
+    else:
+        
+        annotations = _get_annotations(
+            recording, channel_num, time_interval, detector,
+            annotation_name, annotation_value)
+        
+        return annotations.count()
             
 
 def _get_annotations(
@@ -1189,7 +1214,7 @@ def _get_annotations(
     # Filter annotation values first by clip attributes. This part of the
     # query is the same regardless of the annotation value.
     start_time, end_time = time_interval
-    annotations = StringAnnotationValue.objects.filter(
+    annotations = StringAnnotation.objects.filter(
         clip__recording=recording,
         clip__channel_num=channel_num,
         clip__start_time__lt=end_time,
@@ -1200,26 +1225,25 @@ def _get_annotations(
     # Filter annotation values by annotation attributes. This part of the
     # query varies according to the annotation value.
     
-    annotation = Annotation.objects.get(name=annotation_name)
+    info = AnnotationInfo.objects.get(name=annotation_name)
     
     if annotation_value == _WILDCARD:
         # querying for any annotation value
         
-        annotations = annotations.filter(
-            annotation=annotation)
+        annotations = annotations.filter(info=info)
         
     elif annotation_value.endswith(_WILDCARD):
         # querying for annotation values with a particular prefix
         
         annotations = annotations.filter(
-            annotation=annotation,
+            info=info,
             value__startswith=annotation_value[:-1])
         
     else:
         # querying for a single annotation value
         
         annotations = annotations.filter(
-            annotation=annotation,
+            info=info,
             value=annotation_value)
 
 #     print(annotations.query)

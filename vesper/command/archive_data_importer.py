@@ -10,7 +10,7 @@ import yaml
 
 from vesper.command.command import CommandSyntaxError
 from vesper.django.app.models import (
-    Algorithm, AlgorithmVersion, Annotation, AnnotationValueConstraint, Device,
+    Algorithm, AlgorithmVersion, AnnotationConstraint, AnnotationInfo, Device,
     DeviceConnection, DeviceInput, DeviceModel, DeviceModelInput,
     DeviceModelOutput, DeviceOutput, Job, Processor, Station, StationDevice)
 import vesper.command.command_utils as command_utils
@@ -53,7 +53,7 @@ class ArchiveDataImporter:
                 self._add_algorithms()
                 self._add_algorithm_versions()
                 self._add_processors()
-                self._add_annotation_value_constraints(job_info)
+                self._add_annotation_constraints(job_info)
                 self._add_annotations(job_info)
                 
         except Exception:
@@ -66,9 +66,9 @@ class ArchiveDataImporter:
         return True
             
             
-    def _add_annotation_value_constraints(self, job_info):
+    def _add_annotation_constraints(self, job_info):
         
-        constraints_data = self.archive_data.get('annotation_value_constraints')
+        constraints_data = self.archive_data.get('annotation_constraints')
         
         if constraints_data is not None:
             
@@ -81,7 +81,7 @@ class ArchiveDataImporter:
                 creating_user = None
                 creating_job = Job.objects.get(id=job_info.job_id)
                 
-                constraint = AnnotationValueConstraint(
+                constraint = AnnotationConstraint(
                     name=name,
                     description=description,
                     text=text,
@@ -103,12 +103,12 @@ class ArchiveDataImporter:
                 name = data['name']
                 description = data.get('description', '')
                 type_ = data.get('type', 'String')
-                constraint = self._get_annotation_value_constraint(data)
+                constraint = self._get_annotation_constraint(data)
                 creation_time = time_utils.get_utc_now()
                 creating_user = None
                 creating_job = Job.objects.get(id=job_info.job_id)
                 
-                annotation = Annotation(
+                annotation_info = AnnotationInfo(
                     name=name,
                     description=description,
                     type=type_,
@@ -117,16 +117,16 @@ class ArchiveDataImporter:
                     creating_user=creating_user,
                     creating_job=creating_job)
                 
-                annotation.save()              
+                annotation_info.save()              
     
     
-    def _get_annotation_value_constraint(self, data):
+    def _get_annotation_constraint(self, data):
         try:
             name = data['constraint']
         except KeyError:
             return None
         else:
-            return AnnotationValueConstraint.objects.get(name=name)
+            return AnnotationConstraint.objects.get(name=name)
     
         
     def _add_stations(self):

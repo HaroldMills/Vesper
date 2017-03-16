@@ -44,7 +44,10 @@ class DeviceModel(Model):
     
 class DeviceModelInput(Model):
     
-    model = ForeignKey(DeviceModel, CASCADE, related_name='inputs')
+    model = ForeignKey(
+        DeviceModel, CASCADE,
+        related_name='inputs',
+        related_query_name='input')
     local_name = CharField(max_length=255)
     channel_num = IntegerField()
     description = TextField(blank=True)
@@ -67,7 +70,10 @@ class DeviceModelInput(Model):
 
 class DeviceModelOutput(Model):
     
-    model = ForeignKey(DeviceModel, CASCADE, related_name='outputs')
+    model = ForeignKey(
+        DeviceModel, CASCADE,
+        related_name='outputs',
+        related_query_name='output')
     local_name = CharField(max_length=255)
     channel_num = IntegerField()
     description = TextField(blank=True)
@@ -91,7 +97,10 @@ class DeviceModelOutput(Model):
 class Device(Model):
     
     name = CharField(max_length=255, unique=True)
-    model = ForeignKey(DeviceModel, CASCADE, related_name='devices')
+    model = ForeignKey(
+        DeviceModel, CASCADE,
+        related_name='devices',
+        related_query_name='device')
     serial_number = CharField(max_length=255)
     description = TextField(blank=True)
     
@@ -109,9 +118,14 @@ class Device(Model):
 
 class DeviceInput(Model):
     
-    device = ForeignKey(Device, CASCADE, related_name='inputs')
+    device = ForeignKey(
+        Device, CASCADE,
+        related_name='inputs',
+        related_query_name='input')
     model_input = ForeignKey(
-        DeviceModelInput, CASCADE, related_name='device_inputs')
+        DeviceModelInput, CASCADE,
+        related_name='device_inputs',
+        related_query_name='device_input')
     
     @property
     def local_name(self):
@@ -139,9 +153,14 @@ class DeviceInput(Model):
         
 class DeviceOutput(Model):
     
-    device = ForeignKey(Device, CASCADE, related_name='outputs')
+    device = ForeignKey(
+        Device, CASCADE,
+        related_name='outputs',
+        related_query_name='output')
     model_output = ForeignKey(
-        DeviceModelOutput, CASCADE, related_name='device_outputs')
+        DeviceModelOutput, CASCADE,
+        related_name='device_outputs',
+        related_query_name='device_output')
     
     @property
     def local_name(self):
@@ -169,8 +188,14 @@ class DeviceOutput(Model):
         
 class DeviceConnection(Model):
     
-    output = ForeignKey(DeviceOutput, CASCADE, related_name='connections')
-    input = ForeignKey(DeviceInput, CASCADE, related_name='connections')
+    output = ForeignKey(
+        DeviceOutput, CASCADE,
+        related_name='connections',
+        related_query_name='connection')
+    input = ForeignKey(
+        DeviceInput, CASCADE,
+        related_name='connections',
+        related_query_name='connection')
     start_time = DateTimeField()
     end_time = DateTimeField()
     
@@ -306,8 +331,14 @@ def _get_interval_utc(start_date, end_date, get_datetime):
 
 class StationDevice(Model):
     
-    station = ForeignKey(Station, CASCADE, related_name='station_devices')
-    device = ForeignKey(Device, CASCADE, related_name='station_devices')
+    station = ForeignKey(
+        Station, CASCADE,
+        related_name='station_devices',
+        related_query_name='station_device')
+    device = ForeignKey(
+        Device, CASCADE,
+        related_name='station_devices',
+        related_query_name='station_device')
     start_time = DateTimeField()
     end_time = DateTimeField()
     
@@ -346,7 +377,10 @@ class Algorithm(Model):
     
 class AlgorithmVersion(Model):
     
-    algorithm = ForeignKey(Algorithm, CASCADE, related_name='versions')
+    algorithm = ForeignKey(
+        Algorithm, CASCADE,
+        related_name='versions',
+        related_query_name='version')
     version = CharField(max_length=255)
     description = TextField(blank=True)
     
@@ -370,7 +404,9 @@ class Processor(Model):
     
     name = CharField(max_length=255, unique=True)
     algorithm_version = ForeignKey(
-        AlgorithmVersion, CASCADE, related_name='processors')
+        AlgorithmVersion, CASCADE,
+        related_name='processors',
+        related_query_name='processor')
     settings = TextField(blank=True)
     description = TextField(blank=True)
     
@@ -401,13 +437,22 @@ _JOB_LOGS_DIR_PATH = vesper_path_utils.get_archive_dir_path('Logs', 'Jobs')
 class Job(Model):
     
     command = TextField()
-    processor = ForeignKey(Processor, CASCADE, null=True, related_name='jobs')
+    processor = ForeignKey(
+        Processor, CASCADE, null=True,
+        related_name='jobs',
+        related_query_name='job')
     start_time = DateTimeField(null=True)
     end_time = DateTimeField(null=True)
     status = CharField(max_length=255)
     creation_time = DateTimeField()
-    creating_user = ForeignKey(User, CASCADE, null=True, related_name='jobs')
-    creating_job = ForeignKey('Job', CASCADE, null=True, related_name='jobs')
+    creating_user = ForeignKey(
+        User, CASCADE, null=True,
+        related_name='jobs',
+        related_query_name='job')
+    creating_job = ForeignKey(
+        'Job', CASCADE, null=True,
+        related_name='jobs',
+        related_query_name='job')
     
     def __str__(self):
         return 'Job {} started {} ended {} command "{}"'.format(
@@ -440,7 +485,9 @@ class Job(Model):
 class Recording(Model):
     
     station_recorder = ForeignKey(
-        StationDevice, CASCADE, related_name='recordings')
+        StationDevice, CASCADE,
+        related_name='recordings',
+        related_query_name='recording')
     num_channels = IntegerField()
     length = BigIntegerField()
     sample_rate = FloatField()
@@ -448,7 +495,9 @@ class Recording(Model):
     end_time = DateTimeField()
     creation_time = DateTimeField()
     creating_job = ForeignKey(
-        Job, CASCADE, null=True, related_name='recordings')
+        Job, CASCADE, null=True,
+        related_name='recordings',
+        related_query_name='recording')
     
     @property
     def station(self):
@@ -469,7 +518,10 @@ class Recording(Model):
         
 class RecordingFile(Model):
     
-    recording = ForeignKey(Recording, CASCADE, related_name='files')
+    recording = ForeignKey(
+        Recording, CASCADE,
+        related_name='files',
+        related_query_name='file')
     file_num = IntegerField()
     start_index = BigIntegerField()
     length = BigIntegerField()
@@ -515,14 +567,15 @@ class RecordingFile(Model):
 # able to find all of the clips whose time intervals intersect a specified
 # recording subinterval.
 #
-# The `file_path` field of a clip show be non-null if and only if the clip
-# is stored in a file and its name cannot simply be computed from clip
-# metadata stored in the database. The norm should be for this field to
-# be null.
-#
-# We include a multi-column unique constraint to prevent duplicate clips
-# from being created by accidentally running a particular detector on a
-# particular recording more than once.
+# We used to include a multi-column unique constraint to prevent duplicate
+# clips from being created by accidentally running a particular detector on
+# a particular recording more than once. I decided to eliminate this
+# constraint since such accidents can be recovered from by deleting the
+# redundant detector job (the job's clips will be deleted by the
+# database's cascade feature). I plan to provide some sort of system
+# for defining workflows and keeping track of which workflow tasks
+# have been performed on which recordings, and this should help prevent
+# redundant detector runs.
 #
 # Sometimes we know the processor that created a clip, but there is no
 # corresponding job, as when we import clips that were detected outside
@@ -540,18 +593,28 @@ class RecordingFile(Model):
 # times are only approximate.
 class Clip(Model):
     
-    recording = ForeignKey(Recording, CASCADE, related_name='clips')
+    recording = ForeignKey(
+        Recording, CASCADE,
+        related_name='clips',
+        related_query_name='clip')
     channel_num = IntegerField()
     start_index = BigIntegerField(null=True)
     length = BigIntegerField()
     start_time = DateTimeField()
     end_time = DateTimeField()
     creation_time = DateTimeField()
-    creating_user = ForeignKey(User, CASCADE, null=True, related_name='clips')
-    creating_job = ForeignKey(Job, CASCADE, null=True, related_name='clips')
+    creating_user = ForeignKey(
+        User, CASCADE, null=True,
+        related_name='clips',
+        related_query_name='clip')
+    creating_job = ForeignKey(
+        Job, CASCADE, null=True,
+        related_name='clips',
+        related_query_name='clip')
     creating_processor = ForeignKey(
-        Processor, CASCADE, null=True, related_name='clips')
-    file_path = CharField(max_length=255, unique=True, null=True)
+        Processor, CASCADE, null=True,
+        related_name='clips',
+        related_query_name='clip')
     
     def __str__(self):
         return '{} / {} / Channel {} / {}'.format(
@@ -559,9 +622,6 @@ class Clip(Model):
             self.start_time)
         
     class Meta:
-        unique_together = (
-            'recording', 'channel_num', 'start_time', 'length',
-            'creating_processor')
         db_table = 'vesper_clip'
         
     @property
@@ -583,10 +643,7 @@ class Clip(Model):
         
     @property
     def wav_file_path(self):
-        if self.file_path is None:
-            return _create_clip_file_path(self.id)
-        else:
-            return self.file_path
+        return _create_clip_file_path(self.id)
         
     @property
     def wav_file_url(self):
@@ -624,26 +681,29 @@ def _get_clip_id_parts(num, format_):
 # information regarding the annotation values in the archive. We reserve
 # presets for UI configuration information that does not help describe
 # archive contents.
-class AnnotationValueConstraint(Model):
+class AnnotationConstraint(Model):
     
     name = CharField(max_length=255, unique=True)
     description = TextField(blank=True)
     text = TextField(blank=True)
-    creation_time = DateTimeField(null=True)
+    creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True, related_name='annotation_value_constraints')
+        User, CASCADE, null=True,
+        related_name='annotation_constraints',
+        related_query_name='annotation_constraint')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True, related_name='annotation_value_constraints')
+        Job, CASCADE, null=True,
+        related_name='annotation_constraints',
+        related_query_name='annotation_constraint')
     
     def __str__(self):
         return self.name
     
     class Meta:
-        db_table = 'vesper_annotation_value_constraint'
+        db_table = 'vesper_annotation_constraint'
     
     
-# TODO: Don't allow null creation_time? (Check elsewhere, too.)
-class Annotation(Model):
+class AnnotationInfo(Model):
     
     TYPE_STRING = 'String'
     TYPE_CHOICES = ((TYPE_STRING, TYPE_STRING),)
@@ -652,65 +712,109 @@ class Annotation(Model):
     description = TextField(blank=True)
     type = CharField(max_length=255, choices=TYPE_CHOICES)
     constraint = ForeignKey(
-        AnnotationValueConstraint, null=True, on_delete=SET_NULL,
-        related_name='annotations')
-    creation_time = DateTimeField(null=True)
+        AnnotationConstraint, null=True, on_delete=SET_NULL,
+        related_name='annotation_infos',
+        related_query_name='annotation_info')
+    creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True, related_name='annotations')
+        User, CASCADE, null=True,
+        related_name='annotation_infos',
+        related_query_name='annotation_info')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True, related_name='annotations')
+        Job, CASCADE, null=True,
+        related_name='annotation_infos',
+        related_query_name='annotation_info')
     
     def __str__(self):
         return self.name
     
     class Meta:
-        db_table = 'vesper_annotation'
+        db_table = 'vesper_annotation_info'
 
     
-class StringAnnotationValue(Model):
+class StringAnnotation(Model):
     
-    clip = ForeignKey(Clip, CASCADE)
-    annotation = ForeignKey(Annotation, CASCADE)
+    clip = ForeignKey(
+        Clip, CASCADE,
+        related_name='string_annotations',
+        related_query_name='string_annotation')
+    info = ForeignKey(
+        AnnotationInfo, CASCADE,
+        related_name='string_annotations',
+        related_query_name='string_annotation')
     value = CharField(max_length=255)
-    creation_time = DateTimeField(null=True)
-    creating_user = ForeignKey(
-        User, CASCADE, null=True, related_name='string_annotation_values')
-    creating_job = ForeignKey(
-        Job, CASCADE, null=True, related_name='string_annotation_values')
-    
-    class Meta:
-        unique_together = ('clip', 'annotation')
-        db_table = 'vesper_string_annotation_value'
-    
-    
-class StringAnnotationValueHistory(Model):
-    
-    clip = ForeignKey(Clip, CASCADE)
-    annotation = ForeignKey(Annotation, CASCADE)
-    value = CharField(max_length=255)
-    creation_time = DateTimeField(null=True)
+    creation_time = DateTimeField()
     creating_user = ForeignKey(
         User, CASCADE, null=True,
-        related_name='string_annotation_value_histories')
+        related_name='string_annotations',
+        related_query_name='string_annotation')
     creating_job = ForeignKey(
         Job, CASCADE, null=True,
-        related_name='string_annotation_value_histories')
+        related_name='string_annotations',
+        related_query_name='string_annotation')
+    creating_processor = ForeignKey(
+        Processor, CASCADE, null=True,
+        related_name='string_annotations',
+        related_query_name='string_annotations')
     
     class Meta:
-        db_table = 'vesper_string_annotation_value_history'
+        unique_together = ('clip', 'info')
+        db_table = 'vesper_string_annotation'
+    
+    
+# class StringAnnotationEdit(Model):
+#      
+#     ACTION_SET = 'S'
+#     ACTION_DELETE = 'D'
+#     ACTION_CHOICES = (
+#         (ACTION_SET, 'Set'),
+#         (ACTION_DELETE, 'Delete'))
+#      
+#     clip = ForeignKey(
+#         Clip, CASCADE,
+#         related_name='string_annotation_edits',
+#         related_query_name='string_annotation_edit')
+#     info = ForeignKey(
+#         AnnotationInfo, CASCADE,
+#         related_name='string_annotation_edits',
+#         related_query_name='string_annotation_edit')
+#     action = CharField(max_length=1, choices=ACTION_CHOICES)
+#     value = CharField(max_length=255)
+#     creation_time = DateTimeField()
+#     creating_user = ForeignKey(
+#         User, CASCADE, null=True,
+#         related_name='string_annotation_edits',
+#         related_query_name='string_annotation_edit')
+#     creating_job = ForeignKey(
+#         Job, CASCADE, null=True,
+#         related_name='string_annotation_edits',
+#         related_query_name='string_annotation_edit')
+#     creating_processor = ForeignKey(
+#         Processor, CASCADE, null=True,
+#         related_name='string_annotation_edits',
+#         related_query_name='string_annotation_edits')
+#
+#     class Meta:
+#         db_table = 'vesper_string_annotation_edit'
 
 
-class RecordingJob(Model):
-    
-    recording = ForeignKey(Recording, CASCADE, related_name='recording_jobs')
-    job = ForeignKey(Job, CASCADE, related_name='recording_jobs')
-    
-    def __str__(self):
-        return '{} {}'.format(str(self.recording), self.job.processor.name)
-    
-    class Meta:
-        unique_together = ('recording', 'job')
-        db_table = 'vesper_recording_job'
+# class RecordingJob(Model):
+#     
+#     recording = ForeignKey(
+#         Recording, CASCADE,
+#         related_name='recording_jobs',
+#         related_query_name='recording_job')
+#     job = ForeignKey(
+#         Job, CASCADE,
+#         related_name='recording_jobs',
+#         related_query_name='recording_job')
+#     
+#     def __str__(self):
+#         return '{} {}'.format(str(self.recording), self.job.processor.name)
+#     
+#     class Meta:
+#         unique_together = ('recording', 'job')
+#         db_table = 'vesper_recording_job'
         
     
 '''
@@ -721,8 +825,13 @@ or clips to run a classifier on.
 
 class RecordingJob(Model):
     recording = ForeignKey(
-        Recording, CASCADE, related_name='recording_jobs')
-    job = ForeignKey(Job, CASCADE, related_name='recording_jobs')
+        Recording, CASCADE,
+        related_name='recording_jobs',
+        related_query_name='recording_job')
+    job = ForeignKey(
+        Job, CASCADE,
+        related_name='recording_jobs',
+        related_query_name='recording_job')
     
 # The following gets the recordings on which a certain processor has
 # not been run. It's more complicated than I'd like, but I haven't

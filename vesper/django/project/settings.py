@@ -31,12 +31,7 @@ VESPER_ARCHIVE_DATABASE_FILE_NAME = 'Archive Database.sqlite'
 #
 #     4. Store clips in files in a directory hierarchy organized by
 #        clip station and time.
-VESPER_CLIPS_DIR_FORMAT = (3, 3)
-
-# Number of levels in the clips directory hierarchy. The maximum
-# number of clips that a hierarchy with n levels can support is
-# (10 ** (3 * n)) - 1, e.g. 1e9 - 1 for n = 3.
-# VESPER_NUM_CLIPS_DIR_LEVELS = 3
+VESPER_CLIPS_DIR_FORMAT = (3, 3, 3)
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)

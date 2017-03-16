@@ -15,7 +15,7 @@ import pytz
 
 from vesper.archive.archive import Archive
 from vesper.django.app.models import (
-    Annotation, StringAnnotationValue, Clip, Processor, Recording, Station)
+    AnnotationInfo, Clip, Processor, Recording, Station, StringAnnotation)
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
@@ -153,7 +153,7 @@ def _add_clips():
     one_night = datetime.timedelta(days=1)
     station_recordings = _get_station_recordings()
     detectors = _get_detectors()
-    annotations = _get_annotations()
+    annotation_infos = _get_annotation_infos()
     num_added = 0
     num_rejected = 0
     for station in stations:
@@ -161,7 +161,7 @@ def _add_clips():
         while night <= end_night:
             clips = archive.get_clips(station_name=station.name, night=night)
             (m, n) = _add_clips_aux(
-                clips, station_recordings, detectors, annotations)
+                clips, station_recordings, detectors, annotation_infos)
             num_added += m
             num_rejected += n
             night += one_night
@@ -191,12 +191,12 @@ def _get_detectors():
     return detectors
 
 
-def _get_annotations():
-    annotations = Annotation.objects.all()
-    return dict((a.name, a) for a in annotations)
+def _get_annotation_infos():
+    infos = AnnotationInfo.objects.all()
+    return dict((i.name, i) for i in infos)
 
 
-def _add_clips_aux(clips, station_recordings, detectors, annotations):
+def _add_clips_aux(clips, station_recordings, detectors, annotation_infos):
     
     num_added = 0
     num_rejected = 0
@@ -217,7 +217,8 @@ def _add_clips_aux(clips, station_recordings, detectors, annotations):
             num_rejected += 1
             continue
         
-        annotation = _get_annotation('Classification', annotations)
+        annotation_info = \
+            _get_annotation_info('Classification', annotation_infos)
         
         with transaction.atomic():
             
@@ -240,10 +241,9 @@ def _add_clips_aux(clips, station_recordings, detectors, annotations):
             
             _copy_clip_sound_file(c.file_path, clip)
             
-            value = StringAnnotationValue(
-                clip=clip,
-                annotation=annotation,
-                value=c.clip_class_name)
+            value = StringAnnotation(
+                clip=clip, info=annotation_info, value=c.clip_class_name,
+                creation_time=creation_time)
             value.save()
             
             num_added += 1
@@ -305,10 +305,9 @@ def _get_detector(clip, detectors):
                 'Unrecognized detector "{}".'.format(clip.detector_name))
         
         
-def _get_annotation(name, annotations):
-    
+def _get_annotation_info(name, annotation_infos):
     try:
-        return annotations[name]
+        return annotation_infos[name]
     except KeyError:
         raise ValueError('Unrecognized annotation "{}".'.format(name))
     
