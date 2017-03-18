@@ -265,6 +265,8 @@ class _AudioFileWriter(AudioRecorderListener):
                 
             num_bytes = num_frames * self._frame_size
             
+            # TODO: We assume here that the sample bytes are in
+            # little-endian order, but perhaps we shouldn't.
             self._file.writeframes(
                 samples[buffer_index:buffer_index + num_bytes])
             
