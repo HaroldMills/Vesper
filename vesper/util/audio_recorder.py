@@ -1,9 +1,10 @@
 """Module containing the `AudioRecorder` class."""
 
 
-from queue import Queue
+from queue import Empty, Queue
 from threading import Thread
 from datetime import datetime, timedelta, timezone
+import math
 import time
 
 import pyaudio
@@ -34,7 +35,8 @@ from vesper.util.schedule import ScheduleRunner
 # 5. Test MPG Ranch deployment as a Windows service.
 
 
-_SAMPLE_SIZE = 2     # bytes per sample
+_SAMPLE_SIZE = 2               # bytes
+_TOTAL_BUFFER_SIZE = 10        # seconds
 
 
 class AudioRecorder:
@@ -80,6 +82,21 @@ class AudioRecorder:
         self._buffer_size = buffer_size
         self._schedule = schedule
         
+        # Create buffers to hold up to `_TOTAL_BUFFER_SIZE` seconds of
+        # samples and put them onto free buffer queue.
+        num_buffers = int(round(_TOTAL_BUFFER_SIZE / buffer_size))
+        self._frames_per_buffer = \
+            int(math.ceil(self.buffer_size * self.sample_rate))
+        self._bytes_per_frame = self._num_channels * self._sample_size
+        bytes_per_buffer = self._frames_per_buffer * self._bytes_per_frame
+        self._free_buffer_queue = Queue()
+        for _ in range(num_buffers):
+            buffer = bytearray(bytes_per_buffer)
+            self._free_buffer_queue.put(buffer)
+        
+        # Create buffer filled with zeros to send on input overflow.
+        self._zeros_buffer = bytes(bytes_per_buffer)
+            
         self._recording = False
         self._stop_pending = False
         
@@ -198,15 +215,13 @@ class AudioRecorder:
             self._recording = True
             self._stop_pending = False
 
-            num_frames = int(round(self.buffer_size * self.sample_rate))
-            
             self._stream = self._pyaudio.open(
                 input=True,
                 input_device_index=self.input_device_index,
                 channels=self.num_channels,
                 rate=self.sample_rate,
                 format=pyaudio.paInt16,
-                frames_per_buffer=num_frames,
+                frames_per_buffer=self._frames_per_buffer,
                 stream_callback=self._pyaudio_callback)
             
             self._notify_listeners('recording_started', _get_utc_now())
@@ -248,16 +263,27 @@ class AudioRecorder:
             overflow = (status_flags & paInputOverflow) != 0
             underflow = (status_flags & paInputUnderflow) != 0
         
-            # TODO: Should we copy samples before queueing them?
-        
+            # Get buffer to copy samples into.
+            try:
+                buffer = self._free_buffer_queue.get()
+            except Empty:
+                buffer = self._zeros_buffer
+                # TODO: Include error notification in command.
+                
+            # Copy samples.
+            num_bytes = num_frames * self._bytes_per_frame
+            buffer[:num_bytes] = samples[:num_bytes]
+            
+            # Prepare input command.
             command = Bunch(
                 name='input',
-                samples=samples,
+                samples=buffer,
                 num_frames=num_frames,
                 start_time=start_time,
                 overflow=overflow,
                 underflow=underflow)
             
+            # Send command to recorder thread.
             self._command_queue.put(command)
             
             return (None, pyaudio.paContinue)
@@ -272,6 +298,9 @@ class AudioRecorder:
         self._notify_listeners(
             'samples_arrived', c.start_time, c.samples, c.num_frames,
             c.overflow, c.underflow)
+        
+        # Free sample buffer for reuse.
+        self._free_buffer_queue.put(c.samples)
 
         if self._stop_pending:
             
