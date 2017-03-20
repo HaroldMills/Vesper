@@ -591,6 +591,7 @@ class RecordingFile(Model):
 # of great importance, perhaps we can allow null recording lengths,
 # and add flags that indicate whether or not recording start and end
 # times are only approximate.
+# TODO: Add indexes.
 class Clip(Model):
     
     recording = ForeignKey(
