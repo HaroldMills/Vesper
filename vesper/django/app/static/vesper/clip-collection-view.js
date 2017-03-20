@@ -1547,15 +1547,14 @@ class ClipView {
 			
 			if (s.classificationIncluded) {
 				
-				let annotation = clip.classification;
+				let annotation = clip.annotations['Classification'];
 				
-				if (s.hasOwnProperty('hiddenClassificationPrefixes'))
+				if (annotation === undefined)
+					annotation = 'Unclassified';
+				
 					for (const prefix of s.hiddenClassificationPrefixes)
 						if (annotation.startsWith(prefix))
 							annotation = annotation.substr(prefix.length);
-				
-				if (annotation === '')
-					annotation = 'Unclassified';
 				
 		        labelParts.push(annotation);
 		        

@@ -106,8 +106,10 @@ _ONE_DAY = datetime.timedelta(days=1)
 _GET_AND_HEAD = ('GET', 'HEAD')
 
 _WILDCARD = '*'
-_IGNORE_ANNOTATION = '-- Ignore --'
-_NO_ANNOTATION = '-- None --'
+_NONE = 'Unclassified'
+_IGNORE_ANNOTATION = _WILDCARD + ' | ' + _NONE
+_NO_ANNOTATION = _NONE
+_ANY_ANNOTATION = _WILDCARD
 _ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
 
 
@@ -531,9 +533,9 @@ def _get_detector_info(params):
 def _get_classification_info(params):
     
     choices = [
-#         _IGNORE_ANNOTATION,
-#         _NO_ANNOTATION,
-        _WILDCARD
+        _NO_ANNOTATION,
+        _IGNORE_ANNOTATION,
+        _ANY_ANNOTATION
     ]
     
     classifications = _get_string_annotation_values('Classification')
@@ -541,13 +543,13 @@ def _get_classification_info(params):
     if classifications is None:
         # annotation values not available
         
-        return (choices, _WILDCARD)
+        return (choices, _ANY_ANNOTATION)
     
     else:
         # annotation values available
         
         choices += _add_wildcard_classifications(classifications)
-        classification = params.get('classification', _WILDCARD)
+        classification = params.get('classification', _ANY_ANNOTATION)
         return choices, classification
 
 
@@ -874,9 +876,13 @@ def night(request):
     recordings = [recording for recording, _ in rc_pairs]
     recordings_json = _get_recordings_json(recordings, station)
     
-    annotations = _get_rc_pair_annotations(
+    clips = _get_rc_pair_clips(
         rc_pairs, time_interval, detector, annotation_name, annotation_value)
-    clips_json = _get_clips_json(annotations, station)
+    clips_json = _get_clips_json(clips, station)
+    
+#     annotations = _get_rc_pair_annotations(
+#         rc_pairs, time_interval, detector, annotation_name, annotation_value)
+#     clips_json = _get_clips_json(annotations, station)
       
     clip_collection_view_settings_presets_json = \
         _get_presets_json('Clip Collection View Settings')
@@ -1003,42 +1009,82 @@ def _get_recording_dict(recording, utc_to_local):
     }
     
     
-def _get_rc_pair_annotations(
+def _get_rc_pair_clips(
         rc_pairs, time_interval, detector, annotation_name, annotation_value):
-    
-    annotation_iterators = [
-        _get_annotations(
-            recording, channel_num, time_interval, detector,
-            annotation_name, annotation_value)
+        
+    clip_iterators = [
+        _get_clips(
+            recording, channel_num, time_interval, detector, annotation_name,
+            annotation_value)
         for recording, channel_num in rc_pairs]
-    
-    return list(itertools.chain.from_iterable(annotation_iterators))
+
+    return list(itertools.chain.from_iterable(clip_iterators))
 
 
-def _get_clips_json(annotations, station):
+def _get_clips_json(clips, station):
     
     # See note near the top of this file about why we send local
     # instead of UTC times to clients.
         
     utc_to_local = station.utc_to_local
-    clip_dicts = [_get_clip_dict(a, utc_to_local) for a in annotations]
+    clip_dicts = [_get_clip_dict(c, utc_to_local) for c in clips]
     return json.dumps(clip_dicts)
+
+
+def _get_clip_dict(clip, utc_to_local):
     
-    
-def _get_clip_dict(annotation, utc_to_local):
-    
-    clip = annotation.clip
-    
-    # Note about UTC and local times near the top of this file.
+    # See note about UTC and local times near the top of this file.
     start_time = _format_time(utc_to_local(clip.start_time))
+    
+    annotations = clip.string_annotations.all().select_related('info')
+    annotations = dict((a.info.name, a.value) for a in annotations)
+    
     return {
         'id': clip.id,
         'url': clip.wav_file_url,
         'length': clip.length,
         'sampleRate': clip.sample_rate,
         'startTime': start_time,
-        'classification': annotation.value
+        'annotations': annotations
     }
+
+    
+# def _get_rc_pair_annotations(
+#         rc_pairs, time_interval, detector, annotation_name, annotation_value):
+#      
+#     annotation_iterators = [
+#         _get_annotations(
+#             recording, channel_num, time_interval, detector, annotation_name,
+#             annotation_value)
+#         for recording, channel_num in rc_pairs]
+#      
+#     return list(itertools.chain.from_iterable(annotation_iterators))
+# 
+# 
+# def _get_clips_json(annotations, station):
+#      
+#     # See note near the top of this file about why we send local
+#     # instead of UTC times to clients.
+#          
+#     utc_to_local = station.utc_to_local
+#     clip_dicts = [_get_clip_dict(a, utc_to_local) for a in annotations]
+#     return json.dumps(clip_dicts)
+#      
+#      
+# def _get_clip_dict(annotation, utc_to_local):
+#      
+#     clip = annotation.clip
+#      
+#     # See note about UTC and local times near the top of this file.
+#     start_time = _format_time(utc_to_local(clip.start_time))
+#     return {
+#         'id': clip.id,
+#         'url': clip.wav_file_url,
+#         'length': clip.length,
+#         'sampleRate': clip.sample_rate,
+#         'startTime': start_time,
+#         'classification': annotation.value
+#     }
 
     
 def _format_time(time):
@@ -1183,18 +1229,9 @@ def _get_clip_count(
     if annotation_value == _IGNORE_ANNOTATION or \
             annotation_value == _NO_ANNOTATION:
         
-        start_time, end_time = time_interval
-        
-        clips = Clip.objects.filter(
-            recording=recording,
-            channel_num=channel_num,
-            start_time__lt=end_time,
-            end_time__gt=start_time,
-            creating_processor=detector)
-        
-        if annotation_value == _NO_ANNOTATION:
-            info = AnnotationInfo.objects.get(name=annotation_name)
-            clips = clips.exclude(string_annotation__info=info)
+        clips = _get_clips(
+            recording, channel_num, time_interval, detector,
+            annotation_name, annotation_value)
             
         return clips.count()
     
@@ -1207,9 +1244,54 @@ def _get_clip_count(
         return annotations.count()
             
 
+def _get_clips(
+        recording, channel_num, time_interval, detector, annotation_name,
+        annotation_value):
+    
+    start_time, end_time = time_interval
+    
+    clips = Clip.objects.filter(
+        recording=recording,
+        channel_num=channel_num,
+        start_time__lt=end_time,
+        end_time__gt=start_time,
+        creating_processor=detector)
+    
+    if annotation_value != _IGNORE_ANNOTATION:
+        
+        info = AnnotationInfo.objects.get(name=annotation_name)
+        
+        if annotation_value == _NO_ANNOTATION:
+            clips = clips.exclude(string_annotation__info=info)
+        
+        elif annotation_value == _WILDCARD:
+            # querying for any annotation value
+            
+            clips = clips.filter(string_annotation__info=info)
+            
+        elif annotation_value.endswith(_WILDCARD):
+            # querying for annotation values with a particular prefix
+            
+            prefix = annotation_value[:-len(_WILDCARD)]
+            clips = clips.filter(
+                string_annotation__info=info,
+                string_annotation__value__startswith=prefix)
+            
+        else:
+            # querying for a single annotation value
+            
+            clips = clips.filter(
+                string_annotation__info=info,
+                string_annotation__value=annotation_value)
+            
+#     print(clips.query)
+    
+    return clips
+
+
 def _get_annotations(
-        recording, channel_num, time_interval, detector,
-        annotation_name, annotation_value):
+        recording, channel_num, time_interval, detector, annotation_name,
+        annotation_value):
     
     # Filter annotation values first by clip attributes. This part of the
     # query is the same regardless of the annotation value.
