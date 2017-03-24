@@ -6,6 +6,7 @@ from threading import Thread
 import argparse
 import datetime
 import math
+import os
 import sys
 import wave
 
@@ -28,6 +29,7 @@ _DEFAULT_TIME_ZONE = 'UTC'
 _DEFAULT_NUM_CHANNELS = 1
 _DEFAULT_SAMPLE_RATE = 22050
 _DEFAULT_BUFFER_SIZE = .05
+_DEFAULT_RECORDINGS_DIR_PATH = 'Recordings'
 _DEFAULT_PORT_NUM = 22050
 
 
@@ -40,7 +42,7 @@ def _main():
     
     try:
         (station_name, lat, lon, time_zone, input_device_index, num_channels,
-         sample_rate, buffer_size, schedule, port_num) = \
+         sample_rate, buffer_size, schedule, recordings_dir_path, port_num) = \
             _parse_config_file(config_file_path)
     except Exception as e:
         print(
@@ -51,13 +53,15 @@ def _main():
     recorder = AudioRecorder(
         input_device_index, num_channels, sample_rate, buffer_size, schedule)
     recorder.add_listener(_Logger())
-    recorder.add_listener(_AudioFileWriter(station_name))
+    recorder.add_listener(_AudioFileWriter(station_name, recordings_dir_path))
      
     print('Starting recorder...')
     recorder.start()
      
     print('Starting recorder HTTP server at port {}...'.format(port_num))
-    server = _HttpServer(port_num, station_name, lat, lon, time_zone, recorder)
+    server = _HttpServer(
+        port_num, station_name, lat, lon, time_zone, recorder,
+        recordings_dir_path)
     Thread(target=server.serve_forever).start()
     
     print('Waiting for recording schedule to complete...')
@@ -128,11 +132,14 @@ def _parse_config_file(file_path):
     schedule = Schedule.compile_dict(
         schedule_dict, lat=lat, lon=lon, time_zone=time_zone)
     
+    recordings_dir_path = config.get(
+        'recordings_dir_path', _DEFAULT_RECORDINGS_DIR_PATH)
+    
     port_num = int(config.get('port_num', _DEFAULT_PORT_NUM))
     
     return (
         station_name, lat, lon, time_zone, input_device_index, num_channels,
-        sample_rate, buffer_size, schedule, port_num)
+        sample_rate, buffer_size, schedule, recordings_dir_path, port_num)
     
     
 def _get_input_device_index(device):
@@ -222,8 +229,13 @@ class _Logger(AudioRecorderListener):
 class _AudioFileWriter(AudioRecorderListener):
     
     
-    def __init__(self, station_name):
+    def __init__(self, station_name, recordings_dir_path):
+        
         self._station_name = station_name
+        self._recordings_dir_path = recordings_dir_path
+        
+        # Create recordings directory if needed.
+        os.makedirs(self._recordings_dir_path, exist_ok=True)
         
         
     def recording_starting(self, recorder, time):
@@ -282,8 +294,9 @@ class _AudioFileWriter(AudioRecorderListener):
     def _open_audio_file(self, time):
         
         file_name = self._file_namer.create_file_name(time)
+        file_path = os.path.join(self._recordings_dir_path, file_name)
         
-        file_ = wave.open(file_name, 'wb')
+        file_ = wave.open(file_path, 'wb')
         file_.setnchannels(self._num_channels)
         file_.setframerate(self._sample_rate)
         file_.setsampwidth(self._sample_size)
@@ -317,7 +330,9 @@ def _show_event(name, time, state):
 class _HttpServer(HTTPServer):
     
     
-    def __init__(self, port_num, station_name, lat, lon, time_zone, recorder):
+    def __init__(
+            self, port_num, station_name, lat, lon, time_zone, recorder,
+            recordings_dir_path):
         
         address = ('', port_num)
         super().__init__(address, _HttpRequestHandler)
@@ -327,7 +342,8 @@ class _HttpServer(HTTPServer):
             lat=lat,
             lon=lon,
             time_zone=time_zone,
-            recorder = recorder
+            recorder = recorder,
+            recordings_dir_path = recordings_dir_path
         )
         
     
@@ -358,7 +374,10 @@ your recorder. Refresh the page to update the information.
 
 <h2>Input Configuration</h2>
 {}
-  
+
+<h2>Output Configuration</h2>
+{}
+
 <h2>Scheduled Recordings</h2>
 {}
 
@@ -416,13 +435,14 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         station_table = self._create_station_table(data)
         devices = recorder.get_input_devices()
         devices_table = self._create_devices_table(devices)
-        input_table = self._create_input_table(devices)
+        input_table = self._create_input_table(devices, recorder)
+        output_table = self._create_output_table(data)
         recordings_table = self._create_recordings_table(
             recorder.schedule, data.time_zone, now)
         
         body = _PAGE.format(
             _CSS, status_table, station_table, devices_table, input_table,
-            recordings_table)
+            output_table, recordings_table)
         
         return body.encode()
     
@@ -489,18 +509,24 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             prefix + str(device.index), device.name, device.num_input_channels)
     
     
-    def _create_input_table(self, devices):
-        r = self.server._recording_data.recorder
+    def _create_input_table(self, devices, recorder):
         rows = (
-            ('Device Index', r.input_device_index),
-            ('Device Name', devices[r.input_device_index].name),
-            ('Number of Channels', r.num_channels),
-            ('Sample Rate (Hz)', r.sample_rate),
-            ('Buffer Size (seconds)', r.buffer_size)
+            ('Device Index', recorder.input_device_index),
+            ('Device Name', devices[recorder.input_device_index].name),
+            ('Number of Channels', recorder.num_channels),
+            ('Sample Rate (Hz)', recorder.sample_rate),
+            ('Buffer Size (seconds)', recorder.buffer_size)
         )
         return _create_table(rows)
     
     
+    def _create_output_table(self, data):
+        rows = (
+            ('Recordings Directory', data.recordings_dir_path),
+        )
+        return _create_table(rows)
+
+
     def _create_recordings_table(self, schedule, time_zone, now):
         rows = [
             self._create_recordings_table_row(index, interval, time_zone, now)

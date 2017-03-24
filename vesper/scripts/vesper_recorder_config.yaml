@@ -40,6 +40,11 @@ schedule:
         start_time: 30 minutes before sunset
         end_time: 30 minutes after sunrise
 
+# The directory to which the recorder will write audio files.
+# Relative paths are relative to the directory containing the recorder
+# script or executable.
+recordings_dir_path: 'Recordings'
+
 # The port number of the recorder's web server. When the recorder is
 # running, you can view its status by pointing a web browser at the URL
 # http://localhost:<port_num>.
