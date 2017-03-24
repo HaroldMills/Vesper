@@ -7,30 +7,32 @@ describe('Environment class', () => {
 	it('globals', () => {
 		
 		const e = new Environment();
+		const expectValue = (name, value) => expect(e.get(name)).toBe(value);
+		const expectUndefined = name => expectValue(name, undefined);
 		
 		e.setGlobal('one', 1);
 		e.setGlobal('two', 2);
 		e.setGlobal('three', 3);
 		
-		expect(e.get('one')).toBe(1);
-		expect(e.get('two')).toBe(2);
-		expect(e.get('three')).toBe(3);
+		expectValue('one', 1);
+		expectValue('two', 2);
+		expectValue('three', 3);
 		
 		e.deleteGlobal('two');
 		
-		expect(e.get('one')).toBe(1);
-		expect(() => e.get('two')).toThrowError(Error);
-		expect(e.get('three')).toBe(3);
+		expectValue('one', 1)
+		expectUndefined('two');
+		expectValue('three', 3);
 		
 		e.clearLocals();
 		
-		expect(e.get('one')).toBe(1);
-		expect(e.get('three')).toBe(3);
+		expectValue('one', 1);
+		expectValue('three', 3);
 		
 		e.clearGlobals();
 		
-		expect(() => e.get('one')).toThrowError(Error);
-		expect(() => e.get('three')).toThrowError(Error);
+		expectUndefined('one');
+		expectUndefined('three');
 		
 	});
 	
@@ -38,30 +40,32 @@ describe('Environment class', () => {
 	it('locals', () => {
 		
 		const e = new Environment();
+		const expectValue = (name, value) => expect(e.get(name)).toBe(value);
+		const expectUndefined = name => expectValue(name, undefined);
 		
 		e.setLocal('one', 1);
 		e.setLocal('two', 2);
 		e.setLocal('three', 3);
 		
-		expect(e.get('one')).toBe(1);
-		expect(e.get('two')).toBe(2);
-		expect(e.get('three')).toBe(3);
+		expectValue('one', 1);
+		expectValue('two', 2);
+		expectValue('three', 3);
 		
 		e.deleteLocal('two');
 		
-		expect(e.get('one')).toBe(1);
-		expect(() => e.get('two')).toThrowError(Error);
-		expect(e.get('three')).toBe(3);
+		expectValue('one', 1)
+		expectUndefined('two');
+		expectValue('three', 3);
 		
 		e.clearGlobals();
 		
-		expect(e.get('one')).toBe(1);
-		expect(e.get('three')).toBe(3);
+		expectValue('one', 1);
+		expectValue('three', 3);
 		
 		e.clearLocals();
 		
-		expect(() => e.get('one')).toThrowError(Error);
-		expect(() => e.get('three')).toThrowError(Error);
+		expectUndefined('one');
+		expectUndefined('three');
 		
 	});
 	
@@ -69,32 +73,34 @@ describe('Environment class', () => {
 	it('globals and locals', () => {
 		
 		const e = new Environment();
+		const expectValue = (name, value) => expect(e.get(name)).toBe(value);
+		const expectUndefined = name => expectValue(name, undefined);
 		
 		e.setGlobal('one', 1);
 		e.setGlobal('two', 2);
 		e.setLocal('three', 3);
 		e.setLocal('four', 4);
 		
-		expect(e.get('one')).toBe(1);
-		expect(e.get('two')).toBe(2);
-		expect(e.get('three')).toBe(3);
-        expect(e.get('four')).toBe(4);
+		expectValue('one', 1);
+		expectValue('two', 2);
+		expectValue('three', 3);
+		expectValue('four', 4);
         
         e.clearLocals();
 
-		expect(e.get('one')).toBe(1);
-		expect(e.get('two')).toBe(2);
-		expect(() => e.get('three')).toThrowError(Error);
-		expect(() => e.get('four')).toThrowError(Error);
+        expectValue('one', 1);
+        expectValue('two', 2);
+        expectUndefined('three');
+        expectUndefined('four');
         
 		e.setLocal('three', 3);
 		e.setLocal('four', 4);
 		e.clearGlobals();
 		
-		expect(() => e.get('one')).toThrowError(Error);
-		expect(() => e.get('two')).toThrowError(Error);
-		expect(e.get('three')).toBe(3);
-        expect(e.get('four')).toBe(4);
+		expectUndefined('one');
+		expectUndefined('two');
+		expectValue('three', 3);
+		expectValue('four', 4);
 		
 	});
 	
@@ -153,7 +159,7 @@ describe('ContributedFunction class', () => {
 		e.setLocal('local', 1);
 		f.execute(['bobo', 2], e);
 		
-		expect(() => e.get('local')).toThrowError(Error);
+		expect(e.get('local')).toBe(undefined);
 		expect(e.get('bobo')).toBe(2);
 		
 	});
@@ -202,7 +208,7 @@ describe('KeyboardCommandInterpreter class', () => {
 		}
 		
 		function expectUndefined(name) {
-			expect(() => environment.get(name)).toThrowError(Error);
+			expectValue(name, undefined);
 		}
 
 		
@@ -323,7 +329,7 @@ describe('KeyboardCommandInterpreter class', () => {
 		}
 		
 		function expectUndefined(name) {
-			expect(() => environment.get(name)).toThrowError(Error);
+			expectValue(name, undefined);
 		}
 
 		function expectEnv() {

@@ -395,7 +395,7 @@ class Environment {
         if (value !== undefined)
     		return value;
     	    
-    	throw Error(`Variable "${name}" is not defined.`);
+        return undefined;
     	    
     }
 	
