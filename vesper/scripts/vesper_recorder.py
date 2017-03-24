@@ -521,8 +521,9 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
     
     
     def _create_output_table(self, data):
+        recordings_dir_path = os.path.abspath(data.recordings_dir_path)
         rows = (
-            ('Recordings Directory', data.recordings_dir_path),
+            ('Recordings Directory', recordings_dir_path),
         )
         return _create_table(rows)
 
