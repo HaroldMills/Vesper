@@ -75,6 +75,143 @@ spectrogram colors).
 */
 
 
+/*
+
+set_global
+delete_global
+clear_globals
+
+set_local
+delete_local
+clear_locals
+
+clear_command_and_locals
+
+
+show_next_page
+show_previous_page
+
+select_first_clip
+select_next_clip
+select_previous_clip
+
+play_selected_clip
+play_selected_clips
+
+annotate(annotation_name, annotation_value, scope)
+annotate_clips(annotation_value)
+annotate_selected_clips(annotation_value)
+annotate_page_clips(annotation_value)
+annotate_all_clips(annotation_value)
+
+unannotate(annotation_name, scope)
+unannotate_clips()
+unannotate_selected_clips()
+unannotate_page_clips()
+unannotate_all_clips()
+
+tag(tag_name, scope)
+tag_clips(tag_name)
+tag_selected_clips(tag_name)
+tag_page_clips(tag_name)
+tag_all_clips(tag_name)
+
+untag(tag_name, scope)
+untag_clips(tag_name)
+untag_selected_clips(tag_name)
+untag_page_clips(tag_name)
+untag_all_clips(tag_name)
+
+
+globals:
+    annotation_name: Classification
+    annotation_scope: Selected
+    
+commands:
+
+    "_": [clear_command_and_locals]
+    
+    ">": [show_next_page]
+    "<": [show_previous_page]
+    "^": [select_first_clip]
+    ".": [select_next_clip]
+    ",": [select_previous_clip]
+    "/": [play_selected_clip]
+    
+    "#": [set_local, scope, Page]
+    "*": [set_local, scope, All]
+
+    c: [annotate_clips, Call]
+    C: [annotate_page_clips, Call]
+    n: [annotate_clips, Noise]
+    N: [annotate_page_clips, Noise]
+    x: [unannotate_clips]
+    X: [unannotate_page_clips]
+    
+    r: [tag_clips, Review]
+    u: [untag_clips]
+    
+*/
+const _KEYBOARD_COMMANDS = [
+			
+    {
+		'annotation_name': 'Classification',
+		'annotation_commands': {
+			'c': 'Call',
+			'C': '*Call',
+			'n': 'Noise',
+			'N': '*Noise',
+			'x': 'Unclassified',
+			'X': '*Unclassified',
+			'@o': '@MPG Ranch Outside Clip Classifier',
+			'@O': '*@MPG Ranch Outside Clip Classifier',
+			'@c': '@NFC Coarse Clip Classifier',
+			'@C': '*@NFC Coarse Clip Classifier'
+		}
+    },
+    
+    {
+    	'annotation_name': 'Classification Confidence',
+    	'annotation_commands': {
+    		'1': '1',
+    		'2': '2',
+    		'3': '3'
+    	}
+    }
+    
+];
+
+
+const _ANNOTATION_COMMANDS = [
+	
+    {
+		'annotation_name': 'Classification',
+		'annotation_commands': {
+			'c': 'Call',
+			'C': '*Call',
+			'n': 'Noise',
+			'N': '*Noise',
+			'x': 'Unclassified',
+			'X': '*Unclassified',
+			'@o': '@MPG Ranch Outside Clip Classifier',
+			'@O': '*@MPG Ranch Outside Clip Classifier',
+			'@c': '@NFC Coarse Clip Classifier',
+			'@C': '*@NFC Coarse Clip Classifier'
+		}
+    },
+    
+    {
+    	'annotation_name': 'Classification Confidence',
+    	'annotation_commands': {
+    		'1': '1',
+    		'2': '2',
+    		'3': '3'
+    	}
+    }
+    
+];
+
+
 class ClipCollectionView {
 	
 	
@@ -98,6 +235,9 @@ class ClipCollectionView {
 		this._audioContext = new window.AudioContext();
 		
 		this.pageNum = 0;
+		
+// 		this._keyboardCommandInterpreter =
+// 			new _KeyboardCommandInterpreter(this, _ANNOTATION_COMMANDS)
 		
 	}
 	
@@ -376,7 +516,7 @@ class ClipCollectionView {
 				
 		} else {
 		
-		    // this._annotationCommandInterpreter.onKey(e.key);
+		    // this._keyboardCommandInterpreter.onKey(e.key);
 		    
 		}
 		
@@ -1830,184 +1970,189 @@ function _getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
 }
 
 
-class _AnnotationCommandInterpreter {
-	
-	
-	constructor(spec) {
-		this._commandNamePrefixes = new Set();
-		this._commandActions = {};
-		this._parseSpec(spec);
-		this._clearCommandNameBuffer();
-	}
-	
-	
-	_parseSpec(spec) {
-		for (const element of spec)
-			this._parseSpecElement(element);
-	}
-	
-	
-	_parseSpecElement(element) {
-		const commands = element.annotation_commands;
-		const commandNames = Object.keys(commands);
-		this._addCommandNamePrefixes(commandNames);
-		this._addCommandActions(element.annotation_name, commands);
-	}
-	
-	
-	_addCommandNamePrefixes(names) {
-		
-		/*
-		 * Adds the nonempty, proper prefixes of the specified command
-		 * names to this._commandNamePrefixes.
-		 */
-		
-		for (const name of names)
-			for (let i = 1; i < name.length; i++)
-				this._commandNamePrefixes.add(name.slice(0, i));
-		
-	}
-	
-	
-	_addCommandActions(annotationName, commands) {
-		const keys = Object.keys(commands);
-		for (const key of keys)
-			this._commandActions[key] =
-				_parseCommandAction(annotationName, commands[key]);
-	}
-	
-	
-	_clearCommandNameBuffer() {
-		this._commandNameBuffer = '';
-	}
-	
-	
-	onKey(key) {
-		
-		if (key === '\\') {
-			
-			this._clearCommandNameBuffer();
-			console.log('Cleared command name buffer.');
-		
-		} else {
-			
-			const name = this._commandNameBuffer + key;
-			
-			let action = this._commandActions[name];
-			
-			if (action !== undefined) {
-				
-				action();
-				this._clearCommandNameBuffer();
-			
-			} else if (this._commandNamePrefixes.has(name)) {
-					
-				// TODO: Show contents of name buffer in UI.
-				console.log(`Command name buffer "${name}".`);
-				this._commandNameBuffer = name;
-			    
-			
-			} else {
-				// nonexistent command
-				
-				// TODO: Notify user of error.
-				console.log(`Unrecognized command name "${name}".`);
-				this._clearCommandNameBuffer();
-				
-			}
-				
-		}
-		
-	}
-	
-}
+//class _KeyboardCommandInterpreter {
+//	
+//	
+//	constructor(clipCollectionView, spec) {
+//		
+//		this._view = clipCollectionView;
+//		
+//		this._commandNamePrefixes = new Set();
+//		this._commandActions = {};
+//		this._parseSpec(spec);
+//		
+//		this._clearCommandNameBuffer();
+//		
+//	}
+//	
+//	
+//	_parseSpec(spec) {
+//		for (const element of spec)
+//			this._parseSpecElement(element);
+//	}
+//	
+//	
+//	_parseSpecElement(element) {
+//		const commands = element.annotation_commands;
+//		const commandNames = Object.keys(commands);
+//		this._addCommandNamePrefixes(commandNames);
+//		this._addCommandActions(element.annotation_name, commands);
+//	}
+//	
+//	
+//	_addCommandNamePrefixes(names) {
+//		
+//		/*
+//		 * Adds the nonempty, proper prefixes of the specified command
+//		 * names to this._commandNamePrefixes.
+//		 */
+//		
+//		for (const name of names)
+//			for (let i = 1; i < name.length; i++)
+//				this._commandNamePrefixes.add(name.slice(0, i));
+//		
+//	}
+//	
+//	
+//	_addCommandActions(annotationName, commands) {
+//		const keys = Object.keys(commands);
+//		for (const key of keys)
+//			this._commandActions[key] =
+//				this._parseCommandAction(annotationName, commands[key]);
+//	}
+//	
+//	
+//	_parseCommandAction(annotationName, actionSpec) {
+//		
+//		let scope = 'Selection';
+//		if (actionSpec.startsWith('*')) {
+//			scope = 'Page';
+//			actionSpec = actionSpec.slice(1);
+//		}
+//		
+//		if (actionSpec.startsWith('@')) {
+//			
+//			const annotatorName = actionSpec.slice(1);
+//			
+//			// TODO: Implement this.
+//			return () => {}
+//			
+//		} else
+//			return () => this._view.annotateClips(
+//				annotationName, actionSpec, scope)
+//
+//	}
+//
+//
+//	_clearCommandNameBuffer() {
+//		this._commandNameBuffer = '';
+//	}
+//	
+//	
+//	onKey(key) {
+//		
+//		console.log('onKey', key);
+//		
+//		if (key === '\\') {
+//			
+//			this._clearCommandNameBuffer();
+//			console.log('Cleared command name buffer.');
+//		
+//		} else {
+//			
+//			const name = this._commandNameBuffer + key;
+//			
+//			let action = this._commandActions[name];
+//			
+//			if (action !== undefined) {
+//				
+//				action();
+//				this._clearCommandNameBuffer();
+//			
+//			} else if (this._commandNamePrefixes.has(name)) {
+//					
+//				// TODO: Show contents of name buffer in UI.
+//				console.log(`Command name buffer "${name}".`);
+//				this._commandNameBuffer = name;
+//			    
+//			
+//			} else {
+//				// nonexistent command
+//				
+//				// TODO: Notify user of error.
+//				console.log(`Unrecognized command name "${name}".`);
+//				this._clearCommandNameBuffer();
+//				
+//			}
+//				
+//		}
+//		
+//	}
+//	
+//}
 
 	
-function _parseCommandAction(annotationName, actionSpec) {
-	
-	let scope = 'Selection';
-	if (actionSpec.startsWith('*')) {
-		scope = 'Page';
-		actionSpec = actionSpec.slice(1);
-	}
-	
-	let annotationValue = null;
-	let annotatorName = null;
-	if (actionSpec.startsWith('@'))
-		annotatorName = actionSpec.slice(1);
-	else
-		annotationValue = actionSpec;
-
-	if (annotationValue !== null)
-		return () => _annotateClips(annotationName, annotationValue, scope);
-	else
-		return () => _runClipAnnotator(annotationName, annotatorName, scope);
-
-}
-
-
-function _annotateClips(name, value, scope) {
-	
-	if (scope === 'Selection') {
-		_annotateSelectedClips(name, value);
-		// TODO: We need access to the clip collection view here.
-		_selectNextClip();
-	}
-	
-	else if (scope === 'Page')
-		_annotateIntervalClips(name, value, [0, clips.length - 1]);
-	
-	else
-		// TODO: Implement 'All' scope.
-		window.alert(`Unrecognized annotation command scope "${scope}".`);
-	
-}
-
-
-function _annotateSelectedClips(name, value) {
-	for (const interval of selection.selectedIntervals)
-		_annotateIntervalClips(name, value, interval);
-}
-
-
-function _annotateIntervalClips(name, value, interval) {
-	
-	for (let i = interval[0]; i <= interval[1]; i++) {
-		
-		const clip = clips[i];
-		const url = `/vesper/clips/${clip.id}/annotations/${name}`;
-		
-		const xhr = new XMLHttpRequest();
-		xhr.onload = () => _onAnnotationPutComplete(xhr, clip, name, value);
-		xhr.open('PUT', url);
-		xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
-		xhr.send(value);
-		
-	}
-
-}
-
-
-function _onAnnotationPutComplete(xhr, clip, annotationName, annotationValue) {
-	
-	console.log(
-		'PUT completed', xhr.status, clip.id, annotationName, annotationValue);
-	
-	// TODO: Notify user on errors.
-	// TODO: Handle non-"Classification" annotations.
-	if (xhr.status === 200) {
-		clip.classification = annotationValue;
-		drawClip(clip, clipSpectrogramSettings);
-	}
-	
-}
-
-
-function _runClipAnnotator(annotationName, annotatorName, scope) {
-	// TODO: Implement this function.
-	console.log(
-		`run annotator "${annotationName}" "${annotatorName}" ${scope}`);
-}
+//function _annotateClips(clipCollectionView, name, value, scope) {
+//	
+//	if (scope === 'Selection')
+//		clipCollectionView.annotateSelectedClips(name, value);
+//	
+//	else if (scope === 'Page')
+//		clipCollectionView.annotatePageClips(name, value);
+//	
+//	else if (scope === 'All')
+//		clipCollectionView.annotateAllClips(name, value);
+//	
+//	else
+//		window.alert(`Unrecognized annotation command scope "${scope}".`);
+//	
+//}
+//
+//
+//function _annotateSelectedClips(name, value) {
+//	for (const interval of selection.selectedIntervals)
+//		_annotateIntervalClips(name, value, interval);
+//}
+//
+//
+//function _annotateIntervalClips(name, value, interval) {
+//	
+//	for (let i = interval[0]; i <= interval[1]; i++) {
+//		
+//		const clip = clips[i];
+//		const url = `/vesper/clips/${clip.id}/annotations/${name}`;
+//		
+//		const xhr = new XMLHttpRequest();
+//		xhr.onload = () => _onAnnotationPutComplete(xhr, clip, name, value);
+//		xhr.open('PUT', url);
+//		xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
+//		xhr.send(value);
+//		
+//	}
+//
+//}
+//
+//
+//function _onAnnotationPutComplete(xhr, clip, annotationName, annotationValue) {
+//	
+//	console.log(
+//		'PUT completed', xhr.status, clip.id, annotationName, annotationValue);
+//	
+//	// TODO: Notify user on errors.
+//	// TODO: Handle non-"Classification" annotations.
+//	if (xhr.status === 200) {
+//		clip.classification = annotationValue;
+//		drawClip(clip, clipSpectrogramSettings);
+//	}
+//	
+//}
+//
+//
+//function _runClipAnnotator(annotationName, annotatorName, scope) {
+//	// TODO: Implement this function.
+//	console.log(
+//		`run annotator "${annotationName}" "${annotatorName}" ${scope}`);
+//}
 
 
 // <ArrowLeft>
@@ -2055,20 +2200,22 @@ commands:
     
 
 // classification keyboard commands header YAML
-bindings:
-
+globals:
     annotation_name: Classification
     annotation_scope: Selection
     
+    
+actions:
+
     annotate:
         args: [value]
         actions:
-            - [annotate_clips, <<annotation_name>>, <<value>>, <<annotation_scope>>]
-            
+            - [annotate_clips, <annotation_name>, <value>, <annotation_scope>]
+           
     annotate_page:
         args: [value]
         actions:
-            - [annotate_clips, <<annotation_name>>, <<value>>, Page]
+            - [annotate_clips, <annotation_name>, <value>, Page]
             
     commands:
         '#': [bind_temp, annotation_scope, Page]
@@ -2078,6 +2225,7 @@ bindings:
         
 */
 
+/*
 _BASIC_KEYBOARD_COMMANDS = {
 		
     'commands': {
@@ -2094,10 +2242,7 @@ _BASIC_KEYBOARD_COMMANDS = {
 
 _CLASSIFICATION_KEYBOARD_COMMANDS_HEADER = {
 		
-	'bindings': {
-		
-		'annotation_name': 'Classification',
-		'annotation_scope': 'Selection',
+    'actions': {
 			
 		'annotate': {
 			'args': ['value'],
@@ -2116,10 +2261,15 @@ _CLASSIFICATION_KEYBOARD_COMMANDS_HEADER = {
 		
 	},
 	
+	'globals': {
+		'annotation_name': 'Classification',
+		'annotation_scope': 'Selection'
+	},
+
 	'commands': {
-    	'#': ['bind_temp', 'annotation_scope', 'Page'],
-    	'*': ['bind_temp', 'annotation_scope', 'All'],
-    	'_': 'clear_temp_bindings'
+    	'#': ['set_local', 'annotation_scope', 'Page'],
+    	'*': ['set_local', 'annotation_scope', 'All'],
+    	'_': ['clear_command']
 	}
 		
 
@@ -2128,13 +2278,13 @@ _CLASSIFICATION_KEYBOARD_COMMANDS_HEADER = {
 
 _CLASSIFICATION_KEYBOARD_COMMANDS = {
 	
-	// Extension merges mapping items like 'bindings' and 'commands'.
+	// Extension merges mapping items like 'globals' and 'commands'.
 	'extends': [
 	    'basic_keyboard_commands',
 	    'classification_keyboard_commands_header'
 	],
 
-	'settings': {
+	'globals': {
         'advance_selection_after_single_clip_annotation': true,
         'advance_page_after_page_annotation': true,
         'play_single_clip_selections': true
@@ -2142,8 +2292,8 @@ _CLASSIFICATION_KEYBOARD_COMMANDS = {
 		
     'commands': {
     	
-    	'!c': ['bind', {'annotation_name': 'Classification'}],
-    	'!h': ['bind', {'annotation_name': 'Harold Classification'}],
+    	'!c': ['set_global', {'annotation_name': 'Classification'}],
+    	'!h': ['set_global', {'annotation_name': 'Harold Classification'}],
     	
     	'c': ['classify_clips', 'Call'],
     	'C': ['classify_page', 'Call'],
@@ -2160,8 +2310,45 @@ _CLASSIFICATION_KEYBOARD_COMMANDS = {
     }
     
 };
+*/
 
+/*
 
+A command interpreter uses a *commands* mapping from *command names* to
+*command actions*. Each command action is either a list of other command
+actions or a list comprising an *action name* and *action arguments*.
+Like Python function arguments, action arguments are specified as zero
+or more list elements followed by an optional keyword argument dictionary.
+
+The user types a sequence of characters, and the interpreter parses the
+sequence into command names. The interpreter executes a command by
+executing its action.
+
+A command action is executed in the context of *bindings*. Each
+binding comprises a *name* and a *value*. There are two types of
+bindings, *global* and *local*. Once created, a global binding persists
+until it is explicitly deleted. A local binding, on the other hand,
+persists only through the execution of a single action. The local
+bindings created for an action are deleted after the action executes.
+
+A global binding can be created or modified via the `set_global` action
+and deleted via the `clear_global` action. A local binding can be created
+or modified via the `set_local` action and deleted via the `clear_local`
+action. A local binding is also created for each action argument. All local
+bindings for the next action can be deleted via the `clear_locals` action.
+
+At this point, at least, the command language does not support
+conditional or repeated execution.
+
+classification_commands:
+
+    c: [classify_selected, Call]
+    C: [classify, page, Call]
+    
+*/
+
+/*
 function _createExampleCommandInterpreter() {
 	return new _CommandInterpreter(_CLASSIFICATION_KEYBOARD_COMMANDS);
 }
+*/
