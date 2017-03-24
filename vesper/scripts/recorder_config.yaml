@@ -43,4 +43,4 @@ schedule:
 # The port number of the recorder's web server. When the recorder is
 # running, you can view its status by pointing a web browser at the URL
 # http://localhost:<port_num>.
-port_num: 8001
+port_num: 22050
