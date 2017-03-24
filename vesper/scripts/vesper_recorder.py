@@ -19,8 +19,8 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 
 
-_FILE_NAME_EXTENSION = '.wav'
-_MAX_FILE_SIZE = 2**31          # two gigabytes (2**19 is good for testing)
+_AUDIO_FILE_NAME_EXTENSION = '.wav'
+_AUDIO_FILE_HEADER_SIZE = 44
 
 _DEFAULT_STATION_NAME = 'Vesper'
 _DEFAULT_LATITUDE = None
@@ -30,6 +30,7 @@ _DEFAULT_NUM_CHANNELS = 1
 _DEFAULT_SAMPLE_RATE = 22050
 _DEFAULT_BUFFER_SIZE = .05
 _DEFAULT_RECORDINGS_DIR_PATH = 'Recordings'
+_DEFAULT_MAX_AUDIO_FILE_SIZE = 2**31        # bytes
 _DEFAULT_PORT_NUM = 8001
 
 
@@ -42,8 +43,8 @@ def _main():
     
     try:
         (station_name, lat, lon, time_zone, input_device_index, num_channels,
-         sample_rate, buffer_size, schedule, recordings_dir_path, port_num) = \
-            _parse_config_file(config_file_path)
+         sample_rate, buffer_size, schedule, recordings_dir_path,
+         max_audio_file_size, port_num) = _parse_config_file(config_file_path)
     except Exception as e:
         print(
             'Could not parse configuration file. Error message was: {}'.format(
@@ -53,7 +54,8 @@ def _main():
     recorder = AudioRecorder(
         input_device_index, num_channels, sample_rate, buffer_size, schedule)
     recorder.add_listener(_Logger())
-    recorder.add_listener(_AudioFileWriter(station_name, recordings_dir_path))
+    recorder.add_listener(_AudioFileWriter(
+        station_name, recordings_dir_path, max_audio_file_size))
      
     print('Starting recorder...')
     recorder.start()
@@ -61,7 +63,7 @@ def _main():
     print('Starting recorder HTTP server at port {}...'.format(port_num))
     server = _HttpServer(
         port_num, station_name, lat, lon, time_zone, recorder,
-        recordings_dir_path)
+        recordings_dir_path, max_audio_file_size)
     Thread(target=server.serve_forever).start()
     
     print('Waiting for recording schedule to complete...')
@@ -134,12 +136,15 @@ def _parse_config_file(file_path):
     
     recordings_dir_path = config.get(
         'recordings_dir_path', _DEFAULT_RECORDINGS_DIR_PATH)
+    max_audio_file_size = config.get(
+        'max_audio_file_size', _DEFAULT_MAX_AUDIO_FILE_SIZE)
     
     port_num = int(config.get('port_num', _DEFAULT_PORT_NUM))
     
     return (
         station_name, lat, lon, time_zone, input_device_index, num_channels,
-        sample_rate, buffer_size, schedule, recordings_dir_path, port_num)
+        sample_rate, buffer_size, schedule, recordings_dir_path,
+        max_audio_file_size, port_num)
     
     
 def _get_input_device_index(device):
@@ -229,10 +234,11 @@ class _Logger(AudioRecorderListener):
 class _AudioFileWriter(AudioRecorderListener):
     
     
-    def __init__(self, station_name, recordings_dir_path):
+    def __init__(self, station_name, recordings_dir_path, max_file_size):
         
         self._station_name = station_name
         self._recordings_dir_path = recordings_dir_path
+        self._max_file_size = max_file_size
         
         # Create recordings directory if needed.
         os.makedirs(self._recordings_dir_path, exist_ok=True)
@@ -245,16 +251,12 @@ class _AudioFileWriter(AudioRecorderListener):
         self._sample_size = recorder.sample_size
         self._frame_size = self._num_channels * self._sample_size
         
-        # We set the file size to one less than the largest integral number
-        # of seconds of audio data that fit in the maximum file size. This
-        # assumes that the non-audio data in the file (e.g. the header)
-        # require no more space than than one second of audio data.
-        bytes_per_second = self._sample_rate * self._frame_size
-        max_seconds = int(math.floor(_MAX_FILE_SIZE / bytes_per_second)) - 1
-        self._max_num_file_frames = max_seconds * self._sample_rate
-        
+        max_num_audio_bytes = self._max_file_size - _AUDIO_FILE_HEADER_SIZE
+        self._max_num_file_frames = \
+            int(math.floor(max_num_audio_bytes / self._frame_size))
+                    
         self._file_namer = _AudioFileNamer(
-            self._station_name, _FILE_NAME_EXTENSION)
+            self._station_name, _AUDIO_FILE_NAME_EXTENSION)
         
         self._file = None
         
@@ -332,7 +334,7 @@ class _HttpServer(HTTPServer):
     
     def __init__(
             self, port_num, station_name, lat, lon, time_zone, recorder,
-            recordings_dir_path):
+            recordings_dir_path, max_audio_file_size):
         
         address = ('', port_num)
         super().__init__(address, _HttpRequestHandler)
@@ -342,8 +344,9 @@ class _HttpServer(HTTPServer):
             lat=lat,
             lon=lon,
             time_zone=time_zone,
-            recorder = recorder,
-            recordings_dir_path = recordings_dir_path
+            recorder=recorder,
+            recordings_dir_path=recordings_dir_path,
+            max_audio_file_size=max_audio_file_size
         )
         
     
@@ -524,6 +527,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         recordings_dir_path = os.path.abspath(data.recordings_dir_path)
         rows = (
             ('Recordings Directory', recordings_dir_path),
+            ('Max Audio File Size (bytes)', data.max_audio_file_size)
         )
         return _create_table(rows)
 
