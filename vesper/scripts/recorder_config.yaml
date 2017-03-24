@@ -32,9 +32,6 @@ num_channels: 1
 # The sample rate at which to record, in hertz.
 sample_rate: 22050
 
-# The recording buffer size, in seconds.
-buffer_size: .05
-
 # The recording schedule.
 schedule:
     daily:
