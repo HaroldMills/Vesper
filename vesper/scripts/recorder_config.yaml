@@ -5,7 +5,7 @@
 # characters that are not allowed in file names, such as slashes,
 # backslashes, and colons. It also should not contain underscores,
 # since those are used to separate file name components.
-station: Test
+station: Vesper
 
 # The location of your monitoring station. The location is used to
 # determine the times of solar events (for example, sunrise and sunset)
@@ -33,7 +33,7 @@ num_channels: 1
 sample_rate: 22050
 
 # The recording buffer size, in seconds.
-buffer_size: 1
+buffer_size: .05
 
 # The recording schedule.
 schedule:
