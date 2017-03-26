@@ -326,9 +326,9 @@ class AudioRecorder:
     
 
     # TODO: Review the schedule listener methods and this method.
-    def wait(self):
+    def wait(self, timeout=None):
         if self._schedule_runner is not None:
-            self._schedule_runner.wait()
+            self._schedule_runner.wait(timeout)
 
 
 def _get_input_devices():
