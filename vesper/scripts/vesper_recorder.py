@@ -19,9 +19,6 @@ def _main():
     
     config_file_path = _parse_args()
     
-    # TODO: Configure logging, and use it instead of the `print` function
-    # in this script and in the `vesper_recorder` module.
-    
     try:
         config = VesperRecorder.parse_config_file(config_file_path)
     except Exception as e:
