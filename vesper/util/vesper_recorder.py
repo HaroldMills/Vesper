@@ -73,8 +73,7 @@ class VesperRecorder:
         self._recorder.add_listener(_AudioFileWriter(
             c.station_name, c.recordings_dir_path, c.max_audio_file_size))
          
-        _logger.info(
-            'Starting recorder HTTP server at port {}.'.format(c.port_num))
+        _logger.info('Starting HTTP server at port {}.'.format(c.port_num))
         server = _HttpServer(
             c.port_num, c.station_name, c.lat, c.lon, c.time_zone,
             self._recorder, c.recordings_dir_path, c.max_audio_file_size)
@@ -200,27 +199,38 @@ def _get_input_device_index_from_device_name(name):
         return infos[0]['index']
     
     
-class _Logger(AudioRecorderListener):
-    
-    
-    def recording_starting(self, recorder, time):
-        _logger.info('Recording starting at {}.'.format(time))
-    
-    
-    def recording_started(self, recorder, time):
-        _logger.info('Recording started at {}.'.format(time))
-        
-        
+# class _Logger(AudioRecorderListener):
+#     
+#     
+#     def recording_starting(self, recorder, time):
+#         _logger.info('Starting recording at {}.'.format(time))
+#     
+#     
+#     def recording_started(self, recorder, time):
+#         _logger.info('Started recording at {}.'.format(time))
+#         
+#         
 #     def samples_arrived(
 #             self, recorder, time, samples, num_frames, overflow, underflow):
-#            
+#             
 #         _logger.info(
 #             'Samples arrived at {} {} {} {}'.format(
 #                 time, num_frames, overflow, underflow))
+#     
+#     
+#     def recording_stopped(self, recorder, time):
+#         _logger.info('Stopped recording at {}.'.format(time))
+
+    
+class _Logger(AudioRecorderListener):
     
     
+    def recording_started(self, recorder, time):
+        _logger.info('Started recording.')
+        
+        
     def recording_stopped(self, recorder, time):
-        _logger.info('Recording stopped at {}.'.format(time))
+        _logger.info('Stopped recording.')
 
     
 class _AudioFileWriter(AudioRecorderListener):
