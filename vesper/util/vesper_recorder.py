@@ -4,6 +4,7 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
 import datetime
+import logging
 import math
 import os
 import wave
@@ -41,6 +42,9 @@ _DEFAULT_MAX_AUDIO_FILE_SIZE = 2**31        # bytes
 _DEFAULT_PORT_NUM = 8001
 
 
+_logger = logging.getLogger(__name__)
+
+
 class VesperRecorder:
     
     
@@ -69,7 +73,8 @@ class VesperRecorder:
         self._recorder.add_listener(_AudioFileWriter(
             c.station_name, c.recordings_dir_path, c.max_audio_file_size))
          
-        print('Starting recorder HTTP server at port {}...'.format(c.port_num))
+        _logger.info(
+            'Starting recorder HTTP server at port {}.'.format(c.port_num))
         server = _HttpServer(
             c.port_num, c.station_name, c.lat, c.lon, c.time_zone,
             self._recorder, c.recordings_dir_path, c.max_audio_file_size)
@@ -199,23 +204,23 @@ class _Logger(AudioRecorderListener):
     
     
     def recording_starting(self, recorder, time):
-        print('recording_starting,{}'.format(time))
+        _logger.info('Recording starting at {}.'.format(time))
     
     
     def recording_started(self, recorder, time):
-        print('recording_started,{}'.format(time))
+        _logger.info('Recording started at {}.'.format(time))
         
         
 #     def samples_arrived(
 #             self, recorder, time, samples, num_frames, overflow, underflow):
 #            
-#         print(
-#             'samples_arrived,{},{},{},{}'.format(
+#         _logger.info(
+#             'Samples arrived at {} {} {} {}'.format(
 #                 time, num_frames, overflow, underflow))
     
     
     def recording_stopped(self, recorder, time):
-        print('recording_stopped,{}'.format(time))
+        _logger.info('Recording stopped at {}.'.format(time))
 
     
 class _AudioFileWriter(AudioRecorderListener):
