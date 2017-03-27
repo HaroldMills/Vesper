@@ -15,26 +15,6 @@ from vesper.util.notifier import Notifier
 from vesper.util.schedule import ScheduleRunner
 
 
-# TODO:
-#
-# 1. Review the schedule listener methods and the `AudioRecorder.wait`
-#    method. Are they what we want? How will scheduled recording relate
-#    to scheduled processing of recordings, e.g. detection followed by
-#    coarse classification?
-#
-# 2. Make the `AudioRecorder` configuration mutable. Some state will
-#    be mutable only when a recorder is stopped and its schedule is
-#    disabled. As before, synchronize state manipulation with a lock
-#    where needed.
-#
-# 3. Add HTTP access to `AudioRecorder` state. Include a way to get
-#    a list of available input devices.
-#
-# 4. Test local deployment as a Windows service.
-#
-# 5. Test MPG Ranch deployment as a Windows service.
-
-
 _SAMPLE_SIZE = 2               # bytes
 _TOTAL_BUFFER_SIZE = 10        # seconds
 
@@ -103,7 +83,7 @@ class AudioRecorder:
         self._notifier = Notifier()
         
         self._command_queue = Queue()
-        self._thread = Thread(target=self._run)
+        self._thread = Thread(target=self._run, daemon=True)
         self._thread.start()
 
         if schedule is not None:
@@ -325,7 +305,6 @@ class AudioRecorder:
             self._stop_pending = True
     
 
-    # TODO: Review the schedule listener methods and this method.
     def wait(self, timeout=None):
         if self._schedule_runner is not None:
             self._schedule_runner.wait(timeout)

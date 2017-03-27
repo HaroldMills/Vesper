@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+import time
 
 from vesper.util.vesper_recorder import VesperRecorder
 
@@ -27,11 +28,11 @@ def _main():
     print('Starting recorder...')
     recorder.start()
     
-    print('Waiting for recording schedule to complete...')
-    while True:
-        recorder.wait(timeout=1)
-        
-    print('Recording schedule completed.')
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print('Recorder interrupted via keyboard.')
          
  
 def _parse_args():

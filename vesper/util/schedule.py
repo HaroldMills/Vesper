@@ -202,7 +202,7 @@ class ScheduleRunner(Thread):
     
     
     def __init__(self, schedule):
-        super().__init__()
+        super().__init__(daemon=True)
         self._schedule = schedule
         self._notifier = Notifier(schedule)
         self._stop_event = Event()

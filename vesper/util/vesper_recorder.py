@@ -17,6 +17,15 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 
 
+# TODO: Review threads involved in recording (schedule, recorder, and server),
+# clarify their responsibilities, and improve error handling and shutdown.
+# Implement configuration updates and remote logging and control. How does
+# recording relate to job system (as of this writing it's completely
+# independent, but I suspect it should not be)? How does it relate to
+# other processing, like detection and classification, that we would like
+# to be able to schedule?
+
+
 _AUDIO_FILE_NAME_EXTENSION = '.wav'
 _AUDIO_FILE_HEADER_SIZE = 44                # bytes, size of a .wav file header
 
