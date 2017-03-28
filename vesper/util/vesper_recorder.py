@@ -1,7 +1,8 @@
-"""Records audio to .wav files according to a schedule."""
+"""Module containing the `VesperRecorder` class."""
 
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from logging import FileHandler, Formatter
 from threading import Thread
 import datetime
 import logging
@@ -21,14 +22,18 @@ from vesper.util.schedule import Schedule
 # TODO: Review threads involved in recording (schedule, recorder, and server),
 # clarify their responsibilities, and improve error handling and shutdown.
 # Implement configuration updates and remote logging and control. How does
-# recording relate to job system (as of this writing it's completely
-# independent, but I suspect it should not be)? How does it relate to
-# other processing, like detection and classification, that we would like
-# to be able to schedule?
+# recording relate to Vesper job system (as of this writing it's completely
+# independent, but perhaps it should not be)? How does it relate to other
+# processing, like detection and classification, that we would like to be
+# able to schedule?
 
+
+_HOME_DIR_VAR_NAME = 'VESPER_RECORDER_HOME'
+_LOG_FILE_NAME = 'Vesper Recorder Log.txt'
+_CONFIG_FILE_NAME = 'Vesper Recorder Config.yaml'
 
 _AUDIO_FILE_NAME_EXTENSION = '.wav'
-_AUDIO_FILE_HEADER_SIZE = 44                # bytes, size of a .wav file header
+_AUDIO_FILE_HEADER_SIZE = 44                # bytes, size of .wav file header
 
 _DEFAULT_STATION_NAME = 'Vesper'
 _DEFAULT_LATITUDE = None
@@ -47,6 +52,8 @@ _logger = logging.getLogger(__name__)
 
 class VesperRecorder:
     
+    """Records audio to .wav files according to a schedule."""
+    
     
     @staticmethod
     def get_input_devices():
@@ -54,8 +61,8 @@ class VesperRecorder:
     
     
     @staticmethod
-    def parse_config_file(file_path):
-        return _parse_config_file(file_path)
+    def create_and_start_recorder(message):
+        return _create_and_start_recorder(message)
     
     
     def __init__(self, config):
@@ -73,7 +80,6 @@ class VesperRecorder:
         self._recorder.add_listener(_AudioFileWriter(
             c.station_name, c.recordings_dir_path, c.max_audio_file_size))
          
-        _logger.info('Starting HTTP server at port {}.'.format(c.port_num))
         server = _HttpServer(
             c.port_num, c.station_name, c.lat, c.lon, c.time_zone,
             self._recorder, c.recordings_dir_path, c.max_audio_file_size)
@@ -90,7 +96,87 @@ class VesperRecorder:
         self._recorder.stop()
         
         
-def _parse_config_file(file_path):
+def _create_and_start_recorder(message):
+    
+    home_dir_path = os.environ.get(_HOME_DIR_VAR_NAME)
+     
+    # Check that home directori path environment variable is set.
+    if home_dir_path is None:
+        _logger.error(
+            'Required {} environment variable is not set.'.format(
+                _HOME_DIR_VAR_NAME))
+        return None
+         
+    # Check that home directory exists.
+    if not os.path.exists(home_dir_path):
+        _logger.error(
+            'Recorder home directory "{}" does not exist.'.format(
+                home_dir_path))
+        return None
+    
+    # Now that we know that we have a home directory, and hence a place
+    # for a log file, add file logging.
+    _add_file_logging(home_dir_path)
+    
+    _logger.info(message)
+    
+    config_file_path = os.path.join(home_dir_path, _CONFIG_FILE_NAME)
+        
+    # Check that configuration file exists.
+    if not os.path.exists(config_file_path):
+        _logger.error(
+            'Recorder configuration file "{}" does not exist.'.format(
+                config_file_path))
+        return None
+        
+    # Parse configuration file.
+    try:
+        config = _parse_config_file(
+            config_file_path, home_dir_path)
+    except Exception as e:
+        _logger.error((
+            'Could not parse recorder configuration file "{}". Error '
+            'message was: {}').format(config_file_path, str(e)))
+        return None
+    
+    _logger.info(
+        'Starting recorder with HTTP server at port {}.'.format(
+            config.port_num))
+    
+    # Create recorder.
+    try:
+        recorder = VesperRecorder(config)
+    except Exception as e:
+        _logger.error(
+            'Could not create recorder. Error message was: {}'.format(str(e)))
+        return None
+           
+    # Start recorder. 
+    try:
+        recorder.start()
+    except Exception as e:
+        _logger.error(
+            'Could not start recorder. Error message was: {}'.format(str(e)))
+        return None
+    
+    # Phew. We made it!
+    return recorder
+        
+
+def _add_file_logging(home_dir_path):
+    
+    # Create handler that appends messages to log file.
+    log_file_path = os.path.join(home_dir_path, _LOG_FILE_NAME)
+    handler = FileHandler(log_file_path)
+    formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+    handler.setFormatter(formatter)
+    
+    # Add handler to root logger.
+    logger = logging.getLogger()
+    logger.addHandler(handler)
+        
+        
+def _parse_config_file(file_path, home_dir_path):
     
     with open(file_path) as f:
         config = yaml.load(f)
@@ -118,6 +204,9 @@ def _parse_config_file(file_path):
     
     recordings_dir_path = config.get(
         'recordings_dir_path', _DEFAULT_RECORDINGS_DIR_PATH)
+    if not os.path.isabs(recordings_dir_path):
+        recordings_dir_path = os.path.join(home_dir_path, recordings_dir_path)
+        
     max_audio_file_size = config.get(
         'max_audio_file_size', _DEFAULT_MAX_AUDIO_FILE_SIZE)
     
@@ -198,29 +287,6 @@ def _get_input_device_index_from_device_name(name):
     else:
         return infos[0]['index']
     
-    
-# class _Logger(AudioRecorderListener):
-#     
-#     
-#     def recording_starting(self, recorder, time):
-#         _logger.info('Starting recording at {}.'.format(time))
-#     
-#     
-#     def recording_started(self, recorder, time):
-#         _logger.info('Started recording at {}.'.format(time))
-#         
-#         
-#     def samples_arrived(
-#             self, recorder, time, samples, num_frames, overflow, underflow):
-#             
-#         _logger.info(
-#             'Samples arrived at {} {} {} {}'.format(
-#                 time, num_frames, overflow, underflow))
-#     
-#     
-#     def recording_stopped(self, recorder, time):
-#         _logger.info('Stopped recording at {}.'.format(time))
-
     
 class _Logger(AudioRecorderListener):
     
@@ -359,7 +425,7 @@ _PAGE = '''<!DOCTYPE html>
 <h1>Vesper Recorder</h1>
 
 <p>
-Welcome to the Vesper recorder! This page displays information regarding
+Welcome to the Vesper Recorder! This page displays information regarding
 your recorder. Refresh the page to update the information.
 </p>
 

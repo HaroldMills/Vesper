@@ -1,61 +1,50 @@
-"""Records audio to .wav files according to a schedule."""
+"""
+Script version of the Vesper Recorder.
+
+The script takes no arguments.
+
+The Vesper Recorder requires a home directory whose location is specified
+by the `VESPER_RECORDER_HOME` environment variable. The home directory
+must contain a YAML configuration file named `Vesper Recorder Config.yaml`.
+An example configuration file including extensive comments is distributed
+with the recorder.
+
+The recorder logs messages to the file `Vesper Recorder Log.txt`, also in
+the recorder home directory. This script also logs essentially the same
+messages to the console.
+"""
 
 
-from logging import FileHandler, Formatter, StreamHandler
-import argparse
+from logging import Formatter, StreamHandler
 import logging
-import sys
 import time
 
 from vesper.util.vesper_recorder import VesperRecorder
 
-
-_LOG_FILE_NAME = 'vesper_recorder.log'
 
 _logger = logging.getLogger(__name__)
 
 
 def _main():
     
-    config_file_path = _parse_args()
+    _initialize_logging()
     
-    try:
-        config = VesperRecorder.parse_config_file(config_file_path)
-    except Exception as e:
-        print(
-            'Could not parse configuration file. Error message was: {}'.format(
-                str(e)), file=sys.stderr)
-        sys.exit(1)
+    recorder = VesperRecorder.create_and_start_recorder(
+        'Welcome to the Vesper recorder!')
     
-    _configure_logging()
-    
-    _logger.info('Welcome to the Vesper recorder.')
-
-    recorder = VesperRecorder(config)
-    recorder.start()
-    
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        _logger.info('Exiting due to keyboard interrupt.')
+    if recorder is not None:
+        # recorder creation and start succeeded
+        
+        _wait_for_keyboard_interrupt() 
+        
+        _logger.info('Stopping recorder and exiting due to keyboard interrupt.')
+        recorder.stop()
+        recorder.wait()
          
- 
-def _parse_args():
-    parser = argparse.ArgumentParser(
-        description='Records audio according to a schedule.')
-    parser.add_argument('config_file_path', help='configuration file path')
-    args = parser.parse_args()
-    return args.config_file_path
 
-
-def _configure_logging():
+def _initialize_logging():
     
-    formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
-    
-    # Create handler that appends log messages to log file.
-    file_handler = FileHandler(_LOG_FILE_NAME)
-    file_handler.setFormatter(formatter)
+    formatter = Formatter('%(asctime)s %(levelname)s %(message)s')
     
     # Create handler that writes log messages to stderr.
     stderr_handler = StreamHandler()
@@ -63,11 +52,18 @@ def _configure_logging():
     
     # Add handlers to root logger.
     logger = logging.getLogger()
-    logger.addHandler(file_handler)
     logger.addHandler(stderr_handler)
     
     # Set root logger level.
     logger.setLevel(logging.INFO)
+
+
+def _wait_for_keyboard_interrupt():
+    try:
+        while True:
+            time.sleep(5)
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == '__main__':
