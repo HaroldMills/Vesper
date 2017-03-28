@@ -30,7 +30,7 @@ def _main():
     _initialize_logging()
     
     recorder = VesperRecorder.create_and_start_recorder(
-        'Welcome to the Vesper recorder!')
+        'Welcome to the Vesper Recorder!')
     
     if recorder is not None:
         # recorder creation and start succeeded
