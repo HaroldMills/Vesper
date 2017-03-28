@@ -41,8 +41,9 @@ schedule:
         end_time: 30 minutes after sunrise
 
 # The directory to which the recorder will write audio files.
-# Relative paths are relative to the directory containing the recorder
-# script or executable.
+# Relative paths are relative to the recorder home directory,
+# whose path is the value of the VESPER_RECORDER_HOME
+# environment variable.
 recordings_dir_path: Recordings
 
 # The port number of the recorder's web server. When the recorder is
