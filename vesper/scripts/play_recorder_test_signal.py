@@ -64,6 +64,15 @@ _TAPER_DURATION = .05      # seconds
 
 def _main():
     
+    audio_player = _create_audio_player()
+    audio_player.start()
+    
+    print('Type Ctrl+C to stop playback and exit.')
+    _wait_for_keyboard_interrupt()
+    
+
+def _create_audio_player():
+    
     channel_configs = _CONFIG['channel_signals']
     sample_rate = _CONFIG['sample_rate']
     buffer_size = _CONFIG['buffer_size']
@@ -71,15 +80,10 @@ def _main():
     signal_generator = \
         _create_signal_generator(channel_configs, sample_rate, _SAMPLE_DTYPE)
     
-    audio_player = _AudioPlayer(
+    return _AudioPlayer(
         signal_generator, sample_rate, _SAMPLE_SIZE, _SAMPLE_DTYPE, buffer_size,
         _TOTAL_BUFFER_SIZE)
     
-    audio_player.start()
-    
-    while True:
-        time.sleep(.1)
-
 
 def _create_signal_generator(channel_configs, sample_rate, sample_dtype):
     channel_generators = [
@@ -117,6 +121,14 @@ def _create_chirp(
 _SIGNAL_CREATORS = {
     'Chirp': _create_chirp
 }
+
+
+def _wait_for_keyboard_interrupt():
+    try:
+        while True:
+            time.sleep(5)
+    except KeyboardInterrupt:
+        pass
 
 
 class _SignalGenerator:
@@ -201,7 +213,7 @@ class _AudioPlayer:
         self._filled_buffer_queue = Queue()
         
         # Create player thread.
-        self._thread = Thread(target=self._run)
+        self._thread = Thread(target=self._run, daemon=True)
 
 
     @property
