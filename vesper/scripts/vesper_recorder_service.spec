@@ -1,5 +1,7 @@
 # -*- mode: python -*-
 
+# PyInstaller spec file for the Vesper Recorder service.
+
 block_cipher = None
 
 
