@@ -32,4 +32,4 @@ coll = COLLECT(exe,
                a.datas,
                strip=False,
                upx=True,
-               name='vesper_recorder_service')
+               name='Vesper Recorder Service')
