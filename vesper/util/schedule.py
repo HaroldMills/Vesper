@@ -964,7 +964,7 @@ _HHMMSS = re.compile(r'(\d?\d):(\d\d):(\d\d)')
 _HHMM = re.compile(r'(\d?\d):(\d\d)')
 _HH = re.compile(r'(\d?\d)')
 
-_AM_PM = frozenset(('am', 'pm'))
+_AM_PM = frozenset(('am', 'pm', 'AM', 'PM'))
 
 _NAMED_TIMES = {
     'noon': datetime.time(12),
@@ -1033,7 +1033,7 @@ def _parse_am_pm_time(s):
     if hh == 12:
         hh = 0
         
-    if parts[1] == 'pm':
+    if parts[1].lower() == 'pm':
         hh += 12
         
     return datetime.time(hh, mm, ss) 
