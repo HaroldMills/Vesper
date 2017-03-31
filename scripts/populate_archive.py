@@ -48,8 +48,10 @@ import vesper.util.time_utils as time_utils
 #       metadata.
 
 
-_ARCHIVE_DIR_PATH = \
-    r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
+# _ARCHIVE_DIR_PATH = \
+#     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
+_ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
+# _ARCHIVE_DIR_PATH = r'E:\2016_archive'
 # _ARCHIVE_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive'
 
 _DETECTOR_NAME_ALIASES = {
@@ -59,6 +61,29 @@ _DETECTOR_NAME_ALIASES = {
 # _DETECTOR_NAME_ALIASES = {
 #     'Old Bird Tseep': ['Tseep']
 # }
+
+# Assumptions about station and microphone model names:
+#
+# * If a station name ends with one of the elements of _UNCORRECTED_MIC_NAMES,
+#   the station name is a combination of a station name and an uncorrected
+#   microphone model name.
+#
+# * If a station name does not end with one of the elements of
+#   _UNCORRECTED_MIC_NAMES, the station name is just a plain station name
+#   and the name of its microphone model is _DEFAULT_MIC_NAME.
+
+_UNCORRECTED_MIC_NAMES = frozenset(['21c', 'NFC', 'SMX-II'])
+
+_MIC_NAME_CORRECTIONS = {
+    'NFC': 'SMX-NFC'
+}
+
+_DEFAULT_MIC_NAME = 'SMX-NFC'
+
+_MIC_CHANNEL_NUMS = {
+    'SMX-NFC': 0,
+    '21c': 1
+}
 
 
 def _main():
@@ -76,16 +101,58 @@ def _add_data():
     _add_clips()
 
 
-def _add_recordings():
-    recordings = _get_recordings()
+def _show_recordings_old():
+    
+    recordings = _get_channel_recordings()
+    
+    recording_mic_names = defaultdict(set)
     for r in recordings:
-        station_recorder = _get_recording_station_recorder(r)
+        station_name, mic_name = _get_station_and_mic_name(r.station.name)
+        recording_mic_names[(station_name, r.start_time)].add(mic_name)
+        
+    pairs = sorted(recording_mic_names.keys())
+    for i, pair in enumerate(pairs):
+        mic_names = recording_mic_names[pair]
+        num_channels = len(mic_names)
+        station_name, start_time = pair
+        print(
+            '{} "{}" "{}" {} {}'.format(
+                i, station_name, start_time, num_channels, mic_names))
+
+    
+def _add_recordings():
+    
+    channel_recordings = _get_channel_recordings()
+    
+    # Partition channel recordings into sets that belong to the same
+    # recording. The result is a mapping from (station_name, start_time)
+    # pairs (with each pair representing a recording)
+    # to sets of (channel_recording, mic_name) pairs.
+    channel_recording_sets = defaultdict(set)
+    for r in channel_recordings:
+        station_name, mic_name = _get_station_and_mic_name(r.station.name)
+        channel_recording_sets[(station_name, r.start_time)].add((r, mic_name))
+        
+    keys = sorted(channel_recording_sets.keys())
+    
+    for i, (station_name, start_time) in enumerate(keys):
+        
+        channels = channel_recording_sets[(station_name, start_time)]
+        num_channels = len(channels)
+        mic_names = set(mic_name for _, mic_name in channels)
+        
+        print(
+            '{} "{}" "{}" {} {}'.format(
+                i, station_name, start_time, num_channels, mic_names))
+        
+        r, _ = channels.pop()
+        station_recorder = _get_recording_station_recorder(station_name, r)
         span = (r.length - 1) / r.sample_rate
         end_time = r.start_time + datetime.timedelta(seconds=span)
         creation_time = time_utils.get_utc_now()
         recording = Recording(
             station_recorder=station_recorder,
-            num_channels=1,
+            num_channels=num_channels,
             length=r.length,
             sample_rate=r.sample_rate,
             start_time=r.start_time,
@@ -93,6 +160,40 @@ def _add_recordings():
             creation_time=creation_time,
             creating_job=None)
         recording.save()
+        
+        print(recording)
+        
+        
+def _get_station_and_mic_name(station_name):
+    
+    for mic_name in _UNCORRECTED_MIC_NAMES:
+        if station_name.endswith(mic_name):
+            station_name = station_name[:-(len(mic_name) + 1)]
+            mic_name = _MIC_NAME_CORRECTIONS.get(mic_name, mic_name)
+            return (station_name, mic_name)
+            
+    # If we get here, the station name does not end with any of the
+    # elements of _UNCORRECTED_MIC_NAMES.
+    return (station_name, _DEFAULT_MIC_NAME)
+
+        
+# def _add_recordings():
+#     recordings = _get_recordings()
+#     for r in recordings:
+#         station_recorder = _get_recording_station_recorder(r)
+#         span = (r.length - 1) / r.sample_rate
+#         end_time = r.start_time + datetime.timedelta(seconds=span)
+#         creation_time = time_utils.get_utc_now()
+#         recording = Recording(
+#             station_recorder=station_recorder,
+#             num_channels=1,
+#             length=r.length,
+#             sample_rate=r.sample_rate,
+#             start_time=r.start_time,
+#             end_time=end_time,
+#             creation_time=creation_time,
+#             creating_job=None)
+#         recording.save()
         
     
 # _FAKE_RECORDING_START_HOUR = 19
@@ -129,7 +230,7 @@ def _add_recordings():
 #     return recordings
 
 
-def _get_recordings():
+def _get_channel_recordings():
     archive = Archive(_ARCHIVE_DIR_PATH)
     archive.open()
     stations = archive.stations
@@ -149,9 +250,9 @@ def _get_recordings():
     return recordings
 
 
-def _get_recording_station_recorder(recording):
+def _get_recording_station_recorder(station_name, recording):
     
-    station = Station.objects.get(name=recording.station.name)
+    station = Station.objects.get(name=station_name)
     start_time = recording.start_time
     end_time = recording.end_time
     
@@ -171,7 +272,12 @@ def _get_recording_station_recorder(recording):
         return station_recorders[0]
     
 
+_clip_count = 0
+_CLIP_COUNT_LIMIT = 1000000
+
+
 def _add_clips():
+    global _clip_count
     archive = Archive(_ARCHIVE_DIR_PATH)
     archive.open()
     stations = archive.stations
@@ -192,6 +298,10 @@ def _add_clips():
             num_added += m
             num_rejected += n
             night += one_night
+            if _clip_count >= _CLIP_COUNT_LIMIT:
+                break
+        if _clip_count >= _CLIP_COUNT_LIMIT:
+            break
     archive.close()
     print('added {} clips, rejected {}'.format(num_added, num_rejected))
     
@@ -225,13 +335,16 @@ def _get_annotation_infos():
 
 def _add_clips_aux(clips, station_recordings, detectors, annotation_infos):
     
+    global _clip_count
+    
     num_added = 0
     num_rejected = 0
     
     for c in clips:
         
         try:
-            recording = _get_clip_recording(c, station_recordings)
+            recording, channel_num = \
+                _get_clip_recording_and_channel_num(c, station_recordings)
         except ValueError as e:
             print(str(e))
             num_rejected += 1
@@ -257,21 +370,25 @@ def _add_clips_aux(clips, station_recordings, detectors, annotation_infos):
             
             clip = Clip(
                 recording=recording,
-                channel_num=0,
+                channel_num=channel_num,
                 start_index=None,
                 length=length,
                 start_time=start_time,
                 end_time=end_time,
                 creation_time=creation_time,
                 creating_processor=detector)
-            clip.save()
+            print(_clip_count, clip)
+            _clip_count += 1
             
+            clip.save()
+             
             _copy_clip_sound_file(c.file_path, clip)
             
-            value = StringAnnotation(
-                clip=clip, info=annotation_info, value=c.clip_class_name,
-                creation_time=creation_time)
-            value.save()
+            if c.clip_class_name is not None:
+                value = StringAnnotation(
+                    clip=clip, info=annotation_info, value=c.clip_class_name,
+                    creation_time=creation_time)
+                value.save()
             
             num_added += 1
         
@@ -293,10 +410,12 @@ def _copy_clip_sound_file(file_path, clip):
     with open(clip.wav_file_path, 'wb') as file_:
         file_.write(contents)
 
-    print('Wrote file "{}" for clip {}.'.format(clip.wav_file_path, clip.id))
+    # print('Wrote file "{}" for clip {}.'.format(clip.wav_file_path, clip.id))
 
     
-def _get_clip_recording(clip, station_recordings):
+def _get_clip_recording_and_channel_num(clip, station_recordings):
+    
+    station_name, mic_name = _get_station_and_mic_name(clip.station.name)
     
     time = clip.start_time
     
@@ -312,11 +431,16 @@ def _get_clip_recording(clip, station_recordings):
 
     # TODO: Sort recordings by start time and use binary search to
     # find the recording that contains a clip.
-    for r in station_recordings[clip.station.name]:
+    for r in station_recordings[station_name]:
         start_time = r.start_time
         end_time = r.end_time
         if start_time <= time and time <= end_time:
-            return r
+            if r.num_channels == 1:
+                channel_num = 0
+            else:
+                channel_num = _MIC_CHANNEL_NUMS[mic_name]
+            return (r, channel_num)
+        
     raise ValueError(
         'Could not find recording for clip "{}".'.format(clip.file_path))
     
