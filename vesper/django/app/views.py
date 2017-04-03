@@ -133,7 +133,7 @@ def detect(request):
             return _create_job_redirect_response(job_id)
             
     else:
-        return HttpResponseNotAllowed(_GET_AND_HEAD)
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
     
     context = {
         'navbar_items': _NAVBAR_ITEMS,
@@ -210,7 +210,7 @@ def export_clips(request):
 #             return _create_job_redirect_response(job_id))
             
     else:
-        return HttpResponseNotAllowed(_GET_AND_HEAD)
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
     
     context = {
         'navbar_items': _NAVBAR_ITEMS,
@@ -347,25 +347,31 @@ def annotation(request, clip_id, annotation_name):
     if request.method in _GET_AND_HEAD:
         info = get_object_or_404(AnnotationInfo, name=name)
         annotation = get_object_or_404(
-            StringAnnotation, info=info, clip__id=clip_id)
+            StringAnnotation, clip__id=clip_id, info=info)
         response = HttpResponse()
         response.write(annotation.value)
         return response
     
-#     elif request.method == 'PUT':
-#         value = _get_request_body_as_text(request).strip()
-#         try:
-#             annotation = Annotation.objects.get(clip__id=clip_id, name=name)
-#         except Annotation.DoesNotExist:
-#             clip = get_object_or_404(Clip, id=clip_id)
-#             annotation = Annotation(clip=clip, name=name, value=value)
-#         else:
-#             annotation.value = value
-#         annotation.save()
-#         return HttpResponse()
+    elif request.method == 'PUT':
+        clip = get_object_or_404(Clip, pk=clip_id)
+        info = get_object_or_404(AnnotationInfo, name=name)
+        value = _get_request_body_as_text(request).strip()
+        creation_time = time_utils.get_utc_now()
+        defaults = {
+            'value': value,
+            'creation_time': creation_time
+        }
+        StringAnnotation.objects.update_or_create(
+            clip=clip, info=info, defaults=defaults)
+        return HttpResponse()
+    
+    elif request.method == 'DELETE':
+        info = get_object_or_404(AnnotationInfo, name=name)
+        StringAnnotation.objects.filter(clip__id=clip_id, info=info).delete()
+        return HttpResponse()
 
     else:
-        return HttpResponseNotAllowed(_GET_AND_HEAD)
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'PUT', 'DELETE'))
     
 
 def _get_request_body_as_text(request):
@@ -1369,7 +1375,7 @@ def test_command(request):
             print('form invalid')
             
     else:
-        return HttpResponseNotAllowed(_GET_AND_HEAD)
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
     
     return render(request, 'vesper/test-command.html', {'form': form})
 
@@ -1390,7 +1396,7 @@ def import_archive_data(request):
             return _create_job_redirect_response(job_id)
             
     else:
-        return HttpResponseNotAllowed(_GET_AND_HEAD)
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
     
     context = {
         'navbar_items': _NAVBAR_ITEMS,
@@ -1434,7 +1440,7 @@ def import_recordings(request):
             return _create_job_redirect_response(job_id)
             
     else:
-        return HttpResponseNotAllowed(_GET_AND_HEAD)
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
     
     context = {
         'navbar_items': _NAVBAR_ITEMS,

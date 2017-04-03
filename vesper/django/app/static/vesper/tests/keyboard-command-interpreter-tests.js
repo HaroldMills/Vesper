@@ -7,8 +7,16 @@ describe('Environment class', () => {
 	it('globals', () => {
 		
 		const e = new Environment();
-		const expectValue = (name, value) => expect(e.get(name)).toBe(value);
-		const expectUndefined = name => expectValue(name, undefined);
+				
+		function expectValue(name, value) {
+			expect(e.get(name)).toBe(value);
+			expect(e.getRequired(name)).toBe(value);
+		}
+		
+		function expectUndefined(name) {
+			expect(e.get(name)).toBe(undefined);
+			expect(() => e.getRequired(name)).toThrowError(Error);
+		}
 		
 		e.setGlobal('one', 1);
 		e.setGlobal('two', 2);
@@ -108,7 +116,7 @@ describe('Environment class', () => {
 });
 
 
-describe('InterpreterFunction class', () => {
+describe('BuiltInFunction class', () => {
 	
 	
 	it('construction and execution', () => {
@@ -117,15 +125,14 @@ describe('InterpreterFunction class', () => {
 			environment.setLocal(name, value);
 		}
 		
-		const f = new InterpreterFunction(
-			'set_local', ['name', 'value'], setLocal);
-		
-		const e = new Environment();
+		const d = (a, e) => setLocal(e, ...a);
+		const f = new BuiltInFunction('set_local', ['name', 'value'], d);
 		
 		expect(f.name).toBe('set_local');
-		expect(f.argumentNames).toEqual(['name', 'value']);
-		expect(f.executionDelegate).toBe(setLocal);
+		expect(f.parameterNames).toEqual(['name', 'value']);
+		expect(f.executionDelegate).toBe(d);
 		
+		const e = new Environment();
 		f.execute(['bobo', 1], e);
 		
 		expect(e.get('bobo')).toBe(1);
@@ -136,7 +143,7 @@ describe('InterpreterFunction class', () => {
 });
 
 
-describe('ContributedFunction class', () => {
+describe('RegularFunction class', () => {
 	
 	
 	it('construction and execution', () => {
@@ -147,18 +154,19 @@ describe('ContributedFunction class', () => {
 			environment.setGlobal(name, value);
 		}
 		
-		const f = new ContributedFunction(
-			'set_global', ['name', 'value'], setGlobal);
+		const d = e => setGlobal(e);
+		const f = new RegularFunction('set_global', ['name', 'value'], d);
+		
+		expect(f.name).toBe('set_global');
+		expect(f.parameterNames).toEqual(['name', 'value']);
+		expect(f.executionDelegate).toBe(d);
 		
 		const e = new Environment();
 		
-		expect(f.name).toBe('set_global');
-		expect(f.argumentNames).toEqual(['name', 'value']);
-		expect(f.executionDelegate).toBe(setGlobal);
-		
 		e.setLocal('local', 1);
-		f.execute(['bobo', 2], e);
+		expect(e.get('local')).toBe(1);
 		
+		f.execute(['bobo', 2], e);
 		expect(e.get('local')).toBe(undefined);
 		expect(e.get('bobo')).toBe(2);
 		
@@ -171,7 +179,7 @@ describe('ContributedFunction class', () => {
 describe('KeyboardCommandInterpreter class', () => {
 	
 	
-	it('interpreter functions', () => {
+	it('built-in functions', () => {
 		
 		const spec = {
 			
@@ -200,7 +208,7 @@ describe('KeyboardCommandInterpreter class', () => {
 		
 		function input(command) {
 			for (const c of command)
-				interpreter.onKey(c);
+				interpreter.handleKey(c);
 		}
 		
 		function expectValue(name, value) {
@@ -281,14 +289,14 @@ describe('KeyboardCommandInterpreter class', () => {
 	});
 	
 	
-	it('contributed functions', () => {
+	it('regular functions', () => {
 		
 		const spec = {
 			
 			'commands': {
 				's1': ['set', 'one', 1],
 				's2': ['set', 'two', 2],
-				's3': ['set_three'],
+				's3': ['set_three', 3],
 			    'sl4': ['set_local', 'four', 4],
 			    'sg5': ['set_global', 'five', 5]
 			},
@@ -308,8 +316,8 @@ describe('KeyboardCommandInterpreter class', () => {
 		}
 		
 		const functions = [
-			new ContributedFunction('set', ['name', 'value'], set),
-			new ContributedFunction('set_three', ['value'], set)
+			new RegularFunction('set', ['name', 'value'], e => set(e)),
+			new RegularFunction('set_three', ['value'], e => set(e))
 		];
 				
 		const interpreter = new KeyboardCommandInterpreter(spec, functions);
@@ -317,7 +325,7 @@ describe('KeyboardCommandInterpreter class', () => {
 		
 		function input(command) {
 			for (const c of command)
-				interpreter.onKey(c);
+				interpreter.handleKey(c);
 		}
 		
 		function expectSetValue(name, value) {

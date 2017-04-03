@@ -24,17 +24,16 @@ globals:
     
 commands:
 
-    "_": [clear_command_and_locals]
+    "\": [clear_command_and_locals]
     
     ">": [show_next_page]
     "<": [show_previous_page]
-    "^": [select_first_clip]
     ".": [select_next_clip]
     ",": [select_previous_clip]
     "/": [play_selected_clip]
     
-    "#": [set_local, scope, Page]
-    "*": [set_local, scope, All]
+    "#": [set_local, annotation_scope, Page]
+    "*": [set_local, annotation_scope, All]
 
     c: [annotate_clips, Call]
     C: [annotate_page_clips, Call]
@@ -52,9 +51,9 @@ commands:
 class KeyboardCommandInterpreter {
 	
 	
-	constructor(spec, contributedFunctions) {
+	constructor(spec, functions) {
 		
-		this._functions = this._getFunctions(contributedFunctions);
+		this._functions = this._getFunctions(functions);
 		
 		this._environment = new Environment();
 		this._initGlobals(spec);
@@ -67,34 +66,36 @@ class KeyboardCommandInterpreter {
 	}
 	
 	
-	_getFunctions(contributedFunctions) {
-		const interpreterFunctions = this._createInterpreterFunctions();
-		contributedFunctions = contributedFunctions.map((f) => [f.name, f]);
-		return new Map([...interpreterFunctions, ...contributedFunctions]);
+	_getFunctions(functionList) {
+		const builtInFunctions = this._createBuiltInFunctions();
+		const functions = functionList.map((f) => [f.name, f]);
+		return new Map([...builtInFunctions, ...functions]);
 	}
 		
 		
-	_createInterpreterFunctions() {
+	_createBuiltInFunctions() {
 		
 		const functionData = [
-			['set_global', ['name', 'value'], this._setGlobal],
-			['delete_global', ['name'], this._deleteGlobal],
-			['clear_globals', [], this._clearGlobals],
-			['set_local', ['name', 'value'], this._setLocal],
-			['delete_local', ['name'], this._deleteLocal],
-			['clear_locals', [], this._clearLocals],
-			['clear_command_and_locals', [], this._clearCommandAndLocals]
+			['set_global', ['name', 'value'],
+				(a, e) => this._setGlobal(e, ...a)],
+			['delete_global', ['name'], (a, e) => this._deleteGlobal(e, ...a)],
+			['clear_globals', [], (a, e) => this._clearGlobals(e, ...a)],
+			['set_local', ['name', 'value'], (a, e) => this._setLocal(e, ...a)],
+			['delete_local', ['name'], (a, e) => this._deleteLocal(e, ...a)],
+			['clear_locals', [], (a, e) => this._clearLocals(e, ...a)],
+			['clear_command_and_locals', [],
+				(a, e) => this._clearCommandAndLocals(e, ...a)]
 		]
 		
-		const entries = functionData.map(this._createInterpreterFunctionEntry);
+		const entries = functionData.map(this._createBuiltInFunctionEntry);
 		return new Map(entries);
 		
 	}
 	
 	
-	_createInterpreterFunctionEntry(functionData) {
+	_createBuiltInFunctionEntry(functionData) {
 		const name = functionData[0];
-		const value = new InterpreterFunction(...functionData);
+		const value = new BuiltInFunction(...functionData);
 		return [name, value];
 	}
 
@@ -137,7 +138,7 @@ class KeyboardCommandInterpreter {
 	
 	_initGlobals(spec) {
 		
-		if (spec.globals) {
+		if (spec.globals !== undefined) {
 			
 			for (const name of Object.keys(spec.globals)) {
 				const value = spec.globals[name];
@@ -153,7 +154,7 @@ class KeyboardCommandInterpreter {
 		
 		const actions = new Map();
 		
-		if (spec.commands)
+		if (spec.commands !== undefined)
 			for (const name of Object.keys(spec.commands)) {
 				actions.set(name, spec.commands[name]);
 			}
@@ -182,14 +183,16 @@ class KeyboardCommandInterpreter {
 	}
 	
 	
-	onKey(key) {
+	handleKey(key) {
 		
-		console.log('onKey', key, this._commandNameBuffer);
+		console.log(
+			'KeyboardCommandInterpreter.handleKey', key,
+			this._commandNameBuffer);
 		
 		const name = this._commandNameBuffer + key;
 		const action = this._commandActions.get(name);
 		
-		if (action) {
+		if (action !== undefined) {
 			// `name` is a command name
 			
 			this._executeCommand(name, action);
@@ -203,23 +206,23 @@ class KeyboardCommandInterpreter {
 		} else {
 			// `name` is not a prefix of any command name
 			
-			// TODO: Notify user of error.
-			console.log(`Unrecognized command name "${name}".`);
+			throw new Error(`Unrecognized command name "${name}".`);
 			this._clearCommandNameBuffer();
+			this._environment.clearLocals();
 			
 		}
 				
 	}
 	
 	
-	_executeCommand(name, action) {
+	_executeCommand(command_name, action) {
 		
 		const function_name = action[0];
-		const function_arguments = action.slice(1);
-		
 		const function_ = this._functions.get(function_name);
 		
-		if (function_) {
+		if (function_ !== undefined) {
+			
+			const function_arguments = action.slice(1);
 			
 			try {
 				
@@ -227,19 +230,17 @@ class KeyboardCommandInterpreter {
 		
 			} catch (e) {
 				
-		        // TODO: Notify user of error.
-		        console.log(
-		        	`Execution of command "${name}" failed with ` +
+				throw new Error(
+		        	`Execution of command "${command_name}" failed with ` +
 		        	`message: ${e.message}`);
 		        
 			}
 			
 		} else {
 			
-			// TODO: Notify user of error.
-			console.log(
+			throw new Error(
 				`Could not find function "${function_name}" for ` +
-				`command "${name}".`);
+				`command "${command_name}".`);
 			
 		}
 
@@ -252,9 +253,9 @@ class KeyboardCommandInterpreter {
 class _Function {
 	
 
-	constructor(name, argumentNames, executionDelegate) {
+	constructor(name, parameterNames, executionDelegate) {
 		this._name = name;
-		this._argumentNames = argumentNames;
+		this._parameterNames = parameterNames;
 		this._executionDelegate = executionDelegate;
 	}
 	
@@ -264,8 +265,8 @@ class _Function {
 	}
 	
 	
-	get argumentNames() {
-		return this._argumentNames;
+	get parameterNames() {
+		return this._parameterNames;
 	}
 	
 	
@@ -274,26 +275,31 @@ class _Function {
 	}
 
 
-	execute(argumentValues, environment) {
-		this._checkArguments(argumentValues);
-		this._execute(argumentValues, environment);
+	execute(args, environment) {
+		this._checkArguments(args);
+		this._execute(args, environment);
 	}
 	
 	
-	_checkArguments(argumentValues) {
+	_checkArguments(args) {
 		
-		const numArgs = this.argumentNames.length;
+		const numRequiredArgs = this.parameterNames.length;
 		
-		if (argumentValues.length !== numArgs)
+		if (args.length !== numRequiredArgs) {
+			
+			const suffix = numRequiredArgs === 1 ? '' : 's';
+			
 			throw new Error(
-				`Function "${this.name}" requires ${numArgs} ` +
-				`arguments but received ${argumentValues.length}.`);
+				`Function "${this.name}" requires ${numRequiredArgs} ` +
+				`argument${suffix} but received ${args.length}.`);
+			
+		}
 		
 	}
 
 	
-	_execute(argumentValues, environment) {
-		throw Error('The "_execute" method is not implemented.');
+	_execute(args, environment) {
+		throw new Error('The "_execute" method is not implemented.');
 	}
 	
 	
@@ -301,31 +307,31 @@ class _Function {
 
 
 /*
- * An `InterpreterFunction` simply invokes its execution delegate.
- * It does not manipulate the local environment itself: any such
- * manipulation is left to the delegate.
+ * A `BuiltInFunction` simply invokes its execution delegate. It does not
+ * manipulate the local environment itself: any such manipulation is left
+ * to the delegate.
  */
-class InterpreterFunction extends _Function {
+class BuiltInFunction extends _Function {
 	
-	_execute(argumentValues, environment) {
-		this._executionDelegate(environment, ...argumentValues);
+	_execute(args, environment) {
+		this._executionDelegate(args, environment);
 	}
 	
 }
 
 
 /*
- * A `ContributedFunction` adds arguments to the local environment before
+ * A `RegularFunction` adds arguments to the local environment before
  * invoking the execution delegate, and clears the local environment after
  * the execution delegate completes.
  */
-class ContributedFunction extends _Function {
+class RegularFunction extends _Function {
 	
-	_execute(argumentValues, environment) {
+	_execute(args, environment) {
 		
 		// Add arguments to local variables.
-		for (const [i, name] of this.argumentNames.entries())
-			environment.setLocal(name, argumentValues[i]);
+		for (const [i, name] of this.parameterNames.entries())
+			environment.setLocal(name, args[i]);
 		
 		try {
 			
@@ -397,6 +403,20 @@ class Environment {
     	    
         return undefined;
     	    
+    }
+    
+    
+    getRequired(name) {
+    	
+    	const value = this.get(name);
+    	
+    	if (value === undefined)
+    		throw new Error(
+    			`Required command interpreter variable "${name}" not found.`);
+    	
+    	else
+    	    return value;
+    	
     }
 	
 	
