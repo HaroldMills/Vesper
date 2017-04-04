@@ -185,9 +185,9 @@ class KeyboardCommandInterpreter {
 	
 	handleKey(key) {
 		
-		console.log(
-			'KeyboardCommandInterpreter.handleKey', key,
-			this._commandNameBuffer);
+//		console.log(
+//			'KeyboardCommandInterpreter.handleKey', key,
+//			this._commandNameBuffer);
 		
 		const name = this._commandNameBuffer + key;
 		const action = this._commandActions.get(name);
