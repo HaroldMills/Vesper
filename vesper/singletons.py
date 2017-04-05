@@ -45,7 +45,7 @@ extension_manager = Singleton(_create_extension_manager)
 def _create_preset_manager():
     preset_types = extension_manager.instance.get_extensions('Preset')
     preset_types = list(preset_types.values())
-    presets_dir_path = vesper_path_utils.get_archive_dir_path('Presets')
+    presets_dir_path = vesper_path_utils.get_archive_path('Presets')
     return PresetManager(preset_types, presets_dir_path)
     
 preset_manager = Singleton(_create_preset_manager)

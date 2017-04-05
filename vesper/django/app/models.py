@@ -421,7 +421,7 @@ class Processor(Model):
         db_table = 'vesper_processor'
         
     
-_JOB_LOGS_DIR_PATH = vesper_path_utils.get_archive_dir_path('Logs', 'Jobs')
+_JOB_LOGS_DIR_PATH = vesper_path_utils.get_archive_path('Logs', 'Jobs')
 
 
 # A *command* is a specification of something to be executed, possibly
@@ -657,7 +657,7 @@ def _create_clip_file_path(clip_id):
     id_ = ' '.join(id_parts)
     file_name = 'Clip {}.wav'.format(id_)
     path_parts.append(file_name)
-    return vesper_path_utils.get_archive_dir_path('Clips', *path_parts)
+    return vesper_path_utils.get_archive_path('Clips', *path_parts)
 
 
 def _get_clip_id_parts(num, format_):
