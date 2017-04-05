@@ -21,7 +21,7 @@ from vesper.django.app.models import (
     Processor, Recording, Station, StringAnnotation)
 from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.export_clips_form import ExportClipsForm
-from vesper.singletons import job_manager, preset_manager
+from vesper.singletons import job_manager, preference_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.calendar_utils as calendar_utils
@@ -894,7 +894,14 @@ def night(request):
         _get_presets_json('Clip Collection View Settings')
     keyboard_commands_presets_json = \
         _get_presets_json('Clip Collection View Keyboard Commands')
-  
+        
+    preferences = preference_manager.instance.preferences
+    view_settings_preset_path = \
+        preferences.get('default_presets.Clip Collection View Settings')
+    keyboard_commands_preset_path = \
+        preferences.get(
+            'default_presets.Clip Collection View Keyboard Commands')
+        
     context = {
         'navbar_items': _NAVBAR_ITEMS,
         'active_navbar_item': '',
@@ -907,7 +914,9 @@ def night(request):
         'recordings_json': recordings_json,
         'clips_json': clips_json,
         'view_settings_presets_json': view_settings_presets_json,
+        'view_settings_preset_path': view_settings_preset_path,
         'keyboard_commands_presets_json': keyboard_commands_presets_json,
+        'keyboard_commands_preset_path': keyboard_commands_preset_path
     }
           
     return render(request, 'vesper/night.html', context)

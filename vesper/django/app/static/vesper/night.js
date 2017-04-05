@@ -21,9 +21,26 @@ function createClipCollectionView() {
 	const clipViewDelegateClasses = {
 		'Spectrogram': SpectrogramClipViewDelegate
 	};
+	
+	const settings = _findPreset(viewSettingsPresets, viewSettingsPresetPath);
+	
+	const keyboardCommands =
+		_findPreset(keyboardCommandsPresets, keyboardCommandsPresetPath);
 		
 	clipCollectionView = new ClipCollectionView(
-		elements, clips, recordings, solarEventTimes, clipViewDelegateClasses);
+		elements, clips, recordings, solarEventTimes, clipViewDelegateClasses,
+		settings, keyboardCommands);
+	
+}
+
+
+function _findPreset(presetInfos, presetPath) {
+	
+	for (const [path, preset] of presetInfos)
+		if (path.join('/') === presetPath)
+			return preset;
+	
+	return null;
 	
 }
 
@@ -40,16 +57,18 @@ function initSettingsModal() {
 	// with XHRs. We could set up URLs so that a client could request
 	// all presets of a specified type as JSON.
 	
-	showPresets(
-	    'Clip Collection View Settings', viewSettingsPresets);
-	showPresets(
-		'Clip Collection View Keyboard Commands', keyboardCommandsPresets);
+//	showPresets('Clip Collection View Settings', viewSettingsPresets);
+//	showPresets(
+//		'Clip Collection View Keyboard Commands', keyboardCommandsPresets);
 	
 	const viewSettingsSelect = document.getElementById('view-settings');
-	populatePresetSelect(viewSettingsSelect, viewSettingsPresets);
+	populatePresetSelect(
+		viewSettingsSelect, viewSettingsPresets, viewSettingsPresetPath);
 	
 	const keyboardCommandsSelect = document.getElementById('keyboard-commands');
-	populatePresetSelect(keyboardCommandsSelect, keyboardCommandsPresets);
+	populatePresetSelect(
+		keyboardCommandsSelect, keyboardCommandsPresets,
+		keyboardCommandsPresetPath);
 	
 	const okButton = document.getElementById('ok-button');
 	okButton.onclick = onOkButtonClick;
@@ -59,17 +78,22 @@ function initSettingsModal() {
 
 function showPresets(type_name, info) {
 	console.log(`${type_name} presets:`);
-	for (let [path, preset] of info)
+	for (const [path, preset] of info)
 		console.log('    ' + path);
 }
 
 
-function populatePresetSelect(select, info) {
+function populatePresetSelect(select, presetInfos, presetPath) {
 	
-	for (let [path, preset] of info) {
+	for (const [i, [path, preset]] of presetInfos.entries()) {
+		
 		const option = document.createElement('option');
-	    option.text = path.join(' / ');
+	    option.text = path.join('/');
 		select.add(option);
+		
+		if (option.text === presetPath)
+			select.selectedIndex = i;
+		
 	}
 	
 }
