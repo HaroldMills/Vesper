@@ -1,0 +1,12 @@
+# Preference files can contain comments.
+one: 1
+
+category_a:
+
+    two: 2
+    three: three           # Comments don't have to be on their own lines.
+
+    category_b:
+
+        forty_five: 45
+        fifty six: 56
