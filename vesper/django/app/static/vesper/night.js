@@ -57,9 +57,8 @@ function initSettingsModal() {
 	// with XHRs. We could set up URLs so that a client could request
 	// all presets of a specified type as JSON.
 	
-//	showPresets('Clip Collection View Settings', viewSettingsPresets);
-//	showPresets(
-//		'Clip Collection View Keyboard Commands', keyboardCommandsPresets);
+//	showPresets('Clip Album Settings', viewSettingsPresets);
+//	showPresets('Clip Album Commands', keyboardCommandsPresets);
 	
 	const viewSettingsSelect = document.getElementById('view-settings');
 	populatePresetSelect(

@@ -16,7 +16,7 @@ class ClipCollectionViewKeyboardCommandsPreset(YamlPreset):
     names to command actions.
     """
     
-    extension_name = 'Clip Collection View Keyboard Commands'
+    extension_name = 'Clip Album Commands'
     
     
     @property

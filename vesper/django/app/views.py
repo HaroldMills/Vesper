@@ -921,18 +921,15 @@ def night(request):
     preset_manager.instance.reload_presets()
     preference_manager.instance.reload_preferences()
     
-    view_settings_presets_json = \
-        _get_presets_json('Clip Collection View Settings')
-    keyboard_commands_presets_json = \
-        _get_presets_json('Clip Collection View Keyboard Commands')
+    view_settings_presets_json = _get_presets_json('Clip Album Settings')
+    keyboard_commands_presets_json = _get_presets_json('Clip Album Commands')
         
     preferences = preference_manager.instance.preferences
     
     view_settings_preset_path = \
-        preferences.get('default_presets.Clip Collection View Settings')
+        preferences.get('default_presets.Clip Album Settings')
     keyboard_commands_preset_path = \
-        preferences.get(
-            'default_presets.Clip Collection View Keyboard Commands')
+        preferences.get('default_presets.Clip Album Commands')
         
     context = {
         'navbar_items': _NAVBAR_ITEMS,

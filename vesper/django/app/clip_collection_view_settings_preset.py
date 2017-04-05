@@ -14,7 +14,7 @@ class ClipCollectionViewSettingsPreset(YamlPreset):
     to setting values.
     """
     
-    extension_name = 'Clip Collection View Settings'
+    extension_name = 'Clip Album Settings'
     
     
     @property
