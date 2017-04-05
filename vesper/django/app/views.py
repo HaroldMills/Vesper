@@ -410,9 +410,11 @@ def _parse_content_type(content_type):
     
 def calendar(request):
     
+    preferences = preference_manager.instance.preferences
+
     params = request.GET
         
-    stations, station_name, station = _get_station_info(params)
+    stations, station_name, station = _get_station_info(params, preferences)
     
     station_microphone_outputs = \
         _create_station_microphone_outputs_dict(stations)
@@ -420,9 +422,10 @@ def calendar(request):
     microphone_outputs, microphone_output_name, microphone_output = \
         _get_microphone_output_info(station_microphone_outputs, station, params)
         
-    detectors, detector_name, detector = _get_detector_info(params)
+    detectors, detector_name, detector = _get_detector_info(params, preferences)
     
-    classifications, classification = _get_classification_info(params)
+    classifications, classification = \
+        _get_classification_info(params, preferences)
     
     station_microphone_outputs_json = \
         _get_station_microphone_outputs_json(station_microphone_outputs)
@@ -448,20 +451,38 @@ def calendar(request):
     return render(request, 'vesper/calendar.html', context)
     
     
-def _get_station_info(params):
-    
+def _get_station_info(params, preferences):
     stations = Station.objects.order_by('name')
+    return _get_query_info('station', Station, stations, params, preferences)
+
     
-    station_name = params.get('station')
-    if station_name is None and len(stations) != 0:
-        station_name = stations[0].name
+def _get_query_info(type_name, cls, objects, params, preferences):
+    
+    name = params.get(type_name)
+    
+    if name is None:
+        name = preferences.get('calendar_defaults.' + type_name)
         
-    if station_name is None:
-        station = None
-    else:
-        station = Station.objects.get(name=station_name)
+    if name is not None:
+        # object name specified in either params or preferences
+        
+        try:
+            object = cls.objects.get(name=name)
+        except cls.DoesNotExist:
+            name = None
+        else:
+            return objects, name, object
+        
+    # If we get here, the object name is `None`.
     
-    return stations, station_name, station
+    if len(objects) != 0:
+        object = objects[0]
+        name = object.name
+         
+    else:
+        object = None
+    
+    return objects, name, object
 
 
 def _create_station_microphone_outputs_dict(stations):
@@ -519,24 +540,19 @@ def _find_object_by_name(objects, name):
     return None
 
     
-def _get_detector_info(params):
+def _get_detector_info(params, preferences):
     
     detectors = Processor.objects.filter(
         algorithm_version__algorithm__type='Detector').order_by('name')
     
-    detector_name = params.get('detector')
-    if detector_name is None and len(detectors) != 0:
-        detector_name = detectors[0].name
-        
-    if detector_name is None:
-        detector = None
-    else:
-        detector = Processor.objects.get(name=detector_name)
-
-    return detectors, detector_name, detector
+    return _get_query_info(
+        'detector', Processor, detectors, params, preferences)
 
     
-def _get_classification_info(params):
+def _get_classification_info(params, preferences):
+    
+    
+    # Get classification choices.
     
     choices = [
         _NO_ANNOTATION,
@@ -546,17 +562,22 @@ def _get_classification_info(params):
     
     classifications = _get_string_annotation_values('Classification')
     
-    if classifications is None:
-        # annotation values not available
-        
-        return (choices, _ANY_ANNOTATION)
-    
-    else:
-        # annotation values available
-        
+    if classifications is not None:
         choices += _add_wildcard_classifications(classifications)
-        classification = params.get('classification', _ANY_ANNOTATION)
-        return choices, classification
+        
+        
+    # Get choice that should be selected.
+    
+    classification = params.get('classification')
+    
+    if classification is None:
+        classification = preferences.get('calendar_defaults.classification')
+        
+    if classification is None or classification not in choices:
+        classification = _ANY_ANNOTATION
+        
+
+    return choices, classification
 
 
 def _get_string_annotation_values(annotation_name):
