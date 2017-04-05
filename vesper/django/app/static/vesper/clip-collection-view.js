@@ -2,6 +2,19 @@
 
 
 /*
+ * TODO:
+ * 
+ * 1. Add mouse time/freq display.
+ * 
+ * 2. Client should perform only those display pipeline functions that
+ *    are needed to update the display after a settings change. For
+ *    example, it should not recompute spectrograms after a color map
+ *    or layout change.
+ *   
+ */
+
+
+/*
 settings:
 
     layout_type: Nonuniform Resizing Clip Views
@@ -75,6 +88,59 @@ spectrogram colors).
 */
 
 
+const _DEFAULT_SETTINGS = {
+		
+	layoutType: 'Nonuniform Resizing Clip Views',
+	
+	layout: {
+		
+		page: {
+			width: 2,              // seconds
+			height: 6              // rows
+		},
+		
+		clipView: {
+			xSpacing: 1,           // percent of display width
+			ySpacing: 2            // percent of display width
+		}
+		
+	},
+	
+	clipViewType: 'Spectrogram',
+	
+	clipView: {
+		
+		selectionOutline: {
+			color: 'orange',
+			width: 5
+		},
+		
+        label: {
+		    visible: true,
+		    location: 'Below',
+		    color: 'black',
+		    fontSize: 1,
+		    classificationIncluded: true,
+		    startTimeIncluded: true,
+		    hiddenClassificationPrefixes: []
+        },
+        
+		spectrogram: {
+			windowSize: 100,
+			hopSize: 50,
+			dftSize: 256,
+			referencePower: 1e-9,
+			lowPower: 10,
+			highPower: 100,
+			smoothingEnabled: true,
+			timePaddingEnabled: false
+		}
+	
+	}
+	
+};
+
+
 const _COMMAND_CHARS = new Set(
 	'abcdefghijklmnopqrstuvwxyz' +
 	'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
@@ -82,7 +148,7 @@ const _COMMAND_CHARS = new Set(
 	'~!@#$%^&*()_+{}|:"<>?');
 
 
-const _KEYBOARD_COMMANDS_SPEC = {
+const _DEFAULT_KEYBOARD_COMMANDS = {
 		
 	'globals': {
 		'annotation_name': 'Classification',
@@ -90,20 +156,11 @@ const _KEYBOARD_COMMANDS_SPEC = {
 	},
 	
 	'commands': {
-		
 		'>': ['show_next_page'],
 		'<': ['show_previous_page'],
 	    '.': ['select_next_clip'],
 	    ',': ['select_previous_clip'],
-	    '/': ['play_selected_clip'],
-		
-	    '#': ['set_local', 'annotation_scope', 'Page'],
-	    '\\': ['clear_command_and_locals'],
-	    
-	    'd': ['annotate_clips', 'Call.DoubleUp'],
-        'w': ['annotate_clips', 'Call.WIWA'],
-        'x': ['unannotate_clips']
-
+	    '/': ['play_selected_clip']
 	}
 
 };
@@ -113,18 +170,27 @@ class ClipCollectionView {
 	
 	
 	constructor(
-		    elements, clips, recordings, solarEventTimes, settings,
-		    clipViewDelegateClasses) {
+		    elements, clips, recordings, solarEventTimes,
+		    clipViewDelegateClasses, settings = null, keyboardCommands = null) {
 		
 		this._elements = elements;
 		this._clips = clips;
-		this._settings = settings;
+		
+		this._setClipNums();
+		
 		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		
-		this._clipViews = this._createClipViews(settings);
+		this._settings = settings === null ? _DEFAULT_SETTINGS : settings;
+		
+		this.keyboardCommands =
+			keyboardCommands === null ?
+			_DEFAULT_KEYBOARD_COMMANDS :
+			keyboardCommands;
+		
+		this._clipViews = this._createClipViews(this.settings);
 		
 		this._layoutClasses = this._createLayoutClassesObject();
-		this._layout = this._createLayout(settings);
+		this._layout = this._createLayout(this.settings);
 		
 		this._rugPlot = new NightRugPlot(
 			this, this.elements.rugPlotDiv, clips, recordings, solarEventTimes);
@@ -133,275 +199,12 @@ class ClipCollectionView {
 		
 		this.pageNum = 0;
 		
- 		this._keyboardCommandInterpreter =
- 			this._createKeyboardCommandInterpreter();
-		
 	}
 	
 	
-	_createKeyboardCommandInterpreter() {
-		
-		const functionData = [
-			
-			['show_next_page', [], _ => this._showNextPage()],
-			['show_previous_page', [], _ => this._showPreviousPage()],
-			
-			['select_first_clip', [], _ => this._selectFirstClip()],
-			['select_next_clip', [], _ => this._selectNextClip()],
-			['select_previous_clip', [], _ => this._selectPreviousClip()],
-			
-			['play_selected_clip', [], _ => this._playSelectedClip()],
-			
-			['annotate_clips', ['annotation_value'],
-				e => this._annotateClipsDelegate(e)],
-			['annotate_selected_clips', ['annotation_value'],
-				e => this._annotateSelectedClipsDelegate(e)],
-			['annotate_page_clips', ['annotation_value'],
-				e => this._annotatePageClipsDelegate(e)],
-			['annotate_all_clips', ['annotation_value'],
-				e => this._annotateAllClipsDelegate(e)],
-
-			['unannotate_clips', [], e => this._unannotateClipsDelegate(e)],
-			['unannotate_selected_clips', [],
-				e => this._unannotateSelectedClipsDelegate(e)],
-			['unannotate_page_clips', [],
-				e => this._unannotatePageClipsDelegate(e)],
-			['unannotate_all_clips', [],
-				e => this._unannotateAllClipsDelegate(e)],
-
-		];
-		
-		const functions = functionData.map(
-				args => new RegularFunction(...args));
-		
-		return new KeyboardCommandInterpreter(
-			_KEYBOARD_COMMANDS_SPEC, functions);
-		
-	}
-
-
-	_annotateClipsDelegate(env) {
-		
-		const scope = env.getRequired('annotation_scope');
-		
-		switch (scope) {
-		
-		case 'Selection':
-			this._annotateSelectedClipsDelegate(env);
-			break;
-			
-		case 'Page':
-			this._annotatePageClipsDelegate(env);
-			break;
-			
-		case 'All':
-			this._annotateAllClipsDelegate(env);
-			break;
-		
-		default:
-			window.alert(`Unrecognized annotation scope "${scope}".`);
-		
-		}
-		
-	}
-
-
-	_annotateSelectedClipsDelegate(env) {
-		
-		const name = env.getRequired('annotation_name');
-		const value = env.getRequired('annotation_value');
-		this._annotateSelectedClips(name, value);
-		
-		// TODO: Optionally play selected clip.
-		this._selectNextClip();
-		
-	}
-	
-	
-	_annotateSelectedClips(name, value) {
-		for (const interval of this._selection.selectedIntervals)
-			this._annotateIntervalClips(name, value, interval);
-	}
-
-
-	_annotateIntervalClips(name, value, interval) {
-		
-		for (let i = interval[0]; i <= interval[1]; i++) {
-			
-			const clip = clips[i];
-			const url = `/vesper/clips/${clip.id}/annotations/${name}`;
-			
-			const xhr = new XMLHttpRequest();
-			xhr.onload =
-				() => this._onAnnotationPutComplete(xhr, clip, name, value);
-			xhr.open('PUT', url);
-			xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
-			xhr.send(value);
-			
-		}
-
-	}
-
-
-	_onAnnotationPutComplete(xhr, clip, annotationName, annotationValue) {
-		
-		if (xhr.status === 200) {
-			
-			clip.annotations[annotationName] = annotationValue;
-			clip.view.render()
-			
-		} else {
-			
-			window.alert(
-				`Annotation request yielded unexpected response ` +
-				`"${xhr.status} ${xhr.statusText}".`);
-			
-		}
-		
-	}
-
-
-	_annotatePageClipsDelegate(env) {
-		
-		const name = env.getRequired('annotation_name');
-		const value = env.getRequired('annotation_value');
-		this._annotatePageClips(name, value);
-		
-		// TODO: Optionally advance to next page, if there is one,
-		// select the first clip, and optionally play it.
-		
-	}
-	
-	
-	_annotatePageClips(name, value) {
-		const [startClipNum, endClipNum] =
-			this.getPageClipNumRange(this.pageNum);
-		const interval = [startClipNum, endClipNum - 1];
-		this._annotateIntervalClips(name, value, interval);
-	}
-	
-	
-	_annotateAllClipsDelegate(env) {
-		const name = env.getRequired('annotation_name');
-		const value = env.getRequired('annotation_value');
-		this._annotateAllClips(name, value);
-	}
-	
-	
-	_annotateAllClips(name, value) {
-		const interval = [0, len(this.clips) - 1];
-		this._annotateIntervalClips(name, value, interval);
-	}
-	
-	
-	_unannotateClipsDelegate(env) {
-		
-		const scope = env.getRequired('annotation_scope');
-		
-		switch (scope) {
-		
-		case 'Selection':
-			this._unannotateSelectedClipsDelegate(env);
-			break;
-			
-		case 'Page':
-			this._unannotatePageClipsDelegate(env);
-			break;
-			
-		case 'All':
-			this._unannotateAllClipsDelegate(env);
-			break;
-		
-		default:
-			window.alert(`Unrecognized annotation scope "${scope}".`);
-		
-		}
-		
-	}
-
-
-	_unannotateSelectedClipsDelegate(env) {
-		
-		const name = env.getRequired('annotation_name');
-		this._unannotateSelectedClips(name);
-		
-		// TODO: Optionally play selected clip.
-		this._selectNextClip();
-		
-	}
-	
-	
-	_unannotateSelectedClips(name) {
-		for (const interval of this._selection.selectedIntervals)
-			this._unannotateIntervalClips(name, interval);
-	}
-
-
-	_unannotateIntervalClips(name, interval) {
-		
-		for (let i = interval[0]; i <= interval[1]; i++) {
-			
-			const clip = clips[i];
-			const url = `/vesper/clips/${clip.id}/annotations/${name}`;
-			
-			const xhr = new XMLHttpRequest();
-			xhr.onload =
-				() => this._onAnnotationDeleteComplete(xhr, clip, name);
-			xhr.open('DELETE', url);
-			xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
-			xhr.send();
-			
-		}
-
-	}
-
-
-	_onAnnotationDeleteComplete(xhr, clip, annotationName) {
-		
-		if (xhr.status === 200) {
-			
-			delete clip.annotations[annotationName];
-			clip.view.render()
-			
-		} else {
-			
-			window.alert(
-				`Annotation delete request yielded unexpected response ` +
-				`"${xhr.status} ${xhr.statusText}".`);
-			
-		}
-		
-	}
-
-
-	_unannotatePageClipsDelegate(env) {
-		
-		const name = env.getRequired('annotation_name');
-		this._unannotatePageClips(name);
-		
-		// TODO: Optionally advance to next page, if there is one,
-		// select the first clip, and optionally play it.
-		
-	}
-	
-	
-	_unannotatePageClips(name) {
-		const [startClipNum, endClipNum] =
-			this.getPageClipNumRange(this.pageNum);
-		const interval = [startClipNum, endClipNum - 1];
-		this._unannotateIntervalClips(name, interval);
-	}
-	
-	
-	_unannotateAllClipsDelegate(env) {
-		const name = env.getRequired('annotation_name');
-		this._unannotateAllClips(name);
-	}
-	
-	
-	_unannotateAllClips(name) {
-		const interval = [0, len(clips) - 1];
-		this._unannotateIntervalClips(name, interval);
+	_setClipNums() {
+		for (const [num, clip] of this.clips.entries())
+			clip.num = num;
 	}
 	
 	
@@ -411,11 +214,15 @@ class ClipCollectionView {
 		const delegateClass =
 			this.clipViewDelegateClasses[settings.clipViewType];
 		
-		const clipViews = new Array(clips.length);
-		for (const [i, clip] of clips.entries()) {
-			clip.view = new ClipView(
+		const clipViews = new Array(this.clips.length);
+		
+		for (const [i, clip] of this.clips.entries()) {
+			
+			clipViews[i] = new ClipView(
 				this, i, clip, viewSettings, delegateClass);
-			clipViews[i] = clip.view;
+			
+			clip.view = clipViews[i];
+			
 		}
 		
 		return clipViews;
@@ -550,13 +357,13 @@ class ClipCollectionView {
 	}
 	
 	
-	get settings() {
-		return this._settings;
+	get clipViewDelegateClasses() {
+		return this._clipViewDelegateClasses;
 	}
 	
 	
-	get clipViewDelegateClasses() {
-		return this._clipViewDelegateClasses;
+	get settings() {
+		return this._settings;
 	}
 	
 	
@@ -592,6 +399,8 @@ class ClipCollectionView {
 	
 	_updateLayoutSettings(settings) {
 		
+//		this._layout = this._createLayout(settings);
+		
 		if (settings.layoutType !== this.settings.layoutType)
 			// layout type will change
 			
@@ -602,6 +411,292 @@ class ClipCollectionView {
 			
 			this._layout.settings = settings.layout;
 		
+	}
+	
+	
+	get keyboardCommands() {
+		return this._keyboardCommands;
+	}
+	
+	
+	set keyboardCommands(commands) {
+		this._keyboardCommands = commands;
+ 		this._keyboardCommandInterpreter =
+ 			this._createKeyboardCommandInterpreter(this._keyboardCommands);
+	}
+	
+	
+	_createKeyboardCommandInterpreter(spec) {
+		
+		const functionData = [
+			
+			['show_next_page', [], _ => this._showNextPage()],
+			['show_previous_page', [], _ => this._showPreviousPage()],
+			
+			['select_first_clip', [], _ => this._selectFirstClip()],
+			['select_next_clip', [], _ => this._selectNextClip()],
+			['select_previous_clip', [], _ => this._selectPreviousClip()],
+			
+			['play_selected_clip', [], _ => this._playSelectedClip()],
+			
+			['annotate_clips', ['annotation_value'],
+				e => this._annotateClipsDelegate(e)],
+			['annotate_selected_clips', ['annotation_value'],
+				e => this._annotateSelectedClipsDelegate(e)],
+			['annotate_page_clips', ['annotation_value'],
+				e => this._annotatePageClipsDelegate(e)],
+			['annotate_all_clips', ['annotation_value'],
+				e => this._annotateAllClipsDelegate(e)],
+
+			['unannotate_clips', [], e => this._unannotateClipsDelegate(e)],
+			['unannotate_selected_clips', [],
+				e => this._unannotateSelectedClipsDelegate(e)],
+			['unannotate_page_clips', [],
+				e => this._unannotatePageClipsDelegate(e)],
+			['unannotate_all_clips', [],
+				e => this._unannotateAllClipsDelegate(e)],
+
+		];
+		
+		const functions = functionData.map(
+			args => new RegularFunction(...args));
+		
+		return new KeyboardCommandInterpreter(spec, functions);
+		
+	}
+
+
+	_annotateClipsDelegate(env) {
+		
+		const scope = env.getRequired('annotation_scope');
+		
+		switch (scope) {
+		
+		case 'Selection':
+			this._annotateSelectedClipsDelegate(env);
+			break;
+			
+		case 'Page':
+			this._annotatePageClipsDelegate(env);
+			break;
+			
+		case 'All':
+			this._annotateAllClipsDelegate(env);
+			break;
+		
+		default:
+			window.alert(`Unrecognized annotation scope "${scope}".`);
+		
+		}
+		
+	}
+
+
+	_annotateSelectedClipsDelegate(env) {
+		
+		const name = env.getRequired('annotation_name');
+		const value = env.getRequired('annotation_value');
+		this._annotateSelectedClips(name, value);
+		
+		// TODO: Optionally play selected clip.
+		this._selectNextClip();
+		
+	}
+	
+	
+	_annotateSelectedClips(name, value) {
+		for (const interval of this._selection.selectedIntervals)
+			this._annotateIntervalClips(name, value, interval);
+	}
+
+
+	_annotateIntervalClips(name, value, interval) {
+		
+		for (let i = interval[0]; i <= interval[1]; i++) {
+			
+			const clip = clips[i];
+			const url = `/vesper/clips/${clip.id}/annotations/${name}`;
+			
+			const xhr = new XMLHttpRequest();
+			xhr.onload =
+				() => this._onAnnotationPutComplete(xhr, clip, name, value);
+			xhr.open('PUT', url);
+			xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
+			xhr.send(value);
+			
+		}
+
+	}
+
+
+	_onAnnotationPutComplete(xhr, clip, annotationName, annotationValue) {
+		
+		if (xhr.status === 200) {
+			
+			clip.annotations[annotationName] = annotationValue;
+			
+			if (this._isClipOnCurrentPage(clip))
+				clip.view.render();
+			
+		} else {
+			
+			window.alert(
+				`Annotation request yielded unexpected response ` +
+				`"${xhr.status} ${xhr.statusText}".`);
+			
+		}
+		
+	}
+	
+	
+	_isClipOnCurrentPage(clip) {
+		return this._layout.getClipPageNum(clip.num) == this.pageNum;
+	}
+
+
+	_annotatePageClipsDelegate(env) {
+		
+		const name = env.getRequired('annotation_name');
+		const value = env.getRequired('annotation_value');
+		this._annotatePageClips(name, value);
+		
+		// TODO: Optionally advance to next page, if there is one,
+		// select the first clip, and optionally play it.
+		
+	}
+	
+	
+	_annotatePageClips(name, value) {
+		const [startClipNum, endClipNum] =
+			this.getPageClipNumRange(this.pageNum);
+		const interval = [startClipNum, endClipNum - 1];
+		this._annotateIntervalClips(name, value, interval);
+	}
+	
+	
+	_annotateAllClipsDelegate(env) {
+		const name = env.getRequired('annotation_name');
+		const value = env.getRequired('annotation_value');
+		this._annotateAllClips(name, value);
+	}
+	
+	
+	_annotateAllClips(name, value) {
+		const interval = [0, this.clips.length - 1];
+		this._annotateIntervalClips(name, value, interval);
+	}
+	
+	
+	_unannotateClipsDelegate(env) {
+		
+		const scope = env.getRequired('annotation_scope');
+		
+		switch (scope) {
+		
+		case 'Selection':
+			this._unannotateSelectedClipsDelegate(env);
+			break;
+			
+		case 'Page':
+			this._unannotatePageClipsDelegate(env);
+			break;
+			
+		case 'All':
+			this._unannotateAllClipsDelegate(env);
+			break;
+		
+		default:
+			window.alert(`Unrecognized annotation scope "${scope}".`);
+		
+		}
+		
+	}
+
+
+	_unannotateSelectedClipsDelegate(env) {
+		
+		const name = env.getRequired('annotation_name');
+		this._unannotateSelectedClips(name);
+		
+		// TODO: Optionally play selected clip.
+		this._selectNextClip();
+		
+	}
+	
+	
+	_unannotateSelectedClips(name) {
+		for (const interval of this._selection.selectedIntervals)
+			this._unannotateIntervalClips(name, interval);
+	}
+
+
+	_unannotateIntervalClips(name, interval) {
+		
+		for (let i = interval[0]; i <= interval[1]; i++) {
+			
+			const clip = clips[i];
+			const url = `/vesper/clips/${clip.id}/annotations/${name}`;
+			
+			const xhr = new XMLHttpRequest();
+			xhr.onload =
+				() => this._onAnnotationDeleteComplete(xhr, clip, name);
+			xhr.open('DELETE', url);
+			xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
+			xhr.send();
+			
+		}
+
+	}
+
+
+	_onAnnotationDeleteComplete(xhr, clip, annotationName) {
+		
+		if (xhr.status === 200) {
+			
+			delete clip.annotations[annotationName];
+			
+			if (this._isClipOnCurrentPage(clip))
+				clip.view.render();
+			
+		} else {
+			
+			window.alert(
+				`Annotation delete request yielded unexpected response ` +
+				`"${xhr.status} ${xhr.statusText}".`);
+			
+		}
+		
+	}
+
+
+	_unannotatePageClipsDelegate(env) {
+		
+		const name = env.getRequired('annotation_name');
+		this._unannotatePageClips(name);
+		
+		// TODO: Optionally advance to next page, if there is one,
+		// select the first clip, and optionally play it.
+		
+	}
+	
+	
+	_unannotatePageClips(name) {
+		const [startClipNum, endClipNum] =
+			this.getPageClipNumRange(this.pageNum);
+		const interval = [startClipNum, endClipNum - 1];
+		this._unannotateIntervalClips(name, interval);
+	}
+	
+	
+	_unannotateAllClipsDelegate(env) {
+		const name = env.getRequired('annotation_name');
+		this._unannotateAllClips(name);
+	}
+	
+	
+	_unannotateAllClips(name) {
+		const interval = [0, this.clips.length - 1];
+		this._unannotateIntervalClips(name, interval);
 	}
 	
 	
@@ -667,9 +762,9 @@ class ClipCollectionView {
 	    if (e.ctrlKey || e.altKey || e.metaKey || !_COMMAND_CHARS.has(e.key))
 	    	return;
 	    
-		console.log(
-			`onKeyPress "${e.key}"`,
-			e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
+//		console.log(
+//			`onKeyPress "${e.key}"`,
+//			e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
 		
 		// Prevent client from doing whatever it might normally do
 		// in response to the pressed key.
@@ -934,16 +1029,9 @@ class _ClipViewsLayout {
 	
 	
 	constructor(div, clipViews, settings) {
-		
 		this._div = div;
 		this._clipViews = clipViews;
-		this._settings = settings;
-		this._pageStartClipNums = this._paginate();
-		
-		this._numPages = this._pageStartClipNums.length;
-		if (this._numPages > 0)
-			this._numPages -= 1;
-		
+		this.settings = settings;
 	}
 	
 	
@@ -964,7 +1052,7 @@ class _ClipViewsLayout {
     
     set settings(settings) {
     	this._settings = settings;
-    	this._paginate();
+    	this._pageStartClipNums = this._paginate();
     }
     
     
@@ -974,7 +1062,8 @@ class _ClipViewsLayout {
     
     
 	get numPages() {
-		return this._numPages;
+		let numPages = this._pageStartClipNums.length;
+		return numPages == 0 ? numPages : numPages - 1;
 	}
 	
 	
@@ -1146,14 +1235,14 @@ class _NonuniformNonresizingClipViewsLayout extends _ClipViewsLayout {
 	
 	
 	// TODO: It seems that this is never called. Should we delete it?
-	onResize(pageNum) {
-		
-		console.log('NonresizingLayout.onResize');
-		this._checkPageNum(pageNum);
-		
-		// For this layout type resizes are handled by the flexbox layout.
-		
-	}
+//	onResize(pageNum) {
+//		
+//		console.log('NonresizingLayout.onResize');
+//		this._checkPageNum(pageNum);
+//		
+//		// For this layout type resizes are handled by the flexbox layout.
+//		
+//	}
 	
 	
 }
@@ -1368,11 +1457,11 @@ class _NonuniformResizingClipViewsLayout extends _ClipViewsLayout {
 	
 	
 	// TODO: It seems that this is never called. Should we delete it?
-	onResize(pageNum) {
-		console.log('ResizingLayout.onResize');
-		this._checkPageNum(pageNum);
-		this._renderClipViews(pageNum);
-	}
+//	onResize(pageNum) {
+//		console.log('ResizingLayout.onResize');
+//		this._checkPageNum(pageNum);
+//		this._renderClipViews(pageNum);
+//	}
 	
 	
 }
@@ -1534,15 +1623,15 @@ class ClipView {
 	
 	
 	set settings(settings) {
-		if (this._div !== null) {
-			this._updateSettings(settings);
-		}
+		
 		this._settings = settings;
 		this._delegate.settings = settings;
-	}
-	
-	
-	_updateSettings(settings) {
+		
+		if (this._div !== null) {
+			this._styleLabel();
+			this._stylePlayButton();
+			this.render();
+		}
 		
 	}
 	
@@ -1811,8 +1900,10 @@ class ClipView {
     
     
 	render() {
-		this._delegate.render();
-		this._renderLabel();
+		if (this._div !== null) {
+		    this._delegate.render();
+		    this._renderLabel();
+		}
 	}
 	
 	

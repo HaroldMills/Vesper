@@ -890,10 +890,10 @@ def night(request):
 #         rc_pairs, time_interval, detector, annotation_name, annotation_value)
 #     clips_json = _get_clips_json(annotations, station)
       
-    clip_collection_view_settings_presets_json = \
+    view_settings_presets_json = \
         _get_presets_json('Clip Collection View Settings')
-    annotation_scheme_presets_json = _get_presets_json('Annotation Scheme')
-    annotation_commands_presets_json = _get_presets_json('Annotation Commands')
+    keyboard_commands_presets_json = \
+        _get_presets_json('Clip Collection View Keyboard Commands')
   
     context = {
         'navbar_items': _NAVBAR_ITEMS,
@@ -906,10 +906,8 @@ def night(request):
         'solar_event_times_json': solar_event_times_json,
         'recordings_json': recordings_json,
         'clips_json': clips_json,
-        'clip_collection_view_settings_presets_json':
-            clip_collection_view_settings_presets_json,
-        'annotation_scheme_presets_json': annotation_scheme_presets_json,
-        'annotation_commands_presets_json': annotation_commands_presets_json
+        'view_settings_presets_json': view_settings_presets_json,
+        'keyboard_commands_presets_json': keyboard_commands_presets_json,
     }
           
     return render(request, 'vesper/night.html', context)

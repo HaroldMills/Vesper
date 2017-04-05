@@ -19,4 +19,4 @@ class ClipCollectionViewSettingsPreset(YamlPreset):
     
     @property
     def camel_case_data(self):
-        return case_utils.snake_to_camel(self.data)
+        return case_utils.snake_keys_to_camel(self.data)

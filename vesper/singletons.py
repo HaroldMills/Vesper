@@ -25,8 +25,7 @@ Importer:
 
 Preset:
     - vesper.command.station_name_aliases_preset.StationNameAliasesPreset
-    - vesper.django.app.annotation_commands_preset.AnnotationCommandsPreset
-    - vesper.django.app.annotation_scheme_preset.AnnotationSchemePreset
+    - vesper.django.app.clip_collection_view_keyboard_commands_preset.ClipCollectionViewKeyboardCommandsPreset
     - vesper.django.app.clip_collection_view_settings_preset.ClipCollectionViewSettingsPreset
     
 Recording File Parser:

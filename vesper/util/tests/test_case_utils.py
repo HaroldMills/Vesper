@@ -8,6 +8,20 @@ class CaseUtilsTests(TestCase):
     def test_snake_to_camel(self):
         
         cases = (
+            ('', ''),
+            ('one', 'one'),
+            ('one_two', 'oneTwo'),
+            ('mixed_CASE_StrIng', 'mixedCaseString')
+        )
+        
+        for s, expected in cases:
+            result = case_utils.snake_to_camel(s)
+            self.assertEqual(result, expected)
+            
+            
+    def test_snake_keys_to_camel(self):
+        
+        cases = (
             (
                 {'test': 0},
                 {'test': 0}
@@ -36,6 +50,6 @@ class CaseUtilsTests(TestCase):
         )
         
         for d, expected in cases:
-            result = case_utils.snake_to_camel(d)
+            result = case_utils.snake_keys_to_camel(d)
             self.assertEqual(result, expected)
         
