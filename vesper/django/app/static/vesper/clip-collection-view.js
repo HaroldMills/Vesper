@@ -439,6 +439,8 @@ class ClipCollectionView {
 			
 			['play_selected_clip', [], _ => this._playSelectedClip()],
 			
+			['toggle_labels', [], _ => this._toggleLabels()],
+			
 			['annotate_clips', ['annotation_value'],
 				e => this._annotateClipsDelegate(e)],
 			['annotate_selected_clips', ['annotation_value'],
@@ -466,6 +468,13 @@ class ClipCollectionView {
 	}
 
 
+	_toggleLabels() {
+		this.settings.clipView.label.visible =
+			!this.settings.clipView.label.visible;
+		this._updateClipViewSettings(this.settings);
+	}
+	
+	
 	_annotateClipsDelegate(env) {
 		
 		const scope = env.getRequired('annotation_scope');
