@@ -42,6 +42,10 @@ class PresetManagerTests(TestCase):
         self.manager = PresetManager((A, B), _DATA_DIR_PATH)
 
         
+    def test_preset_dir_path(self):
+        self.assertEqual(self.manager.preset_dir_path, _DATA_DIR_PATH)
+        
+        
     def test_preset_types(self):
         type_names = [t.extension_name for t in self.manager.preset_types]
         self.assertEqual(type_names, ['A', 'B'])

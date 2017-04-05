@@ -38,7 +38,15 @@ class PresetManager:
         self._preset_types = _get_preset_types(preset_types)
         """tuple of known preset types."""
         
-        self._preset_data = _load_presets(preset_dir_path, self._preset_types)
+        self._preset_dir_path = preset_dir_path
+        
+        self.reload_presets()
+        
+        
+    def reload_presets(self):
+        
+        self._preset_data = \
+            _load_presets(self._preset_dir_path, self._preset_types)
         """Mapping from preset type names to collections of presets."""
         
         self._preset_dicts = dict(
@@ -50,6 +58,11 @@ class PresetManager:
         """
         
 
+    @property
+    def preset_dir_path(self):
+        return self._preset_dir_path
+    
+    
     @property
     def preset_types(self):
         

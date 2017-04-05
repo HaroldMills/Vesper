@@ -10,8 +10,13 @@ _PREFERENCE_FILE_NAME = 'Preferences.yaml'
 class PreferenceManager:
     
     
-    def __init__(self, dir_path):
-        self._preferences = _load_preferences(dir_path)
+    def __init__(self, preference_dir_path):
+        self._preference_dir_path = preference_dir_path
+        self.reload_preferences()
+        
+        
+    def reload_preferences(self):
+        self._preferences = _load_preferences(self._preference_dir_path)
         
         
     @property

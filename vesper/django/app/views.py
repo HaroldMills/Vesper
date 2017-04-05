@@ -316,6 +316,8 @@ def clip_wav(request, clip_id):
 
 def presets_json(request, preset_type_name):
     
+    preset_manager.instance.reload_presets()
+    
     if request.method in _GET_AND_HEAD:
         content = _get_presets_json(preset_type_name)
         return HttpResponse(content, content_type='application/json')
@@ -410,6 +412,7 @@ def _parse_content_type(content_type):
     
 def calendar(request):
     
+    preference_manager.instance.reload_preferences()
     preferences = preference_manager.instance.preferences
 
     params = request.GET
@@ -911,12 +914,20 @@ def night(request):
 #         rc_pairs, time_interval, detector, annotation_name, annotation_value)
 #     clips_json = _get_clips_json(annotations, station)
       
+    # Reload presets and preferences to make sure we have the latest.
+    # TODO: For efficiency's sake, be more selective about what we reload.
+    # We might reload only presets of specified types, for example, or
+    # only ones belonging to the current user.
+    preset_manager.instance.reload_presets()
+    preference_manager.instance.reload_preferences()
+    
     view_settings_presets_json = \
         _get_presets_json('Clip Collection View Settings')
     keyboard_commands_presets_json = \
         _get_presets_json('Clip Collection View Keyboard Commands')
         
     preferences = preference_manager.instance.preferences
+    
     view_settings_preset_path = \
         preferences.get('default_presets.Clip Collection View Settings')
     keyboard_commands_preset_path = \
