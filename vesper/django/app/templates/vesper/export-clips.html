@@ -17,8 +17,8 @@
   
   <p>
     Exports clips to .wav files. The clips are specified as a set of one
-    or more station/microhpone pairs, one or more detectors, and a range of
-    dates. The sound files are written to the specified output directory
+    or more detectors, one or more station/mic combinations, and a range
+    of dates. The sound files are written to the specified output directory
     on the server. The export runs as a Vesper job.
   </p>
   
@@ -30,8 +30,8 @@
    
   <form class="form" role="form" action="{% url 'export-clips' %}" method="post">
 
-    {{ form.station_mics|block_form_element }}
     {{ form.detectors|block_form_element }}
+    {{ form.station_mics|block_form_element }}
     {{ form.start_date|form_element }}
     {{ form.end_date|form_element }}
     {{ form.output_dir_path|block_form_element }}
