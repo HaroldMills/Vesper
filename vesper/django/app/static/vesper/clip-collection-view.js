@@ -439,7 +439,7 @@ class ClipCollectionView {
 			
 			['play_selected_clip', [], _ => this._playSelectedClip()],
 			
-			['toggle_labels', [], _ => this._toggleLabels()],
+			['toggle_clip_labels', [], _ => this._toggleClipLabels()],
 			
 			['annotate_clips', ['annotation_value'],
 				e => this._annotateClipsDelegate(e)],
@@ -468,7 +468,7 @@ class ClipCollectionView {
 	}
 
 
-	_toggleLabels() {
+	_toggleClipLabels() {
 		this.settings.clipView.label.visible =
 			!this.settings.clipView.label.visible;
 		this._updateClipViewSettings(this.settings);
@@ -2443,6 +2443,8 @@ select_next_clip
 select_previous_clip
 
 play_selected_clip
+
+toggle_clip_labels
 
 annotate_clips(annotation_value)
 annotate_selected_clips(annotation_value)
