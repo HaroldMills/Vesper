@@ -285,12 +285,9 @@ class ClipCollectionView {
 		
 		const q = clipQuery;
 		
-		const micOutputName =
-			getMicrophoneOutputDisplayName(q.microphoneOutputName);
-			
 		const pageText = this._getTitlePageText();
 		
-		const title = `${q.date} / ${q.stationName} / ${micOutputName} / ` +
+		const title = `${q.date} / ${q.stationMicName} / ` +
 	        `${q.detectorName} / ${q.classification} / ${pageText}`;
 		
 		this.elements.titleHeading.innerHTML = title;

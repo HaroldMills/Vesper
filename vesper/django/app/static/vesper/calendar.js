@@ -12,61 +12,15 @@ let highlightedCircle = null;
 
 
 function onLoad() {
-	
-	const stationSelect = document.getElementById('station');
-	stationSelect.onchange = onStationChange;
-	
-	populateMicrophoneOutputSelect();
 	setTitle();
 	setCalendarPeriods();
-	
-}
-
-
-function onStationChange() {
-	clearMicrophoneOutputSelect();
-	populateMicrophoneOutputSelect();
-}
-
-
-function clearMicrophoneOutputSelect() {
-	
-	const microphoneOutputSelect = document.getElementById('microphone');
-	
-	// Remove old station microphone outputs.
-	while (microphoneOutputSelect.length !== 0)
-		microphoneOutputSelect.remove(0);
-	
-}
-
-
-function populateMicrophoneOutputSelect() {
-	
-	// TODO: Rather than having the server send station microphone
-	// outputs to the client, perhaps the client should retrieve the
-	// outputs from the server with an XHR. We could set up URLs so
-	// that a client could request the microphone outputs for a
-	// particular station as JSON.
-	
-	const stationSelect = document.getElementById('station');
-	const microphoneOutputSelect = document.getElementById('microphone');
-	
-	for (name of stationMicrophoneOutputs[stationSelect.value]) {
-		const option = document.createElement('option');
-	    option.text = getMicrophoneOutputDisplayName(name)
-	    option.value = name;
-		microphoneOutputSelect.add(option);
-	}
-
 }
 
 
 function setTitle() {
 	
-	const micOutputName = getMicrophoneOutputDisplayName(microphoneOutputName);
-	
-	const title = `${stationName} / ${micOutputName} / ` +
-	              `${detectorName} / ${classification} Clips`;
+	const title =
+		`${stationMicName} / ${detectorName} / ${classification} Clips`;
 	
 	const titleElement = document.getElementById('title');
 	titleElement.innerHTML = title;
@@ -80,14 +34,9 @@ function setCalendarPeriods() {
 	
 	const periodsDiv = document.getElementById('periods');
 	
-	if (stationName === 'None')
+	if (stationMicName === 'None')
 		periodsDiv.innerHTML = 'There are no stations in the archive.';
 			
-	else if (microphoneOutputName === 'None')
-		periodsDiv.innerHTML =
-			'There are no microphones associated with station ' +
-			`"${stationName}".`;
-	
 	else if (detectorName === 'None')
 		periodsDiv.innerHTML = 'There are no detectors in the archive.';
 	
@@ -200,8 +149,8 @@ function addMonthDay(day, daysDiv) {
 		
 		// Get circle URL.
 		const date = formatDate(day.date);
-		const url = `/vesper/night?station=${stationName}&` +
-				    `microphone_output=${microphoneOutputName}&` +
+		const url = `/vesper/night?` +
+		            `station_mic=${stationMicName}&` +
 				    `detector=${detectorName}&` +
 				    `classification=${classification}&` +
 				    `date=${date}`;

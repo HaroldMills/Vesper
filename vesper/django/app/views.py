@@ -412,101 +412,61 @@ def _parse_content_type(content_type):
     
 def calendar(request):
     
+    params = request.GET
+        
     preference_manager.instance.reload_preferences()
     preferences = preference_manager.instance.preferences
 
-    params = request.GET
-        
-    stations, station_name, station = _get_station_info(params, preferences)
+    station_mics = _get_station_mics()
+    station_mic = _get_calendar_query_object(
+        station_mics, 'station_mic', params, preferences,
+        none_value=(None, None), name_getter=_get_station_mic_name)
     
-    station_microphone_outputs = \
-        _create_station_microphone_outputs_dict(stations)
+    detectors = _get_detectors()
+    detector = _get_calendar_query_object(
+        detectors, 'detector', params, preferences)
     
-    microphone_outputs, microphone_output_name, microphone_output = \
-        _get_microphone_output_info(station_microphone_outputs, station, params)
-        
-    detectors, detector_name, detector = _get_detector_info(params, preferences)
+    classifications = _get_classifications()
+    classification = _get_classification(classifications, params, preferences)
     
-    classifications, classification = \
-        _get_classification_info(params, preferences)
-    
-    station_microphone_outputs_json = \
-        _get_station_microphone_outputs_json(station_microphone_outputs)
-        
     periods_json = _get_periods_json(
-        station, microphone_output, detector, 'Classification', classification)
+        station_mic, detector, 'Classification', classification)
+    
+    station_mic_names = [_get_station_mic_name(sm) for sm in station_mics]
+    station_mic_name = _get_station_mic_name(station_mic)
+    detector_names = [d.name for d in detectors]
     
     context = {
         'navbar_items': _NAVBAR_ITEMS,
         'active_navbar_item': 'Calendar',
-        'stations': stations,
-        'station_name': station_name,
-        'microphone_outputs': microphone_outputs,
-        'microphone_output_name': microphone_output_name,
-        'detectors': detectors,
-        'detector_name': detector_name,
+        'station_mic_names': station_mic_names,
+        'station_mic_name': station_mic_name,
+        'detector_names': detector_names,
+        'detector_name': detector.name,
         'classifications': classifications,
         'classification': classification,
-        'station_microphone_outputs_json': station_microphone_outputs_json,
         'periods_json': periods_json
     }
-            
+    
     return render(request, 'vesper/calendar.html', context)
     
     
-def _get_station_info(params, preferences):
+def _get_station_mics():
+    
+    """
+    Gets a list of all (station, microphone output) pairs.
+    
+    The pairs are sorted by (station name, microphone output name).
+    """
+    
     stations = Station.objects.order_by('name')
-    return _get_query_info('station', Station, stations, params, preferences)
-
     
-def _get_query_info(type_name, cls, objects, params, preferences):
+    return [
+        (station, mic_output)
+        for station in stations
+        for mic_output in _get_station_microphone_outputs(station)]
     
-    name = params.get(type_name)
     
-    if name is None:
-        name = preferences.get('calendar_defaults.' + type_name)
-        
-    if name is not None:
-        # object name specified in either params or preferences
-        
-        try:
-            object = cls.objects.get(name=name)
-        except cls.DoesNotExist:
-            name = None
-        else:
-            return objects, name, object
-        
-    # If we get here, the object name is `None`.
-    
-    if len(objects) != 0:
-        object = objects[0]
-        name = object.name
-         
-    else:
-        object = None
-    
-    return objects, name, object
-
-
-def _create_station_microphone_outputs_dict(stations):
-    
-    """
-    Gets a mapping from station names to tuples of microphone output names.
-    
-    For each station, the value of the mapping is the tuple of the names of
-    all outputs of all microphones that were used at the station, sorted
-    lexicographically.
-    """
-    
-    return dict(
-        _create_station_microphone_outputs_dict_aux(s) for s in stations)
-
-
-def _create_station_microphone_outputs_dict_aux(station):
-    microphone_outputs = _get_station_microphone_outputs(station)
-    return (station.name, microphone_outputs)
-        
-
 def _get_station_microphone_outputs(station):
     microphones = station.devices.filter(model__type='Microphone')
     output_iterators = [m.outputs.all() for m in microphones]
@@ -515,72 +475,82 @@ def _get_station_microphone_outputs(station):
     return tuple(outputs)
 
 
-def _get_microphone_output_info(station_microphone_outputs, station, params):
+def _get_calendar_query_object(
+        objects, type_name, params, preferences, none_value=None,
+        name_getter=lambda object: object.name):
     
-    if station is None:
-        return [], None, None
+    if len(objects) == 0:
+        return none_value
     
     else:
         
-        outputs = station_microphone_outputs[station.name]
-
-        output_name = params.get('microphone')
-        if output_name is None and len(outputs) != 0:
-            output_name = outputs[0].name
+        object_name = \
+            _get_calendar_query_field_value(type_name, params, preferences)
+        
+        if object_name is not None:
+            # object name specified in `params` or `preferences`
             
-        if output_name is None:
-            output = None
+            objects_dict = dict((name_getter(o), o) for o in objects)
+            
+            try:
+                return objects_dict[object_name]
+            except KeyError:
+                return objects[0]
+            
         else:
-            output = _find_object_by_name(outputs, output_name)
+            # object name not specified in `params` or `preferences`
             
-        return outputs, output_name, output
+            return objects[0]
 
 
-def _find_object_by_name(objects, name):
-    for obj in objects:
-        if obj.name == name:
-            return obj
-    return None
+def _get_calendar_query_field_value(field_name, params, preferences):
+    try:
+        return params[field_name]
+    except KeyError:
+        return preferences.get('calendar_defaults.' + field_name)
+            
 
-    
-def _get_detector_info(params, preferences):
-    
-    detectors = Processor.objects.filter(
+def _get_station_mic_name(station_mic):
+    station, mic_output = station_mic
+    output_name = mic_output.name
+    if output_name.endswith(' Output'):
+        output_name = output_name[:-len(' Output')]
+    return station.name + ' / ' + output_name
+
+        
+def _get_detectors():
+    return Processor.objects.filter(
         algorithm_version__algorithm__type='Detector').order_by('name')
-    
-    return _get_query_info(
-        'detector', Processor, detectors, params, preferences)
 
+
+def _get_classifications():
     
-def _get_classification_info(params, preferences):
-    
-    
+
     # Get classification choices.
     
-    choices = [
+    classifications = [
         _NO_ANNOTATION,
         _IGNORE_ANNOTATION,
         _ANY_ANNOTATION
     ]
     
-    classifications = _get_string_annotation_values('Classification')
+    values = _get_string_annotation_values('Classification')
     
-    if classifications is not None:
-        choices += _add_wildcard_classifications(classifications)
+    if values is not None:
+        classifications += _add_wildcard_classifications(values)
+        
+    return classifications
         
         
-    # Get choice that should be selected.
+def _get_classification(classifications, params, preferences):
     
-    classification = params.get('classification')
-    
-    if classification is None:
-        classification = preferences.get('calendar_defaults.classification')
-        
-    if classification is None or classification not in choices:
+    classification = _get_calendar_query_field_value(
+        'classification', params, preferences)
+
+    if classification is None or classification not in classifications:
         classification = _ANY_ANNOTATION
         
-
-    return choices, classification
+    return classification
 
 
 def _get_string_annotation_values(annotation_name):
@@ -730,17 +700,17 @@ def _get_station_microphone_outputs_json(station_microphone_outputs):
     return json.dumps(station_microphone_output_names)
 
 
-def _get_periods_json(
-        station, microphone_output, detector, annotation_name,
-        annotation_value):
+def _get_periods_json(station_mic, detector, annotation_name, annotation_value):
     
-    if station is None or microphone_output is None or detector is None:
+    station, mic_output = station_mic
+    
+    if station is None or mic_output is None or detector is None:
         return '[]'
     
     else:
         
         clip_counts = _get_clip_counts(
-            station, microphone_output, detector, annotation_name,
+            station, mic_output, detector, annotation_name,
             annotation_value)
         
         dates = sorted(list(clip_counts.keys()))
@@ -876,26 +846,22 @@ def _get_microphone_output_channel_num(
 def night(request):
       
     params = request.GET
-      
+    
     # TODO: Type check and range check query items.
-    station_name = params['station']
-    microphone_output_name = params['microphone_output']
+    station_mic_name = params['station_mic']
     detector_name = params['detector']
     annotation_name = 'Classification'
     annotation_value = params['classification']
     date = params['date']
       
-    selected_index = int(params.get('selected', '0')) - 1
-    if selected_index == -1:
-        selected_index = 'null';
-      
-    station = Station.objects.get(name=station_name)
+    station_mics = dict(
+        (_get_station_mic_name(sm), sm) for sm in _get_station_mics())
+    station, microphone_output = station_mics[station_mic_name]
+    
     night = time_utils.parse_date(*date.split('-'))
     
     solar_event_times_json = _get_solar_event_times_json(station, night)
 
-    microphone_output = _get_station_microphone_output(
-        station, microphone_output_name)
     detector = Processor.objects.get(name=detector_name)
     time_interval = station.get_night_interval_utc(night)
   
@@ -934,8 +900,7 @@ def night(request):
     context = {
         'navbar_items': _NAVBAR_ITEMS,
         'active_navbar_item': '',
-        'station_name': station_name,
-        'microphone_output_name': microphone_output_name,
+        'station_mic_name': station_mic_name,
         'detector_name': detector_name,
         'classification': annotation_value,
         'date': date,
