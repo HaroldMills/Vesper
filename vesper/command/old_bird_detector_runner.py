@@ -11,7 +11,7 @@ import time
 
 from django.db import transaction
 
-from vesper.django.app.models import AnnotationInfo, Clip, Job, StringAnnotation
+from vesper.django.app.models import Clip, Job
 from vesper.util.logging_utils import append_stack_trace
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
@@ -226,11 +226,6 @@ class _DetectorMonitor(Thread):
         self._job_info = job_info
         self._job = Job.objects.get(id=self._job_info.job_id)
         
-        # TODO: Remove this and code below that uses `self._annotation_info`
-        # when a detector no longer needs to create an annotation for each
-        # clip that it creates. See below for more.
-        self._annotation_info = AnnotationInfo.objects.get('Classification')
-        
         self._executable_name = _get_detector_executable_name(name)
         self._detector_process = None
         
@@ -444,27 +439,13 @@ class _DetectorMonitor(Thread):
                     creation_time=creation_time,
                     creating_user=None,
                     creating_job=self._job,
-                    creating_processor=self._detector,
-                    file_path=None
+                    creating_processor=self._detector
                 )
                 
                 # We must save the clip before getting its wave file path since
                 # the path depends on the clip's ID, which not created until the
                 # clip is saved.
                 clip.save()
-                
-                # TODO: This is a temporary kludge to make newly created clips
-                # visible in the calendar and night views. The queries used
-                # to populate those views should be modified to include clips
-                # that do not have `'Classification'` annotations when the
-                # specified annotation value is `'*'`, and then this code
-                # should be removed. See related TODO at
-                # `self._annotation_info` assignment in initializer.
-                annotation = StringAnnotation(
-                    clip=clip,
-                    info=self._annotation_info,
-                    value='')
-                annotation.save()
                 
                 if start_index is None:
                     # need to copy clip file
