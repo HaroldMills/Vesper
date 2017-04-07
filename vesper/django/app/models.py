@@ -304,20 +304,18 @@ class Station(Model):
         at this station throughout the specified period.
         """
         
-        # The following would seem to be a better way to implement this
-        # method (or perhaps obviate it), but unfortunately it raises a
-        # django.core.exceptions.FieldError exception with the message
-        # "Unsupported lookup 'le' for DateTimeField or join on the field
-        # not permitted.". I'm not sure why Django would not support le
-        # (or ge) lookups on date/time fields.
-        # return StationDevice.objects.filter(
-        #    station=self, start_time__le=start_time, end_time__ge=end_time)
-    
-        return [
-            sd for sd in StationDevice.objects.filter(station=self)
-            if sd.device.model.type == device_type and \
-                    (start_time is None or sd.start_time <= start_time) and \
-                    (end_time is None or sd.end_time >= end_time)]
+        kwargs = {
+            'station': self,
+            'device__model__type': device_type
+        }
+        
+        if start_time is not None:
+            kwargs['start_time__lte'] = start_time
+            
+        if end_time is not None:
+            kwargs['end_time__gte'] = end_time
+            
+        return StationDevice.objects.filter(**kwargs)
     
     
 def _get_interval_utc(start_date, end_date, get_datetime):
