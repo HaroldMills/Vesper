@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 setup(
       
     name='vesper',
-    version='0.2.4',
+    version='0.2.5',
     description=(
         'Software for acoustical monitoring of nocturnal bird migration.'),
     url='https://github.com/HaroldMills/Vesper',
@@ -19,6 +19,7 @@ setup(
     
     install_requires=[
         'django',
+        'jsonschema',
         'numpy',
         'pyephem',
         'pytz',
@@ -26,7 +27,12 @@ setup(
     ],
       
     entry_points={
-        'console_scripts': ['vesper_admin=vesper.django.manage:main']
+        'console_scripts': [
+            'vesper_admin=vesper.django.manage:main',
+            'vesper_recorder=vesper.scripts.vesper_recorder',
+            'vesper_play_recorder_test_signal=vesper.scripts.play_recorder_test_signal',
+            'vesper_show_audio_input_devices=vesper.scripts.show_audio_input_devices'
+        ]
     },
       
     include_package_data=True,

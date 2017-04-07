@@ -1,6 +1,6 @@
 package:
   name: vesper
-  version: "0.2.4"
+  version: "0.2.5"
 
 source:
   git_url: https://github.com/HaroldMills/Vesper.git
@@ -11,6 +11,8 @@ build:
   entry_points:
     - vesper_admin=vesper.django.manage:main
     - vesper_recorder=vesper.scripts.vesper_recorder:_main
+    - vesper_play_recorder_test_signal=vesper.scripts.play_recorder_test_signal:_main
+    - vesper_show_audio_input_devices=vesper.scripts.show_audio_input_devices:_main
 
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
@@ -20,6 +22,7 @@ requirements:
 
   build:
     - django
+    - jsonschema
     - numpy
     - pyephem
     - python
@@ -29,6 +32,7 @@ requirements:
 
   run:
     - django
+    - jsonschema
     - numpy
     - pyephem
     - python
