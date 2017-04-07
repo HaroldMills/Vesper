@@ -15,10 +15,14 @@ class ClassifyCommand(Command):
     def __init__(self, args):
         super().__init__(args)
         name = command_utils.get_required_arg('classifier', args)
-        # self._classifier = _create_classifier(name)
+        # TODO: Create clip iterator from command arguments.
+        # Iterator must go from (station, mic_output, start_date, end_date)
+        # tuples to (recording/channel num) pairs to clips.
+        self._classifier = _create_classifier(name)
         
         
     def execute(self, job_info):
+        # TODO: Iterate over clips, invoking classifier for each one.
         print('ClassifyCommand.execute')
         return True
 
