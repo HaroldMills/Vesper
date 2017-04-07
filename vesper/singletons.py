@@ -12,6 +12,7 @@ import vesper.util.vesper_path_utils as vesper_path_utils
 _EXTENSIONS_SPEC = '''
 
 Command:
+    - vesper.command.classify_command.ClassifyCommand
     - vesper.command.detect_command.DetectCommand
     - vesper.command.export_command.ExportCommand
     - vesper.command.import_command.ImportCommand

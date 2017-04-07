@@ -1,7 +1,6 @@
 from collections import defaultdict
 import datetime
 import itertools
-import logging
 import json
 
 from django import forms, urls
@@ -14,15 +13,17 @@ from django.views.decorators.csrf import csrf_exempt
 import pytz
 import yaml
 
+from vesper.django.app.classify_form import ClassifyForm
+from vesper.django.app.detect_form import DetectForm
+from vesper.django.app.export_clips_form import ExportClipsForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Clip, DeviceConnection, Job,
     Processor, Recording, Station, StringAnnotation)
-from vesper.django.app.detect_form import DetectForm
-from vesper.django.app.export_clips_form import ExportClipsForm
 from vesper.singletons import job_manager, preference_manager, preset_manager
 from vesper.util.bunch import Bunch
+import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
@@ -173,11 +174,52 @@ def _render_coming_soon(request, action, message):
     return render(request, 'vesper/coming-soon.html', context)
 
 
+@csrf_exempt
 def classify(request):
-    return _render_coming_soon(
-        request, 'Classify', 'Classification is not yet implemented.')
+    
+    if request.method in _GET_AND_HEAD:
+        form = ClassifyForm()
+        
+    elif request.method == 'POST':
+         
+        form = ClassifyForm(request.POST)
+         
+        if form.is_valid():
+            command_spec = _create_classify_command_spec(form)
+            job_id = job_manager.instance.start_job(command_spec)
+            return _create_job_redirect_response(job_id)
+            
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+    
+    context = {
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Classify',
+        'form': form
+    }
+    
+    return render(request, 'vesper/classify.html', context)
+
+#     return _render_coming_soon(
+#         request, 'Classify', 'Classification is not yet implemented.')
     
     
+def _create_classify_command_spec(form):
+    
+    data = form.cleaned_data
+    
+    return {
+        'name': 'classify',
+        'arguments': {
+            'classifier': data['classifier'],
+            'detectors': data['detectors'],
+            'station_mics': data['station_mics'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date']
+        }
+    }
+
+
 def import_(request):
     context = {
         'navbar_items': _NAVBAR_ITEMS,
@@ -417,10 +459,11 @@ def calendar(request):
     preference_manager.instance.reload_preferences()
     preferences = preference_manager.instance.preferences
 
-    station_mics = _get_station_mics()
+    station_mics = model_utils.get_station_mic_outputs()
+    get_name = model_utils.get_station_mic_output_ui_name
     station_mic = _get_calendar_query_object(
         station_mics, 'station_mic', params, preferences,
-        none_value=(None, None), name_getter=_get_station_mic_name)
+        none_value=(None, None), name_getter=get_name)
     
     detectors = _get_detectors()
     detector = _get_calendar_query_object(
@@ -432,8 +475,8 @@ def calendar(request):
     periods_json = _get_periods_json(
         station_mic, detector, 'Classification', classification)
     
-    station_mic_names = [_get_station_mic_name(sm) for sm in station_mics]
-    station_mic_name = _get_station_mic_name(station_mic)
+    station_mic_names = [get_name(sm) for sm in station_mics]
+    station_mic_name = get_name(station_mic)
     detector_names = [d.name for d in detectors]
     
     context = {
@@ -451,30 +494,6 @@ def calendar(request):
     return render(request, 'vesper/calendar.html', context)
     
     
-def _get_station_mics():
-    
-    """
-    Gets a list of all (station, microphone output) pairs.
-    
-    The pairs are sorted by (station name, microphone output name).
-    """
-    
-    stations = Station.objects.order_by('name')
-    
-    return [
-        (station, mic_output)
-        for station in stations
-        for mic_output in _get_station_microphone_outputs(station)]
-    
-    
-def _get_station_microphone_outputs(station):
-    microphones = station.devices.filter(model__type='Microphone')
-    output_iterators = [m.outputs.all() for m in microphones]
-    outputs = list(itertools.chain.from_iterable(output_iterators))
-    outputs.sort(key=lambda o: o.name)
-    return tuple(outputs)
-
-
 def _get_calendar_query_object(
         objects, type_name, params, preferences, none_value=None,
         name_getter=lambda object: object.name):
@@ -510,14 +529,6 @@ def _get_calendar_query_field_value(field_name, params, preferences):
         return preferences.get('calendar_defaults.' + field_name)
             
 
-def _get_station_mic_name(station_mic):
-    station, mic_output = station_mic
-    output_name = mic_output.name
-    if output_name.endswith(' Output'):
-        output_name = output_name[:-len(' Output')]
-    return station.name + ' / ' + output_name
-
-        
 def _get_detectors():
     return Processor.objects.filter(
         algorithm_version__algorithm__type='Detector').order_by('name')
@@ -855,7 +866,8 @@ def night(request):
     date = params['date']
       
     station_mics = dict(
-        (_get_station_mic_name(sm), sm) for sm in _get_station_mics())
+        (model_utils.get_station_mic_output_ui_name(sm), sm)
+        for sm in model_utils.get_station_mic_outputs())
     station, microphone_output = station_mics[station_mic_name]
     
     night = time_utils.parse_date(*date.split('-'))
@@ -959,16 +971,16 @@ def _get_solar_event_time(event, lat, lon, date, utc_to_local):
     return _format_time(local_time)
 
 
-def _get_station_microphone_output(station, microphone_output_name):
-    
-    outputs = _get_station_microphone_outputs(station)
-    for output in outputs:
-        if output.name == microphone_output_name:
-            return output
-        
-    logging.error(
-        'Could not find microphone output "{}" for station "{}".'.format(
-            microphone_output_name, station.name))
+# def _get_station_microphone_output(station, microphone_output_name):
+#     
+#     outputs = _get_station_microphone_outputs(station)
+#     for output in outputs:
+#         if output.name == microphone_output_name:
+#             return output
+#         
+#     logging.error(
+#         'Could not find microphone output "{}" for station "{}".'.format(
+#             microphone_output_name, station.name))
     
     
 # def _get_microphone_output_channel_num(recording, microphone_output):
