@@ -52,7 +52,8 @@ import vesper.util.time_utils as time_utils
 #     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
 _ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
 # _ARCHIVE_DIR_PATH = r'E:\2016_archive'
-# _ARCHIVE_DIR_PATH = r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive'
+# _ARCHIVE_DIR_PATH = \
+#     r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive 0.1.0'
 
 _DETECTOR_NAME_ALIASES = {
     'Old Bird Thrush': ['Thrush'],
@@ -79,6 +80,7 @@ _MIC_NAME_CORRECTIONS = {
 }
 
 _DEFAULT_MIC_NAME = 'SMX-NFC'
+# _DEFAULT_MIC_NAME = '21c'
 
 _MIC_CHANNEL_NUMS = {
     'SMX-NFC': 0,
@@ -180,7 +182,7 @@ def _get_station_and_mic_name(station_name):
 # def _add_recordings():
 #     recordings = _get_recordings()
 #     for r in recordings:
-#         station_recorder = _get_recording_station_recorder(r)
+#         station_recorder = _get_recording_station_recorder(r.station.name, r)
 #         span = (r.length - 1) / r.sample_rate
 #         end_time = r.start_time + datetime.timedelta(seconds=span)
 #         creation_time = time_utils.get_utc_now()
