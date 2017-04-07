@@ -1,4 +1,7 @@
+include vesper/django/*.sqlite
 include vesper/django/app/templates/vesper/*.html
 include vesper/django/app/static/vesper/*.css
 include vesper/django/app/static/vesper/*.js
+include vesper/scripts/*.spec
+recursive-include vesper *.yaml
 recursive-include vesper *.pkl
