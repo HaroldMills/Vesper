@@ -590,6 +590,8 @@ class RecordingFile(Model):
 # and add flags that indicate whether or not recording start and end
 # times are only approximate.
 # TODO: Add indexes.
+# TODO: Consider adding redundant `station`, `mic_output`, `start_day`,
+# and `start_night` fields to simplify and accelerate queries.
 class Clip(Model):
     
     recording = ForeignKey(
