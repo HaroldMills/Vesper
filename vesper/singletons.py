@@ -11,6 +11,9 @@ import vesper.util.vesper_path_utils as vesper_path_utils
 
 _EXTENSIONS_SPEC = '''
 
+Classifier:
+    - vesper.mpg_ranch.outside_classifier.OutsideClassifier
+    
 Command:
     - vesper.command.classify_command.ClassifyCommand
     - vesper.command.detect_command.DetectCommand

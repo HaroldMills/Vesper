@@ -1,6 +1,9 @@
 import logging
 
 
+_logger = logging.getLogger()
+
+
 class OutsideClassifier:
     
     
@@ -8,5 +11,6 @@ class OutsideClassifier:
     
     
     def classify(self, clip):
+        _logger.info('OutsideClassifier.classify', str(clip))
         return True
     

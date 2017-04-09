@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 import pytz
 import yaml
 
-# from vesper.django.app.classify_form import ClassifyForm
+from vesper.django.app.classify_form import ClassifyForm
 from vesper.django.app.detect_form import DetectForm
 # from vesper.django.app.export_clips_form import ExportClipsForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
@@ -177,31 +177,31 @@ def _render_coming_soon(request, action, message):
 @csrf_exempt
 def classify(request):
     
-#     if request.method in _GET_AND_HEAD:
-#         form = ClassifyForm()
-#         
-#     elif request.method == 'POST':
-#          
-#         form = ClassifyForm(request.POST)
-#          
-#         if form.is_valid():
-#             command_spec = _create_classify_command_spec(form)
-#             job_id = job_manager.instance.start_job(command_spec)
-#             return _create_job_redirect_response(job_id)
-#             
-#     else:
-#         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
-#     
-#     context = {
-#         'navbar_items': _NAVBAR_ITEMS,
-#         'active_navbar_item': 'Classify',
-#         'form': form
-#     }
-#     
-#     return render(request, 'vesper/classify.html', context)
+    if request.method in _GET_AND_HEAD:
+        form = ClassifyForm()
+         
+    elif request.method == 'POST':
+          
+        form = ClassifyForm(request.POST)
+          
+        if form.is_valid():
+            command_spec = _create_classify_command_spec(form)
+            job_id = job_manager.instance.start_job(command_spec)
+            return _create_job_redirect_response(job_id)
+             
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+     
+    context = {
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Classify',
+        'form': form
+    }
+     
+    return render(request, 'vesper/classify.html', context)
 
-    return _render_coming_soon(
-        request, 'Classify', 'Classification is coming soon!')
+#     return _render_coming_soon(
+#         request, 'Classify', 'Classification is coming soon!')
     
     
 def _create_classify_command_spec(form):
