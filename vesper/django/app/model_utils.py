@@ -3,7 +3,7 @@
 
 import itertools
 
-from vesper.django.app.models import StationDevice
+from vesper.django.app.models import Processor, StationDevice
 
 
 def get_station_mic_outputs():
@@ -62,3 +62,10 @@ def get_station_mic_output_ui_names():
     return sorted(
         get_station_mic_output_ui_name(sm) for sm in station_mic_outputs)
     
+    
+def get_processors(type):
+    return Processor.objects.filter(type=type).order_by('name')
+
+
+def get_processor(name, type):
+    return Processor.objects.get(name=name, type=type)

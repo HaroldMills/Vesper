@@ -15,7 +15,8 @@ import pytz
 
 from vesper.archive.archive import Archive
 from vesper.django.app.models import (
-    AnnotationInfo, Clip, Processor, Recording, Station, StringAnnotation)
+    AnnotationInfo, Clip, Recording, Station, StringAnnotation)
+import vesper.django.app.model_utils as model_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
@@ -48,9 +49,9 @@ import vesper.util.time_utils as time_utils
 #       metadata.
 
 
-# _ARCHIVE_DIR_PATH = \
-#     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
-_ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
+_ARCHIVE_DIR_PATH = \
+    r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
+# _ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
 # _ARCHIVE_DIR_PATH = r'E:\2016_archive'
 # _ARCHIVE_DIR_PATH = \
 #     r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive 0.1.0'
@@ -317,13 +318,11 @@ def _get_station_recordings():
         
 def _get_detectors():
     
-    detectors = Processor.objects.filter(
-        algorithm_version__algorithm__type='Detector')
-    
+    detectors = model_utils.get_processors('Detector')
     detectors = dict((d.name, d) for d in detectors)
     
     for name, aliases in _DETECTOR_NAME_ALIASES.items():
-        detector = Processor.objects.get(name=name)
+        detector = detectors[name]
         for alias in aliases:
             detectors[alias] = detector
             

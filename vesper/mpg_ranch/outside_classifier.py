@@ -7,7 +7,7 @@ _logger = logging.getLogger()
 class OutsideClassifier:
     
     
-    extension_name = 'MPG Ranch Outside'
+    extension_name = 'MPG Ranch Outside 1.0'
     
     
     def classify(self, clip):

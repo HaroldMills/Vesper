@@ -360,9 +360,68 @@ class StationDevice(Model):
         db_table = 'vesper_station_device'
 
 
-class Algorithm(Model):
+# class Algorithm(Model):
+#     
+#     name = CharField(max_length=255, unique=True)
+#     type = CharField(max_length=255)
+#     description = TextField(blank=True)
+#     
+#     def __str__(self):
+#         return self.name
+#     
+#     class Meta:
+#         db_table = 'vesper_algorithm'
+# 
+#     
+# class AlgorithmVersion(Model):
+#     
+#     algorithm = ForeignKey(
+#         Algorithm, CASCADE,
+#         related_name='versions',
+#         related_query_name='version')
+#     version = CharField(max_length=255)
+#     description = TextField(blank=True)
+#     
+#     @property
+#     def name(self):
+#         return self.algorithm.name + ' ' + self.version
+#     
+#     @property
+#     def type(self):
+#         return self.algorithm.type
+#     
+#     def __str__(self):
+#         return self.name
+#     
+#     class Meta:
+#         unique_together = ('algorithm', 'version')
+#         db_table = 'vesper_algorithm_version'
+# 
+#     
+# class Processor(Model):
+#     
+#     name = CharField(max_length=255, unique=True)
+#     algorithm_version = ForeignKey(
+#         AlgorithmVersion, CASCADE,
+#         related_name='processors',
+#         related_query_name='processor')
+#     settings = TextField(blank=True)
+#     description = TextField(blank=True)
+#     
+#     @property
+#     def type(self):
+#         return self.algorithm_version.type
+#     
+#     def __str__(self):
+#         return self.name
+#     
+#     class Meta:
+#         db_table = 'vesper_processor'
+        
+
+class Processor(Model):
     
-    name = CharField(max_length=255, unique=True)
+    name = CharField(max_length=255)
     type = CharField(max_length=255)
     description = TextField(blank=True)
     
@@ -370,54 +429,9 @@ class Algorithm(Model):
         return self.name
     
     class Meta:
-        db_table = 'vesper_algorithm'
-
-    
-class AlgorithmVersion(Model):
-    
-    algorithm = ForeignKey(
-        Algorithm, CASCADE,
-        related_name='versions',
-        related_query_name='version')
-    version = CharField(max_length=255)
-    description = TextField(blank=True)
-    
-    @property
-    def name(self):
-        return self.algorithm.name + ' ' + self.version
-    
-    @property
-    def type(self):
-        return self.algorithm.type
-    
-    def __str__(self):
-        return self.name
-    
-    class Meta:
-        unique_together = ('algorithm', 'version')
-        db_table = 'vesper_algorithm_version'
-
-    
-class Processor(Model):
-    
-    name = CharField(max_length=255, unique=True)
-    algorithm_version = ForeignKey(
-        AlgorithmVersion, CASCADE,
-        related_name='processors',
-        related_query_name='processor')
-    settings = TextField(blank=True)
-    description = TextField(blank=True)
-    
-    @property
-    def type(self):
-        return self.algorithm_version.type
-    
-    def __str__(self):
-        return self.name
-    
-    class Meta:
+        unique_together = ('name', 'type')
         db_table = 'vesper_processor'
-        
+
     
 _JOB_LOGS_DIR_PATH = vesper_path_utils.get_archive_path('Logs', 'Jobs')
 

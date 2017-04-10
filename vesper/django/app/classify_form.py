@@ -1,6 +1,5 @@
 from django import forms
 
-from vesper.django.app.models import Processor
 import vesper.django.app.model_utils as model_utils
 
 
@@ -19,12 +18,11 @@ class ClassifyForm(forms.Form):
         super().__init__(*args, **kwargs)
         
         # Populate classifiers field.
-        classifiers = ['MPG Ranch Outside', 'MPG Ranch NFC Coarse']
+        classifiers = model_utils.get_processors('Classifier')
         self.fields['classifier'].choices = [(c, c) for c in classifiers]
         
         # Populate detectors field.
-        detectors = Processor.objects.filter(
-            algorithm_version__algorithm__type='Detector')
+        detectors = model_utils.get_processors('Detector')
         self.fields['detectors'].choices = [(d.name, d.name) for d in detectors]
         
         # Populate station/mics field.

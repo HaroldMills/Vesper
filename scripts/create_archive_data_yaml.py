@@ -86,34 +86,62 @@ _MIC_CHANNEL_NUMS = {
     '21c': 1
 }
 
+# _PROCESSORS = '''
+# algorithms:
+# 
+#     - name: Old Bird Tseep Detector
+#       type: Detector
+#       description: http://oldbird.org/analysis.htm
+# 
+#     - name: Old Bird Thrush Detector
+#       type: Detector
+#       description: http://oldbird.org/analysis.htm
+# 
+# algorithm_versions:
+# 
+#     - algorithm: Old Bird Tseep Detector
+#       version: 1.0
+# 
+#     - algorithm: Old Bird Thrush Detector
+#       version: 1.0
+# 
+# processors:
+# 
+#     - name: Old Bird Tseep
+#       algorithm_version: Old Bird Tseep Detector 1.0
+# 
+#     - name: Old Bird Thrush
+#       algorithm_version: Old Bird Thrush Detector 1.0
+# '''.strip('\n')
+
 _PROCESSORS = '''
-algorithms:
-
-    - name: Old Bird Tseep Detector
-      type: Detector
-      description: http://oldbird.org/analysis.htm
-
-    - name: Old Bird Thrush Detector
-      type: Detector
-      description: http://oldbird.org/analysis.htm
-
-algorithm_versions:
-
-    - algorithm: Old Bird Tseep Detector
-      version: 1.0
-
-    - algorithm: Old Bird Thrush Detector
-      version: 1.0
-
-processors:
+detectors:
 
     - name: Old Bird Tseep
-      algorithm_version: Old Bird Tseep Detector 1.0
-
+      description: http://oldbird.org/analysis.htm
+      
     - name: Old Bird Thrush
-      algorithm_version: Old Bird Thrush Detector 1.0
-'''.strip('\n')
+      description: http://oldbird.org/analysis.htm
 
+classifiers:
+
+    - name: MPG Ranch Outside 1.0
+      description: >
+          Classifies a clip as "Outside" if and only if its start time is
+          outside of the interval from one hour after sunset to one half
+          hour before sunrise.
+
+    - name: MPG Ranch Coarse 1.0
+      description: >
+          Classifies a clip as "Call" or "Noise" if and only if it is not
+          yet classified. The classifier is an SVM trained on MPG Ranch
+          clips from 2012-2014. Different SVMs are used for clips detected
+          by the Old Bird Tseep and Old Bird Thrush detectors.
+
+    - name: MPG Ranch Species 1.0
+      description: >
+          Classifies some "Call" clips to species (more documentation needed).
+'''.STRIP('\n')
 
 _ANNOTATIONS = '''
 annotation_constraints:

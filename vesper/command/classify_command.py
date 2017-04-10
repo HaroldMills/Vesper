@@ -1,15 +1,19 @@
 """Module containing class `ClassifyCommand`."""
 
 
+import datetime
 import logging
 
 from vesper.command.command import Command
 from vesper.django.app.models import Processor
 from vesper.singletons import extension_manager
 import vesper.command.command_utils as command_utils
+import vesper.django.app.model_utils as model_utils
 
 
 _logger = logging.getLogger()
+
+_ONE_DAY = datetime.timedelta(days=1)
 
 
 class ClassifyCommand(Command):
@@ -45,6 +49,7 @@ class ClassifyCommand(Command):
             for detector in detectors:
                 for sm_name in self._station_mic_names:
                     print('ClassifyCommand', date, detector.name, sm_name)
+            date += _ONE_DAY
                 
         # TODO: Iterate over clips, invoking classifier for each one.
         print('ClassifyCommand.execute')
@@ -81,8 +86,7 @@ class ClassifyCommand(Command):
             
 def _get_processor(name, type):
     try:
-        return Processor.objects.get(
-            name=name, algorithm_version__algorithm__type=type)
+        return model_utils.get_processor(name, type)
     except Processor.DoesNotExist:
         raise ValueError('Unrecognized {} "{}".'.format(type.lower(), name))
 
@@ -123,7 +127,7 @@ def _get_detectors(detector_names):
         
 def _get_detector(self, name):
     try:
-        return Processor.objects.get(name=name)
+        return model_utils.get_processor(name, 'Detector')
     except Processor.DoesNotExist:
         raise ValueError(
             'Unrecognized detector "{}".'.format(name))

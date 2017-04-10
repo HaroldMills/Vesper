@@ -8,6 +8,7 @@ from vesper.command.command import Command, CommandExecutionError
 from vesper.command.old_bird_detector_runner import OldBirdDetectorRunner
 from vesper.django.app.models import Processor, Recording, Station
 import vesper.command.command_utils as command_utils
+import vesper.django.app.model_utils as model_utils
 
 
 class DetectCommand(Command):
@@ -68,7 +69,7 @@ class DetectCommand(Command):
             
     def _get_detector(self, name):
         try:
-            return Processor.objects.get(name=name)
+            return model_utils.get_processor(name, 'Detector')
         except Processor.DoesNotExist:
             raise CommandExecutionError(
                 'Unrecognized detector "{}".'.format(name))

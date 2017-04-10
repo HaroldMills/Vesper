@@ -20,7 +20,7 @@ from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Clip, DeviceConnection, Job,
-    Processor, Recording, Station, StringAnnotation)
+    Recording, Station, StringAnnotation)
 from vesper.singletons import job_manager, preference_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
@@ -468,7 +468,7 @@ def calendar(request):
         station_mics, 'station_mic', params, preferences,
         none_value=(None, None), name_getter=get_name)
     
-    detectors = _get_detectors()
+    detectors = model_utils.get_processors('Detector')
     detector = _get_calendar_query_object(
         detectors, 'detector', params, preferences)
     
@@ -531,11 +531,6 @@ def _get_calendar_query_field_value(field_name, params, preferences):
     except KeyError:
         return preferences.get('calendar_defaults.' + field_name)
             
-
-def _get_detectors():
-    return Processor.objects.filter(
-        algorithm_version__algorithm__type='Detector').order_by('name')
-
 
 def _get_classifications():
     
@@ -833,8 +828,8 @@ def _get_microphone_output_channel_num(
     # TODO: What should we do a situation in which a single microphone
     # output is connected to more than one recorder input, for example
     # with different input gains? In the following, we simply return
-    # the channel number of first input we encounter. Any other inputs
-    # are ignored.
+    # the channel number of the first input we encounter. Any other
+    # inputs are ignored.
     
     recorder = recording.station_recorder.device
     infos = recorder_microphone_infos[(recorder.id, microphone_output_id)]
@@ -877,7 +872,7 @@ def night(request):
     
     solar_event_times_json = _get_solar_event_times_json(station, night)
 
-    detector = Processor.objects.get(name=detector_name)
+    detector = model_utils.get_processor(detector_name, 'Detector')
     time_interval = station.get_night_interval_utc(night)
   
     rm_infos = _get_recorder_microphone_infos(station, microphone_output)
@@ -972,39 +967,6 @@ def _get_solar_event_time(event, lat, lon, date, utc_to_local):
     utc_time = ephem_utils.get_event_time(event, lat, lon, date)
     local_time = utc_to_local(utc_time)
     return _format_time(local_time)
-
-
-# def _get_station_microphone_output(station, microphone_output_name):
-#     
-#     outputs = _get_station_microphone_outputs(station)
-#     for output in outputs:
-#         if output.name == microphone_output_name:
-#             return output
-#         
-#     logging.error(
-#         'Could not find microphone output "{}" for station "{}".'.format(
-#             microphone_output_name, station.name))
-    
-    
-# def _get_microphone_output_channel_num(recording, microphone_output):
-#       
-#     # TODO: This function seems somewhat redundant with the
-#     # `_get_recording_channel_num_pairs` function. Could they be
-#     # combined?
-#     
-#     connections = DeviceConnection.objects.filter(
-#         output=microphone_output,
-#         input__device=recording.station_recorder.device)
-#     
-#     start_time = recording.start_time
-#     for connection in connections:
-#         if connection.start_time <= start_time and \
-#                 connection.end_time >= start_time:
-#             return connection.input.channel_num
-#     
-#     logging.error((
-#         'Could not find channel number for microphone output "{}" in '
-#         'recording "{}".').format(microphone_output.name, recording.name))
 
 
 def _get_recordings_json(recordings, station):

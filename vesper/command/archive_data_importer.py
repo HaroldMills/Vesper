@@ -10,9 +10,9 @@ import yaml
 
 from vesper.command.command import CommandSyntaxError
 from vesper.django.app.models import (
-    Algorithm, AlgorithmVersion, AnnotationConstraint, AnnotationInfo, Device,
-    DeviceConnection, DeviceInput, DeviceModel, DeviceModelInput,
-    DeviceModelOutput, DeviceOutput, Job, Processor, Station, StationDevice)
+    AnnotationConstraint, AnnotationInfo, Device, DeviceConnection,
+    DeviceInput, DeviceModel, DeviceModelInput, DeviceModelOutput,
+    DeviceOutput, Job, Processor, Station, StationDevice)
 import vesper.command.command_utils as command_utils
 import vesper.util.time_utils as time_utils
 
@@ -50,9 +50,8 @@ class ArchiveDataImporter:
                 self._add_device_models()
                 self._add_devices()
                 self._add_station_devices()
-                self._add_algorithms()
-                self._add_algorithm_versions()
-                self._add_processors()
+                self._add_detectors()
+                self._add_classifiers()
                 self._add_annotation_constraints(job_info)
                 self._add_annotations(job_info)
                 
@@ -388,73 +387,102 @@ class ArchiveDataImporter:
         connection.save()
 
 
-    def _add_algorithms(self):
+    def _add_detectors(self):
+        self._add_processors('detectors', 'detector', 'Detector')
         
-        algorithms_data = self.archive_data.get('algorithms')
         
-        if algorithms_data is not None:
-            
-            for data in algorithms_data:
-            
-                name = data['name']
-
-                self._logger.info('Adding algorithm "{}"...'.format(name))
-                
-                algorithm = Algorithm(
-                    name=name,
-                    type=data['type'],
-                    description=data.get('description', ''))
-                
-                algorithm.save()
-
-
-    def _add_algorithm_versions(self):
+    def _add_processors(self, data_key, log_type_name, db_type_name):
         
-        versions_data = self.archive_data.get('algorithm_versions')
-        
-        if versions_data is not None:
-            
-            algorithms = _create_objects_dict(Algorithm)
-            
-            for data in versions_data:
-            
-                algorithm = algorithms[data['algorithm']]
-                version = data['version']
-
-                self._logger.info(
-                    'Adding algorithm version "{} {}"...'.format(
-                        algorithm.name, version))
-                
-                algorithm_version = AlgorithmVersion(
-                    algorithm=algorithm,
-                    version=version,
-                    description=data.get('description', ''))
-                
-                algorithm_version.save()
-
-
-    def _add_processors(self):
-        
-        processors_data = self.archive_data.get('processors')
+        processors_data = self.archive_data.get(data_key)
         
         if processors_data is not None:
-            
-            algorithm_versions = _create_objects_dict(AlgorithmVersion)
             
             for data in processors_data:
             
                 name = data['name']
-                
-                self._logger.info('Adding processor "{}"...'.format(name))
+
+                self._logger.info(
+                    'Adding {} "{}"...'.format(log_type_name, name))
                 
                 processor = Processor(
                     name=name,
-                    algorithm_version=\
-                        algorithm_versions[data['algorithm_version']],
-                    settings=data.get('settings', ''),
+                    type=db_type_name,
                     description=data.get('description', ''))
                 
                 processor.save()
+
+        
+    def _add_classifiers(self):
+        self._add_processors('classifiers', 'classifier', 'Classifier')
+        
+        
+#     def _add_algorithms(self):
+#         
+#         algorithms_data = self.archive_data.get('algorithms')
+#         
+#         if algorithms_data is not None:
+#             
+#             for data in algorithms_data:
+#             
+#                 name = data['name']
+# 
+#                 self._logger.info('Adding algorithm "{}"...'.format(name))
+#                 
+#                 algorithm = Algorithm(
+#                     name=name,
+#                     type=data['type'],
+#                     description=data.get('description', ''))
+#                 
+#                 algorithm.save()
+# 
+# 
+#     def _add_algorithm_versions(self):
+#         
+#         versions_data = self.archive_data.get('algorithm_versions')
+#         
+#         if versions_data is not None:
+#             
+#             algorithms = _create_objects_dict(Algorithm)
+#             
+#             for data in versions_data:
+#             
+#                 algorithm = algorithms[data['algorithm']]
+#                 version = data['version']
+# 
+#                 self._logger.info(
+#                     'Adding algorithm version "{} {}"...'.format(
+#                         algorithm.name, version))
+#                 
+#                 algorithm_version = AlgorithmVersion(
+#                     algorithm=algorithm,
+#                     version=version,
+#                     description=data.get('description', ''))
+#                 
+#                 algorithm_version.save()
+# 
+# 
+#     def _add_processors(self):
+#         
+#         processors_data = self.archive_data.get('processors')
+#         
+#         if processors_data is not None:
+#             
+#             algorithm_versions = _create_objects_dict(AlgorithmVersion)
+#             
+#             for data in processors_data:
+#             
+#                 name = data['name']
+#                 
+#                 self._logger.info('Adding processor "{}"...'.format(name))
+#                 
+#                 processor = Processor(
+#                     name=name,
+#                     algorithm_version=\
+#                         algorithm_versions[data['algorithm_version']],
+#                     settings=data.get('settings', ''),
+#                     description=data.get('description', ''))
+#                 
+#                 processor.save()
 
 
 def _create_objects_dict(cls):

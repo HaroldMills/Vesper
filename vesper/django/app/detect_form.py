@@ -1,6 +1,7 @@
 from django import forms
 
 from vesper.django.app.models import Processor, Station
+import vesper.django.app.model_utils as model_utils
 
 
 class DetectForm(forms.Form):
@@ -17,8 +18,7 @@ class DetectForm(forms.Form):
         super().__init__(*args, **kwargs)
         
         # Populate detectors field.
-        detectors = Processor.objects.filter(
-            algorithm_version__algorithm__type='Detector')
+        detectors = model_utils.get_processors('Detector')
         self.fields['detectors'].choices = [(d.name, d.name) for d in detectors]
         
         # Populate stations field.
