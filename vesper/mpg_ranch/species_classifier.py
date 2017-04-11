@@ -27,6 +27,8 @@ class SpeciesClassifier(Annotator):
     
     def annotate(self, clip):
         
+        annotated = False
+        
         classification = self._get_annotation_value(clip)
         
         if classification == 'Call':
@@ -41,6 +43,9 @@ class SpeciesClassifier(Annotator):
                 
                 if classification is not None:
                     self._annotate(clip, classification)
+                    annotated = True
+                    
+        return annotated
         
             
 def _create_classifier(name):

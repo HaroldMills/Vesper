@@ -26,6 +26,8 @@ class CoarseClassifier(Annotator):
     
     def annotate(self, clip):
         
+        annotated = False
+        
         classification = self._get_annotation_value(clip)
         
         if classification is None:
@@ -41,6 +43,9 @@ class CoarseClassifier(Annotator):
                 
                 if classification is not None:
                     self._annotate(clip, classification)
+                    annotated = True
+                    
+        return annotated
         
             
 def _get_clip_type(clip):

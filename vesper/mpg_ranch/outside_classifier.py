@@ -29,6 +29,8 @@ class OutsideClassifier(Annotator):
     
     def annotate(self, clip):
         
+        annotated = False
+        
         station = clip.station
         lat = station.latitude
         lon = station.longitude
@@ -57,3 +59,6 @@ class OutsideClassifier(Annotator):
             
             if clip.start_time < start_time or clip.start_time > end_time:
                 self._annotate(clip, 'Outside')
+                annotated = True
+                
+        return annotated

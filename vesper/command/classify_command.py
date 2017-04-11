@@ -120,24 +120,28 @@ def _log_fatal_exception(message, exception):
             message, str(exception)))
 
 
-_LOGGING_PERIOD = 1000    # clips
+_LOGGING_PERIOD = 500    # clips
 
 
 def _classify_clips(clips, classifier):
     
     classifier.begin_annotations()
     
-    count = 0
+    visited_count = 0
+    classified_count = 0
     
     for clip in clips:
         
-        classifier.annotate(clip)
+        if classifier.annotate(clip):
+            classified_count += 1
         
-        count += 1
+        visited_count += 1
         
-        if count % _LOGGING_PERIOD == 0:
-            _logger.info('Classified {} clips...'.format(count))
+        if visited_count % _LOGGING_PERIOD == 0:
+            _logger.info('Visited {} clips...'.format(visited_count))
             
     classifier.end_annotations()
             
-    _logger.info('Classified a total of {} clips.'.format(count))
+    _logger.info(
+        'Classified {} of {} visited clips.'.format(
+            classified_count, visited_count))
