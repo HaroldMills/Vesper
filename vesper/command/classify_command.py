@@ -73,7 +73,7 @@ class ClassifyCommand(Command):
                 
         except Exception:
             _logger.error(
-                'Clip classification failed. The archive has been'
+                'Clip classification failed. The archive has been '
                 'restored to its state before classification started. '
                 'See below for exception traceback.')
             raise
@@ -125,15 +125,19 @@ _LOGGING_PERIOD = 1000    # clips
 
 def _classify_clips(clips, classifier):
     
+    classifier.begin_annotations()
+    
     count = 0
     
     for clip in clips:
         
-        classifier.classify(clip)
+        classifier.annotate(clip)
         
         count += 1
         
         if count % _LOGGING_PERIOD == 0:
             _logger.info('Classified {} clips...'.format(count))
+            
+    classifier.end_annotations()
             
     _logger.info('Classified a total of {} clips.'.format(count))

@@ -1,6 +1,3 @@
-import datetime
-import logging
-
 """
 Module containing class `OutsideClassifier`.
 
@@ -9,8 +6,10 @@ if the clip's start time is outside of the interval from one hour after
 sunset to one half hour before sunrise, and does nothing otherwise.
 """
 
+import datetime
+import logging
 
-from vesper.django.app.annotator import Annotator
+from vesper.command.annotator import Annotator
 import vesper.ephem.ephem_utils as ephem_utils
 
 
@@ -28,7 +27,7 @@ class OutsideClassifier(Annotator):
     extension_name = 'MPG Ranch Outside 1.0'
     
     
-    def classify(self, clip):
+    def annotate(self, clip):
         
         station = clip.station
         lat = station.latitude

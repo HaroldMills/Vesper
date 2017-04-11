@@ -12,6 +12,8 @@ from django.db.models import (
 import pytz
 
 from vesper.django.project.settings import VESPER_CLIPS_DIR_FORMAT
+from vesper.util.bunch import Bunch
+import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.signal_utils as signal_utils
@@ -670,7 +672,15 @@ class Clip(Model):
         
     @property
     def wav_file_url(self):
-        return reverse('clip-wav', args=(self.id,))            
+        return reverse('clip-wav', args=(self.id,))
+    
+    @property
+    def sound(self):
+        path = self.wav_file_path
+        (samples, sample_rate) = audio_file_utils.read_wave_file(path)
+        samples = samples[0]
+        return Bunch(samples=samples, sample_rate=sample_rate)
+
 
 
 def _create_clip_file_path(clip_id):

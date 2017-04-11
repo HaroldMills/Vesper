@@ -12,6 +12,7 @@ import vesper.util.vesper_path_utils as vesper_path_utils
 _EXTENSIONS_SPEC = '''
 
 Classifier:
+    - vesper.mpg_ranch.coarse_classifier.CoarseClassifier
     - vesper.mpg_ranch.outside_classifier.OutsideClassifier
     
 Command:
