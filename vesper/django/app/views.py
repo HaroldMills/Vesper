@@ -19,8 +19,8 @@ from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
-    AnnotationConstraint, AnnotationInfo, Clip, DeviceConnection, Job,
-    Recording, Station, StringAnnotation)
+    AnnotationConstraint, AnnotationInfo, Clip, Job, Recording, Station,
+    StringAnnotation)
 from vesper.singletons import job_manager, preference_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
@@ -215,7 +215,8 @@ def _create_classify_command_spec(form):
             'detectors': data['detectors'],
             'station_mics': data['station_mics'],
             'start_date': data['start_date'],
-            'end_date': data['end_date']
+            'end_date': data['end_date'],
+            'annotation_name': 'Classification'
         }
     }
 
@@ -403,13 +404,7 @@ def annotation(request, clip_id, annotation_name):
         clip = get_object_or_404(Clip, pk=clip_id)
         info = get_object_or_404(AnnotationInfo, name=name)
         value = _get_request_body_as_text(request).strip()
-        creation_time = time_utils.get_utc_now()
-        defaults = {
-            'value': value,
-            'creation_time': creation_time
-        }
-        StringAnnotation.objects.update_or_create(
-            clip=clip, info=info, defaults=defaults)
+        model_utils.annotate_clip(clip, info, value)
         return HttpResponse()
     
     elif request.method == 'DELETE':
@@ -462,11 +457,10 @@ def calendar(request):
     preference_manager.instance.reload_preferences()
     preferences = preference_manager.instance.preferences
 
-    station_mics = model_utils.get_station_mic_outputs()
-    get_name = model_utils.get_station_mic_output_ui_name
-    station_mic = _get_calendar_query_object(
-        station_mics, 'station_mic', params, preferences,
-        none_value=(None, None), name_getter=get_name)
+    sm_pairs = model_utils.get_station_mic_output_pairs_list()
+    get_ui_name = model_utils.get_station_mic_output_pair_ui_name
+    sm_pair = _get_calendar_query_object(
+        sm_pairs, 'station_mic', params, preferences, name_getter=get_ui_name)
     
     detectors = model_utils.get_processors('Detector')
     detector = _get_calendar_query_object(
@@ -476,19 +470,21 @@ def calendar(request):
     classification = _get_classification(classifications, params, preferences)
     
     periods_json = _get_periods_json(
-        station_mic, detector, 'Classification', classification)
+        sm_pair, detector, 'Classification', classification)
     
-    station_mic_names = [get_name(sm) for sm in station_mics]
-    station_mic_name = get_name(station_mic)
+    sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
+    sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
+    
     detector_names = [d.name for d in detectors]
+    detector_name = None if detector is None else detector.name
     
     context = {
         'navbar_items': _NAVBAR_ITEMS,
         'active_navbar_item': 'Calendar',
-        'station_mic_names': station_mic_names,
-        'station_mic_name': station_mic_name,
+        'station_mic_names': sm_pair_ui_names,
+        'station_mic_name': sm_pair_ui_name,
         'detector_names': detector_names,
-        'detector_name': detector.name,
+        'detector_name': detector_name,
         'classifications': classifications,
         'classification': classification,
         'periods_json': periods_json
@@ -498,11 +494,11 @@ def calendar(request):
     
     
 def _get_calendar_query_object(
-        objects, type_name, params, preferences, none_value=None,
+        objects, type_name, params, preferences,
         name_getter=lambda object: object.name):
     
     if len(objects) == 0:
-        return none_value
+        return None
     
     else:
         
@@ -709,15 +705,15 @@ def _get_station_microphone_outputs_json(station_microphone_outputs):
     return json.dumps(station_microphone_output_names)
 
 
-def _get_periods_json(station_mic, detector, annotation_name, annotation_value):
+def _get_periods_json(sm_pair, detector, annotation_name, annotation_value):
     
-    station, mic_output = station_mic
-    
-    if station is None or mic_output is None or detector is None:
+    if sm_pair is None or detector is None:
         return '[]'
     
     else:
         
+        station, mic_output = sm_pair
+    
         clip_counts = _get_clip_counts(
             station, mic_output, detector, annotation_name,
             annotation_value)
@@ -728,145 +724,19 @@ def _get_periods_json(station_mic, detector, annotation_name, annotation_value):
         return calendar_utils.get_calendar_periods_json(periods, clip_counts)
     
 
-def _get_recording_channel_num_pairs(
-        station, microphone_output, recorder_microphone_infos,
-        time_interval=None):
-    
-    """
-    Gets (recording, channel number) pairs for the specified station,
-    microphone output, and time interval. Each pair represents a
-    channel of a recording made at the specified station from the
-    specified microphone output whose interval intersects the specified
-    time interval.
-    
-    The time interval may be `None`, in which case all recordings made at
-    the station are returned. The start and/or end times of the time
-    interval may also be `None`, denoting times of minus and plus
-    infinity, respectively.
-    """
-    
-    # Get recordings for the specified station whose time intervals
-    # intersect the specified time interval.
-    recordings = _get_recordings(station, time_interval)
-         
-    # Limit the recordings to those that involved the specified
-    # microphone output.
-    microphone_output_id = microphone_output.id
-    pairs = []
-    for r in recordings:
-        channel_num = _get_microphone_output_channel_num(
-            r, microphone_output_id, recorder_microphone_infos)
-        if channel_num is not None:
-            pairs.append((r, channel_num))
-            
-    return pairs
-        
-
-def _get_recordings(station, time_interval=None):
-    
-    """
-    Gets the recordings made at the specified station whose time intervals
-    intersect the specified time interval.
-    
-    The time interval may be `None`, in which case all recordings made at
-    the station are returned. The start and/or end times of the time
-    interval may also be `None`, denoting times of minus and plus
-    infinity, respectively.
-    """
-    
-    
-    if time_interval is None:
-        # no time interval specified
-        
-        return Recording.objects.filter(station_recorder__station=station)
-    
-    else:
-        
-        start, end = time_interval
-        
-        if start is None and end is None:
-            # neither start nor end time specified
-            
-            return Recording.objects.filter(station_recorder__station=station)
-        
-        elif end is None:
-            # start time specified, but not end time
-            
-            return Recording.objects.filter(
-                station_recorder__station=station).exclude(
-                end_time__lte=start)
-                
-        elif start is None:
-            # end time specified, but not start time
-            
-            return Recording.objects.filter(
-                station_recorder__station=station).exclude(
-                start_time__gte=end)
-                
-        else:
-            # both start and end times specified
-            
-            return Recording.objects.filter(
-                station_recorder__station=station).exclude(
-                end_time__lte=start).exclude(
-                start_time__gte=end)
-
-            
-def _get_microphone_output_channel_num(
-        recording, microphone_output_id, recorder_microphone_infos):
-    
-    """
-    Gets the channel number of the specified microphone output in the
-    specified recording, or `None` if the microphone output was not
-    involved in the recording.
-    
-    `recorder_microphone_infos` is a mapping from
-    `(recorder_id, microphone_output_id)` pairs to lists of
-    `(channel_num, start_time, end_time)` bunches.
-    """
-    
-    # TODO: What should we do a situation in which a single microphone
-    # output is connected to more than one recorder input, for example
-    # with different input gains? In the following, we simply return
-    # the channel number of the first input we encounter. Any other
-    # inputs are ignored.
-    
-    recorder = recording.station_recorder.device
-    infos = recorder_microphone_infos[(recorder.id, microphone_output_id)]
-    start_time = recording.start_time
-    
-    for info in infos:
-        
-        if info.start_time <= start_time and start_time < info.end_time:
-            # Microphone output was connected to recorder input
-            # during recording. (We assume that equipment connections
-            # do not change during recordings, so that if a microphone
-            # output was connected to a recording's recorder at the
-            # beginning of the recording it remained connected througout
-            # the recording.)
-            
-            return info.channel_num
-        
-    # If we get here, the specified microphone output was not involved
-    # in the specified recording.
-    return None
-        
-    
 def night(request):
       
     params = request.GET
     
     # TODO: Type check and range check query items.
-    station_mic_name = params['station_mic']
+    sm_pair_ui_name = params['station_mic']
     detector_name = params['detector']
     annotation_name = 'Classification'
     annotation_value = params['classification']
     date = params['date']
       
-    station_mics = dict(
-        (model_utils.get_station_mic_output_ui_name(sm), sm)
-        for sm in model_utils.get_station_mic_outputs())
-    station, microphone_output = station_mics[station_mic_name]
+    sm_pairs = model_utils.get_station_mic_output_pairs_dict()
+    station, microphone_output = sm_pairs[sm_pair_ui_name]
     
     night = time_utils.parse_date(*date.split('-'))
     
@@ -875,9 +745,8 @@ def night(request):
     detector = model_utils.get_processor(detector_name, 'Detector')
     time_interval = station.get_night_interval_utc(night)
   
-    rm_infos = _get_recorder_microphone_infos(station, microphone_output)
-    rc_pairs = _get_recording_channel_num_pairs(
-        station, microphone_output, rm_infos, time_interval)
+    rc_pairs = model_utils.get_recording_channel_num_pairs(
+        station, microphone_output, time_interval)
     
     recordings = [recording for recording, _ in rc_pairs]
     recordings_json = _get_recordings_json(recordings, station)
@@ -910,7 +779,7 @@ def night(request):
     context = {
         'navbar_items': _NAVBAR_ITEMS,
         'active_navbar_item': '',
-        'station_mic_name': station_mic_name,
+        'station_mic_name': sm_pair_ui_name,
         'detector_name': detector_name,
         'classification': annotation_value,
         'date': date,
@@ -1121,7 +990,8 @@ def _get_clip_counts(
         annotation_value):
 
     time_zone = pytz.timezone(station.time_zone)
-    rm_infos = _get_recorder_microphone_infos(station, microphone_output)
+    rm_infos = model_utils.get_recorder_microphone_infos(
+        station, microphone_output)
     microphone_output_id = microphone_output.id
     
     recordings = Recording.objects.filter(station_recorder__station=station)
@@ -1129,7 +999,7 @@ def _get_clip_counts(
     
     for recording in recordings:
         
-        channel_num = _get_microphone_output_channel_num(
+        channel_num = model_utils.get_microphone_output_channel_num(
             recording, microphone_output_id, rm_infos)
         
         if channel_num is not None:
@@ -1166,38 +1036,6 @@ def _get_clip_counts(
     return clip_counts          
 
 
-def _get_recorder_microphone_infos(station, microphone_output):
-    
-    """
-    Gets a mapping from (recorder_id, microphone_output_id) pairs
-    to lists of (channel_num, start_time, end_time) bunches.
-    """
-    
-    # Get recorders that were used at station.
-    recorders = station.devices.filter(model__type='Audio Recorder')
-    
-    rm_infos = defaultdict(list)
-    
-    for recorder in recorders:
-        
-        key = (recorder.id, microphone_output.id)
-        
-        # Get connections from microphone to recorder.
-        connections = DeviceConnection.objects.filter(
-            output=microphone_output,
-            input__device=recorder)
-        
-        # Remember channel number and time interval of each connection.
-        for connection in connections:
-            info = Bunch(
-                channel_num=connection.input.channel_num,
-                start_time=connection.start_time,
-                end_time=connection.end_time)
-            rm_infos[key].append(info)
-            
-    return rm_infos
-        
-        
 def _get_night(utc_time, time_zone):
     local_time = utc_time.astimezone(time_zone)
     night = local_time.date()

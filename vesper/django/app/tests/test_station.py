@@ -107,3 +107,35 @@ class StationTests(TestCase):
         ]
         
         self._test_get_interval_utc(cases, self.station.get_night_interval_utc)
+        
+        
+    def test_get_day(self):
+        
+        cases = [
+            ((2017, 4, 10, 16), (2017, 4, 10)),
+            ((2017, 4, 10, 3, 59, 59), (2017, 4, 9)),
+            ((2017, 4, 10, 4), (2017, 4, 10))
+        ]
+        
+        self._test_get_date(cases, self.station.get_day)
+        
+        
+    def _test_get_date(self, cases, get_date):
+        for dt, expected in cases:
+            dt = datetime.datetime(*dt)
+            expected = datetime.date(*expected)
+            result = get_date(dt)
+            self.assertEqual(result, expected)
+
+
+    def test_get_night(self):
+        
+        cases = [
+            ((2017, 4, 10, 4), (2017, 4, 9)),
+            ((2017, 4, 10, 15, 59, 59), (2017, 4, 9)),
+            ((2017, 4, 10, 16), (2017, 4, 10))
+        ]
+        
+        self._test_get_date(cases, self.station.get_night)
+        
+        

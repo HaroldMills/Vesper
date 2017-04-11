@@ -26,6 +26,6 @@ class ClassifyForm(forms.Form):
         self.fields['detectors'].choices = [(d.name, d.name) for d in detectors]
         
         # Populate station/mics field.
-        names = model_utils.get_station_mic_output_ui_names()
+        names = model_utils.get_station_mic_output_pair_ui_names()
         choices = [(name, name) for name in names]
         self.fields['station_mics'].choices = choices

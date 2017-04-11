@@ -11,8 +11,8 @@
   {% load staticfiles %}
   <link rel="stylesheet" type="text/css" href="{% static 'vesper/calendar.css' %}">
   <script>
-    const stationMicName = "{{station_mic_name}}";
-    const detectorName = "{{detector_name}}";
+    const stationMicName = "{{station_mic_name|default_if_none:''}}";
+    const detectorName = "{{detector_name|default_if_none:''}}";
     const classification = "{{classification}}";
     const periods = {{periods_json|safe}};
   </script>

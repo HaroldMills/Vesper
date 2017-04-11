@@ -296,6 +296,14 @@ class Station(Model):
     
     def get_night_interval_utc(self, start_date, end_date=None):
         return _get_interval_utc(start_date, end_date, self.get_noon_utc)
+    
+    def get_day(self, dt):
+        return self.utc_to_local(dt).date()
+    
+    def get_night(self, dt):
+        local_dt = self.utc_to_local(dt)
+        date = local_dt.date()
+        return date if local_dt.hour >= 12 else date - _ONE_DAY
         
     def get_station_devices(self, device_type, start_time=None, end_time=None):
         
