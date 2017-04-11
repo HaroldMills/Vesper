@@ -8,13 +8,8 @@ or alter the classification of a clip that has already been classified.
 """
 
 
-import logging
-
 from vesper.command.annotator import Annotator
 import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
-
-
-_logger = logging.getLogger()
 
 
 class CoarseClassifier(Annotator):

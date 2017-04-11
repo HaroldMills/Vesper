@@ -14,6 +14,7 @@ _EXTENSIONS_SPEC = '''
 Classifier:
     - vesper.mpg_ranch.coarse_classifier.CoarseClassifier
     - vesper.mpg_ranch.outside_classifier.OutsideClassifier
+    - vesper.mpg_ranch.species_classifier.SpeciesClassifier
     
 Command:
     - vesper.command.classify_command.ClassifyCommand
