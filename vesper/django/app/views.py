@@ -15,7 +15,7 @@ import yaml
 
 from vesper.django.app.classify_form import ClassifyForm
 from vesper.django.app.detect_form import DetectForm
-# from vesper.django.app.export_clips_form import ExportClipsForm
+from vesper.django.app.export_clips_form import ExportClipsForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
@@ -199,9 +199,6 @@ def classify(request):
     }
      
     return render(request, 'vesper/classify.html', context)
-
-#     return _render_coming_soon(
-#         request, 'Classify', 'Classification is coming soon!')
     
     
 def _create_classify_command_spec(form):
@@ -212,11 +209,11 @@ def _create_classify_command_spec(form):
         'name': 'classify',
         'arguments': {
             'classifier': data['classifier'],
+            'annotation_name': 'Classification',
             'detectors': data['detectors'],
             'station_mics': data['station_mics'],
             'start_date': data['start_date'],
-            'end_date': data['end_date'],
-            'annotation_name': 'Classification'
+            'end_date': data['end_date']
         }
     }
 
@@ -237,34 +234,29 @@ def export_clip_metadata(request):
 
 @csrf_exempt
 def export_clips(request):
-    return _render_coming_soon(
-        request, 'Clip Export',
-        'Clip export is coming soon!')
     
-#     if request.method in _GET_AND_HEAD:
-#         form = ExportClipsForm()
-#         
-#     elif request.method == 'POST':
-#  
-#         form = ExportClipsForm(request.POST)
-#          
-#         if form.is_valid():
-#             return _render_coming_soon(
-#                 request, 'Clip Export', 'Clip export is coming soon!')
-# #             command_spec = _create_export_clips_command_spec(form)
-# #             job_id = job_manager.instance.start_job(command_spec)
-# #             return _create_job_redirect_response(job_id))
-#             
-#     else:
-#         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
-#     
-#     context = {
-#         'navbar_items': _NAVBAR_ITEMS,
-#         'active_navbar_item': 'Export',
-#         'form': form
-#     }
-#     
-#     return render(request, 'vesper/export-clips.html', context)
+    if request.method in _GET_AND_HEAD:
+        form = ExportClipsForm()
+         
+    elif request.method == 'POST':
+  
+        form = ExportClipsForm(request.POST)
+          
+        if form.is_valid():
+            command_spec = _create_export_clips_command_spec(form)
+            job_id = job_manager.instance.start_job(command_spec)
+            return _create_job_redirect_response(job_id)
+             
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+     
+    context = {
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Export',
+        'form': form
+    }
+     
+    return render(request, 'vesper/export-clips.html', context)
 
 
 def _create_export_clips_command_spec(form):
@@ -274,10 +266,6 @@ def _create_export_clips_command_spec(form):
     return {
         'name': 'export',
         'arguments': {
-            'station_microphones': data['station_mics'],
-            'detectors': data['detectors'],
-            'start_date': data['start_date'],
-            'end_date': data['end_date'],
             'exporter': {
                 'name': 'Clip Exporter',
                 'arguments': {
@@ -287,7 +275,11 @@ def _create_export_clips_command_spec(form):
                         # TODO: Add arguments for format control?
                     }
                 }
-            }
+            },
+            'detectors': data['detectors'],
+            'station_mics': data['station_mics'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date']
         }
     }
 

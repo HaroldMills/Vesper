@@ -247,35 +247,38 @@ def get_processor(name, type):
     return Processor.objects.get(name=name, type=type)
 
 
-def clip_generator(detector_names, sm_pair_ui_names, start_date, end_date):
+def create_clip_iterator(
+        detector_names, sm_pair_ui_names, start_date, end_date):
 
-        detectors = [ _get_detector(name) for name in detector_names]
+    """Generator that returns a clip iterator."""
+    
+    detectors = [ _get_detector(name) for name in detector_names]
 
-        sm_pairs_dict = get_station_mic_output_pairs_dict()
-        sm_pairs = [sm_pairs_dict[name] for name in sm_pair_ui_names]
+    sm_pairs_dict = get_station_mic_output_pairs_dict()
+    sm_pairs = [sm_pairs_dict[name] for name in sm_pair_ui_names]
+    
+    for detector in detectors:
         
-        for detector in detectors:
+        for station, mic_output in sm_pairs:
             
-            for station, mic_output in sm_pairs:
+            start_time = station.get_noon_utc(start_date)
+            end_time = station.get_noon_utc(end_date + _ONE_DAY)
+            interval = (start_time, end_time)
+            
+            rc_pairs = get_recording_channel_num_pairs(
+                station, mic_output, interval)
+            
+            for recording, channel_num in rc_pairs:
                 
-                start_time = station.get_noon_utc(start_date)
-                end_time = station.get_noon_utc(end_date + _ONE_DAY)
-                interval = (start_time, end_time)
+                clips = Clip.objects.filter(
+                    recording=recording,
+                    channel_num=channel_num,
+                    start_time__lt=end_time,
+                    end_time__gt=start_time,
+                    creating_processor=detector)
                 
-                rc_pairs = get_recording_channel_num_pairs(
-                    station, mic_output, interval)
-                
-                for recording, channel_num in rc_pairs:
-                    
-                    clips = Clip.objects.filter(
-                        recording=recording,
-                        channel_num=channel_num,
-                        start_time__lt=end_time,
-                        end_time__gt=start_time,
-                        creating_processor=detector)
-                    
-                    for clip in clips:
-                        yield clip
+                for clip in clips:
+                    yield clip
 
 
 def _get_detector(name):

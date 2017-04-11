@@ -2,10 +2,15 @@
 
 
 import logging
+import os.path
 
-from vesper.django.app.models import Job
+from vesper.command.command import CommandExecutionError
 from vesper.singletons import extension_manager
 import vesper.command.command_utils as command_utils
+import vesper.util.os_utils as os_utils
+
+
+_logger = logging.getLogger()
 
 
 class ClipExporter:
@@ -24,76 +29,69 @@ class ClipExporter:
     
     
     def __init__(self, args):
-        
-        
-        self.output_dir_path = command_utils.get_required_arg(
-            'output_dir_path', args)
-        
-        spec = command_utils.get_required_arg(
-            'clip_file_name_formatter', args)
-        self.file_name_formatter = _create_file_name_formatter(spec)
+    
+        get = command_utils.get_required_arg
+        self._output_dir_path = get('output_dir_path', args)
+        spec = get('clip_file_name_formatter', args)
+         
+        self._file_name_formatter = _create_file_name_formatter(spec)
     
     
-    def execute(self, job_info):
-        
-        self._job = Job.objects.get(id=job_info.job_id)
-        self._logger = logging.getLogger()
-        
+    def begin_exports(self):
         try:
-            self._logger.info('ClipExporter.execute')
-            self._logger.info(str(self.file_name_formatter))
-#             recordings = self._get_recordings()
-#             self._log_recordings(recordings)
-#             with transaction.atomic():
-#                 self._add_recordings(recordings)
-            
-        except Exception as e:
-            self._logger.error((
-                'Recording import failed with an exception.\n'
-                'The exception message was:\n'
-                '    {}\n'
-                'The archive was not modified.\n'
-                'See below for exception traceback.').format(str(e)))
-            raise
-
-        return True
-            
-            
-# def _get_clip_query(keyword_args):
-#     station_names = get_station_names(keyword_args)
-#     detector_names = get_detector_names(keyword_args)
-#     clip_class_names = get_clip_class_names(keyword_args)
-#     start_night, end_night = get_nights(keyword_args)
-#     return (station_names, detector_names, clip_class_names, start_night,
-#             end_night)
-
-
-def _create_file_name_formatter(spec):
+            os_utils.create_directory(self._output_dir_path)
+        except OSError as e:
+            raise CommandExecutionError(str(e))
+        pass
     
+    
+    def export(self, clip):
+        file_name = self._file_name_formatter.get_file_name(clip)
+        file_path = os.path.join(self._output_dir_path, file_name)
+        with open(file_path, 'wb') as file_:
+            file_.write(clip.wav_file_contents)
+        
+        
+    def end_exports(self):
+        pass
+            
+            
+def _create_file_name_formatter(spec):
     formatter_classes = \
         extension_manager.instance.get_extensions('Clip File Name Formatter')
     formatter_class = formatter_classes[spec['name']]
     return formatter_class()
-
-
+ 
+ 
 class SimpleClipFileNameFormatter:
-    
+     
     """Formats clip file names."""
-    
-    
+     
+     
     extension_name = 'Simple Clip File Name Formatter'
-    
-    
-    def format_file_name(self, clip):
-    
+     
+     
+    def get_file_name(self, clip):
+     
         """Creates a file name for the specified clip."""
         
-        return 'clip_{}.wav'.format(clip.id)
+        station_name = clip.station.name
+        channel_num = clip.channel_num
+        detector_name = _get_detector_name(clip)
+        start_time = _format_start_time(clip)
+        
+        return '{}_{}_{}_{}.wav'.format(
+            station_name, channel_num, detector_name, start_time)
 
 
-# def _create_clip_file_name(station_name, detector_name, start_time):
-#     ms = int(round(start_time.microsecond / 1000.))
-#     start_time = start_time.strftime('%Y-%m-%d_%H.%M.%S') + \
-#         '.{:03d}'.format(ms) + '_Z'
-#     return '{:s}_{:s}_{:s}{:s}'.format(
-#         station_name, detector_name, start_time, _CLIP_FILE_NAME_EXTENSION)
+def _get_detector_name(clip):
+    if clip.creating_processor is None:
+        return 'Unknown'
+    else:
+        return clip.creating_processor.name
+    
+    
+def _format_start_time(clip):
+    time = clip.start_time
+    ms = int(round(time.microsecond / 1000.))
+    return time.strftime('%Y-%m-%d_%H.%M.%S') + '.{:03d}'.format(ms) + '_Z'
