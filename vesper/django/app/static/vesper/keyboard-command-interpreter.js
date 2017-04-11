@@ -206,9 +206,9 @@ class KeyboardCommandInterpreter {
 		} else {
 			// `name` is not a prefix of any command name
 			
-			throw new Error(`Unrecognized command name "${name}".`);
 			this._clearCommandNameBuffer();
 			this._environment.clearLocals();
+			throw new Error(`Unrecognized command name "${name}".`);
 			
 		}
 				
