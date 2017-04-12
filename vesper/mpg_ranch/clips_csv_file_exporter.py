@@ -429,16 +429,29 @@ class ClipClassMeasurement(object):
         return _get_classification(clip)
     
     
-_CLASSIFICATION_ANNOTATION_INFO = \
-    AnnotationInfo.objects.get(name='Classification')
+_classification_annotation_info = None
+
+
+def _get_classification_annotation_info():
+    
+    global _classification_annotation_info
+    
+    if _classification_annotation_info is None:
+        _classification_annotation_info = \
+            AnnotationInfo.objects.get(name='Classification')
+            
+    return _classification_annotation_info
 
 
 def _get_classification(clip):
+    
     try:
         annotation = StringAnnotation.objects.get(
-            clip=clip, info=_CLASSIFICATION_ANNOTATION_INFO)
+            clip=clip, info=_get_classification_annotation_info())
+        
     except StringAnnotation.DoesNotExist:
         return None
+    
     else:
         return annotation.value
     
@@ -452,9 +465,12 @@ class DetectorMeasurement(object):
     
     
 def _get_detector_name(clip):
+    
     processor = clip.creating_processor
+    
     if processor is None:
         return None
+    
     else:
         return processor.name.split()[-1]
 
