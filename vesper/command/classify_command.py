@@ -125,6 +125,8 @@ _LOGGING_PERIOD = 500    # clips
 
 def _classify_clips(clips, classifier):
     
+    _logger.info('Beginning classification...')
+    
     classifier.begin_annotations()
     
     visited_count = 0

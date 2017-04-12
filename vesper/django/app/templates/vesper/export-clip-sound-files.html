@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Export Clip Sound Files - Vesper</title>
+  {% include "vesper/header-prefix.html" %}
+  {% load staticfiles %}
+  {% load vesper_extras %}
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/command-form.css' %}">
+</head>
+
+<body>
+
+  {% include "vesper/navbar.html" %}
+
+  <h2>Export Clip Sound Files</h2>
+  
+  <p>
+    Exports clips to .wav files. The clips are specified as a set of one
+    or more detectors, one or more station/mic combinations, and a range
+    of dates. The sound files are written to the specified output directory
+    on the server. The export runs as a Vesper job. [In the future, you
+    will be able to choose the classes of clips to be exported. The clips
+    will also be delivered via your browser rather than via the server
+    file system.] 
+  </p>
+  
+  <!-- 
+    TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
+    of form elements. Or perhaps use django-bootstrap3 app? See
+    http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
+   -->
+   
+  <form class="form" role="form" action="{% url 'export-clip-sound-files' %}" method="post">
+
+    {{ form.detectors|block_form_element }}
+    {{ form.station_mics|block_form_element }}
+    {{ form.start_date|form_element }}
+    {{ form.end_date|form_element }}
+    {{ form.output_dir_path|block_form_element }}
+
+    <button type="submit" class="btn btn-default form-spacing command-form-spacing">Export</button>
+
+  </form>
+
+</body>
+
+</html>

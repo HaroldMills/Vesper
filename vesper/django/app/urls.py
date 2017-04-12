@@ -17,9 +17,10 @@ urlpatterns = [
                
     url(r'^detect$', views.detect, name='detect'),
     url(r'^classify$', views.classify, name='classify'),
-    url(r'^export-clip-metadata$', views.export_clip_metadata,
-        name='export-clip-metadata'),
-    url(r'^export-clips$', views.export_clips, name='export-clips'),
+    url(r'^export-clips-csv-file$', views.export_clips_csv_file,
+        name='export-clips-csv-file'),
+    url(r'^export-clip-sound-files$', views.export_clip_sound_files,
+        name='export-clip-sound-files'),
     
     url(r'^stations/$', views.stations, name='stations'),
     

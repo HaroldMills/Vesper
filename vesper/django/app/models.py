@@ -521,14 +521,6 @@ class Recording(Model):
         related_name='recordings',
         related_query_name='recording')
     
-    @property
-    def station(self):
-        return self.station_recorder.station
-    
-    @property
-    def recorder(self):
-        return self.station_recorder.device
-    
     def __str__(self):
         return '{} / {} / {}'.format(
             self.station.name, self.recorder.name, self.start_time)
@@ -537,7 +529,23 @@ class Recording(Model):
         unique_together = ('station_recorder', 'start_time')
         db_table = 'vesper_recording'
         
-        
+    @property
+    def station(self):
+        return self.station_recorder.station
+    
+    @property
+    def recorder(self):
+        return self.station_recorder.device
+    
+    @property
+    def duration(self):
+        return signal_utils.get_duration(self.length, self.sample_rate)
+    
+    @property
+    def span(self):
+        return signal_utils.get_span(self.length, self._sample_rate)
+    
+    
 class RecordingFile(Model):
     
     recording = ForeignKey(
@@ -558,11 +566,9 @@ class RecordingFile(Model):
         unique_together = ('recording', 'file_num')
         db_table = 'vesper_recording_file'
         
-        
     @property
     def sample_rate(self):
         return self.recording.sample_rate
-    
     
     @property
     def duration(self):
@@ -680,6 +686,22 @@ class Clip(Model):
         (samples, sample_rate) = audio_file_utils.read_wave_file(path)
         samples = samples[0]
         return Bunch(samples=samples, sample_rate=sample_rate)
+    
+    @property
+    def duration(self):
+        return signal_utils.get_duration(self.length, self.sample_rate)
+    
+    @property
+    def span(self):
+        return signal_utils.get_span(self.length, self._sample_rate)
+
+    @property
+    def day(self):
+        return self.station.get_day(self.start_time)
+    
+    @property
+    def night(self):
+        return self.station.get_night(self.start_time)
 
 
 

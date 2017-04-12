@@ -1,4 +1,4 @@
-"""Module containing class `ClipExporter`."""
+"""Module containing class `ClipSoundFilesExporter`."""
 
 
 import logging
@@ -13,10 +13,10 @@ import vesper.util.os_utils as os_utils
 _logger = logging.getLogger()
 
 
-class ClipExporter:
+class ClipSoundFilesExporter:
     
     """
-    Exports clips to sound files.
+    Exports clip sound files.
     
     The sound files are written to the server-side directory specified in
     the `output_dir_path` argument. The name of each sound file is
@@ -25,7 +25,7 @@ class ClipExporter:
     """
         
     
-    extension_name = 'Clip Exporter'
+    extension_name = 'Clip Sound Files'
     
     
     def __init__(self, args):
@@ -42,7 +42,6 @@ class ClipExporter:
             os_utils.create_directory(self._output_dir_path)
         except OSError as e:
             raise CommandExecutionError(str(e))
-        pass
     
     
     def export(self, clip):
@@ -57,15 +56,15 @@ class ClipExporter:
             
             
 def _create_file_name_formatter(spec):
-    formatter_classes = \
-        extension_manager.instance.get_extensions('Clip File Name Formatter')
+    formatter_classes = extension_manager.instance.get_extensions(
+        'Clip File Name Formatter')
     formatter_class = formatter_classes[spec['name']]
     return formatter_class()
  
  
 class SimpleClipFileNameFormatter:
      
-    """Formats clip file names."""
+    """Formats clip sound file names."""
      
      
     extension_name = 'Simple Clip File Name Formatter'
@@ -73,7 +72,7 @@ class SimpleClipFileNameFormatter:
      
     def get_file_name(self, clip):
      
-        """Creates a file name for the specified clip."""
+        """Creates a sound file name for the specified clip."""
         
         station_name = clip.station.name
         channel_num = clip.channel_num

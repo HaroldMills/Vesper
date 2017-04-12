@@ -110,10 +110,12 @@ def _log_fatal_exception(message_prefix, exception):
             message_prefix, str(exception)))
 
 
-_LOGGING_PERIOD = 1000    # clips
+_LOGGING_PERIOD = 500    # clips
 
 
 def _export_clips(clips, exporter):
+    
+    _logger.info('Beginning export...')
     
     exporter.begin_exports()
     

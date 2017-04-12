@@ -24,7 +24,8 @@ Command:
     - vesper.command.test_command.TestCommand
     
 Exporter:
-    - vesper.command.clip_exporter.ClipExporter
+    - vesper.command.clip_sound_files_exporter.ClipSoundFilesExporter
+    - vesper.mpg_ranch.clips_csv_file_exporter.ClipsCsvFileExporter
     
 Importer:
     - vesper.command.archive_data_importer.ArchiveDataImporter
@@ -39,7 +40,7 @@ Recording File Parser:
     - vesper.mpg_ranch.recording_file_parser.RecordingFileParser
     
 Clip File Name Formatter:
-    - vesper.command.clip_exporter.SimpleClipFileNameFormatter
+    - vesper.command.clip_sound_files_exporter.SimpleClipFileNameFormatter
     
 '''
 

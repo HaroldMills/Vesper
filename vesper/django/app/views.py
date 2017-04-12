@@ -15,7 +15,10 @@ import yaml
 
 from vesper.django.app.classify_form import ClassifyForm
 from vesper.django.app.detect_form import DetectForm
-from vesper.django.app.export_clips_form import ExportClipsForm
+from vesper.django.app.export_clip_sound_files_form import \
+    ExportClipSoundFilesForm
+from vesper.django.app.export_clips_csv_file_form import \
+    ExportClipsCsvFileForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
@@ -94,11 +97,11 @@ _NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
 - name: Export
   dropdown:
   
-      - name: Clip Metadata
-        url: export-clip-metadata
+      - name: Clips CSV File
+        url: export-clips-csv-file
         
-      - name: Clips
-        url: export-clips
+      - name: Clip Sound Files
+        url: export-clip-sound-files
   
 '''))
 
@@ -226,24 +229,18 @@ def import_(request):
     return render(request, 'vesper/import.html', context)
     
     
-def export_clip_metadata(request):
-    return _render_coming_soon(
-        request, 'Clip Metadata Export',
-        'Clip metadata export is coming soon!')
-
-
 @csrf_exempt
-def export_clips(request):
+def export_clips_csv_file(request):
     
     if request.method in _GET_AND_HEAD:
-        form = ExportClipsForm()
+        form = ExportClipsCsvFileForm()
          
     elif request.method == 'POST':
   
-        form = ExportClipsForm(request.POST)
+        form = ExportClipsCsvFileForm(request.POST)
           
         if form.is_valid():
-            command_spec = _create_export_clips_command_spec(form)
+            command_spec = _create_export_clips_csv_file_command_spec(form)
             job_id = job_manager.instance.start_job(command_spec)
             return _create_job_redirect_response(job_id)
              
@@ -256,10 +253,10 @@ def export_clips(request):
         'form': form
     }
      
-    return render(request, 'vesper/export-clips.html', context)
+    return render(request, 'vesper/export-clips-csv-file.html', context)
 
 
-def _create_export_clips_command_spec(form):
+def _create_export_clips_csv_file_command_spec(form):
     
     data = form.cleaned_data
     
@@ -267,7 +264,55 @@ def _create_export_clips_command_spec(form):
         'name': 'export',
         'arguments': {
             'exporter': {
-                'name': 'Clip Exporter',
+                'name': 'MPG Ranch Clips CSV File',
+                'arguments': {
+                    'output_file_path': data['output_file_path'],
+                }
+            },
+            'detectors': data['detectors'],
+            'station_mics': data['station_mics'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date']
+        }
+    }
+
+
+@csrf_exempt
+def export_clip_sound_files(request):
+    
+    if request.method in _GET_AND_HEAD:
+        form = ExportClipSoundFilesForm()
+         
+    elif request.method == 'POST':
+  
+        form = ExportClipSoundFilesForm(request.POST)
+          
+        if form.is_valid():
+            command_spec = _create_export_clip_sound_files_command_spec(form)
+            job_id = job_manager.instance.start_job(command_spec)
+            return _create_job_redirect_response(job_id)
+             
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+     
+    context = {
+        'navbar_items': _NAVBAR_ITEMS,
+        'active_navbar_item': 'Export',
+        'form': form
+    }
+     
+    return render(request, 'vesper/export-clip-sound-files.html', context)
+
+
+def _create_export_clip_sound_files_command_spec(form):
+    
+    data = form.cleaned_data
+    
+    return {
+        'name': 'export',
+        'arguments': {
+            'exporter': {
+                'name': 'Clip Sound Files',
                 'arguments': {
                     'output_dir_path': data['output_dir_path'],
                     'clip_file_name_formatter': {

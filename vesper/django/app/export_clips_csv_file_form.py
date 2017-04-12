@@ -3,7 +3,7 @@ from django import forms
 import vesper.django.app.model_utils as model_utils
 
 
-class ExportClipsForm(forms.Form):
+class ExportClipsCsvFileForm(forms.Form):
     
 
     detectors = forms.MultipleChoiceField(label='Detectors')
@@ -21,8 +21,8 @@ class ExportClipsForm(forms.Form):
     
     end_date = forms.DateField(label='End date')
     
-    output_dir_path = forms.CharField(
-        label='Output directory', max_length=255,
+    output_file_path = forms.CharField(
+        label='Output file', max_length=255,
         widget=forms.TextInput(attrs={'class': 'command-form-wide-input'}))
     
     
