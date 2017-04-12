@@ -95,7 +95,7 @@ class JobManager:
 def _create_job(command_spec):
     
     # TODO: This should be the logged-in user.
-    user = User.objects.get(username='Harold')
+    user = User.objects.get(username='Vesper')
     
     job = Job(
         command=json.dumps(command_spec, default=_json_date_serializer),
