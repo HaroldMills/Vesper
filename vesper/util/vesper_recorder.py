@@ -98,21 +98,29 @@ class VesperRecorder:
         
 def _create_and_start_recorder(message):
     
+    _logger.info('Getting home directory path...')
+    
     home_dir_path = os.environ.get(_HOME_DIR_VAR_NAME)
      
-    # Check that home directori path environment variable is set.
+    _logger.info('Checking home directory path 1...')
+    
+    # Check that home directory path environment variable is set.
     if home_dir_path is None:
         _logger.error(
             'Required {} environment variable is not set.'.format(
                 _HOME_DIR_VAR_NAME))
         return None
          
+    _logger.info('Checking home directory path 2...')
+    
     # Check that home directory exists.
     if not os.path.exists(home_dir_path):
         _logger.error(
             'Recorder home directory "{}" does not exist.'.format(
                 home_dir_path))
         return None
+    
+    _logger.info('Adding file logging...')
     
     # Now that we know that we have a home directory, and hence a place
     # for a log file, add file logging.
@@ -129,6 +137,8 @@ def _create_and_start_recorder(message):
                 config_file_path))
         return None
         
+    _logger.info('Parsing configuration file...')
+    
     # Parse configuration file.
     try:
         config = _parse_config_file(
@@ -143,6 +153,8 @@ def _create_and_start_recorder(message):
         'Starting recorder with HTTP server at port {}.'.format(
             config.port_num))
     
+    _logger.info('Creating recorder...')
+    
     # Create recorder.
     try:
         recorder = VesperRecorder(config)
@@ -151,6 +163,8 @@ def _create_and_start_recorder(message):
             'Could not create recorder. Error message was: {}'.format(str(e)))
         return None
            
+    _logger.info('Starting recorder...')
+    
     # Start recorder. 
     try:
         recorder.start()
@@ -158,6 +172,8 @@ def _create_and_start_recorder(message):
         _logger.error(
             'Could not start recorder. Error message was: {}'.format(str(e)))
         return None
+    
+    _logger.info('Done.')
     
     # Phew. We made it!
     return recorder
@@ -249,7 +265,7 @@ def _get_default_input_device_index():
         info = pa.get_default_input_device_info()
         
     except IOError:
-        raise ValueError('No default input device available.')
+        raise ValueError('Could not get default input device info.')
     
     finally:
         pa.terminate()
@@ -271,7 +287,7 @@ def _get_input_device_index_from_device_name(name):
     infos = [i for i in infos if i['maxInputChannels'] != 0]
     
     if len(infos) == 0:
-        raise ValueError('No input devices available.')
+        raise ValueError('No input devices were found.')
     
     # Find infos for devices whose names include `name`.
     infos = [i for i in infos if name in i['name']]
@@ -422,7 +438,7 @@ _PAGE = '''<!DOCTYPE html>
 </head>
 <body>
 
-<h1>Vesper Recorder</h1>
+<h1>Vesper Recorder 0.1.1</h1>
 
 <p>
 Welcome to the Vesper Recorder! This page displays information regarding
@@ -435,9 +451,8 @@ your recorder. Refresh the page to update the information.
 <h2>Station Configuration</h2>
 {}
 
-<h2>Available Input Devices</h2>
+<h2>Input Devices</h2>
 {}
-<p>An asterisk marks the configured input device.</p>
 
 <h2>Input Configuration</h2>
 {}
@@ -560,15 +575,22 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
     
     
     def _create_devices_table(self, devices):
-        recorder = self.server._recording_data.recorder
-        selected_device_index = recorder.input_device_index
-        rows = [
-            self._create_devices_table_row(d, selected_device_index)
-            for d in devices]
-        header = ('Index', 'Name', 'Number of Channels')
-        return _create_table(
-            rows, header)
-    
+        
+        if len(devices) == 0:
+            return '<p>No input devices were found.</p>'
+        
+        else:
+            recorder = self.server._recording_data.recorder
+            selected_device_index = recorder.input_device_index
+            rows = [
+                self._create_devices_table_row(d, selected_device_index)
+                for d in devices]
+            header = ('Index', 'Name', 'Number of Channels')
+            table = _create_table(rows, header)
+            if selected_device_index < len(devices):
+                table += '<p>* Selected input device.</p>'
+            return table
+
     
     def _create_devices_table_row(self, device, selected_device_index):
         prefix = '*' if device.index == selected_device_index else ''
@@ -577,9 +599,18 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
     
     
     def _create_input_table(self, devices, recorder):
+        
+        device_index = recorder.input_device_index
+        
+        if device_index < len(devices):
+            device_name = devices[device_index].name
+        else:
+            message = 'There is no input device with index {}.'
+            device_name = message.format(device_index)
+            
         rows = (
-            ('Device Index', recorder.input_device_index),
-            ('Device Name', devices[recorder.input_device_index].name),
+            ('Device Index', device_index),
+            ('Device Name', device_name),
             ('Number of Channels', recorder.num_channels),
             ('Sample Rate (Hz)', recorder.sample_rate),
             ('Buffer Size (seconds)', recorder.buffer_size)

@@ -19,11 +19,9 @@ longitude: -76.5000
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones.
 time_zone: US/Eastern
 
-# The index of the input device to record with. The recorder displays
-# a list of input devices, including their indices, on the console when
-# it starts. You can also see the list of devices at the web page of
-# the recorder. The web page is at the URL http://localhost:<port_num>,
-# where <port_num> is as specified below.
+# The index of the input device to record with. You can see a list of
+# input devices at the web page of the recorder. The web page is at the
+# URL http://localhost:<port_num>, where <port_num> is as specified below.
 input_device: 1
 
 # The number of channels to record.

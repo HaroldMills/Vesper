@@ -13,7 +13,7 @@ def _main():
          
     else:
          
-        print('Available input devices:')
+        print('Input devices:')
          
         default_found = False
          
