@@ -8,7 +8,8 @@ import os
 from django.db import transaction
 
 from vesper.command.command import CommandExecutionError
-from vesper.django.app.models import Job, Recording, RecordingFile, Station
+from vesper.django.app.models import (
+    DeviceConnection, Job, Recording, RecordingChannel, RecordingFile, Station)
 from vesper.singletons import extension_manager, preset_manager
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
@@ -111,12 +112,20 @@ class RecordingImporter:
         else:
             
             try:
-                return self.file_parser.parse_file(file_path)
+                f = self.file_parser.parse_file(file_path)
             
             except ValueError as e:
                 raise CommandExecutionError(
                     'Error parsing recording file "{}": {}'.format(
                         file_path, str(e)))
+                
+            if f.recorder is None:
+                f.recorder = _get_recorder(f)
+                
+            if f.recorder_channel_nums is None:
+                f.recorder_channel_nums = _get_recorder_channel_nums(f)
+                
+            return f
             
     
     def _log_recordings(self, recordings):
@@ -124,17 +133,13 @@ class RecordingImporter:
         log = self._logger.info
         log('recordings:')
         for r in recordings:
-            station = r.station_recorder.station
-            recorder = r.station_recorder.device
             log('    {} {} {} {} {} {}'.format(
-                station.name, recorder.name,
-                r.num_channels, r.length, r.sample_rate, str(r.start_time)))
+                r.station.name, r.recorder.name, r.num_channels, r.length,
+                r.sample_rate, str(r.start_time)))
             for f in r.files:
-                station = f.station_recorder.station
-                recorder = f.station_recorder.device
                 log('        {} {} {} {} {} {} {}'.format(
-                    f.path, station.name, recorder.name,
-                    f.num_channels, f.length, f.sample_rate, str(f.start_time)))
+                    f.path, f.station.name, r.recorder.name, f.num_channels,
+                    f.length, f.sample_rate, str(f.start_time)))
 
 
     def _add_recordings(self, recordings):
@@ -147,7 +152,8 @@ class RecordingImporter:
             creation_time = time_utils.get_utc_now()
             
             recording = Recording(
-                station_recorder=r.station_recorder,
+                station=r.station,
+                recorder=r.recorder,
                 num_channels=r.num_channels,
                 length=r.length,
                 sample_rate=r.sample_rate,
@@ -158,13 +164,36 @@ class RecordingImporter:
             
             recording.save()
             
-            start_index = 0
+            mic_outputs = _get_recorder_mic_outputs(
+                recording.recorder, recording.start_time)
             
-            for i, f in enumerate(r.files):
+            for channel_num in range(r.num_channels):
+                
+                recorder_channel_num = r.recorder_channel_nums[channel_num]
+                
+                mic_output = mic_outputs.get(recorder_channel_num)
+            
+                if mic_output is None:
+                    raise CommandExecutionError((
+                        'Could not find mic output connected to recorder '
+                        'input channel {} for recording "{}".').format
+                            (recorder_channel_num, str(recording)))
+                
+                channel = RecordingChannel(
+                    recording=recording,
+                    channel_num=channel_num,
+                    recorder_channel_num=recorder_channel_num,
+                    mic_output=mic_output)
+                
+                channel.save()
+                
+            start_index = 0         
+            
+            for file_num, f in enumerate(r.files):
                 
                 file = RecordingFile(
                     recording=recording,
-                    file_num=i,
+                    file_num=file_num,
                     start_index=start_index,
                     length=f.length,
                     path=f.path)
@@ -172,8 +201,8 @@ class RecordingImporter:
                 file.save()
                 
                 start_index += f.length
-            
-            
+
+
 def _create_file_parser(spec):
     
     # Get stations.
@@ -190,3 +219,55 @@ def _create_file_parser(spec):
     station_name_aliases = preset.data
     
     return parser_class(stations, station_name_aliases)
+
+
+def _get_recorder(file):
+    
+    end_time = signal_utils.get_end_time(
+        file.start_time, file.length, file.sample_rate)
+
+    station_recorders = file.station.get_station_devices(
+        'Audio Recorder', file.start_time, end_time)
+    
+    if len(station_recorders) == 0:
+        raise CommandExecutionError('Could not find recorder for file.')
+    
+    elif len(station_recorders) > 1:
+        raise CommandExecutionError(
+            'Found more than one possible recorder for file.')
+    
+    else:
+        return station_recorders[0].device
+        
+        
+def _get_recorder_channel_nums(file):
+    
+    """
+    Gets a tuple that maps recording channel numbers to recorder input
+    channel numbers.
+    """
+    
+    # At present we assume that unless a recording file parser tells us
+    # otherwise (for example, based on information in a recording file
+    # name or contents), the mapping from recording channel numbers to
+    # recorder channel numbers is the identity.
+    
+    return tuple(range(file.num_channels))
+            
+            
+def _get_recorder_mic_outputs(recorder, time):
+     
+    """
+    Gets a mapping from recorder input channel numbers to connected
+    microphone outputs for the specified recorder and time.
+    """
+     
+    connections = DeviceConnection.objects.filter(
+        input__device=recorder,
+        output__device__model__type='Microphone',
+        start_time__lte=time,
+        end_time__gt=time)
+     
+    print('model_utils.get_recorder_mic_outputs', connections.query)
+     
+    return dict((c.input.channel_num, c.output) for c in connections)

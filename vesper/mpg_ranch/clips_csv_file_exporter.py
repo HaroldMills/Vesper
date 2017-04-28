@@ -371,7 +371,7 @@ class AstronomicalDawnMeasurement(object):
 
 def _get_time(clip, event, increment_date=False):
     
-    date = clip.night
+    date = clip.date
     if increment_date:
         date += datetime.timedelta(days=1)
     
@@ -613,7 +613,7 @@ class NightMeasurement(object):
     name = 'Night'
     
     def measure(self, clip):
-        return clip.night
+        return clip.date
     
     
 class RecordingDurationMeasurement(object):

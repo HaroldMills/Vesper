@@ -114,7 +114,7 @@ class DetectCommand(Command):
         time_interval = station.get_night_interval_utc(start_date, end_date)
         
         return Recording.objects.filter(
-            station_recorder__station=station,
+            station=station,
             start_time__range=time_interval)
 
 

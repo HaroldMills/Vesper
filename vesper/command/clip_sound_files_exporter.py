@@ -75,14 +75,24 @@ class SimpleClipFileNameFormatter:
         """Creates a sound file name for the specified clip."""
         
         station_name = clip.station.name
-        channel_num = clip.channel_num
+        mic_output_name = _get_mic_output_name(clip)
         detector_name = _get_detector_name(clip)
         start_time = _format_start_time(clip)
         
         return '{}_{}_{}_{}.wav'.format(
-            station_name, channel_num, detector_name, start_time)
+            station_name, mic_output_name, detector_name, start_time)
 
 
+_SUFFIX = ' Output'
+
+
+def _get_mic_output_name(clip):
+    name = clip.mic_output.name
+    if name.endswith(_SUFFIX):
+        name = name[:-len(_SUFFIX)]
+    return name
+
+        
 def _get_detector_name(clip):
     if clip.creating_processor is None:
         return 'Unknown'

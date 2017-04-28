@@ -11,7 +11,7 @@ import time
 
 from django.db import transaction
 
-from vesper.django.app.models import Clip, Job
+from vesper.django.app.models import Clip, Job, RecordingChannel
 from vesper.util.logging_utils import append_stack_trace
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
@@ -221,9 +221,15 @@ class _DetectorMonitor(Thread):
         
         self._detector = detector
         self._recording_file = recording_file
-        self._sample_rate = recording_file.sample_rate
         self._channel_num = channel_num
         self._job_info = job_info
+        
+        self._recording = recording_file.recording
+        channel = RecordingChannel.objects.get(
+            recording=self._recording, channel_num=channel_num)
+        self._mic_output = channel.mic_output
+        self._sample_rate = recording_file.sample_rate
+
         self._job = Job.objects.get(id=self._job_info.job_id)
         
         self._executable_name = _get_detector_executable_name(name)
@@ -404,20 +410,22 @@ class _DetectorMonitor(Thread):
             
     def _archive_clip(self, file_path, start_delta, length):
         
-        recording = self._recording_file.recording
-        start_index = None
-        
         if length == 0:
             self._logger.error(
                 'Clip file "{}" has zero length and will be ignored.'.format(
                     file_path))
             return False
         
+        station = self._recording.station
+        
+        # TODO: Find exact clip start index in input file.
+        start_index = None
+        
         # Get clip start time as a `datetime`.
         file_start_index = self._recording_file.start_index
         file_start_seconds = file_start_index / self._sample_rate
         file_start_delta = datetime.timedelta(seconds=file_start_seconds)
-        file_start_time = recording.start_time + file_start_delta
+        file_start_time = self._recording.start_time + file_start_delta
         start_time = file_start_time + start_delta
         
         end_time = signal_utils.get_end_time(
@@ -430,12 +438,15 @@ class _DetectorMonitor(Thread):
             with transaction.atomic():
                 
                 clip = Clip(
-                    recording=recording,
+                    recording=self._recording,
                     channel_num=self._channel_num,
-                    start_index=None,
+                    station=station,
+                    mic_output=self._mic_output,
+                    start_index=start_index,
                     length=length,
                     start_time=start_time,
                     end_time=end_time,
+                    date=station.get_night(start_time),
                     creation_time=creation_time,
                     creating_user=None,
                     creating_job=self._job,

@@ -14,15 +14,16 @@ def group_recording_files(files, tolerance=1):
     
     This function groups audio files according to the recordings to
     which they belong. More specifically, the function first sorts the
-    files by station name, recorder name, number of channels, sample
-    rate, and start time. It then inspects the files in order, grouping
-    consecutive subsequences of them into recordings.
+    files by station name, recorder name, recorder channel numbers,
+    number of channels, sample rate, and start time. It then inspects
+    the files in order, grouping consecutive subsequences of them into
+    recordings.
     
     As files are being grouped into recordings, the next file is added
     to the current recording if either the recording is empty or:
     
-        1. The file has the same station, recorder, number of channels,
-           and sample rate as the recording.
+        1. The file has the same station, recorder, recorder channel
+           numbers, number of channels, and sample rate as the recording.
     
         2. The absolute value of the difference between the start time
            of the file and the end time of the recording does not
@@ -52,7 +53,8 @@ def group_recording_files(files, tolerance=1):
         Information about the files of a recording is included in the
         `files` attribute, a sequence of `Bunch` objects, one for each
         recording file. The returned recordings are sorted by station
-        name, number of channels, sample rate, and start time.
+        name, recorder name, recorder channel numbers, number of channels,
+        sample rate, and start time.
     """
     
     return _FileGrouper().group(files, tolerance)
@@ -95,7 +97,9 @@ class _FileGrouper:
 
 
     def _start_recording(self, f):
-        self.station_recorder = f.station_recorder
+        self.station = f.station
+        self.recorder = f.recorder
+        self.recorder_channel_nums = f.recorder_channel_nums
         self.num_channels = f.num_channels
         self.length = f.length
         self.sample_rate = f.sample_rate
@@ -110,7 +114,9 @@ class _FileGrouper:
         delta = abs((f.start_time - end_time).total_seconds())
         threshold = max(1, duration * self.tolerance / 3600)
         
-        return f.station_recorder == self.station_recorder and \
+        return f.station == self.station and \
+            f.recorder == self.recorder and \
+            f.recorder_channel_nums == self.recorder_channel_nums and \
             f.num_channels == self.num_channels and \
             f.sample_rate == self.sample_rate and \
             delta <= threshold
@@ -123,7 +129,9 @@ class _FileGrouper:
 
     def _end_recording(self):
         return Bunch(
-            station_recorder=self.station_recorder,
+            station=self.station,
+            recorder=self.recorder,
+            recorder_channel_nums=self.recorder_channel_nums,
             num_channels=self.num_channels,
             length=self.length,
             sample_rate=self.sample_rate,
@@ -132,8 +140,6 @@ class _FileGrouper:
 
 
 def _create_sort_key(f):
-    station = f.station_recorder.station
-    recorder = f.station_recorder.device
     return (
-        station.name, recorder.name, f.num_channels, f.sample_rate,
-        f.start_time)
+        f.station.name, f.recorder.name, f.recorder_channel_nums,
+        f.num_channels, f.sample_rate, f.start_time)

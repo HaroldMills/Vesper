@@ -82,7 +82,10 @@ class RecordingFileParser:
         :Returns:
             a `Bunch` with the following attributes:
             
-            `station_recorder` - the `StationRecorder` of the recording.
+            `station` - the `Station` of the recording.
+            `recorder` - the `Recorder` of the recording, or `None` if unknown.
+            `recorder_channel_nums` - array of recorder channel numbers
+                indexed by recording channel number, or `None` if unknown.
             `num_channels` - the number of channels of the file.
             `length` - the length of the file in sample frames.
             `sample_rate` - the sample rate of the file in Hertz.
@@ -96,11 +99,11 @@ class RecordingFileParser:
         
         end_time = signal_utils.get_end_time(start_time, length, sample_rate)
         end_time = station.local_to_utc(end_time)
-        station_recorder = \
-            self._get_station_recorder(station, start_time, end_time)
             
         return Bunch(
-            station_recorder=station_recorder,
+            station=station,
+            recorder=None,
+            recorder_channel_nums=None,
             num_channels=num_channels,
             length=length,
             sample_rate=sample_rate,
@@ -184,21 +187,6 @@ class RecordingFileParser:
                 'Could not parse file name date and time: {}'.format(str(e)))
         
 
-    def _get_station_recorder(self, station, start_time, end_time):
-        
-        station_recorders = station.get_station_devices(
-            'Audio Recorder', start_time, end_time)
-        
-        if len(station_recorders) == 0:
-            raise ValueError('Could not find recorder for file.')
-        
-        elif len(station_recorders) > 1:
-            raise ValueError('Found more than one possible recorder for file.')
-        
-        else:
-            return station_recorders[0]            
-        
-        
     def _get_audio_file_info(self, file_path):
 
         try:

@@ -7,8 +7,9 @@ import os.path
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db.models import (
-    BigIntegerField, CASCADE, CharField, DateTimeField, FloatField, ForeignKey,
-    IntegerField, ManyToManyField, Model, SET_NULL, TextField)
+    BigIntegerField, CASCADE, CharField, DateField, DateTimeField,
+    FloatField, ForeignKey, IntegerField, ManyToManyField, Model,
+    SET_NULL, TextField)
 import pytz
 
 from vesper.django.project.settings import VESPER_CLIPS_DIR_FORMAT
@@ -496,20 +497,24 @@ class Job(Model):
             return os_utils.read_file(self.log_file_path)            
         
 
-# We include the `end_time` field even though it's redundant to accelerate
-# queries.
+# We use separate `station` and `recorder` fields rather than one
+# `station_recorder` field (which would contain a `StationDevice`
+# foreign key) in order to simplify queries.
 #
-# An alternative to making the `recorder` field a `StationDevice` would be
-# to have a `station` field that is a `Station` and a `recorder` field
-# that is a `Device`. However, the latter introduces a redundancy between
-# the recorders indicated in the `StationDevice` table and the recorders
-# indicated in the `Recording` table. The former eliminates this redundancy.
+# We include the `end_time` field even though it's redundant in order to
+# simplify queries.
 class Recording(Model):
     
-    station_recorder = ForeignKey(
-        StationDevice, CASCADE,
+    station = ForeignKey(
+        Station, CASCADE,
         related_name='recordings',
         related_query_name='recording')
+     
+    recorder = ForeignKey(
+        Device, CASCADE,
+        related_name='recordings',
+        related_query_name='recording')
+    
     num_channels = IntegerField()
     length = BigIntegerField()
     sample_rate = FloatField()
@@ -526,17 +531,9 @@ class Recording(Model):
             self.station.name, self.recorder.name, self.start_time)
         
     class Meta:
-        unique_together = ('station_recorder', 'start_time')
+        unique_together = ('station', 'recorder', 'start_time')
         db_table = 'vesper_recording'
         
-    @property
-    def station(self):
-        return self.station_recorder.station
-    
-    @property
-    def recorder(self):
-        return self.station_recorder.device
-    
     @property
     def duration(self):
         return signal_utils.get_duration(self.length, self.sample_rate)
@@ -545,6 +542,34 @@ class Recording(Model):
     def span(self):
         return signal_utils.get_span(self.length, self._sample_rate)
     
+    
+class RecordingChannel(Model):
+     
+    recording = ForeignKey(
+        Recording, CASCADE,
+        related_name='channels',
+        related_query_name='channel')
+     
+    channel_num = IntegerField()
+    
+    # Typically, the recorder channel number and the recording channel
+    # number of a recording channel are the same. In some cases, however,
+    # such as when a single channel recording is created by extracting
+    # one channel of a multchannel recording, the two may differ.
+    recorder_channel_num = IntegerField()
+     
+    mic_output = ForeignKey(
+        DeviceOutput, CASCADE,
+        related_name='recording_channels',
+        related_query_name='recording_channel')
+     
+    def __str__(self):
+        return '{} / Channel {}'.format(str(self.recording), self.channel_num)
+         
+    class Meta:
+        unique_together = ('recording', 'channel_num')
+        db_table = 'vesper_recording_channel'
+        
     
 class RecordingFile(Model):
     
@@ -578,6 +603,11 @@ class RecordingFile(Model):
 # The station, recorder, and sample rate of a clip are the station,
 # recorder, and sample rate of its recording.
 #
+# We include the redundant `station`, `mic_output`, `end_time`, `start_day`,
+# and `start_night` fields to simplify certain very common queries, for
+# example for constructing clip calendars or displaying all of the clips
+# for a particular combination of station, mic output, and night.
+#
 # Ideally, and in most cases moving forward, we will know the start index
 # of a clip in its parent recording. However, there are many clips that
 # people have collected for which the start time of a clip is known but
@@ -588,12 +618,6 @@ class RecordingFile(Model):
 # recording) but not the start index. For such clips we allow the
 # start index to be null. We require, however, that every clip have
 # a start time.
-#
-# The `end_time` field of a clip is redundant, since it can be computed
-# from the clip's start time, length, and sample rate. We include it anyway
-# to accelerate certain types of queries. For example, we will want to be
-# able to find all of the clips whose time intervals intersect a specified
-# recording subinterval.
 #
 # We used to include a multi-column unique constraint to prevent duplicate
 # clips from being created by accidentally running a particular detector on
@@ -619,20 +643,40 @@ class RecordingFile(Model):
 # of great importance, perhaps we can allow null recording lengths,
 # and add flags that indicate whether or not recording start and end
 # times are only approximate.
-# TODO: Add indexes.
-# TODO: Consider adding redundant `station`, `mic_output`, `start_day`,
-# and `start_night` fields to simplify and accelerate queries.
 class Clip(Model):
+    
+    # TODO: Perhaps have a `recording_channel` field here instead of
+    # `recording` and `channel_num` fields?
     
     recording = ForeignKey(
         Recording, CASCADE,
         related_name='clips',
         related_query_name='clip')
+    
     channel_num = IntegerField()
+    
+    station = ForeignKey(
+        Station, CASCADE,
+        related_name='clips',
+        related_query_name='clip')
+      
+    mic_output = ForeignKey(
+        DeviceOutput, CASCADE,
+        related_name='clips',
+        related_query_name='clip')
+    
     start_index = BigIntegerField(null=True)
     length = BigIntegerField()
+    
     start_time = DateTimeField()
     end_time = DateTimeField()
+    
+    # The date assigned to this clip. For nocturnal migration monitoring
+    # this is the date of start of the local time interval extending from
+    # one noon up to but not including the next noon that includes the
+    # clip start time.
+    date = DateField()
+    
     creation_time = DateTimeField()
     creating_user = ForeignKey(
         User, CASCADE, null=True,
@@ -654,11 +698,8 @@ class Clip(Model):
         
     class Meta:
         db_table = 'vesper_clip'
+        index_together = ('station', 'mic_output', 'date', 'creating_processor')
         
-    @property
-    def station(self):
-        return self.recording.station
-    
     @property
     def recorder(self):
         return self.recording.recorder
@@ -694,15 +735,6 @@ class Clip(Model):
     @property
     def span(self):
         return signal_utils.get_span(self.length, self._sample_rate)
-
-    @property
-    def day(self):
-        return self.station.get_day(self.start_time)
-    
-    @property
-    def night(self):
-        return self.station.get_night(self.start_time)
-
 
 
 def _create_clip_file_path(clip_id):

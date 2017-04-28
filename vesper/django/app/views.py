@@ -506,8 +506,10 @@ def calendar(request):
     classifications = _get_classifications()
     classification = _get_classification(classifications, params, preferences)
     
+    annotation_name, annotation_value = \
+        _get_classification_annotation_info(classification)
     periods_json = _get_periods_json(
-        sm_pair, detector, 'Classification', classification)
+        sm_pair, detector, annotation_name, annotation_value)
     
     sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
     sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
@@ -735,6 +737,24 @@ def _get_string_annotation_constraint_own_values(values):
     return flattened_values
 
 
+def _get_classification_annotation_info(classification):
+    
+    if classification == _IGNORE_ANNOTATION:
+        annotation_name = None
+        annotation_value = None
+        
+    else:
+        
+        annotation_name = 'Classification'
+        
+        if classification == _NO_ANNOTATION:
+            annotation_value = None
+        else:
+            annotation_value = classification
+            
+    return annotation_name, annotation_value
+        
+
 def _get_station_microphone_outputs_json(station_microphone_outputs):
     station_microphone_output_names = dict(
         (station_name, [o.name for o in outputs])
@@ -742,7 +762,8 @@ def _get_station_microphone_outputs_json(station_microphone_outputs):
     return json.dumps(station_microphone_output_names)
 
 
-def _get_periods_json(sm_pair, detector, annotation_name, annotation_value):
+def _get_periods_json(
+        sm_pair, detector, annotation_name=None, annotation_value=None):
     
     if sm_pair is None or detector is None:
         return '[]'
@@ -751,9 +772,9 @@ def _get_periods_json(sm_pair, detector, annotation_name, annotation_value):
         
         station, mic_output = sm_pair
     
-        clip_counts = _get_clip_counts(
-            station, mic_output, detector, annotation_name,
-            annotation_value)
+        clip_counts = model_utils.get_clip_counts(
+            station, mic_output, detector, annotation_name=annotation_name,
+            annotation_value=annotation_value)
         
         dates = sorted(list(clip_counts.keys()))
         periods = calendar_utils.get_calendar_periods(dates)
@@ -768,28 +789,36 @@ def night(request):
     # TODO: Type check and range check query items.
     sm_pair_ui_name = params['station_mic']
     detector_name = params['detector']
-    annotation_name = 'Classification'
-    annotation_value = params['classification']
+    classification = params['classification']
     date = params['date']
       
     sm_pairs = model_utils.get_station_mic_output_pairs_dict()
-    station, microphone_output = sm_pairs[sm_pair_ui_name]
+    station, mic_output = sm_pairs[sm_pair_ui_name]
     
-    night = time_utils.parse_date(*date.split('-'))
+    date = time_utils.parse_date(*date.split('-'))
     
-    solar_event_times_json = _get_solar_event_times_json(station, night)
+    solar_event_times_json = _get_solar_event_times_json(station, date)
 
     detector = model_utils.get_processor(detector_name, 'Detector')
-    time_interval = station.get_night_interval_utc(night)
+    time_interval = station.get_night_interval_utc(date)
   
-    rc_pairs = model_utils.get_recording_channel_num_pairs(
-        station, microphone_output, time_interval)
+    recordings = model_utils.get_recordings(station, mic_output, time_interval)
     
-    recordings = [recording for recording, _ in rc_pairs]
+#     rc_pairs = model_utils.get_recording_channel_num_pairs(
+#         station, mic_output, time_interval)
+#     recordings = [recording for recording, _ in rc_pairs]
+    
     recordings_json = _get_recordings_json(recordings, station)
     
-    clips = _get_rc_pair_clips(
-        rc_pairs, time_interval, detector, annotation_name, annotation_value)
+    annotation_name, annotation_value = \
+        _get_classification_annotation_info(classification)
+        
+    clips = model_utils.get_clips(
+        station, mic_output, detector, date, annotation_name, annotation_value)
+    
+#     clips = _chain_rc_pair_clips(
+#         rc_pairs, time_interval, detector, annotation_name, annotation_value)
+    
     clips_json = _get_clips_json(clips, station)
     
 #     annotations = _get_rc_pair_annotations(
@@ -818,7 +847,7 @@ def night(request):
         'active_navbar_item': '',
         'station_mic_name': sm_pair_ui_name,
         'detector_name': detector_name,
-        'classification': annotation_value,
+        'classification': classification,
         'date': date,
         'solar_event_times_json': solar_event_times_json,
         'recordings_json': recordings_json,
@@ -899,11 +928,11 @@ def _get_recording_dict(recording, utc_to_local):
     }
     
     
-def _get_rc_pair_clips(
+def _chain_rc_pair_clips(
         rc_pairs, time_interval, detector, annotation_name, annotation_value):
         
     clip_iterators = [
-        _get_clips(
+        _get_rc_pair_clips(
             recording, channel_num, time_interval, detector, annotation_name,
             annotation_value)
         for recording, channel_num in rc_pairs]
@@ -1022,7 +1051,7 @@ def _add_wildcard_classifications_aux(classification):
     return frozenset(prefixes)
         
         
-def _get_clip_counts(
+def _get_clip_counts_old(
         station, microphone_output, detector, annotation_name,
         annotation_value):
 
@@ -1031,7 +1060,7 @@ def _get_clip_counts(
         station, microphone_output)
     microphone_output_id = microphone_output.id
     
-    recordings = Recording.objects.filter(station_recorder__station=station)
+    recordings = Recording.objects.filter(station=station)
     clip_counts = defaultdict(int)
     
     for recording in recordings:
@@ -1088,7 +1117,7 @@ def _get_clip_count(
     if annotation_value == _IGNORE_ANNOTATION or \
             annotation_value == _NO_ANNOTATION:
         
-        clips = _get_clips(
+        clips = _get_rc_pair_clips(
             recording, channel_num, time_interval, detector,
             annotation_name, annotation_value)
             
@@ -1122,7 +1151,7 @@ WHERE (
 '''
 
 
-def _get_clips(
+def _get_rc_pair_clips(
         recording, channel_num, time_interval, detector, annotation_name,
         annotation_value):
     

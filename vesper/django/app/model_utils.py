@@ -5,13 +5,16 @@ from collections import defaultdict
 import datetime
 import itertools
 
+from django.db.models import Count
+
 from vesper.django.app.models import (
-    Clip, DeviceConnection, Processor, Recording, StationDevice,
-    StringAnnotation)
+    AnnotationInfo, Clip, DeviceConnection, Processor, Recording,
+    RecordingChannel, StationDevice, StringAnnotation)
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
 
 
+WILDCARD = '*'
 _ONE_DAY = datetime.timedelta(days=1)
 
 
@@ -133,7 +136,7 @@ def get_station_recordings(station, time_interval=None):
     if time_interval is None:
         # no time interval specified
         
-        return Recording.objects.filter(station_recorder__station=station)
+        return Recording.objects.filter(station=station)
     
     else:
         
@@ -142,27 +145,27 @@ def get_station_recordings(station, time_interval=None):
         if start is None and end is None:
             # neither start nor end time specified
             
-            return Recording.objects.filter(station_recorder__station=station)
+            return Recording.objects.filter(station=station)
         
         elif end is None:
             # start time specified, but not end time
             
             return Recording.objects.filter(
-                station_recorder__station=station).exclude(
+                station=station).exclude(
                 end_time__lte=start)
                 
         elif start is None:
             # end time specified, but not start time
             
             return Recording.objects.filter(
-                station_recorder__station=station).exclude(
+                station=station).exclude(
                 start_time__gte=end)
                 
         else:
             # both start and end times specified
             
             return Recording.objects.filter(
-                station_recorder__station=station).exclude(
+                station=station).exclude(
                 end_time__lte=start).exclude(
                 start_time__gte=end)
 
@@ -218,7 +221,7 @@ def get_microphone_output_channel_num(
     # the channel number of the first input we encounter. Any other
     # inputs are ignored.
     
-    recorder = recording.station_recorder.device
+    recorder = recording.recorder
     infos = recorder_microphone_infos[(recorder.id, microphone_output_id)]
     start_time = recording.start_time
     
@@ -239,6 +242,117 @@ def get_microphone_output_channel_num(
     return None
         
     
+def get_recordings(station, mic_output, time_interval):
+    
+    """
+    Gets the recordings that involve the specified station and
+    microphone output and that intersect the specified time
+    interval.
+    """
+    
+    start_time, end_time = time_interval
+    
+    channels = RecordingChannel.objects.filter(
+        recording__station=station,
+        mic_output=mic_output,
+        recording__start_time__lt=end_time,
+        recording__end_time__gt=start_time
+    ).order_by(
+        'recording__start_time'
+    )
+    
+    return [c.recording for c in channels]
+
+
+def get_recording_dates(station, mic_output):
+    
+    # This function currently assumes that a recording is contained
+    # entirely in one night.
+    # TODO: Make this work for recordings that span more than one night,
+    # and for diurnal recordings.
+    
+    # TODO: Annotate channels with recording start times?
+    channels = RecordingChannel.objects.filter(
+        recording__station=station,
+        mic_output=mic_output)
+    
+    nights = set(station.get_night(c.recording.start_time) for c in channels)
+    
+    return nights
+
+
+def get_clip_counts(
+        station, mic_output, detector, annotation_name=None,
+        annotation_value=None):
+    
+    dates = get_recording_dates(station, mic_output)
+    
+    counts = dict((date, 0) for date in dates)
+    
+    clips = get_clips(
+        station, mic_output, detector, annotation_name=annotation_name,
+        annotation_value=annotation_value)
+    
+    count_dicts = clips.values('date').annotate(count=Count('date'))
+    
+    for d in count_dicts:
+        counts[d['date']] = d['count']
+    
+#     print('_get_clip_counts', count_dicts.query)
+#     
+#     for date, count in counts.items():
+#         print('_get_clip_counts {}: {}'.format(str(date), count))
+    
+    return counts
+    
+    
+def get_clips(
+        station, mic_output, detector, date=None, annotation_name=None,
+        annotation_value=None):
+    
+    kwargs = {}
+    if date is not None:
+        kwargs['date'] = date
+        
+    # Get all clips, whether or not they are annotated.
+    clips = Clip.objects.filter(
+        station=station,
+        mic_output=mic_output,
+        creating_processor=detector,
+        **kwargs)
+    
+    if annotation_name is not None:
+        # whether or not clips are annotated will matter
+        
+        info = AnnotationInfo.objects.get(name=annotation_name)
+        
+        if annotation_value is None:
+            # want only unannotated clips
+            
+            clips = clips.exclude(string_annotation__info=info)
+            
+        else:
+            # want only annotated clips
+            
+            # Get all annotated clips.
+            clips = clips.filter(string_annotation__info=info)
+            
+            if not annotation_value.endswith(WILDCARD):
+                # want clips with a particular annotation value
+                
+                clips = clips.filter(string_annotation__value=annotation_value)
+                
+            elif annotation_value != WILDCARD:
+                # want clips whose annotation values start with a prefix
+                
+                prefix = annotation_value[:-len(WILDCARD)]
+                
+                clips = clips.filter(
+                    string_annotation__value__startswith=prefix)
+                
+    return clips
+
+
 def get_processors(type):
     return Processor.objects.filter(type=type).order_by('name')
 
@@ -252,33 +366,25 @@ def create_clip_iterator(
 
     """Generator that returns a clip iterator."""
     
-    detectors = [ _get_detector(name) for name in detector_names]
+    detectors = [_get_detector(name) for name in detector_names]
 
     sm_pairs_dict = get_station_mic_output_pairs_dict()
     sm_pairs = [sm_pairs_dict[name] for name in sm_pair_ui_names]
+    
+    date_range = (start_date, end_date)
     
     for detector in detectors:
         
         for station, mic_output in sm_pairs:
             
-            start_time = station.get_noon_utc(start_date)
-            end_time = station.get_noon_utc(end_date + _ONE_DAY)
-            interval = (start_time, end_time)
-            
-            rc_pairs = get_recording_channel_num_pairs(
-                station, mic_output, interval)
-            
-            for recording, channel_num in rc_pairs:
+            clips = Clip.objects.filter(
+                station=station,
+                mic_output=mic_output,
+                date__range=date_range,
+                creating_processor=detector)
                 
-                clips = Clip.objects.filter(
-                    recording=recording,
-                    channel_num=channel_num,
-                    start_time__lt=end_time,
-                    end_time__gt=start_time,
-                    creating_processor=detector)
-                
-                for clip in clips:
-                    yield clip
+            for clip in clips:
+                yield clip
 
 
 def _get_detector(name):
