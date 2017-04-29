@@ -645,15 +645,10 @@ class RecordingFile(Model):
 # times are only approximate.
 class Clip(Model):
     
-    # TODO: Perhaps have a `recording_channel` field here instead of
-    # `recording` and `channel_num` fields?
-    
-    recording = ForeignKey(
-        Recording, CASCADE,
+    recording_channel = ForeignKey(
+        RecordingChannel, CASCADE,
         related_name='clips',
         related_query_name='clip')
-    
-    channel_num = IntegerField()
     
     station = ForeignKey(
         Station, CASCADE,
@@ -700,6 +695,14 @@ class Clip(Model):
         db_table = 'vesper_clip'
         index_together = ('station', 'mic_output', 'date', 'creating_processor')
         
+    @property
+    def recording(self):
+        return self.recording_channel.recording
+    
+    @property
+    def channel_num(self):
+        return self.recording_channel.channel_num
+    
     @property
     def recorder(self):
         return self.recording.recorder

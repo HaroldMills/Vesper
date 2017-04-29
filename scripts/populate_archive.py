@@ -295,7 +295,6 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
         with transaction.atomic():
             
             recording = channel.recording
-            channel_num = channel.channel_num
             station = recording.station
             mic_output = channel.mic_output
             length = audio_file_utils.get_wave_file_info(c.file_path).length
@@ -305,8 +304,7 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             creation_time = time_utils.get_utc_now()
             
             clip = Clip(
-                recording=recording,
-                channel_num=channel_num,
+                recording_channel=channel,
                 station=station,
                 mic_output=mic_output,
                 start_index=None,

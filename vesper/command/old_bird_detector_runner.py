@@ -221,13 +221,12 @@ class _DetectorMonitor(Thread):
         
         self._detector = detector
         self._recording_file = recording_file
-        self._channel_num = channel_num
         self._job_info = job_info
         
         self._recording = recording_file.recording
-        channel = RecordingChannel.objects.get(
+        self._recording_channel = RecordingChannel.objects.get(
             recording=self._recording, channel_num=channel_num)
-        self._mic_output = channel.mic_output
+        self._mic_output = self._recording_channel.mic_output
         self._sample_rate = recording_file.sample_rate
 
         self._job = Job.objects.get(id=self._job_info.job_id)
@@ -438,8 +437,7 @@ class _DetectorMonitor(Thread):
             with transaction.atomic():
                 
                 clip = Clip(
-                    recording=self._recording,
-                    channel_num=self._channel_num,
+                    recording_channel=self._recording_channel,
                     station=station,
                     mic_output=self._mic_output,
                     start_index=start_index,
