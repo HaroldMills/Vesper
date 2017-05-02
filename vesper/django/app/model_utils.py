@@ -416,13 +416,32 @@ def annotate_clip(
     StringAnnotation.objects.update_or_create(
         clip=clip, info=annotation_info, defaults=defaults)
 
-    # TODO: Record annotation edit.
+#     StringAnnotationEdit.objects.create(
+#         clip=clip,
+#         info=annotation_info,
+#         action=StringAnnotationEdit.ACTION_SET,
+#         **defaults)
     
     
 def delete_clip_annotation(
         clip_id, annotation_info, user=None, job=None, processor=None):
     
-    StringAnnotation.objects.filter(
-        clip__id=clip_id, info=annotation_info).delete()
+    annotation = StringAnnotation.objects.get(
+        clip__id=clip_id,
+        info=annotation_info)
+    
+#     value = annotation.value
+    
+    annotation.delete()
 
-    # TODO: Record annotation edit.
+#     creation_time = time_utils.get_utc_now()
+#     
+#     StringAnnotationEdit.objects.create(
+#         clip__id=clip_id,
+#         info=annotation_info,
+#         action=StringAnnotationEdit.ACTION_DELETE,
+#         value=value,
+#         creation_time=creation_time,
+#         creating_user=user,
+#         creating_job=job,
+#         creating_processor=processor)
