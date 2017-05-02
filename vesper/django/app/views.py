@@ -441,12 +441,20 @@ def annotation(request, clip_id, annotation_name):
         clip = get_object_or_404(Clip, pk=clip_id)
         info = get_object_or_404(AnnotationInfo, name=name)
         value = _get_request_body_as_text(request).strip()
-        model_utils.annotate_clip(clip, info, value)
+        
+        # TODO: This should be the logged-in user.
+        user = model_utils.get_vesper_user()
+        
+        model_utils.annotate_clip(clip, info, value, creating_user=user)
         return HttpResponse()
     
     elif request.method == 'DELETE':
         info = get_object_or_404(AnnotationInfo, name=name)
-        StringAnnotation.objects.filter(clip__id=clip_id, info=info).delete()
+        
+        # TODO: This should be the logged-in user.
+        user = model_utils.get_vesper_user()
+        
+        model_utils.delete_clip_annotation(clip_id, info, user=user)
         return HttpResponse()
 
     else:

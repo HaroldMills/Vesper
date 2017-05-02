@@ -6,7 +6,7 @@ import logging
 from django.db import transaction
 
 from vesper.command.command import Command
-from vesper.django.app.models import AnnotationInfo
+from vesper.django.app.models import AnnotationInfo, Job, Processor
 from vesper.singletons import extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
@@ -33,32 +33,12 @@ class ClassifyCommand(Command):
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
         
-        self._classifier = self._create_classifier()
-        
-        
-    def _create_classifier(self):
-        
-        # Get annotation info.
-        try:
-            annotation_info = _get_annotation_info(self._annotation_name)
-            return _create_classifier(self._classifier_name, annotation_info)
-        except Exception as e:
-            _log_fatal_exception('Classifier construction failed.', e)
-            raise
-        
 
     def execute(self, job_info):
         
-        # Create clip iterator.
-        try:
-            clips = model_utils.create_clip_iterator(
-                self._detector_names,
-                self._sm_pair_ui_names,
-                self._start_date,
-                self._end_date)
-        except Exception as e:
-            _log_fatal_exception('Clip iterator construction failed.', e)
-            raise
+        classifier = self._create_classifier(job_info.job_id)
+        
+        clips = self._create_clip_iterator()
         
         try:
             
@@ -69,7 +49,7 @@ class ClassifyCommand(Command):
             # a clip more than once, say if a classification command is
             # re-run after being interrupted.
             with transaction.atomic():
-                _classify_clips(clips, self._classifier)
+                _classify_clips(clips, classifier)
                 
         except Exception:
             _logger.error(
@@ -81,6 +61,34 @@ class ClassifyCommand(Command):
         return True
 
 
+    def _create_classifier(self, job_id):
+        
+        try:
+            annotation_info = _get_annotation_info(self._annotation_name)
+            job = _get_job(job_id)
+            processor = _get_processor(self._classifier_name)
+            return _create_classifier(
+                self._classifier_name, annotation_info, job, processor)
+        
+        except Exception as e:
+            _log_fatal_exception('Classifier construction failed.', e)
+            raise
+        
+
+    def _create_clip_iterator(self):
+        
+        try:
+            return model_utils.create_clip_iterator(
+                self._detector_names,
+                self._sm_pair_ui_names,
+                self._start_date,
+                self._end_date)
+            
+        except Exception as e:
+            _log_fatal_exception('Clip iterator construction failed.', e)
+            raise
+        
+        
 def _get_annotation_info(name):
     try:
         return AnnotationInfo.objects.get(name=name)
@@ -89,6 +97,20 @@ def _get_annotation_info(name):
             'Unrecognized annotation "{}".'.format(name))
     
         
+def _get_job(job_id):
+    try:
+        return Job.objects.get(id=job_id)
+    except Job.DoesNotExist:
+        raise ValueError('Unrecognized job ID {}.'.format(job_id))
+        
+
+def _get_processor(name):
+    try:
+        return Processor.objects.get(name=name, type='Classifier')
+    except Processor.DoesNotExist:
+        raise ValueError('Unrecognized processor "{}".'.format(name))
+        
+
 # TODO: Who is the authority regarding classifiers: `Processor` instances
 # or the extension manager? Right now classifier names are stored redundantly
 # in both `Processor` instances and the extensions, and hence there is
@@ -98,7 +120,7 @@ def _get_annotation_info(name):
 # themselves. How might we eliminate the redundancy? Be sure to consider
 # versioning and the possibility of processing parameters when thinking
 # about this.
-def _create_classifier(name, annotation_info):
+def _create_classifier(name, annotation_info, job, processor):
     
     classes = extension_manager.instance.get_extensions('Classifier')
     
@@ -107,7 +129,7 @@ def _create_classifier(name, annotation_info):
     except KeyError:
         raise ValueError('Unrecognized classifier "{}".'.format(name))
     
-    return cls(annotation_info)
+    return cls(annotation_info, creating_job=job, creating_processor=processor)
     
     
 def _log_fatal_exception(message, exception):

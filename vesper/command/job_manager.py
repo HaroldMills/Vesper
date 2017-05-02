@@ -5,10 +5,11 @@ from multiprocessing import Event, Lock, Process
 import datetime
 import json
 
-from vesper.django.app.models import Job, User
+from vesper.django.app.models import Job
 from vesper.util.bunch import Bunch
 from vesper.util.repeating_timer import RepeatingTimer
 import vesper.command.job_runner as job_runner
+import vesper.django.app.model_utils as model_utils
 import vesper.util.time_utils as time_utils
 
 
@@ -95,7 +96,7 @@ class JobManager:
 def _create_job(command_spec):
     
     # TODO: This should be the logged-in user.
-    user = User.objects.get(username='Vesper')
+    user = model_utils.get_vesper_user()
     
     job = Job(
         command=json.dumps(command_spec, default=_json_date_serializer),

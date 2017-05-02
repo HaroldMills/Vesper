@@ -9,13 +9,17 @@ from django.db.models import Count
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Processor, Recording,
-    RecordingChannel, StationDevice, StringAnnotation)
+    RecordingChannel, StationDevice, StringAnnotation, User)
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
 
 
 WILDCARD = '*'
 _ONE_DAY = datetime.timedelta(days=1)
+
+
+def get_vesper_user():
+    return User.objects.get(username='Vesper')
 
 
 def get_station_mic_output_pairs_dict():
@@ -411,3 +415,14 @@ def annotate_clip(
     
     StringAnnotation.objects.update_or_create(
         clip=clip, info=annotation_info, defaults=defaults)
+
+    # TODO: Record annotation edit.
+    
+    
+def delete_clip_annotation(
+        clip_id, annotation_info, user=None, job=None, processor=None):
+    
+    StringAnnotation.objects.filter(
+        clip__id=clip_id, info=annotation_info).delete()
+
+    # TODO: Record annotation edit.

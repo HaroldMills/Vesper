@@ -21,6 +21,22 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.vesper_path_utils as vesper_path_utils
 
 
+# A note on the instance creation fields:
+#
+# Several models each have four fields containing information pertaining
+# to the creation of model instances. The names of the fields and the
+# meanings of their values are as follows:
+#
+#     creation_time - the time at which the instance was created.
+#     creating_user - the user who created the instance if the instance
+#         was created directly by a user and not via a job, or `None` if
+#         the instance was created via a job.
+#     creating_job - the job that created the instance, or `None` if the
+#         instance was created directly by a user and not via a job.
+#     creating_processor - the processor that created the instance, or
+#         `None` if the instance was not created by a processor.
+
+
 def _double(*args):
     return tuple((a, a) for a in args)
 
