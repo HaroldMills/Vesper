@@ -18,7 +18,7 @@ function onLoad() {
 
 //function onJobInterval() {
 //	console.log('onJobInterval');
-//	const url = '/vesper/job/xx/json';
+//	const url = '/job/xx/json';
 //	const xhr = new XMLHttpRequest();
 //	xhr.onload = () => onJobGetComplete(xhr);
 //	xhr.onerror = () => console.log('XHR error');

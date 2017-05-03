@@ -521,7 +521,7 @@ class ClipCollectionView {
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
 			const clip = clips[i];
-			const url = `/vesper/clips/${clip.id}/annotations/${name}`;
+			const url = `/clips/${clip.id}/annotations/${name}`;
 			
 			const xhr = new XMLHttpRequest();
 			xhr.onload =
@@ -641,7 +641,7 @@ class ClipCollectionView {
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
 			const clip = clips[i];
-			const url = `/vesper/clips/${clip.id}/annotations/${name}`;
+			const url = `/clips/${clip.id}/annotations/${name}`;
 			
 			const xhr = new XMLHttpRequest();
 			xhr.onload =

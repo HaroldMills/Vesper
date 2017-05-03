@@ -149,7 +149,7 @@ function addMonthDay(day, daysDiv) {
 		
 		// Get circle URL.
 		const date = formatDate(day.date);
-		const url = `/vesper/night?` +
+		const url = `/night?` +
 		            `station_mic=${stationMicName}&` +
 				    `detector=${detectorName}&` +
 				    `classification=${classification}&` +
