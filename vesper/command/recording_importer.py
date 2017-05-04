@@ -268,6 +268,6 @@ def _get_recorder_mic_outputs(recorder, time):
         start_time__lte=time,
         end_time__gt=time)
      
-    print('model_utils.get_recorder_mic_outputs', connections.query)
+    # print('recording_importer.get_recorder_mic_outputs', connections.query)
      
     return dict((c.input.channel_num, c.output) for c in connections)
