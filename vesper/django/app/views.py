@@ -1,13 +1,16 @@
 from collections import defaultdict
+from urllib.parse import quote
 import datetime
 import itertools
 import json
 
 from django import forms, urls
 from django.db.models import Max, Min
+from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.http import (
-    HttpResponse, HttpResponseNotAllowed, HttpResponseRedirect)
+    HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed,
+    HttpResponseRedirect)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 import pytz
@@ -53,7 +56,7 @@ def _create_navbar_items(data):
 
 
 def _create_navbar_item(data):
-    if 'url' in data:
+    if 'url_name' in data or 'url' in data:
         return _create_navbar_link_item(data)
     else:
         return _create_navbar_dropdown_item(data)
@@ -61,8 +64,15 @@ def _create_navbar_item(data):
 
 def _create_navbar_link_item(data):
     name = data['name']
-    url = data['url']
+    url = _get_navbar_link_url(data)
     return Bunch(type='link', name=name, url=url)
+
+
+def _get_navbar_link_url(data):
+    if 'url_name' in data:
+        return urls.reverse_lazy(data['url_name'])
+    else:
+        return data['url']
 
 
 def _create_navbar_dropdown_item(data):
@@ -71,37 +81,71 @@ def _create_navbar_dropdown_item(data):
     return Bunch(type='dropdown', name=name, items=items)
 
 
+def _create_navbar_right_items(request):
+    
+    user = request.user
+    
+    # The value of the "next" parameter is a URL that is embedded in the
+    # URL of which the "next" parameter is a part. We must quote the
+    # embedded URL to ensure that it does not interfere with parsing the
+    # containing URL.
+    query = '?next=' + quote(request.get_full_path())
+    
+    if user.is_authenticated():
+        # user is logged in
+        
+        item = Bunch(
+            name=user.username,
+            type='dropdown',
+            items = [
+                Bunch(
+                    name='Log Out',
+                    type='link',
+                    url='/logout/' + query)
+            ])
+        
+    else:
+        # user is not logged in
+        
+        item = Bunch(
+            name='Log In',
+            type='link',
+            url='/login/' + query)
+        
+    return [item]
+
+
 # Note that as of 2016-07-19, nested navbar dropdowns do not work.
 # The generated HTML looks right to me so the problem may be a
 # Bootstrap limitation.
 _NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
   
 - name: View
-  url: calendar
+  url_name: calendar
     
 - name: Import
   dropdown:
   
       - name: Archive Data
-        url: import-archive-data
+        url_name: import-archive-data
         
       - name: Recordings
-        url: import-recordings
+        url_name: import-recordings
           
 - name: Detect
-  url: detect
+  url_name: detect
     
 - name: Classify
-  url: classify
+  url_name: classify
     
 - name: Export
   dropdown:
   
       - name: Clips CSV File
-        url: export-clips-csv-file
+        url_name: export-clips-csv-file
         
       - name: Clip Sound Files
-        url: export-clip-sound-files
+        url_name: export-clip-sound-files
   
 '''))
 
@@ -121,6 +165,7 @@ def index(request):
     return redirect(reverse('calendar'))
 
 
+@login_required
 @csrf_exempt
 def detect(request):
     
@@ -133,17 +178,12 @@ def detect(request):
         
         if form.is_valid():
             command_spec = _create_detect_command_spec(form)
-            job_id = job_manager.instance.start_job(command_spec)
-            return _create_job_redirect_response(job_id)
+            return _start_job(command_spec, request.user)
             
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
     
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': 'Detect',
-        'form': form
-    }
+    context = _create_template_context(request, 'Detect', form=form)
     
     return render(request, 'vesper/detect.html', context)
     
@@ -163,20 +203,29 @@ def _create_detect_command_spec(form):
     }
 
 
-def _create_job_redirect_response(job_id):
+def _start_job(command_spec, user):
+    job_id = job_manager.instance.start_job(command_spec, user)
     url = urls.reverse('job', args=[job_id])
     return HttpResponseRedirect(url)
 
 
+def _create_template_context(
+        request, active_navbar_item='', **kwargs):
+    
+    kwargs.update(
+        navbar_items=_NAVBAR_ITEMS,
+        navbar_right_items=_create_navbar_right_items(request),
+        active_navbar_item=active_navbar_item)
+    
+    return kwargs
+
+
 def _render_coming_soon(request, action, message):
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': action,
-        'message': message
-    }
+    context = _create_template_context(request, action, message=message)
     return render(request, 'vesper/coming-soon.html', context)
 
 
+@login_required
 @csrf_exempt
 def classify(request):
     
@@ -189,17 +238,12 @@ def classify(request):
           
         if form.is_valid():
             command_spec = _create_classify_command_spec(form)
-            job_id = job_manager.instance.start_job(command_spec)
-            return _create_job_redirect_response(job_id)
+            return _start_job(command_spec, request.user)
              
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
      
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': 'Classify',
-        'form': form
-    }
+    context = _create_template_context(request, 'Classify', form=form)
      
     return render(request, 'vesper/classify.html', context)
     
@@ -222,13 +266,11 @@ def _create_classify_command_spec(form):
 
 
 def import_(request):
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': 'Import'
-    }
+    context = _create_template_context(request, 'Import')
     return render(request, 'vesper/import.html', context)
     
     
+@login_required
 @csrf_exempt
 def export_clips_csv_file(request):
     
@@ -241,17 +283,12 @@ def export_clips_csv_file(request):
           
         if form.is_valid():
             command_spec = _create_export_clips_csv_file_command_spec(form)
-            job_id = job_manager.instance.start_job(command_spec)
-            return _create_job_redirect_response(job_id)
+            return _start_job(command_spec, request.user)
              
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
      
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': 'Export',
-        'form': form
-    }
+    context = _create_template_context(request, 'Export', form=form)
      
     return render(request, 'vesper/export-clips-csv-file.html', context)
 
@@ -277,6 +314,7 @@ def _create_export_clips_csv_file_command_spec(form):
     }
 
 
+@login_required
 @csrf_exempt
 def export_clip_sound_files(request):
     
@@ -289,17 +327,12 @@ def export_clip_sound_files(request):
           
         if form.is_valid():
             command_spec = _create_export_clip_sound_files_command_spec(form)
-            job_id = job_manager.instance.start_job(command_spec)
-            return _create_job_redirect_response(job_id)
+            return _start_job(command_spec, request.user)
              
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
      
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': 'Export',
-        'form': form
-    }
+    context = _create_template_context(request, 'Export', form=form)
      
     return render(request, 'vesper/export-clip-sound-files.html', context)
 
@@ -424,6 +457,7 @@ def _get_presets_json(preset_type_name):
     return json.dumps(presets)
 
 
+@login_required
 @csrf_exempt
 def annotation(request, clip_id, annotation_name):
     
@@ -438,24 +472,36 @@ def annotation(request, clip_id, annotation_name):
         return response
     
     elif request.method == 'PUT':
-        clip = get_object_or_404(Clip, pk=clip_id)
-        info = get_object_or_404(AnnotationInfo, name=name)
-        value = _get_request_body_as_text(request).strip()
         
-        # TODO: This should be the logged-in user.
-        user = model_utils.get_vesper_user()
+        if request.user.is_authenticated():
+            
+            clip = get_object_or_404(Clip, pk=clip_id)
+            info = get_object_or_404(AnnotationInfo, name=name)
+            value = _get_request_body_as_text(request).strip()
+            model_utils.annotate_clip(
+                clip, info, value, creating_user=request.user)
+            
+            return HttpResponse()
         
-        model_utils.annotate_clip(clip, info, value, creating_user=user)
-        return HttpResponse()
+        else:
+            # user not logged in
+            
+            return HttpResponseForbidden()
+        
     
     elif request.method == 'DELETE':
-        info = get_object_or_404(AnnotationInfo, name=name)
         
-        # TODO: This should be the logged-in user.
-        user = model_utils.get_vesper_user()
+        if request.user.is_authenticated():
+            
+            info = get_object_or_404(AnnotationInfo, name=name)
+            model_utils.delete_clip_annotation(clip_id, info, user=request.user)
+            
+            return HttpResponse()
         
-        model_utils.delete_clip_annotation(clip_id, info, user=user)
-        return HttpResponse()
+        else:
+            # user not logged in
+            
+            return HttpResponseForbidden()
 
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'PUT', 'DELETE'))
@@ -525,17 +571,15 @@ def calendar(request):
     detector_names = [d.name for d in detectors]
     detector_name = None if detector is None else detector.name
     
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': 'Calendar',
-        'station_mic_names': sm_pair_ui_names,
-        'station_mic_name': sm_pair_ui_name,
-        'detector_names': detector_names,
-        'detector_name': detector_name,
-        'classifications': classifications,
-        'classification': classification,
-        'periods_json': periods_json
-    }
+    context = _create_template_context(
+        request, 'View',
+        station_mic_names=sm_pair_ui_names,
+        station_mic_name=sm_pair_ui_name,
+        detector_names=detector_names,
+        detector_name=detector_name,
+        classifications=classifications,
+        classification=classification,
+        periods_json=periods_json)
     
     return render(request, 'vesper/calendar.html', context)
     
@@ -850,21 +894,19 @@ def night(request):
     keyboard_commands_preset_path = \
         preferences.get('default_presets.Clip Album Commands')
         
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': '',
-        'station_mic_name': sm_pair_ui_name,
-        'detector_name': detector_name,
-        'classification': classification,
-        'date': date,
-        'solar_event_times_json': solar_event_times_json,
-        'recordings_json': recordings_json,
-        'clips_json': clips_json,
-        'view_settings_presets_json': view_settings_presets_json,
-        'view_settings_preset_path': view_settings_preset_path,
-        'keyboard_commands_presets_json': keyboard_commands_presets_json,
-        'keyboard_commands_preset_path': keyboard_commands_preset_path
-    }
+    context = _create_template_context(
+        request, 'View',
+        station_mic_name=sm_pair_ui_name,
+        detector_name=detector_name,
+        classification=classification,
+        date=date,
+        solar_event_times_json=solar_event_times_json,
+        recordings_json=recordings_json,
+        clips_json=clips_json,
+        view_settings_presets_json=view_settings_presets_json,
+        view_settings_preset_path=view_settings_preset_path,
+        keyboard_commands_presets_json=keyboard_commands_presets_json,
+        keyboard_commands_preset_path=keyboard_commands_preset_path)
           
     return render(request, 'vesper/night.html', context)
     
@@ -1248,6 +1290,7 @@ def _get_annotations(
     return annotations
 
 
+@login_required
 @csrf_exempt
 def test_command(request):
     
@@ -1255,12 +1298,14 @@ def test_command(request):
         form = forms.Form()
         
     elif request.method == 'POST':
+        
         form = forms.Form(request.POST)
+        
         if form.is_valid():
             print('form valid')
             command_spec = {'name': 'test'}
-            job_id = job_manager.instance.start_job(command_spec)
-            return _create_job_redirect_response(job_id)
+            return _start_job(command_spec, request.user)
+        
         else:
             print('form invalid')
             
@@ -1270,6 +1315,7 @@ def test_command(request):
     return render(request, 'vesper/test-command.html', {'form': form})
 
     
+@login_required
 @csrf_exempt
 def import_archive_data(request):
     
@@ -1282,17 +1328,12 @@ def import_archive_data(request):
         
         if form.is_valid():
             command_spec = _create_import_archive_data_command_spec(form)
-            job_id = job_manager.instance.start_job(command_spec)
-            return _create_job_redirect_response(job_id)
+            return _start_job(command_spec, request.user)
             
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
     
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': 'Import',
-        'form': form
-    }
+    context = _create_template_context(request, 'Import', form=form)
     
     return render(request, 'vesper/import-archive-data.html', context)
     
@@ -1314,6 +1355,7 @@ def _create_import_archive_data_command_spec(form):
     }
             
 
+@login_required
 @csrf_exempt
 def import_recordings(request):
     
@@ -1326,17 +1368,12 @@ def import_recordings(request):
         
         if form.is_valid():
             command_spec = _create_import_recordings_command_spec(form)
-            job_id = job_manager.instance.start_job(command_spec)
-            return _create_job_redirect_response(job_id)
+            return _start_job(command_spec, request.user)
             
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
     
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'active_navbar_item': 'Import',
-        'form': form
-    }
+    context = _create_template_context(request, 'Import', form=form)
     
     return render(request, 'vesper/import-recordings.html', context)
     
@@ -1372,9 +1409,6 @@ def _create_import_recordings_command_spec(form):
 def job(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
     command_spec = json.loads(job.command)
-    context = {
-        'navbar_items': _NAVBAR_ITEMS,
-        'job': job,
-        'command_name': command_spec['name']
-    }
+    context = _create_template_context(
+        request, job=job, command_name=command_spec['name'])
     return render(request, 'vesper/job.html', context)

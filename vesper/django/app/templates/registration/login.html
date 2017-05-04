@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Log In - Vesper</title>
+  {% include "vesper/header-prefix.html" %}
+  {% load staticfiles %}
+  {% load vesper_extras %}
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/command-form.css' %}">
+</head>
+
+<body>
+
+  {% include "vesper/navbar.html" %}
+
+  <h2>Log In</h2>
+  
+  {% if form.errors %}
+  <p class="command-form-spacing">Your username or password was incorrect. Please try again.</p>
+  {% endif %}
+  
+  {% if next %}
+  
+    {% if user.is_authenticated %}
+      
+      <p>
+        You are currently logged in as user "{{ user.username}}",
+        who does not have access to this page. To proceed, please
+        log in as a user who does have access.
+      </p>
+      
+    {% endif %}
+      
+  {% endif %}
+  
+  <form class="form" method="post" action="{% url 'login' %}">
+  
+  {% csrf_token %}
+  
+  {{ form.username|form_element }}
+  {{ form.password|form_element }}
+  
+  {# Assumes you setup the password_reset view in your URLconf #}
+  <p class="command-form-spacing"><a href="{% url 'password_reset' %}">Forgot your password?</a></p>
+
+  <button type="submit" class="btn btn-default form-spacing command-form-spacing">Log In</button>
+
+  <input type="hidden" name="next" value="{{next}}" />
+  
+  </form>
+  
+</body>
+  
+</html>
+

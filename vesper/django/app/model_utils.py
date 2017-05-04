@@ -9,17 +9,13 @@ from django.db.models import Count
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Processor, Recording,
-    RecordingChannel, StationDevice, StringAnnotation, User)
+    RecordingChannel, StationDevice, StringAnnotation)
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
 
 
 WILDCARD = '*'
 _ONE_DAY = datetime.timedelta(days=1)
-
-
-def get_vesper_user():
-    return User.objects.get(username='Vesper')
 
 
 def get_station_mic_output_pairs_dict():

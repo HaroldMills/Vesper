@@ -9,7 +9,6 @@ from vesper.django.app.models import Job
 from vesper.util.bunch import Bunch
 from vesper.util.repeating_timer import RepeatingTimer
 import vesper.command.job_runner as job_runner
-import vesper.django.app.model_utils as model_utils
 import vesper.util.time_utils as time_utils
 
 
@@ -53,11 +52,11 @@ class JobManager:
         self._timer.start()
 
 
-    def start_job(self, command_spec):
+    def start_job(self, command_spec, user):
         
         info = Bunch()
         info.command_spec = command_spec
-        info.job_id = _create_job(command_spec)
+        info.job_id = _create_job(command_spec, user)
         info.stop_event = Event()
 
         with self._lock:
@@ -93,10 +92,7 @@ class JobManager:
                 del self._job_infos[job_id]
 
 
-def _create_job(command_spec):
-    
-    # TODO: This should be the logged-in user.
-    user = model_utils.get_vesper_user()
+def _create_job(command_spec, user):
     
     job = Job(
         command=json.dumps(command_spec, default=_json_date_serializer),

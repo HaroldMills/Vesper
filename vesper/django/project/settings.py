@@ -141,7 +141,6 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
-
 STATIC_URL = '/static/'
 
 
@@ -150,3 +149,7 @@ STATIC_URL = '/static/'
 # are served from this directory when Vesper is deployed on nginx/uWSGI,
 # but not when it is deployed on the Django development server.
 STATIC_ROOT = '/opt/vesper/static'
+
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
