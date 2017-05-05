@@ -1935,6 +1935,7 @@ class ClipView {
 				if (annotation === undefined)
 					annotation = 'Unclassified';
 				
+				else
 					for (const prefix of s.hiddenClassificationPrefixes)
 						if (annotation.startsWith(prefix))
 							annotation = annotation.substr(prefix.length);
