@@ -176,7 +176,7 @@ class ClipCollectionView {
 		this._elements = elements;
 		this._clips = clips;
 		
-		this._setClipNums();
+		this._initClips();
 		
 		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		
@@ -202,9 +202,24 @@ class ClipCollectionView {
 	}
 	
 	
-	_setClipNums() {
-		for (const [num, clip] of this.clips.entries())
+	_initClips() {
+		
+		for (const [num, clip] of this.clips.entries()) {
+			
 			clip.num = num;
+			
+			// TODO: Consider making a clip's annotations and audio data
+			// lazy properties. The way things are, a clip relies explicitly
+			// on its view to get its annotations and audio data. Using lazy
+			// properties would better separate concerns.
+
+			// Initialize clip with no annotations. The actual annotations
+			// will be gotten from the server by the clip's view when the
+			// view is first displayed.
+			clip.annotations = {};
+			
+		}
+		
 	}
 	
 	
@@ -1679,6 +1694,7 @@ class ClipView {
 	    this._canvas = this._createCanvas();
 		this._label = this._createLabel();
 		this._styleLabel();
+		this._startClipAnnotationsGet();
 	    this._startClipAudioDataDownload();
 	}
 
@@ -1776,6 +1792,32 @@ class ClipView {
 			    
     }
     
+    
+    _startClipAnnotationsGet() {
+    	
+    	const url = `/clips/${this.clip.id}/annotations/json/`;
+		const xhr = new XMLHttpRequest();
+		xhr.open('GET', url);
+		xhr.onload = () => this._onClipAnnotationsGetComplete(xhr)
+		xhr.send();
+		
+    }
+    
+    
+    _onClipAnnotationsGetComplete(xhr) {
+    	
+    	if (xhr.status === 200)
+    		this.clip.annotations = JSON.parse(xhr.responseText);
+    		
+    	else
+    		
+    		// TODO: Report error somehow.
+    		this.clip.annotations = {};
+    	
+     	this._renderLabel();
+     	
+    }
+
     
     _startClipAudioDataDownload() {
     	
@@ -1926,7 +1968,7 @@ class ClipView {
 	
 		if (s.visible) {
 			
-			let labelParts = [];
+			const labelParts = [];
 			
 			if (s.classificationIncluded) {
 				

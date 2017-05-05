@@ -36,6 +36,9 @@ urlpatterns = [
 
     url(r'^clips/(?P<clip_id>[0-9]+)/wav/$', views.clip_wav, name='clip-wav'),
     
+    url(r'^clips/(?P<clip_id>[0-9]+)/annotations/json/$',
+        views.annotations_json, name='annotations'),
+    
     url(r'^clips/(?P<clip_id>[0-9]+)/annotations/(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$',
         views.annotation, name='annotation'),
                

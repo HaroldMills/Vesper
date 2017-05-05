@@ -5,7 +5,7 @@ import itertools
 import json
 
 from django import forms, urls
-from django.db.models import Max, Min
+from django.db.models import F, Max, Min
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.http import (
@@ -457,7 +457,28 @@ def _get_presets_json(preset_type_name):
     return json.dumps(presets)
 
 
-@login_required
+@csrf_exempt
+def annotations_json(request, clip_id):
+    
+    if request.method in _GET_AND_HEAD:
+        content = _get_annotations_json(clip_id)
+        return HttpResponse(content, content_type='application/json')
+    
+    else:
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
+
+
+def _get_annotations_json(clip_id):
+    
+    annotations = StringAnnotation.objects.filter(
+        clip_id=clip_id
+    ).annotate(name=F('info__name'))
+    
+    annotations_dict = dict((a.name, a.value) for a in annotations)
+    
+    return json.dumps(annotations_dict)
+    
+    
 @csrf_exempt
 def annotation(request, clip_id, annotation_name):
     
@@ -997,7 +1018,8 @@ def _get_clips_json(clips, station):
         
     utc_to_local = station.utc_to_local
     clip_dicts = [_get_clip_dict(c, utc_to_local) for c in clips]
-    return json.dumps(clip_dicts)
+    result = json.dumps(clip_dicts)
+    return result
 
 
 def _get_clip_dict(clip, utc_to_local):
@@ -1005,16 +1027,12 @@ def _get_clip_dict(clip, utc_to_local):
     # See note about UTC and local times near the top of this file.
     start_time = _format_time(utc_to_local(clip.start_time))
     
-    annotations = clip.string_annotations.all().select_related('info')
-    annotations = dict((a.info.name, a.value) for a in annotations)
-    
     return {
         'id': clip.id,
         'url': clip.wav_file_url,
         'length': clip.length,
-        'sampleRate': clip.sample_rate,
+        'sampleRate': 22050, # clip.sample_rate,
         'startTime': start_time,
-        'annotations': annotations
     }
 
     
