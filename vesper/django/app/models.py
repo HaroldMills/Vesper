@@ -2,6 +2,7 @@
 
 
 import datetime
+import json
 import os.path
 
 from django.contrib.auth.models import User
@@ -220,13 +221,13 @@ class DeviceConnection(Model):
     
     @property
     def name(self):
-        return '{} -> {} from {} to {}'.format(
+        return '{} / {} / start {} / end {}'.format(
             self.output.name, self.input.name,
             str(self.start_time), str(self.end_time))
     
     @property
     def long_name(self):
-        return '{} -> {} from {} to {}'.format(
+        return '{} / {} / start {} / end {}'.format(
             self.output.long_name, self.input.long_name,
             str(self.start_time), str(self.end_time))
     
@@ -369,14 +370,14 @@ class StationDevice(Model):
     
     @property
     def name(self):
-        return '{} at {} from {} to {}'.format(
-            self.device.name, self.station.name,
+        return '{} / {} / start {} / end {}'.format(
+            self.station.name, self.device.name,
             str(self.start_time), str(self.end_time))
         
     @property
     def long_name(self):
-        return '{} at {} from {} to {}'.format(
-            self.device.long_name, self.station.name,
+        return '{} / {} / start {} / end {}'.format(
+            self.station.name, self.device.long_name,
             str(self.start_time), str(self.end_time))
         
     def __str__(self):
@@ -494,8 +495,9 @@ class Job(Model):
         related_query_name='job')
     
     def __str__(self):
-        return 'Job {} started {} ended {} command "{}"'.format(
-            self.id, self.start_time, self.end_time, self.command)
+        command = json.loads(self.command)
+        return 'Job {} / {} / start {} / end {}'.format(
+            self.id, command['name'], self.start_time, self.end_time)
         
     class Meta:
         db_table = 'vesper_job'
@@ -543,8 +545,9 @@ class Recording(Model):
         related_query_name='recording')
     
     def __str__(self):
-        return '{} / {} / {}'.format(
-            self.station.name, self.recorder.name, self.start_time)
+        return '{} / {} / start {} / duration {:0.3f} h'.format(
+            self.station.name, self.recorder.name, self.start_time,
+            self.duration / 3600)
         
     class Meta:
         unique_together = ('station', 'recorder', 'start_time')
@@ -600,8 +603,8 @@ class RecordingFile(Model):
     
     def __str__(self):
         r = self.recording
-        return '{} / File {} / "{}"'.format(
-            str(r), self.file_num, self.path)
+        return '{} / File {} / duration {:0.3f} h /"{}"'.format(
+            str(r), self.file_num, self.duration / 3600, self.path)
         
     class Meta:
         unique_together = ('recording', 'file_num')
@@ -705,9 +708,9 @@ class Clip(Model):
         related_query_name='clip')
     
     def __str__(self):
-        return '{} / {} / Channel {} / {}'.format(
-            self.station.name, self.recorder.name, self.channel_num,
-            self.start_time)
+        return '{} / {} / {} / start {} / duration {:0.3f} s'.format(
+            self.station.name, self.mic_output.name,
+            self.creating_processor.name, self.start_time, self.duration)
         
     class Meta:
         db_table = 'vesper_clip'
@@ -860,6 +863,9 @@ class StringAnnotation(Model):
         Processor, CASCADE, null=True,
         related_name='string_annotations',
         related_query_name='string_annotations')
+    
+    def __str__(self):
+        return 'Clip {} / {} / {}'.format(self.clip.id, self.info.name, self.value)
     
     class Meta:
         unique_together = ('clip', 'info')
