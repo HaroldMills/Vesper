@@ -15,7 +15,7 @@ from django.db import transaction
 from vesper.archive.archive import Archive
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Recording, RecordingChannel,
-    Station, StringAnnotation)
+    Station)
 import vesper.django.app.model_utils as model_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
@@ -57,11 +57,11 @@ _ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
 #     r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive 0.1.0'
 
 _DETECTOR_NAME_ALIASES = {
-    'Old Bird Thrush': ['Thrush'],
-    'Old Bird Tseep': ['Tseep']
+    'Old Bird Thrush Detector': ['Thrush'],
+    'Old Bird Tseep Detector': ['Tseep']
 }
 # _DETECTOR_NAME_ALIASES = {
-#     'Old Bird Tseep': ['Tseep']
+#     'Old Bird Tseep Detector': ['Tseep']
 # }
 
 # Assumptions about station and microphone model names:
@@ -144,7 +144,7 @@ def _add_recordings():
             creating_job=None)
         recording.save()
         
-        print('{} "{}" "{}"'.format(i, station.name, start_time))
+        print('Recording {} {}'.format(i, str(recording)))
 
         for _, mic_output, recorder_input in channel_infos:
             
@@ -159,7 +159,7 @@ def _add_recordings():
                 mic_output=mic_output)  
             channel.save()
             
-            print('    {} "{}"'.format(channel_num, mic_output.name))
+            print('    Channel {} {}'.format(channel_num, mic_output.name))
         
         
 def _get_channel_recordings():
@@ -316,7 +316,7 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
                 date=night,
                 creation_time=creation_time,
                 creating_processor=detector)
-            print(_clip_count, clip)
+            print('Clip', _clip_count, clip)
             _clip_count += 1
             
             clip.save()
@@ -324,12 +324,11 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             _copy_clip_sound_file(c.file_path, clip)
             
             if c.clip_class_name is not None:
-                value = StringAnnotation(
-                    clip=clip,
-                    info=annotation_info,
-                    value=c.clip_class_name,
-                    creation_time=creation_time)
-                value.save()
+                
+                # TODO: When this script becomes an importer, add the
+                # creating job to the following.
+                model_utils.annotate_clip(
+                    clip, annotation_info, c.clip_class_name)
             
             num_added += 1
         

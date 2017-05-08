@@ -10,6 +10,7 @@ import yaml
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Device, DeviceModel, Recording, Station,
     StationDevice, StringAnnotation)
+import vesper.django.app.model_utils as model_utils
 
 
 def _dt(*args):
@@ -223,11 +224,8 @@ def _populate_database_from_yaml(s):
             creation_time=creation_time)
         
         for name, value in clip_d['annotations'].items():
-            
             info = annotation_infos[name]
-
-            StringAnnotation.objects.create(
-                clip=clip, info=info, value=value, creation_time=creation_time)
+            model_utils.annotate_clip(clip, info, value, creation_time)
         
 
 def _get_annotation_names(clips):
@@ -281,6 +279,7 @@ def _populate_database(num_clips, query=None, query_period=None):
         start_time=recording_start_time, end_time=recording_end_time,
         creation_time=creation_time)
 
+    
     classification = AnnotationInfo.objects.create(
         name='Classification', type='String', creation_time=creation_time)
     
@@ -311,13 +310,10 @@ def _populate_database(num_clips, query=None, query_period=None):
         
         info = classification if i % 2 == 0 else other
 
-        StringAnnotation.objects.create(
-            clip=clip, info=info, value=str(i), creation_time=creation_time)
+        model_utils.annotate_clip(clip, info, str(i), creation_time)
         
         if i < num_clips / 2:
-            StringAnnotation.objects.create(
-                clip=clip, info=another, value=str(i),
-                creation_time=creation_time)
+            model_utils.annotate_clip(clip, another, str(i), creation_time)
             
       
 def _depopulate_database():

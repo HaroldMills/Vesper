@@ -9,7 +9,7 @@ from django.db.models import Count
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Processor, Recording,
-    RecordingChannel, StationDevice, StringAnnotation)
+    RecordingChannel, StationDevice, StringAnnotation, StringAnnotationEdit)
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
 
@@ -396,10 +396,11 @@ def _get_detector(name):
 
 
 def annotate_clip(
-        clip, annotation_info, value, creating_user=None,
+        clip, annotation_info, value, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
     
-    creation_time = time_utils.get_utc_now()
+    if creation_time is None:
+        creation_time = time_utils.get_utc_now()
     
     defaults = {
         'value': value,
@@ -410,34 +411,35 @@ def annotate_clip(
     }
     
     StringAnnotation.objects.update_or_create(
-        clip=clip, info=annotation_info, defaults=defaults)
+        clip=clip,
+        info=annotation_info,
+        defaults=defaults)
 
-#     StringAnnotationEdit.objects.create(
-#         clip=clip,
-#         info=annotation_info,
-#         action=StringAnnotationEdit.ACTION_SET,
-#         **defaults)
+    StringAnnotationEdit.objects.create(
+        clip=clip,
+        info=annotation_info,
+        action=StringAnnotationEdit.ACTION_SET,
+        **defaults)
     
     
 def delete_clip_annotation(
-        clip_id, annotation_info, user=None, job=None, processor=None):
+        clip, annotation_info, creation_time=None, creating_user=None,
+        creating_job=None, creating_processor=None):
     
     annotation = StringAnnotation.objects.get(
-        clip__id=clip_id,
+        clip=clip,
         info=annotation_info)
-    
-#     value = annotation.value
     
     annotation.delete()
 
-#     creation_time = time_utils.get_utc_now()
-#     
-#     StringAnnotationEdit.objects.create(
-#         clip__id=clip_id,
-#         info=annotation_info,
-#         action=StringAnnotationEdit.ACTION_DELETE,
-#         value=value,
-#         creation_time=creation_time,
-#         creating_user=user,
-#         creating_job=job,
-#         creating_processor=processor)
+    if creation_time is None:
+        creation_time = time_utils.get_utc_now()
+     
+    StringAnnotationEdit.objects.create(
+        clip=clip,
+        info=annotation_info,
+        action=StringAnnotationEdit.ACTION_DELETE,
+        creation_time=creation_time,
+        creating_user=creating_user,
+        creating_job=creating_job,
+        creating_processor=creating_processor)

@@ -865,47 +865,142 @@ class StringAnnotation(Model):
         related_query_name='string_annotations')
     
     def __str__(self):
-        return 'Clip {} / {} / {}'.format(self.clip.id, self.info.name, self.value)
+        return 'Clip {} / {} / {}'.format(
+            self.clip.id, self.info.name, self.value)
     
     class Meta:
         unique_together = ('clip', 'info')
         db_table = 'vesper_string_annotation'
     
     
-# class StringAnnotationEdit(Model):
-#      
-#     ACTION_SET = 'S'
-#     ACTION_DELETE = 'D'
-#     ACTION_CHOICES = (
-#         (ACTION_SET, 'Set'),
-#         (ACTION_DELETE, 'Delete'))
-#      
-#     clip = ForeignKey(
-#         Clip, CASCADE,
-#         related_name='string_annotation_edits',
-#         related_query_name='string_annotation_edit')
-#     info = ForeignKey(
-#         AnnotationInfo, CASCADE,
-#         related_name='string_annotation_edits',
-#         related_query_name='string_annotation_edit')
-#     action = CharField(max_length=1, choices=ACTION_CHOICES)
-#     value = CharField(max_length=255)
-#     creation_time = DateTimeField()
-#     creating_user = ForeignKey(
-#         User, CASCADE, null=True,
-#         related_name='string_annotation_edits',
-#         related_query_name='string_annotation_edit')
-#     creating_job = ForeignKey(
-#         Job, CASCADE, null=True,
-#         related_name='string_annotation_edits',
-#         related_query_name='string_annotation_edit')
-#     creating_processor = ForeignKey(
-#         Processor, CASCADE, null=True,
-#         related_name='string_annotation_edits',
-#         related_query_name='string_annotation_edits')
-#
-#     class Meta:
-#         db_table = 'vesper_string_annotation_edit'
+class StringAnnotationEdit(Model):
+      
+    ACTION_SET = 'S'
+    ACTION_DELETE = 'D'
+    ACTION_CHOICES = (
+        (ACTION_SET, 'Set'),
+        (ACTION_DELETE, 'Delete'))
+      
+    clip = ForeignKey(
+        Clip, CASCADE,
+        related_name='string_annotation_edits',
+        related_query_name='string_annotation_edit')
+    info = ForeignKey(
+        AnnotationInfo, CASCADE,
+        related_name='string_annotation_edits',
+        related_query_name='string_annotation_edit')
+    action = CharField(max_length=1, choices=ACTION_CHOICES)
+    value = CharField(max_length=255, null=True)
+    creation_time = DateTimeField()
+    creating_user = ForeignKey(
+        User, CASCADE, null=True,
+        related_name='string_annotation_edits',
+        related_query_name='string_annotation_edit')
+    creating_job = ForeignKey(
+        Job, CASCADE, null=True,
+        related_name='string_annotation_edits',
+        related_query_name='string_annotation_edit')
+    creating_processor = ForeignKey(
+        Processor, CASCADE, null=True,
+        related_name='string_annotation_edits',
+        related_query_name='string_annotation_edits')
+
+    def __str__(self):
+        choices = dict(self.ACTION_CHOICES)
+        action = choices[self.action]
+        return 'Clip {} / {} / {} / {}'.format(
+            self.clip.id, action, self.info.name, self.value)
+
+    class Meta:
+        db_table = 'vesper_string_annotation_edit'
+
+
+class TagInfo(Model):
+     
+    name = CharField(max_length=255, unique=True)
+    description = TextField(blank=True)
+    creation_time = DateTimeField()
+    creating_user = ForeignKey(
+        User, CASCADE, null=True,
+        related_name='tag_infos',
+        related_query_name='tag_info')
+    creating_job = ForeignKey(
+        Job, CASCADE, null=True,
+        related_name='tag_infos',
+        related_query_name='tag_info')
+     
+    def __str__(self):
+        return self.name
+     
+    class Meta:
+        db_table = 'vesper_tag_info'
+ 
+     
+class Tag(Model):
+     
+    clip = ForeignKey(
+        Clip, CASCADE,
+        related_name='tags',
+        related_query_name='tag')
+    info = ForeignKey(
+        TagInfo, CASCADE,
+        related_name='tags',
+        related_query_name='tag')
+    creation_time = DateTimeField()
+    creating_user = ForeignKey(
+        User, CASCADE, null=True,
+        related_name='tags',
+        related_query_name='tag')
+    creating_job = ForeignKey(
+        Job, CASCADE, null=True,
+        related_name='tags',
+        related_query_name='tag')
+    creating_processor = ForeignKey(
+        Processor, CASCADE, null=True,
+        related_name='tags',
+        related_query_name='tags')
+     
+    def __str__(self):
+        return 'Clip {} / {}'.format(self.clip.id, self.info.name)
+     
+    class Meta:
+        unique_together = ('clip', 'info')
+        db_table = 'vesper_tag'
+     
+     
+class TagEdit(Model):
+       
+    ACTION_SET = 'S'
+    ACTION_DELETE = 'D'
+    ACTION_CHOICES = (
+        (ACTION_SET, 'Set'),
+        (ACTION_DELETE, 'Delete'))
+       
+    clip = ForeignKey(
+        Clip, CASCADE,
+        related_name='tag_edits',
+        related_query_name='tag_edit')
+    info = ForeignKey(
+        TagInfo, CASCADE,
+        related_name='tag_edits',
+        related_query_name='tag_edit')
+    action = CharField(max_length=1, choices=ACTION_CHOICES)
+    creation_time = DateTimeField()
+    creating_user = ForeignKey(
+        User, CASCADE, null=True,
+        related_name='tag_edits',
+        related_query_name='tag_edit')
+    creating_job = ForeignKey(
+        Job, CASCADE, null=True,
+        related_name='tag_edits',
+        related_query_name='tag_edit')
+    creating_processor = ForeignKey(
+        Processor, CASCADE, null=True,
+        related_name='tag_edits',
+        related_query_name='tag_edits')
+ 
+    class Meta:
+        db_table = 'vesper_tag_edit'
 
 
 # class RecordingJob(Model):

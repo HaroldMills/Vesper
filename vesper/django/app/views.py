@@ -514,8 +514,10 @@ def annotation(request, clip_id, annotation_name):
         
         if request.user.is_authenticated():
             
+            clip = get_object_or_404(Clip, pk=clip_id)
             info = get_object_or_404(AnnotationInfo, name=name)
-            model_utils.delete_clip_annotation(clip_id, info, user=request.user)
+            model_utils.delete_clip_annotation(
+                clip, info, creating_user=request.user)
             
             return HttpResponse()
         
