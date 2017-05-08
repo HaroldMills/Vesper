@@ -18,7 +18,7 @@ setup(
         exclude=['tests', 'tests.*', '*.tests.*', '*.tests']),
     
     install_requires=[
-        'django=1.11',
+        'django (1.11)',
         'jsonschema',
         'numpy',
         'pyephem',
