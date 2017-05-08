@@ -23,6 +23,7 @@ class ImportRecordingsForm(forms.Form):
 
     recursive = forms.BooleanField(
         label='Recursive',
+        label_suffix='',
         required=False,
         help_text = '''
             Check the box to recursively include .wav files in subdirectories
