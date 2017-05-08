@@ -21,7 +21,7 @@ build:
 requirements:
 
   build:
-    - django
+    - django=1.11
     - jsonschema
     - numpy
     - pyephem
@@ -32,7 +32,7 @@ requirements:
     - setuptools
 
   run:
-    - django
+    - django=1.11
     - jsonschema
     - numpy
     - pyephem
