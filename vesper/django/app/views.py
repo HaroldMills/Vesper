@@ -865,12 +865,12 @@ def night(request):
     sm_pair_ui_name = params['station_mic']
     detector_name = params['detector']
     classification = params['classification']
-    date = params['date']
+    date_string = params['date']
       
     sm_pairs = model_utils.get_station_mic_output_pairs_dict()
     station, mic_output = sm_pairs[sm_pair_ui_name]
     
-    date = time_utils.parse_date(*date.split('-'))
+    date = time_utils.parse_date(*date_string.split('-'))
     
     solar_event_times_json = _get_solar_event_times_json(station, date)
 
@@ -922,7 +922,7 @@ def night(request):
         station_mic_name=sm_pair_ui_name,
         detector_name=detector_name,
         classification=classification,
-        date=date,
+        date=date_string,
         solar_event_times_json=solar_event_times_json,
         recordings_json=recordings_json,
         clips_json=clips_json,
