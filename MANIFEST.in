@@ -1,5 +1,6 @@
-include vesper/django/*.sqlite
+include vesper/django/app/templates/registration/*.html
 include vesper/django/app/templates/vesper/*.html
+include vesper/django/app/static/vesper/*.html
 include vesper/django/app/static/vesper/*.css
 include vesper/django/app/static/vesper/*.js
 include vesper/scripts/*.spec
