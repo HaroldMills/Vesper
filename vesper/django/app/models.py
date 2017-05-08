@@ -661,11 +661,6 @@ class RecordingFile(Model):
 # times are only approximate.
 class Clip(Model):
     
-    recording_channel = ForeignKey(
-        RecordingChannel, CASCADE,
-        related_name='clips',
-        related_query_name='clip')
-    
     station = ForeignKey(
         Station, CASCADE,
         related_name='clips',
@@ -676,8 +671,15 @@ class Clip(Model):
         related_name='clips',
         related_query_name='clip')
     
+    recording_channel = ForeignKey(
+        RecordingChannel, CASCADE,
+        related_name='clips',
+        related_query_name='clip')
+    
     start_index = BigIntegerField(null=True)
     length = BigIntegerField()
+    
+    sample_rate = FloatField()
     
     start_time = DateTimeField()
     end_time = DateTimeField()
@@ -722,10 +724,6 @@ class Clip(Model):
     @property
     def recorder(self):
         return self.recording.recorder
-    
-    @property
-    def sample_rate(self):
-        return self.recording.sample_rate
     
     @property
     def wav_file_contents(self):

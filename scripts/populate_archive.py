@@ -49,9 +49,9 @@ import vesper.util.time_utils as time_utils
 #       metadata.
 
 
-_ARCHIVE_DIR_PATH = \
-    r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
-# _ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
+# _ARCHIVE_DIR_PATH = \
+#     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
+_ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
 # _ARCHIVE_DIR_PATH = r'E:\2016_archive'
 # _ARCHIVE_DIR_PATH = \
 #     r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive 0.1.0'
@@ -217,7 +217,7 @@ def _get_station_and_mic_name(station_name):
 
         
 _clip_count = 0
-_CLIP_COUNT_LIMIT = 1000000
+_CLIP_COUNT_LIMIT = 10000
 
 
 def _add_clips():
@@ -298,17 +298,19 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             station = recording.station
             mic_output = channel.mic_output
             length = audio_file_utils.get_wave_file_info(c.file_path).length
+            sample_rate = recording.sample_rate
             start_time = c.start_time
-            span = (length - 1) / recording.sample_rate
+            span = (length - 1) / sample_rate
             end_time = start_time + datetime.timedelta(seconds=span)
             creation_time = time_utils.get_utc_now()
             
             clip = Clip(
-                recording_channel=channel,
                 station=station,
                 mic_output=mic_output,
+                recording_channel=channel,
                 start_index=None,
                 length=length,
+                sample_rate=sample_rate,
                 start_time=start_time,
                 end_time=end_time,
                 date=night,

@@ -1031,7 +1031,7 @@ def _get_clip_dict(clip, utc_to_local):
         'id': clip.id,
         'url': clip.wav_file_url,
         'length': clip.length,
-        'sampleRate': 22050, # clip.sample_rate,
+        'sampleRate': clip.sample_rate,
         'startTime': start_time,
     }
 

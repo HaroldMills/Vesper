@@ -437,11 +437,12 @@ class _DetectorMonitor(Thread):
             with transaction.atomic():
                 
                 clip = Clip(
-                    recording_channel=self._recording_channel,
                     station=station,
                     mic_output=self._mic_output,
+                    recording_channel=self._recording_channel,
                     start_index=start_index,
                     length=length,
+                    sample_rate=self._sample_rate,
                     start_time=start_time,
                     end_time=end_time,
                     date=station.get_night(start_time),
