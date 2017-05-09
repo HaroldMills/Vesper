@@ -80,6 +80,9 @@ class ArchiveDataImporter:
                 creating_user = None
                 creating_job = Job.objects.get(id=job_info.job_id)
                 
+                self._logger.info(
+                    'Adding annotation constraint "{}"...'.format(name))
+                
                 constraint = AnnotationConstraint(
                     name=name,
                     description=description,
@@ -106,6 +109,8 @@ class ArchiveDataImporter:
                 creation_time = time_utils.get_utc_now()
                 creating_user = None
                 creating_job = Job.objects.get(id=job_info.job_id)
+                
+                self._logger.info('Adding annotation "{}"...'.format(name))
                 
                 annotation_info = AnnotationInfo(
                     name=name,
