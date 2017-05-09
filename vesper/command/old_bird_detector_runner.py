@@ -191,7 +191,7 @@ class OldBirdDetectorRunner:
 
     def _start_detector(self, detector, recording_file, channel_num):
         
-        name = detector.name.split()[-1]
+        name = _get_detector_name(detector)
         
         self._logger.info('Starting {} detector...'.format(name))
         
@@ -207,6 +207,10 @@ class OldBirdDetectorRunner:
             monitor.join()
             
             
+def _get_detector_name(detector):
+    return detector.name.split()[-2]
+
+
 class _DetectorMonitor(Thread):
     
     """

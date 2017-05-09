@@ -24,7 +24,7 @@ _ONE_DAY = datetime.timedelta(days=1)
 class OutsideClassifier(Annotator):
     
     
-    extension_name = 'MPG Ranch Outside 1.0'
+    extension_name = 'MPG Ranch Outside Classifier 1.0'
     
     
     def annotate(self, clip):

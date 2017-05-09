@@ -18,7 +18,7 @@ from vesper.command.annotator import Annotator
 class SpeciesClassifier(Annotator):
     
     
-    extension_name = 'MPG Ranch Species 1.0'
+    extension_name = 'MPG Ranch Species Classifier 1.0'
     
     
     def begin_annotations(self):
@@ -70,10 +70,10 @@ def _get_clip_type(clip):
     if processor is None:
         return None
     
-    elif processor.name == 'Old Bird Tseep':
+    elif processor.name == 'Old Bird Tseep Detector':
         return 'Tseep'
         
-    elif processor.name == 'Old Bird Thrush':
+    elif processor.name == 'Old Bird Thrush Detector':
         return 'Thrush'
     
     else:
