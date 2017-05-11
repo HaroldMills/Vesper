@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -77,8 +77,8 @@ MIDDLEWARE_CLASSES = [
 # https://django-debug-toolbar.readthedocs.io/en/stable/installation.html)
 if DEBUG:
     INSTALLED_APPS.append('debug_toolbar')
-    MIDDLEWARE_CLASSES = \
-        ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE_CLASSES
+    MIDDLEWARE = \
+        ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
     INTERNAL_IPS = ['127.0.0.1']
 
 
