@@ -56,6 +56,9 @@ _ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
 # _ARCHIVE_DIR_PATH = \
 #     r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive 0.1.0'
 
+_CREATE_FAKE_RECORDINGS = False
+"""Set `True` if and only if source archive does not contain recordings."""
+
 _DETECTOR_NAME_ALIASES = {
     'Old Bird Thrush Detector': ['Thrush'],
     'Old Bird Tseep Detector': ['Tseep']
@@ -82,11 +85,6 @@ _MIC_NAME_CORRECTIONS = {
 
 _DEFAULT_MIC_NAME = 'SMX-NFC'
 # _DEFAULT_MIC_NAME = '21c'
-
-_MIC_CHANNEL_NUMS = {
-    'SMX-NFC': 0,
-    '21c': 1
-}
 
 
 def _main():
@@ -163,23 +161,65 @@ def _add_recordings():
         
         
 def _get_channel_recordings():
+    
     archive = Archive(_ARCHIVE_DIR_PATH)
     archive.open()
+    
     stations = archive.stations
+    
     start_night = archive.start_night
     end_night = archive.end_night
+    
     one_night = datetime.timedelta(days=1)
+    
     channels = set()
+    
     for station in stations:
+        
         night = start_night
+        
         while night <= end_night:
-            for r in archive.get_recordings(station.name, night):
+            
+            for r in _get_night_channel_recordings(archive, station, night):
                 channels.add(r)
+                
             night += one_night
+            
     archive.close()
+    
     channels = list(channels)
     channels.sort(key=lambda r: (r.station.name, r.start_time))
+    
     return channels
+
+
+def _get_night_channel_recordings(archive, station, night):
+    if _CREATE_FAKE_RECORDINGS:
+        return _create_fake_night_channel_recordings(archive, station, night)
+    else:
+        return archive.get_recordings(station.name, night)
+
+
+_FAKE_RECORDING_START_HOUR = 19
+_FAKE_RECORDING_DURATION = 12
+_FAKE_RECORDING_SAMPLE_RATE = 22050
+  
+  
+def _create_fake_night_channel_recordings(archive, station, night):
+      
+    from vesper.archive.recording import Recording as RecordingOld
+      
+    start_time = time_utils.create_utc_datetime(
+        night.year, night.month, night.day, _FAKE_RECORDING_START_HOUR,
+        time_zone=station.time_zone)
+    
+    length = \
+        _FAKE_RECORDING_DURATION * 3600 * _FAKE_RECORDING_SAMPLE_RATE
+        
+    channel = RecordingOld(
+        station, start_time, length, _FAKE_RECORDING_SAMPLE_RATE)
+    
+    return [channel]
 
 
 def _get_recording_channel_info(station_name):
