@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
+
 import os
 
 
@@ -70,8 +71,16 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# For the Django Debug Toolbar (see
+# https://django-debug-toolbar.readthedocs.io/en/stable/installation.html)
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
+    MIDDLEWARE_CLASSES = \
+        ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE_CLASSES
+    INTERNAL_IPS = ['127.0.0.1']
+
 
 ROOT_URLCONF = 'vesper.django.project.urls'
 
