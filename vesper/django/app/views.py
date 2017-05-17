@@ -1019,24 +1019,18 @@ def _get_clips_json(clips, station):
     # instead of UTC times to clients.
         
     utc_to_local = station.utc_to_local
-    clip_dicts = [_get_clip_dict(c, utc_to_local) for c in clips]
-    result = json.dumps(clip_dicts)
+    clip_lists = [_get_clip_list(c, utc_to_local) for c in clips]
+    result = json.dumps(clip_lists)
     return result
 
 
-def _get_clip_dict(clip, utc_to_local):
+def _get_clip_list(c, utc_to_local):
     
     # See note about UTC and local times near the top of this file.
-    start_time = _format_time(utc_to_local(clip.start_time))
+    start_time = _format_time(utc_to_local(c.start_time))
     
-    return {
-        'id': clip.id,
-        'url': clip.wav_file_url,
-        'length': clip.length,
-        'sampleRate': clip.sample_rate,
-        'startTime': start_time,
-    }
-
+    return [c.id, c.wav_file_url, c.length, c.sample_rate, start_time]
+    
     
 # def _get_rc_pair_annotations(
 #         rc_pairs, time_interval, detector, annotation_name, annotation_value):

@@ -174,9 +174,7 @@ class ClipCollectionView {
 		    clipViewDelegateClasses, settings = null, keyboardCommands = null) {
 		
 		this._elements = elements;
-		this._clips = clips;
-		
-		this._initClips();
+		this._clips = this._createClips(clipArrays);
 		
 		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		
@@ -193,7 +191,8 @@ class ClipCollectionView {
 		this._layout = this._createLayout(this.settings);
 		
 		this._rugPlot = new NightRugPlot(
-			this, this.elements.rugPlotDiv, clips, recordings, solarEventTimes);
+			this, this.elements.rugPlotDiv, this.clips, recordings,
+			solarEventTimes);
 			
 		this._audioContext = new window.AudioContext();
 		
@@ -202,23 +201,34 @@ class ClipCollectionView {
 	}
 	
 	
-	_initClips() {
+	_createClips(clipArrays) {
 		
-		for (const [num, clip] of this.clips.entries()) {
-			
-			clip.num = num;
-			
-			// TODO: Consider making a clip's annotations and audio data
-			// lazy properties. The way things are, a clip relies explicitly
-			// on its view to get its annotations and audio data. Using lazy
-			// properties would better separate concerns.
-
-			// Initialize clip with no annotations. The actual annotations
-			// will be gotten from the server by the clip's view when the
-			// view is first displayed.
-			clip.annotations = {};
-			
+		const clips = [];
+		
+		for (const entry of clipArrays.entries()) {
+			clips.push(this._createClip(entry));
 		}
+		
+		return clips;
+		
+	}
+	
+	
+	_createClip([clipNum, clipArray]) {
+		
+		const clip = new _Clip(clipNum, ...clipArray);
+		
+		// TODO: Consider making a clip's annotations and audio data
+		// lazy properties. The way things are, a clip relies explicitly
+		// on its view to get its annotations and audio data. Using lazy
+		// properties would better separate concerns.
+
+		// Initialize clip with no annotations. The actual annotations
+		// will be gotten from the server by the clip's view when the
+		// view is first displayed.
+		clip.annotations = {};
+		
+		return clip;
 		
 	}
 	
@@ -1049,6 +1059,57 @@ function _scrollToTop() {
 
 function _scrollToBottom() {
 	window.scrollTo(0, document.body.scrollHeight);
+}
+
+
+class _Clip {
+	
+	
+	constructor(num, id, url, length, sampleRate, startTime) {
+		
+		this._num = num;
+		this._id = id;
+		this._url = url;
+		this._length = length;
+		this._sampleRate = sampleRate;
+		this._startTime = startTime;
+		
+		this._samples = null;
+		this._annotations = null;
+		
+	}
+	
+	
+	get id() {
+		return this._id;
+	}
+	
+	
+	get num() {
+		return this._num;
+	}
+	
+	
+	get url() {
+		return this._url;
+	}
+	
+	
+	get length() {
+		return this._length;
+	}
+	
+	
+	get sampleRate() {
+		return this._sampleRate;
+	}
+	
+	
+	get startTime() {
+		return this._startTime;
+	}
+	
+
 }
 
 
