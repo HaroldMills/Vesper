@@ -1032,44 +1032,6 @@ def _get_clip_list(c, utc_to_local):
     return [c.id, c.length, c.sample_rate, start_time]
     
     
-# def _get_rc_pair_annotations(
-#         rc_pairs, time_interval, detector, annotation_name, annotation_value):
-#      
-#     annotation_iterators = [
-#         _get_annotations(
-#             recording, channel_num, time_interval, detector, annotation_name,
-#             annotation_value)
-#         for recording, channel_num in rc_pairs]
-#      
-#     return list(itertools.chain.from_iterable(annotation_iterators))
-# 
-# 
-# def _get_clips_json(annotations, station):
-#      
-#     # See note near the top of this file about why we send local
-#     # instead of UTC times to clients.
-#          
-#     utc_to_local = station.utc_to_local
-#     clip_dicts = [_get_clip_dict(a, utc_to_local) for a in annotations]
-#     return json.dumps(clip_dicts)
-#      
-#      
-# def _get_clip_dict(annotation, utc_to_local):
-#      
-#     clip = annotation.clip
-#      
-#     # See note about UTC and local times near the top of this file.
-#     start_time = _format_time(utc_to_local(clip.start_time))
-#     return {
-#         'id': clip.id,
-#         'url': clip.wav_file_url,
-#         'length': clip.length,
-#         'sampleRate': clip.sample_rate,
-#         'startTime': start_time,
-#         'classification': annotation.value
-#     }
-
-    
 def _format_time(time):
     
     prefix = time.strftime('%Y-%m-%d %H:%M:%S')
