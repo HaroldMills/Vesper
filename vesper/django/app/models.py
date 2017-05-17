@@ -738,10 +738,6 @@ class Clip(Model):
         return _create_clip_file_path(self.id)
         
     @property
-    def wav_file_url(self):
-        return reverse('clip-wav', args=(self.id,))
-    
-    @property
     def sound(self):
         path = self.wav_file_path
         (samples, sample_rate) = audio_file_utils.read_wave_file(path)

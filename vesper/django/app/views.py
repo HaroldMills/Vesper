@@ -1029,7 +1029,7 @@ def _get_clip_list(c, utc_to_local):
     # See note about UTC and local times near the top of this file.
     start_time = _format_time(utc_to_local(c.start_time))
     
-    return [c.id, c.wav_file_url, c.length, c.sample_rate, start_time]
+    return [c.id, c.length, c.sample_rate, start_time]
     
     
 # def _get_rc_pair_annotations(

@@ -218,11 +218,6 @@ class ClipCollectionView {
 		
 		const clip = new _Clip(clipNum, ...clipArray);
 		
-		// TODO: Consider making a clip's annotations and audio data
-		// lazy properties. The way things are, a clip relies explicitly
-		// on its view to get its annotations and audio data. Using lazy
-		// properties would better separate concerns.
-
 		// Initialize clip with no annotations. The actual annotations
 		// will be gotten from the server by the clip's view when the
 		// view is first displayed.
@@ -1065,11 +1060,10 @@ function _scrollToBottom() {
 class _Clip {
 	
 	
-	constructor(num, id, url, length, sampleRate, startTime) {
+	constructor(num, id, length, sampleRate, startTime) {
 		
 		this._num = num;
 		this._id = id;
-		this._url = url;
 		this._length = length;
 		this._sampleRate = sampleRate;
 		this._startTime = startTime;
@@ -1091,7 +1085,7 @@ class _Clip {
 	
 	
 	get url() {
-		return this._url;
+    	return `/clips/${this.id}/wav`;
 	}
 	
 	
