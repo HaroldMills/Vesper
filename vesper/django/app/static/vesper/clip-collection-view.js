@@ -174,7 +174,7 @@ class ClipCollectionView {
 		    clipViewDelegateClasses, settings = null, keyboardCommands = null) {
 		
 		this._elements = elements;
-		this._clips = this._createClips(clipArrays);
+		this._clips = this._createClips(clips);
 		
 		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		
@@ -201,11 +201,11 @@ class ClipCollectionView {
 	}
 	
 	
-	_createClips(clipArrays) {
+	_createClips(clipInfos) {
 		
 		const clips = [];
 		
-		for (const entry of clipArrays.entries()) {
+		for (const entry of clipInfos.entries()) {
 			clips.push(this._createClip(entry));
 		}
 		
@@ -214,9 +214,9 @@ class ClipCollectionView {
 	}
 	
 	
-	_createClip([clipNum, clipArray]) {
+	_createClip([clipNum, clipInfo]) {
 		
-		const clip = new _Clip(clipNum, ...clipArray);
+		const clip = new _Clip(clipNum, ...clipInfo);
 		
 		// Initialize clip with no annotations. The actual annotations
 		// will be gotten from the server by the clip's view when the
