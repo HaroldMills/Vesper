@@ -1109,13 +1109,23 @@ class _Clip {
 	}
 	
 	
-	get clipUrl() {
+	get annotations() {
+		return this._annotations;
+	}
+	
+	
+	set annotations(annotations) {
+		this._annotations = annotations;
+	}
+	
+	
+	get url() {
 		return `/clips/${this.id}/`;
 	}
 	
 	
 	get wavFileUrl() {
-    	return `${this.clipUrl}wav/`;
+    	return `${this.url}wav/`;
 	}
 	
 	
@@ -1130,7 +1140,7 @@ class _Clip {
 	
 	
 	get annotationsUrl() {
-		return `${this.clipUrl}annotations/`;
+		return `${this.url}annotations/`;
 	}
 	
 	
@@ -1140,7 +1150,7 @@ class _Clip {
 	
 	
 	getAnnotationUrl(name) {
-		return `${this.annotationsUrl}/${name}`;
+		return `${this.annotationsUrl}${name}/`;
 	}
 	
 	
