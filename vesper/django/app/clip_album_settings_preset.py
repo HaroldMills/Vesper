@@ -1,14 +1,14 @@
-"""Module containing class `ClipCollectionViewSettingsPreset`."""
+"""Module containing class `ClipAlbumSettingsPreset`."""
 
 
 from vesper.util.yaml_preset import YamlPreset
 import vesper.util.case_utils as case_utils
 
 
-class ClipCollectionViewSettingsPreset(YamlPreset):
+class ClipAlbumSettingsPreset(YamlPreset):
     
     """
-    Preset that specifies clip collection view settings.
+    Preset that specifies clip album settings.
     
     The preset body is YAML that specifies a mapping from setting names
     to setting values.

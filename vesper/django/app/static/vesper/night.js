@@ -1,16 +1,16 @@
 'use strict'
 
 
-let clipCollectionView = null;
+let clipAlbum = null;
 
 
 function onLoad() {
 	initSettingsModal();
-	createClipCollectionView();
+	createClipAlbum();
 }
 
 
-function createClipCollectionView() {
+function createClipAlbum() {
 	
 	const elements = {
 		'titleHeading': document.getElementById('title'),
@@ -22,14 +22,12 @@ function createClipCollectionView() {
 		'Spectrogram': SpectrogramClipViewDelegate
 	};
 	
-	const settings = _findPreset(viewSettingsPresets, viewSettingsPresetPath);
-	
-	const keyboardCommands =
-		_findPreset(keyboardCommandsPresets, keyboardCommandsPresetPath);
+	const settings = _findPreset(settingsPresets, settingsPresetPath);
+	const commands = _findPreset(commandsPresets, commandsPresetPath);
 		
-	clipCollectionView = new ClipCollectionView(
+	clipAlbum = new ClipAlbum(
 		elements, clips, recordings, solarEventTimes, clipViewDelegateClasses,
-		settings, keyboardCommands);
+		settings, commands);
 	
 }
 
@@ -46,7 +44,7 @@ function _findPreset(presetInfos, presetPath) {
 
 
 function onResize() {
-	clipCollectionView.onResize();
+	clipAlbum.onResize();
 }
 
 
@@ -57,17 +55,14 @@ function initSettingsModal() {
 	// with XHRs. We could set up URLs so that a client could request
 	// all presets of a specified type as JSON.
 	
-//	showPresets('Clip Album Settings', viewSettingsPresets);
-//	showPresets('Clip Album Commands', keyboardCommandsPresets);
+//	showPresets('Clip Album Settings', settingsPresets);
+//	showPresets('Clip Album Commands', commandsPresets);
 	
-	const viewSettingsSelect = document.getElementById('view-settings');
-	populatePresetSelect(
-		viewSettingsSelect, viewSettingsPresets, viewSettingsPresetPath);
+	const settingsSelect = document.getElementById('settings');
+	populatePresetSelect(settingsSelect, settingsPresets, settingsPresetPath);
 	
-	const keyboardCommandsSelect = document.getElementById('keyboard-commands');
-	populatePresetSelect(
-		keyboardCommandsSelect, keyboardCommandsPresets,
-		keyboardCommandsPresetPath);
+	const commandsSelect = document.getElementById('commands');
+	populatePresetSelect(commandsSelect, commandsPresets, commandsPresetPath);
 	
 	const okButton = document.getElementById('ok-button');
 	okButton.onclick = onOkButtonClick;
@@ -100,13 +95,11 @@ function populatePresetSelect(select, presetInfos, presetPath) {
 
 function onOkButtonClick() {
 	
-	if (viewSettingsPresets.length > 0)
-		clipCollectionView.settings = _getSelectedPreset(
-			'view-settings', viewSettingsPresets);
+	if (settingsPresets.length > 0)
+		clipAlbum.settings = _getSelectedPreset('settings', settingsPresets);
 	
-	if (keyboardCommandsPresets.length > 0)
-		clipCollectionView.keyboardCommands = _getSelectedPreset(
-		    'keyboard-commands', keyboardCommandsPresets);
+	if (commandsPresets.length > 0)
+		clipAlbum.commands = _getSelectedPreset('commands', commandsPresets);
 		
 }
 
@@ -118,7 +111,7 @@ function _getSelectedPreset(selectId, presets) {
 
 
 function onKeyPress(e) {
-	clipCollectionView.onKeyPress(e);
+	clipAlbum.onKeyPress(e);
 }
 
 

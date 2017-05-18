@@ -1,14 +1,14 @@
-"""Module containing class `ClipCollectionViewKeyboardCommandsPreset`."""
+"""Module containing class `ClipAlbumCommandsPreset`."""
 
 
 from vesper.util.yaml_preset import YamlPreset
 import vesper.util.case_utils as case_utils
 
 
-class ClipCollectionViewKeyboardCommandsPreset(YamlPreset):
+class ClipAlbumCommandsPreset(YamlPreset):
     
     """
-    Preset that specifies clip collection view keyboard commands.
+    Preset that specifies clip album keyboard commands.
     
     The preset body is YAML that specifies two mappings, one called
     `globals` that maps command interpreter global variable names

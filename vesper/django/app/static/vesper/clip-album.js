@@ -64,16 +64,16 @@ settings:
 
 For nonuniform clip view layouts, the time axis initial and final
 padding settings affect both clip view layout and content. This leads
-to a dilemma: in a clip collection view settings object, should those
-settings be considered layout settings or clip view settings? I
-have chosen to consider them layout settings, since then a change
-of layout type affects only layout settings, and never clip view
-settings. However, this leaves us with settings that affect clip
-view content in both the layout and clip view settings, which
-complicates clip view initialization and settings updates. A
-possible solution would be to augment the clip view settings of
-a clip collection view settings object with the relevant layout
-settings before initializing a clip view or updating its settings.
+to a dilemma: in a clip album settings object, should those settings
+be considered layout settings or clip view settings? I have chosen
+to consider them layout settings, since then a change of layout type
+affects only layout settings, and never clip view settings. However,
+this leaves us with settings that affect clip view content in both
+the layout and clip view settings, which complicates clip view
+initialization and settings updates. A possible solution would be to
+augment the clip view settings of a clip album settings object with
+the relevant layout settings before initializing a clip view or
+updating its settings.
 
 A similar dilemma arises concerning clip label settings, and
 probably other display elements. Could we perhaps have a
@@ -148,7 +148,7 @@ const _COMMAND_CHARS = new Set(
 	'~!@#$%^&*()_+{}|:"<>?');
 
 
-const _DEFAULT_KEYBOARD_COMMANDS = {
+const _DEFAULT_COMMANDS = {
 		
 	'globals': {
 		'annotation_name': 'Classification',
@@ -166,12 +166,12 @@ const _DEFAULT_KEYBOARD_COMMANDS = {
 };
 
 
-class ClipCollectionView {
+class ClipAlbum {
 	
 	
 	constructor(
 		    elements, clips, recordings, solarEventTimes,
-		    clipViewDelegateClasses, settings = null, keyboardCommands = null) {
+		    clipViewDelegateClasses, settings = null, commands = null) {
 		
 		this._elements = elements;
 		this._clips = this._createClips(clips);
@@ -179,11 +179,7 @@ class ClipCollectionView {
 		this._clipViewDelegateClasses = clipViewDelegateClasses;
 		
 		this._settings = settings === null ? _DEFAULT_SETTINGS : settings;
-		
-		this.keyboardCommands =
-			keyboardCommands === null ?
-			_DEFAULT_KEYBOARD_COMMANDS :
-			keyboardCommands;
+		this.commands = commands === null ? _DEFAULT_COMMANDS : commands;
 		
 		this._clipViews = this._createClipViews(this.settings);
 		
@@ -431,19 +427,19 @@ class ClipCollectionView {
 	}
 	
 	
-	get keyboardCommands() {
-		return this._keyboardCommands;
+	get commands() {
+		return this._commands;
 	}
 	
 	
-	set keyboardCommands(commands) {
-		this._keyboardCommands = commands;
- 		this._keyboardCommandInterpreter =
- 			this._createKeyboardCommandInterpreter(this._keyboardCommands);
+	set commands(commands) {
+		this._commands = commands;
+ 		this._commandInterpreter =
+ 			this._createCommandInterpreter(this._commands);
 	}
 	
 	
-	_createKeyboardCommandInterpreter(spec) {
+	_createCommandInterpreter(spec) {
 		
 		const functionData = [
 			
@@ -540,7 +536,7 @@ class ClipCollectionView {
 		
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
-			const clip = clips[i];
+			const clip = this.clips[i];
 			const url = clip.getAnnotationUrl(name);
 			
 			const xhr = new XMLHttpRequest();
@@ -668,7 +664,7 @@ class ClipCollectionView {
 		
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
-			const clip = clips[i];
+			const clip = this.clips[i];
 			const url = clip.getAnnotationUrl(name);
 			
 			const xhr = new XMLHttpRequest();
@@ -803,7 +799,7 @@ class ClipCollectionView {
 		e.preventDefault();
 		
     	try {
-    	    this._keyboardCommandInterpreter.handleKey(e.key);
+    	    this._commandInterpreter.handleKey(e.key);
     	} catch (e) {
     		window.alert(e.message);
     	}
@@ -906,7 +902,7 @@ class ClipCollectionView {
 
 
 	/**
-	 * Gets the y clip view margin of this clip collection view in pixels.
+	 * Gets the y clip view margin of this clip album in pixels.
 	 * 
 	 * The y clip view margin is half of the y clip view spacing, which
 	 * is specified in the clip view settings. However, the units in
@@ -979,7 +975,7 @@ class ClipCollectionView {
 
 /*
 
-Clip collection view layout settings by layout type:
+Clip album layout settings by layout type:
 
     Uniform Nonresizing Clip Views
     
@@ -1627,10 +1623,10 @@ function _toCssPercent(x) {
 
 /*
 
-Clip collection view layout sets clip view time bounds, so clip view
+Clip album layout sets clip view time bounds, so clip view
 does not have to know anything about layout.
 
-clip collection view settings:
+clip album settings:
 
     layout_type: Nonuniform Resizing Clip Views
     
@@ -1712,9 +1708,8 @@ Observations and questions:
 
 * How can we allow the user to define a preset that "plugs in" at various
   places in the settings namespace? For example, how could they define
-  one spectrogram settings preset that can be used both for clip
-  collection views and individual clip views? (Perhaps the answer is
-  relative names.)
+  one spectrogram settings preset that can be used both for clip albums
+  and individual clip views? (Perhaps the answer is relative names.)
 
 * How are settings specified? How do plugins specify the settings they
   use? How do they specify preset types?
@@ -2184,7 +2179,7 @@ class ClipViewDelegate {
 	 * 
 	 * This method is invoked by this delegate's clip view whenever
 	 * the contents of the clip view may need to be rendered, including
-	 * when the containing clip collection view has changed size.
+	 * when the containing clip album has changed size.
 	 */
 	render() {
 		throw new Error('ClipViewDelegate.render method not implemented.');
@@ -2395,8 +2390,8 @@ Annotation settings:
 * auto_advance_after_annotate_page: Boolean
 
 It might be nice to be able to modify settings with commands, for example
-to toggle the above settings. Perhaps the clip collection view should
-offer a "toggle_setting" command? Then one could do something like:
+to toggle the above settings. Perhaps the clip album should offer a
+"toggle_setting" command? Then one could do something like:
 
     commands: {
         _toggle_auto_select: [toggle_setting, auto_select_first_page_clip],

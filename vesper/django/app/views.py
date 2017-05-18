@@ -907,14 +907,14 @@ def night(request):
     preset_manager.instance.reload_presets()
     preference_manager.instance.reload_preferences()
     
-    view_settings_presets_json = _get_presets_json('Clip Album Settings')
-    keyboard_commands_presets_json = _get_presets_json('Clip Album Commands')
+    settings_presets_json = _get_presets_json('Clip Album Settings')
+    commands_presets_json = _get_presets_json('Clip Album Commands')
         
     preferences = preference_manager.instance.preferences
     
-    view_settings_preset_path = \
+    settings_preset_path = \
         preferences.get('default_presets.Clip Album Settings')
-    keyboard_commands_preset_path = \
+    commands_preset_path = \
         preferences.get('default_presets.Clip Album Commands')
         
     context = _create_template_context(
@@ -926,10 +926,10 @@ def night(request):
         solar_event_times_json=solar_event_times_json,
         recordings_json=recordings_json,
         clips_json=clips_json,
-        view_settings_presets_json=view_settings_presets_json,
-        view_settings_preset_path=view_settings_preset_path,
-        keyboard_commands_presets_json=keyboard_commands_presets_json,
-        keyboard_commands_preset_path=keyboard_commands_preset_path)
+        settings_presets_json=settings_presets_json,
+        settings_preset_path=settings_preset_path,
+        commands_presets_json=commands_presets_json,
+        commands_preset_path=commands_preset_path)
           
     return render(request, 'vesper/night.html', context)
     

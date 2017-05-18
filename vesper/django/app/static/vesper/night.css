@@ -154,9 +154,9 @@ html {
 We set min-width and min-height properties for the body to help avoid
 problems that tend to arise at smaller sizes, for example playback buttons
 that are taller than the clip views that are supposed to contain them. While
-such problems can occur for a clip collection view of any height (since
-there is no limit on the number of view rows one can specify), for
-reasonable view settings they tend to occur only at smaller view sizes.
+such problems can occur for a clip album of any height (since there is no
+limit on the number of page rows one can specify), for reasonable album
+settings they tend to occur only at smaller view sizes.
 */
 body {
   display: flex;
@@ -265,8 +265,8 @@ body {
  * We set the margin, padding, and line height to eliminate all space
  * around the text by default.
  *
- * We set the overflow to "hidden" to clip labels to the clip collection
- * view div to avoid undesirable horizontal scrollbars.
+ * We set the overflow to "hidden" to clip labels to the album div
+ * to avoid undesirable horizontal scrollbars.
  */
 .clip-label {
   white-space: nowrap;

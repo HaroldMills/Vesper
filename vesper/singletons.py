@@ -33,8 +33,8 @@ Importer:
 
 Preset:
     - vesper.command.station_name_aliases_preset.StationNameAliasesPreset
-    - vesper.django.app.clip_collection_view_keyboard_commands_preset.ClipCollectionViewKeyboardCommandsPreset
-    - vesper.django.app.clip_collection_view_settings_preset.ClipCollectionViewSettingsPreset
+    - vesper.django.app.clip_album_commands_preset.ClipAlbumCommandsPreset
+    - vesper.django.app.clip_album_settings_preset.ClipAlbumSettingsPreset
     
 Recording File Parser:
     - vesper.mpg_ranch.recording_file_parser.RecordingFileParser

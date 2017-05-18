@@ -57,7 +57,7 @@ const nonuniformResizingSettings = {
 };
 
 
-let clipCollectionView = null;
+let clipAlbum = null;
 
 
 function onLoad() {
@@ -70,7 +70,7 @@ function onLoad() {
 	const clips = createClips(numClips, minClipSpan, maxClipSpan);
 	const settings = getSettings();
 	const clipViewDelegateClasses = { 'Demo': DemoClipViewDelegate };
-	clipCollectionView = new ClipCollectionView(
+	clipAlbum = new ClipAlbum(
 		pageDiv, clips, settings, clipViewDelegateClasses);
 	
 	updateTitle();
@@ -79,7 +79,7 @@ function onLoad() {
 	
 	
 function onCheckboxChange() {
-	clipCollectionView.settings = getSettings();
+	clipAlbum.settings = getSettings();
 	updateTitle();
 }
 
@@ -94,9 +94,9 @@ function getSettings() {
 
 function updateTitle() {
 	const title = document.getElementById('title');
-	const view = clipCollectionView;
-	const [startIndex, endIndex] = view.getPageIndexBounds(view.pageNum);
-	const numClips = view.clips.length;
+	const album = clipAlbum;
+	const [startIndex, endIndex] = album.getPageIndexBounds(album.pageNum);
+	const numClips = album.clips.length;
 	title.innerHTML = `Clips ${startIndex + 1} to ${endIndex} of ${numClips}`;
 }
 
@@ -126,18 +126,17 @@ function createClips(numClips, minSpan, maxSpan) {
 
 
 function onResize() {
-	clipCollectionView.onResize();
+	clipAlbum.onResize();
 }
 
 
 function onKeyPress(e) {
 	
-	const view = clipCollectionView;
-	const pageNum = view.pageNum;
+	const pageNum = clipAlbum.pageNum;
 	
 	if (e.key === '>') {
 		
-		if (pageNum < view.numPages - 1)
+		if (pageNum < clipAlbum.numPages - 1)
 			setPageNum(pageNum + 1);
 		
 	} else if (e.key === '<') {
@@ -151,7 +150,7 @@ function onKeyPress(e) {
 
 
 function setPageNum(pageNum) {
-	clipCollectionView.pageNum = pageNum;
+	clipAlbum.pageNum = pageNum;
 	updateTitle();
 }
 
