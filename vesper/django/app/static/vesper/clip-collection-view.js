@@ -541,7 +541,7 @@ class ClipCollectionView {
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
 			const clip = clips[i];
-			const url = `/clips/${clip.id}/annotations/${name}/`;
+			const url = clip.getAnnotationUrl(name);
 			
 			const xhr = new XMLHttpRequest();
 			xhr.onload =
@@ -669,7 +669,7 @@ class ClipCollectionView {
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
 			const clip = clips[i];
-			const url = `/clips/${clip.id}/annotations/${name}`;
+			const url = clip.getAnnotationUrl(name);
 			
 			const xhr = new XMLHttpRequest();
 			xhr.onload =
@@ -1084,11 +1084,6 @@ class _Clip {
 	}
 	
 	
-	get url() {
-    	return `/clips/${this.id}/wav`;
-	}
-	
-	
 	get length() {
 		return this._length;
 	}
@@ -1104,6 +1099,66 @@ class _Clip {
 	}
 	
 
+	get samples() {
+		return this._samples;
+	}
+	
+	
+	set samples(samples) {
+		this._samples = samples;
+	}
+	
+	
+	get clipUrl() {
+		return `/clips/${this.id}/`;
+	}
+	
+	
+	get wavFileUrl() {
+    	return `${this.clipUrl}wav/`;
+	}
+	
+	
+	get annotations() {
+		return this._annotations;
+	}
+	
+	
+	set annotations(annotations) {
+		this._annotations = annotations;
+	}
+	
+	
+	get annotationsUrl() {
+		return `${this.clipUrl}annotations/`;
+	}
+	
+	
+	get annotationsJsonUrl() {
+		return `${this.annotationsUrl}json/`;
+	}
+	
+	
+	getAnnotationUrl(name) {
+		return `${this.annotationsUrl}/${name}`;
+	}
+	
+	
+}
+
+
+// Loads clip samples and annotations from the server and notifies clip
+// views when the clip data arrive.
+//
+// Different clip managers may load clip data differently. For example,
+// one manager may load data for clip pages as they are displayed, requesting
+// data from the server one clip at a time. Another manager may load the data
+// for the clips of a page in bulk, requesting all of the data in a single
+// request for the server. Yet other managers may load data for all the clips
+// of an album greedily, regardless of which pages have or have not been
+// displayed.
+class _ClipManager {
+	
 }
 
 
@@ -1850,9 +1905,8 @@ class ClipView {
     
     _startClipAnnotationsGet() {
     	
-    	const url = `/clips/${this.clip.id}/annotations/json/`;
 		const xhr = new XMLHttpRequest();
-		xhr.open('GET', url);
+		xhr.open('GET', this.clip.annotationsJsonUrl);
 		xhr.onload = () => this._onClipAnnotationsGetComplete(xhr)
 		xhr.send();
 		
@@ -1879,7 +1933,7 @@ class ClipView {
     	const clip = this.clip;
 		const context = new OfflineAudioContext(1, 1, clip.sampleRate);
 		const xhr = new XMLHttpRequest();
-		xhr.open('GET', clip.url);
+		xhr.open('GET', clip.wavFileUrl);
 		xhr.responseType = 'arraybuffer';
 		xhr.onload = () =>
 			context.decodeAudioData(xhr.response).then(audioBuffer =>
