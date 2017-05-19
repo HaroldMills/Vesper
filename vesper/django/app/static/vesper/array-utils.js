@@ -1,3 +1,23 @@
+function arraysEqual(a, b) {
+	
+	if (a.length !== b.length)
+		return false;
+	
+	else {
+		
+		const n = a.length;
+		
+		for (let i = 0; i < n; i++)
+			if (a[i] !== b[i])
+				return false;
+		
+		return true;
+		
+	}
+	
+}
+
+
 /**
  * Finds the index of the last element of array a that is less than or equal
  * to x. The array must not be empty and its elements must be in nondecreasing

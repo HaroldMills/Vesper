@@ -1,6 +1,45 @@
 'use strict'
 
 
+describe('arraysEqual', () => {
+	
+	
+	it('equal arrays', () => {
+		
+		const cases = [
+			[],
+			[1],
+			[1, 2],
+			[1., 2., 3.],
+			['one', 'two', 'three']
+		];
+		
+		for (const a of cases) {
+			const b = [...a];
+			expect(arraysEqual(a, b)).toBe(true);
+		}
+		
+	});
+	
+	
+	it('unequal arrays', () => {
+		
+		const cases = [
+			[[], [1]],
+			[[1], [2]],
+			[[1], [1, 2]],
+			[[1], ['one']]
+		];
+		
+		for (const [a, b] of cases)
+			expect(arraysEqual(a, b)).toBe(false);
+		
+	});
+	
+	
+});
+
+
 describe('findLastLE', () => {
 	
 	
