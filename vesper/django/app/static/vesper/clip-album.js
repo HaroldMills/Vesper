@@ -192,6 +192,9 @@ class ClipAlbum {
 			
 		this._audioContext = new window.AudioContext();
 		
+		this._clipManager = new _SimpleClipManager(
+			this.clips, this._clipViews, this._layout.pageStartClipNums);
+		
 		this.pageNum = 0;
 		
 	}
@@ -381,11 +384,32 @@ class ClipAlbum {
 	
 	
 	set settings(settings) {
+		
 		this._updateClipViewSettings(settings);
-		this._updateLayoutSettings(settings);
+		const paginationChanged = this._updateLayoutSettings(settings);
 		this._settings = settings;
-		this.pageNum = 0;
-		this._update();
+		
+		if (paginationChanged) {
+			
+			// TODO: Set the page number so that the first clip that was
+			// visible before the settings changed remains visible.
+			const pageNum = 0;
+			
+		    this._clipManager.update(this._layout.pageStartClipNums, pageNum);
+		
+		    // It is important to do this *after* updating the clip manager
+		    // for both the new pagination and the (possibly) new page
+		    // number. Otherwise the clip manager may update twice, once
+		    // because the page number changed (but not the pagination)
+		    // and a second time because the pagination changed.
+		    //
+			// Note that this assignment triggers a call to this._update,
+		    // so we don't need to invoke this._update explicitly here.
+		    this.pageNum = pageNum;
+		    
+		} else
+		    this._update();
+		
 	}
 	
 	
@@ -410,19 +434,32 @@ class ClipAlbum {
 	}
 	
 	
+	/*
+	 * Updates the settings of this album's layout.
+	 * 
+	 * Returns true if and only if the album's pagination changed,
+	 * or if it is not known whether or not it changed.
+	 */
 	_updateLayoutSettings(settings) {
 		
-//		this._layout = this._createLayout(settings);
-		
-		if (settings.layoutType !== this.settings.layoutType)
+		if (settings.layoutType !== this.settings.layoutType) {
 			// layout type will change
 			
 			this._layout = this._createLayout(settings);
 			
-		else
+			// We don't know here whether or not the pagination changed.
+			return true;
+		
+		} else {
 			// layout type will not change
 			
+			const oldPageStartClipNums = this._layout.pageStartClipNums;
 			this._layout.settings = settings.layout;
+			const paginationChanged = !arraysEqual(
+				this._layout.pageStartClipNums, oldPageStartClipNums);
+			return paginationChanged;
+			
+		}
 		
 	}
 	
@@ -754,6 +791,7 @@ class ClipAlbum {
 			this._pageNum = pageNum;
 			this._selection = this._createSelection();
 			this._rugPlot.pageNum = pageNum;
+			this._clipManager.pageNum = pageNum;
 		}
 			
 		this._update();
@@ -1165,20 +1203,62 @@ class _Clip {
 class _ClipManager {
 	
 	
-	constructor(clipAlbum) {
-		this._clipAlbum = clipAlbum;
+	constructor(clips, clipViews, pageStartClipNums, pageNum = 0) {
+		this._clips = clips;
+		this._clipViews = clipViews;
+		this._pageStartClipNums = pageStartClipNums;
+		this._pageNum = pageNum;
 	}
 	
 	
-	onLayoutChanged() {
-		
+	get clips() {
+		return this._clips;
 	}
 	
 	
-	onPageNumChanged() {
-		
+	get clipViews() {
+		return this._clipViews;
 	}
 	
+	
+	get pageStartClipNums() {
+		return this._pageStartClipNums;
+	}
+	
+	
+	get pageNum() {
+		return this._pageNum;
+	}
+	
+	
+	set pageNum(pageNum) {
+		if (pageNum != this.pageNum) {
+		    this._pageNum = pageNum;
+		    this._update();
+		}
+	}
+	
+	
+	update(pageStartClipNums, pageNum) {
+		this._pageStartClipNums = pageStartClipNums;
+		this._pageNum = pageNum;
+		this._update();
+	}
+	
+	
+	_update() {
+		throw new Error('_ClipManager._update not implemented');
+	}
+	
+	
+}
+
+
+class _SimpleClipManager extends _ClipManager {
+	
+	_update() {
+		console.log('_SimpleClipManager._update');
+	}
 	
 }
 
@@ -1215,7 +1295,7 @@ class _ClipViewsLayout {
     
     
     _paginate() {
-		throw new Error('ClipViewsLayout._paginate not implemented');
+		throw new Error('_ClipViewsLayout._paginate not implemented');
     }
     
     
