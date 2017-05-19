@@ -74,9 +74,13 @@ describe('_NonuniformNonresizingClipViewsLayout', () => {
 			expect(layout.clipViews).toEqual(clipViews);
 			expect(layout.settings).toEqual(NONRESIZING_SETTINGS);
 			
+			// num pages
 			const numStartClipNums = expectedPageStartClipNums.length;
 			const numPages = numStartClipNums === 0 ? 0 : numStartClipNums - 1
 			expect(layout.numPages).toBe(numPages);
+			
+			// page start clip nums
+			expect(layout.pageStartClipNums).toEqual(expectedPageStartClipNums);
 
 			// page clip num range
 			const clipNums = expectedPageStartClipNums;

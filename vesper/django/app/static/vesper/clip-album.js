@@ -1153,17 +1153,32 @@ class _Clip {
 }
 
 
-// Loads clip samples and annotations from the server and notifies clip
-// views when the clip data arrive.
-//
-// Different clip managers may load clip data differently. For example,
-// one manager may load data for clip pages as they are displayed, requesting
-// data from the server one clip at a time. Another manager may load the data
-// for the clips of a page in bulk, requesting all of the data in a single
-// request for the server. Yet other managers may load data for all the clips
-// of an album greedily, regardless of which pages have or have not been
-// displayed.
+// Loads and unloads clip samples and annotations on behalf of a clip album.
+// 
+// Different clip managers may load clip data according to different policies.
+// For example, one manager may load data for clip pages as they are displayed,
+// requesting data from the server one clip at a time. Another manager may load
+// the data for the clips of a page in bulk, obtaining all of the data from
+// the server in a single request. Yet other managers may load data for all
+// the clips of an album greedily, regardless of which pages have or have not
+// been displayed.
 class _ClipManager {
+	
+	
+	constructor(clipAlbum) {
+		this._clipAlbum = clipAlbum;
+	}
+	
+	
+	onLayoutChanged() {
+		
+	}
+	
+	
+	onPageNumChanged() {
+		
+	}
+	
 	
 }
 
@@ -1210,6 +1225,11 @@ class _ClipViewsLayout {
 	}
 	
 	
+    get pageStartClipNums() {
+    	return this._pageStartClipNums;
+    }
+    
+    
 	getPageClipNumRange(pageNum) {
 		this._checkPageNum(pageNum);
 		const clipNums = this._pageStartClipNums;
