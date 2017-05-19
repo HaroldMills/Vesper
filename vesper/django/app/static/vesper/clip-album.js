@@ -238,7 +238,7 @@ class ClipAlbum {
 		for (const [i, clip] of this.clips.entries()) {
 			
 			clipViews[i] = new ClipView(
-				this, i, clip, viewSettings, delegateClass);
+				this, clip, viewSettings, delegateClass);
 			
 			clip.view = clipViews[i];
 			
@@ -1828,10 +1828,9 @@ Observations and questions:
 class ClipView {
 	
 	
-	constructor(parent, clipNum, clip, settings, delegateClass) {
+	constructor(parent, clip, settings, delegateClass) {
 		
 		this._parent = parent;
-		this._clipNum = clipNum;
 		this._clip = clip;
 		this._settings = settings;
 		
@@ -1846,11 +1845,6 @@ class ClipView {
 	
 	get parent() {
 		return this._parent;
-	}
-	
-	
-	get clipNum() {
-		return this._clipNum;
 	}
 	
 	
@@ -1929,19 +1923,19 @@ class ClipView {
 	
 	
 	_onMouseOver(e) {
-		console.log("mouse over " + this.clipNum);
+		console.log("mouse over " + this.clip.num);
 	}
 	
 	
 	_onMouseOut(e) {
-		console.log("mouse out " + this.clipNum);
+		console.log("mouse out " + this.clip.num);
 	}
 	
 	
 	_onCanvasClick(e) {
 	
 		const parent = this.parent;
-		const clipNum = this.clipNum;
+		const clipNum = this.clip.num;
 		
 		if (e.shiftKey)
 			parent.extendSelection(clipNum);
@@ -2061,7 +2055,7 @@ class ClipView {
     // spectrogram computation and rendering pipeline?
 	_onAudioDataDecoded(audioBuffer) {
 		
-		console.log('got samples for clip', this.clipNum);
+		console.log('got samples for clip', this.clip.num);
 //		_showAudioBufferInfo(audioBuffer);
 		
 		const clip = this.clip;
