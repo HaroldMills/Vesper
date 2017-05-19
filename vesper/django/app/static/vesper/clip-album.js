@@ -214,16 +214,7 @@ class ClipAlbum {
 	
 	
 	_createClip([clipNum, clipInfo]) {
-		
-		const clip = new _Clip(clipNum, ...clipInfo);
-		
-		// Initialize clip with no annotations. The actual annotations
-		// will be gotten from the server by the clip's view when the
-		// view is first displayed.
-		clip.annotations = {};
-		
-		return clip;
-		
+		return new _Clip(clipNum, ...clipInfo);
 	}
 	
 	
@@ -1091,6 +1082,13 @@ function _scrollToBottom() {
 }
 
 
+const _STATUS = {
+	ABSENT: 0,
+	PENDING: 1,
+	PRESENT: 2
+}
+
+
 class _Clip {
 	
 	
@@ -1103,7 +1101,10 @@ class _Clip {
 		this._startTime = startTime;
 		
 		this._samples = null;
+		this._samplesStatus = _STATUS.ABSENT;
+		
 		this._annotations = null;
+		this._annotationsStatus = _STATUS.ABSENT;
 		
 	}
 	
@@ -1143,6 +1144,16 @@ class _Clip {
 	}
 	
 	
+	get samplesStatus() {
+		return this._samplesStatus;
+	}
+	
+	
+	set samplesStatus(status) {
+		this._samplesStatus = status;
+	}
+	
+	
 	get annotations() {
 		return this._annotations;
 	}
@@ -1150,6 +1161,16 @@ class _Clip {
 	
 	set annotations(annotations) {
 		this._annotations = annotations;
+	}
+	
+	
+	get annotationsStatus() {
+		return this._annotationsStatus;
+	}
+	
+	
+	set annotationsStatus(status) {
+		this._annotationsStatus = status;
 	}
 	
 	
@@ -1206,8 +1227,7 @@ class _ClipManager {
 	constructor(clips, clipViews, pageStartClipNums, pageNum = 0) {
 		this._clips = clips;
 		this._clipViews = clipViews;
-		this._pageStartClipNums = pageStartClipNums;
-		this._pageNum = pageNum;
+		this.update(pageStartClipNums, pageNum);
 	}
 	
 	
@@ -1256,10 +1276,109 @@ class _ClipManager {
 
 class _SimpleClipManager extends _ClipManager {
 	
+	
 	_update() {
-		console.log('_SimpleClipManager._update');
+		
+		const start = this.pageStartClipNums[this.pageNum];
+		const end = this.pageStartClipNums[this.pageNum + 1];
+		
+		for (let i = start; i < end; i++) {
+			
+			const clip = this.clips[i];
+			
+			if (clip.samplesStatus === _STATUS.ABSENT)
+				this._requestSamples(clip);
+			
+			if (clip.annotationsStatus === _STATUS.ABSENT)
+				this._requestAnnotations(clip);
+			
+		}
+		
 	}
 	
+	
+    _requestSamples(clip) {
+    	
+	    console.log('_SimpleClipManager._requestSamples', clip.num);
+
+	    clip.samplesStatus = _STATUS.PENDING;
+	    
+	    // TODO: Use one audio context across multiple requests?
+		const context = new OfflineAudioContext(1, 1, clip.sampleRate);
+		const xhr = new XMLHttpRequest();
+		xhr.open('GET', clip.wavFileUrl);
+		xhr.responseType = 'arraybuffer';
+		// TODO: Handle XHR and decode errors.
+		xhr.onload = () =>
+			context.decodeAudioData(xhr.response).then(audioBuffer =>
+		        this._onSamplesResponse(audioBuffer, clip));
+		xhr.send();
+		
+		// See comment in _createPlayButton for information regarding
+		// the following.
+//	    const context = new OfflineAudioContext(
+//          1, clip.length, clip.sampleRate);
+//	    const source = context.createMediaElementSource(audio);
+//	    source.connect(context.destination);
+//	    context.startRendering().then(audioBuffer =>
+//	        onAudioDecoded(audioBuffer, clip));
+	
+	}
+
+
+    // TODO: Create a SpectrogramRenderer class that encapsulates the
+    // spectrogram computation and rendering pipeline?
+	_onSamplesResponse(audioBuffer, clip) {
+		
+		console.log('_SimpleClipManager._onSamplesResponse', clip.num);
+//		_showAudioBufferInfo(audioBuffer);
+		
+		clip.audioBuffer = audioBuffer;
+	    clip.samples = audioBuffer.getChannelData(0);
+	    clip.samplesStatus = _STATUS.PRESENT;
+	    
+	    clip.view.onClipSamplesChanged();
+	    
+	}
+
+
+    _requestAnnotations(clip) {
+    	
+	    console.log('_SimpleClipManager._requestAnnotations', clip.num);
+
+	    clip.annotationsStatus = _STATUS.PENDING;
+	    
+	    const xhr = new XMLHttpRequest();
+		xhr.open('GET', clip.annotationsJsonUrl);
+		xhr.onload = () => this._onAnnotationsResponse(xhr, clip)
+		xhr.send();
+		
+    }
+    
+    
+    _onAnnotationsResponse(xhr, clip) {
+    	
+	    console.log('_SimpleClipManager._onAnnotationsResponse', clip.num);
+	    
+   	    if (xhr.status === 200) {
+    		
+    		clip.annotations = JSON.parse(xhr.responseText);
+    		clip.annotationsStatus = _STATUS.PRESENT;
+    		
+    	} else {
+    		
+    		// TODO: Report error somehow.
+    		
+    		clip.annotations = null;
+    		clip.annotationsStatus = _STATUS.ABSENT;
+    		
+    	}
+    	
+    	clip.view.onClipAnnotationsChanged();
+     	
+    }
+
+    
 }
 
 
@@ -1903,8 +2022,6 @@ class ClipView {
 	    this._canvas = this._createCanvas();
 		this._label = this._createLabel();
 		this._styleLabel();
-		this._startClipAnnotationsGet();
-	    this._startClipAudioDataDownload();
 	}
 
 
@@ -2002,77 +2119,20 @@ class ClipView {
     }
     
     
-    _startClipAnnotationsGet() {
+    onClipSamplesChanged() {
     	
-		const xhr = new XMLHttpRequest();
-		xhr.open('GET', this.clip.annotationsJsonUrl);
-		xhr.onload = () => this._onClipAnnotationsGetComplete(xhr)
-		xhr.send();
-		
-    }
-    
-    
-    _onClipAnnotationsGetComplete(xhr) {
-    	
-    	if (xhr.status === 200)
-    		this.clip.annotations = JSON.parse(xhr.responseText);
-    		
-    	else
-    		
-    		// TODO: Report error somehow.
-    		this.clip.annotations = {};
-    	
-     	this._renderLabel();
-     	
+    	// TODO: Move play button creation to _populateDiv method?
+        // We create the play button for a clip only after its audio data
+        // are available since it is only then that we can play them from
+        // this.clip.audioBuffer using the Web Audio API.
+    	this._playButton = this._createPlayButton();
+    	this._stylePlayButton();
+        
+        this._delegate.onClipSamplesChanged()
+        
     }
 
     
-    _startClipAudioDataDownload() {
-    	
-    	const clip = this.clip;
-		const context = new OfflineAudioContext(1, 1, clip.sampleRate);
-		const xhr = new XMLHttpRequest();
-		xhr.open('GET', clip.wavFileUrl);
-		xhr.responseType = 'arraybuffer';
-		xhr.onload = () =>
-			context.decodeAudioData(xhr.response).then(audioBuffer =>
-		        this._onAudioDataDecoded(audioBuffer));
-		xhr.send();
-		
-		// See comment in _createPlayButton for information regarding
-		// the following.
-//	    const context = new OfflineAudioContext(
-//          1, clip.length, clip.sampleRate);
-//	    const source = context.createMediaElementSource(audio);
-//	    source.connect(context.destination);
-//	    context.startRendering().then(audioBuffer =>
-//	        onAudioDecoded(audioBuffer, clip));
-	
-	}
-
-
-    // TODO: Create a SpectrogramRenderer class that encapsulates the
-    // spectrogram computation and rendering pipeline?
-	_onAudioDataDecoded(audioBuffer) {
-		
-		console.log('got samples for clip', this.clip.num);
-//		_showAudioBufferInfo(audioBuffer);
-		
-		const clip = this.clip;
-		clip.audioBuffer = audioBuffer;
-	    clip.samples = audioBuffer.getChannelData(0);
-	    
-	    // We create the play button for a clip only after its audio data
-	    // are available since it is only then that we can play them from
-	    // this.clip.audioBuffer using the Web Audio API.
-		this._playButton = this._createPlayButton();
-		this._stylePlayButton();
-	    
-	    this._delegate.onClipAudioDataDownloaded()
-	    
-	}
-
-
 	_createPlayButton() {
 		
 	    const button = document.createElement('button');
@@ -2113,6 +2173,17 @@ class ClipView {
 //	    audio.innerHtml =
 //	        'Your browser does not support the <code>audio</code> HTML element.'
 //	    div.appendChild(audio)
+	    
+	    /* The following is the code from _startClipSamplesDownload (which
+	     * no longer exists) mentioned in the comment above.
+	     */
+//    const context = new OfflineAudioContext(
+//    1, clip.length, clip.sampleRate);
+//  const source = context.createMediaElementSource(audio);
+//  source.connect(context.destination);
+//  context.startRendering().then(audioBuffer =>
+//      onAudioDecoded(audioBuffer, clip));
+
 	    
 	}
     
@@ -2161,6 +2232,11 @@ class ClipView {
     }
     
     
+    onClipAnnotationsChanged() {
+     	this._renderLabel();
+    }
+    
+    
 	render() {
 		if (this._div !== null) {
 		    this._delegate.render();
@@ -2178,7 +2254,10 @@ class ClipView {
 			
 			const labelParts = [];
 			
-			if (s.classificationIncluded) {
+			if (clip.annotations === null)
+				console.log('_renderLabel: clip annotations null');
+			
+			if (s.classificationIncluded && clip.annotations !== null) {
 				
 				let annotation = clip.annotations['Classification'];
 				
@@ -2251,20 +2330,16 @@ class ClipViewDelegate {
 	
 	
 	/**
-	 * Handles the arrival of the clip audio data of this delegate's clip view.
-	 * 
-	 * A clip view creates its HTML components and downloads the clip's
-	 * audio data lazily, or more specifically not until the view's div is
-	 * requested. After the audio data have been downloaded the view invokes
-	 * this method, which should render the clip on the clip view's canvas.
-	 * The canvas is available from this method as `this.clipView._canvas`,
-	 * the decoded audio data are available as `this.clip.audioBuffer`, a
-	 * Web Audio AudioBuffer, and the clip samples are available as
-	 * this.clip.samples, a Float32Array.
+	 * This method is invoked by the clip manager after a clip's samples
+	 * have arrived from the server. The method renders the clip on the
+	 * clip view's canvas. The canvas is available from this method as
+	 * `this.clipView._canvas`, the decoded audio data are available as
+	 * `this.clip.audioBuffer` (a Web Audio `AudioBuffer`), and the clip
+	 * samples are available as `this.clip.samples`, a `Float32Array`.
 	 */
-	onClipAudioDataDownloaded() {
+	onClipSamplesChanged() {
 		throw new Error(
-			'ClipViewDelegate.onClipAudioDataDownloaded not implemented');
+			'ClipViewDelegate.onClipSamplesChanged not implemented');
 	}
 	
 	
@@ -2289,7 +2364,7 @@ class SpectrogramClipViewDelegate extends ClipViewDelegate {
     // TODO: Update view in response to settings changes, recomputing
 	// as little as possible.
 	
-	onClipAudioDataDownloaded() {
+	onClipSamplesChanged() {
 		
 	    const settings = this.settings.spectrogram;
 	    
