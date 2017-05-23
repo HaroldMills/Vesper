@@ -1280,7 +1280,9 @@ class _SimpleClipManager extends _ClipManager {
 	_update() {
 		
 		const start = this.pageStartClipNums[this.pageNum];
-		const end = this.pageStartClipNums[this.pageNum + 1];
+		const endPageNum = Math.min(
+			this.pageNum + 2, this.pageStartClipNums.length)
+		const end = this.pageStartClipNums[endPageNum];
 		
 		for (let i = start; i < end; i++) {
 			
@@ -2003,11 +2005,45 @@ class ClipView {
 	
 	
 	get div() {
-		if (this._div === null) {
-			this._div = this._createDiv();
-			this._populateDiv();
-		}
+		this._createUiElementsIfNeeded();
 		return this._div;
+	}
+	
+	
+	get canvas() {
+		this._createUiElementsIfNeeded();
+		return this._canvas;
+	}
+	
+	
+	get label() {
+		this._createUiElementsIfNeeded();
+		return this._label;
+	}
+	
+	
+	get playButton() {
+		this._createUiElementsIfNeeded();
+		return this._playButton;
+	}
+	
+	
+	_createUiElementsIfNeeded() {
+
+		if (this._div === null) {
+
+			this._div = this._createDiv();
+			
+		    this._canvas = this._createCanvas();
+		    
+			this._label = this._createLabel();
+			this._styleLabel();
+			
+			this._playButton = this._createPlayButton();
+			this._stylePlayButton();
+			
+		}
+		
 	}
 	
 	
@@ -2018,19 +2054,6 @@ class ClipView {
 	}
 	    
 	    
-	_populateDiv() {
-		
-	    this._canvas = this._createCanvas();
-	    
-		this._label = this._createLabel();
-		this._styleLabel();
-		
-		this._playButton = this._createPlayButton();
-		this._stylePlayButton();
-		
-	}
-
-
 	_createCanvas(div) {
 		
 	    const canvas = document.createElement('canvas');
@@ -2282,7 +2305,7 @@ class ClipView {
 				labelParts.push(parts[1]);
 			}
 			
-			this._label.innerHTML =
+			this.label.innerHTML =
 				(labelParts.length !== 0) ? labelParts.join(' ') : ''
 			
 		}
@@ -2387,7 +2410,7 @@ class SpectrogramClipViewDelegate extends ClipViewDelegate {
 	    	this._spectrogramImageData, settings);
 	    
 	    // Draw spectrogram image.
-	    const canvas = this.clipView._canvas;
+	    const canvas = this.clipView.canvas;
 	    _drawSpectrogramImage(clip, this._spectrogramCanvas, canvas, settings);
 	    
 	}
