@@ -2019,9 +2019,15 @@ class ClipView {
 	    
 	    
 	_populateDiv() {
+		
 	    this._canvas = this._createCanvas();
+	    
 		this._label = this._createLabel();
 		this._styleLabel();
+		
+		this._playButton = this._createPlayButton();
+		this._stylePlayButton();
+		
 	}
 
 
@@ -2119,20 +2125,6 @@ class ClipView {
     }
     
     
-    onClipSamplesChanged() {
-    	
-    	// TODO: Move play button creation to _populateDiv method?
-        // We create the play button for a clip only after its audio data
-        // are available since it is only then that we can play them from
-        // this.clip.audioBuffer using the Web Audio API.
-    	this._playButton = this._createPlayButton();
-    	this._stylePlayButton();
-        
-        this._delegate.onClipSamplesChanged()
-        
-    }
-
-    
 	_createPlayButton() {
 		
 	    const button = document.createElement('button');
@@ -2194,11 +2186,18 @@ class ClipView {
 	
 	
 	playClip() {
-		const context = this.parent._audioContext;
-		const source = context.createBufferSource();
-		source.buffer = this.clip.audioBuffer;
-		source.connect(context.destination);
-		source.start();
+		
+		if (this.clip.audioBuffer != null) {
+			// have clip samples
+			
+			const context = this.parent._audioContext;
+			const source = context.createBufferSource();
+			source.buffer = this.clip.audioBuffer;
+			source.connect(context.destination);
+			source.start();
+			
+		}
+		
 	}
 	
 	
@@ -2231,6 +2230,11 @@ class ClipView {
 			    
     }
     
+    
+    onClipSamplesChanged() {
+        this._delegate.onClipSamplesChanged()
+    }
+
     
     onClipAnnotationsChanged() {
      	this._renderLabel();
