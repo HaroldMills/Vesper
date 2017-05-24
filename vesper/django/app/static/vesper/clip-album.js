@@ -193,7 +193,7 @@ class ClipAlbum {
 		this._audioContext = new window.AudioContext();
 		
 		this._clipManager = new _SimpleClipManager(
-			this.clips, this._clipViews, this._layout.pageStartClipNums);
+			this.clips, this._layout.pageStartClipNums);
 		
 		this.pageNum = 0;
 		
@@ -1225,20 +1225,14 @@ class _Clip {
 class _ClipManager {
 	
 	
-	constructor(clips, clipViews, pageStartClipNums, pageNum = 0) {
+	constructor(clips, pageStartClipNums, pageNum = 0) {
 		this._clips = clips;
-		this._clipViews = clipViews;
 		this.update(pageStartClipNums, pageNum);
 	}
 	
 	
 	get clips() {
 		return this._clips;
-	}
-	
-	
-	get clipViews() {
-		return this._clipViews;
 	}
 	
 	
