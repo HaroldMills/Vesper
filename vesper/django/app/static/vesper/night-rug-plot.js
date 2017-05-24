@@ -58,8 +58,12 @@ class NightRugPlot {
 		
 		[this._startTime, this._endTime] = this._getPlotLimits();
 		
-		this._pageNum = null;
-		this._mousePageNum = null;
+		// We work with page clip number ranges rather than page numbers
+		// in the rug plot since that makes it more straightforward to
+		// update line colors across layout (or, more specifically,
+		// pagination) changes.
+		this._pageClipNumRange = null;
+		this._mousePageClipNumRange = null;
 		
 		this._updateIfNeeded();
 		
@@ -154,8 +158,8 @@ class NightRugPlot {
 		this._drawUnderlay();
 		this._drawRecordingRects();
 		this._drawClipLines(0, this._clipTimes.length, _CLIP_COLOR);
-		this._updatePageLines(this.pageNum);
-		this._updatePageLines(this._mousePageNum);
+		this._updatePageLines(this._pageClipNumRange);
+		this._updatePageLines(this._mousePageClipNumRange);
 		this._drawAxis();
 	}
 	
@@ -287,26 +291,26 @@ class NightRugPlot {
 	}
 	
 		
-	_updatePageLines(pageNum) {
-		
-		if (pageNum !== null) {
-			
+    _updatePageLines(clipNumRange) {
+    	
+    	if (clipNumRange !== null) {
+    		
 			let color = _CLIP_COLOR;
 			
-			if (pageNum === this._pageNum)
+			if (_rangesEqual(clipNumRange, this._pageClipNumRange))
 			    color = _CURRENT_PAGE_COLOR;
 			
-			else if (pageNum === this._mousePageNum)
+			else if (_rangesEqual(clipNumRange, this._mousePageClipNumRange))
 				color = _MOUSE_PAGE_COLOR;
 			
-			const [start, end] = this._parent.getPageClipNumRange(pageNum);
+			const [start, end] = clipNumRange;
 			this._drawClipLines(start, end, color);
-			
-		}
-		
-	}
-	
-	
+    		
+    	}
+    	
+    }
+    
+    
 	_drawAxis() {
 		
 		const context = this._axisCanvas.getContext('2d');
@@ -381,70 +385,78 @@ class NightRugPlot {
 	}
 	
 	
-	get pageNum() {
-		return this._pageNum;
-	}
-	
-	
-	set pageNum(pageNum) {
+	setPageClipNumRange(range) {
 		
-		if (pageNum != this._pageNum) {
+		if (!_rangesEqual(range, this._pageClipNumRange)) {
 			
-			const oldPageNum = this._pageNum;
-			this._pageNum = pageNum;
+			const oldRange = this._pageClipNumRange;
+			this._pageClipNumRange = range;
 			
-			this._updatePageLines(oldPageNum);
-			this._updatePageLines(pageNum);
-
+			this._updatePageLines(oldRange);
+			this._updatePageLines(range);
+			
 		}
 		
 	}
 	
 	
     _onMouseEvent(e) {
+    	const range = this._getMousePageClipNumRange(e);
+    	this._setMousePageClipNumRange(range);
+    }
+
+    
+    _getMousePageClipNumRange(e) {
+    	
     	const pageNum = this._getMousePageNum(e);
-    	this._setMousePageNum(pageNum);
+    	
+    	if (pageNum === null)
+    		return null;
+    	
+    	else
+    		return this._parent.getPageClipNumRange(pageNum);
+	    		
     }
     
     
-    _getMousePageNum(e) {
-    	
+	_getMousePageNum(e) {
+		
 		if (this._clipTimes.length === 0)
 			// no clips
-			
-			return null;
-    	
+		
+		return null;
+	
 		else {
 			// at least one clip
 			
-	    	const clipTimes = this._clipTimes;
+			const clipTimes = this._clipTimes;
 			const numClips = clipTimes.length;
-	    	const firstClipX = this._timeToClientX(clipTimes[0]);
-	    	const lastClipX = this._timeToClientX(clipTimes[numClips - 1]);
-	    	
-	    	const rect = this._rugCanvas.getBoundingClientRect();
-	    	const mouseX = e.clientX - rect.left;
-	    	
-	    	if (firstClipX - mouseX > _PAGE_DISTANCE_THRESHOLD ||
-	    			mouseX - lastClipX > _PAGE_DISTANCE_THRESHOLD)
-	    		// mouse is too far to left or right of clips
-	    		
-	    		return null;
-	    	
-	    	else {
-	    		// mouse is within clips, or close enough to first or last
-	    		
-		    	const time = this._clientXToTime(mouseX);
-		    	const clipNum = this._findClosestClipNum(time);
-		    	return this._parent.getClipPageNum(clipNum);
-
+			const firstClipX = this._timeToClientX(clipTimes[0]);
+			const lastClipX = this._timeToClientX(clipTimes[numClips - 1]);
+			
+			const rect = this._rugCanvas.getBoundingClientRect();
+			const mouseX = e.clientX - rect.left;
+			
+			if (firstClipX - mouseX > _PAGE_DISTANCE_THRESHOLD ||
+					mouseX - lastClipX > _PAGE_DISTANCE_THRESHOLD)
+				// mouse is too far to left or right of clips
+				
+				return null;
+			
+			else {
+				// mouse is within clips, or close enough to first or last
+		    		
+			    	const time = this._clientXToTime(mouseX);
+			    	const clipNum = this._findClosestClipNum(time);
+			    	return this._parent.getClipPageNum(clipNum);
+		
 	    	}
 	    	
 		}
 	    		
-    }
-    
-    
+	}
+
+
 	_timeToClientX(time) {
 		const clientWidth = this._rugCanvas.clientWidth
 		const deltaTime = this._endTime - this._startTime;
@@ -488,15 +500,15 @@ class NightRugPlot {
 	}
 	
 	
-	_setMousePageNum(pageNum) {
+	_setMousePageClipNumRange(range) {
 		
-		if (pageNum != this._mousePageNum) {
+		if (!_rangesEqual(range, this._mousePageClipNumRange)) {
 			
-			const oldPageNum = this._mousePageNum;
-			this._mousePageNum = pageNum;
+			const oldRange = this._mousePageClipNumRange;
+			this._mousePageClipNumRange = range;
 			
-			this._updatePageLines(oldPageNum);
-			this._updatePageLines(pageNum);
+			this._updatePageLines(oldRange);
+			this._updatePageLines(range);
 			
 		}
 		
@@ -504,7 +516,7 @@ class NightRugPlot {
 	
 	
     _onMouseOut(e) {
-	    this._setMousePageNum(null);
+	    this._setMousePageClipNumRange(null);
     }
     
     
@@ -518,6 +530,20 @@ class NightRugPlot {
 	}
 	
 	
+}
+
+
+function _rangesEqual(a, b) {
+	
+	if (a === null && b === null)
+		return true;
+	
+	else if (a === null || b === null)
+		return false;
+	
+	else
+		return a[0] === b[0] && a[1] === b[1];
+
 }
 
 

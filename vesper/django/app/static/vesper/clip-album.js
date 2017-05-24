@@ -781,7 +781,8 @@ class ClipAlbum {
 		if (pageNum >= 0 && pageNum < this.numPages) {
 			this._pageNum = pageNum;
 			this._selection = this._createSelection();
-			this._rugPlot.pageNum = pageNum;
+			const range = this.getPageClipNumRange(pageNum);
+			this._rugPlot.setPageClipNumRange(range);
 			this._clipManager.pageNum = pageNum;
 		}
 			
