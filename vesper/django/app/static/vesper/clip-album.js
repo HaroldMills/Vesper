@@ -1302,8 +1302,6 @@ class _SimpleClipManager extends _ClipManager {
 	
     _requestSamples(clip) {
     	
-	    console.log('_SimpleClipManager._requestSamples', clip.num);
-
 	    clip.samplesStatus = _STATUS.PENDING;
 	    
 	    // TODO: Use one audio context across multiple requests?
@@ -1333,7 +1331,6 @@ class _SimpleClipManager extends _ClipManager {
     // spectrogram computation and rendering pipeline?
 	_onSamplesResponse(audioBuffer, clip) {
 		
-		console.log('_SimpleClipManager._onSamplesResponse', clip.num);
 //		_showAudioBufferInfo(audioBuffer);
 		
 		clip.audioBuffer = audioBuffer;
@@ -1347,8 +1344,6 @@ class _SimpleClipManager extends _ClipManager {
 
     _requestAnnotations(clip) {
     	
-	    console.log('_SimpleClipManager._requestAnnotations', clip.num);
-
 	    clip.annotationsStatus = _STATUS.PENDING;
 	    
 	    const xhr = new XMLHttpRequest();
@@ -1361,8 +1356,6 @@ class _SimpleClipManager extends _ClipManager {
     
     _onAnnotationsResponse(xhr, clip) {
     	
-	    console.log('_SimpleClipManager._onAnnotationsResponse', clip.num);
-	    
    	    if (xhr.status === 200) {
     		
     		clip.annotations = JSON.parse(xhr.responseText);
@@ -2070,12 +2063,12 @@ class ClipView {
 	
 	
 	_onMouseOver(e) {
-		console.log("mouse over " + this.clip.num);
+		// console.log("mouse over " + this.clip.num);
 	}
 	
 	
 	_onMouseOut(e) {
-		console.log("mouse out " + this.clip.num);
+		// console.log("mouse out " + this.clip.num);
 	}
 	
 	
@@ -2281,9 +2274,6 @@ class ClipView {
 		if (s.visible) {
 			
 			const labelParts = [];
-			
-			if (clip.annotations === null)
-				console.log('_renderLabel: clip annotations null');
 			
 			if (s.classificationIncluded && clip.annotations !== null) {
 				
