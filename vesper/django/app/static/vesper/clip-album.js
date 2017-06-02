@@ -383,14 +383,13 @@ class ClipAlbum {
 	set settings(settings) {
 		
 		this._updateClipViewSettings(settings);
-		const paginationChanged = this._updateLayoutSettings(settings);
+		
+		const [paginationChanged, pageNum] =
+			this._updateLayoutSettings(settings);
+		
 		this._settings = settings;
 		
 		if (paginationChanged) {
-			
-			// TODO: Set the page number so that the first clip that was
-			// visible before the settings changed remains visible.
-			const pageNum = 0;
 			
 		    this._clipManager.update(this._layout.pageStartClipNums, pageNum);
 		
@@ -439,24 +438,32 @@ class ClipAlbum {
 	 */
 	_updateLayoutSettings(settings) {
 		
+		const oldFirstClipNum = this._layout.pageStartClipNums[this.pageNum];
+		let paginationChanged;
+		
 		if (settings.layoutType !== this.settings.layoutType) {
 			// layout type will change
 			
 			this._layout = this._createLayout(settings);
 			
-			// We don't know here whether or not the pagination changed.
-			return true;
+			// Pagination may or may not have changed. We say it has to
+			// ensure that display will update properly in all cases.
+			paginationChanged = true;
 		
 		} else {
 			// layout type will not change
 			
 			const oldPageStartClipNums = this._layout.pageStartClipNums;
 			this._layout.settings = settings.layout;
-			const paginationChanged = !arraysEqual(
+			paginationChanged = !arraysEqual(
 				this._layout.pageStartClipNums, oldPageStartClipNums);
-			return paginationChanged;
 			
 		}
+		
+		// Get new page number of clip that was first on old page.
+		const newPageNum = this._layout.getClipPageNum(oldFirstClipNum);
+		
+		return [paginationChanged, newPageNum];
 		
 	}
 	
