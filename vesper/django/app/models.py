@@ -6,7 +6,6 @@ import json
 import os.path
 
 from django.contrib.auth.models import User
-from django.core.urlresolvers import reverse
 from django.db.models import (
     BigIntegerField, CASCADE, CharField, DateField, DateTimeField,
     FloatField, ForeignKey, IntegerField, ManyToManyField, Model,
