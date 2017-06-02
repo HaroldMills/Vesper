@@ -4,6 +4,7 @@
 from collections import defaultdict
 import datetime
 import os
+import time
 
 # Set up Django.
 os.environ['DJANGO_SETTINGS_MODULE'] = 'vesper.django.project.settings'
@@ -51,13 +52,16 @@ import vesper.util.time_utils as time_utils
 
 # _ARCHIVE_DIR_PATH = \
 #     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
-_ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
-# _ARCHIVE_DIR_PATH = r'E:\2016_archive'
+# _ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
+_ARCHIVE_DIR_PATH = r'E:\2016_archive'
 # _ARCHIVE_DIR_PATH = \
 #     r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive 0.1.0'
 
 _CREATE_FAKE_RECORDINGS = False
 """Set `True` if and only if source archive does not contain recordings."""
+
+_CLIP_COUNT_LIMIT = 10000
+"""The approximate maximum number of clips to add to the archive."""
 
 _DETECTOR_NAME_ALIASES = {
     'Old Bird Thrush Detector': ['Thrush'],
@@ -77,6 +81,10 @@ _DETECTOR_NAME_ALIASES = {
 #   _UNCORRECTED_MIC_NAMES, the station name is just a plain station name
 #   and the name of its microphone model is _DEFAULT_MIC_NAME.
 
+_STATION_NAME_CORRECTIONS = {
+    "St Mary's": 'St Mary'
+}
+
 _UNCORRECTED_MIC_NAMES = frozenset(['21c', 'NFC', 'SMX-II'])
 
 _MIC_NAME_CORRECTIONS = {
@@ -86,6 +94,14 @@ _MIC_NAME_CORRECTIONS = {
 _DEFAULT_MIC_NAME = 'SMX-NFC'
 # _DEFAULT_MIC_NAME = '21c'
 
+_SHOW_RECORDINGS = False
+_RECORDING_PROGRESS_PERIOD = 1000
+
+_SHOW_CLIPS = False
+_CLIP_PROGRESS_PERIOD = 1000
+
+_ONE_NIGHT = datetime.timedelta(days=1)
+    
 
 def _main():
     _delete_data()
@@ -104,6 +120,8 @@ def _add_data():
 
 def _add_recordings():
     
+    processing_start_time = time.time()
+    
     channel_recordings = _get_channel_recordings()
     
     # Partition recording channels into sets that belong to the same
@@ -118,9 +136,13 @@ def _add_recordings():
             (r, mic_output, recorder_input))
         
     keys = sorted(channel_info_sets.keys(), key=lambda p: (p[0].name, p[1]))
+    num_recordings = len(keys)
     
     for i, (station, start_time) in enumerate(keys):
         
+        if i % _RECORDING_PROGRESS_PERIOD == 0:
+            print('Recording {} of {}...'.format(i, num_recordings))
+            
         channel_infos = list(channel_info_sets[(station, start_time)])
         channel_infos.sort(key=lambda i: i[2].channel_num)
         
@@ -142,7 +164,8 @@ def _add_recordings():
             creating_job=None)
         recording.save()
         
-        print('Recording {} {}'.format(i, str(recording)))
+        if _SHOW_RECORDINGS:
+            print('Recording {} {}'.format(i, str(recording)))
 
         for _, mic_output, recorder_input in channel_infos:
             
@@ -157,7 +180,15 @@ def _add_recordings():
                 mic_output=mic_output)  
             channel.save()
             
-            print('    Channel {} {}'.format(channel_num, mic_output.name))
+            if _SHOW_RECORDINGS:
+                print('    Channel {} {}'.format(channel_num, mic_output.name))
+        
+    elapsed_time = time.time() - processing_start_time
+    rate = num_recordings / elapsed_time
+    
+    print((
+        'Processed {} recordings in {:.1f} seconds, an average of {:.1f} '
+        'recordings per second.').format(len(keys), elapsed_time, rate))
         
         
 def _get_channel_recordings():
@@ -170,8 +201,6 @@ def _get_channel_recordings():
     start_night = archive.start_night
     end_night = archive.end_night
     
-    one_night = datetime.timedelta(days=1)
-    
     channels = set()
     
     for station in stations:
@@ -183,7 +212,7 @@ def _get_channel_recordings():
             for r in _get_night_channel_recordings(archive, station, night):
                 channels.add(r)
                 
-            night += one_night
+            night += _ONE_NIGHT
             
     archive.close()
     
@@ -248,7 +277,8 @@ def _get_station_and_mic_name(station_name):
     for mic_name in _UNCORRECTED_MIC_NAMES:
         if station_name.endswith(mic_name):
             station_name = station_name[:-(len(mic_name) + 1)]
-            mic_name = _MIC_NAME_CORRECTIONS.get(mic_name, mic_name)
+            station_name = _correct(station_name, _STATION_NAME_CORRECTIONS)
+            mic_name = _correct(mic_name, _MIC_NAME_CORRECTIONS)
             return (station_name, mic_name)
             
     # If we get here, the station name does not end with any of the
@@ -256,36 +286,61 @@ def _get_station_and_mic_name(station_name):
     return (station_name, _DEFAULT_MIC_NAME)
 
         
+def _correct(name, name_corrections):
+    return name_corrections.get(name, name)
+
+
 _clip_count = 0
-_CLIP_COUNT_LIMIT = 10000
 
 
 def _add_clips():
+    
+    processing_start_time = time.time()
+    
     global _clip_count
+    
     archive = Archive(_ARCHIVE_DIR_PATH)
     archive.open()
     stations = archive.stations
     start_night = archive.start_night
     end_night = archive.end_night
-    one_night = datetime.timedelta(days=1)
+    
     detectors = _get_detectors()
     annotation_infos = _get_annotation_infos()
+    
     num_added = 0
     num_rejected = 0
+    
     for station in stations:
+        
         night = start_night
+        
         while night <= end_night:
+            
             clips = archive.get_clips(station_name=station.name, night=night)
+            
             (m, n) = _add_clips_aux(clips, night, detectors, annotation_infos)
+            
             num_added += m
             num_rejected += n
-            night += one_night
+            night += _ONE_NIGHT
+            
             if _clip_count >= _CLIP_COUNT_LIMIT:
                 break
+            
         if _clip_count >= _CLIP_COUNT_LIMIT:
             break
+        
     archive.close()
-    print('added {} clips, rejected {}'.format(num_added, num_rejected))
+    
+    num_clips = num_added + num_rejected
+    elapsed_time = time.time() - processing_start_time
+    rate = num_clips / elapsed_time
+    
+    print((
+        'Processed {} clips in {:.1f} seconds, an average of {:.1f} '
+        'clips per second.').format(num_clips, elapsed_time, rate))
+    print('Added {} clips, rejected {}.'.format(num_added, num_rejected))
     
     
 def _get_detectors():
@@ -318,17 +373,22 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
     
     for c in clips:
         
+        if _clip_count % _CLIP_PROGRESS_PERIOD == 0:
+            print('Clip {}...'.format(_clip_count))
+            
         try:
             channel = _get_clip_recording_channel(c)
-        except Exception as e:
-            print(str(e))
+        except Exception:
+            print(
+                'Could not get recording channel for clip "{}".'.format(
+                    c.file_path))
             num_rejected += 1
             continue
         
         try:
             detector = _get_detector(c, detectors)
-        except ValueError as e:
-            print(str(e))
+        except ValueError:
+            print('Could not get detector "{}".'.format(c.detector_name))
             num_rejected += 1
             continue
         
@@ -356,7 +416,10 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
                 date=night,
                 creation_time=creation_time,
                 creating_processor=detector)
-            print('Clip', _clip_count, clip)
+            
+            if _SHOW_CLIPS:
+                print('Clip', _clip_count, clip)
+                
             _clip_count += 1
             
             clip.save()
