@@ -708,9 +708,11 @@ class Clip(Model):
         related_query_name='clip')
     
     def __str__(self):
+        processor = self.creating_processor
+        processor_name = 'None' if processor is None else processor.name
         return '{} / {} / {} / start {} / duration {:0.3f} s'.format(
             self.station.name, self.mic_output.name,
-            self.creating_processor.name, self.start_time, self.duration)
+            processor_name, self.start_time, self.duration)
         
     class Meta:
         db_table = 'vesper_clip'
