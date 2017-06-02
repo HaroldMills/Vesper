@@ -2004,7 +2004,7 @@ class _NonuniformNonresizingClipViewsLayout extends _ClipViewsLayout {
 		clipsDiv.style.flex = '1 1 auto';
 		clipsDiv.style.justifyContent = 'center';
 		clipsDiv.style.alignContent = 'flex-start';
-		clipsDiv.style.alignItems = 'flex-end';
+		clipsDiv.style.alignItems = 'flex-start';
 		clipsDiv.style.width = 'auto';
 		clipsDiv.style.margin = margin;
 		
