@@ -1,3 +1,33 @@
+function rangeArray(a, b = null, inc = 1) {
+	
+	if (inc == 0) {
+		throw new Error('range increment must be nonzero');
+	}
+	
+	let start, end;
+	
+	if (b === null) {
+		start = 0;
+		end = a;
+	} else {
+		start = a;
+		end = b;
+	}
+	
+	result = [];
+	if (inc > 0) {
+		for (let i = start; i < end; i += inc)
+			result.push(i);
+	} else {
+		for (let i = start; i > end; i += inc)
+			result.push(i);
+	}
+	
+	return result;
+	
+}
+
+
 function arraysEqual(a, b) {
 	
 	if (a.length !== b.length)
