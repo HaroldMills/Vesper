@@ -1607,7 +1607,7 @@ class _ClipManager {
 
     	if (!this._loadedPageNums.has(pageNum)) {
     		
-    		console.log(`clip manager loading page ${pageNum}...`);
+    		// console.log(`clip manager loading page ${pageNum}...`);
     		
 			const start = this.pageStartClipNums[pageNum];
 			const end = this.pageStartClipNums[pageNum + 1];
@@ -1625,8 +1625,8 @@ class _ClipManager {
 	
 	_unloadPartiallyLoadedPage(pageNum) {
 		
-		console.log(
-			`clip manager unloading partially loaded page ${pageNum}...`);
+		// console.log(
+		// 	`clip manager unloading partially loaded page ${pageNum}...`);
 		
 		const start = this.pageStartClipNums[pageNum];
 		const end = this.pageStartClipNums[pageNum + 1];
@@ -1639,7 +1639,7 @@ class _ClipManager {
 	
 	_updatePageNum(pageNum) {
 		
-	    console.log(`clip manager updating for page ${pageNum}...`);
+	    // console.log(`clip manager updating for page ${pageNum}...`);
 	    
 		const [unloadPageNums, loadPageNums] = this._getUpdatePlan(pageNum);
 			
@@ -1653,8 +1653,8 @@ class _ClipManager {
 
 		const pageNums = Array.from(this._loadedPageNums)
 	    pageNums.sort((a, b) => a - b);
-		console.log(`clip manager loaded pages: [${pageNums.join(', ')}]`);
-		console.log(`clip manager num loaded clips ${this._numLoadedClips}`);
+		// console.log(`clip manager loaded pages: [${pageNums.join(', ')}]`);
+		// console.log(`clip manager num loaded clips ${this._numLoadedClips}`);
 
 	}
 	
@@ -1674,7 +1674,7 @@ class _ClipManager {
 
     	if (this._loadedPageNums.has(pageNum)) {
     		
-    		console.log(`clip manager unloading page ${pageNum}...`);
+    		// console.log(`clip manager unloading page ${pageNum}...`);
     		
 			const start = this.pageStartClipNums[pageNum];
 			const end = this.pageStartClipNums[pageNum + 1];
