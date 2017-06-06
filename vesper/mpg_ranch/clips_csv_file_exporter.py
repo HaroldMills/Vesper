@@ -472,7 +472,7 @@ def _get_detector_name(clip):
         return None
     
     else:
-        return processor.name.split()[-1]
+        return processor.name.split()[-2]
 
 
 class DuplicateCallMeasurement(object):
