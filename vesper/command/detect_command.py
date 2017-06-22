@@ -5,8 +5,8 @@ import itertools
 import logging
 
 from vesper.command.command import Command, CommandExecutionError
-from vesper.command.old_bird_detector_runner import OldBirdDetectorRunner
 from vesper.django.app.models import Processor, Recording, Station
+from vesper.old_bird.old_bird_detector_runner import OldBirdDetectorRunner
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 
