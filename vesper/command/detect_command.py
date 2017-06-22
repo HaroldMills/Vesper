@@ -35,19 +35,8 @@ class DetectCommand(Command):
         recordings = self._get_recordings()
                 
         for recording in recordings:
-            
-            recording_files = recording.files.all()
-            
-            if len(recording_files) == 0:
-                self._logger.info(
-                    'No file information available for {}.'.format(recording))
-                
-            else:
-                num_channels = recording.num_channels
-                for file_ in recording_files:
-                    for channel_num in range(num_channels):
-                        self._run_detectors(detectors, file_, channel_num)
-            
+            self._run_detectors_on_recording(detectors, recording)
+                        
         return True
     
     
@@ -118,6 +107,69 @@ class DetectCommand(Command):
             start_time__range=time_interval)
 
 
-    def _run_detectors(self, detectors, recording_file, channel_num):
-        runner = OldBirdDetectorRunner(self._job_info)
-        runner.run_detectors(detectors, recording_file, channel_num)
+    def _run_detectors_on_recording(self, detectors, recording):
+        
+        recording_files = recording.files.all()
+        
+        if len(recording_files) == 0:
+            self._logger.info(
+                'No file information available for {}.'.format(recording))
+            
+        else:
+            
+            old_bird_detectors, other_detectors = \
+                _partition_detectors(detectors)
+                
+            self._run_old_bird_detectors_on_recording(
+                old_bird_detectors, recording, recording_files)
+            
+            self._run_other_detectors_on_recording(
+                other_detectors, recording, recording_files)
+            
+            
+    def _run_old_bird_detectors_on_recording(
+            self, detectors, recording, recording_files):
+        
+        if len(detectors) != 0:
+            
+            num_channels = recording.num_channels
+            
+            for file_ in recording_files:
+
+                for channel_num in range(num_channels):
+                    
+                    runner = OldBirdDetectorRunner(self._job_info)
+                    runner.run_detectors(detectors, file_, channel_num)
+
+
+    def _run_other_detectors_on_recording(
+            self, detectors, recording, recording_files):
+        
+        pass
+    
+    
+# This module must be able to distinguish between the original Old Bird
+# Tseep and Thrush detectors and other detectors since there are special
+# considerations for running the Old Bird detectors. We will probably
+# eventually drop support for the original Old Bird detectors, at which
+# point we can be rid of this ugliness.
+_OLD_BIRD_DETECTOR_NAMES = (
+    'Old Bird Thrush Detector',
+    'Old Bird Tseep Detector'
+)
+
+
+def _partition_detectors(detectors):
+    
+    old_bird_detectors = []
+    other_detectors = []
+    
+    for detector in detectors:
+        
+        if detector.name in _OLD_BIRD_DETECTOR_NAMES:
+            old_bird_detectors.append(detector)
+            
+        else:
+            other_detectors.append(detector)
+            
+    return (old_bird_detectors, other_detectors)
