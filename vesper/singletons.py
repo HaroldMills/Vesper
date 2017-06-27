@@ -23,6 +23,10 @@ Command:
     - vesper.command.import_command.ImportCommand
     - vesper.command.test_command.TestCommand
     
+Detector:
+    - vesper.old_bird.old_bird_detector_redux.ThrushDetector
+    - vesper.old_bird.old_bird_detector_redux.TseepDetector
+    
 Exporter:
     - vesper.command.clip_sound_files_exporter.ClipSoundFilesExporter
     - vesper.mpg_ranch.clips_csv_file_exporter.ClipsCsvFileExporter
