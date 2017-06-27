@@ -663,6 +663,17 @@ class RecordingFile(Model):
 # times are only approximate.
 class Clip(Model):
     
+    
+    @staticmethod
+    def get_string(
+            station_name, mic_output_name, processor_name, start_time,
+            duration):
+        
+        return '{} / {} / {} / start {} / duration {:0.3f} s'.format(
+            station_name, mic_output_name, processor_name, start_time,
+            duration)
+        
+        
     station = ForeignKey(
         Station, CASCADE,
         related_name='clips',
@@ -709,9 +720,9 @@ class Clip(Model):
     def __str__(self):
         processor = self.creating_processor
         processor_name = 'None' if processor is None else processor.name
-        return '{} / {} / {} / start {} / duration {:0.3f} s'.format(
-            self.station.name, self.mic_output.name,
-            processor_name, self.start_time, self.duration)
+        return Clip.get_string(
+            self.station.name, self.mic_output.name, processor_name,
+            self.start_time, self.duration)
         
     class Meta:
         db_table = 'vesper_clip'
