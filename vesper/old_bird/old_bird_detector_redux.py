@@ -60,7 +60,7 @@ _THRUSH_SETTINGS = Bunch(
     max_duration=.400,                  # seconds
     initial_padding=5000 / _OLD_FS,     # seconds
     final_padding=0 / _OLD_FS,          # seconds
-    suppressor_count_threshold=15,      # clips
+    suppressor_count_threshold=10,      # clips
     suppressor_period=20                # seconds
 )
 
