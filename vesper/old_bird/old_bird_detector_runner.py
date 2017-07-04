@@ -12,8 +12,10 @@ import time
 from django.db import transaction
 
 from vesper.django.app.models import Clip, Job, RecordingChannel
+from vesper.signal.wave_audio_file import WaveAudioFileReader
 from vesper.util.logging_utils import append_stack_trace
 import vesper.util.audio_file_utils as audio_file_utils
+import vesper.util.numpy_utils as numpy_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.signal_utils as signal_utils
@@ -51,6 +53,19 @@ The above error message was logged when the minimum processing delay was
 set to one second, so I increased it to five seconds. This will not
 entirely eliminate the chance that an error will occur, but it should
 reduce it substantially.
+"""
+
+_CLIP_SEARCH_PADDING = 2
+"""
+Padding for recording clip search, in seconds.
+
+Since the Old Bird detectors only provide an approximate start time
+of a clip in a recording (as an integer number of seconds from the
+start of the recording), to find the exact index of a clip in a
+recording we must search for the clip in the recording. We do this
+by searching for the clip in the portion of the recording that starts
+`_CLIP_SEARCH_PADDING` seconds before the approximate clip start time
+and whose duration is the clip duration plus twice the padding.
 """
 
 
@@ -225,6 +240,7 @@ class _DetectorMonitor(Thread):
         
         self._detector = detector
         self._recording_file = recording_file
+        self._channel_num = channel_num
         self._job_info = job_info
         
         self._recording = recording_file.recording
@@ -242,6 +258,8 @@ class _DetectorMonitor(Thread):
         
         pattern = _CLIP_FILE_NAME_PATTERN_FORMAT.format(name)
         self._clip_file_name_re = re.compile(pattern)
+        
+        self._recording_file_reader = WaveAudioFileReader(recording_file.path)
         
         
     @property
@@ -383,53 +401,108 @@ class _DetectorMonitor(Thread):
             if time.time() - mod_time < min_delay:
                 break
             
-            # Get clip start time relative to recording file start.
-            file_name = os.path.basename(file_path)
-            try:
-                _, start_delta = _parse_clip_file_name(file_name)
-            except ValueError as e:
-                self._logger.error((
-                    'Could not parse clip file name at "{}". Error message '
-                    'was: {}. File will be ignored.').format(file_path, str(e)))
-                continue
+            # Try to find clip in recording.
+            clip_data = self._find_clip_in_recording(file_path)
             
-            # TODO: Find clip start index in recording, and use that
-            # to archive clip rather than `start_delta`.
-            
-            # Get clip length from clip file
-            try:
-                length = audio_file_utils.get_wave_file_info(file_path).length
-            except Exception as e:
-                self._logger.error((
-                    'Could not get information for .wav file "{}". Error '
-                    'message was: {}. File will be ignored.').format(
-                        file_path, str(e)))
-                continue
-            
-            if self._archive_clip(file_path, start_delta, length):
+            # Archive clip if found.
+            if clip_data is not None and \
+                    self._archive_clip(file_path, *clip_data):
                 self._delete_file(file_path)
-
+                
             
-            
-    def _archive_clip(self, file_path, start_delta, length):
+    def _find_clip_in_recording(self, file_path):
         
-        if length == 0:
+        try:
+            clip_samples, _ = audio_file_utils.read_wave_file(file_path)
+        except Exception as e:
+            self._logger.error((
+                'Could not read clip file "{}". Error message was: {}. '
+                'File will be ignored.').format(file_path, str(e)))
+            return None
+            
+        # A clip always has one channel. Get that channel's samples.
+        clip_samples = clip_samples[0]
+        
+        if len(clip_samples) == 0:
             self._logger.error(
                 'Clip file "{}" has zero length and will be ignored.'.format(
                     file_path))
-            return False
+            return None
+        
+        # Get clip start time relative to recording file start.
+        file_name = os.path.basename(file_path)
+        try:
+            _, start_delta = _parse_clip_file_name(file_name)
+        except ValueError as e:
+            self._logger.error((
+                'Could not parse clip file name at "{}". Error message '
+                'was: {}. File will be ignored.').format(file_path, str(e)))
+            return None
+            
+        start_seconds = start_delta.total_seconds() - _CLIP_SEARCH_PADDING
+        start_index = int(round(start_seconds * self._sample_rate))
+        
+        padding_length = int(round(_CLIP_SEARCH_PADDING * self._sample_rate))
+        length = len(clip_samples) + 2 * padding_length
+        
+        # Adjust length if seaarch interval would extend past end of file.
+        end_index = start_index + length
+        if end_index > self._recording_file_reader.length:
+            length -= end_index - self._recording_file_reader.length
+
+        # Read recording samples from file.
+        recording_samples = \
+            self._recording_file_reader.read(start_index, length)
+        recording_samples = recording_samples[self._channel_num]
+        
+        # Find clip in recording samples. Note that we cannot just search
+        # for an exact copy of the clip samples in the recording samples,
+        # since the clip samples may differ slightly (presumably because
+        # of some scaling that happens inside the detector) from the
+        # recording samples. So we allow each clip sample to differ from
+        # the corresponding recording sample by a magnitude of up to one.
+        indices = numpy_utils.find(clip_samples, recording_samples, tolerance=1)
+        
+        if len(indices) == 0:
+            self._logger.error((
+                'Could not find samples of clip file "{}" in recording. '
+                'File will be ignored.').format(file_path))
+            return None
+        
+        elif len(indices) > 1:
+            self._logger.error((
+                'Found samples of clip file "{}" more than once in '
+                'recording. File will be ignored.').format(file_path))
+            return None
+        
+        else:
+            # found exactly one copy of clip samples in recording
+            
+            # Get start index of clip in recording.
+            clip_start_index = \
+                self._recording_file.start_index + start_index + indices[0]
+                
+            # Extract clip samples from recording. We return these
+            # instead of the clip file samples since as explained above
+            # the latter may differ slightly from the former.
+            start_index = indices[0]
+            end_index = start_index + len(clip_samples)
+            clip_samples = recording_samples[start_index:end_index]
+            
+            return (clip_samples, clip_start_index)
+        
+        
+    def _archive_clip(self, file_path, samples, start_index):
         
         station = self._recording.station
         
-        # TODO: Find exact clip start index in input file.
-        start_index = None
-        
         # Get clip start time as a `datetime`.
-        file_start_index = self._recording_file.start_index
-        file_start_seconds = file_start_index / self._sample_rate
-        file_start_delta = datetime.timedelta(seconds=file_start_seconds)
-        file_start_time = self._recording.start_time + file_start_delta
-        start_time = file_start_time + start_delta
+        start_seconds = start_index / self._sample_rate
+        start_delta = datetime.timedelta(seconds=start_seconds)
+        start_time = self._recording.start_time + start_delta
+        
+        # Get clip length in sample frames.
+        length = len(samples)
         
         end_time = signal_utils.get_end_time(
             start_time, length, self._sample_rate)
@@ -461,11 +534,8 @@ class _DetectorMonitor(Thread):
                 # clip is saved.
                 clip.save()
                 
-                if start_index is None:
-                    # need to copy clip file
-                    
-                    self._copy_clip_sound_file(file_path, clip)
-                    
+                self._write_clip_sound_file(clip, samples)
+                                    
         except Exception as e:
             self._logger.error((
                 'Attempt to create clip from file "{}" failed with message: '
@@ -478,17 +548,15 @@ class _DetectorMonitor(Thread):
             return True
 
 
-    def _copy_clip_sound_file(self, file_path, clip):
+    def _write_clip_sound_file(self, clip, samples):
         
-        with open(file_path, 'rb') as file_:
-            contents = file_.read()
-             
         # Create clip directory if needed.
         dir_path = os.path.dirname(clip.wav_file_path)
         os_utils.create_directory(dir_path)
         
-        with open(clip.wav_file_path, 'wb') as file_:
-            file_.write(contents)
+        samples = samples.reshape((1, len(samples)))
+        audio_file_utils.write_wave_file(
+            clip.wav_file_path, samples, self._sample_rate)
 
 
     def _delete_file(self, file_path):
@@ -521,20 +589,17 @@ def _parse_clip_file_name(file_name):
         
     else:
         
-        (detector_name, hhh, mm, ss, nn) = m.groups()
+        (detector_name, hhh, mm, ss, _) = m.groups()
         
         hours = int(hhh)
         minutes = int(mm)
         seconds = int(ss)
-        num = int(nn)
     
         _check(file_name, 'minutes', time_utils.check_minutes, minutes)
         _check(file_name, 'seconds', time_utils.check_seconds, seconds)
-        _check_num(num, file_name)
             
         elapsed_time = datetime.timedelta(
-            hours=hours, minutes=minutes, seconds=seconds,
-            microseconds=num * 100000)
+            hours=hours, minutes=minutes, seconds=seconds)
         
         return (detector_name, elapsed_time)
 
@@ -554,9 +619,3 @@ def _check(file_name, part_name, check, n, *args):
         check(n, *args)
     except ValueError:
         _raise_value_error(file_name, 'Bad {} "{}"'.format(part_name, n))
-
-
-def _check_num(num, file_name):
-    if num > 9:
-        _raise_value_error(
-            file_name, 'Clip number {} is too high.'.format(num))
