@@ -223,6 +223,9 @@ class _Detector:
                 offset += self._signal_processor.latency
                 self._initial_samples_repeated = True
                 
+            # Add one to offset for agreement with original Old Bird detector.
+            offset += 1
+                
             crossings = self._get_crossings(crossing_samples, offset)
             
             clips = self._series_processor.process(crossings)
