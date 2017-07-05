@@ -286,8 +286,8 @@ class _DetectorListener:
         sample_rate = self._recording.sample_rate
         
         # Get clip start time as a `datetime`.
-        recording_index = self._file_start_index + start_index
-        start_delta = datetime.timedelta(seconds=recording_index / sample_rate)
+        start_index += self._file_start_index
+        start_delta = datetime.timedelta(seconds=start_index / sample_rate)
         start_time = self._recording.start_time + start_delta
         
         end_time = signal_utils.get_end_time(start_time, length, sample_rate)
@@ -345,7 +345,8 @@ class _DetectorListener:
         os_utils.create_directory(dir_path)
 
         path = clip.wav_file_path
-        samples = self._file_reader.read(clip.start_index, clip.length)
+        start_index = clip.start_index - self._file_start_index
+        samples = self._file_reader.read(start_index, clip.length)
         samples = samples[self._recording_channel.channel_num]
         samples.shape = (1, clip.length)
         audio_file_utils.write_wave_file(path, samples, clip.sample_rate)
