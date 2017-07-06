@@ -10,6 +10,7 @@ from django.db.models import Count
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Processor, Recording,
     RecordingChannel, StationDevice, StringAnnotation, StringAnnotationEdit)
+from vesper.singletons import preference_manager
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
 
@@ -353,9 +354,31 @@ def get_clips(
     return clips
 
 
-def get_processors(type):
-    return Processor.objects.filter(type=type).order_by('name')
+def get_processors(type, include_hidden=False):
+    
+    processors = Processor.objects.filter(type=type).order_by('name')
+    
+    if include_hidden:
+        return processors
+    
+    else:
+        hidden = _get_hidden_processors()
+        return [p for p in processors if (p.name, type) not in hidden]
 
+
+def _get_hidden_processors():
+    preferences = preference_manager.instance.preferences
+    processors = preferences.get('hidden_processors', [])
+    processors = [_get_processor_pair(p) for p in processors]
+    return frozenset(p for p in processors if p is not None)
+
+
+def _get_processor_pair(p):
+    try:
+        return (p['name'], p['type'])
+    except Exception:
+        return None
+    
 
 def get_processor(name, type):
     return Processor.objects.get(name=name, type=type)
