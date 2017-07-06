@@ -11,6 +11,7 @@ from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo, StringAnnotation
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
+import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.os_utils as os_utils
 
@@ -461,20 +462,9 @@ class DetectorMeasurement(object):
     name = 'Detector'
     
     def measure(self, clip):
-        return _get_detector_name(clip)
+        return model_utils.get_clip_type(clip)
     
     
-def _get_detector_name(clip):
-    
-    processor = clip.creating_processor
-    
-    if processor is None:
-        return None
-    
-    else:
-        return processor.name.split()[-2]
-
-
 class DuplicateCallMeasurement(object):
     
     
@@ -533,6 +523,17 @@ class DuplicateCallMeasurement(object):
                     return time - last_time < self._min_intercall_interval
     
     
+def _get_detector_name(clip):
+    
+    processor = clip.creating_processor
+    
+    if processor is None:
+        return None
+    
+    else:
+        return processor.name
+
+
 class ElapsedStartTimeMeasurement(object):
     
     name = 'Elapsed Start Time'

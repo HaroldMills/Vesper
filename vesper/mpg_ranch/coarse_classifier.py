@@ -9,6 +9,7 @@ or alter the classification of a clip that has already been classified.
 
 
 from vesper.command.annotator import Annotator
+import vesper.django.app.model_utils as model_utils
 import vesper.util.nfc_coarse_classifier as nfc_coarse_classifier
 
 
@@ -33,7 +34,7 @@ class CoarseClassifier(Annotator):
         if classification is None:
             # clip is unclassified
             
-            clip_type = _get_clip_type(clip)
+            clip_type = model_utils.get_clip_type(clip)
         
             if clip_type is not None:
                 # clip was detected by Old Bird Tseep or Thrush
@@ -46,20 +47,3 @@ class CoarseClassifier(Annotator):
                     annotated = True
                     
         return annotated
-        
-            
-def _get_clip_type(clip):
-    
-    processor = clip.creating_processor
-    
-    if processor is None:
-        return None
-    
-    elif processor.name == 'Old Bird Tseep Detector':
-        return 'Tseep'
-        
-    elif processor.name == 'Old Bird Thrush Detector':
-        return 'Thrush'
-    
-    else:
-        return None

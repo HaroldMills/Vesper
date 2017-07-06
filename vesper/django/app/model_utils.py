@@ -466,3 +466,20 @@ def delete_clip_annotation(
         creating_user=creating_user,
         creating_job=creating_job,
         creating_processor=creating_processor)
+
+
+def get_clip_type(clip):
+    
+    processor = clip.creating_processor
+    
+    if processor is None:
+        return None
+    
+    elif 'Tseep' in processor.name:
+        return 'Tseep'
+    
+    elif 'Thrush' in processor.name:
+        return 'Thrush'
+    
+    else:
+        return None

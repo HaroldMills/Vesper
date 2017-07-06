@@ -13,6 +13,7 @@ import os.path
 import pickle
 
 from vesper.command.annotator import Annotator
+import vesper.django.app.model_utils as model_utils
 
 
 class SpeciesClassifier(Annotator):
@@ -34,7 +35,7 @@ class SpeciesClassifier(Annotator):
         if classification == 'Call':
             # clip is classified as a call, but not to species
             
-            clip_type = _get_clip_type(clip)
+            clip_type = model_utils.get_clip_type(clip)
         
             if clip_type == 'Tseep':
                 # clip was detected by Old Bird Tseep
@@ -61,20 +62,3 @@ def _create_classifier(name):
         raise ValueError(
             ('Could not create classifier "{}". Error message '
              'was: {}').format(name, str(e)))
-
-
-def _get_clip_type(clip):
-    
-    processor = clip.creating_processor
-    
-    if processor is None:
-        return None
-    
-    elif processor.name == 'Old Bird Tseep Detector':
-        return 'Tseep'
-        
-    elif processor.name == 'Old Bird Thrush Detector':
-        return 'Thrush'
-    
-    else:
-        return None
