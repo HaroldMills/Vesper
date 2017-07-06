@@ -26,10 +26,14 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
 ]
 
-if settings.DEBUG:
-    
+
+# Django Debug Toolbar
+# See https://django-debug-toolbar.readthedocs.io/en/stable/installation.html.
+
+if settings.INCLUDE_DJANGO_DEBUG_TOOLBAR:
+     
     import debug_toolbar
-    
+     
     urlpatterns = [
         url(r'^debug/', include(debug_toolbar.urls)),
     ] + urlpatterns

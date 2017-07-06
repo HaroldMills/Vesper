@@ -48,6 +48,10 @@ SECRET_KEY = 'fi1dxvoed!-l9y-e7-2_m^l_if8qp2lixmggj&lk6(ad)4f+9g'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# Set this to `True` to include the Django debug toolbar (see
+# https://django-debug-toolbar.readthedocs.io/en/stable).
+INCLUDE_DJANGO_DEBUG_TOOLBAR = False
+
 ALLOWED_HOSTS = ['*']
 
 
@@ -73,14 +77,16 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
-# For the Django Debug Toolbar (see
-# https://django-debug-toolbar.readthedocs.io/en/stable/installation.html)
-if DEBUG:
+
+# Django Debug Toolbar
+# See https://django-debug-toolbar.readthedocs.io/en/stable/installation.html.
+
+if INCLUDE_DJANGO_DEBUG_TOOLBAR:
     INSTALLED_APPS.append('debug_toolbar')
     MIDDLEWARE = \
         ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
     INTERNAL_IPS = ['127.0.0.1']
-
+    
 
 ROOT_URLCONF = 'vesper.django.project.urls'
 
