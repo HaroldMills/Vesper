@@ -727,6 +727,8 @@ class Clip(Model):
     class Meta:
         db_table = 'vesper_clip'
         index_together = ('station', 'mic_output', 'date', 'creating_processor')
+        unique_together = (
+            'recording_channel', 'start_time', 'creating_processor')
         
     @property
     def recording(self):

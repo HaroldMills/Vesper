@@ -405,9 +405,11 @@ class _DetectorMonitor(Thread):
             clip_data = self._find_clip_in_recording(file_path)
             
             # Archive clip if found.
-            if clip_data is not None and \
-                    self._archive_clip(file_path, *clip_data):
-                self._delete_file(file_path)
+            if clip_data is not None:
+                self._archive_clip(file_path, *clip_data)
+                
+            # Delete clip file after processing.
+            self._delete_file(file_path)
                 
             
     def _find_clip_in_recording(self, file_path):
@@ -541,11 +543,9 @@ class _DetectorMonitor(Thread):
                 'Attempt to create clip from file "{}" failed with message: '
                 '{}. File will be ignored.').format(
                     file_path, str(e)))
-            return False
         
         else:
             self._logger.info('Archived {} clip {}.'.format(self.name, clip))
-            return True
 
 
     def _write_clip_sound_file(self, clip, samples):

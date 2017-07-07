@@ -332,7 +332,6 @@ class _DetectorListener:
             self._logger.error((
                 'Attempt to archive clip {} failed with message: {}. '
                 'Clip will be ignored.').format(s, str(e)))
-            raise
         
         else:
             self._logger.info('Archived clip {}.'.format(clip))
