@@ -51,10 +51,16 @@ class RecordingImporter:
         self._logger = logging.getLogger()
         
         try:
+            
             recordings = self._get_recordings()
-            self._log_recordings(recordings)
+            
+            new_recordings, old_recordings = \
+                self._partition_recordings(recordings)
+                
+            self._log_header(new_recordings, old_recordings)
+            
             with transaction.atomic():
-                self._add_recordings(recordings)
+                self._import_recordings(new_recordings)
             
         except Exception as e:
             self._logger.error((
@@ -64,6 +70,9 @@ class RecordingImporter:
                 'The archive was not modified.\n'
                 'See below for exception traceback.').format(str(e)))
             raise
+        
+        else:
+            self._log_imports(new_recordings)
 
         return True
             
@@ -128,24 +137,69 @@ class RecordingImporter:
             return f
             
     
-    def _log_recordings(self, recordings):
+    def _partition_recordings(self, recordings):
+        
+        new_recordings = []
+        old_recordings = []
+        
+        for r in recordings:
+            
+            if self._recording_exists(r):
+                old_recordings.append(r)
+                
+            else:
+                new_recordings.append(r)
+                
+        return (new_recordings, old_recordings)
+    
+                
+    def _recording_exists(self, recording):
+        
+        try:
+            Recording.objects.get(
+                station=recording.station,
+                recorder=recording.recorder,
+                start_time=recording.start_time)
+            
+        except Recording.DoesNotExist:
+            return False
+        
+        else:
+            return True
+            
+
+    def _log_header(self, new_recordings, old_recordings):
         
         log = self._logger.info
-        log('recordings:')
-        for r in recordings:
-            log('    {} {} {} {} {} {}'.format(
-                r.station.name, r.recorder.name, r.num_channels, r.length,
-                r.sample_rate, str(r.start_time)))
-            for f in r.files:
-                log('        {} {} {} {} {} {} {}'.format(
-                    f.path, f.station.name, r.recorder.name, f.num_channels,
-                    f.length, f.sample_rate, str(f.start_time)))
+        
+        new_count = len(new_recordings)
+        old_count = len(old_recordings)
+        
+        if new_count == 0 and old_count == 0:
+            log('Found no recordings at the specified paths.')
+            
+        else:
+            new_text = self._get_num_recordings_text(new_count, 'new')
+            old_text = self._get_num_recordings_text(old_count, 'old')
+            log('Found {} and {} at the specified paths.'.format(
+                new_text, old_text))
 
+        if len(new_recordings) == 0:
+            self._logger.info('No recordings will be imported.')
+            
+        else:
+            self._logger.info('The new recordings will be imported.')
+            
 
-    def _add_recordings(self, recordings):
+    def _get_num_recordings_text(self, count, description):
+        suffix = '' if count == 1 else 's'
+        return '{} {} recording{}'.format(count, description, suffix)
+        
+        
+    def _import_recordings(self, recordings):
     
         for r in recordings:
-             
+            
             end_time = signal_utils.get_end_time(
                 r.start_time, r.length, r.sample_rate)
             
@@ -163,6 +217,8 @@ class RecordingImporter:
                 creating_job=self._job)
             
             recording.save()
+            
+            r.model = recording
             
             mic_outputs = _get_recorder_mic_outputs(
                 recording.recorder, recording.start_time)
@@ -201,7 +257,15 @@ class RecordingImporter:
                 file.save()
                 
                 start_index += f.length
+                
 
+    def _log_imports(self, recordings):
+        for r in recordings:
+            log = self._logger.info
+            log('Imported recording {} with files:'.format(str(r.model)))
+            for f in r.files:
+                log('    {}'.format(f.path))
+            
 
 def _create_file_parser(spec):
     
