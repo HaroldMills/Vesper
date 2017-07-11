@@ -15,27 +15,45 @@ django.setup()
 from vesper.django.app.models import Clip, Device, Processor, Station
 
 
-STATION_NAME = 'Floodplain'
-MIC_NAME = '21c 0'
-# MIC_NAME = 'SMX-NFC 2'
-DATE = datetime.date(2016, 8, 25)
-DETECTOR_NAME = 'Thrush'
+DETECTOR_PAIRS = (
+    ('Old Bird Tseep Detector', 'Old Bird Tseep Detector Redux 1.0'),
+    ('Old Bird Thrush Detector', 'Old Bird Thrush Detector Redux 1.0'),
+)
+STATION_NAMES = ('Floodplain',)
+MIC_NAMES = ('21c 0', 'SMX-NFC 2')
+START_DATE = datetime.date(2016, 8, 22)
+END_DATE = datetime.date(2016, 8, 25)
+
+ONE_DAY = datetime.timedelta(days=1)
 SAMPLE_RATE = 22050
 
 
 def main():
     
-    station = Station.objects.get(name=STATION_NAME)
-    
-    mic = Device.objects.get(name=MIC_NAME)
-    mic_output = mic.outputs.all()[0]
-
-    detector_a_name = 'Old Bird {} Detector'.format(DETECTOR_NAME)
-    detector_b_name = 'Old Bird {} Detector Redux 1.0'.format(DETECTOR_NAME)
-    detector_a = Processor.objects.get(name=detector_a_name)
-    detector_b = Processor.objects.get(name=detector_b_name)
+    for detector_a_name, detector_b_name in DETECTOR_PAIRS:
         
-    pair_clips(station, mic_output, DATE, detector_a, detector_b)
+        detector_a = Processor.objects.get(name=detector_a_name)
+        detector_b = Processor.objects.get(name=detector_b_name)
+                    
+        for station_name in STATION_NAMES:
+            
+            station = Station.objects.get(name=station_name)
+        
+            for mic_name in MIC_NAMES:
+                
+                mic = Device.objects.get(name=mic_name)
+                mic_output = mic.outputs.all()[0]
+                
+                date = START_DATE
+                
+                while date <= END_DATE:
+                                        
+                    pair_clips(
+                        station, mic_output, date, detector_a, detector_b)
+                    
+                    date += ONE_DAY
+                    
+                print()
     
     # test_pair_clips()
     
@@ -47,7 +65,7 @@ def pair_clips(station, mic_output, date, detector_a, detector_b):
     
     pairs = pair_clips_aux(clips_a, clips_b)
     
-    differences_count = 0
+    diffs_count = 0
     extras_count_a = 0
     extras_count_b = 0
     
@@ -56,7 +74,7 @@ def pair_clips(station, mic_output, date, detector_a, detector_b):
         clip_a, clip_b = pair
         
         if clip_a != clip_b:
-            differences_count += 1
+            diffs_count += 1
             
         if clip_a is None:
             extras_count_a += 1
@@ -67,13 +85,29 @@ def pair_clips(station, mic_output, date, detector_a, detector_b):
         if clip_a != clip_b:
             clip_a = add_duration(clip_a)
             clip_b = add_duration(clip_b)
-            print(add_index(clip_a, clips_a))
-            print(add_index(clip_b, clips_b))
-            print()
+#             print(add_index(clip_a, clips_a))
+#             print(add_index(clip_b, clips_b))
+#             print()
             
+    print('{} / {} / {} / {} / {}'.format(
+        station.name, mic_output.name, str(date), detector_a.name,
+        detector_b.name))
+    
+    num_clips_a = len(clips_a)
+    
+    if num_clips_a != 0:
+        diffs_count_percent = to_percent(diffs_count / num_clips_a)
+        extras_count_a_percent = to_percent(extras_count_a / num_clips_a)
+        extras_count_b_percent = to_percent(extras_count_b / num_clips_a)
+    else:
+        diffs_count_percent = 0
+        extras_count_a_percent = 0
+        extras_count_b_percent = 0
+        
     print(
-        len(clips_a), len(clips_b), differences_count, extras_count_a,
-        extras_count_b)
+        '   ', num_clips_a, len(clips_b),
+        diffs_count, extras_count_a, extras_count_b,
+        diffs_count_percent, extras_count_a_percent, extras_count_b_percent)
    
     
 def get_clips(station, mic_output, date, detector):
@@ -145,6 +179,10 @@ def add_index(clip, clips):
                 return (i + 1,) + clip
         
         
+def to_percent(x):
+    return round(1000 * x) / 10
+
+
 def test_pair_clips():
     
     cases = [
