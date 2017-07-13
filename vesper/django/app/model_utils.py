@@ -449,23 +449,29 @@ def delete_clip_annotation(
         clip, annotation_info, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
     
-    annotation = StringAnnotation.objects.get(
-        clip=clip,
-        info=annotation_info)
+    try:
+        annotation = StringAnnotation.objects.get(
+            clip=clip,
+            info=annotation_info)
+        
+    except StringAnnotation.DoesNotExist:
+        return
     
-    annotation.delete()
-
-    if creation_time is None:
-        creation_time = time_utils.get_utc_now()
-     
-    StringAnnotationEdit.objects.create(
-        clip=clip,
-        info=annotation_info,
-        action=StringAnnotationEdit.ACTION_DELETE,
-        creation_time=creation_time,
-        creating_user=creating_user,
-        creating_job=creating_job,
-        creating_processor=creating_processor)
+    else:
+    
+        annotation.delete()
+    
+        if creation_time is None:
+            creation_time = time_utils.get_utc_now()
+         
+        StringAnnotationEdit.objects.create(
+            clip=clip,
+            info=annotation_info,
+            action=StringAnnotationEdit.ACTION_DELETE,
+            creation_time=creation_time,
+            creating_user=creating_user,
+            creating_job=creating_job,
+            creating_processor=creating_processor)
 
 
 def get_clip_type(clip):
