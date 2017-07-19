@@ -1158,25 +1158,6 @@ def _get_clip_count(
         return annotations.count()
             
 
-# TODO: Something along the lines of the following seems like it should
-# be a more efficient way to query for unannotated clips, but I haven't
-# been able to get it to work yet.
-_UNANNOTATED_CLIPS_QUERY = '''
-SELECT *
-FROM vesper_clip
-LEFT JOIN vesper_string_annotation
-ON vesper_clip.id = vesper_string_annotation.clip_id
-WHERE (
-    vesper_clip.recording_id = %s AND
-    vesper_clip.channel_num = %s AND
-    vesper_clip.start_time < %s AND
-    vesper_clip.end_time > %s AND
-    vesper_clip.creating_processor_id = %s AND
-    vesper_string_annotation.info_id = %s AND
-    vesper_string_annotation.value IS NULL);
-'''
-
-
 def _get_rc_pair_clips(
         recording, channel_num, time_interval, detector, annotation_name,
         annotation_value):
