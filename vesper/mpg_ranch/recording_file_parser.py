@@ -4,21 +4,183 @@
 import os.path
 import re
 
+import pytz
+
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
-import vesper.util.signal_utils as signal_utils
 import vesper.util.time_utils as time_utils
 
 
-_INPUT_FILE_NAME_RE_1 = \
-    re.compile(
+class _FileNameParser:
+    
+    
+    def __init__(self, stations, station_name_aliases=None):
+        
+        """
+        Initializes this parser for the specified stations and aliases.
+        
+        :Parameters:
+        
+            stations : collection of `Station` objects
+                the stations whose recording files will be parsed.
+                
+            station_name_aliases: mapping from `str` to `str`
+                mapping from station names to station name aliases.
+                
+                The station name aliases appear in file names and will
+                be translated by the parser into regular station names.
+                The capitalization of aliases is inconsequential since
+                the parser will compare them to the station names that
+                appear in file names only after both are converted to
+                lower case.
+        """
+        
+        if station_name_aliases is None:
+            station_name_aliases = {}
+            
+        self._stations = _create_stations_dict(stations, station_name_aliases)
+
+
+    def parse_file_name(self, file_name):
+        
+        station_name, year, month, day, hour, minute, second = \
+            self._get_file_name_fields(file_name)
+            
+        station = self._get_station(station_name)
+        
+        naive_start_time = _parse_file_name_date_time(
+            year, month, day, hour, minute, second)
+
+        utc_start_time = self._get_utc_start_time(naive_start_time, station)
+        
+        return station, utc_start_time
+            
+
+    def _get_file_name_fields(self, file_name):
+        raise NotImplementedError()
+    
+    
+    def _get_station(self, station_name):
+        try:
+            return self._stations[station_name.lower()]
+        except KeyError:
+            raise ValueError(
+                'Unrecognized station name "{}".'.format(station_name))
+            
+            
+    def _get_utc_start_time(self, naive_start_time, station):
+        raise NotImplementedError()
+
+
+def _create_stations_dict(stations, station_name_aliases):
+    
+    stations = dict((s.name, s) for s in stations)
+    
+    result = {}
+    
+    for station_name, aliases in station_name_aliases.items():
+        
+        try:
+            station = stations[station_name]
+        except KeyError:
+            raise ValueError(
+                'Unrecognized station name "{}".'.format(station_name))
+            
+        if isinstance(aliases, list):
+            for alias in aliases:
+                result[alias] = station
+                    
+        else:
+            result[alias] = station
+            
+    # Always map the lower case version of each station name to that station.
+    for station in stations.values():
+        result[station.name.lower()] = station
+            
+    return result
+
+        
+def _parse_file_name_date_time(year, month, day, hour, minute, second):
+    
+    try:
+        return time_utils.parse_date_time(
+            year, month, day, hour, minute, second)
+        
+    except ValueError as e:
+        raise ValueError(
+            'Could not parse file name date and time: {}'.format(str(e)))
+        
+
+class _VesperRecorderFileNameParser(_FileNameParser):
+    
+    
+    _re = re.compile(
+        r'^([^_]+)_(\d\d\d\d)-(\d\d)-(\d\d)_(\d\d)\.(\d\d)\.(\d\d)_Z\.wav$')
+    
+    
+    def _get_file_name_fields(self, file_name):
+        
+        m = _VesperRecorderFileNameParser._re.match(file_name)
+            
+        if m is not None:
+            return m.groups()
+        
+        else:
+            raise ValueError()
+
+            
+    def _get_utc_start_time(self, naive_start_time, station):
+        return pytz.utc.localize(naive_start_time)
+
+    
+class _MpgRanchFileNameParser0(_FileNameParser):
+    
+    
+    _re = re.compile(
         r'^([^_]+)_(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)(_.+)?\.wav$')
     
-_INPUT_FILE_NAME_RE_2 = \
-    re.compile(
+    
+    def _get_file_name_fields(self, file_name):
+        
+        m = _MpgRanchFileNameParser0._re.match(file_name)
+            
+        if m is not None:
+            return m.groups()[:-1]
+        
+        else:
+            raise ValueError()
+
+            
+    def _get_utc_start_time(self, naive_start_time, station):
+        return station.local_to_utc(naive_start_time)
+    
+        
+class _MpgRanchFileNameParser1(_FileNameParser):
+    
+    
+    _re = re.compile(
         r'^([^_]+)_(\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)_(\d{6})(_.+)?\.wav$')
     
     
+    def _get_file_name_fields(self, file_name):
+
+        m = _MpgRanchFileNameParser1._re.match(file_name)
+            
+        if m is not None:
+            
+            station_name, month, day, year, hour, minute, second = \
+                m.groups()[:-2]
+                
+            return (station_name, year, month, day, hour, minute, second)
+        
+        else:
+            raise ValueError()
+
+
+    def _get_utc_start_time(self, naive_start_time, station):
+        return station.local_to_utc(naive_start_time)
+
+
 class RecordingFileParser:
     
     """
@@ -61,10 +223,11 @@ class RecordingFileParser:
                 lower case.
         """
         
-        if station_name_aliases is None:
-            station_name_aliases = {}
-            
-        self._stations = _create_stations_dict(stations, station_name_aliases)
+        self._file_name_parsers = (
+            _VesperRecorderFileNameParser(stations, station_name_aliases),
+            _MpgRanchFileNameParser0(stations, station_name_aliases),
+            _MpgRanchFileNameParser1(stations, station_name_aliases)
+        )
         
         
     def parse_file(self, file_path):
@@ -97,9 +260,6 @@ class RecordingFileParser:
         
         num_channels, length, sample_rate = self._get_audio_file_info(file_path)
         
-        end_time = signal_utils.get_end_time(start_time, length, sample_rate)
-        end_time = station.local_to_utc(end_time)
-            
         return Bunch(
             station=station,
             recorder=None,
@@ -115,78 +275,19 @@ class RecordingFileParser:
         
         file_name = os.path.basename(file_path)
         
-        for parse_method in (self._parse_file_name_1, self._parse_file_name_2):
+        for parser in self._file_name_parsers:
             
             try:
-                station_name, year, month, day, hour, minute, second = \
-                    parse_method(file_name)
+                return parser.parse_file_name(file_name)
                     
             except ValueError:
                 continue
-            
-            else:
-                # parse succeeded
-            
-                station = self._get_station(station_name)
                 
-                local_start_time = self._parse_file_name_date_time(
-                    year, month, day, hour, minute, second)
-        
-                utc_start_time = station.local_to_utc(local_start_time)
-                
-                return station, utc_start_time
-                
-        # If we get here, the form of the file name was not recognized
-        # by any of the parse methods.
-        raise ValueError('File name is not of a recognized form.')
+        # If we get here, the file name could not be parsed by any of
+        # the file name parsers.
+        raise ValueError('Could not parse file name.')
         
         
-    def _parse_file_name_1(self, file_name):
-        
-        m = _INPUT_FILE_NAME_RE_1.match(file_name)
-            
-        if m is not None:
-            return m.groups()[:-1]
-        
-        else:
-            raise ValueError()
-        
-
-    def _parse_file_name_2(self, file_name):
-        
-        m = _INPUT_FILE_NAME_RE_2.match(file_name)
-            
-        if m is not None:
-            
-            station_name, month, day, year, hour, minute, second = \
-                m.groups()[:-2]
-                
-            return (station_name, year, month, day, hour, minute, second)
-        
-        else:
-            raise ValueError()
-        
-
-    def _get_station(self, station_name):
-        try:
-            return self._stations[station_name.lower()]
-        except KeyError:
-            raise ValueError(
-                'Unrecognized station name "{}".'.format(station_name))
-
-
-    def _parse_file_name_date_time(
-            self, year, month, day, hour, minute, second):
-        
-        try:
-            return time_utils.parse_date_time(
-                year, month, day, hour, minute, second)
-            
-        except ValueError as e:
-            raise ValueError(
-                'Could not parse file name date and time: {}'.format(str(e)))
-        
-
     def _get_audio_file_info(self, file_path):
 
         try:
@@ -198,31 +299,3 @@ class RecordingFileParser:
                 '{}').format(str(e)))
            
         return info.num_channels, info.length, info.sample_rate
-
-
-def _create_stations_dict(stations, station_name_aliases):
-    
-    stations = dict((s.name, s) for s in stations)
-    
-    result = {}
-    
-    for station_name, aliases in station_name_aliases.items():
-        
-        try:
-            station = stations[station_name]
-        except KeyError:
-            raise ValueError(
-                'Unrecognized station name "{}".'.format(station_name))
-            
-        if isinstance(aliases, list):
-            for alias in aliases:
-                result[alias] = station
-                    
-        else:
-            result[alias] = station
-            
-    # Always map the lower case version of each station name to that station.
-    for station in stations.values():
-        result[station.name.lower()] = station
-            
-    return result

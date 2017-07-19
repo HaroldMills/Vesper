@@ -50,6 +50,9 @@ class RecordingFileParserTests(TestCase):
                   
             ('FLOOD_20150601_200102.wav',
              'Floodplain', 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
+                 
+            ('Flood_2015-06-02_02.01.02_Z.wav',
+             'Floodplain', 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
                    
             ('Ridge_20150601_200102.wav',
              'Ridge', 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
