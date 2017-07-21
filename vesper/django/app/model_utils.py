@@ -422,6 +422,9 @@ def annotate_clip(
         clip, annotation_info, value, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
     
+    # We assume that any database locking and/or transaction management
+    # involved in deleting a clip happens in the caller.
+    
     if creation_time is None:
         creation_time = time_utils.get_utc_now()
     
@@ -448,6 +451,9 @@ def annotate_clip(
 def delete_clip_annotation(
         clip, annotation_info, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
+    
+    # We assume that any database locking and/or transaction management
+    # involved in deleting a clip happens in the caller.
     
     try:
         annotation = StringAnnotation.objects.get(

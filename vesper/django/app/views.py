@@ -5,6 +5,7 @@ import itertools
 import json
 
 from django import forms, urls
+from django.db import transaction
 from django.db.models import F, Max, Min
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
@@ -28,6 +29,7 @@ from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Clip, Job, Recording, Station,
     StringAnnotation)
 from vesper.singletons import job_manager, preference_manager, preset_manager
+from vesper.util.archive_lock import archive_lock
 from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
@@ -499,8 +501,11 @@ def annotation(request, clip_id, annotation_name):
             clip = get_object_or_404(Clip, pk=clip_id)
             info = get_object_or_404(AnnotationInfo, name=name)
             value = _get_request_body_as_text(request).strip()
-            model_utils.annotate_clip(
-                clip, info, value, creating_user=request.user)
+            
+            with archive_lock:
+                with transaction.atomic():
+                    model_utils.annotate_clip(
+                        clip, info, value, creating_user=request.user)
             
             return HttpResponse()
         
@@ -516,8 +521,11 @@ def annotation(request, clip_id, annotation_name):
             
             clip = get_object_or_404(Clip, pk=clip_id)
             info = get_object_or_404(AnnotationInfo, name=name)
-            model_utils.delete_clip_annotation(
-                clip, info, creating_user=request.user)
+            
+            with archive_lock:
+                with transaction.atomic():
+                    model_utils.delete_clip_annotation(
+                        clip, info, creating_user=request.user)
             
             return HttpResponse()
         
