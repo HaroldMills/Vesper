@@ -627,8 +627,7 @@ class ClipAlbum {
 		
 		window.alert(
 			`Annotation request failed with response ` +
-			`"${xhr.status} ${xhr.statusText}".\n` +
-			`Are you logged in?`);
+			`"${xhr.status} ${xhr.statusText}".`);
 		
 	}
 	
