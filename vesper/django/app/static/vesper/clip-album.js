@@ -2983,24 +2983,22 @@ function _computeSpectrogramImage(spectrogram, canvas, imageData, settings) {
 	const data = imageData.data;
 	
 	// Get scale factor and offset for mapping the range
-	// [settings.lowPower, settings.highPower] into the range [0, 255].
+	// [settings.lowPower, settings.highPower] into the range [255, 0].
 	const delta = settings.highPower - settings.lowPower
-	const a = 255 / delta;
-	const b = -255 * settings.lowPower / delta;
+	const a = -255 / delta;
+	const b = 255 * (1. - settings.lowPower / delta);
 	
 	// Map spectrogram values to pixel values.
-	let spectrumNum = 0;
-	let spectrumStride = numBins;
 	let m = 0;
 	for (let i = 0; i < numBins; i++) {
-		let k = numBins - 1 - i
+		let k = numBins - 1 - i;
 	    for (let j = 0; j < numSpectra; j++) {
-			const v = 255 - a * spectrogram[k] + b;
+			const v = a * spectrogram[k] + b;
 			data[m++] = v;
 			data[m++] = v;
 			data[m++] = v;
 			data[m++] = 255;
-			k += spectrumStride;
+			k += numBins;
 		}
 	}
 	
@@ -3013,6 +3011,13 @@ function _computeSpectrogramImage(spectrogram, canvas, imageData, settings) {
 
 function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
 
+	// Make sure clip view canvas has same size as spectrogram.
+	const gramCanvas = spectrogramCanvas;
+	if (canvas.width != gramCanvas.width)
+	    canvas.width = gramCanvas.width;
+	if (canvas.height != gramCanvas.height)
+	    canvas.height = gramCanvas.height;
+	
 	const context = canvas.getContext('2d');
 	
 	// Draw gray background rectangle.
@@ -3020,7 +3025,6 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
 	context.fillRect(0, 0, canvas.width, canvas.height);
 	
 	// Draw spectrogram from clip spectrogram canvas, stretching as needed.
-	const gramCanvas = spectrogramCanvas;
 	const numSpectra = gramCanvas.width;
 	context.imageSmoothingEnabled = settings.smoothingEnabled;
 	if (settings.timePaddingEnabled) {
