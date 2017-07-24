@@ -578,14 +578,22 @@ class ClipAlbum {
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
 			const clip = this.clips[i];
-			const url = clip.getAnnotationUrl(name);
+			const oldValue = clip.annotations[name];
 			
-			const xhr = new XMLHttpRequest();
-			xhr.onload =
-				() => this._onAnnotationPutComplete(xhr, clip, name, value);
-			xhr.open('PUT', url);
-			xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
-			xhr.send(value);
+			if (oldValue !== value) {
+				// annotation does not exist or value will change
+			
+				const url = clip.getAnnotationUrl(name);
+				
+				const xhr = new XMLHttpRequest();
+				xhr.onload =
+					() => this._onAnnotationPutComplete(xhr, clip, name, value);
+				xhr.open('PUT', url);
+				xhr.setRequestHeader(
+					'Content-Type', 'text/plain; charset=utf-8');
+				xhr.send(value);
+				
+			}
 			
 		}
 
@@ -706,14 +714,20 @@ class ClipAlbum {
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
 			const clip = this.clips[i];
-			const url = clip.getAnnotationUrl(name);
 			
-			const xhr = new XMLHttpRequest();
-			xhr.onload =
-				() => this._onAnnotationDeleteComplete(xhr, clip, name);
-			xhr.open('DELETE', url);
-			xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
-			xhr.send();
+			if (clip.annotations.hasOwnProperty(name)) {
+				// clip has annotation
+				
+				const url = clip.getAnnotationUrl(name);
+				
+				const xhr = new XMLHttpRequest();
+				xhr.onload =
+					() => this._onAnnotationDeleteComplete(xhr, clip, name);
+				xhr.open('DELETE', url);
+				xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
+				xhr.send();
+				
+			}
 			
 		}
 
