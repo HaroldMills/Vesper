@@ -2,7 +2,7 @@
 
 
 const _DEFAULT_PLOT_LIMITS = [17.5, 31.5];
-const _PLOT_LIMIT_PADDING = .5;      // hours
+const _PLOT_LIMIT_PADDING = 1;       // hours
 const _RUG_HEIGHT = 25;              // client pixels, also appears in CSS
 const _CLIP_LINE_MARGIN = 6;         // client pixels
 const _TICK_LABEL_MARGIN = 10;       // client pixels
@@ -100,14 +100,21 @@ class NightRugPlot {
 		
 		const padding = _PLOT_LIMIT_PADDING;
 		
-		if (this._recordingIntervals.length !== 0) {
+		// Removed the following 2017-07-26 since for NFC monitoring we
+		// would like the rug plot to consistently show a whole night,
+		// even if (or *especially* if) recording did not cover the whole
+		// night.
+		
+//		if (this._recordingIntervals.length !== 0) {
+//			
+//			const intervals = this._recordingIntervals;
+//			const startTime = intervals[0].startTime - padding;
+//			const endTime = intervals[intervals.length - 1].endTime + padding;
+//			return [startTime, endTime];
+//			
+//		} else if (this._solarEventTimes !== null) {}
 			
-			const intervals = this._recordingIntervals;
-			const startTime = intervals[0].startTime - padding;
-			const endTime = intervals[intervals.length - 1].endTime + padding;
-			return [startTime, endTime];
-			
-		} else if (this._solarEventTimes !== null) {
+		if (this._solarEventTimes !== null) {
 			
 			const startTime = this._solarEventTimes['sunset'] - padding;
 			const endTime = this._solarEventTimes['sunrise'] + padding;
