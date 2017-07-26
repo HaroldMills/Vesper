@@ -65,13 +65,13 @@ _EVENT_DATA = {
 }
 
 
-# TODO: Put this in a separate module and parameterize capacity?
+# TODO: Put this in a separate module and parameterize cache size?
 # TODO: Make caching optional?
 def memoize(function):
     
     results_dict = {}
     results_deque = collections.deque()
-    capacity = 100
+    size = 100
     
     def aux(*args):
         
@@ -84,10 +84,10 @@ def memoize(function):
             
             result = function(*args)
             
-            # Forget oldest result if at capacity.
-            if len(results_deque) == capacity:
-                key, _ = results_deque.popleft()
-                del results_dict[key]
+            # Forget oldest result if cache is full.
+            if len(results_deque) == size:
+                k, _ = results_deque.popleft()
+                del results_dict[k]
 
             # Cache new result.
             results_dict[key] = result
