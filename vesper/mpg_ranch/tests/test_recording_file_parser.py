@@ -43,53 +43,75 @@ class RecordingFileParserTests(TestCase):
 
     def test_parse_file(self):
         
+        
         cases = [
                  
+                 
+            # Vesper recorder file names.
+            
+            ('Flood_2015-06-02_02.01.02_Z.wav',
+             'Floodplain', None, 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
+                    
+                    
+            # Song Meter file names without channel numbers.
+            
             ('FLOODPLAIN_20140820_210203.wav',
-             'Floodplain', 1, 10, 24000, dt(2014, 8, 20, 21, 2, 3)),
+             'Floodplain', None, 1, 10, 24000, dt(2014, 8, 20, 21, 2, 3)),
                   
             ('FLOOD_20150601_200102.wav',
-             'Floodplain', 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                 
-            ('Flood_2015-06-02_02.01.02_Z.wav',
-             'Floodplain', 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                   
+             'Floodplain', None, 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
+                  
             ('Ridge_20150601_200102.wav',
-             'Ridge', 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                  
+             'Ridge', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
+                   
             ('Sheep Camp_20150601_200102.wav',
-             'Sheep Camp', 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                   
-            ('Sheep Camp_20150601_200102_comment_with_underscores.wav',
-             'Sheep Camp', 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                   
+             'Sheep Camp', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
+                    
             ('SHEEP_20150601_200102.wav',
-             'Sheep Camp', 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                   
+             'Sheep Camp', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
+                    
             ('SHEEPCAMP_20150601_200102.wav',
-             'Sheep Camp', 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                  
-            ('ridge_042315_203600_101222.wav',
-             'Ridge', 1, 10, 22050, dt(2015, 4, 23, 20, 36, 0)),
+             'Sheep Camp', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
                    
+
+            # Song Meter file names with channel numbers.
+            
+            ('flood_0+1_20170725_123456.wav',
+             'Floodplain', (0, 1), 2, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
+                 
+            ('flood__0__20170725_123456.wav',
+             'Floodplain', (0,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
+                 
+            ('flood__1__20170725_123456.wav',
+             'Floodplain', (1,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
+
+                 
+            # Older MPG Ranch file names.
+            
+            ('Sheep Camp_20150601_200102_comment_with_underscores.wav',
+             'Sheep Camp', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
+                    
+            ('ridge_042315_203600_101222.wav',
+             'Ridge', None, 1, 10, 22050, dt(2015, 4, 23, 20, 36, 0)),
+                    
             ('ridge_042315_203600_101222_comment.wav',
-             'Ridge', 1, 10, 22050, dt(2015, 4, 23, 20, 36, 0)),
+             'Ridge', None, 1, 10, 22050, dt(2015, 4, 23, 20, 36, 0)),
+                 
                  
         ]
         
+        
         parser = RecordingFileParser(STATIONS, STATION_NAME_ALIASES)
         
-        for (file_name, station_name, num_channels, length, sample_rate,
-             start_time) in cases:
+        for (file_name, station_name, recorder_channel_nums, num_channels,
+             length, sample_rate, start_time) in cases:
             
             file_path = os.path.join(DATA_DIR_PATH, file_name)
             info = parser.parse_file(file_path)
             
             self.assertEqual(info.station.name, station_name)
-            self.assertIsNone(info.recorder)
-            self.assertIsNone(info.recorder_channel_nums)
+            self.assertEqual(info.recorder_channel_nums, recorder_channel_nums)
             self.assertEqual(info.num_channels, num_channels)
-            self.assertIsNone(info.recorder_channel_nums)
             self.assertEqual(info.length, length)
             self.assertEqual(info.sample_rate, sample_rate)
             self.assertEqual(info.start_time, start_time)
@@ -118,6 +140,12 @@ class RecordingFileParserTests(TestCase):
             'flood_20150601_250102.wav',
             'flood_20150601_206002.wav',
             'flood_20150601_200160.wav',
+            
+            # bad channel numbers
+            'flood_0_20150601_250102.wav',
+            'flood_0__20150601_250102.wav',
+            'flood__0_20150601_250102.wav',
+            'flood_0+0_20150601_250102.wav',
             
         ]
         

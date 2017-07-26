@@ -11,6 +11,11 @@ import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.time_utils as time_utils
 
 
+# TODO: Support recording file parser extensions.
+# TODO: Support specification of file name formats via YAML.
+# TODO: Should recording file parser find recorder as well as station?
+
+
 class _FileNameParser:
     
     
@@ -43,17 +48,18 @@ class _FileNameParser:
 
     def parse_file_name(self, file_name):
         
-        station_name, year, month, day, hour, minute, second = \
+        (station_name, recorder_channel_nums,
+         year, month, day, hour, minute, second) = \
             self._get_file_name_fields(file_name)
             
         station = self._get_station(station_name)
         
-        naive_start_time = _parse_file_name_date_time(
+        naive_start_time = _get_file_name_date_time(
             year, month, day, hour, minute, second)
 
         utc_start_time = self._get_utc_start_time(naive_start_time, station)
         
-        return station, utc_start_time
+        return station, recorder_channel_nums, utc_start_time
             
 
     def _get_file_name_fields(self, file_name):
@@ -71,6 +77,33 @@ class _FileNameParser:
     def _get_utc_start_time(self, naive_start_time, station):
         raise NotImplementedError()
 
+
+def _get_file_name_fields_with_regex(file_name, regex):
+    
+    """
+    Parses a file name using a regular expression.
+    
+    This method assumes that `self._re` is a compiled regular
+    expression that, when 
+    """
+    
+    m = regex.match(file_name)
+        
+    if m is not None:
+        return _get_file_name_fields_aux(m.group)
+    
+    else:
+        raise ValueError()
+
+
+def _get_file_name_fields_aux(g, recorder_channel_nums=None):
+    
+    return (
+        g('station_name'),
+        recorder_channel_nums,
+        g('year'), g('month'), g('day'),
+        g('hour'), g('minute'), g('second'))
+    
 
 def _create_stations_dict(stations, station_name_aliases):
     
@@ -100,7 +133,7 @@ def _create_stations_dict(stations, station_name_aliases):
     return result
 
         
-def _parse_file_name_date_time(year, month, day, hour, minute, second):
+def _get_file_name_date_time(year, month, day, hour, minute, second):
     
     try:
         return time_utils.parse_date_time(
@@ -114,41 +147,82 @@ def _parse_file_name_date_time(year, month, day, hour, minute, second):
 class _VesperRecorderFileNameParser(_FileNameParser):
     
     
-    _re = re.compile(
-        r'^([^_]+)_(\d\d\d\d)-(\d\d)-(\d\d)_(\d\d)\.(\d\d)\.(\d\d)_Z\.wav$')
+    _REGEX = re.compile(
+        r'^'
+        r'(?P<station_name>[^_]+)'
+        r'_'
+        r'(?P<year>\d\d\d\d)-(?P<month>\d\d)-(?P<day>\d\d)'
+        r'_'
+        r'(?P<hour>\d\d)\.(?P<minute>\d\d)\.(?P<second>\d\d)_Z'
+        r'\.wav'
+        r'$')
     
     
     def _get_file_name_fields(self, file_name):
-        
-        m = _VesperRecorderFileNameParser._re.match(file_name)
-            
-        if m is not None:
-            return m.groups()
-        
-        else:
-            raise ValueError()
+        return _get_file_name_fields_with_regex(file_name, self._REGEX)
 
             
     def _get_utc_start_time(self, naive_start_time, station):
         return pytz.utc.localize(naive_start_time)
 
     
-class _MpgRanchFileNameParser0(_FileNameParser):
+class _SongMeterFileNameParser(_FileNameParser):
     
     
-    _re = re.compile(
-        r'^([^_]+)_(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)(_.+)?\.wav$')
+    _REGEX = re.compile(
+        r'^'
+        r'(?P<station_name>[^_]+)'
+        r'_'
+        r'(?P<channel_nums>_0__|_1__|0\+1_)?'    # optional channel number(s)
+        r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
+        r'_'
+        r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
+        r'\.wav'
+        r'$')
+    
+    
+    _CHANNEL_NUMS = {
+        '_0__': (0,),
+        '_1__': (1,),
+        '0+1_': (0, 1),
+        None: None
+    }
     
     
     def _get_file_name_fields(self, file_name):
-        
-        m = _MpgRanchFileNameParser0._re.match(file_name)
+
+        m = self._REGEX.match(file_name)
             
         if m is not None:
-            return m.groups()[:-1]
+            g = m.group
+            channel_nums = self._CHANNEL_NUMS[g('channel_nums')]
+            return _get_file_name_fields_aux(g, channel_nums)
         
         else:
             raise ValueError()
+
+
+    def _get_utc_start_time(self, naive_start_time, station):
+        return station.local_to_utc(naive_start_time)
+    
+    
+class _MpgRanchFileNameParser0(_FileNameParser):
+    
+    
+    _REGEX = re.compile(
+        r'^'
+        r'(?P<station_name>[^_]+)'
+        r'_'
+        r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
+        r'_'
+        r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
+        r'(_.+)'      # trailing comment
+        r'\.wav'
+        r'$')
+
+    
+    def _get_file_name_fields(self, file_name):
+        return _get_file_name_fields_with_regex(file_name, self._REGEX)
 
             
     def _get_utc_start_time(self, naive_start_time, station):
@@ -158,23 +232,22 @@ class _MpgRanchFileNameParser0(_FileNameParser):
 class _MpgRanchFileNameParser1(_FileNameParser):
     
     
-    _re = re.compile(
-        r'^([^_]+)_(\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)_(\d{6})(_.+)?\.wav$')
-    
+    _REGEX = re.compile(
+        r'^'
+        r'(?P<station_name>[^_]+)'
+        r'_'
+        r'(?P<month>\d\d)(?P<day>\d\d)(?P<year>\d\d)'
+        r'_'
+        r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
+        r'_'
+        r'(\d{6})'    # six mystery digits (hhmmss recording duration?)
+        r'(_.+)?'     # optional trailing comment
+        r'\.wav'
+        r'$')
+
     
     def _get_file_name_fields(self, file_name):
-
-        m = _MpgRanchFileNameParser1._re.match(file_name)
-            
-        if m is not None:
-            
-            station_name, month, day, year, hour, minute, second = \
-                m.groups()[:-2]
-                
-            return (station_name, year, month, day, hour, minute, second)
-        
-        else:
-            raise ValueError()
+        return _get_file_name_fields_with_regex(file_name, self._REGEX)
 
 
     def _get_utc_start_time(self, naive_start_time, station):
@@ -225,8 +298,9 @@ class RecordingFileParser:
         
         self._file_name_parsers = (
             _VesperRecorderFileNameParser(stations, station_name_aliases),
+            _SongMeterFileNameParser(stations, station_name_aliases),
             _MpgRanchFileNameParser0(stations, station_name_aliases),
-            _MpgRanchFileNameParser1(stations, station_name_aliases)
+            _MpgRanchFileNameParser1(stations, station_name_aliases),
         )
         
         
@@ -247,7 +321,7 @@ class RecordingFileParser:
             
             `station` - the `Station` of the recording.
             `recorder` - the `Recorder` of the recording, or `None` if unknown.
-            `recorder_channel_nums` - array of recorder channel numbers
+            `recorder_channel_nums` - sequence of recorder channel numbers
                 indexed by recording channel number, or `None` if unknown.
             `num_channels` - the number of channels of the file.
             `length` - the length of the file in sample frames.
@@ -256,14 +330,15 @@ class RecordingFileParser:
             `path` - the path of the file.
         """
         
-        station, start_time = self._parse_file_name(file_path)
+        station, recorder_channel_nums, start_time = \
+            self._parse_file_name(file_path)
         
         num_channels, length, sample_rate = self._get_audio_file_info(file_path)
         
         return Bunch(
             station=station,
             recorder=None,
-            recorder_channel_nums=None,
+            recorder_channel_nums=recorder_channel_nums,
             num_channels=num_channels,
             length=length,
             sample_rate=sample_rate,
