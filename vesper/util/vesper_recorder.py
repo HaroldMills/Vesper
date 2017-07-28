@@ -99,12 +99,8 @@ class VesperRecorder:
         
 def _create_and_start_recorder(message):
     
-    _logger.info('Getting home directory path...')
-    
     home_dir_path = os.environ.get(_HOME_DIR_VAR_NAME)
      
-    _logger.info('Checking home directory path 1...')
-    
     # Check that home directory path environment variable is set.
     if home_dir_path is None:
         _logger.error(
@@ -112,16 +108,12 @@ def _create_and_start_recorder(message):
                 _HOME_DIR_VAR_NAME))
         return None
          
-    _logger.info('Checking home directory path 2...')
-    
     # Check that home directory exists.
     if not os.path.exists(home_dir_path):
         _logger.error(
             'Recorder home directory "{}" does not exist.'.format(
                 home_dir_path))
         return None
-    
-    _logger.info('Adding file logging...')
     
     # Now that we know that we have a home directory, and hence a place
     # for a log file, add file logging.
@@ -138,8 +130,6 @@ def _create_and_start_recorder(message):
                 config_file_path))
         return None
         
-    _logger.info('Parsing configuration file...')
-    
     # Parse configuration file.
     try:
         config = _parse_config_file(
@@ -154,8 +144,6 @@ def _create_and_start_recorder(message):
         'Starting recorder with HTTP server at port {}.'.format(
             config.port_num))
     
-    _logger.info('Creating recorder...')
-    
     # Create recorder.
     try:
         recorder = VesperRecorder(config)
@@ -164,8 +152,6 @@ def _create_and_start_recorder(message):
             'Could not create recorder. Error message was: {}'.format(str(e)))
         return None
            
-    _logger.info('Starting recorder...')
-    
     # Start recorder. 
     try:
         recorder.start()
@@ -173,8 +159,6 @@ def _create_and_start_recorder(message):
         _logger.error(
             'Could not start recorder. Error message was: {}'.format(str(e)))
         return None
-    
-    _logger.info('Done.')
     
     # Phew. We made it!
     return recorder
