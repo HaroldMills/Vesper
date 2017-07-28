@@ -8,7 +8,7 @@ import math
 import time
 
 import pyaudio
-from pyaudio import paInputOverflow, paInputUnderflow
+from pyaudio import paInputOverflow
 
 from vesper.util.bunch import Bunch
 from vesper.util.notifier import Notifier
@@ -65,17 +65,12 @@ class AudioRecorder:
         # Create buffers to hold up to `_TOTAL_BUFFER_SIZE` seconds of
         # samples and put them onto free buffer queue.
         num_buffers = int(round(_TOTAL_BUFFER_SIZE / buffer_size))
-        self._frames_per_buffer = \
-            int(math.ceil(self.buffer_size * self.sample_rate))
         self._bytes_per_frame = self._num_channels * self._sample_size
-        bytes_per_buffer = self._frames_per_buffer * self._bytes_per_frame
+        bytes_per_buffer = self.frames_per_buffer * self._bytes_per_frame
         self._free_buffer_queue = Queue()
         for _ in range(num_buffers):
             buffer = bytearray(bytes_per_buffer)
             self._free_buffer_queue.put(buffer)
-        
-        # Create buffer filled with zeros to send on input overflow.
-        self._zeros_buffer = bytes(bytes_per_buffer)
             
         self._recording = False
         self._stop_pending = False
@@ -119,6 +114,11 @@ class AudioRecorder:
         return self._buffer_size
     
     
+    @property
+    def frames_per_buffer(self):
+        return int(math.ceil(self.buffer_size * self.sample_rate))
+
+
     @property
     def schedule(self):
         return self._schedule
@@ -201,7 +201,7 @@ class AudioRecorder:
                 channels=self.num_channels,
                 rate=self.sample_rate,
                 format=pyaudio.paInt16,
-                frames_per_buffer=self._frames_per_buffer,
+                frames_per_buffer=self.frames_per_buffer,
                 stream_callback=self._pyaudio_callback)
             
             self._notify_listeners('recording_started', _get_utc_now())
@@ -237,51 +237,64 @@ class AudioRecorder:
 
         if self._recording:
             
-            buffer_duration = timedelta(seconds=num_frames / self.sample_rate)
+            # Get samples start time.
+            buffer_duration = \
+                timedelta(seconds=num_frames / self.sample_rate)
             start_time = _get_utc_now() - buffer_duration
-            
-            overflow = (status_flags & paInputOverflow) != 0
-            underflow = (status_flags & paInputUnderflow) != 0
-        
-            # Get buffer to copy samples into.
-            try:
-                buffer = self._free_buffer_queue.get()
-            except Empty:
-                buffer = self._zeros_buffer
-                # TODO: Include error notification in command.
                 
-            # Copy samples.
-            num_bytes = num_frames * self._bytes_per_frame
-            buffer[:num_bytes] = samples[:num_bytes]
-            
-            # Prepare input command.
-            command = Bunch(
-                name='input',
-                samples=buffer,
-                num_frames=num_frames,
-                start_time=start_time,
-                overflow=overflow,
-                underflow=underflow)
-            
+            pyaudio_overflow = (status_flags & paInputOverflow) != 0
+        
+            try:
+                
+                # Get buffer to copy new samples into.
+                buffer = self._free_buffer_queue.get(block=False)
+                
+            except Empty:
+                # no buffers available
+                
+                # Prepare command for recorder thread.
+                command = Bunch(
+                    name='input_overflowed',
+                    num_frames=num_frames,
+                    start_time=start_time,
+                    pyaudio_overflow=pyaudio_overflow)
+                
+            else:
+                # got a buffer
+                
+                # Copy samples into buffer.
+                num_bytes = num_frames * self._bytes_per_frame
+                buffer[:num_bytes] = samples[:num_bytes]
+                
+                # Prepare command for recorder thread.
+                command = Bunch(
+                    name='input_arrived',
+                    samples=buffer,
+                    num_frames=num_frames,
+                    start_time=start_time,
+                    pyaudio_overflow=pyaudio_overflow)
+                
             # Send command to recorder thread.
             self._command_queue.put(command)
-            
+                
             return (None, pyaudio.paContinue)
         
         else:
             return (None, pyaudio.paComplete)
 
 
-    def _on_input(self, command):
+    def _on_input_overflowed(self, command):
         
         c = command
         self._notify_listeners(
-            'samples_arrived', c.start_time, c.samples, c.num_frames,
-            c.overflow, c.underflow)
+            'samples_overflowed', c.start_time, c.num_frames,
+            c.pyaudio_overflow)
         
-        # Free sample buffer for reuse.
-        self._free_buffer_queue.put(c.samples)
-
+        self._stop_if_pending()
+        
+        
+    def _stop_if_pending(self):
+        
         if self._stop_pending:
             
             self._recording = False
@@ -292,6 +305,19 @@ class AudioRecorder:
             self._pyaudio.terminate()
             
             self._notify_listeners('recording_stopped', _get_utc_now())
+
+        
+    def _on_input_arrived(self, command):
+        
+        c = command
+        self._notify_listeners(
+            'samples_arrived', c.start_time, c.samples, c.num_frames,
+            c.pyaudio_overflow)
+        
+        # Free sample buffer for reuse.
+        self._free_buffer_queue.put(c.samples)
+        
+        self._stop_if_pending()
 
 
     def _on_stop(self, command):
@@ -399,9 +425,13 @@ class AudioRecorderListener:
     
     
     def samples_arrived(
-            self, recorder, time, samples, num_frames, overflow, underflow):
+            self, recorder, time, samples, num_frames, pyaudio_overflow):
         pass
     
     
+    def samples_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
+        pass
+    
+        
     def recording_stopped(self, recorder, time):
         pass

@@ -28,6 +28,7 @@ from vesper.util.schedule import Schedule
 # able to schedule?
 
 
+_VERSION_NUMBER = '0.2.0a0'
 _HOME_DIR_VAR_NAME = 'VESPER_RECORDER_HOME'
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
 _CONFIG_FILE_NAME = 'Vesper Recorder Config.yaml'
@@ -307,11 +308,98 @@ def _get_input_device_index_from_device_name(name):
 class _Logger(AudioRecorderListener):
     
     
+    def __init__(self):
+        super().__init__()
+        self._pyaudio_overflow_buffer_count = 0
+        self._num_recorder_overflow_frames = 0
+        
+        
     def recording_started(self, recorder, time):
+        self._sample_rate = recorder.sample_rate
         _logger.info('Started recording.')
         
         
+    def samples_arrived(
+            self, recorder, time, samples, num_frames, pyaudio_overflow):
+        
+        self._log_pyaudio_overflow_if_needed(pyaudio_overflow)
+        self._log_recorder_overflow_if_needed(False)
+            
+            
+    def _log_pyaudio_overflow_if_needed(self, overflow):
+        
+        if overflow:
+            
+            if self._pyaudio_overflow_buffer_count == 0:
+                # overflow has just started
+                
+                _logger.error(
+                    'PyAudio input overflow: PyAudio has reported that '
+                    'an unspecified number of input samples were dropped '
+                    'before or during the current buffer. A second message '
+                    'will be logged later indicating the number of '
+                    'consecutive buffers for which this error occurred.')
+                
+            self._pyaudio_overflow_buffer_count += 1
+            
+        else:
+            
+            if self._pyaudio_overflow_buffer_count > 0:
+                # overflow has just ended
+                
+                if self._pyaudio_overflow_buffer_count == 1:
+                    
+                    _logger.error(
+                        'PyAudio input overflow: Overflow was reported for '
+                        'one buffer.')
+                    
+                else:
+                    
+                    _logger.error((
+                        'PyAudio input overflow: Overflow was reported for '
+                        '{} consecutive buffers.').format(
+                            self._pyaudio_overflow_buffer_count))
+            
+                self._pyaudio_overflow_buffer_count = 0
+            
+
+    def _log_recorder_overflow_if_needed(self, overflow, num_frames=0):
+        
+        if overflow:
+            
+            if self._num_recorder_overflow_frames == 0:
+                # overflow has just started
+                
+                _logger.error(
+                    'Recorder input overflow: the recorder has run out of '
+                    'buffers for arriving input samples. It will substitute '
+                    'zero samples until buffers become available, and then '
+                    'log another message to report the duration of the lost '
+                    'samples.')
+                
+            self._num_recorder_overflow_frames += num_frames
+            
+        else:
+            
+            if self._num_recorder_overflow_frames > 0:
+                # overflow has just ended
+                
+                _logger.error((
+                    'Recorder input overflow: {:.3f} seconds of zero samples '
+                    'were substituted for lost input samples.').format(
+                        self._num_recorder_overflow_frames / self._sample_rate))
+                    
+                self._num_recorder_overflow_frames = 0
+                    
+        
+    def samples_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
+        self._log_pyaudio_overflow_if_needed(pyaudio_overflow)
+        self._log_recorder_overflow_if_needed(True, num_frames)
+        
+        
     def recording_stopped(self, recorder, time):
+        self._log_pyaudio_overflow_if_needed(False)
+        self._log_recorder_overflow_if_needed(False)
         _logger.info('Stopped recording.')
 
     
@@ -319,6 +407,8 @@ class _AudioFileWriter(AudioRecorderListener):
     
     
     def __init__(self, station_name, recordings_dir_path, max_file_size):
+        
+        super().__init__()
         
         self._station_name = station_name
         self._recordings_dir_path = recordings_dir_path
@@ -334,6 +424,7 @@ class _AudioFileWriter(AudioRecorderListener):
         self._sample_rate = recorder.sample_rate
         self._sample_size = recorder.sample_size
         self._frame_size = self._num_channels * self._sample_size
+        self._zeros = bytearray(recorder.frames_per_buffer * self._frame_size)
         
         max_num_audio_bytes = self._max_file_size - _AUDIO_FILE_HEADER_SIZE
         self._max_num_file_frames = \
@@ -346,7 +437,11 @@ class _AudioFileWriter(AudioRecorderListener):
         
     
     def samples_arrived(
-            self, recorder, time, samples, num_frames, overflow, underflow):
+            self, recorder, time, samples, num_frames, pyaudio_overflow):
+        self._write_samples(time, samples, num_frames)
+        
+        
+    def _write_samples(self, time, samples, num_frames):
         
         num_frames_remaining = num_frames
         buffer_index = 0
@@ -377,6 +472,10 @@ class _AudioFileWriter(AudioRecorderListener):
                 self._file = None
     
     
+    def samples_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
+        self._write_samples(time, self._zeros, num_frames)
+    
+        
     def _open_audio_file(self, time):
         
         file_name = self._file_namer.create_file_name(time)
@@ -438,7 +537,7 @@ _PAGE = '''<!DOCTYPE html>
 </head>
 <body>
 
-<h1>Vesper Recorder 0.1.1</h1>
+<h1>Vesper Recorder {}</h1>
 
 <p>
 Welcome to the Vesper Recorder! This page displays information regarding
@@ -523,8 +622,8 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             recorder.schedule, data.time_zone, now)
         
         body = _PAGE.format(
-            _CSS, status_table, station_table, devices_table, input_table,
-            output_table, recordings_table)
+            _CSS, _VERSION_NUMBER, status_table, station_table, devices_table,
+            input_table, output_table, recordings_table)
         
         return body.encode()
     
