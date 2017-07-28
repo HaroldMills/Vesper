@@ -371,7 +371,7 @@ class _Logger(AudioRecorderListener):
                 # overflow has just started
                 
                 _logger.error(
-                    'Recorder input overflow: the recorder has run out of '
+                    'Recorder input overflow: The recorder has run out of '
                     'buffers for arriving input samples. It will substitute '
                     'zero samples until buffers become available, and then '
                     'log another message to report the duration of the lost '
