@@ -16,7 +16,6 @@ from vesper.util.schedule import ScheduleRunner
 
 
 _SAMPLE_SIZE = 2               # bytes
-_TOTAL_BUFFER_SIZE = 10        # seconds
 
 
 class AudioRecorder:
@@ -53,24 +52,21 @@ class AudioRecorder:
 
     def __init__(
             self, input_device_index, num_channels, sample_rate, buffer_size,
-            schedule=None):
+            total_buffer_size, schedule=None):
         
         self._input_device_index = input_device_index
         self._num_channels = num_channels
         self._sample_rate = sample_rate
         self._sample_size = _SAMPLE_SIZE
         self._buffer_size = buffer_size
+        self._total_buffer_size = total_buffer_size
         self._schedule = schedule
         
-        # Create buffers to hold up to `_TOTAL_BUFFER_SIZE` seconds of
-        # samples and put them onto free buffer queue.
-        num_buffers = int(round(_TOTAL_BUFFER_SIZE / buffer_size))
-        self._bytes_per_frame = self._num_channels * self._sample_size
-        bytes_per_buffer = self.frames_per_buffer * self._bytes_per_frame
-        self._free_buffer_queue = Queue()
-        for _ in range(num_buffers):
-            buffer = bytearray(bytes_per_buffer)
-            self._free_buffer_queue.put(buffer)
+        self._bytes_per_frame = self.num_channels * self.sample_size
+        self._frames_per_buffer = \
+            int(math.ceil(self.buffer_size * self.sample_rate))
+            
+        self._free_buffer_queue = self._create_input_buffers()
             
         self._recording = False
         self._stop_pending = False
@@ -89,6 +85,25 @@ class AudioRecorder:
             self._schedule_runner = None
             
     
+    def _create_input_buffers(self):
+        
+        """
+        Creates input buffers to hold up to `self.total_buffer_size`
+        seconds of samples and puts them onto free buffer queue.
+        """
+        
+        num_buffers = int(round(self.total_buffer_size / self.buffer_size))
+        bytes_per_buffer = self.frames_per_buffer * self._bytes_per_frame
+        
+        queue = Queue()
+        
+        for _ in range(num_buffers):
+            buffer = bytearray(bytes_per_buffer)
+            queue.put(buffer)
+            
+        return queue
+            
+
     @property
     def input_device_index(self):
         return self._input_device_index
@@ -116,9 +131,14 @@ class AudioRecorder:
     
     @property
     def frames_per_buffer(self):
-        return int(math.ceil(self.buffer_size * self.sample_rate))
+        return self._frames_per_buffer
 
 
+    @property
+    def total_buffer_size(self):
+        return self._total_buffer_size
+    
+    
     @property
     def schedule(self):
         return self._schedule

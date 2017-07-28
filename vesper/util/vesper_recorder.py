@@ -42,6 +42,7 @@ _DEFAULT_TIME_ZONE = 'UTC'
 _DEFAULT_NUM_CHANNELS = 1
 _DEFAULT_SAMPLE_RATE = 22050
 _DEFAULT_BUFFER_SIZE = .05
+_DEFAULT_TOTAL_BUFFER_SIZE = 10
 _DEFAULT_RECORDINGS_DIR_PATH = 'Recordings'
 _DEFAULT_MAX_AUDIO_FILE_SIZE = 2**31        # bytes
 _DEFAULT_PORT_NUM = 8001
@@ -78,7 +79,7 @@ class VesperRecorder:
         
         self._recorder = AudioRecorder(
             c.input_device_index, c.num_channels, c.sample_rate, c.buffer_size,
-            c.schedule)
+            c.total_buffer_size, c.schedule)
         self._recorder.add_listener(_Logger())
         self._recorder.add_listener(_AudioFileWriter(
             c.station_name, c.recordings_dir_path, c.max_audio_file_size))
@@ -203,6 +204,8 @@ def _parse_config_file(file_path, home_dir_path):
     num_channels = int(config.get('num_channels', _DEFAULT_NUM_CHANNELS))
     sample_rate = int(config.get('sample_rate', _DEFAULT_SAMPLE_RATE))
     buffer_size = float(config.get('buffer_size', _DEFAULT_BUFFER_SIZE))
+    total_buffer_size = \
+        float(config.get('total_buffer_size', _DEFAULT_TOTAL_BUFFER_SIZE))
     
     schedule_dict = config.get('schedule', {})
     schedule = Schedule.compile_dict(
@@ -227,6 +230,7 @@ def _parse_config_file(file_path, home_dir_path):
         num_channels=num_channels,
         sample_rate=sample_rate,
         buffer_size=buffer_size,
+        total_buffer_size=total_buffer_size,
         schedule=schedule,
         recordings_dir_path=recordings_dir_path,
         max_audio_file_size=max_audio_file_size,
