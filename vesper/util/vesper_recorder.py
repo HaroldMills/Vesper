@@ -319,7 +319,7 @@ class _Logger(AudioRecorderListener):
         _logger.info('Started recording.')
         
         
-    def samples_arrived(
+    def input_arrived(
             self, recorder, time, samples, num_frames, pyaudio_overflow):
         
         self._log_pyaudio_overflow_if_needed(pyaudio_overflow)
@@ -392,7 +392,7 @@ class _Logger(AudioRecorderListener):
                 self._num_recorder_overflow_frames = 0
                     
         
-    def samples_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
+    def input_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
         self._log_pyaudio_overflow_if_needed(pyaudio_overflow)
         self._log_recorder_overflow_if_needed(True, num_frames)
         
@@ -436,7 +436,7 @@ class _AudioFileWriter(AudioRecorderListener):
         self._file = None
         
     
-    def samples_arrived(
+    def input_arrived(
             self, recorder, time, samples, num_frames, pyaudio_overflow):
         self._write_samples(time, samples, num_frames)
         
@@ -472,7 +472,7 @@ class _AudioFileWriter(AudioRecorderListener):
                 self._file = None
     
     
-    def samples_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
+    def input_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
         self._write_samples(time, self._zeros, num_frames)
     
         

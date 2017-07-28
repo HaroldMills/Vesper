@@ -19,6 +19,10 @@ _SAMPLE_SIZE = 2               # bytes
 _TOTAL_BUFFER_SIZE = 10        # seconds
 
 
+# _OVERFLOW_TEST_ENABLED = False
+# _OVERFLOW_TEST_NUM_BUFFERS = 40
+
+
 class AudioRecorder:
     
     """Records audio asynchronously."""
@@ -72,6 +76,9 @@ class AudioRecorder:
             buffer = bytearray(bytes_per_buffer)
             self._free_buffer_queue.put(buffer)
             
+#         if _OVERFLOW_TEST_ENABLED:
+#             self._overflow_test_start()
+            
         self._recording = False
         self._stop_pending = False
         
@@ -89,6 +96,36 @@ class AudioRecorder:
             self._schedule_runner = None
             
     
+#     def _overflow_test_start(self):
+#         
+#         # Hide free buffers from PyAudio callback.
+#         self._overflow_test_buffers = []
+#         while True:
+#             try:
+#                 buffer = self._free_buffer_queue.get(block=False)
+#             except Empty:
+#                 break
+#             else:
+#                 self._overflow_test_buffers.append(buffer)
+#                 
+#                 self._overflow_test_buffer_count = 0
+#         
+#         self._overflow_test_buffer_count = 0
+# 
+# 
+#     def _overflow_test_tick(self):
+#         
+#         if self._overflow_test_buffer_count < _OVERFLOW_TEST_NUM_BUFFERS:
+#             
+#             self._overflow_test_buffer_count += 1
+#             
+#         else:
+#             
+#             # Unhide free buffers.
+#             for buffer in self._overflow_test_buffers:
+#                 self._free_buffer_queue.put(buffer)
+            
+            
     @property
     def input_device_index(self):
         return self._input_device_index
@@ -237,6 +274,9 @@ class AudioRecorder:
 
         if self._recording:
             
+#             if _OVERFLOW_TEST_ENABLED:
+#                 self._overflow_test_tick()
+            
             # Get samples start time.
             buffer_duration = \
                 timedelta(seconds=num_frames / self.sample_rate)
@@ -287,7 +327,7 @@ class AudioRecorder:
         
         c = command
         self._notify_listeners(
-            'samples_overflowed', c.start_time, c.num_frames,
+            'input_overflowed', c.start_time, c.num_frames,
             c.pyaudio_overflow)
         
         self._stop_if_pending()
@@ -311,7 +351,7 @@ class AudioRecorder:
         
         c = command
         self._notify_listeners(
-            'samples_arrived', c.start_time, c.samples, c.num_frames,
+            'input_arrived', c.start_time, c.samples, c.num_frames,
             c.pyaudio_overflow)
         
         # Free sample buffer for reuse.
@@ -424,12 +464,12 @@ class AudioRecorderListener:
         pass
     
     
-    def samples_arrived(
+    def input_arrived(
             self, recorder, time, samples, num_frames, pyaudio_overflow):
         pass
     
     
-    def samples_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
+    def input_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
         pass
     
         
