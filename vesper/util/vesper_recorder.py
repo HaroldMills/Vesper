@@ -28,7 +28,6 @@ from vesper.util.schedule import Schedule
 # able to schedule?
 
 
-_VERSION_NUMBER = '0.2.0a0'
 _HOME_DIR_VAR_NAME = 'VESPER_RECORDER_HOME'
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
 _CONFIG_FILE_NAME = 'Vesper Recorder Config.yaml'
@@ -56,6 +55,9 @@ class VesperRecorder:
     """Records audio to .wav files according to a schedule."""
     
     
+    VERSION_NUMBER = '0.2.0a0'
+
+
     @staticmethod
     def get_input_devices():
         return AudioRecorder.get_input_devices()
@@ -120,6 +122,9 @@ def _create_and_start_recorder(message):
     _add_file_logging(home_dir_path)
     
     _logger.info(message)
+    
+    _logger.info(
+        'Recorder version number is {}.'.format(VesperRecorder.VERSION_NUMBER))
     
     config_file_path = os.path.join(home_dir_path, _CONFIG_FILE_NAME)
         
@@ -606,8 +611,8 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             recorder.schedule, data.time_zone, now)
         
         body = _PAGE.format(
-            _CSS, _VERSION_NUMBER, status_table, station_table, devices_table,
-            input_table, output_table, recordings_table)
+            _CSS, VesperRecorder.VERSION_NUMBER, status_table, station_table,
+            devices_table, input_table, output_table, recordings_table)
         
         return body.encode()
     
