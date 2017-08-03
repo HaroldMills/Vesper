@@ -15,6 +15,9 @@ urlpatterns = [
     url(r'^import-recordings/$', views.import_recordings,
         name='import-recordings'),
                
+    url(r'^import-old-bird-clips/$', views.import_old_bird_clips,
+        name='import-old-bird-clips'),
+               
     url(r'^detect/$', views.detect, name='detect'),
     url(r'^classify/$', views.classify, name='classify'),
     url(r'^export-clips-csv-file/$', views.export_clips_csv_file,

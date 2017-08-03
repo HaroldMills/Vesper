@@ -34,6 +34,7 @@ Exporter:
 Importer:
     - vesper.command.archive_data_importer.ArchiveDataImporter
     - vesper.command.recording_importer.RecordingImporter
+    - vesper.old_bird.clip_importer.ClipImporter
 
 Preset:
     - vesper.command.station_name_aliases_preset.StationNameAliasesPreset

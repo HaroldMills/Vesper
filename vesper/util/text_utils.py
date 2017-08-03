@@ -62,3 +62,15 @@ def format_number(x):
     
         else:
             return str(i)
+
+
+def get_units_text(quantity, singular_units_text, plural_units_text=None):
+    
+    if quantity == 1:
+        return singular_units_text
+    
+    elif plural_units_text is not None:
+        return plural_units_text
+    
+    else:
+        return singular_units_text + 's'

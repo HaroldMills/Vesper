@@ -24,6 +24,7 @@ from vesper.django.app.export_clip_sound_files_form import \
 from vesper.django.app.export_clips_csv_file_form import \
     ExportClipsCsvFileForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
+from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Clip, Job, Recording, Station,
@@ -133,6 +134,9 @@ _NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
         
       - name: Recordings
         url_name: import-recordings
+        
+      - name: Old Bird Clips
+        url_name: import-old-bird-clips
           
 - name: Detect
   url_name: detect
@@ -1319,6 +1323,48 @@ def _create_import_archive_data_command_spec(form):
         }
     }
             
+
+@login_required
+@csrf_exempt
+def import_old_bird_clips(request):
+    
+    if request.method in _GET_AND_HEAD:
+        form = ImportClipsForm()
+        
+    elif request.method == 'POST':
+        
+        form = ImportClipsForm(request.POST)
+         
+        if form.is_valid():
+            command_spec = _create_import_old_bird_clips_command_spec(form)
+            return _start_job(command_spec, request.user)
+            
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+    
+    context = _create_template_context(request, 'Import', form=form)
+    
+    return render(request, 'vesper/import-old-bird-clips.html', context)
+
+
+def _create_import_old_bird_clips_command_spec(form):
+    
+    data = form.cleaned_data
+    
+    return {
+        'name': 'import',
+        'arguments': {
+            'importer': {
+                'name': 'Old Bird Clip Importer',
+                'arguments': {
+                    'paths': data['paths'],
+                    'start_date': data['start_date'],
+                    'end_date': data['end_date']
+                }
+            }
+        }
+    }
+
 
 @login_required
 @csrf_exempt
