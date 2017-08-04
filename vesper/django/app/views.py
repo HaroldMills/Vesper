@@ -57,7 +57,48 @@ import vesper.util.time_utils as time_utils
 # all of the major browsers we should switch to that practice.
 
 
-def _create_navbar_items(data):
+# Note that as of 2016-07-19, nested navbar dropdowns do not work.
+# The generated HTML looks right to me so the problem may be a
+# Bootstrap limitation.
+_DEFAULT_NAVBAR_DATA = yaml.load('''
+  
+- name: View
+  url_name: calendar
+    
+- name: Import
+  dropdown:
+  
+      - name: Archive Data
+        url_name: import-archive-data
+        
+      - name: Recordings
+        url_name: import-recordings
+          
+- name: Detect
+  url_name: detect
+    
+- name: Classify
+  url_name: classify
+    
+- name: Export
+  dropdown:
+  
+      - name: Clips CSV File
+        url_name: export-clips-csv-file
+        
+      - name: Clip Sound Files
+        url_name: export-clip-sound-files
+  
+''')
+
+
+def _create_navbar_items():
+    preferences = preference_manager.instance.preferences
+    data = preferences.get('navbar', _DEFAULT_NAVBAR_DATA)
+    return _create_navbar_items_aux(data)
+
+
+def _create_navbar_items_aux(data):
     return tuple(_create_navbar_item(d) for d in data)
 
 
@@ -83,7 +124,7 @@ def _get_navbar_link_url(data):
 
 def _create_navbar_dropdown_item(data):
     name = data['name']
-    items = _create_navbar_items(data['dropdown'])
+    items = _create_navbar_items_aux(data['dropdown'])
     return Bunch(type='dropdown', name=name, items=items)
 
 
@@ -120,46 +161,7 @@ def _create_navbar_right_items(request):
         
     return [item]
 
-
-# Note that as of 2016-07-19, nested navbar dropdowns do not work.
-# The generated HTML looks right to me so the problem may be a
-# Bootstrap limitation.
-_NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
-  
-- name: View
-  url_name: calendar
-    
-- name: Import
-  dropdown:
-  
-      - name: Archive Data
-        url_name: import-archive-data
-        
-      - name: Recordings
-        url_name: import-recordings
-        
-      - name: Old Bird Clips
-        url_name: import-old-bird-clips
-          
-- name: Detect
-  url_name: detect
-    
-- name: Classify
-  url_name: classify
-    
-- name: Export
-  dropdown:
-  
-      - name: Clip Counts CSV File
-        url_name: export-clip-counts-csv-file
-  
-      - name: Clips CSV File
-        url_name: export-clips-csv-file
-        
-      - name: Clip Sound Files
-        url_name: export-clip-sound-files
-  
-'''))
+_navbar_items = _create_navbar_items()
 
 
 _ONE_DAY = datetime.timedelta(days=1)
@@ -225,7 +227,7 @@ def _create_template_context(
         request, active_navbar_item='', **kwargs):
     
     kwargs.update(
-        navbar_items=_NAVBAR_ITEMS,
+        navbar_items=_navbar_items,
         navbar_right_items=_create_navbar_right_items(request),
         active_navbar_item=active_navbar_item)
     
