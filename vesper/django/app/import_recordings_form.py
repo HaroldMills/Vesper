@@ -3,24 +3,19 @@ import os.path
 from django import forms
 from django.forms import ValidationError
 
-from vesper.singletons import preference_manager
+import vesper.django.app.form_utils as form_utils
 
 
-_preferences = preference_manager.instance.preferences
-
-
-def _get_default(name, default):
-    defaults = _preferences.get('import_recordings_defaults', {})
-    return defaults.get(name, default)
-
-
+_FORM_NAME = 'import_recordings'
+    
+    
+def _get_field_default(name, default):
+    return form_utils.get_field_default(_FORM_NAME, name, default)
+    
+    
 def _get_paths_default():
-    paths = _get_default('paths', [])
+    paths = _get_field_default('paths', [])
     return ''.join(p + '\n' for p in paths)
-
-
-def _get_recursive_default():
-    return _get_default('recursive', False)
 
 
 class ImportRecordingsForm(forms.Form):
@@ -44,7 +39,7 @@ class ImportRecordingsForm(forms.Form):
     recursive = forms.BooleanField(
         label='Recursive',
         label_suffix='',
-        initial=_get_recursive_default(),
+        initial=_get_field_default('recursive', False),
         required=False,
         help_text = '''
             Check the box to recursively include .wav files in subdirectories

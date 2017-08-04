@@ -30,6 +30,7 @@ Detector:
 Exporter:
     - vesper.command.clip_sound_files_exporter.ClipSoundFilesExporter
     - vesper.mpg_ranch.clips_csv_file_exporter.ClipsCsvFileExporter
+    - vesper.old_bird.clip_counts_exporter.ClipCountsExporter
     
 Importer:
     - vesper.command.archive_data_importer.ArchiveDataImporter

@@ -20,6 +20,8 @@ urlpatterns = [
                
     url(r'^detect/$', views.detect, name='detect'),
     url(r'^classify/$', views.classify, name='classify'),
+    url(r'^export-clip-counts-csv-file/$', views.export_clip_counts_csv_file,
+        name='export-clip-counts-csv-file'),
     url(r'^export-clips-csv-file/$', views.export_clips_csv_file,
         name='export-clips-csv-file'),
     url(r'^export-clip-sound-files/$', views.export_clip_sound_files,

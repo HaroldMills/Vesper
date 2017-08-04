@@ -24,6 +24,7 @@ from vesper.django.app.export_clip_sound_files_form import \
 from vesper.django.app.export_clips_csv_file_form import \
     ExportClipsCsvFileForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
+from vesper.old_bird.export_clip_counts_csv_file_form import ExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
@@ -34,6 +35,8 @@ from vesper.util.archive_lock import archive_lock
 from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
+import vesper.old_bird.export_clip_counts_csv_file_utils as \
+    export_clip_counts_csv_file_utils
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
 
@@ -146,6 +149,9 @@ _NAVBAR_ITEMS = _create_navbar_items(yaml.load('''
     
 - name: Export
   dropdown:
+  
+      - name: Clip Counts CSV File
+        url_name: export-clip-counts-csv-file
   
       - name: Clips CSV File
         url_name: export-clips-csv-file
@@ -276,6 +282,48 @@ def import_(request):
     return render(request, 'vesper/import.html', context)
     
     
+@login_required
+@csrf_exempt
+def export_clip_counts_csv_file(request):
+    
+    if request.method in _GET_AND_HEAD:
+        form = ExportClipCountsCsvFileForm()
+         
+    elif request.method == 'POST':
+  
+        form = ExportClipCountsCsvFileForm(request.POST)
+          
+        if form.is_valid():
+            
+            # TODO: Create the CSV file with a command (i.e. in a separate
+            # process) rather than in the view?
+            
+            utils = export_clip_counts_csv_file_utils
+            
+            d = form.cleaned_data
+
+            file_name = utils.get_clip_counts_csv_file_name(
+                d['file_name'], d['detector'], d['station_mic'],
+                d['start_date'], d['end_date'])
+            
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = \
+                'attachment; filename="{}"'.format(file_name)
+                
+            utils.write_clip_counts_csv_file(
+                response, d['detector'], d['station_mic'], d['start_date'],
+                d['end_date'])
+            
+            return response
+             
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+     
+    context = _create_template_context(request, 'Export', form=form)
+     
+    return render(request, 'vesper/export-clip-counts-csv-file.html', context)
+
+
 @login_required
 @csrf_exempt
 def export_clips_csv_file(request):
