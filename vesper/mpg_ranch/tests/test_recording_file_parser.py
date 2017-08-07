@@ -98,6 +98,15 @@ class RecordingFileParserTests(TestCase):
              'Ridge', None, 1, 10, 22050, dt(2015, 4, 23, 20, 36, 0)),
                  
                  
+            # Easy Hi-Q recorder file names.
+            
+            ('Flood 6-1-2015_8;01;02_AM.wav',
+             'Floodplain', None, 2, 10, 22050, dt(2015, 6, 1, 8, 1, 2)),
+
+            ('Flood 6-1-2015_8;01;02_PM.wav',
+             'Floodplain', None, 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
+                    
+                    
         ]
         
         
@@ -146,6 +155,12 @@ class RecordingFileParserTests(TestCase):
             'flood_0__20150601_250102.wav',
             'flood__0_20150601_250102.wav',
             'flood_0+0_20150601_250102.wav',
+            
+            # corrupted Easy Hi-Q file names
+            'Flood6-1-2015_8;01;02_PM.wav',
+            'Flood 6-1-2015_8.01.02_PM.wav',
+            'Flood 6-1-2015_8;01;02.wav',
+            'Flood 6-1-2015_8;01;02_ZZ.wav'
             
         ]
         

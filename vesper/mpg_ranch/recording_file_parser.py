@@ -254,6 +254,63 @@ class _MpgRanchFileNameParser1(_FileNameParser):
         return station.local_to_utc(naive_start_time)
 
 
+class _EasyHiQRecorderFileNameParser(_FileNameParser):
+    
+    
+    _REGEX = re.compile(
+        r'^'
+        r'(?P<month>\d\d?)-(?P<day>\d\d?)-(?P<year>\d\d\d\d)'
+        r'_'
+        r'(?P<hour>\d\d?);(?P<minute>\d\d);(?P<second>\d\d)'
+        r'_'
+        r'(?P<period>AM|PM)'
+        r'\.wav'
+        r'$')
+    
+    
+    def _get_file_name_fields(self, file_name):
+        
+        parts = file_name.rsplit(' ', 1)
+        
+        if len(parts) != 2:
+            raise ValueError()
+        
+        station_name, rest = parts
+        
+        m = self._REGEX.match(rest)
+        
+        if m is None:
+            raise ValueError()
+        
+        g = m.group
+        
+        hour = self._get_hour(g('hour'), g('period'))
+            
+        return(
+            station_name, None,
+            g('year'), g('month'), g('day'),
+            hour, g('minute'), g('second'))
+        
+        
+    def _get_hour(self, hour, period):
+        
+        hour = int(hour)
+        
+        # Check that hour is in [0, 11].
+        if hour >= 12:
+            raise ValueError()
+        
+        # Convert hour to 24-hour time.
+        if period == 'PM':
+            hour += 12
+            
+        return str(hour)
+            
+            
+    def _get_utc_start_time(self, naive_start_time, station):
+        return station.local_to_utc(naive_start_time)
+
+    
 class RecordingFileParser:
     
     """
@@ -301,6 +358,7 @@ class RecordingFileParser:
             _SongMeterFileNameParser(stations, station_name_aliases),
             _MpgRanchFileNameParser0(stations, station_name_aliases),
             _MpgRanchFileNameParser1(stations, station_name_aliases),
+            _EasyHiQRecorderFileNameParser(stations, station_name_aliases)
         )
         
         
