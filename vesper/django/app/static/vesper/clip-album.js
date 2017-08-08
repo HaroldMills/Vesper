@@ -578,23 +578,25 @@ class ClipAlbum {
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
 			const clip = this.clips[i];
-			const oldValue = clip.annotations[name];
+			const annotations = clip.annotations;
 			
-			if (oldValue !== value) {
-				// annotation does not exist or value will change
-			
+			if (annotations === null || value != annotations[name]) {
+				// client does not have clip annotations or specified
+				// annotation either does not exist or value will change
+				
 				const url = clip.getAnnotationUrl(name);
 				
 				const xhr = new XMLHttpRequest();
 				xhr.onload =
-					() => this._onAnnotationPutComplete(xhr, clip, name, value);
+					() => this._onAnnotationPutComplete(
+					    xhr, clip, name, value);
 				xhr.open('PUT', url);
 				xhr.setRequestHeader(
 					'Content-Type', 'text/plain; charset=utf-8');
 				xhr.send(value);
 				
 			}
-			
+				
 		}
 
 	}
@@ -604,10 +606,17 @@ class ClipAlbum {
 		
 		if (xhr.status === 200) {
 			
-			clip.annotations[annotationName] = annotationValue;
+			const annotations = clip.annotations
 			
-			if (this._isClipOnCurrentPage(clip))
-				clip.view.render();
+			if (annotations !== null) {
+				// client has clip annotations
+				
+				annotations[annotationName] = annotationValue;
+				
+				if (this._isClipOnCurrentPage(clip))
+					clip.view.render();
+				
+			}
 			
 		} else {
 			
@@ -713,9 +722,11 @@ class ClipAlbum {
 		for (let i = interval[0]; i <= interval[1]; i++) {
 			
 			const clip = this.clips[i];
+			const annotations = clip.annotations;
 			
-			if (clip.annotations.hasOwnProperty(name)) {
-				// clip has annotation
+			if (annotations === null || annotations.hasOwnProperty(name)) {
+				// client does not have clip annotations or annotations
+				// include specified one
 				
 				const url = clip.getAnnotationUrl(name);
 				
@@ -723,7 +734,8 @@ class ClipAlbum {
 				xhr.onload =
 					() => this._onAnnotationDeleteComplete(xhr, clip, name);
 				xhr.open('DELETE', url);
-				xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
+				xhr.setRequestHeader(
+					'Content-Type', 'text/plain; charset=utf-8');
 				xhr.send();
 				
 			}
@@ -737,10 +749,17 @@ class ClipAlbum {
 		
 		if (xhr.status === 200) {
 			
-			delete clip.annotations[annotationName];
+			const annotations = clip.annotations;
 			
-			if (this._isClipOnCurrentPage(clip))
-				clip.view.render();
+			if (annotations !== null) {
+				// client has clip annotations
+				
+				delete annotations[annotationName];
+				
+				if (this._isClipOnCurrentPage(clip))
+					clip.view.render();
+				
+			}
 			
 		} else {
 			

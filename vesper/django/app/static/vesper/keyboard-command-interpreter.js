@@ -195,8 +195,19 @@ class KeyboardCommandInterpreter {
 		if (action !== undefined) {
 			// `name` is a command name
 			
-			this._executeCommand(name, action);
-			this._clearCommandNameBuffer();
+			try {
+				
+			    this._executeCommand(name, action);
+			    
+			} finally {
+				
+				// It is important to clear the command name buffer
+				// whether or not the command throws an exception,
+				// so the buffer is always empty when command
+				// processing completes.
+			    this._clearCommandNameBuffer();
+			    
+			}
 			
 		} else if (this._commandNamePrefixes.has(name)) {
 			// `name` is a proper prefix of one or more command names

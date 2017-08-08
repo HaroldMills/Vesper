@@ -425,27 +425,49 @@ def annotate_clip(
     # We assume that any database locking and/or transaction management
     # involved in deleting a clip happens in the caller.
     
-    if creation_time is None:
-        creation_time = time_utils.get_utc_now()
+    try:
+        annotation = StringAnnotation.objects.get(
+            clip=clip,
+            info=annotation_info)
+        
+    except StringAnnotation.DoesNotExist:
+        annotation = None
     
-    defaults = {
-        'value': value,
-        'creation_time': creation_time,
-        'creating_user': creating_user,
-        'creating_job': creating_job,
-        'creating_processor': creating_processor
-    }
-    
-    StringAnnotation.objects.update_or_create(
-        clip=clip,
-        info=annotation_info,
-        defaults=defaults)
+    if annotation is None or annotation.value != value:
+        # annotation does not exist or value differs from specified value
+        
+        if creation_time is None:
+            creation_time = time_utils.get_utc_now()
+        
+        kwargs = {
+            'value': value,
+            'creation_time': creation_time,
+            'creating_user': creating_user,
+            'creating_job': creating_job,
+            'creating_processor': creating_processor
+        }
 
-    StringAnnotationEdit.objects.create(
-        clip=clip,
-        info=annotation_info,
-        action=StringAnnotationEdit.ACTION_SET,
-        **defaults)
+        if annotation is None:
+            # annotation does not exist
+            
+            StringAnnotation.objects.create(
+                clip=clip,
+                info=annotation_info,
+                **kwargs)
+            
+        else:
+            # annotation exists but value differs from specified value
+            
+            StringAnnotation.objects.filter(
+                clip=clip,
+                info=annotation_info
+            ).update(**kwargs)
+            
+        StringAnnotationEdit.objects.create(
+            clip=clip,
+            info=annotation_info,
+            action=StringAnnotationEdit.ACTION_SET,
+            **kwargs)
     
     
 def delete_clip_annotation(
