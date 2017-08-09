@@ -47,6 +47,9 @@ urlpatterns = [
     url(r'^clips/(?P<clip_id>[0-9]+)/annotations/(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$',
         views.annotation, name='annotation'),
                
+    url(r'^annotations/(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$',
+        views.annotations, name='annotations'),
+    
     url(r'^presets/(?P<preset_type_name>[a-zA-Z0-9_\-\. ]+)/json/$',
         views.presets_json, name='presets-json'),
 

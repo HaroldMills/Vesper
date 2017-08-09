@@ -166,6 +166,16 @@ const _DEFAULT_COMMANDS = {
 };
 
 
+// The maximum number of clips that the _annotateClips function will
+// annotate without displaying the wait cursor.
+const _ANNOTATION_WAIT_CURSOR_THRESHOLD = 20
+
+
+function setCursor(name) {
+	document.body.style.cursor = name;
+}
+
+
 class ClipAlbum {
 	
 	
@@ -568,53 +578,56 @@ class ClipAlbum {
 	
 	
 	_annotateSelectedClips(name, value) {
-		for (const interval of this._selection.selectedIntervals)
-			this._annotateIntervalClips(name, value, interval);
+		const clipNums = this._selection.selectedIndices;
+		const clips = clipNums.map(i => this.clips[i]);
+		this._annotateClips(name, value, clips);
 	}
 
 
-	_annotateIntervalClips(name, value, interval) {
+	_annotateClips(name, value, clips) {
 		
-		for (let i = interval[0]; i <= interval[1]; i++) {
-			
-			const clip = this.clips[i];
-			const annotations = clip.annotations;
-			
-			if (annotations === null || value != annotations[name]) {
-				// client does not have clip annotations or specified
-				// annotation either does not exist or value will change
-				
-				const url = clip.getAnnotationUrl(name);
-				
-				const xhr = new XMLHttpRequest();
-				xhr.onload =
-					() => this._onAnnotationPutComplete(
-					    xhr, clip, name, value);
-				xhr.open('PUT', url);
-				xhr.setRequestHeader(
-					'Content-Type', 'text/plain; charset=utf-8');
-				xhr.send(value);
-				
-			}
-				
-		}
-
+		if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
+		    setCursor('wait');
+		
+		const url = `/annotations/${name}/`;
+		const clip_ids = clips.map(clip => clip.id);
+		
+		const xhr = new XMLHttpRequest();
+		xhr.onload =
+			() => this._onAnnotationsPostComplete(xhr, name, value, clips);
+		xhr.open('POST', url);
+		xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
+		xhr.send(JSON.stringify({
+			value: value,
+			clip_ids: clip_ids
+		}));
+		
 	}
-
-
-	_onAnnotationPutComplete(xhr, clip, annotationName, annotationValue) {
+	
+	
+	_onAnnotationsPostComplete(xhr, annotationName, annotationValue, clips) {
+		
+		if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
+		    setCursor('auto');
 		
 		if (xhr.status === 200) {
 			
-			const annotations = clip.annotations
-			
-			if (annotations !== null) {
-				// client has clip annotations
+			for (const clip of clips) {
 				
-				annotations[annotationName] = annotationValue;
+				const annotations = clip.annotations
 				
-				if (this._isClipOnCurrentPage(clip))
-					clip.view.render();
+				if (annotations !== null) {
+					// client has clip annotations
+					
+					if (annotationValue === null)
+						delete annotations[annotationName]
+					else
+						annotations[annotationName] = annotationValue;
+					
+					if (this._isClipOnCurrentPage(clip))
+						clip.view.render();
+					
+				}
 				
 			}
 			
@@ -633,11 +646,9 @@ class ClipAlbum {
 
 
 	_onAnnotationError(xhr) {
-		
 		window.alert(
 			`Annotation request failed with response ` +
 			`"${xhr.status} ${xhr.statusText}".`);
-		
 	}
 	
 	
@@ -656,8 +667,9 @@ class ClipAlbum {
 	_annotatePageClips(name, value) {
 		const [startClipNum, endClipNum] =
 			this.getPageClipNumRange(this.pageNum);
-		const interval = [startClipNum, endClipNum - 1];
-		this._annotateIntervalClips(name, value, interval);
+		const clipNums = rangeArray(startClipNum, endClipNum);
+		const clips = clipNums.map(i => this.clips[i]);
+		this._annotateClips(name, value, clips);
 	}
 	
 	
@@ -669,8 +681,7 @@ class ClipAlbum {
 	
 	
 	_annotateAllClips(name, value) {
-		const interval = [0, this.clips.length - 1];
-		this._annotateIntervalClips(name, value, interval);
+		this._annotateClips(name, value, this.clips);
 	}
 	
 	
@@ -703,7 +714,7 @@ class ClipAlbum {
 	_unannotateSelectedClipsDelegate(env) {
 		
 		const name = env.getRequired('annotation_name');
-		this._unannotateSelectedClips(name);
+		this._annotateSelectedClips(name, null);
 		
 		// TODO: Optionally play selected clip.
 		this._selectNextClip();
@@ -711,69 +722,10 @@ class ClipAlbum {
 	}
 	
 	
-	_unannotateSelectedClips(name) {
-		for (const interval of this._selection.selectedIntervals)
-			this._unannotateIntervalClips(name, interval);
-	}
-
-
-	_unannotateIntervalClips(name, interval) {
-		
-		for (let i = interval[0]; i <= interval[1]; i++) {
-			
-			const clip = this.clips[i];
-			const annotations = clip.annotations;
-			
-			if (annotations === null || annotations.hasOwnProperty(name)) {
-				// client does not have clip annotations or annotations
-				// include specified one
-				
-				const url = clip.getAnnotationUrl(name);
-				
-				const xhr = new XMLHttpRequest();
-				xhr.onload =
-					() => this._onAnnotationDeleteComplete(xhr, clip, name);
-				xhr.open('DELETE', url);
-				xhr.setRequestHeader(
-					'Content-Type', 'text/plain; charset=utf-8');
-				xhr.send();
-				
-			}
-			
-		}
-
-	}
-
-
-	_onAnnotationDeleteComplete(xhr, clip, annotationName) {
-		
-		if (xhr.status === 200) {
-			
-			const annotations = clip.annotations;
-			
-			if (annotations !== null) {
-				// client has clip annotations
-				
-				delete annotations[annotationName];
-				
-				if (this._isClipOnCurrentPage(clip))
-					clip.view.render();
-				
-			}
-			
-		} else {
-			
-			this._onAnnotationError(xhr);
-			
-		}
-		
-	}
-
-
 	_unannotatePageClipsDelegate(env) {
 		
 		const name = env.getRequired('annotation_name');
-		this._unannotatePageClips(name);
+		this._annotatePageClips(name, null)
 		
 		// TODO: Optionally advance to next page, if there is one,
 		// select the first clip, and optionally play it.
@@ -781,23 +733,9 @@ class ClipAlbum {
 	}
 	
 	
-	_unannotatePageClips(name) {
-		const [startClipNum, endClipNum] =
-			this.getPageClipNumRange(this.pageNum);
-		const interval = [startClipNum, endClipNum - 1];
-		this._unannotateIntervalClips(name, interval);
-	}
-	
-	
 	_unannotateAllClipsDelegate(env) {
 		const name = env.getRequired('annotation_name');
-		this._unannotateAllClips(name);
-	}
-	
-	
-	_unannotateAllClips(name) {
-		const interval = [0, this.clips.length - 1];
-		this._unannotateIntervalClips(name, interval);
+		this._annotateAllClips(name, null);
 	}
 	
 	

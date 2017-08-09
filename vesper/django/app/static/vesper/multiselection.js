@@ -34,6 +34,12 @@ class Multiselection {
 	}
 	
 	
+	get selectedIndices() {
+		const indexLists = this._intervals.map(_getIntervalIndices);
+		return [].concat(...indexLists);
+	}
+	
+	
 	get size() {
 		return this._intervals.reduce(_getSizeAux, 0);
 	}
@@ -255,4 +261,9 @@ function _combinable(v, w) {
 function _union(v, w) {
 	// Caller ensures that x[0] <= w[0] and v[1] >= w[0].
 	return [v[0], Math.max(v[1], w[1])];
+}
+
+
+function _getIntervalIndices([startIndex, endIndex]) {
+	return rangeArray(startIndex, endIndex + 1);
 }

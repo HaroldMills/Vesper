@@ -10,8 +10,8 @@ from django.db.models import F, Max, Min
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.http import (
-    HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed,
-    HttpResponseRedirect)
+    HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
+    HttpResponseNotAllowed, HttpResponseRedirect)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 import pytz
@@ -24,7 +24,8 @@ from vesper.django.app.export_clip_sound_files_form import \
 from vesper.django.app.export_clips_csv_file_form import \
     ExportClipsCsvFileForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
-from vesper.old_bird.export_clip_counts_csv_file_form import ExportClipCountsCsvFileForm
+from vesper.old_bird.export_clip_counts_csv_file_form import \
+    ExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
@@ -41,6 +42,17 @@ import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
 
 
+class HttpError(Exception):
+    
+    def __init__(self, status_code, reason=None):
+        self._status_code = status_code
+        self._reason = reason
+        
+    @property
+    def http_response(self):
+        return HttpResponse(status=self._status_code, reason=self._reason)
+        
+        
 # A note about UTC vs. local times on client and server:
 #
 # Our preferred approach to timekeeping is to work with UTC times as
@@ -554,6 +566,11 @@ def annotation(request, clip_id, annotation_name):
             
             clip = get_object_or_404(Clip, pk=clip_id)
             info = get_object_or_404(AnnotationInfo, name=name)
+            
+            # TODO: If the request body is not plain text, we should
+            # respond with an appropriate HTTP error, not just raise
+            # an exception, which results in an internal server error
+            # (500) response.
             value = _get_request_body_as_text(request).strip()
             
             with archive_lock:
@@ -594,17 +611,23 @@ def annotation(request, clip_id, annotation_name):
 
 def _get_request_body_as_text(request):
     
+    # According to rfc6657, us-ascii is the default charset for the
+    # text/plain media type.
+    
+    return _get_request_body(request, 'text/plain', 'us-ascii')
+
+
+def _get_request_body(request, content_type_name, default_charset_name):
+    
     content_type = _parse_content_type(request.META['CONTENT_TYPE'])
     
     # Make sure content type is text/plain.
-    if content_type.name != 'text/plain':
-        raise ValueError(
-            ('Received HTTP request content type was {}, but {} '
-             'is required.').format(content_type.name, 'text/plain'))
+    if content_type.name != content_type_name:
+        raise HttpError(
+            status_code=415,
+            reason='Request content type must be {}'.format(content_type_name))
 
-    # Get charset, defaulting to us-ascii. (According to rfc6657,
-    # us-ascii is the default charset for the text/plain media type.)
-    charset = content_type.params.get('charset', 'us-ascii')
+    charset = content_type.params.get('charset', default_charset_name)
             
     return request.body.decode(charset)
 
@@ -626,6 +649,86 @@ def _parse_content_type(content_type):
     return Bunch(name=parts[0], params=params)
     
     
+@csrf_exempt
+def annotations(request, annotation_name):
+    
+    '''
+    This view expects a request body that is UTF-8 encoded JSON like:
+    
+        { "value": null, "clip_ids": [1, 2, 3, 4, 5] }
+    '''
+    
+    if request.method == 'POST':
+        
+        if request.user.is_authenticated():
+
+            try:
+                content = _get_request_body_as_json(request)
+            except HttpError as e:
+                return e.http_response
+            
+            try:
+                content = json.loads(content)
+            except json.JSONDecodeError as e:
+                return HttpResponseBadRequest(
+                    reason='Could not decode request JSON')
+                
+            # TODO: Typecheck JSON?
+            value = content['value']
+            clip_ids = content['clip_ids']
+            
+            # We lock the archive just once for all of the clips that
+            # we process, rather than once for each clip. This means
+            # that we may hold the lock for several seconds, during
+            # which no other threads or processes can hold it. This
+            # method is several times faster this way, and since it
+            # is typically invoked interactively, the improved
+            # performance is especially important.
+            with archive_lock:
+                with transaction.atomic():
+                     
+                    info = get_object_or_404(
+                        AnnotationInfo, name=annotation_name)
+                     
+                    # TODO: Try to speed up the following, which currently
+                    # takes several seconds per thousand clips. Perhaps we
+                    # don't need for Django to create Clip instances for us,
+                    # but instead can use raw SQL to query the
+                    # vesper_string_annotation table just once to get the
+                    # information we need to decide what updates are needed,
+                    # and then a second time to perform the updates.
+                    
+                    for clip_id in clip_ids:
+         
+                        clip = get_object_or_404(Clip, pk=clip_id)
+                        user = request.user
+                         
+                        if value is None:
+                            model_utils.delete_clip_annotation(
+                                clip, info, creating_user=user)
+                             
+                        else:
+                            model_utils.annotate_clip(
+                                clip, info, value, creating_user=user)
+                
+            return HttpResponse()
+        
+        else:
+            
+            return HttpResponseForbidden()            
+        
+    else:
+        return HttpResponseNotAllowed(['POST'])
+
+
+def _get_request_body_as_json(request):
+    
+    # According to rfc4627, utf-8 is the default charset for the
+    # application/json media type.
+    
+    return _get_request_body(request, 'application/json', 'utf-8')
+
+
 def calendar(request):
     
     params = request.GET

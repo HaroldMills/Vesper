@@ -316,6 +316,13 @@ def _get_recorder_channel_nums(file):
     # name or contents), the mapping from recording channel numbers to
     # recorder channel numbers is the identity.
     
+    # RESUME: Improve automatic mapping of recording channels to
+    # recorder channels so that if, say, we know that one microphone
+    # was connected to a recorder during a recording, we assign the
+    # correct recorder channel to a mono recording, regardless of
+    # whether the microphone was connected to channel zero or to
+    # channel one.
+    
     return tuple(range(file.num_channels))
             
             
