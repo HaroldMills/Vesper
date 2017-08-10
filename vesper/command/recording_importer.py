@@ -131,8 +131,7 @@ class RecordingImporter:
             if f.recorder is None:
                 f.recorder = _get_recorder(f)
                 
-            if f.recorder_channel_nums is None:
-                f.recorder_channel_nums = _get_recorder_channel_nums(f)
+            _set_recording_file_channel_info(f)
                 
             return f
             
@@ -220,21 +219,11 @@ class RecordingImporter:
             
             r.model = recording
             
-            mic_outputs = _get_recorder_mic_outputs(
-                recording.recorder, recording.start_time)
-            
             for channel_num in range(r.num_channels):
                 
                 recorder_channel_num = r.recorder_channel_nums[channel_num]
-                
-                mic_output = mic_outputs.get(recorder_channel_num)
+                mic_output = r.mic_outputs[channel_num]
             
-                if mic_output is None:
-                    raise CommandExecutionError((
-                        'Could not find mic output connected to recorder '
-                        'input channel {} for recording "{}".').format
-                            (recorder_channel_num, str(recording)))
-                
                 channel = RecordingChannel(
                     recording=recording,
                     channel_num=channel_num,
@@ -304,28 +293,35 @@ def _get_recorder(file):
         return station_recorders[0].device
         
         
-def _get_recorder_channel_nums(file):
+def _set_recording_file_channel_info(f):
     
-    """
-    Gets a tuple that maps recording channel numbers to recorder input
-    channel numbers.
-    """
+    mic_outputs = _get_recorder_mic_outputs(f.recorder, f.start_time)
     
-    # At present we assume that unless a recording file parser tells us
-    # otherwise (for example, based on information in a recording file
-    # name or contents), the mapping from recording channel numbers to
-    # recorder channel numbers is the identity.
-    
-    # RESUME: Improve automatic mapping of recording channels to
-    # recorder channels so that if, say, we know that one microphone
-    # was connected to a recorder during a recording, we assign the
-    # correct recorder channel to a mono recording, regardless of
-    # whether the microphone was connected to channel zero or to
-    # channel one.
-    
-    return tuple(range(file.num_channels))
+    if f.recorder_channel_nums is None:
+        # file name did not indicate recorder channel numbers
+        
+        if len(mic_outputs) != f.num_channels:
+            # number of connected mic outputs does not match number
+            # of file channels
             
+            raise CommandExecutionError((
+                'Could not infer recorder channel numbers for '
+                'recording file "{}".').format(f.path))
             
+        else:
+            # number of connected mic outputs matches number of file
+            # channels
+            
+            # We assume that recorder inputs map to file channel numbers
+            # in increasing order.
+            f.recorder_channel_nums = tuple(sorted(mic_outputs.keys()))
+            
+    
+    f.mic_outputs = tuple(
+        _get_mic_output(mic_outputs, i, f.path)
+        for i in f.recorder_channel_nums)
+        
+        
 def _get_recorder_mic_outputs(recorder, time):
      
     """
@@ -342,3 +338,15 @@ def _get_recorder_mic_outputs(recorder, time):
     # print('recording_importer.get_recorder_mic_outputs', connections.query)
      
     return dict((c.input.channel_num, c.output) for c in connections)
+
+
+def _get_mic_output(mic_outputs, channel_num, file_path):
+    
+    try:
+        return mic_outputs[channel_num]
+    
+    except KeyError:
+        raise CommandExecutionError((
+            'Could not find microphone output connected to recorder input '
+            '{} for recording file "{}".').format(channel_num, file_path))
+        

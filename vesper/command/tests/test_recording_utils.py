@@ -107,6 +107,7 @@ class RecordingUtilsTests(TestCase):
         self.assertEqual(a.station, b.station)
         self.assertEqual(a.recorder, b.recorder)
         self.assertEqual(a.recorder_channel_nums, b.recorder_channel_nums)
+        self.assertEqual(a.mic_outputs, b.mic_outputs)
         self.assertEqual(a.num_channels, b.num_channels)
         self.assertEqual(a.length, b.length)
         self.assertEqual(a.sample_rate, b.sample_rate)
@@ -122,7 +123,8 @@ class RecordingUtilsTests(TestCase):
         
 def create_file(
         station_name, recorder_name, start_time, duration, num_channels=1,
-        sample_rate=22050):
+        sample_rate=22050, recorder_channel_nums=(0,),
+        mic_outputs=('Mic Output 0',)):
     
     t = datetime.datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S')
     start_time = time_utils.create_utc_datetime(
@@ -139,7 +141,8 @@ def create_file(
     return Bunch(
         station=station,
         recorder=recorder,
-        recorder_channel_nums=None,
+        recorder_channel_nums=recorder_channel_nums,
+        mic_outputs=mic_outputs,
         num_channels=num_channels,
         length=length,
         sample_rate=sample_rate,

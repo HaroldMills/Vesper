@@ -100,6 +100,7 @@ class _FileGrouper:
         self.station = f.station
         self.recorder = f.recorder
         self.recorder_channel_nums = f.recorder_channel_nums
+        self.mic_outputs = f.mic_outputs
         self.num_channels = f.num_channels
         self.length = f.length
         self.sample_rate = f.sample_rate
@@ -117,6 +118,7 @@ class _FileGrouper:
         return f.station == self.station and \
             f.recorder == self.recorder and \
             f.recorder_channel_nums == self.recorder_channel_nums and \
+            f.mic_outputs == self.mic_outputs and \
             f.num_channels == self.num_channels and \
             f.sample_rate == self.sample_rate and \
             delta <= threshold
@@ -132,6 +134,7 @@ class _FileGrouper:
             station=self.station,
             recorder=self.recorder,
             recorder_channel_nums=self.recorder_channel_nums,
+            mic_outputs=self.mic_outputs,
             num_channels=self.num_channels,
             length=self.length,
             sample_rate=self.sample_rate,
@@ -142,4 +145,5 @@ class _FileGrouper:
 def _create_sort_key(f):
     return (
         f.station.name, f.recorder.name, f.recorder_channel_nums,
+        tuple(str(o) for o in f.mic_outputs),
         f.num_channels, f.sample_rate, f.start_time)
