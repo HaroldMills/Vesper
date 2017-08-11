@@ -85,6 +85,12 @@ class RecordingFileParserTests(TestCase):
             ('flood__1__20170725_123456.wav',
              'Floodplain', (1,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
 
+            ('flood_0+1_0_20170725_123456.wav',
+             'Floodplain', (0,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
+                 
+            ('flood_0+1_1_20170725_123456.wav',
+             'Floodplain', (1,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
+                 
                  
             # Older MPG Ranch file names.
             

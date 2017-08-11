@@ -173,7 +173,7 @@ class _SongMeterFileNameParser(_FileNameParser):
         r'^'
         r'(?P<station_name>[^_]+)'
         r'_'
-        r'(?P<channel_nums>_0__|_1__|0\+1_)?'    # optional channel number(s)
+        r'(?P<channel_nums>_0__|_1__|0\+1_|0\+1_0_|0\+1_1_)?'
         r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
         r'_'
         r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
@@ -185,6 +185,8 @@ class _SongMeterFileNameParser(_FileNameParser):
         '_0__': (0,),
         '_1__': (1,),
         '0+1_': (0, 1),
+        '0+1_0_': (0,),
+        '0+1_1_': (1,),
         None: None
     }
     
