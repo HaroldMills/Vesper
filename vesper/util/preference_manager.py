@@ -71,33 +71,30 @@ def _get_item(preferences, name):
             
 def _load_preferences(dir_path):
     
-    if not os.path.exists(dir_path):
-        logging.error(
-            'Preferences directory "{}" does not exist.'.format(dir_path))
-        return {}
-    
-    if not os.path.isdir(dir_path):
-        logging.error(
-            'Path "{}" exists but is not a directory.'.format(dir_path))
-        return {}
-
     path = os.path.join(dir_path, _PREFERENCE_FILE_NAME)
+    defaults_message = 'Will use default preference values.'
+    
+    if not os.path.exists(path):
+        logging.warning((
+            'Could not find preferences file "{}". {}').format(
+                path, defaults_message))
+        return {}
         
     try:
         with open(path, 'r') as file_:
             contents = file_.read()
     except Exception as e:
         logging.error(
-            'Read of preference file "{}" failed with message: {}'.format(
-                path, str(e)))
+            'Read failed for preferences file "{}". {}'.format(
+                path, defaults_message))
         return {}
     
     try:
         preferences = yaml.load(contents)
     except Exception as e:
         logging.error((
-            'Load of YAML from preference file "{}" failed with '
-            'message: {}').format(path, str(e)))
+            'YAML load failed for preferences file "{}". {} YAML load error '
+            'message was:\n{}').format(path, defaults_message, str(e)))
         return {}
     
     if preferences is None:
@@ -107,7 +104,8 @@ def _load_preferences(dir_path):
     
     elif not isinstance(preferences, dict):
         logging.error(
-            'Preference file "{}" does not contain a YAML map.'.format(path))
+            'Preferences file "{}" does not contain a YAML map. {}'.format(
+                path, defaults_message))
         return {}
     
     return _Preferences(preferences)
