@@ -15,6 +15,10 @@ from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
 
 
+# TODO: Review the queries in this module and ensure that results are
+# ordered when that is desirable.
+
+
 WILDCARD = '*'
 _ONE_DAY = datetime.timedelta(days=1)
 
@@ -292,7 +296,7 @@ def get_clip_counts(
     
     clips = get_clips(
         station, mic_output, detector, annotation_name=annotation_name,
-        annotation_value=annotation_value)
+        annotation_value=annotation_value, order=False)
     
     count_dicts = clips.values('date').annotate(count=Count('date'))
     
@@ -309,7 +313,7 @@ def get_clip_counts(
     
 def get_clips(
         station, mic_output, detector, date=None, annotation_name=None,
-        annotation_value=None):
+        annotation_value=None, order=True):
     
     kwargs = {}
     if date is not None:
@@ -351,6 +355,9 @@ def get_clips(
                 clips = clips.filter(
                     string_annotation__value__startswith=prefix)
                 
+    if order:
+        clips = clips.order_by('start_time')
+        
     return clips
 
 
