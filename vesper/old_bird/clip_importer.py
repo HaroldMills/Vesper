@@ -20,6 +20,7 @@ import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
+import vesper.util.signal_utils as signal_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
@@ -29,6 +30,29 @@ _DETECTOR_NAMES = {
     'Thrush': 'Old Bird Thrush Detector'
 }
 
+_RECORDING_DATA = {
+    
+    'CLC': [
+        
+        {
+            'start_date': datetime.date(2017, 1, 1),
+            'end_date': datetime.date(2018, 1, 1),
+            'start_time': datetime.time(21),
+            'end_time': datetime.time(5)
+        }
+    ],
+                   
+    'JAS': [
+        {
+            'start_date': datetime.date(2017, 1, 1),
+            'end_date': datetime.date(2018, 1, 1),
+            'start_time': datetime.time(20, 30),
+            'end_time': datetime.time(5, 30)
+        }
+    ]
+                   
+}
+
 _CLASSIFICATIONS = {
     'calls': 'Call',
     'noise': 'Noise',
@@ -36,12 +60,12 @@ _CLASSIFICATIONS = {
 }
 
 _NUM_RECORDING_CHANNELS = 1
-_RECORDING_START_TIME = datetime.time(20, 30)
-_RECORDING_DURATION = datetime.timedelta(hours=9)
 _RECORDING_CHANNEL_NUM = 0
 _RECORDER_CHANNEL_NUM = 0
 
 _ANNOTATION_NAME = 'Classification'
+
+_ONE_DAY = datetime.timedelta(days=1)
 
 
 class _ImportError(Exception):
@@ -288,14 +312,16 @@ class ClipImporter:
         
         length, sample_rate = _get_audio_file_info(file_path)
         
-        # Get clip end time.
-        duration = datetime.timedelta(seconds=length * sample_rate)
-        end_time = info.start_time + duration
+        start_time = info.start_time
+        end_time = signal_utils.get_end_time(start_time, length, sample_rate)
         
         mic_output = self._get_mic_output(info.station.name)
-        recording_channel = \
-            self._get_recording_channel(info.station, info.date, sample_rate)
+        recording_channel = self._get_recording_channel(
+            info.station, info.date, sample_rate)
         
+        recording = recording_channel.recording
+        _assert_recording_contains_clip(recording, start_time, end_time)
+
         creation_time = time_utils.get_utc_now()
         
         clip = Clip.objects.create(
@@ -305,7 +331,7 @@ class ClipImporter:
             start_index=None,
             length=length,
             sample_rate=sample_rate,
-            start_time=info.start_time,
+            start_time=start_time,
             end_time=end_time,
             date=info.date,
             creation_time=creation_time,
@@ -370,7 +396,8 @@ class ClipImporter:
             return self._recorders[station_name]
         except KeyError:
             raise ValueError(
-                'Could not find recorder for station "{}".'.format(station_name))
+                'Could not find recorder for station "{}".'.format(
+                    station_name))
 
 
     def _get_recording_channel(self, station, date, sample_rate):
@@ -396,11 +423,18 @@ class ClipImporter:
         recorder = self._get_recorder(station_name)
         mic_output = self._get_mic_output(station_name)
         
-        length = int(round(_RECORDING_DURATION.total_seconds() * sample_rate))
-
         start_time, end_time = \
             _get_recording_start_and_end_times(station, date)
         
+        duration = (end_time - start_time).total_seconds()
+        length = int(round(duration * sample_rate))
+
+        # Recompute end time from recording start time, length, and
+        # sample rate so it is consistent with our definition (i.e. so
+        # that it is the time of the last sample of the recording rather
+        # than the time of the sample after that).
+        end_time = signal_utils.get_end_time(start_time, length, sample_rate)
+
         creation_time = time_utils.get_utc_now()
         
         recording = Recording.objects.create(
@@ -438,13 +472,13 @@ def _get_audio_file_info(file_path):
     try:
         info = audio_file_utils.get_wave_file_info(file_path)
         
-    except:
+    except Exception:
         
         message = 'Could not get file length and sample rate.'
         
         try:
             size = os.path.getsize(file_path)
-        except:
+        except Exception:
             pass
         else:
             if size == 0:
@@ -494,12 +528,41 @@ def _parse_file_name(file_name):
 
 
 def _get_recording_start_and_end_times(station, date):
-    local_start_time = datetime.datetime.combine(date, _RECORDING_START_TIME)
-    start_time = station.local_to_utc(local_start_time)
-    end_time = start_time + _RECORDING_DURATION
-    return start_time, end_time
+    
+    try:
+        infos = _RECORDING_DATA[station.name]
+    except KeyError:
+        raise ValueError(
+            'No recording information available for station "{}".'.format(
+                station.name))
+    
+    for info in infos:
+        if info['start_date'] <= date and date <= info['end_date']:
+            start_time = _get_recording_time(station, date, info['start_time'])
+            end_time = _get_recording_time(station, date, info['end_time'])
+            return start_time, end_time
+        
+    raise ValueError((
+        'Could not find start and end times for recording from station "{}" '
+        'on {}.').format(station.name, date))
+            
 
+def _get_recording_time(station, date, time):
+    if time.hour < 12:
+        date += _ONE_DAY
+    return station.local_to_utc(datetime.datetime.combine(date, time))
+    
 
+def _assert_recording_contains_clip(recording, clip_start_time, clip_end_time):
+    
+    if clip_start_time < recording.start_time:
+        raise ValueError(
+            'Clip starts before recording that should contain it.')
+    
+    elif clip_end_time > recording.end_time:
+        raise ValueError('Clip ends after recording that should contain it.')
+    
+    
 def _copy_clip_sound_file(from_path, to_path):
     
     # Create clip directory if needed.
