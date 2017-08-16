@@ -115,16 +115,24 @@ def _create_stations_dict(stations, station_name_aliases):
         
         try:
             station = stations[station_name]
-        except KeyError:
-            raise ValueError(
-                'Unrecognized station name "{}".'.format(station_name))
             
-        if isinstance(aliases, list):
-            for alias in aliases:
-                result[alias] = station
-                    
+        except KeyError:
+            # unrecognized station name
+            
+            # Here we ignore unrecognized station names in station name
+            # alias dictionaries. The proper time to warn about them
+            # would be when the presets that specify the dictionaries
+            # are parsed, rather than here.
+            pass
+            
         else:
-            result[alias] = station
+            
+            if isinstance(aliases, list):
+                for alias in aliases:
+                    result[alias] = station
+                        
+            else:
+                result[alias] = station
             
     # Always map the lower case version of each station name to that station.
     for station in stations.values():
