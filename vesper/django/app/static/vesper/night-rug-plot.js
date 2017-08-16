@@ -300,7 +300,7 @@ class NightRugPlot {
 		
     _updatePageLines(clipNumRange) {
     	
-    	if (clipNumRange !== null) {
+        if (clipNumRange !== null) {
     		
 			let color = _CLIP_COLOR;
 			
@@ -313,7 +313,7 @@ class NightRugPlot {
 			const [start, end] = clipNumRange;
 			this._drawClipLines(start, end, color);
     		
-    	}
+        }
     	
     }
     
@@ -408,8 +408,8 @@ class NightRugPlot {
 	
 	
     _onMouseEvent(e) {
-    	const range = this._getMousePageClipNumRange(e);
-    	this._setMousePageClipNumRange(range);
+        const range = this._getMousePageClipNumRange(e);
+        this._setMousePageClipNumRange(range);
     }
 
     
@@ -431,7 +431,7 @@ class NightRugPlot {
 		if (this._clipTimes.length === 0)
 			// no clips
 		
-		return null;
+            return null;
 	
 		else {
 			// at least one clip
@@ -457,7 +457,7 @@ class NightRugPlot {
 			    	const clipNum = this._findClosestClipNum(time);
 			    	return this._parent.getClipPageNum(clipNum);
 		
-	    	}
+            }
 	    	
 		}
 	    		
@@ -528,7 +528,9 @@ class NightRugPlot {
     
     
     _onClick(e) {
-    	this._parent.pageNum = this._getMousePageNum(e);
+        const pageNum = this._getMousePageNum(e);
+        if (pageNum !== null)
+            this._parent.pageNum = pageNum;
     }
     
     
