@@ -215,7 +215,8 @@ class _Detector:
             # have enough samples to fill processing pipeline
             
             # Run signal processors on samples.
-            crossing_samples = self._signal_processor.process(augmented_samples)
+            crossing_samples = \
+                self._signal_processor.process(augmented_samples)
             
             # Get transient index offset.
             offset = self._num_samples_processed
@@ -247,7 +248,7 @@ class _Detector:
         
         return sorted(
             [(i, True) for i in rise_indices] +
-            [(i, False) for i in fall_indices])        
+            [(i, False) for i in fall_indices])
     
     
     def _notify_listener(self, clips):
@@ -307,7 +308,7 @@ class _Squarer(_SignalProcessor):
     
     
     def process(self, x):
-        return x * x;
+        return x * x
     
     
 class _Integrator(_FirFilter):
