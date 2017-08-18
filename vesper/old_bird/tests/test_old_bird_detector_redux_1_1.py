@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from vesper.old_bird.old_bird_detector_redux import _TransientFinder
+from vesper.old_bird.old_bird_detector_redux_1_1 import _TransientFinder
 
 
 _MIN_LENGTH = 100
@@ -87,7 +87,7 @@ class TransientFinderTests(TestCase):
             finder = _TransientFinder(_MIN_LENGTH, _MAX_LENGTH)
             clips = finder.process(crossings)
             clips += finder.complete_processing([_FINAL_FALL])
-            self.assertEqual(clips, expected_clips)  
+            self.assertEqual(clips, expected_clips)
                       
             # Pass case crossings one at a time.
             finder = _TransientFinder(_MIN_LENGTH, _MAX_LENGTH)
@@ -95,4 +95,4 @@ class TransientFinderTests(TestCase):
             for crossing in crossings:
                 clips += finder.process([crossing])
             clips += finder.complete_processing([_FINAL_FALL])
-            self.assertEqual(clips, expected_clips)  
+            self.assertEqual(clips, expected_clips)

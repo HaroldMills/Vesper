@@ -693,7 +693,7 @@ class _SeriesProcessorChain(_SeriesProcessor):
 class TseepDetector(_Detector):
     
     
-    extension_name = 'Old Bird Tseep Detector Redux 1.0'
+    extension_name = 'Old Bird Tseep Detector Redux 1.1'
     
     
     def __init__(self, sample_rate, listener):
@@ -703,7 +703,7 @@ class TseepDetector(_Detector):
 class ThrushDetector(_Detector):
     
     
-    extension_name = 'Old Bird Thrush Detector Redux 1.0'
+    extension_name = 'Old Bird Thrush Detector Redux 1.1'
     
     
     def __init__(self, sample_rate, listener):

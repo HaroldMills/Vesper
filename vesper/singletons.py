@@ -24,8 +24,10 @@ Command:
     - vesper.command.test_command.TestCommand
     
 Detector:
-    - vesper.old_bird.old_bird_detector_redux.ThrushDetector
-    - vesper.old_bird.old_bird_detector_redux.TseepDetector
+    - vesper.old_bird.old_bird_detector_redux_1_0.ThrushDetector
+    - vesper.old_bird.old_bird_detector_redux_1_0.TseepDetector
+    - vesper.old_bird.old_bird_detector_redux_1_1.ThrushDetector
+    - vesper.old_bird.old_bird_detector_redux_1_1.TseepDetector
     
 Exporter:
     - vesper.command.clip_sound_files_exporter.ClipSoundFilesExporter
@@ -49,8 +51,10 @@ Clip File Name Formatter:
     
 '''
 
+
 def _create_extension_manager():
     return ExtensionManager(_EXTENSIONS_SPEC)
+
 
 extension_manager = Singleton(_create_extension_manager)
 
@@ -61,12 +65,14 @@ def _create_preset_manager():
     presets_dir_path = vesper_path_utils.get_archive_path('Presets')
     return PresetManager(preset_types, presets_dir_path)
     
+    
 preset_manager = Singleton(_create_preset_manager)
 
 
 def _create_preference_manager():
     preferences_dir_path = vesper_path_utils.get_archive_path()
     return PreferenceManager(preferences_dir_path)
+
 
 preference_manager = Singleton(_create_preference_manager)
 
