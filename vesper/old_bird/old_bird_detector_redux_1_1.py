@@ -263,7 +263,7 @@ class _Detector:
     
         # Find indices of outward-going threshold crossing events.
         rise_indices = np.where(crossing_samples == 1)[0] + offset
-        fall_indices = np.where(crossing_samples == -2)[0] + offset
+        fall_indices = np.where(crossing_samples == -1)[0] + offset
         
         return sorted(
             [(i, True) for i in rise_indices] +
@@ -370,22 +370,19 @@ class _ThresholdCrossingMarker(_SignalProcessor):
         
     def process(self, x):
         
-        # Compare input to threshold and its inverse.
-        y = np.zeros(len(x))
-        y[x > self._threshold] = 1
-        y[x < 1. / self._threshold] = -2
+        x0 = x[:-1]
+        x1 = x[1:]
         
-        # Take differences to mark where the input crosses the threshold
-        # and its inverse. The four types of crossing will be marked as
-        # follows:
-        #
-        #     1 - upward crossing of threshold
-        #    -1 - downward crossing of threshold
-        #     2 - upward crossing of threshold inverse
-        #    -2 - downward crossing of threshold inverse
-        return np.diff(y)
+        t = self._threshold
+        u = 1 / t
         
-
+        y = np.zeros(len(x) - 1)
+        y[(x0 <= t) & (x1 > t)] = 1
+        y[(x0 >= u) & (x1 < u)] = -1
+        
+        return y
+    
+    
 class _SignalProcessorChain(_SignalProcessor):
     
     
