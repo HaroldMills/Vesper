@@ -146,7 +146,6 @@ class _Detector:
             _Squarer(),
             _Integrator(integration_length),
             _Divider(delay),
-            _ThresholdCrossingMarker(s.ratio_threshold)
         ]
         
         return _SignalProcessorChain(processors)
@@ -234,8 +233,7 @@ class _Detector:
             # have enough samples to fill processing pipeline
             
             # Run signal processors on samples.
-            crossing_samples = \
-                self._signal_processor.process(augmented_samples)
+            ratios = self._signal_processor.process(augmented_samples)
             
             # Get transient index offset.
             offset = self._num_samples_processed
@@ -246,7 +244,7 @@ class _Detector:
             # Add one to offset for agreement with original Old Bird detector.
             offset += 1
                 
-            crossings = self._get_crossings(crossing_samples, offset)
+            crossings = self._get_threshold_crossings(ratios, offset)
             
             clips = self._series_processor.process(crossings)
             
@@ -259,12 +257,24 @@ class _Detector:
         self._num_samples_processed += len(samples)
             
             
-    def _get_crossings(self, crossing_samples, offset):
+    def _get_threshold_crossings(self, ratios, offset):
     
-        # Find indices of outward-going threshold crossing events.
-        rise_indices = np.where(crossing_samples == 1)[0] + offset
-        fall_indices = np.where(crossing_samples == -1)[0] + offset
+        # Add one to index offset to compensate for processing latency
+        # of this method.
+        offset += 1
         
+        x0 = ratios[:-1]
+        x1 = ratios[1:]
+        
+        # Find indices where ratio rises above threshold.
+        t = self.settings.ratio_threshold
+        rise_indices = np.where((x0 <= t) & (x1 > t))[0] + offset
+        
+        # Find indices where ratio falls below threshold inverse.
+        t = 1 / t
+        fall_indices = np.where((x0 >= t) & (x1 < t))[0] + offset
+
+        # Tag rises and falls with booleans, combine, and sort.
         return sorted(
             [(i, True) for i in rise_indices] +
             [(i, False) for i in fall_indices])
@@ -359,29 +369,6 @@ class _Divider(_SignalProcessor):
     def process(self, x):
         return x[self._delay:] / x[:-self._delay]
              
-    
-class _ThresholdCrossingMarker(_SignalProcessor):
-    
-    
-    def __init__(self, threshold):
-        super().__init__(1)
-        self._threshold = threshold
-        
-        
-    def process(self, x):
-        
-        x0 = x[:-1]
-        x1 = x[1:]
-        
-        t = self._threshold
-        u = 1 / t
-        
-        y = np.zeros(len(x) - 1)
-        y[(x0 <= t) & (x1 > t)] = 1
-        y[(x0 >= u) & (x1 < u)] = -1
-        
-        return y
-    
     
 class _SignalProcessorChain(_SignalProcessor):
     
