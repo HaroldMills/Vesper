@@ -145,7 +145,7 @@ class _Detector:
             _FirFilter(coefficients),
             _Squarer(),
             _Integrator(integration_length),
-            _DelayAndDivideProcessor(delay),
+            _Divider(delay),
             _ThresholdCrossingMarker(s.ratio_threshold)
         ]
         
@@ -348,7 +348,7 @@ class _Integrator(_FirFilter):
         super().__init__(coefficients)
 
 
-class _DelayAndDivideProcessor(_SignalProcessor):
+class _Divider(_SignalProcessor):
     
     
     def __init__(self, delay):
