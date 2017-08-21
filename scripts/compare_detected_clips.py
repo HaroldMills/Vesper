@@ -16,16 +16,30 @@ from vesper.django.app.models import Clip, Device, Processor, Station
 
 
 DETECTOR_PAIRS = (
-    ('Old Bird Tseep Detector', 'Old Bird Tseep Detector Redux 1.0'),
-    ('Old Bird Thrush Detector', 'Old Bird Thrush Detector Redux 1.0'),
+    
+    ('Old Bird Tseep Detector Redux 1.0',
+     'Old Bird Tseep Detector Redux 1.1'),
+                  
+    ('Old Bird Thrush Detector Redux 1.0',
+     'Old Bird Thrush Detector Redux 1.1')
+                  
 )
-STATION_NAMES = ('Floodplain',)
-MIC_NAMES = ('21c 0', 'SMX-NFC 2')
-START_DATE = datetime.date(2016, 8, 22)
-END_DATE = datetime.date(2016, 8, 25)
+
+STATION_NAMES = ('Test',)
+MIC_NAMES = ('21c 0',)
+START_DATE = datetime.date(2017, 8, 1)
+END_DATE = datetime.date(2017, 8, 5)
+
+# DETECTOR_PAIRS = (
+#     ('Old Bird Tseep Detector', 'Old Bird Tseep Detector Redux 1.0'),
+#     ('Old Bird Thrush Detector', 'Old Bird Thrush Detector Redux 1.0'),
+# )
+# STATION_NAMES = ('Floodplain',)
+# MIC_NAMES = ('21c 0', 'SMX-NFC 2')
+# START_DATE = datetime.date(2016, 8, 22)
+# END_DATE = datetime.date(2016, 8, 25)
 
 ONE_DAY = datetime.timedelta(days=1)
-SAMPLE_RATE = 22050
 
 
 def main():
@@ -81,13 +95,6 @@ def pair_clips(station, mic_output, date, detector_a, detector_b):
         
         if clip_b is None:
             extras_count_b += 1
-            
-        if clip_a != clip_b:
-            clip_a = add_duration(clip_a)
-            clip_b = add_duration(clip_b)
-#             print(add_index(clip_a, clips_a))
-#             print(add_index(clip_b, clips_b))
-#             print()
             
     print('{} / {} / {} / {} / {}'.format(
         station.name, mic_output.name, str(date), detector_a.name,
@@ -161,23 +168,6 @@ def pair_clips_aux(a, b):
         
     return pairs
             
-        
-def add_duration(clip):
-    if clip is None:
-        return None
-    else:
-        duration = (clip[1] - clip[0]) / SAMPLE_RATE
-        return clip + (duration,)
-    
-    
-def add_index(clip, clips):
-    if clip is None:
-        return None
-    else:
-        for i, c in enumerate(clips):
-            if clip[0] == c[0]:
-                return (i + 1,) + clip
-        
         
 def to_percent(x):
     return round(1000 * x) / 10
