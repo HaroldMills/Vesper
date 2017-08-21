@@ -367,6 +367,11 @@ class _Divider(_SignalProcessor):
         
         
     def process(self, x):
+        
+        # Avoid potential divide-by-zero issues by replacing zero values
+        # with very small ones.
+        x[np.where(x == 0)] = 1e-20
+        
         return x[self._delay:] / x[:-self._delay]
              
     
