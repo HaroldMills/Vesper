@@ -49,13 +49,13 @@ class _FileNameParser:
     def parse_file_name(self, file_name):
         
         (station_name, recorder_channel_nums,
-         year, month, day, hour, minute, second) = \
+         year, month, day, hour, minute, second, fraction) = \
             self._get_file_name_fields(file_name)
             
         station = self._get_station(station_name)
         
         naive_start_time = _get_file_name_date_time(
-            year, month, day, hour, minute, second)
+            year, month, day, hour, minute, second, fraction)
 
         utc_start_time = self._get_utc_start_time(naive_start_time, station)
         
@@ -78,31 +78,51 @@ class _FileNameParser:
         raise NotImplementedError()
 
 
-def _get_file_name_fields_with_regex(file_name, regex):
+def _get_file_name_fields_with_regex(
+        file_name, regex, channel_nums_mapping=None):
     
-    """
-    Parses a file name using a regular expression.
-    
-    This method assumes that `self._re` is a compiled regular
-    expression that, when 
-    """
+    """Parses a file name using a regular expression."""
     
     m = regex.match(file_name)
         
     if m is not None:
-        return _get_file_name_fields_aux(m.group)
+        return _get_file_name_fields_aux(m.group, channel_nums_mapping)
     
     else:
         raise ValueError()
 
 
-def _get_file_name_fields_aux(g, recorder_channel_nums=None):
+def _get_file_name_fields_aux(g, channel_nums_mapping=None):
+    
+    channel_nums = _get_file_name_channel_nums(g, channel_nums_mapping)
+    fraction = _get_file_name_field(g, 'fraction')
     
     return (
         g('station_name'),
-        recorder_channel_nums,
+        channel_nums,
         g('year'), g('month'), g('day'),
-        g('hour'), g('minute'), g('second'))
+        g('hour'), g('minute'), g('second'),
+        fraction)
+    
+    
+def _get_file_name_channel_nums(g, channel_nums_mapping=None):
+    
+    channel_nums = _get_file_name_field(g, 'channel_nums')
+    
+    if channel_nums_mapping is not None:
+        try:
+            channel_nums = channel_nums_mapping[channel_nums]
+        except KeyError:
+            raise ValueError()
+        
+    return channel_nums
+
+
+def _get_file_name_field(g, field_name, default=None):
+    try:
+        return g(field_name)
+    except IndexError:
+        return default
     
 
 def _create_stations_dict(stations, station_name_aliases):
@@ -141,11 +161,11 @@ def _create_stations_dict(stations, station_name_aliases):
     return result
 
         
-def _get_file_name_date_time(year, month, day, hour, minute, second):
+def _get_file_name_date_time(year, month, day, hour, minute, second, fraction):
     
     try:
         return time_utils.parse_date_time(
-            year, month, day, hour, minute, second)
+            year, month, day, hour, minute, second, fraction)
         
     except ValueError as e:
         raise ValueError(
@@ -174,14 +194,19 @@ class _VesperRecorderFileNameParser(_FileNameParser):
         return pytz.utc.localize(naive_start_time)
 
     
-class _SongMeterFileNameParser(_FileNameParser):
+class _SongMeterFileNameParser0(_FileNameParser):
+    
+    """
+    Parses basic Song Meter file names.
+    
+    The SM1, SM2, SM2+, and SM4 all create files with this format.
+    """
     
     
     _REGEX = re.compile(
         r'^'
         r'(?P<station_name>[^_]+)'
         r'_'
-        r'(?P<channel_nums>_0__|_1__|0\+1_|0\+1_0_|0\+1_1_)?'
         r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
         r'_'
         r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
@@ -189,27 +214,77 @@ class _SongMeterFileNameParser(_FileNameParser):
         r'$')
     
     
+    def _get_file_name_fields(self, file_name):
+        return _get_file_name_fields_with_regex(file_name, self._REGEX)
+
+
+    def _get_utc_start_time(self, naive_start_time, station):
+        return station.local_to_utc(naive_start_time)
+    
+    
+class _SongMeterFileNameParser1(_FileNameParser):
+    
+    """Parses SM3 file names, which include channel numbers."""
+    
+    
+    _REGEX = re.compile(
+        r'^'
+        r'(?P<station_name>[^_]+)'
+        r'_'
+        r'(?P<channel_nums>_0_|_1_|0\+1)'
+        r'_'
+        r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
+        r'(_|\$)'
+        r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
+        r'\.wav'
+        r'$')
+    
+    
     _CHANNEL_NUMS = {
-        '_0__': (0,),
-        '_1__': (1,),
-        '0+1_': (0, 1),
-        '0+1_0_': (0,),
-        '0+1_1_': (1,),
-        None: None
+        '_0_': (0,),
+        '_1_': (1,),
+        '0+1': (0, 1),
     }
     
     
     def _get_file_name_fields(self, file_name):
+        return _get_file_name_fields_with_regex(
+            file_name, self._REGEX, self._CHANNEL_NUMS)
 
-        m = self._REGEX.match(file_name)
-            
-        if m is not None:
-            g = m.group
-            channel_nums = self._CHANNEL_NUMS[g('channel_nums')]
-            return _get_file_name_fields_aux(g, channel_nums)
-        
-        else:
-            raise ValueError()
+
+    def _get_utc_start_time(self, naive_start_time, station):
+        return station.local_to_utc(naive_start_time)
+    
+    
+class _SongMeterFileNameParser2(_FileNameParser):
+    
+    """Parses SM3 file names after Kaleidoscope Pro channel splitting."""
+    
+    
+    _REGEX = re.compile(
+        r'^'
+        r'(?P<station_name>[^_]+)'
+        r'_'
+        r'(?P<channel_nums>0\+1_0|0\+1_1)'
+        r'_'
+        r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
+        r'(_|\$)'
+        r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
+        r'_'
+        r'(?P<fraction>\d\d\d)'
+        r'\.wav'
+        r'$')
+    
+    
+    _CHANNEL_NUMS = {
+        '0+1_0': (0,),
+        '0+1_1': (1,),
+    }
+    
+    
+    def _get_file_name_fields(self, file_name):
+        return _get_file_name_fields_with_regex(
+            file_name, self._REGEX, self._CHANNEL_NUMS)
 
 
     def _get_utc_start_time(self, naive_start_time, station):
@@ -217,6 +292,8 @@ class _SongMeterFileNameParser(_FileNameParser):
     
     
 class _MpgRanchFileNameParser0(_FileNameParser):
+    
+    """Parses basic Song Meter file names with trailing comments."""
     
     
     _REGEX = re.compile(
@@ -241,6 +318,48 @@ class _MpgRanchFileNameParser0(_FileNameParser):
         
 class _MpgRanchFileNameParser1(_FileNameParser):
     
+    """
+    Parses SM3 file names after Kaleidoscope Pro channel splitting
+    and millisecond field deletion.
+    """
+    
+    
+    _REGEX = re.compile(
+        r'^'
+        r'(?P<station_name>[^_]+)'
+        r'_'
+        r'(?P<channel_nums>0\+1_0|0\+1_1)'
+        r'_'
+        r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
+        r'(_|\$)'
+        r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
+        r'\.wav'
+        r'$')
+    
+    
+    _CHANNEL_NUMS = {
+        '0+1_0': (0,),
+        '0+1_1': (1,),
+    }
+    
+    
+    def _get_file_name_fields(self, file_name):
+        return _get_file_name_fields_with_regex(
+            file_name, self._REGEX, self._CHANNEL_NUMS)
+
+
+    def _get_utc_start_time(self, naive_start_time, station):
+        return station.local_to_utc(naive_start_time)
+    
+    
+
+class _MpgRanchFileNameParser2(_FileNameParser):
+    
+    """
+    Parses older MPG Ranch file names with mmddyy date, recording duration,
+    and optional trailing comment.
+    """
+    
     
     _REGEX = re.compile(
         r'^'
@@ -250,7 +369,7 @@ class _MpgRanchFileNameParser1(_FileNameParser):
         r'_'
         r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
         r'_'
-        r'(\d{6})'    # six mystery digits (hhmmss recording duration?)
+        r'(\d{6})'    # hhmmss recording duration
         r'(_.+)?'     # optional trailing comment
         r'\.wav'
         r'$')
@@ -299,7 +418,8 @@ class _EasyHiQRecorderFileNameParser(_FileNameParser):
         return(
             station_name, None,
             g('year'), g('month'), g('day'),
-            hour, g('minute'), g('second'))
+            hour, g('minute'), g('second'),
+            None)
         
         
     def _get_hour(self, hour, period):
@@ -365,9 +485,12 @@ class RecordingFileParser:
         
         self._file_name_parsers = (
             _VesperRecorderFileNameParser(stations, station_name_aliases),
-            _SongMeterFileNameParser(stations, station_name_aliases),
+            _SongMeterFileNameParser0(stations, station_name_aliases),
+            _SongMeterFileNameParser1(stations, station_name_aliases),
+            _SongMeterFileNameParser2(stations, station_name_aliases),
             _MpgRanchFileNameParser0(stations, station_name_aliases),
             _MpgRanchFileNameParser1(stations, station_name_aliases),
+            _MpgRanchFileNameParser2(stations, station_name_aliases),
             _EasyHiQRecorderFileNameParser(stations, station_name_aliases)
         )
         

@@ -48,67 +48,86 @@ class RecordingFileParserTests(TestCase):
                  
                  
             # Vesper recorder file names.
-            
+               
             ('Flood_2015-06-02_02.01.02_Z.wav',
              'Floodplain', None, 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                    
-                    
-            # Song Meter file names without channel numbers.
-            
+                       
+                       
+            # Basic Song Meter file names.
+               
             ('FLOODPLAIN_20140820_210203.wav',
              'Floodplain', None, 1, 10, 24000, dt(2014, 8, 20, 21, 2, 3)),
-                  
+                     
             ('FLOOD_20150601_200102.wav',
              'Floodplain', None, 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                  
+                     
             ('Ridge_20150601_200102.wav',
              'Ridge', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                   
+                      
             ('Sheep Camp_20150601_200102.wav',
              'Sheep Camp', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                    
+                       
             ('SHEEP_20150601_200102.wav',
              'Sheep Camp', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                    
+                       
             ('SHEEPCAMP_20150601_200102.wav',
              'Sheep Camp', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
-                   
-
-            # Song Meter file names with channel numbers.
-            
+                     
+  
+            # SM3 file names.
+              
             ('flood_0+1_20170725_123456.wav',
              'Floodplain', (0, 1), 2, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
-                 
+                   
             ('flood__0__20170725_123456.wav',
              'Floodplain', (0,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
-                 
+                    
             ('flood__1__20170725_123456.wav',
              'Floodplain', (1,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
-
-            ('flood_0+1_0_20170725_123456.wav',
-             'Floodplain', (0,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
-                 
-            ('flood_0+1_1_20170725_123456.wav',
-             'Floodplain', (1,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
-                 
-                 
-            # Older MPG Ranch file names.
-            
+  
+  
+            # SM3 file names after Kaleidoscope Pro channel splitting.
+              
+            ('flood_0+1_0_20170725_123456_123.wav',
+             'Floodplain', (0,), 1, 10, 22050,
+              dt(2017, 7, 25, 12, 34, 56, 123000)),
+                   
+            ('flood_0+1_1_20170725_123456_123.wav',
+             'Floodplain', (1,), 1, 10, 22050,
+              dt(2017, 7, 25, 12, 34, 56, 123000)),
+                    
+                    
+            # Basic Song Meter file names with trailing comments.
+               
             ('Sheep Camp_20150601_200102_comment_with_underscores.wav',
              'Sheep Camp', None, 1, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
                     
+                    
+            # SM3 file names after Kaleidoscope Pro channel splitting
+            # and millisecond field deletion.
+               
+            ('flood_0+1_0_20170725_123456.wav',
+             'Floodplain', (0,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
+                    
+            ('flood_0+1_1_20170725_123456.wav',
+             'Floodplain', (1,), 1, 10, 22050, dt(2017, 7, 25, 12, 34, 56)),
+                    
+                    
+            # Older MPG Ranch file names with mmddyy date, recording duration,
+            # and optional trailing comment.
+   
             ('ridge_042315_203600_101222.wav',
              'Ridge', None, 1, 10, 22050, dt(2015, 4, 23, 20, 36, 0)),
-                    
+                       
             ('ridge_042315_203600_101222_comment.wav',
              'Ridge', None, 1, 10, 22050, dt(2015, 4, 23, 20, 36, 0)),
-                 
-                 
+                   
+                   
             # Easy Hi-Q recorder file names.
-            
+              
             ('Flood 6-1-2015_8;01;02_AM.wav',
              'Floodplain', None, 2, 10, 22050, dt(2015, 6, 1, 8, 1, 2)),
-
+  
             ('Flood 6-1-2015_8;01;02_PM.wav',
              'Floodplain', None, 2, 10, 22050, dt(2015, 6, 1, 20, 1, 2)),
                     
