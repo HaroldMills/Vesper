@@ -44,7 +44,6 @@ _TSEEP_SETTINGS = Bunch(
     min_duration=.100,                  # seconds
     max_duration=.400,                  # seconds
     initial_padding=3000 / _OLD_FS,     # seconds
-    final_padding=0 / _OLD_FS,          # seconds
     suppressor_count_threshold=15,      # clips
     suppressor_period=20                # seconds
 )
@@ -61,12 +60,38 @@ _THRUSH_SETTINGS = Bunch(
     min_duration=.100,                  # seconds
     max_duration=.400,                  # seconds
     initial_padding=5000 / _OLD_FS,     # seconds
-    final_padding=0 / _OLD_FS,          # seconds
     suppressor_count_threshold=10,      # clips
     suppressor_period=20                # seconds
 )
 
 
+# import datetime
+# 
+# 
+# _START_TIME = datetime.datetime(2017, 7, 1, 20)
+# 
+# 
+# def _get_dt(index, sample_rate):
+#     td = datetime.timedelta(seconds=index / sample_rate)
+#     return _START_TIME + td
+#     
+#     
+# class _CrossingsHandler:
+#     
+#     
+#     def __init__(self, sample_rate):
+#         self._sample_rate = sample_rate
+#         
+#         
+#     def handle_crossings(self, crossings, lines):
+#         
+#         for index, rise in crossings:
+#             direction = 'Rise' if rise else 'Fall'
+#             start_time = _get_dt(index, self._sample_rate)
+#             s = '{} {}'.format(direction, str(start_time))
+#             lines.append((index, s))
+        
+        
 class _Detector:
     
     """
@@ -126,6 +151,9 @@ class _Detector:
         self._num_samples_processed = 0
         self._recent_samples = np.array([], dtype='float')
         self._initial_samples_repeated = False
+        
+#         self._crossings_handler = _CrossingsHandler(sample_rate)
+#         self._lines = []
         
     
     def _create_signal_processor(self):
@@ -191,15 +219,16 @@ class _Detector:
         max_length = int(math.floor(s.max_duration * sample_rate))
         
         initial_padding = int(round(s.initial_padding * sample_rate))
-        final_padding = int(round(s.final_padding * sample_rate))
         
         suppressor_period = int(round(s.suppressor_period * sample_rate))
         
         processors = [
             _TransientFinder(min_length, max_length),
-            _TransientPadder(initial_padding, final_padding),
+            _ClipExtender(initial_padding),
             _ClipMerger(),
-            _ClipSuppressor(s.suppressor_count_threshold, suppressor_period)
+            _ClipSuppressor(s.suppressor_count_threshold, suppressor_period),
+            _ClipTruncator(),
+            _ClipShifter(-initial_padding)
         ]
         
         return _SeriesProcessorChain(processors)
@@ -246,6 +275,8 @@ class _Detector:
                 
             crossings = self._get_threshold_crossings(ratios, offset)
             
+#             self._crossings_handler.handle_crossings(crossings, self._lines)
+            
             clips = self._series_processor.process(crossings)
             
             self._notify_listener(clips)
@@ -281,7 +312,17 @@ class _Detector:
     
     
     def _notify_listener(self, clips):
+        
         for start_index, length in clips:
+            
+#             start_time = _get_dt(start_index, self.sample_rate)
+#             start_time += datetime.timedelta(seconds=3000 / self.sample_rate)
+#             end_time = _get_dt(start_index + length, self.sample_rate)
+#             duration = (length - 3000) / self.sample_rate
+#             s = '{} {} {} {}'.format(
+#                 length, str(start_time), duration, str(end_time))
+#             self._lines.append((start_index, s))
+
             self._listener.process_clip(start_index, length)
             
             
@@ -300,6 +341,11 @@ class _Detector:
         clips = self._series_processor.complete_processing([fall])
         self._notify_listener(clips)
 
+#         self._lines.sort()
+#         text = ''.join('{} {}\n'.format(i, s) for i, s in self._lines)
+#         with open(r'C:\Users\Harold\Desktop\Detector Output.txt', 'w') as f:
+#             f.write(text)
+        
 
 class _SignalProcessor:
     
@@ -535,30 +581,20 @@ class _TransientFinder(_SeriesProcessor):
         return transients
     
     
-class _TransientPadder(_SeriesProcessor):
+class _ClipExtender(_SeriesProcessor):
     
     
-    def __init__(self, initial_padding, final_padding):
-        self._initial_padding = initial_padding
-        self._final_padding = final_padding
+    def __init__(self, extension_length):
+        self._extension_length = extension_length
         
         
-    def process(self, transients):
-        
-        clips = []
-        
-        for start_index, length in transients:
-            
-            start_index -= self._initial_padding
-            length += self._initial_padding + self._final_padding
-            
-            if start_index < 0:
-                length += start_index
-                start_index = 0
-                
-            clips.append((start_index, length))
-            
-        return clips
+    def process(self, clips):
+        return [self._extend_clip(clip) for clip in clips]
+    
+    
+    def _extend_clip(self, clip):
+        start_index, length = clip
+        return (start_index, length + self._extension_length)
             
         
 class _ClipMerger(_SeriesProcessor):
@@ -659,6 +695,53 @@ class _ClipSuppressor(_SeriesProcessor):
             
         return unsuppressed_clips
         
+        
+_BUFFER_SIZE = 8192
+_FIFO_SIZE = 4 * _BUFFER_SIZE
+_OVERLAP_SIZE = _FIFO_SIZE - _BUFFER_SIZE
+
+
+class _ClipTruncator(_SeriesProcessor):
+    
+    
+    def process(self, clips):
+        
+        processed_clips = []
+        
+        for start_index, length in clips:
+            
+            end_index = start_index + length
+            
+            final_segment_length = end_index % _BUFFER_SIZE
+            
+            initial_segment_length = \
+                min(length - final_segment_length, _OVERLAP_SIZE)
+                
+            length = initial_segment_length + final_segment_length
+            
+            start_index = end_index - length
+            
+            processed_clips.append((start_index, length))
+            
+        return processed_clips
+            
+    
+class _ClipShifter(_SeriesProcessor):
+    
+    
+    def __init__(self, shift):
+        self._shift = shift
+        
+        
+    def process(self, clips):
+        return [self._shift_clip(clip) for clip in clips]
+    
+    
+    def _shift_clip(self, clip):
+        start_index, length = clip
+        start_index = max(start_index + self._shift, 0)
+        return (start_index, length)
+            
         
 class _SeriesProcessorChain(_SeriesProcessor):
     
