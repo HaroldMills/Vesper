@@ -743,6 +743,13 @@ class Clip(Model):
         return self.recording.recorder
     
     @property
+    def end_index(self):
+        if self.start_index is None:
+            return None
+        else:
+            return self.start_index + self.length
+        
+    @property
     def wav_file_contents(self):
         with open(self.wav_file_path, 'rb') as file_:
             return file_.read()
