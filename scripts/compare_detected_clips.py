@@ -242,21 +242,21 @@ def show_diffs(clip_pairs):
         if clip_a is not None and clip_b is not None and \
                 (clip_a.start_index != clip_b.start_index or \
                  clip_a.length != clip_b.length):
-            a = get_clip_string(clip_a)
-            b = get_clip_string(clip_b)
-            print('    different {}  {}'.format(a, b))
+#             a = get_clip_string(clip_a)
+#             b = get_clip_string(clip_b)
+#             print('    different {}  {}'.format(a, b))
             diffs_count += 1
             
         if clip_b is None:
-            a = get_clip_string(clip_a)
-            print('    unpaired a', a)
+#             a = get_clip_string(clip_a)
+#             print('    unpaired a', a)
             unpaired_count_a += 1
         else:
             num_clips_b += 1
         
         if clip_a is None:
-            b = get_clip_string(clip_b)
-            print('    unpaired b', b)
+#             b = get_clip_string(clip_b)
+#             print('    unpaired b', b)
             unpaired_count_b += 1
         else:
             num_clips_a += 1
