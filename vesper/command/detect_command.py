@@ -81,10 +81,10 @@ class DetectCommand(Command):
     def _get_recordings(self):
         
         try:
-            return itertools.chain.from_iterable(
+            return list(itertools.chain.from_iterable(
                 self._get_station_recordings(
                     name, self._start_date, self._end_date)
-                for name in self._station_names)
+                for name in self._station_names))
             
         except Exception as e:
             self._logger.error((
