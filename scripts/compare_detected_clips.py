@@ -12,7 +12,9 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'vesper.django.project.settings'
 import django
 django.setup()
 
-from vesper.django.app.models import Clip, Device, Processor, Station
+from vesper.django.app.models import (
+    AnnotationInfo, Clip, Device, Processor, Station, StringAnnotation)
+import vesper.util.time_utils as time_utils
 
 
 DETECTOR_PAIRS = (
@@ -44,10 +46,72 @@ ONE_DAY = datetime.timedelta(days=1)
 
 def main():
 
+    # annotate_differing_clips()
+    
     show_clip_diffs()
     
     # test_pair_clips_aux()
     
+    
+def annotate_differing_clips():
+    
+    for detector_a_name, detector_b_name in DETECTOR_PAIRS:
+        
+        detector_a = Processor.objects.get(name=detector_a_name)
+        detector_b = Processor.objects.get(name=detector_b_name)
+                    
+        for station_name in STATION_NAMES:
+            
+            station = Station.objects.get(name=station_name)
+        
+            for mic_name in MIC_NAMES:
+                
+                mic = Device.objects.get(name=mic_name)
+                mic_output = mic.outputs.all()[0]
+                
+                date = START_DATE
+                
+                while date <= END_DATE:
+                                        
+                    clip_pairs = pair_clips(
+                        station, mic_output, date, detector_a, detector_b)
+                    
+                    for clip_a, clip_b in clip_pairs:
+                        
+                        if clip_a is None:
+                            annotate_clip(clip_b, 'Unpaired')
+                            
+                        elif clip_b is None:
+                            annotate_clip(clip_a, 'Unpaired')
+                            
+                        elif clip_a.start_index != clip_b.start_index or \
+                                clip_a.length != clip_b.length:
+                            annotate_clip(clip_a, 'Different')
+                            annotate_clip(clip_b, 'Different')
+                            
+                    date += ONE_DAY
+                    
+                print()
+
+    
+def annotate_clip(clip, annotation_value):
+    
+    annotation_info = AnnotationInfo.objects.get(name='Classification')
+    creation_time = time_utils.get_utc_now()
+    
+    try:
+        StringAnnotation.objects.create(
+            clip=clip,
+            info=annotation_info,
+            value=annotation_value,
+            creation_time=creation_time)
+        
+    except Exception:
+        
+        # This can happen if a clip from one detector overlaps two or
+        # more clips from another detector.
+        pass
+
     
 def show_clip_diffs():
     
@@ -73,10 +137,10 @@ def show_clip_diffs():
                         station.name, mic_output.name, str(date),
                         detector_a.name, detector_b.name))
                     
-                    pairs = pair_clips(
+                    clip_pairs = pair_clips(
                         station, mic_output, date, detector_a, detector_b)
                     
-                    show_diffs(pairs)
+                    show_diffs(clip_pairs)
                     
                     date += ONE_DAY
                     
@@ -168,8 +232,8 @@ def show_diffs(clip_pairs):
     num_clips_a = 0
     num_clips_b = 0
     diffs_count = 0
-    extras_count_a = 0
-    extras_count_b = 0
+    unpaired_count_a = 0
+    unpaired_count_b = 0
     
     for pair in clip_pairs:
         
@@ -178,33 +242,45 @@ def show_diffs(clip_pairs):
         if clip_a is not None and clip_b is not None and \
                 (clip_a.start_index != clip_b.start_index or \
                  clip_a.length != clip_b.length):
+            a = get_clip_string(clip_a)
+            b = get_clip_string(clip_b)
+            print('    different {}  {}'.format(a, b))
             diffs_count += 1
             
         if clip_b is None:
-            extras_count_a += 1
+            a = get_clip_string(clip_a)
+            print('    unpaired a', a)
+            unpaired_count_a += 1
         else:
             num_clips_b += 1
         
         if clip_a is None:
-            extras_count_b += 1
+            b = get_clip_string(clip_b)
+            print('    unpaired b', b)
+            unpaired_count_b += 1
         else:
             num_clips_a += 1
             
     if num_clips_a != 0:
-        diffs_count_percent = to_percent(diffs_count / num_clips_a)
-        extras_count_a_percent = to_percent(extras_count_a / num_clips_a)
-        extras_count_b_percent = to_percent(extras_count_b / num_clips_a)
+        diffs_percent = to_percent(diffs_count / num_clips_a)
+        unpaired_percent_a = to_percent(unpaired_count_a / num_clips_a)
+        unpaired_percent_b = to_percent(unpaired_count_b / num_clips_a)
     else:
-        diffs_count_percent = 0
-        extras_count_a_percent = 0
-        extras_count_b_percent = 0
+        diffs_percent = 0
+        unpaired_percent_a = 0
+        unpaired_percent_b = 0
         
     print(
         '   ', num_clips_a, num_clips_b, ' ',
-        diffs_count, extras_count_a, extras_count_b, ' ',
-        diffs_count_percent, extras_count_a_percent, extras_count_b_percent)
+        diffs_count, unpaired_count_a, unpaired_count_b, ' ',
+        diffs_percent, unpaired_percent_a, unpaired_percent_b)
    
     
+def get_clip_string(c):
+    return '({}, {}, {}, {:.3f})'.format(
+        c.start_index, c.end_index, c.length, c.duration)
+
+
 def to_percent(x):
     return round(1000 * x) / 10
 
