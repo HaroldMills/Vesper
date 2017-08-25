@@ -164,8 +164,7 @@ class DetectCommand(Command):
                     
                 else:
                     
-                    self._logger.info(
-                        'Detecting on file "{}"...'.format(file_.path))
+                    self._log_detection_start(detector_models, file_.path)
                     
                     start_time = time.time()
                     
@@ -192,6 +191,24 @@ class DetectCommand(Command):
                         file_duration, processing_time)
                     
                 
+    def _log_detection_start(self, detector_models, file_path):
+        
+        if len(detector_models) == 1:
+            
+            self._logger.info(
+                'Running detector "{}" on file "{}"...'.format(
+                    detector_models[0].name, file_path))
+            
+        else:
+            
+            self._logger.info(
+                'Running the following detectors on file "{}"...'.format(
+                    file_path))
+            
+            for model in detector_models:
+                self._logger.info('    {}'.format(model.name))
+                
+
     # TODO: Do we really need to pass both the recording and the recording
     # file around? How many extra queries do we incur if we don't?
     
