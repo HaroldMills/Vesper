@@ -4,7 +4,9 @@ and date.
 """
 
 
+import csv
 import datetime
+import io
 import os
 
 # Set up Django.
@@ -90,8 +92,6 @@ def annotate_differing_clips():
                             annotate_clip(clip_b, 'Different')
                             
                     date += ONE_DAY
-                    
-                print()
 
     
 def annotate_clip(clip, annotation_value):
@@ -113,7 +113,28 @@ def annotate_clip(clip, annotation_value):
         pass
 
     
+CSV_FILE_HEADER = (
+    'Station',
+    'Mic Output',
+    'Date',
+    'Detector A',
+    'Detector B',
+    'A Clips',
+    'B Clips',
+    'Differing Clips',
+    'Unpaired A Clips',
+    'Unpaired B Clips',
+    'Differing Clips Percent',
+    'Unpaired A Clips Percent',
+    'Unpaired B Clips Percent'
+)
+
+
 def show_clip_diffs():
+    
+    string = io.StringIO(newline='')
+    writer = csv.writer(string)
+    writer.writerow(CSV_FILE_HEADER)
     
     for detector_a_name, detector_b_name in DETECTOR_PAIRS:
         
@@ -133,18 +154,16 @@ def show_clip_diffs():
                 
                 while date <= END_DATE:
                                         
-                    print('{} / {} / {} / {} / {}'.format(
-                        station.name, mic_output.name, str(date),
-                        detector_a.name, detector_b.name))
-                    
                     clip_pairs = pair_clips(
                         station, mic_output, date, detector_a, detector_b)
                     
-                    show_diffs(clip_pairs)
+                    write_diffs(
+                        writer, station, mic_output, date, detector_a,
+                        detector_b, clip_pairs)
                     
                     date += ONE_DAY
                     
-                print()
+    print(string.getvalue())
     
     
 def pair_clips(station, mic_output, date, detector_a, detector_b):
@@ -227,7 +246,8 @@ def get_clip(index, clips):
         return clips[index]
 
 
-def show_diffs(clip_pairs):
+def write_diffs(
+        writer, station, mic_output, date, detector_a, detector_b, clip_pairs):
     
     num_clips_a = 0
     num_clips_b = 0
@@ -270,10 +290,21 @@ def show_diffs(clip_pairs):
         unpaired_percent_a = 0
         unpaired_percent_b = 0
         
-    print(
-        '   ', num_clips_a, num_clips_b, ' ',
-        diffs_count, unpaired_count_a, unpaired_count_b, ' ',
-        diffs_percent, unpaired_percent_a, unpaired_percent_b)
+    writer.writerow(
+        (station.name, mic_output.name, str(date),
+         detector_a.name, detector_b.name,
+         num_clips_a, num_clips_b,
+         diffs_count, unpaired_count_a, unpaired_count_b,
+         diffs_percent, unpaired_percent_a, unpaired_percent_b))
+    
+#     print('{} / {} / {} / {} / {}'.format(
+#         station.name, mic_output.name, str(date),
+#         detector_a.name, detector_b.name))
+#                     
+#     print(
+#         '   ', num_clips_a, num_clips_b, ' ',
+#         diffs_count, unpaired_count_a, unpaired_count_b, ' ',
+#         diffs_percent, unpaired_percent_a, unpaired_percent_b)
    
     
 def get_clip_string(c):
