@@ -114,22 +114,18 @@ class _Detector:
     `detect` method that takes a NumPy array of samples. The method can be
     called repeatedly with consecutive sample arrays. The `complete_detection`
     method should be called after the final call to the `detect` method.
-    During detection, the detector notifies a listener each time it detects
-    a clip. The listener must have a `process_clip` method that accepts two
-    arguments, a clip start index and length.
+    During detection, each time the detector detects a clip it notifies
+    a listener by invoking the listener's `process_clip` method. The
+    `process_clip` method must accept two arguments, the start index and
+    length of the detected clip.
     
     See the `_TSEEP_SETTINGS` and `_THRUSH_SETTINGS` objects above for
-    settings that make a `_Detector` behave like the original Old Bird
-    Tseep and Thrush detectors in the sense that it will detect the
-    same clips (almost: there remain some slight differences between
-    both the number and extent of clips produced by the old and new
-    detectors, but for most purposes the old and new detectors are
-    essentially identical). Note, however, that when a `_Detector`
-    produces a clip it calls its listener with the start index and the
-    length of the clip, while the Old Bird detector saves the clip to a
-    .wav file. The `TseepDetector` and `ThrushDetector` classes of this
-    module subclass the `_Detector` class with fixed settings, namely
-    `_TSEEP_SETTINGS` AND `_THRUSH_SETTINGS`, respectively.
+    settings that make a `_Detector` behave much like the original Old
+    Bird Tseep and Thrush detectors in the sense that it will detect
+    most of the same clips. The `TseepDetector` and `ThrushDetector`
+    classes of this module subclass the `_Detector` class with fixed
+    settings, namely `_TSEEP_SETTINGS` AND `_THRUSH_SETTINGS`,
+    respectively.
     
     This detector reimplementation was developed and tested initially in
     the GitHub repository https://github.com/HaroldMills/Vesper-Tseep-Thrush,
