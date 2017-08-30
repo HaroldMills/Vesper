@@ -10,8 +10,14 @@ class ImportArchiveDataForm(forms.Form):
         label='Archive data YAML',
         widget=forms.Textarea(
             attrs={
+                'id': 'yaml-text-area',
                 'class': 'form-control command-form-wide-input',
-                'rows': '15'}))
+                'rows': '15',
+                'ondragover': 'onDragOver(event);',
+                'ondrop': 'onDrop(event);'
+            }
+        )
+    )
 
 
     def clean_archive_data(self):
