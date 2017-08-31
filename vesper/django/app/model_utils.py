@@ -430,7 +430,7 @@ def annotate_clip(
         creating_job=None, creating_processor=None):
     
     # We assume that any database locking and/or transaction management
-    # involved in deleting a clip happens in the caller.
+    # involved in annotating a clip happens in the caller.
     
     try:
         annotation = StringAnnotation.objects.get(
