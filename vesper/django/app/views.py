@@ -32,12 +32,12 @@ from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Clip, Job, Recording, Station,
     StringAnnotation)
 from vesper.singletons import job_manager, preference_manager, preset_manager
-from vesper.util.archive_lock import archive_lock
 from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.old_bird.export_clip_counts_csv_file_utils as \
     export_clip_counts_csv_file_utils
+import vesper.util.archive_lock as archive_lock
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
 
@@ -573,10 +573,8 @@ def annotation(request, clip_id, annotation_name):
             # (500) response.
             value = _get_request_body_as_text(request).strip()
             
-            with archive_lock:
-                with transaction.atomic():
-                    model_utils.annotate_clip(
-                        clip, info, value, creating_user=request.user)
+            model_utils.annotate_clip(
+                clip, info, value, creating_user=request.user)
             
             return HttpResponse()
         
@@ -593,10 +591,8 @@ def annotation(request, clip_id, annotation_name):
             clip = get_object_or_404(Clip, pk=clip_id)
             info = get_object_or_404(AnnotationInfo, name=name)
             
-            with archive_lock:
-                with transaction.atomic():
-                    model_utils.delete_clip_annotation(
-                        clip, info, creating_user=request.user)
+            model_utils.delete_clip_annotation(
+                clip, info, creating_user=request.user)
             
             return HttpResponse()
         
@@ -684,7 +680,7 @@ def annotations(request, annotation_name):
             # method is several times faster this way, and since it
             # is typically invoked interactively, the improved
             # performance is especially important.
-            with archive_lock:
+            with archive_lock.atomic():
                 with transaction.atomic():
                      
                     info = get_object_or_404(

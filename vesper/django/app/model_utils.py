@@ -5,6 +5,7 @@ from collections import defaultdict
 import datetime
 import itertools
 
+from django.db import transaction
 from django.db.models import Count
 
 from vesper.django.app.models import (
@@ -13,6 +14,7 @@ from vesper.django.app.models import (
 from vesper.singletons import preference_manager
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
+import vesper.util.archive_lock as archive_lock
 
 
 # TODO: Review the queries in this module and ensure that results are
@@ -425,12 +427,11 @@ def _get_detector(name):
             'Unrecognized detector "{}".'.format(name))
 
 
+@archive_lock.atomic
+@transaction.atomic
 def annotate_clip(
         clip, annotation_info, value, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
-    
-    # We assume that any database locking and/or transaction management
-    # involved in annotating a clip happens in the caller.
     
     try:
         annotation = StringAnnotation.objects.get(
@@ -453,7 +454,7 @@ def annotate_clip(
             'creating_job': creating_job,
             'creating_processor': creating_processor
         }
-
+    
         if annotation is None:
             # annotation does not exist
             
@@ -477,12 +478,11 @@ def annotate_clip(
             **kwargs)
     
     
+@archive_lock.atomic
+@transaction.atomic
 def delete_clip_annotation(
         clip, annotation_info, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
-    
-    # We assume that any database locking and/or transaction management
-    # involved in deleting a clip happens in the caller.
     
     try:
         annotation = StringAnnotation.objects.get(

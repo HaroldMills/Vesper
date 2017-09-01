@@ -17,7 +17,6 @@ from vesper.command.command import CommandSyntaxError
 from vesper.command.job_info import JobInfo
 from vesper.command.job_logging_manager import JobLoggingManager
 import vesper.util.django_utils as django_utils
-# import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
 
@@ -81,6 +80,11 @@ def run_job(job_info):
     # they will be executed after Django is set up in the main job process.
     # from django.conf import settings as django_settings
     from vesper.django.app.models import Job
+    import vesper.util.archive_lock as archive_lock
+    
+    # Set the archive lock for this process. The lock is provided to
+    # this process by its creator.
+    archive_lock.set_lock(job_info.archive_lock)
 
     # Get the Django model instance for this job.
     job = Job.objects.get(id=job_info.job_id)
@@ -101,7 +105,8 @@ def run_job(job_info):
         # Mark job as running.
         job.start_time = time_utils.get_utc_now()
         job.status = 'Running'
-        job.save()
+        with archive_lock.atomic():
+            job.save()
         
         # Create command from command spec.
         command = _create_command(job_info.command_spec)
@@ -123,7 +128,8 @@ def run_job(job_info):
         
         job.end_time = time_utils.get_utc_now()
         job.status = 'Raised Exception'
-        job.save()
+        with archive_lock.atomic():
+            job.save()
         
         logger.error(
             'Job raised exception. See traceback below.\n' +
@@ -137,7 +143,8 @@ def run_job(job_info):
 
         job.end_time = time_utils.get_utc_now()
         job.status = status
-        job.save()
+        with archive_lock.atomic():
+            job.save()
         
         logger.info('Job {}.'.format(status.lower()))
         

@@ -9,6 +9,7 @@ from vesper.django.app.models import Job
 from vesper.util.bunch import Bunch
 from vesper.util.repeating_timer import RepeatingTimer
 import vesper.command.job_runner as job_runner
+import vesper.util.archive_lock as archive_lock
 import vesper.util.time_utils as time_utils
 
 
@@ -57,6 +58,7 @@ class JobManager:
         info = Bunch()
         info.command_spec = command_spec
         info.job_id = _create_job(command_spec, user)
+        info.archive_lock = archive_lock.get_lock()
         info.stop_event = Event()
 
         with self._lock:
@@ -94,12 +96,12 @@ class JobManager:
 
 def _create_job(command_spec, user):
     
-    job = Job(
-        command=json.dumps(command_spec, default=_json_date_serializer),
-        creation_time = time_utils.get_utc_now(),
-        creating_user=user,
-        status='Not Started')
-    job.save()
+    with archive_lock.atomic():
+        job = Job.objects.create(
+            command=json.dumps(command_spec, default=_json_date_serializer),
+            creation_time=time_utils.get_utc_now(),
+            creating_user=user,
+            status='Not Started')
     
     return job.id
     

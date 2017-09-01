@@ -3,8 +3,6 @@
 
 import logging
 
-from django.db import transaction
-
 from vesper.command.command import Command
 from vesper.django.app.models import AnnotationInfo, Job, Processor
 from vesper.singletons import extension_manager
@@ -41,21 +39,12 @@ class ClassifyCommand(Command):
         clips = self._create_clip_iterator()
         
         try:
-            
-            # TODO: Do we need to use a transaction here? Can this cause
-            # performance problems? Consider interactions among commands
-            # that may run simultaneously. Keep in mind that classification
-            # is idempotent: it should be harmless to run a classifier on
-            # a clip more than once, say if a classification command is
-            # re-run after being interrupted.
-            with transaction.atomic():
-                _classify_clips(clips, classifier)
+            _classify_clips(clips, classifier)
                 
         except Exception:
             _logger.error(
-                'Clip classification failed. The archive has been '
-                'restored to its state before classification started. '
-                'See below for exception traceback.')
+                'Clip classification failed. See below for exception '
+                'traceback.')
             raise
             
         return True
@@ -156,8 +145,14 @@ def _classify_clips(clips, classifier):
     
     for clip in clips:
         
-        if classifier.annotate(clip):
-            classified_count += 1
+        try:
+            if classifier.annotate(clip):
+                classified_count += 1
+                        
+        except Exception as e:
+            _logger.error((
+                'Classification failed for clip "{}". Error message '
+                'was: {}').format(str(clip), str(e)))
         
         visited_count += 1
         
