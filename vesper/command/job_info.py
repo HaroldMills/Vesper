@@ -9,7 +9,7 @@ class JobInfo:
     """
     Job-related information useful during command execution.
     
-    This information includes the following attributes:
+    This information includes the following:
     
         job_id : `int`
             the ID of the Django model instance for this job.
@@ -27,9 +27,11 @@ class JobInfo:
             `JobLoggingManager.configure_logger` static method exactly
             once with this configuration.
            
-        stop_requested : `boolean`
-            `True` if and only if it has been requested that this job stop
-            without completing.
+        stop_event : `multiprocessing.Event`
+            event indicating job stop request.
+            
+            This event is set when it has been requested that this job
+            stop without completing.
     """
     
     
