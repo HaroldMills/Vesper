@@ -14,6 +14,7 @@ from django.db import transaction
 from vesper.django.app.models import Clip, Job, RecordingChannel
 from vesper.signal.wave_audio_file import WaveAudioFileReader
 from vesper.util.logging_utils import append_stack_trace
+import vesper.util.archive_lock as archive_lock
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.numpy_utils as numpy_utils
 import vesper.util.os_utils as os_utils
@@ -513,30 +514,35 @@ class _DetectorMonitor(Thread):
         
         try:
             
-            with transaction.atomic():
+            with archive_lock.atomic():
                 
-                clip = Clip(
-                    station=station,
-                    mic_output=self._mic_output,
-                    recording_channel=self._recording_channel,
-                    start_index=start_index,
-                    length=length,
-                    sample_rate=self._sample_rate,
-                    start_time=start_time,
-                    end_time=end_time,
-                    date=station.get_night(start_time),
-                    creation_time=creation_time,
-                    creating_user=None,
-                    creating_job=self._job,
-                    creating_processor=self._detector
-                )
-                
-                # We must save the clip before getting its wave file path since
-                # the path depends on the clip's ID, which not created until the
-                # clip is saved.
-                clip.save()
-                
-                self._write_clip_sound_file(clip, samples)
+                with transaction.atomic():
+                    
+                    clip = Clip.objects.create(
+                        station=station,
+                        mic_output=self._mic_output,
+                        recording_channel=self._recording_channel,
+                        start_index=start_index,
+                        length=length,
+                        sample_rate=self._sample_rate,
+                        start_time=start_time,
+                        end_time=end_time,
+                        date=station.get_night(start_time),
+                        creation_time=creation_time,
+                        creating_user=None,
+                        creating_job=self._job,
+                        creating_processor=self._detector
+                    )
+                    
+                    # We must create the clip sound file after creating
+                    # the clip row in the database. The file's path
+                    # depends on the clip ID, which is set as part of
+                    # creating the clip row.
+                    #
+                    # We create the sound file within the database
+                    # transaction to ensure that the clip row and
+                    # sound file are created atomically.
+                    self._write_clip_sound_file(clip, samples)
                                     
         except Exception as e:
             self._logger.error((
