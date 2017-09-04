@@ -7,6 +7,10 @@ from vesper.util.bunch import Bunch
 from vesper.util.signal_utils import seconds_to_frames
 import vesper.util.nfc_classification_utils as nfc_classification_utils
 import vesper.util.nfc_detection_utils as nfc_detection_utils
+import vesper.util.signal_utils as signal_utils
+
+
+_CLASSIFICATION_SAMPLE_RATE = 22050
 
 
 class NfcSpeciesClassifier(object):
@@ -25,12 +29,16 @@ class NfcSpeciesClassifier(object):
     
     def classify_clip(self, clip):
         
-        selection = find_call(clip, self._config)
+        # Our species classifiers are designed for clips with a particular
+        # sample rate, so resample to that rate if needed.
+        sound = signal_utils.resample(clip.sound, _CLASSIFICATION_SAMPLE_RATE)
+        
+        selection = find_call(sound, self._config)
         
         if selection is None:
             return None
         
-        call = extract_call(clip, selection, self._config)
+        call = extract_call(sound, selection, self._config)
         
         if call is None:
             return None
@@ -130,13 +138,13 @@ class CompositeSegmentClassifier(object):
         return predictions        
 
 
-def find_call(clip, config):
+def find_call(sound, config):
     
     # TODO: Why does `detect_tseeps` return selections in seconds?
     # TODO: We're tied to tseeps here since we call `detect_tseeps`.
     # Perhaps we should call `detect_events` with an appropriate
     # detector configuration instead.
-    selections = nfc_detection_utils.detect_tseeps(clip)
+    selections = nfc_detection_utils.detect_tseeps(sound)
     selection = nfc_detection_utils.get_longest_selection(selections)
     
     if selection is None:
@@ -144,15 +152,14 @@ def find_call(clip, config):
     
     else:
         start_time, end_time = selection
-        sample_rate = float(clip.sound.sample_rate)
+        sample_rate = float(sound.sample_rate)
         start_index = seconds_to_frames(start_time, sample_rate)
         end_index = seconds_to_frames(end_time, sample_rate)
         return (start_index, end_index)
     
     
-def extract_call(clip, selection, config):
+def extract_call(sound, selection, config):
     
-    sound = clip.sound
     samples = sound.samples
     sample_rate = sound.sample_rate
 

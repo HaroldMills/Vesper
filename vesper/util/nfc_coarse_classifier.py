@@ -26,6 +26,8 @@ SEGMENT_SOURCE_CLIP = 'Clip'
 SEGMENT_SOURCE_CLIP_CENTER = 'Clip Center'
 SEGMENT_SOURCE_SELECTION = 'Selection'
 
+_CLASSIFICATION_SAMPLE_RATE = 22050
+
 
 def create_classifier(classifier_name):
 
@@ -125,7 +127,10 @@ class NfcCoarseClassifier(object):
     
     def classify_clip_segments(self, clip):
         
-        sound = clip.sound
+        # Our classifiers are designed for clips with a particular sample
+        # rate, so resample to that rate if needed.
+        sound = signal_utils.resample(clip.sound, _CLASSIFICATION_SAMPLE_RATE)
+        
         c = self._config
         
         u = signal_utils
