@@ -126,7 +126,8 @@ class ClipImporter:
         
         # Number of audio files processed.
         units = get_units_text(self._file_count, 'audio file')
-        timing_text = self._get_timing_text(elapsed_time, self._file_count)
+        timing_text = command_utils.get_timing_text(
+            elapsed_time, self._file_count, 'files')
         log('Processed {} {}{}.'.format(self._file_count, units, timing_text))
         
         # Number of file path parse errors.
@@ -154,27 +155,6 @@ class ClipImporter:
         log('{} {} were imported.'.format(self._imported_count, units))
         
         
-    def _get_timing_text(self, elapsed_time, file_count):
-        
-        # Round elapsed time to nearest tenth of a second since it
-        # will be displayed at that resolution. This will keep the
-        # reported file count, elapsed time, and rate consistent.
-        elapsed_time = round(10 * elapsed_time) / 10
-        
-        time_text = ' in {:.1f} seconds'.format(elapsed_time)
-        
-        if elapsed_time > 0:
-            
-            rate = file_count / elapsed_time
-            return '{}, an average of {:.1f} files per second'.format(
-                time_text, rate)
-            
-        else:
-            # elapsed time is zero
-            
-            return time_text
-
-
     def _get_stations(self):
         return dict([(s.name, s) for s in Station.objects.all()])
     

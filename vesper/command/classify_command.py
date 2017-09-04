@@ -2,6 +2,7 @@
 
 
 import logging
+import time
 
 from vesper.command.command import Command
 from vesper.django.app.models import AnnotationInfo, Job, Processor
@@ -138,6 +139,8 @@ def _classify_clips(clips, classifier):
     
     _logger.info('Beginning classification...')
     
+    start_time = time.time()
+    
     classifier.begin_annotations()
     
     visited_count = 0
@@ -160,7 +163,11 @@ def _classify_clips(clips, classifier):
             _logger.info('Visited {} clips...'.format(visited_count))
             
     classifier.end_annotations()
+    
+    elapsed_time = time.time() - start_time
+    timing_text = command_utils.get_timing_text(
+        elapsed_time, visited_count, 'clips')
             
-    _logger.info(
-        'Classified {} of {} visited clips.'.format(
-            classified_count, visited_count))
+    _logger.info((
+        'Classified {} of {} visited clips{}.').format(
+            classified_count, visited_count, timing_text))
