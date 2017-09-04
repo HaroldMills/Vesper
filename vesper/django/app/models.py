@@ -730,6 +730,10 @@ class Clip(Model):
         unique_together = (
             'recording_channel', 'start_time', 'creating_processor')
         
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._sound = None
+        
     @property
     def recording(self):
         return self.recording_channel.recording
@@ -760,10 +764,12 @@ class Clip(Model):
         
     @property
     def sound(self):
-        path = self.wav_file_path
-        (samples, sample_rate) = audio_file_utils.read_wave_file(path)
-        samples = samples[0]
-        return Bunch(samples=samples, sample_rate=sample_rate)
+        if self._sound is None:
+            path = self.wav_file_path
+            (samples, sample_rate) = audio_file_utils.read_wave_file(path)
+            samples = samples[0]
+            self._sound = Bunch(samples=samples, sample_rate=sample_rate)
+        return self._sound
     
     @property
     def duration(self):
