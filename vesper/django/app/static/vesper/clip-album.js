@@ -2824,49 +2824,49 @@ class SpectrogramClipViewDelegate extends ClipViewDelegate {
 	// as little as possible.
 	
 	onClipSamplesChanged() {
-		
-	    const clip = this.clipView.clip;
-	    
-	    if (clip.samples !== null) {
-	    	// have clip samples
-	    	
-	    	// console.log(
-	    	// 	`computing and drawing spectrogram for clip ${clip.num}...`);
-	    	
-		    const settings = this.settings.spectrogram;
-		    
-		    // Compute spectrogram, offscreen spectrogram canvas, and
-		    // spectrogram image data and put image data to canvas. The
-		    // spectrogram canvas and the spectrogram image data have the
+
+        const clip = this.clipView.clip;
+
+        if (clip.samples !== null) {
+            // have clip samples
+
+//            console.log(
+//                `computing and drawing spectrogram for clip ${clip.num}...`);
+
+            const settings = this.settings.spectrogram;
+
+            // Compute spectrogram, offscreen spectrogram canvas, and
+            // spectrogram image data and put image data to canvas. The
+            // spectrogram canvas and the spectrogram image data have the
 		    // same size as the spectrogram. 
-		    this._spectrogram =
-		    	_computeSpectrogram(this._clip.samples, settings);
-		    this._spectrogramCanvas =
-		    	_createSpectrogramCanvas(this._spectrogram, settings);
-		    this._spectrogramImageData =
-		    	_createSpectrogramImageData(this._spectrogramCanvas);
+            this._spectrogram =
+                _computeSpectrogram(this._clip.samples, settings);
+            this._spectrogramCanvas =
+                _createSpectrogramCanvas(this._spectrogram, settings);
+            this._spectrogramImageData =
+                _createSpectrogramImageData(this._spectrogramCanvas);
 		    _computeSpectrogramImage(
-		    	this._spectrogram, this._spectrogramCanvas,
-		    	this._spectrogramImageData, settings);
-		    
+                this._spectrogram, this._spectrogramCanvas,
+                this._spectrogramImageData, settings);
+
 		    // Draw spectrogram image.
-		    const canvas = this.clipView.canvas;
-		    _drawSpectrogramImage(
-		    	clip, this._spectrogramCanvas, canvas, settings);
-		    
-	    } else {
-	    	// do not have clip samples
-	    	
-			// console.log(
-			// 	`freeing spectrogram memory for clip ${clip.num}...`);
-			
-			this._spectrogram = null;
-			this._spectrogramCanvas = null;
-			this._spectrogramImageData = null;
-			
-	    }
-	    
-	}
+            const canvas = this.clipView.canvas;
+            _drawSpectrogramImage(
+                clip, this._spectrogramCanvas, canvas, settings);
+
+        } else {
+            // do not have clip samples
+
+//            console.log(
+//                `freeing spectrogram memory for clip ${clip.num}...`);
+
+            this._spectrogram = null;
+            this._spectrogramCanvas = null;
+            this._spectrogramImageData = null;
+
+        }
+
+    }
 
 	
 	render() {
