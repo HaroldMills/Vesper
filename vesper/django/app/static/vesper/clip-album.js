@@ -3044,11 +3044,6 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
     const dY = dEndFreqY;
     const dHeight = dStartFreqY - dEndFreqY;
     
-    console.log(
-        '_drawSpectrogramImage ',
-        sX, sY, sWidth, sHeight, ' ',
-        dX, dY, dWidth, dHeight);
-    
     context.drawImage(
         gramCanvas, sX, sY, sWidth, sHeight, dX, dY, dWidth, dHeight);
 	
