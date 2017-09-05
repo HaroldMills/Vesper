@@ -3013,10 +3013,13 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
             settings, numSpectra, clip, canvas.width);
         
     // Get view frequency range.
+    // TODO: Restore the default frequency range from [0, 11025] to
+    // [0, halfSampleRate] after clip album settings preset changes
+    // are applied properly.
     const [startFreq, endFreq] =
         settings.frequencyRange !== undefined ?
         settings.frequencyRange :
-        [0, halfSampleRate];
+        [0, 11025];
     
     if (startFreq >= halfSampleRate)
         // view frequency range is above that of spectrogram, so no
