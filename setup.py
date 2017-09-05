@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 setup(
       
     name='vesper',
-    version='0.3.8',
+    version='0.3.9',
     description=(
         'Software for acoustical monitoring of nocturnal bird migration.'),
     url='https://github.com/HaroldMills/Vesper',

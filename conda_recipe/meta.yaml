@@ -1,6 +1,6 @@
 package:
   name: vesper
-  version: "0.3.8"
+  version: "0.3.9"
 
 source:
   git_url: https://github.com/HaroldMills/Vesper.git
