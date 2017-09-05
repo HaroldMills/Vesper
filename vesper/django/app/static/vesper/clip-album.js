@@ -132,6 +132,8 @@ const _DEFAULT_SETTINGS = {
 			referencePower: 1e-9,
 			lowPower: 10,
 			highPower: 100,
+			startFrequency: 0,
+			endFrequency: 11000,
 			smoothingEnabled: true,
 			timePaddingEnabled: false
 		}
@@ -2994,30 +2996,110 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
 	context.fillStyle = 'gray';
 	context.fillRect(0, 0, canvas.width, canvas.height);
 	
+	
 	// Draw spectrogram from clip spectrogram canvas, stretching as needed.
-	const numSpectra = gramCanvas.width;
-	context.imageSmoothingEnabled = settings.smoothingEnabled;
-	if (settings.timePaddingEnabled) {
-		let [x, width] = _getSpectrogramXExtent(
-			settings, numSpectra, clip, canvas.width);
-		context.drawImage(gramCanvas, x, 0, width, canvas.height);
-	} else {
-		context.drawImage(gramCanvas, 0, 0, canvas.width, canvas.height);
-	}
+	
+    context.imageSmoothingEnabled = settings.smoothingEnabled;
+
+    const numSpectra = gramCanvas.width;
+    const numBins = gramCanvas.height;
+    const halfSampleRate = clip.sampleRate / 2.;
+    
+    // Always draw entire spectrogram duration.
+    const sX = 0;
+    const sWidth = numSpectra;
+    
+    const [dX, dWidth] = _getSpectrogramXExtent(
+            settings, numSpectra, clip, canvas.width);
+        
+    // Get view frequency range.
+    const [startFreq, endFreq] =
+        settings.frequencyRange !== undefined ?
+        settings.frequencyRange :
+        [0, halfSampleRate];
+    
+    if (startFreq >= halfSampleRate)
+        // view frequency range is above that of spectrogram, so no
+        // part of spectrogram will be visible
+        
+        return;
+    
+    const sStartFreq = startFreq;
+    const sEndFreq = Math.min(endFreq, halfSampleRate);
+    
+    const sStartFreqY =
+        _freqToGramCanvasY(sStartFreq, numBins, halfSampleRate);
+    const sEndFreqY = _freqToGramCanvasY(sEndFreq, numBins, halfSampleRate);
+    
+    // The roles of sStartFreqY and sEndFreqY are reversed from what one
+    // might expect in the following since frequency decreases (instead
+    // of increasing) with increasing gram image y coordinate.
+    const sY = sEndFreqY
+    const sHeight = sStartFreqY - sEndFreqY;
+    
+    const h = canvas.height
+    const dStartFreqY = _freqToViewCanvasY(sStartFreq, h, startFreq, endFreq);
+    const dEndFreqY = _freqToViewCanvasY(sEndFreq, h, startFreq, endFreq);
+    
+    const dY = dEndFreqY;
+    const dHeight = dStartFreqY - dEndFreqY;
+    
+    console.log(
+        '_drawSpectrogramImage ',
+        sX, sY, sWidth, sHeight, ' ',
+        dX, dY, dWidth, dHeight);
+    
+    context.drawImage(
+        gramCanvas, sX, sY, sWidth, sHeight, dX, dY, dWidth, dHeight);
 	
 }
 
 
 function _getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
-	const sampleRate = clip.sampleRate;
-	const startTime = settings.window.length / 2 / sampleRate;
-	const spectrumPeriod = settings.hopSize / sampleRate;
-	const endTime = startTime + (numSpectra - 1) * spectrumPeriod;
-	const span = (clip.length - 1) / sampleRate;
-	const pixelPeriod = span / canvasWidth;
-	const x = startTime / pixelPeriod;
-	const width = (endTime - startTime) / pixelPeriod;
-	return [x, width];
+    
+    if (settings.timePaddingEnabled) {
+        
+        	const sampleRate = clip.sampleRate;
+        	const startTime = settings.window.length / 2 / sampleRate;
+        	const spectrumPeriod = settings.hopSize / sampleRate;
+        	const endTime = startTime + (numSpectra - 1) * spectrumPeriod;
+        	const span = (clip.length - 1) / sampleRate;
+        	const pixelPeriod = span / canvasWidth;
+        	const x = startTime / pixelPeriod;
+        	const width = (endTime - startTime) / pixelPeriod;
+        	return [x, width];
+        	
+    } else {
+        
+        return [0, canvasWidth];
+        
+    }
+    
+}
+
+
+// TODO: Look into the details of HTML canvas image rendering to
+// determine the proper mapping between frequency and gram canvas
+// coordinates. I think the simple mapping implemented here is probably
+// not the best one, since it assumes that the gram canvas pixel height
+// is halfSampleRate / numBins, i.e. (sampleRate / 2) / (dftSize / 2 + 1).
+// That is incorrect: the gram canvas pixel height is the DFT bin size,
+// sampleRate / dftSize. I suspect that the solution is to put zero hertz
+// and half the sample rate in the middles of the bottom and top canvas
+// pixels, respectively, rather than at the top and bottom of the canvas.
+// The commented-out code below does this.
+function _freqToGramCanvasY(freq, numBins, halfSampleRate) {
+ 
+    return numBins * (1. - freq / halfSampleRate);
+ 
+//    const binSize = halfSampleRate / (numBins - 1)
+//    return numBins - .5 - freq / binSize
+ 
+}
+
+
+function _freqToViewCanvasY(freq, canvasHeight, startFreq, endFreq) {
+    return canvasHeight * (1. - (freq - startFreq) / (endFreq - startFreq));
 }
 
 
