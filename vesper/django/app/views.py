@@ -18,6 +18,7 @@ import pytz
 import yaml
 
 from vesper.django.app.classify_form import ClassifyForm
+from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.export_clip_sound_files_form import \
     ExportClipSoundFilesForm
@@ -100,6 +101,12 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
         
       - name: Clip Sound Files
         url_name: export-clip-sound-files
+        
+- name: Other
+  dropdown:
+  
+      - name: Delete Recordings
+        url_name: delete-recordings
   
 ''')
 
@@ -424,6 +431,43 @@ def _create_export_clip_sound_files_command_spec(form):
             },
             'detectors': data['detectors'],
             'station_mics': data['station_mics'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date']
+        }
+    }
+
+
+@login_required
+@csrf_exempt
+def delete_recordings(request):
+    
+    if request.method in _GET_AND_HEAD:
+        form = DeleteRecordingsForm()
+        
+    elif request.method == 'POST':
+        
+        form = DeleteRecordingsForm(request.POST)
+        
+        if form.is_valid():
+            command_spec = _create_delete_recordings_command_spec(form)
+            return _start_job(command_spec, request.user)
+            
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+    
+    context = _create_template_context(request, 'Other', form=form)
+    
+    return render(request, 'vesper/delete-recordings.html', context)
+    
+    
+def _create_delete_recordings_command_spec(form):
+    
+    data = form.cleaned_data
+    
+    return {
+        'name': 'delete_recordings',
+        'arguments': {
+            'stations': data['stations'],
             'start_date': data['start_date'],
             'end_date': data['end_date']
         }

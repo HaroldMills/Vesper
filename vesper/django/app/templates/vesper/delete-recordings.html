@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Delete Recordings - Vesper</title>
+  {% include "vesper/header-prefix.html" %}
+  {% load staticfiles %}
+  {% load vesper_extras %}
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/command-form.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/delete-recordings-form.css' %}">
+</head>
+
+<body>
+
+  {% include "vesper/navbar.html" %}
+
+  <h2>Delete Recordings</h2>
+  
+  <p>
+    Deletes one or more recordings from this archive. The recordings are
+    specified as a set of one or more stations and a range of dates. All
+    data associated with the recordings are deleted from the archive,
+    including recording metadata, clips (including clip sound files), and
+    annotations. Recording sound files are not deleted. The deletion runs
+    as a Vesper job. This operation cannot be undone, so be careful!
+  </p>
+  
+  <!-- 
+    TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
+    of form elements. Or perhaps use django-bootstrap3 app? See
+    http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
+   -->
+   
+  <form class="form" role="form" action="{% url 'delete-recordings' %}" method="post">
+  
+    {{ form.stations|block_form_element }}
+    {{ form.start_date|form_element }}
+    {{ form.end_date|form_element }}
+
+    <button type="submit" class="btn btn-default form-spacing command-form-spacing">Delete</button>
+    
+  </form>
+
+</body>
+
+</html>
