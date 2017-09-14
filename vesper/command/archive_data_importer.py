@@ -37,7 +37,8 @@ class ArchiveDataImporter:
     
     
     def __init__(self, args):
-        self.archive_data = command_utils.get_required_arg('archive_data', args)
+        self.archive_data = \
+            command_utils.get_required_arg('archive_data', args)
     
     
     def execute(self, job_info):
@@ -121,7 +122,7 @@ class ArchiveDataImporter:
                     creating_user=creating_user,
                     creating_job=creating_job)
                 
-                annotation_info.save()              
+                annotation_info.save()
     
     
     def _get_annotation_constraint(self, data):
@@ -227,7 +228,7 @@ class ArchiveDataImporter:
                 
             else:
                 names = ['{} {}'.format(port_type.capitalize(), i)
-                        for i in range(num_ports)]
+                         for i in range(num_ports)]
                 
         return [(name, i) for i, name in enumerate(names)]
                 
@@ -422,71 +423,71 @@ class ArchiveDataImporter:
         
         
 #     def _add_algorithms(self):
-#         
+#
 #         algorithms_data = self.archive_data.get('algorithms')
-#         
+#
 #         if algorithms_data is not None:
-#             
+#
 #             for data in algorithms_data:
-#             
+#
 #                 name = data['name']
-# 
+#
 #                 self._logger.info('Adding algorithm "{}"...'.format(name))
-#                 
+#
 #                 algorithm = Algorithm(
 #                     name=name,
 #                     type=data['type'],
 #                     description=data.get('description', ''))
-#                 
+#
 #                 algorithm.save()
-# 
-# 
+#
+#
 #     def _add_algorithm_versions(self):
-#         
+#
 #         versions_data = self.archive_data.get('algorithm_versions')
-#         
+#
 #         if versions_data is not None:
-#             
+#
 #             algorithms = _create_objects_dict(Algorithm)
-#             
+#
 #             for data in versions_data:
-#             
+#
 #                 algorithm = algorithms[data['algorithm']]
 #                 version = data['version']
-# 
+#
 #                 self._logger.info(
 #                     'Adding algorithm version "{} {}"...'.format(
 #                         algorithm.name, version))
-#                 
+#
 #                 algorithm_version = AlgorithmVersion(
 #                     algorithm=algorithm,
 #                     version=version,
 #                     description=data.get('description', ''))
-#                 
+#
 #                 algorithm_version.save()
-# 
-# 
+#
+#
 #     def _add_processors(self):
-#         
+#
 #         processors_data = self.archive_data.get('processors')
-#         
+#
 #         if processors_data is not None:
-#             
+#
 #             algorithm_versions = _create_objects_dict(AlgorithmVersion)
-#             
+#
 #             for data in processors_data:
-#             
+#
 #                 name = data['name']
-#                 
+#
 #                 self._logger.info('Adding processor "{}"...'.format(name))
-#                 
+#
 #                 processor = Processor(
 #                     name=name,
 #                     algorithm_version=\
 #                         algorithm_versions[data['algorithm_version']],
 #                     settings=data.get('settings', ''),
 #                     description=data.get('description', ''))
-#                 
+#
 #                 processor.save()
 
 
