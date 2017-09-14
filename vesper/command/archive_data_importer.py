@@ -1,6 +1,7 @@
 """Module containing class `ArchiveDataImporter`."""
 
 
+from collections import defaultdict
 import datetime
 import logging
 
@@ -129,8 +130,8 @@ class ArchiveDataImporter:
         for local_name, channel_num in port_data:
             
             self._logger.info(
-                'Adding device model {} "{} {} {}"...'.format(
-                    port_type, model.name, local_name, channel_num))
+                'Adding device model "{}" {} "{}"...'.format(
+                    model.name, port_type, local_name))
             
             port_class.objects.create(
                 model=model,
@@ -207,7 +208,7 @@ class ArchiveDataImporter:
         for model_input in device.model.inputs.all():
             
             self._logger.info(
-                'Adding device input "{} {}"...'.format(
+                'Adding device "{}" input "{}"...'.format(
                     device.name, model_input.local_name))
             
             DeviceInput.objects.create(
@@ -220,7 +221,7 @@ class ArchiveDataImporter:
         for model_output in device.model.outputs.all():
             
             self._logger.info(
-                'Adding device output "{} {}"...'.format(
+                'Adding device "{}" output "{}"...'.format(
                     device.name, model_output.local_name))
             
             DeviceOutput.objects.create(
@@ -242,9 +243,6 @@ class ArchiveDataImporter:
                 
                 station = self._get_station(data)
                 
-                self._logger.info(
-                    'Adding devices for station "{}"...'.format(station.name))
-                
                 data_name = 'station devices array'
                 
                 start_time = self._get_time(
@@ -253,16 +251,24 @@ class ArchiveDataImporter:
                     data, 'end_time', station, data_name)
                 
                 device_names = _get_required(data, 'devices', data_name)
+                station_devices = []
                 for name in device_names:
                     device = self._get_device(name, devices)
                     self._add_station_device(
                         station, device, start_time, end_time)
-                
+                    station_devices.append(device)
+                    
+                shorthand_inputs, shorthand_outputs = \
+                    _get_shorthand_ports(station_devices)
+                    
                 connections = _get_required(data, 'connections', data_name)
                 for connection in connections:
-                    output = self._get_port(connection, 'output', outputs)
-                    input_ = self._get_port(connection, 'input', inputs)
-                    self._add_connection(output, input_, start_time, end_time)
+                    output = self._get_port(
+                        connection, 'output', shorthand_outputs, outputs)
+                    input_ = self._get_port(
+                        connection, 'input', shorthand_inputs, inputs)
+                    self._add_connection(
+                        station, output, input_, start_time, end_time)
                             
     
     def _get_station(self, data):
@@ -290,8 +296,8 @@ class ArchiveDataImporter:
     def _add_station_device(self, station, device, start_time, end_time):
         
         self._logger.info(
-            'Adding device "{}" from {} to {}"...'.format(
-                device.name, str(start_time), str(end_time)))
+            'Adding station "{}" device "{}" from {} to {}"...'.format(
+                station.name, device.name, str(start_time), str(end_time)))
     
         StationDevice.objects.create(
             station=station,
@@ -300,21 +306,30 @@ class ArchiveDataImporter:
             end_time=end_time)
         
 
-    def _get_port(self, connection, port_type, ports):
+    def _get_port(self, connection, port_type, shorthand_ports, ports):
+        
         name = _get_required(connection, port_type, 'device connection')
-        try:
-            return ports[name]
-        except KeyError:
+        
+        port = shorthand_ports.get(name)
+        
+        if port is None:
+            port = ports.get(name)
+            
+        if port is None:
             raise CommandSyntaxError(
                 'Unrecognized device {} "{}".'.format(port_type, name))
+        
+        else:
+            return port
             
             
-    def _add_connection(self, output, input_, start_time, end_time):
+    def _add_connection(self, station, output, input_, start_time, end_time):
         
         self._logger.info((
-            'Adding device connection "{} -> {} '
+            'Adding station "{}" device connection "{} -> {} '
             'from {} to {}"...').format(
-                output.name, input_.name, str(start_time), str(end_time)))
+                station.name, output.name, input_.name,
+                str(start_time), str(end_time)))
     
         DeviceConnection.objects.create(
             output=output,
@@ -433,6 +448,36 @@ def _create_objects_dict(cls):
     objects = {}
     for obj in cls.objects.all():
         objects[obj.name] = obj
-        if hasattr(obj, 'long_name'):
-            objects[obj.long_name] = obj
+        objects[obj.long_name] = obj
     return objects
+
+
+def _get_shorthand_ports(devices):
+    
+    # Create mapping from model names to sets of devices.
+    model_devices = defaultdict(set)
+    for device in devices:
+        model_devices[device.model.name].add(device)
+        
+    # Create mappings from shorthand port names to ports. A shorthand
+    # port name is like a regular port name except that it includes
+    # only a model name rather than a device name. We include an item
+    # in this mapping for each port of each device that is the only one
+    # of its model in `devices`.
+    shorthand_inputs = {}
+    shorthand_outputs = {}
+    for model_name, devices in model_devices.items():
+        if len(devices) == 1:
+            for device in devices:
+                _add_shorthand_ports(
+                    shorthand_inputs, device.inputs.all(), model_name)
+                _add_shorthand_ports(
+                    shorthand_outputs, device.outputs.all(), model_name)
+                
+    return shorthand_inputs, shorthand_outputs
+                    
+                    
+def _add_shorthand_ports(shorthand_ports, ports, model_name):
+    for port in ports:
+        name = '{} {}'.format(model_name, port.local_name)
+        shorthand_ports[name] = port
