@@ -16,10 +16,6 @@ import vesper.command.command_utils as command_utils
 import vesper.util.time_utils as time_utils
 
 
-# TODO: Recover more gracefully when data are missing, e.g. raise a
-# `CommandSyntaxError` rather than a `KeyError`.
-
-
 class ArchiveDataImporter:
     
     """
@@ -65,74 +61,6 @@ class ArchiveDataImporter:
         return True
             
             
-    def _add_annotation_constraints(self, job_info):
-        
-        constraints_data = self.archive_data.get('annotation_constraints')
-        
-        if constraints_data is not None:
-            
-            for data in constraints_data:
-                
-                name = data['name']
-                description = data.get('description', '')
-                text = yaml.dump(data)
-                creation_time = time_utils.get_utc_now()
-                creating_user = None
-                creating_job = Job.objects.get(id=job_info.job_id)
-                
-                self._logger.info(
-                    'Adding annotation constraint "{}"...'.format(name))
-                
-                constraint = AnnotationConstraint(
-                    name=name,
-                    description=description,
-                    text=text,
-                    creation_time=creation_time,
-                    creating_user=creating_user,
-                    creating_job=creating_job)
-                
-                constraint.save()
-                
-                
-    def _add_annotations(self, job_info):
-        
-        annotations_data = self.archive_data.get('annotations')
-        
-        if annotations_data is not None:
-            
-            for data in annotations_data:
-                
-                name = data['name']
-                description = data.get('description', '')
-                type_ = data.get('type', 'String')
-                constraint = self._get_annotation_constraint(data)
-                creation_time = time_utils.get_utc_now()
-                creating_user = None
-                creating_job = Job.objects.get(id=job_info.job_id)
-                
-                self._logger.info('Adding annotation "{}"...'.format(name))
-                
-                annotation_info = AnnotationInfo(
-                    name=name,
-                    description=description,
-                    type=type_,
-                    constraint=constraint,
-                    creation_time=creation_time,
-                    creating_user=creating_user,
-                    creating_job=creating_job)
-                
-                annotation_info.save()
-    
-    
-    def _get_annotation_constraint(self, data):
-        try:
-            name = data['constraint']
-        except KeyError:
-            return None
-        else:
-            return AnnotationConstraint.objects.get(name=name)
-    
-        
     def _add_stations(self):
         
         stations_data = self.archive_data.get('stations')
@@ -141,19 +69,23 @@ class ArchiveDataImporter:
             
             for data in stations_data:
             
-                name = data['name']
+                name = _get_required(data, 'name', 'station')
                 
                 self._logger.info('Adding station "{}"...'.format(name))
                 
-                station = Station(
-                    name=name,
-                    description=data.get('description', ''),
-                    latitude=data['latitude'],
-                    longitude=data['longitude'],
-                    elevation=data['elevation'],
-                    time_zone=data['time_zone'])
+                description = data.get('description', '')
+                latitude = _get_required(data, 'latitude', 'station')
+                longitude = _get_required(data, 'longitude', 'station')
+                elevation = _get_required(data, 'elevation', 'station')
+                time_zone = _get_required(data, 'time_zone', 'station')
                 
-                station.save()
+                Station.objects.create(
+                    name=name,
+                    description=description,
+                    latitude=latitude,
+                    longitude=longitude,
+                    elevation=elevation,
+                    time_zone=time_zone)
 
 
     def _add_device_models(self):
@@ -170,24 +102,22 @@ class ArchiveDataImporter:
             
     def _add_device_model(self, data):
         
-        name = data['name']
-        type_ = data['type']
-        manufacturer = data['manufacturer']
-        model = data['model']
+        name = _get_required(data, 'name', 'device model')
         
-        self._logger.info(
-            'Adding device model "{}" "{} {} {}"...'.format(
-                name, manufacturer, model, type_))
+        self._logger.info('Adding device model "{}"...'.format(name))
+
+        type_ = _get_required(data, 'type', 'device model')
+        manufacturer = _get_required(data, 'manufacturer', 'device model')
+        model = _get_required(data, 'model', 'device model')
+        description = data.get('description', '')
         
-        model = DeviceModel(
+        model = DeviceModel.objects.create(
             name=name,
             type=type_,
             manufacturer=manufacturer,
             model=model,
-            description=data.get('description', '')
+            description=description
         )
-        
-        model.save()
         
         return model
             
@@ -202,12 +132,10 @@ class ArchiveDataImporter:
                 'Adding device model {} "{} {} {}"...'.format(
                     port_type, model.name, local_name, channel_num))
             
-            port = port_class(
+            port_class.objects.create(
                 model=model,
                 local_name=local_name,
                 channel_num=channel_num)
-            
-            port.save()
 
 
     def _get_port_data(self, data, port_type):
@@ -241,40 +169,37 @@ class ArchiveDataImporter:
             models = _create_objects_dict(DeviceModel)
         
             for data in devices_data:
-                model = self._get_device_model(data, models)
-                device = self._add_device(data, model)
+                device = self._add_device(data, models)
                 self._add_device_inputs(device)
                 self._add_device_outputs(device)
             
             
+    def _add_device(self, data, models):
+        
+        name = _get_required(data, 'name', 'device')
+        
+        self._logger.info('Adding device "{}"...'.format(name))
+        
+        model = self._get_device_model(data, models)
+        serial_number = _get_required(data, 'serial_number', 'device')
+        description = data.get('description', '')
+        
+        return Device.objects.create(
+            name=name,
+            model=model,
+            serial_number=serial_number,
+            description=description)
+
+
     def _get_device_model(self, data, models):
-    
-        name = data['model']
+
+        name = _get_required(data, 'model', 'device')
+        
         try:
             return models[name]
         except KeyError:
             raise CommandSyntaxError(
                 'Unrecognized device model name "{}".'.format(name))
-
-
-    def _add_device(self, data, model):
-        
-        name = data['name']
-        serial_number = data['serial_number']
-        
-        self._logger.info(
-            'Adding device "{}" "{} {}"...'.format(
-                name, model.name, serial_number))
-        
-        device = Device(
-            name=name,
-            model=model,
-            serial_number=serial_number,
-            description=data.get('description', ''))
-        
-        device.save()
-        
-        return device
 
 
     def _add_device_inputs(self, device):
@@ -285,8 +210,9 @@ class ArchiveDataImporter:
                 'Adding device input "{} {}"...'.format(
                     device.name, model_input.local_name))
             
-            input_ = DeviceInput(device=device, model_input=model_input)
-            input_.save()
+            DeviceInput.objects.create(
+                device=device,
+                model_input=model_input)
             
             
     def _add_device_outputs(self, device):
@@ -297,8 +223,9 @@ class ArchiveDataImporter:
                 'Adding device output "{} {}"...'.format(
                     device.name, model_output.local_name))
             
-            output = DeviceOutput(device=device, model_output=model_output)
-            output.save()
+            DeviceOutput.objects.create(
+                device=device,
+                model_output=model_output)
 
 
     def _add_station_devices(self):
@@ -314,30 +241,45 @@ class ArchiveDataImporter:
             for data in station_devices_data:
                 
                 station = self._get_station(data)
-                start_time = _get_utc_time(data['start_time'], station)
-                end_time = _get_utc_time(data['end_time'], station)
                 
-                device_names = data['devices']
+                self._logger.info(
+                    'Adding devices for station "{}"...'.format(station.name))
+                
+                data_name = 'station devices array'
+                
+                start_time = self._get_time(
+                    data, 'start_time', station, data_name)
+                end_time = self._get_time(
+                    data, 'end_time', station, data_name)
+                
+                device_names = _get_required(data, 'devices', data_name)
                 for name in device_names:
                     device = self._get_device(name, devices)
                     self._add_station_device(
                         station, device, start_time, end_time)
                 
-                connections = data['connections']
+                connections = _get_required(data, 'connections', data_name)
                 for connection in connections:
-                    output = self._get_output(connection['output'], outputs)
-                    input_ = self._get_input(connection['input'], inputs)
+                    output = self._get_port(connection, 'output', outputs)
+                    input_ = self._get_port(connection, 'input', inputs)
                     self._add_connection(output, input_, start_time, end_time)
                             
     
     def _get_station(self, data):
-        name = data['station']
+        name = _get_required(data, 'station', 'station devices item')
         try:
             return Station.objects.get(name=name)
         except Station.DoesNotExist:
             raise CommandSyntaxError('Unrecognized station "{}".'.format(name))
             
 
+    def _get_time(self, data, key, station, data_name):
+        dt = _get_required(data, key, data_name)
+        if isinstance(dt, datetime.date):
+            dt = datetime.datetime(dt.year, dt.month, dt.day)
+        return station.local_to_utc(dt)
+
+    
     def _get_device(self, name, devices):
         try:
             return devices[name]
@@ -348,34 +290,25 @@ class ArchiveDataImporter:
     def _add_station_device(self, station, device, start_time, end_time):
         
         self._logger.info(
-            'Adding station device "{} at {} from {} to {}"...'.format(
-                device.name, station.name, str(start_time), str(end_time)))
+            'Adding device "{}" from {} to {}"...'.format(
+                device.name, str(start_time), str(end_time)))
     
-        station_device = StationDevice(
+        StationDevice.objects.create(
             station=station,
             device=device,
             start_time=start_time,
             end_time=end_time)
         
-        station_device.save()
-        
 
-    def _get_output(self, name, outputs):
+    def _get_port(self, connection, port_type, ports):
+        name = _get_required(connection, port_type, 'device connection')
         try:
-            return outputs[name]
+            return ports[name]
         except KeyError:
             raise CommandSyntaxError(
-                'Unrecognized device output "{}".'.format(name))
-
-
-    def _get_input(self, name, inputs):
-        try:
-            return inputs[name]
-        except KeyError:
-            raise CommandSyntaxError(
-                'Unrecognized device input "{}".'.format(name))
-
-
+                'Unrecognized device {} "{}".'.format(port_type, name))
+            
+            
     def _add_connection(self, output, input_, start_time, end_time):
         
         self._logger.info((
@@ -383,13 +316,11 @@ class ArchiveDataImporter:
             'from {} to {}"...').format(
                 output.name, input_.name, str(start_time), str(end_time)))
     
-        connection = DeviceConnection(
+        DeviceConnection.objects.create(
             output=output,
             input=input_,
             start_time=start_time,
             end_time=end_time)
-        
-        connection.save()
 
 
     def _add_detectors(self):
@@ -404,21 +335,98 @@ class ArchiveDataImporter:
             
             for data in processors_data:
             
-                name = data['name']
+                name = _get_required(data, 'name', log_type_name)
 
                 self._logger.info(
                     'Adding {} "{}"...'.format(log_type_name, name))
                 
-                processor = Processor(
+                description = data.get('description', '')
+                
+                Processor.objects.create(
                     name=name,
                     type=db_type_name,
-                    description=data.get('description', ''))
-                
-                processor.save()
+                    description=description)
 
         
     def _add_classifiers(self):
         self._add_processors('classifiers', 'classifier', 'Classifier')
+        
+        
+    def _add_annotation_constraints(self, job_info):
+        
+        constraints_data = self.archive_data.get('annotation_constraints')
+        
+        if constraints_data is not None:
+            
+            for data in constraints_data:
+                
+                name = _get_required(data, 'name', 'annotation constraint')
+                
+                self._logger.info(
+                    'Adding annotation constraint "{}"...'.format(name))
+                
+                description = data.get('description', '')
+                text = yaml.dump(data)
+                creation_time = time_utils.get_utc_now()
+                creating_user = None
+                creating_job = Job.objects.get(id=job_info.job_id)
+                
+                AnnotationConstraint.objects.create(
+                    name=name,
+                    description=description,
+                    text=text,
+                    creation_time=creation_time,
+                    creating_user=creating_user,
+                    creating_job=creating_job)
+                
+                
+    def _add_annotations(self, job_info):
+        
+        annotations_data = self.archive_data.get('annotations')
+        
+        if annotations_data is not None:
+            
+            for data in annotations_data:
+                
+                name = _get_required(data, 'name', 'annotation')
+                
+                self._logger.info('Adding annotation "{}"...'.format(name))
+                
+                description = data.get('description', '')
+                type_ = data.get('type', 'String')
+                constraint = self._get_annotation_constraint(data)
+                creation_time = time_utils.get_utc_now()
+                creating_user = None
+                creating_job = Job.objects.get(id=job_info.job_id)
+                
+                AnnotationInfo.objects.create(
+                    name=name,
+                    description=description,
+                    type=type_,
+                    constraint=constraint,
+                    creation_time=creation_time,
+                    creating_user=creating_user,
+                    creating_job=creating_job)
+    
+    
+    def _get_annotation_constraint(self, data):
+        try:
+            name = data['constraint']
+        except KeyError:
+            return None
+        else:
+            return AnnotationConstraint.objects.get(name=name)
+    
+        
+def _get_required(data, key, data_name):
+    
+    try:
+        return data[key]
+    
+    except KeyError:
+        raise CommandSyntaxError(
+            '{} missing required item "{}".'.format(
+                data_name.capitalize(), key))
         
         
 def _create_objects_dict(cls):
@@ -428,9 +436,3 @@ def _create_objects_dict(cls):
         if hasattr(obj, 'long_name'):
             objects[obj.long_name] = obj
     return objects
-
-
-def _get_utc_time(dt, station):
-    if isinstance(dt, datetime.date):
-        dt = datetime.datetime(dt.year, dt.month, dt.day)
-    return station.local_to_utc(dt)
