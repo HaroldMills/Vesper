@@ -5,7 +5,6 @@ import datetime
 import logging
 
 from django.db import transaction
-import pytz
 import yaml
 
 from vesper.command.command import CommandSyntaxError
@@ -500,12 +499,7 @@ def _create_objects_dict(cls):
     return objects
 
 
-# TODO: Move this to another module and make it public?
 def _get_utc_time(dt, station):
     if isinstance(dt, datetime.date):
         dt = datetime.datetime(dt.year, dt.month, dt.day)
-    if dt.tzinfo is None:
-        time_zone = pytz.timezone(station.time_zone)
-        dt = time_zone.localize(dt)
-        dt = dt.astimezone(pytz.utc)
-    return dt
+    return station.local_to_utc(dt)
