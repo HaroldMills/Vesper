@@ -37,17 +37,34 @@ class ClassifyCommand(Command):
         
         classifier = self._create_classifier(job_info.job_id)
         
-        clips = self._create_clip_iterator()
+        classifier.begin_annotations()
+    
+        value_tuples = self._create_clip_query_values_iterator()
         
-        try:
-            _classify_clips(clips, classifier)
-                
-        except Exception:
-            _logger.error(
-                'Clip classification failed. See below for exception '
-                'traceback.')
-            raise
+        for detector, station, mic_output, date in value_tuples:
             
+            clips = _create_clip_iterator(detector, station, mic_output, date)
+            
+            count = clips.count()
+            count_text = _create_clip_count_text(count)
+            
+            _logger.info((
+                'Classifier will visit {} for detector "{}", station "{}", '
+                'mic output "{}", and date {}.').format(
+                    count_text, detector.name, station.name, mic_output.name,
+                    date))
+            
+            try:
+                _classify_clips(clips, classifier)
+                    
+            except Exception:
+                _logger.error(
+                    'Clip classification failed. See below for exception '
+                    'traceback.')
+                raise
+            
+        classifier.end_annotations()
+    
         return True
 
 
@@ -65,20 +82,18 @@ class ClassifyCommand(Command):
             raise
         
 
-    def _create_clip_iterator(self):
+    def _create_clip_query_values_iterator(self):
         
         try:
-            return model_utils.create_clip_iterator(
-                self._detector_names,
-                self._sm_pair_ui_names,
-                self._start_date,
-                self._end_date)
+            return model_utils.create_clip_query_values_iterator(
+                self._detector_names, self._sm_pair_ui_names,
+                self._start_date, self._end_date)
             
         except Exception as e:
-            _log_fatal_exception('Clip iterator construction failed.', e)
-            raise
-        
-        
+            _log_fatal_exception(
+                'Clip query values iterator construction failed.', e)
+            
+            
 def _get_annotation_info(name):
     try:
         return AnnotationInfo.objects.get(name=name)
@@ -132,16 +147,27 @@ def _log_fatal_exception(message, exception):
             message, str(exception)))
 
 
+def _create_clip_iterator(*args):
+    
+    try:
+        return model_utils.create_clip_iterator(*args)
+        
+    except Exception as e:
+        _log_fatal_exception('Clip iterator construction failed.', e)
+        raise
+    
+    
+def _create_clip_count_text(count):
+    suffix = '' if count == 1 else 's'
+    return '{} clip{}'.format(count, suffix)
+        
+
 _LOGGING_PERIOD = 500    # clips
 
 
 def _classify_clips(clips, classifier):
     
-    _logger.info('Beginning classification...')
-    
     start_time = time.time()
-    
-    classifier.begin_annotations()
     
     visited_count = 0
     classified_count = 0
@@ -162,8 +188,6 @@ def _classify_clips(clips, classifier):
         if visited_count % _LOGGING_PERIOD == 0:
             _logger.info('Visited {} clips...'.format(visited_count))
             
-    classifier.end_annotations()
-    
     elapsed_time = time.time() - start_time
     timing_text = command_utils.get_timing_text(
         elapsed_time, visited_count, 'clips')

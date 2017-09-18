@@ -265,6 +265,9 @@ class ClipsCsvFileExporter(object):
         if classification is not None and classification.startswith('Call'):
             values = [_get_column_value(c, clip) for c in self._columns]
             self._lines.append(','.join(values))
+            return True
+        else:
+            return False
         
         
     def end_exports(self):

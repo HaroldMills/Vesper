@@ -49,6 +49,7 @@ class ClipSoundFilesExporter:
         file_path = os.path.join(self._output_dir_path, file_name)
         with open(file_path, 'wb') as file_:
             file_.write(clip.wav_file_contents)
+        return True
         
         
     def end_exports(self):

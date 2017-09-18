@@ -3,8 +3,6 @@
 
 import logging
 
-from django.db import transaction
-
 from vesper.command.command import Command, CommandSyntaxError
 from vesper.singletons import extension_manager
 import vesper.command.command_utils as command_utils
@@ -46,36 +44,48 @@ class ExportCommand(Command):
         
     def execute(self, job_info):
         
-        # Create clip iterator.
-        try:
-            clips = model_utils.create_clip_iterator(
-                self._detector_names,
-                self._sm_pair_ui_names,
-                self._start_date,
-                self._end_date)
-        except Exception as e:
-            _log_fatal_exception('Clip iterator construction failed.', e)
-            raise
+        self._exporter.begin_exports()
+    
+        value_tuples = self._create_clip_query_values_iterator()
         
-        try:
+        for detector, station, mic_output, date in value_tuples:
             
-            # TODO: Do we need to use a transaction here? Can this cause
-            # performance problems? Consider interactions among commands
-            # that may run simultaneously. Keep in mind that classification
-            # is idempotent: it should be harmless to run a classifier on
-            # a clip more than once, say if a classification command is
-            # re-run after being interrupted.
-            with transaction.atomic():
+            clips = _create_clip_iterator(detector, station, mic_output, date)
+            
+            count = clips.count()
+            count_text = _create_clip_count_text(count)
+            
+            _logger.info((
+                'Exporter will visit {} for detector "{}", station "{}", '
+                'mic output "{}", and date {}.').format(
+                    count_text, detector.name, station.name, mic_output.name,
+                    date))
+            
+            try:
                 _export_clips(clips, self._exporter)
-                
-        except Exception:
-            _logger.error(
-                'Clip export failed. See below for exception traceback.')
-            raise
+                    
+            except Exception:
+                _logger.error(
+                    'Clip export failed. See below for exception traceback.')
+                raise
+            
+        self._exporter.end_exports()
             
         return True
 
 
+    def _create_clip_query_values_iterator(self):
+        
+        try:
+            return model_utils.create_clip_query_values_iterator(
+                self._detector_names, self._sm_pair_ui_names,
+                self._start_date, self._end_date)
+            
+        except Exception as e:
+            _log_fatal_exception(
+                'Clip query values iterator construction failed.', e)
+            
+            
 def _parse_exporter_spec(spec):
     
     try:
@@ -110,26 +120,39 @@ def _log_fatal_exception(message_prefix, exception):
             message_prefix, str(exception)))
 
 
+def _create_clip_iterator(*args):
+    
+    try:
+        return model_utils.create_clip_iterator(*args)
+        
+    except Exception as e:
+        _log_fatal_exception('Clip iterator construction failed.', e)
+        raise
+    
+    
+def _create_clip_count_text(count):
+    suffix = '' if count == 1 else 's'
+    return '{} clip{}'.format(count, suffix)
+        
+
 _LOGGING_PERIOD = 500    # clips
 
 
 def _export_clips(clips, exporter):
     
-    _logger.info('Beginning export...')
-    
-    exporter.begin_exports()
-    
-    count = 0
+    visited_count = 0
+    exported_count = 0
     
     for clip in clips:
         
-        exporter.export(clip)
+        if exporter.export(clip):
+            exported_count += 1
         
-        count += 1
+        visited_count += 1
         
-        if count % _LOGGING_PERIOD == 0:
-            _logger.info('Exported {} clips...'.format(count))
+        if visited_count % _LOGGING_PERIOD == 0:
+            _logger.info('Visited {} clips...'.format(visited_count))
             
-    exporter.end_exports()
-            
-    _logger.info('Exported a total of {} clips.'.format(count))
+    _logger.info(
+        'Exported {} of {} visited clips.'.format(
+            exported_count, visited_count))

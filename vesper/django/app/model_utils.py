@@ -393,38 +393,56 @@ def get_processor(name, type):
     return Processor.objects.get(name=name, type=type)
 
 
-def create_clip_iterator(
+def create_clip_query_values_iterator(
         detector_names, sm_pair_ui_names, start_date, end_date):
-
-    """Generator that returns a clip iterator."""
+    
+    # We create lists of detectors, station/mic output pairs, and
+    # dates immediately so that if we will raise an exception due
+    # to a bad detector name, station/mic output pair, or date
+    # range we do so before we start yielding query values.
     
     detectors = [_get_detector(name) for name in detector_names]
 
     sm_pairs_dict = get_station_mic_output_pairs_dict()
     sm_pairs = [sm_pairs_dict[name] for name in sm_pair_ui_names]
     
-    date_range = (start_date, end_date)
+    dates = list(create_date_iterator(start_date, end_date))
     
     for detector in detectors:
-        
         for station, mic_output in sm_pairs:
-            
-            clips = Clip.objects.filter(
-                station=station,
-                mic_output=mic_output,
-                date__range=date_range,
-                creating_processor=detector)
-                
-            for clip in clips:
-                yield clip
-
-
+            for date in dates:
+                yield (detector, station, mic_output, date)
+           
+         
 def _get_detector(name):
     try:
         return get_processor(name, 'Detector')
     except Processor.DoesNotExist:
         raise ValueError(
             'Unrecognized detector "{}".'.format(name))
+
+
+_ONE_DAY = datetime.timedelta(days=1)
+
+  
+def create_date_iterator(start_date, end_date):
+    
+    if end_date < start_date:
+        return
+    
+    else:
+        date = start_date
+        while date <= end_date:
+            yield date
+            date += _ONE_DAY
+    
+    
+def create_clip_iterator(detector, station, mic_output, date):
+    return Clip.objects.filter(
+        station=station,
+        mic_output=mic_output,
+        date=date,
+        creating_processor=detector)
 
 
 @archive_lock.atomic
