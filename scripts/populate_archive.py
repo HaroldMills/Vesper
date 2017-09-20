@@ -4,6 +4,7 @@
 from collections import defaultdict
 import datetime
 import os
+import random
 import time
 
 # Set up Django.
@@ -30,9 +31,6 @@ import vesper.util.time_utils as time_utils
 # annotations needed by the import are already present in the target
 # archive.
 #
-# The import should be run in a transaction so that if any part of it
-# fails the database can be rolled back to its state prior to the import.
-#
 # Command arguments will include:
 #
 # * The full path of the source archive directory, which must be on the server.
@@ -53,15 +51,19 @@ import vesper.util.time_utils as time_utils
 # _ARCHIVE_DIR_PATH = \
 #     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
 # _ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
-_ARCHIVE_DIR_PATH = r'E:\2016_archive'
+# _ARCHIVE_DIR_PATH = \
+#     r'Y:\Desktop\NFC\Data\MPG Ranch\2016 MPG Ranch Desktop Archive'
+_ARCHIVE_DIR_PATH = \
+    '/Users/Harold/Desktop/NFC/Data/MPG Ranch/2016 MPG Ranch Desktop Archive'
+# _ARCHIVE_DIR_PATH = r'F:\2016_archive'
 # _ARCHIVE_DIR_PATH = \
 #     r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive 0.1.0'
 
 _CREATE_FAKE_RECORDINGS = False
 """Set `True` if and only if source archive does not contain recordings."""
 
-_CLIP_COUNT_LIMIT = 10000
-"""The approximate maximum number of clips to add to the archive."""
+_CLIP_COUNT_LIMIT = 100000000
+"""The approximate maximum number of clips to process."""
 
 _DETECTOR_NAME_ALIASES = {
     'Old Bird Thrush Detector': ['Thrush'],
@@ -98,12 +100,17 @@ _SHOW_RECORDINGS = False
 _RECORDING_PROGRESS_PERIOD = 1000
 
 _SHOW_CLIPS = False
-_CLIP_PROGRESS_PERIOD = 1000
+_CLIP_PROGRESS_PERIOD = 10000
+_NON_CALL_CLIP_INCLUSION_PROBABILITY = .11
 
-_ONE_NIGHT = datetime.timedelta(days=1)
+_PAUSE_FILE_PATH = '/Users/Harold/Desktop/Pause'
+_PAUSE_CHECK_PERIOD = 100
     
+_ONE_NIGHT = datetime.timedelta(days=1)
+
 
 def _main():
+    random.seed(0)
     _delete_data()
     _add_data()
     
@@ -177,7 +184,7 @@ def _add_recordings():
                 recording=recording,
                 channel_num=channel_num,
                 recorder_channel_num=channel_num,
-                mic_output=mic_output)  
+                mic_output=mic_output)
             channel.save()
             
             if _SHOW_RECORDINGS:
@@ -310,8 +317,11 @@ def _add_clips():
     
     num_added = 0
     num_rejected = 0
+    num_excluded = 0
     
     for station in stations:
+        
+        print('station "{}"...'.format(station.name))
         
         night = start_night
         
@@ -319,10 +329,11 @@ def _add_clips():
             
             clips = archive.get_clips(station_name=station.name, night=night)
             
-            (m, n) = _add_clips_aux(clips, night, detectors, annotation_infos)
+            m, n, p = _add_clips_aux(clips, night, detectors, annotation_infos)
             
             num_added += m
             num_rejected += n
+            num_excluded += p
             night += _ONE_NIGHT
             
             if _clip_count >= _CLIP_COUNT_LIMIT:
@@ -333,14 +344,15 @@ def _add_clips():
         
     archive.close()
     
-    num_clips = num_added + num_rejected
+    num_clips = num_added + num_rejected + num_excluded
     elapsed_time = time.time() - processing_start_time
     rate = num_clips / elapsed_time
     
     print((
         'Processed {} clips in {:.1f} seconds, an average of {:.1f} '
         'clips per second.').format(num_clips, elapsed_time, rate))
-    print('Added {} clips, rejected {}.'.format(num_added, num_rejected))
+    print('Added {} clips, rejected {}, excluded {}.'.format(
+        num_added, num_rejected, num_excluded))
     
     
 def _get_detectors():
@@ -370,12 +382,22 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
         
     num_added = 0
     num_rejected = 0
+    num_excluded = 0
     
     for c in clips:
+        
+        _clip_count += 1
         
         if _clip_count % _CLIP_PROGRESS_PERIOD == 0:
             print('Clip {}...'.format(_clip_count))
             
+        if _clip_count % _PAUSE_CHECK_PERIOD == 0:
+            _pause_if_indicated()
+            
+        if not _include_clip(c):
+            num_excluded += 1
+            continue
+        
         try:
             channel = _get_clip_recording_channel(c)
         except Exception:
@@ -420,8 +442,6 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             if _SHOW_CLIPS:
                 print('Clip', _clip_count, clip)
                 
-            _clip_count += 1
-            
             clip.save()
              
             _copy_clip_sound_file(c.file_path, clip)
@@ -435,9 +455,38 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             
             num_added += 1
         
-    return (num_added, num_rejected)
+    return (num_added, num_rejected, num_excluded)
 
 
+def _pause_if_indicated():
+    
+    if _pause_file_exists():
+        print('pausing...')
+        while True:
+            time.sleep(1)
+            if not _pause_file_exists():
+                print('resuming...')
+                break
+            
+            
+def _pause_file_exists():
+    return os.path.exists(_PAUSE_FILE_PATH)
+
+                
+def _include_clip(clip):
+    
+    name = clip.clip_class_name
+    
+    if name is None or name == 'Outside':
+        return False
+    
+    elif name.startswith('Call'):
+        return True
+    
+    else:
+        return random.random() <= _NON_CALL_CLIP_INCLUSION_PROBABILITY
+    
+    
 def _get_clip_recording_channel(clip):
     station, _, recorder_input = _get_recording_channel_info(clip.station.name)
     return RecordingChannel.objects.get(
@@ -491,4 +540,3 @@ def _copy_clip_sound_file(file_path, clip):
     
 if __name__ == '__main__':
     _main()
-    
