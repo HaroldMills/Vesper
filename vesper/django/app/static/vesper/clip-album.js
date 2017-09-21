@@ -2975,8 +2975,9 @@ class SpectrogramClipViewDelegate extends ClipViewDelegate {
 			
 			const time = (x - left) / (right - left) * clip.span;
 			
+			const settings = this.settings.spectrogram;
 			const [lowFreq, highFreq] =
-				_getFreqRange(this.settings, clip.sampleRate / 2);
+				_getFreqRange(settings, clip.sampleRate / 2);
 			const deltaFreq = highFreq - lowFreq;
 			const freq = highFreq - (y - top) / (bottom - top) * deltaFreq;
 			
