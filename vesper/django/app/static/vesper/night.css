@@ -269,7 +269,7 @@ body {
  * to avoid undesirable horizontal scrollbars.
  */
 .clip-label {
-  white-space: nowrap;
+  white-space: pre;
   background-color: transparent;
   position: absolute;
   text-align: center;

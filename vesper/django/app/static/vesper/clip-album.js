@@ -1115,6 +1115,19 @@ class _Clip {
 	}
 	
 	
+	get span() {
+		if (this.length === 0)
+			return 0;
+		else
+			return (this.length - 1) / this.sampleRate;
+	}
+	
+	
+	get duration() {
+		return this.length / this.sampleRate;
+	}
+	
+	
 	get startTime() {
 		return this._startTime;
 	}
@@ -2471,9 +2484,28 @@ class ClipView {
 	
 	
 	_createDiv() {
+		
 	    const div = document.createElement('div');
+	    
 	    div.className = 'clip';
+	    
+	    // We install event listeners on the div rather than the canvas
+	    // since the label and button are children of the div (it does
+	    // not seem to work to make them children of the canvas: when
+	    // they are they are invisible), and we want to receive mousemove
+	    // events (via bubbling) whose targets are the label and the 
+	    // button. We listen for mouseenter and mouseleave rather than
+	    // mouseover and mouseout since the latter would be delivered to
+	    // the div when the mouse moved into and out of it from and to
+	    // the label and the button, which we do not want. We only want
+	    // to know when the mouse enters and leaves the div from and to
+	    // the outside.
+	    div.addEventListener('mouseenter', e => this._onMouseEnter(e));
+	    div.addEventListener('mousemove', e => this._onMouseMove(e));
+	    div.addEventListener('mouseleave', e => this._onMouseLeave(e));
+	    
 	    return div;
+	    
 	}
 	    
 	    
@@ -2481,8 +2513,6 @@ class ClipView {
 		
 	    const canvas = document.createElement('canvas');
 	    canvas.className = 'clip-canvas';
-	    canvas.addEventListener('mouseover', e => this._onMouseOver(e));
-	    canvas.addEventListener('mouseout', e => this._onMouseOut(e));
 	    canvas.addEventListener('click', e => this._onCanvasClick(e));
 	    this._div.appendChild(canvas);
 	    
@@ -2491,13 +2521,30 @@ class ClipView {
 	}
 	
 	
-	_onMouseOver(e) {
-		// console.log('mouse over ' + this.clip.num);
+	_onMouseEnter(e) {
+		this._onMouseEvent(e, 'mouseenter');
 	}
 	
 	
-	_onMouseOut(e) {
-		// console.log('mouse out ' + this.clip.num);
+	_onMouseEvent(e, name) {
+		
+		const text = this._delegate.getMouseText(e, name)
+		
+		if (text !== null)
+			this.label.innerHTML = text;
+		else
+			this._renderLabel();
+		
+	}
+	
+	
+	_onMouseMove(e) {
+		this._onMouseEvent(e, 'mousemove');
+	}
+	
+	
+	_onMouseLeave(e) {
+		this._onMouseEvent(e, 'mouseleave');
 	}
 	
 	
@@ -2805,12 +2852,28 @@ class ClipViewDelegate {
 	/**
 	 * Renders the contents of this delegate's clip view.
 	 * 
-	 * This method is invoked by this delegate's clip view whenever
-	 * the contents of the clip view may need to be rendered, including
+	 * This method is invoked by a delegate's clip view whenever the
+	 * contents of the clip view may need to be rendered, including
 	 * when the containing clip album has changed size.
 	 */
 	render() {
 		throw new Error('ClipViewDelegate.render method not implemented.');
+	}
+	
+	
+	/**
+	 * Gets text to display for the current mouse position.
+	 * 
+	 * This method is invoked by a delegate's clip view whenever the
+	 * mouse enters, leaves, or moves within the view. The argument is
+	 * the mouse event that triggered the invocation, along with an
+	 * event name that is either "mouseenter", "mouseleave", or
+	 * "mousemove". The method can return either text to display
+	 * instead of the view's usual label, or `null` to display the
+	 * usual label.
+	 */
+	getMouseText(event, name) {
+		return null;
 	}
 	
 	
@@ -2876,6 +2939,51 @@ class SpectrogramClipViewDelegate extends ClipViewDelegate {
 		// somewhere, anyway) eventually to handle view settings
 		// changes, for example changes to spectrogram settings
 		// or color map settings.
+	}
+	
+	
+	getMouseText(event, name) {
+		
+		const x = event.clientX;
+		const y = event.clientY;
+		
+	    // The sides of the bounding client rectangle of an HTML element
+		// can have non-integer coordinates. We bump them to the nearest
+		// integers for comparison to the integer mouse coordinates, and
+		// assign time zero to the resulting left coordinate, the clip
+		// duration to the right coordinate, the low view frequency to
+		// the bottom coordinate, and the high view frequency to the top
+		// coordinate.
+		const r = this.clipView.div.getBoundingClientRect();
+		const left = Math.ceil(r.left);
+		const right = Math.floor(r.right);
+		const top = Math.ceil(r.top);
+		const bottom = Math.floor(r.bottom);
+		
+		if (x < left || x > right || y < top || y > bottom)
+			// mouse outside view
+			
+			// The mouse is outside of the view for mouseleave events, and
+			// (for some reason) even for some mousemove events.
+			
+			return null;
+		
+		else {
+			// mouse inside view
+			
+			const clip = this.clipView.clip;
+			
+			const time = (x - left) / (right - left) * clip.span;
+			
+			const [lowFreq, highFreq] =
+				_getFreqRange(this.settings, clip.sampleRate / 2);
+			const deltaFreq = highFreq - lowFreq;
+			const freq = highFreq - (y - top) / (bottom - top) * deltaFreq;
+			
+			return `${time.toFixed(3)} s  ${freq.toFixed(1)} Hz`;
+			
+		}
+		
 	}
 
 	
@@ -3013,13 +3121,7 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
             settings, numSpectra, clip, canvas.width);
         
     // Get view frequency range.
-    // TODO: Restore the default frequency range from [0, 11025] to
-    // [0, halfSampleRate] after clip album settings preset changes
-    // are applied properly.
-    const [startFreq, endFreq] =
-        settings.frequencyRange !== undefined ?
-        settings.frequencyRange :
-        [0, 11025];
+    const [startFreq, endFreq] = _getFreqRange(settings, halfSampleRate);
     
     if (startFreq >= halfSampleRate)
         // view frequency range is above that of spectrogram, so no
@@ -3073,6 +3175,17 @@ function _getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
         
     }
     
+}
+
+
+// TODO: Restore the default frequency range from [0, 11025] to
+// [0, halfSampleRate] after clip album settings preset changes
+// are applied properly.
+function _getFreqRange(settings, halfSampleRate) {
+	if (settings.frequencyRange !== undefined)
+		return settings.frequencyRange;
+	else
+		return [0, 11025];
 }
 
 
