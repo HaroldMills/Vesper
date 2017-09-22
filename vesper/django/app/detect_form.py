@@ -1,6 +1,6 @@
 from django import forms
 
-from vesper.django.app.models import Processor, Station
+from vesper.django.app.models import Station
 import vesper.django.app.model_utils as model_utils
 
 
