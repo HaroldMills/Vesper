@@ -43,6 +43,8 @@ class ClassifyCommand(Command):
         
         for detector, station, mic_output, date in value_tuples:
             
+            # TODO: Use `model_utils.get_clips` instead of
+            # `model_utils.create_clip_iterator` to iterate over clips.
             clips = _create_clip_iterator(detector, station, mic_output, date)
             
             count = clips.count()
@@ -78,8 +80,8 @@ class ClassifyCommand(Command):
                 self._classifier_name, annotation_info, job, processor)
         
         except Exception as e:
-            _log_fatal_exception('Classifier construction failed.', e)
-            raise
+            command_utils.log_and_reraise_fatal_exception(
+                e, 'Classifier construction', 'The archive was not modified.')
         
 
     def _create_clip_query_values_iterator(self):
@@ -90,8 +92,8 @@ class ClassifyCommand(Command):
                 self._start_date, self._end_date)
             
         except Exception as e:
-            _log_fatal_exception(
-                'Clip query values iterator construction failed.', e)
+            command_utils.log_and_reraise_fatal_exception(
+                e, 'Clip query values iterator construction')
             
             
 def _get_annotation_info(name):
@@ -137,24 +139,14 @@ def _create_classifier(name, annotation_info, job, processor):
     return cls(annotation_info, creating_job=job, creating_processor=processor)
     
     
-def _log_fatal_exception(message, exception):
-    _logger.error((
-        '{}\n'
-        'The exception message was:\n'
-        '    {}\n'
-        'The archive was not modified.\n'
-        'See below for exception traceback.').format(
-            message, str(exception)))
-
-
 def _create_clip_iterator(*args):
     
     try:
         return model_utils.create_clip_iterator(*args)
         
     except Exception as e:
-        _log_fatal_exception('Clip iterator construction failed.', e)
-        raise
+        command_utils.log_and_reraise_fatal_exception(
+            e, 'Clip iterator construction')
     
     
 def _create_clip_count_text(count):

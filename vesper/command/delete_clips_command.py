@@ -96,10 +96,9 @@ class DeleteClipsCommand(Command):
                 self._start_date, self._end_date)
             
         except Exception as e:
-            _log_fatal_exception(
-                'Clip query values iterator construction', e,
+            command_utils.log_and_reraise_fatal_exception(
+                e, 'Clip query values iterator construction',
                 'The archive was not modified.')
-            raise
 
     
     def _delete_clips(self, retain_indices):
@@ -160,21 +159,10 @@ class DeleteClipsCommand(Command):
                     clip.delete()
                     
         except Exception as e:
-            
-            _log_fatal_exception(
-                'Deletion of clip "{}"'.format(str(clip)), e,
+            command_utils.log_and_reraise_fatal_exception(
+                e, 'Deletion of clip "{}"'.format(str(clip)),
                 'The clip and associated annotations were not modified.')
-            
-            raise
         
-
-def _log_fatal_exception(action_message, exception, result_message):
-    _logger.error((
-        '{} failed with an exception.\n'
-        'The exception message was:\n'
-        '    {}\n'
-        '{}').format(action_message, str(exception), result_message))
-
 
 def _create_clip_count_text(count):
     suffix = '' if count == 1 else 's'

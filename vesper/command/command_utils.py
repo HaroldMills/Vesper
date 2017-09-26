@@ -1,3 +1,5 @@
+import logging
+
 from vesper.command.command import CommandSyntaxError
 
 
@@ -35,3 +37,20 @@ def get_timing_text(elapsed_time, item_count, items_name):
         # elapsed time is zero
         
         return time_text
+
+
+_logger = logging.getLogger()
+
+
+def log_and_reraise_fatal_exception(exception, action_text, result_text=None):
+    
+    error = _logger.error
+    
+    error('{} failed with an exception.'.format(action_text))
+    error('The exception message was:')
+    error('    {}'.format(str(exception)))
+    
+    if result_text is not None:
+        error(result_text)
+        
+    raise

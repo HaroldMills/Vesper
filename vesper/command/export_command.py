@@ -37,9 +37,10 @@ class ExportCommand(Command):
         try:
             name, arguments = _parse_exporter_spec(self._exporter_spec)
             return _create_exporter(name, arguments)
+        
         except Exception as e:
-            _log_fatal_exception('Exporter construction failed.', e)
-            raise
+            command_utils.log_and_reraise_fatal_exception(
+                e, 'Exporter construction')
             
         
     def execute(self, job_info):
@@ -82,8 +83,8 @@ class ExportCommand(Command):
                 self._start_date, self._end_date)
             
         except Exception as e:
-            _log_fatal_exception(
-                'Clip query values iterator construction failed.', e)
+            command_utils.log_and_reraise_fatal_exception(
+                e, 'Clip query values iterator construction')
             
             
 def _parse_exporter_spec(spec):
@@ -110,24 +111,14 @@ def _create_exporter(name, arguments):
     return cls(arguments)
 
 
-def _log_fatal_exception(message_prefix, exception):
-    _logger.error((
-        '{}\n'
-        'The exception message was:\n'
-        '    {}\n'
-        'The archive was not modified.\n'
-        'See below for exception traceback.').format(
-            message_prefix, str(exception)))
-
-
 def _create_clip_iterator(*args):
     
     try:
         return model_utils.create_clip_iterator(*args)
         
     except Exception as e:
-        _log_fatal_exception('Clip iterator construction failed.', e)
-        raise
+        command_utils.log_and_reraise_fatal_exception(
+            e, 'Clip iterator construction')
     
     
 def _create_clip_count_text(count):
