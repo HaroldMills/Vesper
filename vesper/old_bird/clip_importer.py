@@ -121,11 +121,11 @@ class ClipImporter:
 
     def _log_summary(self, elapsed_time):
         
-        get_units_text = text_utils.get_units_text
+        create_units_text = text_utils.create_units_text
         log = self._logger.info
         
         # Number of audio files processed.
-        units = get_units_text(self._file_count, 'audio file')
+        units = create_units_text(self._file_count, 'audio file')
         timing_text = command_utils.get_timing_text(
             elapsed_time, self._file_count, 'files')
         log('Processed {} {}{}.'.format(self._file_count, units, timing_text))
@@ -133,25 +133,25 @@ class ClipImporter:
         # Number of file path parse errors.
         count = self._file_count - self._parsed_count
         if count != 0:
-            units = get_units_text(count, 'audio file path')
+            units = create_units_text(count, 'audio file path')
             log(('{} {} could not be parsed. See error messages above '
                  'for details.').format(count, units))
         
         # Number of excluded files.
         count = self._parsed_count - self._eligible_count
         if count != 0:
-            units = get_units_text(count, 'audio file was', 'audio files were')
+            units = create_units_text(count, 'audio file was', 'audio files were')
             log('{} {} excluded by date.'.format(count, units))
             
         # Number of failed imports.
         count = self._eligible_count - self._imported_count
         if count != 0:
-            units = get_units_text(count, 'attempted clip import')
+            units = create_units_text(count, 'attempted clip import')
             log('{} {} failed. See error messages above for details.'.format(
                 count, units))
             
         # Number of successful imports.
-        units = get_units_text(self._imported_count, 'clip')
+        units = create_units_text(self._imported_count, 'clip')
         log('{} {} were imported.'.format(self._imported_count, units))
         
         

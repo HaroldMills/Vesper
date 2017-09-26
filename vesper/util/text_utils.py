@@ -65,11 +65,11 @@ def format_number(x):
 
 
 def create_count_text(count, singular_units_text, plural_units_text=None):
-    units = get_units_text(count, singular_units_text, plural_units_text)
+    units = create_units_text(count, singular_units_text, plural_units_text)
     return '{} {}'.format(count, units)
 
 
-def get_units_text(quantity, singular_units_text, plural_units_text=None):
+def create_units_text(quantity, singular_units_text, plural_units_text=None):
     
     if quantity == 1:
         return singular_units_text
