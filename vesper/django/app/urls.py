@@ -28,6 +28,8 @@ urlpatterns = [
         name='export-clip-sound-files'),
     url(r'^delete-recordings/$', views.delete_recordings,
         name='delete-recordings'),
+    url(r'^delete-clips/$', views.delete_clips,
+        name='delete-clips'),
     
     url(r'^stations/$', views.stations, name='stations'),
     

@@ -7,10 +7,12 @@ import itertools
 
 from django.db import transaction
 from django.db.models import Count
+import yaml
 
 from vesper.django.app.models import (
-    AnnotationInfo, Clip, DeviceConnection, Processor, Recording,
-    RecordingChannel, StationDevice, StringAnnotation, StringAnnotationEdit)
+    AnnotationConstraint, AnnotationInfo, Clip, DeviceConnection, Processor,
+    Recording, RecordingChannel, StationDevice, StringAnnotation,
+    StringAnnotationEdit)
 from vesper.singletons import preference_manager
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
@@ -542,3 +544,219 @@ def get_clip_type(clip):
     
     else:
         return None
+
+
+def get_clip_query_annotation_data(
+        value_choice, annotation_name, no_value='Unannotated'):
+    
+    value_data = get_string_annotation_value_data(no_value)
+    
+    if value_choice == value_data.no_value:
+        return annotation_name, None
+    
+    elif value_choice == value_data.ignore_value:
+        return None, None
+    
+    else:
+        return annotation_name, value_choice
+    
+    
+def get_classification_value_data():
+    return get_string_annotation_value_data('Unclassified')
+
+
+def get_string_annotation_value_data(no_value='Unannotated'):
+    wildcard = '*'
+    return Bunch(
+        no_value=no_value,
+        ignore_value=wildcard + ' | ' + no_value,
+        any_value=wildcard,
+        wildcard='*',
+        separator='.')
+    
+
+def get_classification_value_choices(annotation_name):
+    value_data = get_classification_value_data()
+    return get_string_annotation_value_choices(annotation_name, value_data)
+
+
+def get_string_annotation_value_choices(annotation_name, value_data):
+    
+    choices = [
+        value_data.no_value,
+        value_data.ignore_value,
+        value_data.any_value
+    ]
+    
+    values = get_string_annotation_values(annotation_name, value_data)
+    
+    if values is not None:
+        choices += _add_wildcard_string_annotation_values(values, value_data)
+        
+    return choices
+
+
+def get_string_annotation_values(annotation_name, value_data):
+    
+    try:
+        info = AnnotationInfo.objects.get(name=annotation_name)
+    except AnnotationInfo.DoesNotExist:
+        return None
+    
+    constraint = info.constraint
+    
+    if constraint is None:
+        return None
+    
+    else:
+        
+        # We get the annotation values specified by the named constraint
+        # in a two-stage process. In the first stage, we retrieve the
+        # constraint's YAML, and the YAML of all of its ancestors, from
+        # the database, parse it into constraint dictionaries, and
+        # substitute parent constraint dictionaries for parent names.
+        # We also look for inheritance graph cycles in this stage and
+        # raise an exception if one is found.
+        #
+        # In the second stage, we create a flat tuple of annotation
+        # values from the graph of constraint dictionaries produced
+        # by the first stage.
+        #
+        # In retrospect I'm not sure it was really a good idea to
+        # separate the processing into two stages rather than doing
+        # it all in one. I don't think the single-stage processing
+        # would really be any more difficult to write or understand.
+
+        constraint = _get_string_annotation_constraint_dict(constraint.name)
+        values = _get_string_annotation_constraint_values(
+            constraint, value_data)
+        return tuple(sorted(values))
+
+
+def _get_string_annotation_constraint_dict(constraint_name):
+    return _get_string_annotation_constraint_dict_aux(constraint_name, [])
+
+
+def _get_string_annotation_constraint_dict_aux(
+        constraint_name, visited_constraint_names):
+    
+    """
+    Gets the specified string annotation value constraint from the
+    database, parses its YAML to produce a constraint dictionary, and
+    recursively substitutes similarly parsed constraint dictionaries for
+    constraint names in the `extends` value (if there is one) of the result.
+    
+    This method detects cycles in constraint inheritance graphs, raising
+    a `ValueError` when one is found.
+    """
+    
+    if constraint_name in visited_constraint_names:
+        # constraint inheritance graph is cyclic
+        
+        i = visited_constraint_names.index(constraint_name)
+        cycle = ' -> '.join(visited_constraint_names[i:] + [constraint_name])
+        raise ValueError(
+            ('Cycle detected in constraint inheritance graph. '
+             'Cycle is: {}.').format(cycle))
+        
+    constraint = AnnotationConstraint.objects.get(name=constraint_name)
+    constraint = yaml.load(constraint.text)
+    
+    constraint['parents'] = _get_string_annotation_constraint_parents(
+        constraint, visited_constraint_names)
+    
+    return constraint
+        
+    
+def _get_string_annotation_constraint_parents(
+        constraint, visited_constraint_names):
+    
+    augmented_constraint_names = \
+        visited_constraint_names + [constraint['name']]
+    
+    extends = constraint.get('extends')
+    
+    if extends is None:
+        # constraint has no parents
+        
+        return []
+    
+    elif isinstance(extends, str):
+        # `extends` is a parent constraint name
+        
+        return [_get_string_annotation_constraint_dict_aux(
+            extends, augmented_constraint_names)]
+        
+    elif isinstance(extends, list):
+        # `extends` is a list of parent constraint names
+        
+        return [
+            _get_string_annotation_constraint_dict_aux(
+                name, augmented_constraint_names)
+            for name in extends]
+        
+    else:
+        class_name = extends.__class__.__name__
+        raise ValueError(
+            ('Unexpected type "{}" for value of string annotation '
+             'constraint "extends" item.').format(class_name))
+    
+
+def _get_string_annotation_constraint_values(constraint, value_data):
+    
+    parent_value_sets = [
+        _get_string_annotation_constraint_values(parent, value_data)
+        for parent in constraint['parents']]
+        
+    values = _get_string_annotation_constraint_own_values(
+        constraint['values'], value_data)
+    
+    return values.union(*parent_value_sets)
+    
+    
+def _get_string_annotation_constraint_own_values(values, value_data):
+    
+    flattened_values = set()
+    
+    for value in values:
+        
+        if isinstance(value, str):
+            # value is string
+            
+            flattened_values.add(value)
+            
+        elif isinstance(value, dict):
+            
+            for parent, children in value.items():
+                
+                flattened_children = \
+                    _get_string_annotation_constraint_own_values(
+                        children, value_data)
+                
+                flattened_values |= set(
+                    parent + value_data.separator + child
+                    for child in flattened_children)
+                
+    return flattened_values
+
+
+def _add_wildcard_string_annotation_values(values, value_data):
+    prefixes = set()
+    for value in values:
+        prefixes.add(value)
+        prefixes |= _add_wildcard_string_annotation_values_aux(
+            value, value_data)
+    return sorted(prefixes)
+        
+        
+def _add_wildcard_string_annotation_values_aux(value, value_data):
+    separator = value_data.separator
+    wildcard = value_data.wildcard
+    parts = value.split(separator)
+    prefixes = []
+    for i in range(1, len(parts)):
+        prefix = separator.join(parts[:i])
+        prefixes.append(prefix)
+        prefixes.append(prefix + wildcard)
+        prefixes.append(prefix + separator + wildcard)
+    return frozenset(prefixes)

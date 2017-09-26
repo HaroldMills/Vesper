@@ -18,6 +18,7 @@ Classifier:
     
 Command:
     - vesper.command.classify_command.ClassifyCommand
+    - vesper.command.delete_clips_command.DeleteClipsCommand
     - vesper.command.delete_recordings_command.DeleteRecordingsCommand
     - vesper.command.detect_command.DetectCommand
     - vesper.command.export_command.ExportCommand

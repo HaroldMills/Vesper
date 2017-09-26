@@ -1,7 +1,5 @@
-from collections import defaultdict
 from urllib.parse import quote
 import datetime
-import itertools
 import json
 
 from django import forms, urls
@@ -14,10 +12,10 @@ from django.http import (
     HttpResponseNotAllowed, HttpResponseRedirect)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
-import pytz
 import yaml
 
 from vesper.django.app.classify_form import ClassifyForm
+from vesper.django.app.delete_clips_form import DeleteClipsForm
 from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.export_clip_sound_files_form import \
@@ -30,8 +28,7 @@ from vesper.old_bird.export_clip_counts_csv_file_form import \
 from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
-    AnnotationConstraint, AnnotationInfo, Clip, Job, Recording, Station,
-    StringAnnotation)
+    AnnotationInfo, Clip, Job, Station, StringAnnotation)
 from vesper.singletons import job_manager, preference_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
@@ -107,6 +104,9 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
   
       - name: Delete Recordings
         url_name: delete-recordings
+        
+      - name: Delete Clips
+        url_name: delete-clips
   
 ''')
 
@@ -185,13 +185,7 @@ _navbar_items = _create_navbar_items()
 
 _ONE_DAY = datetime.timedelta(days=1)
 _GET_AND_HEAD = ('GET', 'HEAD')
-
-_WILDCARD = '*'
-_NONE = 'Unclassified'
-_IGNORE_ANNOTATION = _WILDCARD + ' | ' + _NONE
-_NO_ANNOTATION = _NONE
-_ANY_ANNOTATION = _WILDCARD
-_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
+_CLASSIFICATION_VALUE_DATA = model_utils.get_classification_value_data()
 
 
 def index(request):
@@ -470,6 +464,46 @@ def _create_delete_recordings_command_spec(form):
             'stations': data['stations'],
             'start_date': data['start_date'],
             'end_date': data['end_date']
+        }
+    }
+
+
+@login_required
+@csrf_exempt
+def delete_clips(request):
+    
+    if request.method in _GET_AND_HEAD:
+        form = DeleteClipsForm()
+        
+    elif request.method == 'POST':
+        
+        form = DeleteClipsForm(request.POST)
+        
+        if form.is_valid():
+            command_spec = _create_delete_clips_command_spec(form)
+            return _start_job(command_spec, request.user)
+            
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+    
+    context = _create_template_context(request, 'Other', form=form)
+    
+    return render(request, 'vesper/delete-clips.html', context)
+    
+    
+def _create_delete_clips_command_spec(form):
+    
+    data = form.cleaned_data
+    
+    return {
+        'name': 'delete_clips',
+        'arguments': {
+            'detectors': data['detectors'],
+            'station_mics': data['station_mics'],
+            'classification': data['classification'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
+            'retain_count': data['retain_count']
         }
     }
 
@@ -785,7 +819,8 @@ def calendar(request):
     detector = _get_calendar_query_object(
         detectors, 'detector', params, preferences)
     
-    classifications = _get_classifications()
+    classifications = \
+        model_utils.get_classification_value_choices('Classification')
     classification = _get_classification(classifications, params, preferences)
     
     annotation_name, annotation_value = \
@@ -847,179 +882,20 @@ def _get_calendar_query_field_value(field_name, params, preferences):
         return preferences.get('calendar_defaults.' + field_name)
             
 
-def _get_classifications():
-    
-
-    # Get classification choices.
-    
-    classifications = [
-        _NO_ANNOTATION,
-        _IGNORE_ANNOTATION,
-        _ANY_ANNOTATION
-    ]
-    
-    values = _get_string_annotation_values('Classification')
-    
-    if values is not None:
-        classifications += _add_wildcard_classifications(values)
-        
-    return classifications
-        
-        
 def _get_classification(classifications, params, preferences):
     
     classification = _get_calendar_query_field_value(
         'classification', params, preferences)
 
     if classification is None or classification not in classifications:
-        classification = _ANY_ANNOTATION
+        classification = _CLASSIFICATION_VALUE_DATA.any_value
         
     return classification
 
 
-def _get_string_annotation_values(annotation_name):
-    
-    try:
-        info = AnnotationInfo.objects.get(name=annotation_name)
-    except AnnotationInfo.DoesNotExist:
-        return None
-    
-    constraint = info.constraint
-    
-    if constraint is None:
-        return None
-    
-    else:
-        
-        # We get the annotation values specified by the named constraint
-        # in a two-stage process. In the first stage, we retrieve the
-        # constraint's YAML, and the YAML of all of its ancestors, from
-        # the database, parse it into constraint dictionaries, and
-        # substitute parent constraint dictionaries for parent names.
-        # We also look for inheritance graph cycles in this stage and
-        # raise an exception if one is found.
-        #
-        # In the second stage, we create a flat tuple of annotation
-        # values from the graph of constraint dictionaries produced
-        # by the first stage.
-        #
-        # In retrospect I'm not sure it was really a good idea to
-        # separate the processing into two stages rather than doing
-        # it all in one. I don't think the single-stage processing
-        # would really be any more difficult to write or understand.
-
-        constraint = _get_string_annotation_constraint_dict(constraint.name)
-        values = _get_string_annotation_constraint_values(constraint)
-        return tuple(sorted(values))
-
-
-def _get_string_annotation_constraint_dict(constraint_name):
-    return _get_string_annotation_constraint_dict_aux(constraint_name, [])
-
-
-def _get_string_annotation_constraint_dict_aux(
-        constraint_name, visited_constraint_names):
-    
-    """
-    Gets the specified string annotation value constraint from the
-    database, parses its YAML to produce a constraint dictionary, and
-    recursively substitutes similarly parsed constraint dictionaries for
-    constraint names in the `extends` value (if there is one) of the result.
-    
-    This method detects cycles in constraint inheritance graphs, raising
-    a `ValueError` when one is found.
-    """
-    
-    if constraint_name in visited_constraint_names:
-        # constraint inheritance graph is cyclic
-        
-        i = visited_constraint_names.index(constraint_name)
-        cycle = ' -> '.join(visited_constraint_names[i:] + [constraint_name])
-        raise ValueError(
-            ('Cycle detected in constraint inheritance graph. '
-             'Cycle is: {}.').format(cycle))
-        
-    constraint = AnnotationConstraint.objects.get(name=constraint_name)
-    constraint = yaml.load(constraint.text)
-    
-    constraint['parents'] = _get_string_annotation_constraint_parents(
-        constraint, visited_constraint_names)
-    
-    return constraint
-        
-    
-def _get_string_annotation_constraint_parents(
-        constraint, visited_constraint_names):
-    
-    augmented_constraint_names = visited_constraint_names + [constraint['name']]
-    
-    extends = constraint.get('extends')
-    
-    if extends is None:
-        # constraint has no parents
-        
-        return []
-    
-    elif isinstance(extends, str):
-        # `extends` is a parent constraint name
-        
-        return [_get_string_annotation_constraint_dict_aux(
-            extends, augmented_constraint_names)]
-        
-    elif isinstance(extends, list):
-        # `extends` is a list of parent constraint names
-        
-        return [
-            _get_string_annotation_constraint_dict_aux(
-                name, augmented_constraint_names)
-            for name in extends]
-        
-    else:
-        class_name = extends.__class__.__name__
-        raise ValueError(
-            ('Unexpected type "{}" for value of string annotation '
-             'constraint "extends" item.').format(class_name))
-    
-
-def _get_string_annotation_constraint_values(constraint):
-    
-    parent_value_sets = [
-        _get_string_annotation_constraint_values(parent)
-        for parent in constraint['parents']]
-        
-    values = _get_string_annotation_constraint_own_values(constraint['values'])
-    
-    return values.union(*parent_value_sets)
-    
-    
-def _get_string_annotation_constraint_own_values(values):
-    
-    flattened_values = set()
-    
-    for value in values:
-        
-        if isinstance(value, str):
-            # value is string
-            
-            flattened_values.add(value)
-            
-        elif isinstance(value, dict):
-            
-            for parent, children in value.items():
-                
-                flattened_children = \
-                    _get_string_annotation_constraint_own_values(children)
-                
-                flattened_values |= set(
-                    parent + _ANNOTATION_VALUE_COMPONENT_SEPARATOR + child
-                    for child in flattened_children)
-                
-    return flattened_values
-
-
 def _get_classification_annotation_info(classification):
     
-    if classification == _IGNORE_ANNOTATION:
+    if classification == _CLASSIFICATION_VALUE_DATA.ignore_value:
         annotation_name = None
         annotation_value = None
         
@@ -1027,7 +903,7 @@ def _get_classification_annotation_info(classification):
         
         annotation_name = 'Classification'
         
-        if classification == _NO_ANNOTATION:
+        if classification == _CLASSIFICATION_VALUE_DATA.no_value:
             annotation_value = None
         else:
             annotation_value = classification
@@ -1084,10 +960,6 @@ def night(request):
   
     recordings = model_utils.get_recordings(station, mic_output, time_interval)
     
-#     rc_pairs = model_utils.get_recording_channel_num_pairs(
-#         station, mic_output, time_interval)
-#     recordings = [recording for recording, _ in rc_pairs]
-    
     recordings_json = _get_recordings_json(recordings, station)
     
     annotation_name, annotation_value = \
@@ -1096,15 +968,8 @@ def night(request):
     clips = model_utils.get_clips(
         station, mic_output, detector, date, annotation_name, annotation_value)
     
-#     clips = _chain_rc_pair_clips(
-#         rc_pairs, time_interval, detector, annotation_name, annotation_value)
-    
     clips_json = _get_clips_json(clips, station)
     
-#     annotations = _get_rc_pair_annotations(
-#         rc_pairs, time_interval, detector, annotation_name, annotation_value)
-#     clips_json = _get_clips_json(annotations, station)
-      
     # Reload presets and preferences to make sure we have the latest.
     # TODO: For efficiency's sake, be more selective about what we reload.
     # We might reload only presets of specified types, for example, or
@@ -1206,18 +1071,6 @@ def _get_recording_dict(recording, utc_to_local):
     }
     
     
-def _chain_rc_pair_clips(
-        rc_pairs, time_interval, detector, annotation_name, annotation_value):
-        
-    clip_iterators = [
-        _get_rc_pair_clips(
-            recording, channel_num, time_interval, detector, annotation_name,
-            annotation_value)
-        for recording, channel_num in rc_pairs]
-
-    return list(itertools.chain.from_iterable(clip_iterators))
-
-
 def _get_clips_json(clips, station):
     
     # See note near the top of this file about why we send local
@@ -1262,196 +1115,6 @@ def _limit_index(index, min_index, max_index):
         return index
     
     
-def _add_wildcard_classifications(classifications):
-    prefixes = set()
-    for c in classifications:
-        prefixes.add(c)
-        prefixes |= _add_wildcard_classifications_aux(c)
-    return sorted(prefixes)
-        
-        
-def _add_wildcard_classifications_aux(classification):
-    parts = classification.split(_ANNOTATION_VALUE_COMPONENT_SEPARATOR)
-    prefixes = []
-    for i in range(1, len(parts)):
-        prefix = _ANNOTATION_VALUE_COMPONENT_SEPARATOR.join(parts[:i])
-        prefixes.append(prefix)
-        prefixes.append(prefix + _WILDCARD)
-        prefixes.append(
-            prefix + _ANNOTATION_VALUE_COMPONENT_SEPARATOR + _WILDCARD)
-    return frozenset(prefixes)
-        
-        
-def _get_clip_counts_old(
-        station, microphone_output, detector, annotation_name,
-        annotation_value):
-
-    time_zone = pytz.timezone(station.time_zone)
-    rm_infos = model_utils.get_recorder_microphone_infos(
-        station, microphone_output)
-    microphone_output_id = microphone_output.id
-    
-    recordings = Recording.objects.filter(station=station)
-    clip_counts = defaultdict(int)
-    
-    for recording in recordings:
-        
-        channel_num = model_utils.get_microphone_output_channel_num(
-            recording, microphone_output_id, rm_infos)
-        
-        if channel_num is not None:
-            
-            # TODO: We assume in this function that a recording starts and
-            # ends the same night. In the future, we may want to support
-            # recordings that span multiple nights. That will look fairly
-            # different from what we do here. This function will be replaced
-            # by a `_get_clip_count` function that accepts the same arguments
-            # as this function plus a `time_interval` argument. The function
-            # will be called once for each night, and the `time_interval`
-            # argument will specify the interval of the night.
-            #
-            # The time interval of an archive will not be determined from
-            # counts for a particular annotation as it is now, but rather
-            # from the intervals of the recordings that are in the archive
-            # for a particular station and microphone output.
-                        
-            start_time = recording.start_time
-            night = _get_night(start_time, time_zone)
-            
-            time_interval = (start_time, recording.end_time)
-            clip_count = _get_clip_count(
-                recording, channel_num, time_interval, detector,
-                annotation_name, annotation_value)
-            
-            clip_counts[night] += clip_count
-                
-#     print('_get_clip_counts:')
-#     nights = sorted(clip_counts.keys())
-#     for night in nights:
-#         print('   ', night, clip_counts[night])
-        
-    return clip_counts          
-
-
-def _get_night(utc_time, time_zone):
-    local_time = utc_time.astimezone(time_zone)
-    night = local_time.date()
-    if local_time.hour < 12:
-        night -= _ONE_DAY
-    return night
-
-
-def _get_clip_count(
-        recording, channel_num, time_interval, detector, annotation_name,
-        annotation_value):
-    
-    if annotation_value == _IGNORE_ANNOTATION or \
-            annotation_value == _NO_ANNOTATION:
-        
-        clips = _get_rc_pair_clips(
-            recording, channel_num, time_interval, detector,
-            annotation_name, annotation_value)
-            
-        return clips.count()
-    
-    else:
-        
-        annotations = _get_annotations(
-            recording, channel_num, time_interval, detector,
-            annotation_name, annotation_value)
-        
-        return annotations.count()
-            
-
-def _get_rc_pair_clips(
-        recording, channel_num, time_interval, detector, annotation_name,
-        annotation_value):
-    
-    start_time, end_time = time_interval
-    
-    clips = Clip.objects.filter(
-        recording=recording,
-        channel_num=channel_num,
-        start_time__lt=end_time,
-        end_time__gt=start_time,
-        creating_processor=detector)
-    
-    if annotation_value != _IGNORE_ANNOTATION:
-        
-        info = AnnotationInfo.objects.get(name=annotation_name)
-        
-        if annotation_value == _NO_ANNOTATION:
-            clips = clips.exclude(string_annotation__info=info)
-        
-        elif annotation_value == _WILDCARD:
-            # querying for any annotation value
-            
-            clips = clips.filter(string_annotation__info=info)
-            
-        elif annotation_value.endswith(_WILDCARD):
-            # querying for annotation values with a particular prefix
-            
-            prefix = annotation_value[:-len(_WILDCARD)]
-            clips = clips.filter(
-                string_annotation__info=info,
-                string_annotation__value__startswith=prefix)
-            
-        else:
-            # querying for a single annotation value
-            
-            clips = clips.filter(
-                string_annotation__info=info,
-                string_annotation__value=annotation_value)
-            
-#     print(clips.query)
-    
-    return clips
-
-
-def _get_annotations(
-        recording, channel_num, time_interval, detector, annotation_name,
-        annotation_value):
-    
-    # Filter annotation values first by clip attributes. This part of the
-    # query is the same regardless of the annotation value.
-    start_time, end_time = time_interval
-    annotations = StringAnnotation.objects.filter(
-        clip__recording=recording,
-        clip__channel_num=channel_num,
-        clip__start_time__lt=end_time,
-        clip__end_time__gt=start_time,
-        clip__creating_processor=detector)
-
-
-    # Filter annotation values by annotation attributes. This part of the
-    # query varies according to the annotation value.
-    
-    info = AnnotationInfo.objects.get(name=annotation_name)
-    
-    if annotation_value == _WILDCARD:
-        # querying for any annotation value
-        
-        annotations = annotations.filter(info=info)
-        
-    elif annotation_value.endswith(_WILDCARD):
-        # querying for annotation values with a particular prefix
-        
-        annotations = annotations.filter(
-            info=info,
-            value__startswith=annotation_value[:-1])
-        
-    else:
-        # querying for a single annotation value
-        
-        annotations = annotations.filter(
-            info=info,
-            value=annotation_value)
-
-#     print(annotations.query)
-    
-    return annotations
-
-
 @login_required
 @csrf_exempt
 def test_command(request):
