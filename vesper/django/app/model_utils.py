@@ -439,14 +439,6 @@ def create_date_iterator(start_date, end_date):
             date += _ONE_DAY
     
     
-def create_clip_iterator(detector, station, mic_output, date):
-    return Clip.objects.filter(
-        station=station,
-        mic_output=mic_output,
-        date=date,
-        creating_processor=detector)
-
-
 @archive_lock.atomic
 @transaction.atomic
 def annotate_clip(

@@ -43,9 +43,7 @@ class ClassifyCommand(Command):
         
         for detector, station, mic_output, date in value_tuples:
             
-            # TODO: Use `model_utils.get_clips` instead of
-            # `model_utils.create_clip_iterator` to iterate over clips.
-            clips = _create_clip_iterator(detector, station, mic_output, date)
+            clips = _get_clips(station, mic_output, detector, date)
             
             count = clips.count()
             count_text = _create_clip_count_text(count)
@@ -139,14 +137,11 @@ def _create_classifier(name, annotation_info, job, processor):
     return cls(annotation_info, creating_job=job, creating_processor=processor)
     
     
-def _create_clip_iterator(*args):
-    
+def _get_clips(*args):
     try:
-        return model_utils.create_clip_iterator(*args)
-        
+        return model_utils.get_clips(*args)
     except Exception as e:
-        command_utils.log_and_reraise_fatal_exception(
-            e, 'Clip iterator construction')
+        command_utils.log_and_reraise_fatal_exception(e, 'Clip query')
     
     
 def _create_clip_count_text(count):
