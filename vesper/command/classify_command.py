@@ -9,6 +9,7 @@ from vesper.django.app.models import AnnotationInfo, Job, Processor
 from vesper.singletons import extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
+import vesper.util.text_utils as text_utils
 
 
 _logger = logging.getLogger()
@@ -46,7 +47,7 @@ class ClassifyCommand(Command):
             clips = _get_clips(station, mic_output, detector, date)
             
             count = clips.count()
-            count_text = _create_clip_count_text(count)
+            count_text = text_utils.create_count_text(count, 'clip')
             
             _logger.info((
                 'Classifier will visit {} for detector "{}", station "{}", '
@@ -144,11 +145,6 @@ def _get_clips(*args):
         command_utils.log_and_reraise_fatal_exception(e, 'Clip query')
     
     
-def _create_clip_count_text(count):
-    suffix = '' if count == 1 else 's'
-    return '{} clip{}'.format(count, suffix)
-        
-
 _LOGGING_PERIOD = 500    # clips
 
 

@@ -7,6 +7,7 @@ from vesper.command.command import Command, CommandSyntaxError
 from vesper.singletons import extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
+import vesper.util.text_utils as text_utils
 
 
 _logger = logging.getLogger()
@@ -54,7 +55,7 @@ class ExportCommand(Command):
             clips = _get_clips(station, mic_output, detector, date)
             
             count = clips.count()
-            count_text = _create_clip_count_text(count)
+            count_text = text_utils.create_count_text(count, 'clip')
             
             _logger.info((
                 'Exporter will visit {} for detector "{}", station "{}", '

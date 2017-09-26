@@ -11,6 +11,7 @@ import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
 import vesper.util.os_utils as os_utils
+import vesper.util.text_utils as text_utils
 
 
 _logger = logging.getLogger()
@@ -128,7 +129,7 @@ class DeleteClipsCommand(Command):
                 index += 1
                 
             deleted_count = count - retained_count
-            count_text = _create_clip_count_text(count)
+            count_text = text_utils.create_count_text(count, 'clip')
             _logger.info((
                 'Deleted {} and retained {} of {} for detector "{}", '
                 'station "{}", mic output "{}", and date {}.').format(
@@ -138,7 +139,7 @@ class DeleteClipsCommand(Command):
             total_retained_count += retained_count
                 
         deleted_count = index - total_retained_count
-        count_text = _create_clip_count_text(index)
+        count_text = text_utils.create_count_text(count, 'clip')
         _logger.info(
             'Deleted {} and retained {} of a total of {}.'.format(
                 deleted_count, total_retained_count, count_text))
@@ -162,8 +163,3 @@ class DeleteClipsCommand(Command):
             command_utils.log_and_reraise_fatal_exception(
                 e, 'Deletion of clip "{}"'.format(str(clip)),
                 'The clip and associated annotations were not modified.')
-        
-
-def _create_clip_count_text(count):
-    suffix = '' if count == 1 else 's'
-    return '{} clip{}'.format(count, suffix)
