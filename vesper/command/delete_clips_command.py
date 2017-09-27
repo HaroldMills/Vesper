@@ -139,7 +139,7 @@ class DeleteClipsCommand(Command):
             total_retained_count += retained_count
                 
         deleted_count = index - total_retained_count
-        count_text = text_utils.create_count_text(count, 'clip')
+        count_text = text_utils.create_count_text(index, 'clip')
         _logger.info(
             'Deleted {} and retained {} of a total of {}.'.format(
                 deleted_count, total_retained_count, count_text))
