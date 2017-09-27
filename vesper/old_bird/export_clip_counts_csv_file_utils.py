@@ -9,6 +9,85 @@ import vesper.old_bird.clip_count_utils as clip_count_utils
 from itertools import count
 
 
+'''
+Clip Count Table preset for Old Bird:
+
+preset_type: Clip Count Table
+preset_type_version: 1.0
+
+default_annotation_name: Classification
+
+columns:
+    - Call*
+    - Call.AMRE
+    - Call.BAWW
+    - Call.BTBW
+    - Call.CAWA
+    - Call.CMWA
+    - Call.COYE
+    - Call.CSWA
+    - Call.DbUp
+    - Call.HOWA
+    - Call.MOWA
+    - Call.NOPA
+    - Call.NWTH
+    - Call.OVEN
+    - Call.SVSP
+    - Call.WIWA
+    - Call.Zeep
+    
+annotation_value_prefixes_hidden_in_column_names: [Call.]
+
+include_column_totals: false
+
+bird_counts:
+    annotation_value_prefixes: [Call.]
+    count_suppression_interval: 60
+
+
+
+Another Clip Count Table preset:
+
+preset_type: Clip Count Table
+preset_type_version: 1.0
+
+default_annotation_name: Classification
+
+columns:
+
+    - type: Total Clip Count
+
+    # Here is an example of using a dictionary instead of a string to
+    # specify an annotated clip count column.
+    - type: Annotated Clip Count
+      annotation_value: Call*
+      
+    # Note that we will want to name this column "Call.*" even though
+    # we specify below that the annotation value prefix "Call." should
+    # hidden in column names. In general, we don't hide a prefix for
+    # an annotation value "<prefix>*".
+    - Call.*
+    - Noise
+    - Tone
+    
+    - type: Unannotated Clip Count
+      name: Unclassified
+    
+annotation_value_prefixes_hidden_in_column_names: [Call.]
+
+include_column_totals: true
+
+bird_count:
+    annotation_value_prefixes: [Call.]
+    count_suppression_interval: 60
+
+
+
+If no columns are specified in a Clip Count Table preset, we create a
+column for each annotation value of the system.
+'''
+
+
 _ANNOTATION_NAME = 'Classification'
 
 _ANNOTATION_VALUES = (
