@@ -31,6 +31,7 @@ from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, Station, StringAnnotation)
 from vesper.singletons import job_manager, preference_manager, preset_manager
 from vesper.util.bunch import Bunch
+import vesper.django.app.annotation_utils as annotation_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.old_bird.export_clip_counts_csv_file_utils as \
@@ -185,7 +186,6 @@ _navbar_items = _create_navbar_items()
 
 _ONE_DAY = datetime.timedelta(days=1)
 _GET_AND_HEAD = ('GET', 'HEAD')
-_CLASSIFICATION_VALUE_DATA = model_utils.get_classification_value_data()
 
 
 def index(request):
@@ -819,12 +819,13 @@ def calendar(request):
     detector = _get_calendar_query_object(
         detectors, 'detector', params, preferences)
     
-    classifications = \
-        model_utils.get_classification_value_choices('Classification')
-    classification = _get_classification(classifications, params, preferences)
+    annotation_value_specs = \
+        model_utils.get_string_annotation_value_specs('Classification')
+    annotation_value_spec = _get_string_annotation_value_spec(
+        annotation_value_specs, params, preferences)
     
     annotation_name, annotation_value = \
-        _get_classification_annotation_info(classification)
+        _get_string_annotation_info(annotation_value_spec)
     periods_json = _get_periods_json(
         sm_pair, detector, annotation_name, annotation_value)
     
@@ -840,8 +841,8 @@ def calendar(request):
         station_mic_name=sm_pair_ui_name,
         detector_names=detector_names,
         detector_name=detector_name,
-        classifications=classifications,
-        classification=classification,
+        classifications=annotation_value_specs,
+        classification=annotation_value_spec,
         periods_json=periods_json)
     
     return render(request, 'vesper/calendar.html', context)
@@ -882,20 +883,21 @@ def _get_calendar_query_field_value(field_name, params, preferences):
         return preferences.get('calendar_defaults.' + field_name)
             
 
-def _get_classification(classifications, params, preferences):
+def _get_string_annotation_value_spec(
+        annotation_value_specs, params, preferences):
     
-    classification = _get_calendar_query_field_value(
+    spec = _get_calendar_query_field_value(
         'classification', params, preferences)
 
-    if classification is None or classification not in classifications:
-        classification = _CLASSIFICATION_VALUE_DATA.any_value
+    if spec is None or spec not in annotation_value_specs:
+        spec = annotation_utils.ALL_CLIPS
         
-    return classification
+    return spec
 
 
-def _get_classification_annotation_info(classification):
+def _get_string_annotation_info(annotation_value_spec):
     
-    if classification == _CLASSIFICATION_VALUE_DATA.ignore_value:
+    if annotation_value_spec == annotation_utils.ALL_CLIPS:
         annotation_name = None
         annotation_value = None
         
@@ -903,10 +905,10 @@ def _get_classification_annotation_info(classification):
         
         annotation_name = 'Classification'
         
-        if classification == _CLASSIFICATION_VALUE_DATA.no_value:
+        if annotation_value_spec == annotation_utils.UNANNOTATED_CLIPS:
             annotation_value = None
         else:
-            annotation_value = classification
+            annotation_value = annotation_value_spec
             
     return annotation_name, annotation_value
         
@@ -945,7 +947,7 @@ def night(request):
     # TODO: Type check and range check query items.
     sm_pair_ui_name = params['station_mic']
     detector_name = params['detector']
-    classification = params['classification']
+    annotation_value_spec = params['classification']
     date_string = params['date']
       
     sm_pairs = model_utils.get_station_mic_output_pairs_dict()
@@ -963,7 +965,7 @@ def night(request):
     recordings_json = _get_recordings_json(recordings, station)
     
     annotation_name, annotation_value = \
-        _get_classification_annotation_info(classification)
+        _get_string_annotation_info(annotation_value_spec)
         
     clips = model_utils.get_clips(
         station, mic_output, detector, date, annotation_name, annotation_value)
@@ -991,7 +993,7 @@ def night(request):
         request, 'View',
         station_mic_name=sm_pair_ui_name,
         detector_name=detector_name,
-        classification=classification,
+        classification=annotation_value_spec,
         date=date_string,
         solar_event_times_json=solar_event_times_json,
         recordings_json=recordings_json,

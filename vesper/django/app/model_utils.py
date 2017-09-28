@@ -15,6 +15,7 @@ from vesper.django.app.models import (
     StringAnnotationEdit)
 from vesper.singletons import preference_manager
 from vesper.util.bunch import Bunch
+import vesper.django.app.annotation_utils as annotation_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.archive_lock as archive_lock
 
@@ -23,7 +24,6 @@ import vesper.util.archive_lock as archive_lock
 # ordered when that is desirable.
 
 
-WILDCARD = '*'
 _ONE_DAY = datetime.timedelta(days=1)
 
 
@@ -343,18 +343,20 @@ def get_clips(
         else:
             # want only annotated clips
             
+            wildcard = annotation_utils.WILDCARD
+            
             # Get all annotated clips.
             clips = clips.filter(string_annotation__info=info)
             
-            if not annotation_value.endswith(WILDCARD):
+            if not annotation_value.endswith(wildcard):
                 # want clips with a particular annotation value
                 
                 clips = clips.filter(string_annotation__value=annotation_value)
                 
-            elif annotation_value != WILDCARD:
+            elif annotation_value != wildcard:
                 # want clips whose annotation values start with a prefix
                 
-                prefix = annotation_value[:-len(WILDCARD)]
+                prefix = annotation_value[:-len(wildcard)]
                 
                 clips = clips.filter(
                     string_annotation__value__startswith=prefix)
@@ -538,57 +540,29 @@ def get_clip_type(clip):
         return None
 
 
-def get_clip_query_annotation_data(
-        value_choice, annotation_name, no_value='Unannotated'):
+def get_clip_query_annotation_data(annotation_name, annotation_value_spec):
     
-    value_data = get_string_annotation_value_data(no_value)
-    
-    if value_choice == value_data.no_value:
+    if annotation_value_spec == annotation_utils.UNANNOTATED_CLIPS:
         return annotation_name, None
     
-    elif value_choice == value_data.ignore_value:
+    elif annotation_value_spec == annotation_utils.ALL_CLIPS:
         return None, None
     
     else:
-        return annotation_name, value_choice
+        return annotation_name, annotation_value_spec
     
     
-def get_classification_value_data():
-    return get_string_annotation_value_data('Unclassified')
-
-
-def get_string_annotation_value_data(no_value='Unannotated'):
-    wildcard = '*'
-    return Bunch(
-        no_value=no_value,
-        ignore_value=wildcard + ' | ' + no_value,
-        any_value=wildcard,
-        wildcard='*',
-        separator='.')
+def get_string_annotation_value_specs(annotation_name):
     
-
-def get_classification_value_choices(annotation_name):
-    value_data = get_classification_value_data()
-    return get_string_annotation_value_choices(annotation_name, value_data)
-
-
-def get_string_annotation_value_choices(annotation_name, value_data):
+    values = _get_string_annotation_values(annotation_name)
     
-    choices = [
-        value_data.no_value,
-        value_data.ignore_value,
-        value_data.any_value
-    ]
+    if values is None:
+        values = []
     
-    values = get_string_annotation_values(annotation_name, value_data)
-    
-    if values is not None:
-        choices += _add_wildcard_string_annotation_values(values, value_data)
-        
-    return choices
+    return annotation_utils.get_string_annotation_value_specs(values)
 
 
-def get_string_annotation_values(annotation_name, value_data):
+def _get_string_annotation_values(annotation_name):
     
     try:
         info = AnnotationInfo.objects.get(name=annotation_name)
@@ -620,8 +594,7 @@ def get_string_annotation_values(annotation_name, value_data):
         # would really be any more difficult to write or understand.
 
         constraint = _get_string_annotation_constraint_dict(constraint.name)
-        values = _get_string_annotation_constraint_values(
-            constraint, value_data)
+        values = _get_string_annotation_constraint_values(constraint)
         return tuple(sorted(values))
 
 
@@ -694,19 +667,18 @@ def _get_string_annotation_constraint_parents(
              'constraint "extends" item.').format(class_name))
     
 
-def _get_string_annotation_constraint_values(constraint, value_data):
+def _get_string_annotation_constraint_values(constraint):
     
     parent_value_sets = [
-        _get_string_annotation_constraint_values(parent, value_data)
+        _get_string_annotation_constraint_values(parent)
         for parent in constraint['parents']]
         
-    values = _get_string_annotation_constraint_own_values(
-        constraint['values'], value_data)
+    values = _get_string_annotation_constraint_own_values(constraint['values'])
     
     return values.union(*parent_value_sets)
     
     
-def _get_string_annotation_constraint_own_values(values, value_data):
+def _get_string_annotation_constraint_own_values(values):
     
     flattened_values = set()
     
@@ -722,33 +694,10 @@ def _get_string_annotation_constraint_own_values(values, value_data):
             for parent, children in value.items():
                 
                 flattened_children = \
-                    _get_string_annotation_constraint_own_values(
-                        children, value_data)
+                    _get_string_annotation_constraint_own_values(children)
                 
                 flattened_values |= set(
-                    parent + value_data.separator + child
+                    parent + annotation_utils.SEPARATOR + child
                     for child in flattened_children)
                 
     return flattened_values
-
-
-def _add_wildcard_string_annotation_values(values, value_data):
-    prefixes = set()
-    for value in values:
-        prefixes.add(value)
-        prefixes |= _add_wildcard_string_annotation_values_aux(
-            value, value_data)
-    return sorted(prefixes)
-        
-        
-def _add_wildcard_string_annotation_values_aux(value, value_data):
-    separator = value_data.separator
-    wildcard = value_data.wildcard
-    parts = value.split(separator)
-    prefixes = []
-    for i in range(1, len(parts)):
-        prefix = separator.join(parts[:i])
-        prefixes.append(prefix)
-        prefixes.append(prefix + wildcard)
-        prefixes.append(prefix + separator + wildcard)
-    return frozenset(prefixes)
