@@ -47,6 +47,10 @@ unannotated ones.
 """
 
 
+import itertools
+import re
+
+
 SEPARATOR = '.'
 """Annotation value component separator."""
 
@@ -65,6 +69,8 @@ UNANNOTATED_CLIPS = 'Unclassified'
 
 ALL_CLIPS = ANNOTATED_CLIPS + ' | ' + UNANNOTATED_CLIPS
 """Annotation value spec for all clips, whether annotated or not."""
+
+_REGEXP_THAT_NEVER_MATCHES = 'a^'
 
 
 def get_string_annotation_value_specs(annotation_values):
@@ -100,3 +106,35 @@ def _get_string_annotation_value_specs(annotation_value):
         specs.append(spec + WILDCARD)
         specs.append(spec + SEPARATOR + WILDCARD)
     return frozenset(specs)
+
+
+def create_string_annotation_values_regexp(annotation_value_specs):
+    term_lists = [_create_regexp_terms(s) for s in annotation_value_specs]
+    terms_list = list(itertools.chain.from_iterable(term_lists))
+    if len(terms_list) == 0:
+        return re.compile(_REGEXP_THAT_NEVER_MATCHES)
+    else:
+        return re.compile('|'.join(terms_list))
+
+
+def _create_regexp_terms(annotation_value_spec):
+    
+    if annotation_value_spec == WILDCARD:
+        return [r'']
+    
+    elif annotation_value_spec.endswith(SEPARATOR + WILDCARD):
+        prefix = _escape(annotation_value_spec[:-len(WILDCARD)])
+        return [r'^{}.+'.format(prefix)]
+    
+    elif annotation_value_spec.endswith(WILDCARD):
+        prefix = _escape(annotation_value_spec[:-len(WILDCARD)])
+        return [
+            r'^{}$'.format(prefix),
+            r'^{}.+'.format(prefix + _escape(SEPARATOR))]
+
+    else:
+        return [_escape(annotation_value_spec)]
+
+
+def _escape(s):
+    return s.replace('.', r'\.')
