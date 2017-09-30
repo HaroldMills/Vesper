@@ -22,6 +22,8 @@ from vesper.django.app.export_clip_sound_files_form import \
     ExportClipSoundFilesForm
 from vesper.django.app.export_clips_csv_file_form import \
     ExportClipsCsvFileForm
+from vesper.django.app.export_clips_hdf5_file_form import \
+    ExportClipsHdf5FileForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm
@@ -421,6 +423,50 @@ def _create_export_clip_sound_files_command_spec(form):
                         'name': 'Simple Clip File Name Formatter',
                         # TODO: Add arguments for format control?
                     }
+                }
+            },
+            'detectors': data['detectors'],
+            'station_mics': data['station_mics'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date']
+        }
+    }
+
+
+@login_required
+@csrf_exempt
+def export_clips_hdf5_file(request):
+    
+    if request.method in _GET_AND_HEAD:
+        form = ExportClipsHdf5FileForm()
+         
+    elif request.method == 'POST':
+  
+        form = ExportClipsHdf5FileForm(request.POST)
+          
+        if form.is_valid():
+            command_spec = _create_export_clips_hdf5_file_command_spec(form)
+            return _start_job(command_spec, request.user)
+             
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+     
+    context = _create_template_context(request, 'Export', form=form)
+     
+    return render(request, 'vesper/export-clips-hdf5-file.html', context)
+
+
+def _create_export_clips_hdf5_file_command_spec(form):
+    
+    data = form.cleaned_data
+    
+    return {
+        'name': 'export',
+        'arguments': {
+            'exporter': {
+                'name': 'Clips HDF5 File',
+                'arguments': {
+                    'output_file_path': data['output_file_path'],
                 }
             },
             'detectors': data['detectors'],

@@ -34,6 +34,7 @@ Detector:
 Exporter:
     - vesper.command.clip_sound_files_exporter.ClipSoundFilesExporter
     - vesper.mpg_ranch.clips_csv_file_exporter.ClipsCsvFileExporter
+    - vesper.command.clips_hdf5_file_exporter.ClipsHdf5FileExporter
     
 Importer:
     - vesper.command.archive_data_importer.ArchiveDataImporter

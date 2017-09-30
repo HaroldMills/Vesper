@@ -26,6 +26,8 @@ urlpatterns = [
         name='export-clips-csv-file'),
     url(r'^export-clip-sound-files/$', views.export_clip_sound_files,
         name='export-clip-sound-files'),
+    url(r'^export-clips-hdf5-file/$', views.export_clips_hdf5_file,
+        name='export-clips-hdf5-file'),
     url(r'^delete-recordings/$', views.delete_recordings,
         name='delete-recordings'),
     url(r'^delete-clips/$', views.delete_clips,
