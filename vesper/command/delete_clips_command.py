@@ -40,7 +40,7 @@ class DeleteClipsCommand(Command):
 
         self._annotation_name, self._annotation_value = \
             model_utils.get_clip_query_annotation_data(
-                self._classification, 'Classification', 'Unclassified')
+                'Classification', self._classification)
 
         retain_indices = self._get_retain_clip_indices()
         
