@@ -5,11 +5,6 @@ from vesper.util.time_frequency_analysis import TimeFrequencyAnalysis
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-# TODO: Compare this spectrogram carefully to that computed by the
-# Matplotlib `specgram` function, in terms of both functionality
-# and efficiency.
-
-
 class Spectrogram(TimeFrequencyAnalysis):
      
      
@@ -38,10 +33,12 @@ class Spectrogram(TimeFrequencyAnalysis):
                 This parameter must be a Python object with the
                 following attributes:
              
-                    window : NumPy array
+                    window : `object`
                         the data window to use for the spectrogram.
                  
-                        The data window may be of any length.
+                        The data window may be of any length. It must
+                        have a `samples` attribute that is a NumPy
+                        array of window samples.
                  
                     hop_size : `int`
                         the spectrogram hop size in samples.
@@ -51,9 +48,9 @@ class Spectrogram(TimeFrequencyAnalysis):
                         or `None`.
                          
                         The DFT size must be either a power of two
-                        or `None`. If `None`, the DFT size is taken to
-                        be the smallest power of two that is at least
-                        the window size.
+                        or `None`. If `None`, the implied DFT size is
+                        the smallest power of two that is at least the
+                        window size.
                          
                     ref_power : `float`
                         the reference power for the spectrogram, or `None`.
@@ -67,7 +64,7 @@ class Spectrogram(TimeFrequencyAnalysis):
      
      
         self.dft_size, freqs = tfa_utils.get_dft_analysis_data(
-            sound.sample_rate, params.dft_size, params.window.size)
+            sound.sample_rate, params.window.size, params.dft_size)
         
         self.ref_power = params.ref_power
              
@@ -81,10 +78,10 @@ class Spectrogram(TimeFrequencyAnalysis):
             self.sound.samples, self.window.samples, self.hop_size,
             self.dft_size)
         
-        tfa_utils.adjust_spectrogram_powers(spectra, self.dft_size)
+        tfa_utils.scale_spectrogram(spectra, out=spectra)
         
         if self.ref_power is not None:
-            tfa_utils.linear_to_log(spectra, self.ref_power, spectra)
+            tfa_utils.linear_to_log(spectra, self.ref_power, out=spectra)
             
         return spectra
                      
@@ -96,4 +93,4 @@ class Spectrogram(TimeFrequencyAnalysis):
     
     @property
     def freq_spacing(self):
-        return self.sound.sample_rate / (self.dft_size + 1)
+        return self.sound.sample_rate / self.dft_size
