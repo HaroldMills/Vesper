@@ -10,8 +10,8 @@ import vesper.util.os_utils as os_utils
 
 _DATA_DIR_PATH = Path(test_utils.get_test_data_dir_path(__file__))
 _SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'Settings.yaml'
-_NON_ARRAY_SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'NonArraySettings.yaml'
-_MALFORMED_SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'MalformedSettings.yaml'
+_NON_ARRAY_SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'Non-array Settings.yaml'
+_MALFORMED_SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'Malformed Settings.yaml'
 
 
 class SettingsTests(TestCase):
