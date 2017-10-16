@@ -9,6 +9,9 @@ import vesper.util.os_utils as os_utils
 
 
 _DATA_DIR_PATH = Path(test_utils.get_test_data_dir_path(__file__))
+_EMPTY_SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'Empty Settings.yaml'
+_COMMENTED_OUT_SETTINGS_FILE_PATH = \
+    _DATA_DIR_PATH / 'Commented-out Settings.yaml'
 _SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'Settings.yaml'
 _NON_ARRAY_SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'Non-array Settings.yaml'
 _MALFORMED_SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'Malformed Settings.yaml'
@@ -50,11 +53,36 @@ class SettingsTests(TestCase):
         self.assertEqual(s.object_setting.two, 2)
 
     
+    def test_create_from_empty_yaml(self):
+        settings = Settings.create_from_yaml('')
+        self._check_empty_settings(settings)
+        
+        
+    def _check_empty_settings(self, settings):
+        self.assertEqual(len(settings.__dict__), 0)
+        
+        
+    def test_create_from_commented_out_yaml(self):
+        settings = Settings.create_from_yaml('#')
+        self._check_empty_settings(settings)
+        
+        
     def test_create_from_yaml(self):
         contents = os_utils.read_file(_SETTINGS_FILE_PATH)
         settings = Settings.create_from_yaml(contents)
         self._check_settings(settings)
 
+        
+    def test_create_from_empty_yaml_file(self):
+        settings = Settings.create_from_yaml_file(_EMPTY_SETTINGS_FILE_PATH)
+        self._check_empty_settings(settings)
+        
+        
+    def test_create_from_commented_out_yaml_file(self):
+        settings = Settings.create_from_yaml_file(
+            _COMMENTED_OUT_SETTINGS_FILE_PATH)
+        self._check_empty_settings(settings)
+        
         
     def test_create_from_yaml_file(self):
         settings = Settings.create_from_yaml_file(_SETTINGS_FILE_PATH)

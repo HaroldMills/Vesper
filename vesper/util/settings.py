@@ -57,7 +57,10 @@ class Settings(Bunch):
             raise ValueError(
                 'YAML parse failed. Error message was:\n{}'.format(str(e)))
         
-        if not isinstance(d, dict):
+        if d is None:
+            d = dict()
+            
+        elif not isinstance(d, dict):
             raise ValueError('Settings must be a YAML associative array.')
         
         return Settings.create_from_dict(d)
