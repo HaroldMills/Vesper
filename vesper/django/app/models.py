@@ -1,9 +1,9 @@
 """Vesper Django model classes."""
 
 
-from pathlib import Path
 import datetime
 import json
+import os.path
 
 from django.contrib.auth.models import User
 from django.db.models import (
@@ -500,11 +500,11 @@ class Job(Model):
     @property
     def log_file_path(self):
         file_name = 'Job {}.log'.format(self.id)
-        return archive_paths.job_logs_dir_path / file_name
+        return str(archive_paths.job_logs_dir_path / file_name)
         
     @property
     def log(self):
-        if not self.log_file_path.exists():
+        if not os.path.exists(self.log_file_path):
             return ''
         else:
             return os_utils.read_file(self.log_file_path)            
@@ -785,7 +785,7 @@ def _create_clip_file_path(clip_id):
     id_ = ' '.join(id_parts)
     file_name = 'Clip {}.wav'.format(id_)
     path_parts.append(file_name)
-    return archive_paths.clips_dir_path / Path(*path_parts)
+    return os.path.join(str(archive_paths.clips_dir_path), *path_parts)
 
 
 def _get_clip_id_parts(num, format_):

@@ -71,7 +71,7 @@ def _get_item(preferences, name):
             
 def _load_preferences(dir_path):
     
-    path = dir_path / _PREFERENCE_FILE_NAME
+    path = os.path.join(dir_path, _PREFERENCE_FILE_NAME)
     defaults_message = 'Will use default preference values.'
     
     if not os.path.exists(path):
