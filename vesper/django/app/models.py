@@ -1,9 +1,9 @@
 """Vesper Django model classes."""
 
 
+from pathlib import Path
 import datetime
 import json
-import os.path
 
 from django.contrib.auth.models import User
 from django.db.models import (
@@ -12,13 +12,12 @@ from django.db.models import (
     SET_NULL, TextField)
 import pytz
 
-from vesper.django.project.settings import VESPER_CLIPS_DIR_FORMAT
+from vesper.archive_paths import archive_paths
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.signal_utils as signal_utils
-import vesper.util.vesper_path_utils as vesper_path_utils
 
 
 # A note on the instance creation fields:
@@ -460,9 +459,6 @@ class Processor(Model):
         db_table = 'vesper_processor'
 
     
-_JOB_LOGS_DIR_PATH = vesper_path_utils.get_archive_path('Logs', 'Jobs')
-
-
 # A *command* is a specification of something to be executed, possibly
 # more than once. A *job* is a particular execution of a command.
 #
@@ -504,11 +500,11 @@ class Job(Model):
     @property
     def log_file_path(self):
         file_name = 'Job {}.log'.format(self.id)
-        return os.path.join(_JOB_LOGS_DIR_PATH, file_name)
+        return archive_paths.job_logs_dir_path / file_name
         
     @property
     def log(self):
-        if not os.path.exists(self.log_file_path):
+        if not self.log_file_path.exists():
             return ''
         else:
             return os_utils.read_file(self.log_file_path)            
@@ -780,13 +776,16 @@ class Clip(Model):
         return signal_utils.get_span(self.length, self._sample_rate)
 
 
+_CLIPS_DIR_FORMAT = (3, 3, 3)
+
+
 def _create_clip_file_path(clip_id):
-    id_parts = _get_clip_id_parts(clip_id, VESPER_CLIPS_DIR_FORMAT)
+    id_parts = _get_clip_id_parts(clip_id, _CLIPS_DIR_FORMAT)
     path_parts = id_parts[:-1]
     id_ = ' '.join(id_parts)
     file_name = 'Clip {}.wav'.format(id_)
     path_parts.append(file_name)
-    return vesper_path_utils.get_archive_path('Clips', *path_parts)
+    return archive_paths.clips_dir_path / Path(*path_parts)
 
 
 def _get_clip_id_parts(num, format_):

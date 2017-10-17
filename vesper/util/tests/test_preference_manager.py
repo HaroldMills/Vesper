@@ -1,9 +1,11 @@
+from pathlib import Path
+
 from vesper.tests.test_case import TestCase
 from vesper.util.preference_manager import PreferenceManager
 import vesper.tests.test_utils as test_utils
 
 
-_DATA_DIR_PATH = test_utils.get_test_data_dir_path(__file__)
+_DATA_DIR_PATH = Path(test_utils.get_test_data_dir_path(__file__))
 
 
 class PreferenceManagerTests(TestCase):

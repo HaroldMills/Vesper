@@ -68,29 +68,48 @@ transactions at all.
 
 from multiprocessing import RLock
 
+from vesper.archive_settings import archive_settings
+
+
+class DoNothingLock:
+     
+    """Do-nothing replacement for RLock."""
+    
+    def __enter__(self):
+        pass
+  
+    def __exit__(self, *args):
+        pass
+
 
 _lock = None
 
 
 def create_lock():
-    set_lock(RLock())
     
-    
+    if archive_settings.database.engine == 'SQLite':
+        lock_class = RLock
+    else:
+        lock_class = DoNothingLock
+        
+    set_lock(lock_class())
+
+
 def set_lock(lock):
     global _lock
     _lock = lock
-    
-    
+     
+     
 def get_lock():
     _check_lock()
     return _lock
-
-
+ 
+ 
 def _check_lock():
     if _lock is None:
         raise ValueError('Archive lock has not yet been created or set.')
-
-
+ 
+ 
 def atomic(arg=None):
     
     """
@@ -126,23 +145,3 @@ def atomic(arg=None):
         
         raise ValueError(
             'Decorator argument does not appear to be a callable.')
-
-
-# from multiprocessing import Semaphore
-#
-#
-# _lock = Semaphore(1)
-
-
-# class _NoOpContextManager:
-#
-#
-#     def __enter__(self):
-#         pass
-#
-#
-#     def __exit__(self, *args):
-#         pass
-#
-#
-# _lock = _NoOpContextManager()

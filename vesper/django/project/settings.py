@@ -13,26 +13,8 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 
 import os
 
-
-# Path of Vesper archive to be served.
-VESPER_ARCHIVE_DIR_PATH = os.getcwd()
-
-# Archive database file name.
-VESPER_ARCHIVE_DATABASE_FILE_NAME = 'Archive Database.sqlite'
-
-# TODO: It would be good to support clip and recording storage policies
-# as Vesper extensions. Some possible examples of clip storage policies:
-#
-#     1. Don't store clips separate from recordings, but rather extract
-#        them from their recordings when needed.
-#
-#     2. Store clips in batches in HDF5 files.
-#
-#     3. Store clips in files in a directory hierarchy organized by clip ID.
-#
-#     4. Store clips in files in a directory hierarchy organized by
-#        clip station and time.
-VESPER_CLIPS_DIR_FORMAT = (3, 3, 3)
+from vesper.archive_settings import archive_settings
+from vesper.archive_paths import archive_paths
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -112,13 +94,36 @@ WSGI_APPLICATION = 'vesper.django.project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(
-            VESPER_ARCHIVE_DIR_PATH, VESPER_ARCHIVE_DATABASE_FILE_NAME),
-    }
-}
+def _create_databases_setting_value():
+    
+    db = archive_settings.database
+    
+    if db.engine == 'SQLite':
+        
+        value = {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': str(archive_paths.sqlite_database_file_path)
+        }
+        
+    elif db.engine == 'PostgreSQL':
+        
+        value = {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': db.name,
+            'USER': db.user,
+            'PASSWORD': db.password,
+            'HOST': db.host,
+            'PORT': db.port
+        }
+        
+    else:
+        raise ValueError(
+            'Unrecognized database engine "{}".'.format(db.engine))
+        
+    return { 'default': value }
+
+
+DATABASES = _create_databases_setting_value()
 
 
 # Password validation

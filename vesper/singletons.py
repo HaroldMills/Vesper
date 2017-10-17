@@ -1,12 +1,12 @@
 """Module containing Vesper singleton objects."""
 
 
+from vesper.archive_paths import archive_paths
 from vesper.command.job_manager import JobManager
 from vesper.util.extension_manager import ExtensionManager
 from vesper.util.preference_manager import PreferenceManager
 from vesper.util.preset_manager import PresetManager
 from vesper.util.singleton import Singleton
-import vesper.util.vesper_path_utils as vesper_path_utils
 
 
 _EXTENSIONS_SPEC = '''
@@ -65,7 +65,7 @@ extension_manager = Singleton(_create_extension_manager)
 def _create_preset_manager():
     preset_types = extension_manager.instance.get_extensions('Preset')
     preset_types = list(preset_types.values())
-    presets_dir_path = vesper_path_utils.get_archive_path('Presets')
+    presets_dir_path = archive_paths.presets_dir_path
     return PresetManager(preset_types, presets_dir_path)
     
     
@@ -73,7 +73,7 @@ preset_manager = Singleton(_create_preset_manager)
 
 
 def _create_preference_manager():
-    preferences_dir_path = vesper_path_utils.get_archive_path()
+    preferences_dir_path = archive_paths.archive_dir_path
     return PreferenceManager(preferences_dir_path)
 
 

@@ -8,7 +8,8 @@
 import os
 import sys
 
-import vesper.django.project.settings as settings
+from vesper.archive_settings import archive_settings
+from vesper.archive_paths import archive_paths
 
 
 def main():
@@ -16,7 +17,7 @@ def main():
     args = sys.argv
     
     if 'createsuperuser' in args or 'runserver' in args:
-        _check_cwd()
+        _check_archive_dir()
     
     os.environ.setdefault(
         'DJANGO_SETTINGS_MODULE', 'vesper.django.project.settings')
@@ -25,21 +26,24 @@ def main():
     execute_from_command_line(sys.argv)
     
     
-def _check_cwd():
+def _check_archive_dir():
     
     """
-    Checks that the current working directory is a Vesper archive directory.
+    Checks that the purported archive directory appears to contain a
+    Vesper archive.
     """
     
-    current_dir_path = os.getcwd()
-    database_file_path = os.path.join(
-        current_dir_path, settings.VESPER_ARCHIVE_DATABASE_FILE_NAME)
-    if not os.path.exists(database_file_path):
-        print((
-            'The current directory "{}" does not appear to be a Vesper '
-            'archive directory. Please run your command again in an '
-            'archive directory.').format(current_dir_path))
-        sys.exit(1)
+    if archive_settings.database.engine == 'SQLite':
+        
+        database_file_path = archive_paths.sqlite_database_file_path
+        
+        if not database_file_path.exists():
+            
+            print((
+                'The directory "{}" does not appear to be a Vesper archive '
+                'directory. Please run your command again in an archive '
+                'directory.').format(archive_paths.archive_dir_path))
+            sys.exit(1)
 
 
 if __name__ == '__main__':
