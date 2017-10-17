@@ -20,6 +20,7 @@ setup(
     install_requires=[
         'django>=1.11',
         'django<1.12',
+        'h5py',
         'jsonschema',
         'numpy',
         'pyephem',
