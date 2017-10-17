@@ -16,6 +16,13 @@ def main():
     
     args = sys.argv
     
+    print('in manage.py 1', __file__, args)
+    
+    if args[0].endswith('vesper_admin'):
+        args[0] = __file__
+        
+    print('in manage.py 2', __file__, args)
+
     if 'createsuperuser' in args or 'runserver' in args:
         _check_archive_dir()
     
@@ -23,7 +30,7 @@ def main():
         'DJANGO_SETTINGS_MODULE', 'vesper.django.project.settings')
 
     from django.core.management import execute_from_command_line
-    execute_from_command_line(sys.argv)
+    execute_from_command_line(args)
     
     
 def _check_archive_dir():
