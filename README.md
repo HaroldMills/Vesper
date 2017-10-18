@@ -10,3 +10,5 @@ Vesper is a web application. As such, it comprises two parts, a *server* and a *
 Vesper is not ready for widespread use just yet, but for the intrepid there are preliminary [installation instructions](https://github.com/HaroldMills/Vesper/wiki/Installing-and-Updating-Vesper).
 
 Many thanks to [MPG Ranch](http://mpgranch.com), [Old Bird](http://oldbird.org), and an anonymous donor for financial support of the Vesper project.
+
+![Image of Zenodo DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.1020572.svg)
