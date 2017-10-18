@@ -16,13 +16,22 @@ def main():
     
     args = sys.argv
     
-    print('in manage.py 1', __file__, args)
-    
+    # We did not used to do this, but when we switched to version 3 of
+    # the `conda-build` package the command `vesper_admin runserver`
+    # began failing on Windows (at least, and also on macOS, if I
+    # remember correctly) with an error message indicating that
+    # `python.exe` could not find `vesper_admin` in its environment's
+    # `Scripts` directory (indeed, there is no such file there). The
+    # code below is a workaround for that problem. Interestingly,
+    # the command `vesper_admin` (with no arguments) continued to work
+    # as before.
+    #
+    # In the future, we might just want to do away with the
+    # `vesper_admin` entry point, which is just a shorthand for
+    # `python -m vesper.django.manage`.
     if args[0].endswith('vesper_admin'):
         args[0] = __file__
         
-    print('in manage.py 2', __file__, args)
-
     if 'createsuperuser' in args or 'runserver' in args:
         _check_archive_dir()
     
