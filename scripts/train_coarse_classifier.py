@@ -14,12 +14,6 @@ import vesper.util.data_windows as data_windows
 import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
-# Uncomment the following when using TensorFlow directly rather than
-# via Keras.
-# import math
-# import tensorflow as tf
-# from vesper.util.batch_iterator import BatchIterator
-
 
 _FILE_PATH = Path('/Users/Harold/Desktop/clips.hdf5')
 
@@ -136,9 +130,6 @@ def _main():
     print('Testing classifier...')
     _test_classifier(model, train_set, 'training')
     _test_classifier(model, val_set, 'validation')
-
-#     print('Training classifier...')
-#     _train_classifier_tf(train_set, val_set, settings)
 
     print()
         
@@ -404,105 +395,6 @@ def _compute_statistics(targets, activations, threshold=.5):
     recall = num_true_positives / num_calls
     
     return accuracy, precision, recall
-
-
-# def _train_classifier_tf(train_set, val_set, settings):
-#         
-#     n = train_set.features.shape[1]
-#          
-#     # Create placeholders for features and targets.
-#     x = tf.placeholder(tf.float32, [None, n])
-#     y = tf.placeholder(tf.float32, [None, 1])
-#         
-#     Ws, _, zs, as_ = _create_classifier_layers_tf(
-#         x, settings.hidden_layer_sizes)
-#         
-#     # Create loss function.
-#     cross_entropy = tf.nn.weighted_cross_entropy_with_logits(y, zs[-1], 1)
-#     beta = settings.regularization_beta
-#     weight_norms_sum = sum(tf.nn.l2_loss(W) for W in Ws)
-#     regularization = beta * weight_norms_sum
-#     loss = tf.reduce_mean(cross_entropy + regularization)
-#     # loss = tf.reduce_mean(-(y * tf.log(h) + (1 - y) * tf.log(1 - h)))
-#         
-#     # Create training step.
-#     optimizer = tf.train.AdamOptimizer()
-#     step = optimizer.minimize(loss)
-#          
-#     session = tf.InteractiveSession()
-#     tf.global_variables_initializer().run()
-#          
-#     # Train model, reporting test accuracy after each epoch.
-#         
-#     for epoch_num in range(settings.num_epochs):
-#         
-#         batches = BatchIterator(train_set, settings.batch_size)
-#         
-#         for features, targets in batches:
-#                 
-#             targets.shape = (len(targets), 1)
-#             session.run(step, feed_dict={x: features, y: targets})
-#             
-#         train_accuracy, train_precision, train_recall = \
-#             _test_classifier_tf(train_set, session, x, y, as_[-1])
-#                 
-#         val_accuracy, val_precision, val_recall = \
-#             _test_classifier_tf(val_set, session, x, y, as_[-1])
-#                 
-#         print((
-#             'epoch {}:    {:.3f} {:.3f} {:.3f}    '
-#             '{:.3f} {:.3f} {:.3f}').format(
-#                 epoch_num + 1,
-#                 train_accuracy, train_precision, train_recall,
-#                 val_accuracy, val_precision, val_recall))
-#     
-#     
-# def _create_classifier_layers_tf(x, hidden_layer_sizes):
-#         
-#     layer_sizes = hidden_layer_sizes + [1]
-#     num_layers = len(layer_sizes)
-#         
-#     Ws = []
-#     bs = []
-#     zs = []
-#     as_ = []
-#         
-#     for i, layer_size in enumerate(layer_sizes):
-#             
-#         input_ = x if i == 0 else as_[-1]
-#         final_layer = i == num_layers - 1
-#             
-#         W, b, z, a = _create_classifier_layer_tf(
-#             input_, layer_size, final_layer)
-#             
-#         Ws.append(W)
-#         bs.append(b)
-#         zs.append(z)
-#         as_.append(a)
-#             
-#     return Ws, bs, zs, as_
-#             
-#         
-# def _create_classifier_layer_tf(input_, layer_size, final_layer):
-#         
-#     num_inputs = input_.get_shape().as_list()[1]
-#     num_outputs = layer_size
-#     activation_function = tf.sigmoid if final_layer else tf.nn.relu
-#         
-#     # Create and initialize layer.
-#     W = tf.Variable(tf.truncated_normal(
-#         [num_inputs, num_outputs], stddev=1 / math.sqrt(num_inputs)))
-#     b = tf.Variable(tf.zeros([num_outputs]))
-#     z = tf.matmul(input_, W) + b
-#     a = activation_function(z)
-#         
-#     return W, b, z, a
-#     
-#     
-# def _test_classifier_tf(data_set, session, x, y, h):
-#     feed_dict = {x: data_set.features, y: data_set.targets}
-#     activations = session.run(h, feed_dict=feed_dict)
-#     return _compute_statistics(data_set.targets, activations)
 
 
 if __name__ == '__main__':
