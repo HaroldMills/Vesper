@@ -80,7 +80,7 @@ def _main():
     settings = _SETTINGS['Tseep']
     
     print('Reading data set...')
-    waveforms, classifications = _read_data_set()
+    waveforms, classifications = _read_data_set(_FILE_PATH)
     
     num_clips = waveforms.shape[0]
     num_calls = int(np.sum(classifications))
@@ -90,6 +90,35 @@ def _main():
         'Read {} clips, {} calls and {} noises.'.format(
             num_clips, num_calls, num_noises))
     
+    features = _compute_features(waveforms, settings)
+    
+    print('Creating data sets...')
+    train_set, val_set, _ = \
+        _create_data_sets(features, classifications, settings)
+        
+    print('Training classifier...')
+    model = _train_classifier(train_set, settings)
+       
+    print('Testing classifier...')
+    _test_classifier(model, train_set, 'training')
+    _test_classifier(model, val_set, 'validation')
+
+    print()
+        
+
+def _read_data_set(file_path):
+    
+    with h5py.File(file_path) as f:
+        waveforms = f['samples'][...]
+        classifications = f['classifications'][...]
+        
+    return waveforms, classifications
+    
+        
+def _compute_features(waveforms, settings):
+    
+    num_examples = len(waveforms)
+    
     print('Trimming waveforms...')
     waveforms = _trim_waveforms(waveforms, settings)
     
@@ -98,13 +127,13 @@ def _main():
     spectrograms = _compute_spectrograms(waveforms, settings)
     elapsed_time = time.time() - start_time
     
-    spectrogram_rate = num_clips / elapsed_time
+    spectrogram_rate = num_examples / elapsed_time
     spectrum_rate = spectrogram_rate * spectrograms[0].shape[0]
     print((
         'Computed {} spectrograms of shape {} in {:.1f} seconds, an average '
         'of {:.1f} spectrograms and {:.1f} spectra per second.').format(
-            num_clips, spectrograms[0].shape, elapsed_time, spectrogram_rate,
-            spectrum_rate))
+            num_examples, spectrograms[0].shape, elapsed_time,
+            spectrogram_rate, spectrum_rate))
     
     print('Trimming spectrogram frequencies...')
     print('    input shape {}'.format(spectrograms.shape))
@@ -120,66 +149,12 @@ def _main():
     print('    {}'.format(normalization))
     print('    {} {}'.format(spectrograms.mean(), spectrograms.std()))
     
-    print('Creating data sets...')
-    train_set, val_set, _ = \
-        _create_data_sets(spectrograms, classifications, settings)
-        
-    print('Training classifier...')
-    model = _train_classifier(train_set, settings)
-       
-    print('Testing classifier...')
-    _test_classifier(model, train_set, 'training')
-    _test_classifier(model, val_set, 'validation')
+    print('Flattening spectrograms...')
+    features = spectrograms.reshape((num_examples, -1))
+    
+    return features
+    
 
-    print()
-        
-
-def _create_data_sets(spectrograms, classifications, settings):
-    
-    num_examples, num_spectra, num_bins = spectrograms.shape
-    
-    assert(len(classifications) == num_examples)
-    
-    # Shuffle examples.
-    permutation = np.random.permutation(num_examples)
-    spectrograms = spectrograms[permutation]
-    classifications = classifications[permutation]
-    
-    # Flatten spectrograms to make features.
-    features = spectrograms.reshape((num_examples, num_spectra * num_bins))
-    
-    # Targets are just classifications, each in {0, 1}.
-    targets = classifications
-    
-    val_size = settings.validation_set_size
-    test_size = settings.test_set_size
-    test_start = num_examples - test_size
-    val_start = test_start - val_size
-    
-    train_set = Bunch(
-        features=features[:val_start],
-        targets=targets[:val_start])
-    
-    val_set = Bunch(
-        features=features[val_start:test_start],
-        targets=targets[val_start:test_start])
-    
-    test_set = Bunch(
-        features=features[test_start:],
-        targets=targets[test_start:])
-    
-    return train_set, val_set, test_set
-    
-    
-def _read_data_set():
-    
-    with h5py.File(_FILE_PATH) as f:
-        waveforms = f['samples'][...]
-        classifications = f['classifications'][...]
-        
-    return waveforms, classifications
-    
-        
 def _trim_waveforms(waveforms, settings):
     start_index = signal_utils.seconds_to_frames(
         settings.waveform_start_time, _SAMPLE_RATE)
@@ -191,15 +166,15 @@ def _trim_waveforms(waveforms, settings):
     
 def _compute_spectrograms(waveforms, settings):
     
+    num_examples = len(waveforms)
     params = settings.spectrogram_params
     
-    num_clips = waveforms.shape[0]
     num_spectra, num_bins = _get_spectrogram_shape(waveforms, params)
 
     spectrograms = np.zeros(
-        (num_clips, num_spectra, num_bins), dtype='float32')
+        (num_examples, num_spectra, num_bins), dtype='float32')
     
-    for i in range(num_clips):
+    for i in range(num_examples):
         if i != 0 and i % 10000 == 0:
             print('    {}...'.format(i))
         waveform = waveforms[i, :]
@@ -395,6 +370,40 @@ def _compute_statistics(targets, activations, threshold=.5):
     recall = num_true_positives / num_calls
     
     return accuracy, precision, recall
+
+
+def _create_data_sets(features, classifications, settings):
+    
+    num_examples = len(features)
+    
+    assert(len(classifications) == num_examples)
+    
+    # Shuffle examples.
+    permutation = np.random.permutation(num_examples)
+    features = features[permutation]
+    classifications = classifications[permutation]
+    
+    # Targets are just classifications, each in {0, 1}.
+    targets = classifications
+    
+    val_size = settings.validation_set_size
+    test_size = settings.test_set_size
+    test_start = num_examples - test_size
+    val_start = test_start - val_size
+    
+    train_set = Bunch(
+        features=features[:val_start],
+        targets=targets[:val_start])
+    
+    val_set = Bunch(
+        features=features[val_start:test_start],
+        targets=targets[val_start:test_start])
+    
+    test_set = Bunch(
+        features=features[test_start:],
+        targets=targets[test_start:])
+    
+    return train_set, val_set, test_set
 
 
 if __name__ == '__main__':
