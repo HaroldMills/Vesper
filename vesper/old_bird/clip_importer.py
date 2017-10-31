@@ -32,31 +32,40 @@ _DETECTOR_NAMES = {
 
 _RECORDING_DATA = {
     
-    'CLC': [
-        
-        {
-            'start_date': datetime.date(2017, 1, 1),
-            'end_date': datetime.date(2018, 1, 1),
-            'start_time': datetime.time(21),
-            'end_time': datetime.time(5)
-        }
-    ],
+#     'CLC': [
+#         
+#         {
+#             'start_date': datetime.date(2017, 1, 1),
+#             'end_date': datetime.date(2018, 1, 1),
+#             'start_time': datetime.time(21),
+#             'end_time': datetime.time(5)
+#         }
+#     ],
+#                    
+#     'JAS': [
+#         {
+#             'start_date': datetime.date(2017, 1, 1),
+#             'end_date': datetime.date(2018, 1, 1),
+#             'start_time': datetime.time(20, 30),
+#             'end_time': datetime.time(5, 30)
+#         }
+#     ],
                    
-    'JAS': [
+    'Deline': [
         {
-            'start_date': datetime.date(2017, 1, 1),
-            'end_date': datetime.date(2018, 1, 1),
-            'start_time': datetime.time(20, 30),
-            'end_time': datetime.time(5, 30)
+            'start_date': datetime.date(2006, 1, 1),
+            'end_date': datetime.date(2007, 1, 1),
+            'start_time': datetime.time(13, 0),
+            'end_time': datetime.time(11, 0)
         }
     ]
                    
 }
 
 _CLASSIFICATIONS = {
-    'calls': 'Call',
-    'noise': 'Noise',
-    'tones': 'Tone'
+#     'calls': 'Call',
+#     'noise': 'Noise',
+#     'tones': 'Tone'
 }
 
 _NUM_RECORDING_CHANNELS = 1
