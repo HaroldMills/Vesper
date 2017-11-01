@@ -55,6 +55,10 @@ _SETTINGS = {
         
         regularization_beta=.001,
         
+        classification_threshold = .5,
+        
+        verbose = False
+        
     )
              
 #     'Tseep': Bunch(
@@ -79,7 +83,7 @@ def _main():
     
     settings = _SETTINGS['Tseep']
     
-    print('Reading data set...')
+    print('Reading clips from HDF5 file...')
     waveforms, classifications = _read_data_set(_FILE_PATH)
     
     num_clips = waveforms.shape[0]
@@ -87,12 +91,14 @@ def _main():
     num_noises = num_clips - num_calls
     
     print(
-        'Read {} clips, {} calls and {} noises.'.format(
+        'Read {} clips, including {} calls and {} noises.'.format(
             num_clips, num_calls, num_noises))
     
+    if not settings.verbose:
+        print('Computing features...')
     features = _compute_features(waveforms, settings)
     
-    print('Creating data sets...')
+    print('Creating training, validation, and test data sets...')
     train_set, val_set, _ = \
         _create_data_sets(features, classifications, settings)
         
@@ -100,8 +106,8 @@ def _main():
     model = _train_classifier(train_set, settings)
        
     print('Testing classifier...')
-    _test_classifier(model, train_set, 'training')
-    _test_classifier(model, val_set, 'validation')
+    _test_classifier(model, train_set, settings)
+    _test_classifier(model, val_set, settings)
 
     print()
         
@@ -115,41 +121,53 @@ def _read_data_set(file_path):
     return waveforms, classifications
     
         
+class _VerbosePrinter:
+    
+    def __init__(self, verbose):
+        self._verbose = verbose
+        
+    def __call__(self, x):
+        if self._verbose:
+            print(x)
+            
+            
 def _compute_features(waveforms, settings):
     
     num_examples = len(waveforms)
+    print_if_verbose = _VerbosePrinter(settings.verbose)
     
-    print('Trimming waveforms...')
+    print_if_verbose('Trimming waveforms...')
     waveforms = _trim_waveforms(waveforms, settings)
     
-    print('Computing spectrograms...')
+    print_if_verbose('Computing spectrograms...')
     start_time = time.time()
     spectrograms = _compute_spectrograms(waveforms, settings)
     elapsed_time = time.time() - start_time
     
     spectrogram_rate = num_examples / elapsed_time
     spectrum_rate = spectrogram_rate * spectrograms[0].shape[0]
-    print((
-        'Computed {} spectrograms of shape {} in {:.1f} seconds, an average '
-        'of {:.1f} spectrograms and {:.1f} spectra per second.').format(
+    print_if_verbose((
+        'Computed {} spectrograms of shape {} in {:.1f} seconds, an '
+        'average of {:.1f} spectrograms and {:.1f} spectra per '
+        'second.').format(
             num_examples, spectrograms[0].shape, elapsed_time,
             spectrogram_rate, spectrum_rate))
     
-    print('Trimming spectrogram frequencies...')
-    print('    input shape {}'.format(spectrograms.shape))
+    print_if_verbose('Trimming spectrogram frequencies...')
+    print_if_verbose('    input shape {}'.format(spectrograms.shape))
     spectrograms = _trim_spectrograms(spectrograms, settings)
-    print('    output shape {}'.format(spectrograms.shape))
+    print_if_verbose('    output shape {}'.format(spectrograms.shape))
     
-    print('Clipping spectrogram powers...')
+    print_if_verbose('Clipping spectrogram powers...')
     power_clipping_range = _clip_spectrogram_powers(spectrograms, settings)
-    print('    {}'.format(power_clipping_range))
+    print_if_verbose('    {}'.format(power_clipping_range))
     
-    print('Normalizing spectrograms...')
+    print_if_verbose('Normalizing spectrograms...')
     normalization = _normalize_spectrograms(spectrograms, settings)
-    print('    {}'.format(normalization))
-    print('    {} {}'.format(spectrograms.mean(), spectrograms.std()))
+    print_if_verbose('    {}'.format(normalization))
+    print_if_verbose('    {} {}'.format(spectrograms.mean(), spectrograms.std()))
     
-    print('Flattening spectrograms...')
+    print_if_verbose('Flattening spectrograms...')
     features = spectrograms.reshape((num_examples, -1))
     
     return features
@@ -168,6 +186,7 @@ def _compute_spectrograms(waveforms, settings):
     
     num_examples = len(waveforms)
     params = settings.spectrogram_params
+    print_if_verbose = _VerbosePrinter(settings.verbose)
     
     num_spectra, num_bins = _get_spectrogram_shape(waveforms, params)
 
@@ -176,7 +195,7 @@ def _compute_spectrograms(waveforms, settings):
     
     for i in range(num_examples):
         if i != 0 and i % 10000 == 0:
-            print('    {}...'.format(i))
+            print_if_verbose('    {}...'.format(i))
         waveform = waveforms[i, :]
         spectrogram = _compute_spectrogram(waveform, params)
         spectrograms[i, :, :] = spectrogram
@@ -299,13 +318,15 @@ def _train_classifier(train_set, settings):
     
     input_length = train_set.features.shape[1]
     model = _create_classifier_model(input_length, settings)
+    
+    verbose = 2 if settings.verbose else 0
 
     model.fit(
         train_set.features,
         train_set.targets,
         epochs=settings.num_epochs,
         batch_size=settings.batch_size,
-        verbose=2)
+        verbose=verbose)
     
     return model
     
@@ -339,25 +360,26 @@ def _create_classifier_model(input_length, settings):
     return model
         
     
-def _test_classifier(model, data_set, data_set_name=None):
+def _test_classifier(model, data_set, settings):
      
     features = data_set.features
     targets = data_set.targets
      
     activations = model.predict(features, batch_size=len(features))
      
-    accuracy, precision, recall = _compute_statistics(targets, activations)
+    accuracy, precision, recall = \
+        _compute_statistics(targets, activations, settings)
      
-    if data_set_name is not None:
-        print(
-            '{} accuracy, precision, and recall: {:.3f} {:.3f} {:.3f}'.format(
-                data_set_name, accuracy, precision, recall))
+    print(
+        '{} accuracy, precision, and recall: {:.3f} {:.3f} {:.3f}'.format(
+            data_set.name.capitalize(), accuracy, precision, recall))
      
     return accuracy, precision, recall
 
 
-def _compute_statistics(targets, activations, threshold=.5):
+def _compute_statistics(targets, activations, settings):
     
+    threshold = settings.classification_threshold
     predictions = (activations >= threshold).astype('float')
     
     accuracy = np.sum(predictions == targets) / len(targets)
@@ -392,14 +414,17 @@ def _create_data_sets(features, classifications, settings):
     val_start = test_start - val_size
     
     train_set = Bunch(
+        name='training',
         features=features[:val_start],
         targets=targets[:val_start])
     
     val_set = Bunch(
+        name='validation',
         features=features[val_start:test_start],
         targets=targets[val_start:test_start])
     
     test_set = Bunch(
+        name='test',
         features=features[test_start:],
         targets=targets[test_start:])
     
