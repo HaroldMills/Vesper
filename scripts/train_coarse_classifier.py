@@ -7,6 +7,7 @@ import h5py
 import keras
 import numpy as np
 
+from vesper.util.binary_classification_stats import BinaryClassificationStats
 from vesper.util.bunch import Bunch
 from vesper.util.settings import Settings
 from vesper.util.spectrogram import Spectrogram
@@ -33,7 +34,7 @@ _SETTINGS = {
             dft_size=64,
             ref_power=1),
                       
-        spectrogram_start_freq=2000,
+        spectrogram_start_freq=4000,
         spectrogram_end_freq=10000,
         
         spectrogram_power_clipping_fraction=.001,
@@ -54,8 +55,6 @@ _SETTINGS = {
         hidden_layer_sizes = [16],
         
         regularization_beta=.001,
-        
-        classification_threshold = .5,
         
         verbose = False
         
@@ -84,7 +83,7 @@ def _main():
     settings = _SETTINGS['Tseep']
     
     print('Reading clips from HDF5 file...')
-    waveforms, classifications = _read_data_set(_FILE_PATH)
+    waveforms, classifications = _get_clips(_FILE_PATH)
     
     num_clips = waveforms.shape[0]
     num_calls = int(np.sum(classifications))
@@ -106,13 +105,14 @@ def _main():
     model = _train_classifier(train_set, settings)
        
     print('Testing classifier...')
-    _test_classifier(model, train_set, settings)
-    _test_classifier(model, val_set, settings)
+    train_stats = _test_classifier(model, train_set)
+    val_stats = _test_classifier(model, val_set)
+    _show_stats(train_stats, val_stats)
 
     print()
         
 
-def _read_data_set(file_path):
+def _get_clips(file_path):
     
     with h5py.File(file_path) as f:
         waveforms = f['samples'][...]
@@ -314,6 +314,43 @@ def _normalize_spectrograms(spectrograms, settings):
         return None
     
     
+def _create_data_sets(features, classifications, settings):
+    
+    num_examples = len(features)
+    
+    assert(len(classifications) == num_examples)
+    
+    # Shuffle examples.
+    permutation = np.random.permutation(num_examples)
+    features = features[permutation]
+    classifications = classifications[permutation]
+    
+    # Targets are just classifications, each in {0, 1}.
+    targets = classifications
+    
+    val_size = settings.validation_set_size
+    test_size = settings.test_set_size
+    test_start = num_examples - test_size
+    val_start = test_start - val_size
+    
+    train_set = Bunch(
+        name='training',
+        features=features[:val_start],
+        targets=targets[:val_start])
+    
+    val_set = Bunch(
+        name='validation',
+        features=features[val_start:test_start],
+        targets=targets[val_start:test_start])
+    
+    test_set = Bunch(
+        name='test',
+        features=features[test_start:],
+        targets=targets[test_start:])
+    
+    return train_set, val_set, test_set
+
+
 def _train_classifier(train_set, settings):
     
     input_length = train_set.features.shape[1]
@@ -360,77 +397,34 @@ def _create_classifier_model(input_length, settings):
     return model
         
     
-def _test_classifier(model, data_set, settings):
+def _test_classifier(model, data_set, num_thresholds=101):
      
     features = data_set.features
     targets = data_set.targets
      
-    activations = model.predict(features, batch_size=len(features))
-     
-    accuracy, precision, recall = \
-        _compute_statistics(targets, activations, settings)
-     
-    print(
-        '{} accuracy, precision, and recall: {:.3f} {:.3f} {:.3f}'.format(
-            data_set.name.capitalize(), accuracy, precision, recall))
-     
-    return accuracy, precision, recall
+    values = model.predict(features, batch_size=len(features))
+    
+    thresholds = np.arange(num_thresholds) / float(num_thresholds - 1)
+
+    return BinaryClassificationStats(targets, values, thresholds)
 
 
-def _compute_statistics(targets, activations, settings):
+def _show_stats(train_stats, val_stats):
     
-    threshold = settings.classification_threshold
-    predictions = (activations >= threshold).astype('float')
+    import matplotlib.pyplot as plt
     
-    accuracy = np.sum(predictions == targets) / len(targets)
+    plt.plot(
+        train_stats.false_positive_rate, train_stats.true_positive_rate, 'b',
+        val_stats.false_positive_rate, val_stats.true_positive_rate, 'g')
     
-    num_true_positives = np.sum(np.logical_and(targets == 1, predictions == 1))
-    num_positives = np.sum(predictions)
-    num_calls = np.sum(targets)
+    plt.legend(['Training', 'Validation'])
     
-    precision = num_true_positives / num_positives
-    recall = num_true_positives / num_calls
+    plt.xlim((0, 1))
+    plt.ylim((0, 1))
     
-    return accuracy, precision, recall
-
-
-def _create_data_sets(features, classifications, settings):
-    
-    num_examples = len(features)
-    
-    assert(len(classifications) == num_examples)
-    
-    # Shuffle examples.
-    permutation = np.random.permutation(num_examples)
-    features = features[permutation]
-    classifications = classifications[permutation]
-    
-    # Targets are just classifications, each in {0, 1}.
-    targets = classifications
-    
-    val_size = settings.validation_set_size
-    test_size = settings.test_set_size
-    test_start = num_examples - test_size
-    val_start = test_start - val_size
-    
-    train_set = Bunch(
-        name='training',
-        features=features[:val_start],
-        targets=targets[:val_start])
-    
-    val_set = Bunch(
-        name='validation',
-        features=features[val_start:test_start],
-        targets=targets[val_start:test_start])
-    
-    test_set = Bunch(
-        name='test',
-        features=features[test_start:],
-        targets=targets[test_start:])
-    
-    return train_set, val_set, test_set
-
-
+    plt.show()
+        
+        
 if __name__ == '__main__':
     _main()
     
