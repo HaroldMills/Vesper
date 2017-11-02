@@ -22,3 +22,7 @@ class TestCase(unittest.TestCase):
             
     def _assert_arrays_equal(self, x, y):
         self.assertTrue(np.all(x == y))
+        
+        
+    def _assert_arrays_close(self, x, y):
+        self.assertTrue(np.allclose(x, y))
