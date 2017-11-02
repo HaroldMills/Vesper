@@ -35,7 +35,7 @@ import csv
 
 
 _FILE_PATH = Path((
-    r'Y:\Desktop\NFC\Data\MPG Ranch\2017 MPG Ranch Fall Archive'
+    r'Y:\Desktop\NFC\Data\MPG Ranch\2017 MPG Ranch Archive Analysis'
     r'\Clip Counts.csv'))
 
 
