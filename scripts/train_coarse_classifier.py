@@ -11,6 +11,7 @@ from vesper.util.binary_classification_stats import BinaryClassificationStats
 from vesper.util.bunch import Bunch
 from vesper.util.settings import Settings
 from vesper.util.spectrogram import Spectrogram
+from vesper.util.verbose_printer import VerbosePrinter
 import vesper.util.data_windows as data_windows
 import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
@@ -121,20 +122,10 @@ def _get_clips(file_path):
     return waveforms, classifications
     
         
-class _VerbosePrinter:
-    
-    def __init__(self, verbose):
-        self._verbose = verbose
-        
-    def __call__(self, x):
-        if self._verbose:
-            print(x)
-            
-            
 def _compute_features(waveforms, settings):
     
     num_examples = len(waveforms)
-    print_if_verbose = _VerbosePrinter(settings.verbose)
+    print_if_verbose = VerbosePrinter(settings.verbose)
     
     print_if_verbose('Trimming waveforms...')
     waveforms = _trim_waveforms(waveforms, settings)
@@ -186,7 +177,7 @@ def _compute_spectrograms(waveforms, settings):
     
     num_examples = len(waveforms)
     params = settings.spectrogram_params
-    print_if_verbose = _VerbosePrinter(settings.verbose)
+    print_if_verbose = VerbosePrinter(settings.verbose)
     
     num_spectra, num_bins = _get_spectrogram_shape(waveforms, params)
 
