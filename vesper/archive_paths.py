@@ -26,7 +26,7 @@ def initialize(archive_dir_path, archive_settings):
 #         recordings_dir_path=_create_recordings_dir_path(
 #             archive_dir_path, archive_settings),
         clips_dir_path=archive_dir_path / 'Clips',
-        job_logs_dir_path=archive_dir_path / 'Jobs' / 'Logs')
+        job_logs_dir_path=archive_dir_path / 'Logs' / 'Jobs')
     
     
 # def _create_recordings_dir_path(archive_dir_path, archive_settings):
