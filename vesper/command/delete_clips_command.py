@@ -3,6 +3,7 @@
 
 import logging
 import random
+import time
 
 from django.db import transaction
 
@@ -104,6 +105,10 @@ class DeleteClipsCommand(Command):
     
     def _delete_clips(self, retain_indices):
         
+        start_time = time.time()
+        
+        retaining_clips = len(retain_indices) == 0
+        
         value_tuples = self._create_clip_query_values_iterator()
         
         index = 0
@@ -128,21 +133,35 @@ class DeleteClipsCommand(Command):
                 count += 1
                 index += 1
                 
-            deleted_count = count - retained_count
+            # Log deletions for this detector/station/mic_output/date.
+            if retaining_clips:
+                prefix = 'Deleted'
+            else:
+                deleted_count = count - retained_count
+                prefix = 'Deleted {} and retained {} of'.format(
+                    deleted_count, retained_count)
             count_text = text_utils.create_count_text(count, 'clip')
             _logger.info((
-                'Deleted {} and retained {} of {} for detector "{}", '
-                'station "{}", mic output "{}", and date {}.').format(
-                    deleted_count, retained_count, count_text,
-                    detector.name, station.name, mic_output.name, date))
+                '{} {} for detector "{}", station "{}", mic output "{}", '
+                'and date {}.').format(
+                    prefix, count_text, detector.name, station.name,
+                    mic_output.name, date))
 
             total_retained_count += retained_count
                 
-        deleted_count = index - total_retained_count
+        # Log total deletions and deletion rate.
+        if total_retained_count == 0:
+            prefix = 'Deleted'
+        else:
+            deleted_count = index - total_retained_count
+            prefix = 'Deleted {} and retained {} of'.format(
+                deleted_count, total_retained_count)
         count_text = text_utils.create_count_text(index, 'clip')
-        _logger.info(
-            'Deleted {} and retained {} of a total of {}.'.format(
-                deleted_count, total_retained_count, count_text))
+        elapsed_time = time.time() - start_time
+        timing_text = command_utils.get_timing_text(
+            elapsed_time, index, 'clips')
+        _logger.info('{} a total of {}{}.'.format(
+            prefix, count_text, timing_text))
 
 
     def _delete_clip(self, clip):
