@@ -1,17 +1,18 @@
 from pathlib import Path
+import random
 import time
 
 from keras.models import Sequential
 from keras.layers import Dense
-import h5py
 import keras
 import numpy as np
 
 from vesper.util.binary_classification_stats import BinaryClassificationStats
 from vesper.util.bunch import Bunch
+from vesper.util.clips_hdf5_file import ClipsHdf5File
+from vesper.util.conditional_printer import ConditionalPrinter
 from vesper.util.settings import Settings
 from vesper.util.spectrogram import Spectrogram
-from vesper.util.verbose_printer import VerbosePrinter
 import vesper.util.data_windows as data_windows
 import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
@@ -41,6 +42,7 @@ _SETTINGS = {
         spectrogram_power_clipping_fraction=.001,
         normalize_spectrograms=True,
         
+        training_set_size=None,
         validation_set_size=5000,
         test_set_size=5000,
         
@@ -57,7 +59,7 @@ _SETTINGS = {
         
         regularization_beta=.001,
         
-        verbose = False
+        verbose = True
         
     )
              
@@ -83,24 +85,17 @@ def _main():
     
     settings = _SETTINGS['Tseep']
     
-    print('Reading clips from HDF5 file...')
-    waveforms, classifications = _get_clips(_FILE_PATH)
-    
-    num_clips = waveforms.shape[0]
-    num_calls = int(np.sum(classifications))
-    num_noises = num_clips - num_calls
-    
-    print(
-        'Read {} clips, including {} calls and {} noises.'.format(
-            num_clips, num_calls, num_noises))
+    clips = _get_clips(_FILE_PATH, settings)
     
     if not settings.verbose:
         print('Computing features...')
-    features = _compute_features(waveforms, settings)
+    features = _compute_features(clips, settings)
+    
+    print('Getting targets from classifications...')
+    targets = _get_targets(clips)
     
     print('Creating training, validation, and test data sets...')
-    train_set, val_set, _ = \
-        _create_data_sets(features, classifications, settings)
+    train_set, val_set, _ = _create_data_sets(features, targets, settings)
         
     print('Training classifier...')
     model = _train_classifier(train_set, settings)
@@ -113,19 +108,113 @@ def _main():
     print()
         
 
-def _get_clips(file_path):
+def _get_clips(file_path, settings):
     
-    with h5py.File(file_path) as f:
-        waveforms = f['samples'][...]
-        classifications = f['classifications'][...]
+    verbose = settings.verbose
+
+    file_ = ClipsHdf5File(file_path)
+    
+    num_file_clips = file_.get_num_clips()
+    
+    num_clips = _get_num_read_clips(num_file_clips, settings)
+    
+    if num_clips != num_file_clips:
+        s = '{} of {}'.format(num_clips, num_file_clips)
+    else:
+        s = '{}'.format(num_clips)
+    print('Reading {} clips from file "{}"...'.format(s, file_path))
+    
+    if verbose:
+        start_time = time.time()
+    
+    notification_period = 10000 if verbose else None
+    listener = (lambda n: print('    {}'.format(n))) if verbose else None
+    clips = file_.read_clips(num_clips, notification_period, listener)
         
-    return waveforms, classifications
+    if verbose:
+        
+        elapsed_time = time.time() - start_time
+        elapsed_time = int(round(10 * elapsed_time)) / 10
+        
+        if elapsed_time != 0:
+            rate = num_clips / elapsed_time
+            s = ', an average of {:.1f} clips per second'.format(rate)
+        else:
+            s = ''
+        
+        print('Read {} clips in {:.1f} seconds{}.'.format(
+            len(clips), elapsed_time, s))
+    
+        num_calls = len(
+            [c for c in clips if c.classification.startswith('Call')])
+        num_noises = num_clips - num_calls
+        print('Clips include {} calls and {} noises.'.format(
+            num_calls, num_noises))
+    
+    return clips
+        
+        
+def _get_num_read_clips(num_file_clips, settings):
+    
+    train_size = settings.training_set_size
+    val_size = settings.validation_set_size
+    test_size = settings.test_set_size
+    
+    if train_size is None:
+    
+        if num_file_clips <= val_size + test_size:
+            
+            raise ValueError((
+                'File contains {} clips, fewer than required '
+                'with the specified validation and test set sizes '
+                'of {} and {} clips, respectively.').format(
+                    num_file_clips, val_size, test_size))
+            
+        return num_file_clips
+            
+    else:
+        
+        num_clips = train_size + val_size + test_size
+        
+        if num_clips > num_file_clips:
+            
+            raise ValueError((
+                'File contains {} clips, too few for the '
+                'specified training, validation, and test set '
+                'sizes of {}, {}, and {} clips, respectively.').format(
+                    num_file_clips, train_size, val_size, test_size))
+            
+        return num_clips
     
         
-def _compute_features(waveforms, settings):
+def _sample_clips(clips, settings):
     
-    num_examples = len(waveforms)
-    print_if_verbose = VerbosePrinter(settings.verbose)
+    train_size = settings.training_set_size
+    
+    if train_size is None:
+        return clips
+    
+    else:
+        # training set size specified
+
+        val_size = settings.validation_set_size
+        test_size = settings.test_set_size
+        
+        n = train_size + val_size + test_size
+        
+        if n < len(clips):
+            indices = frozenset(random.sample(range(len(clips)), n))
+            clips = [c for i, c in enumerate(clips) if i in indices]
+        
+        return clips
+        
+        
+def _compute_features(clips, settings):
+    
+    waveforms = _get_waveforms(clips)
+    
+    num_examples = len(clips)
+    print_if_verbose = ConditionalPrinter(settings.verbose)
     
     print_if_verbose('Trimming waveforms...')
     waveforms = _trim_waveforms(waveforms, settings)
@@ -164,6 +253,15 @@ def _compute_features(waveforms, settings):
     return features
     
 
+def _get_waveforms(clips):
+    num_clips = len(clips)
+    num_samples = len(clips[0].waveform)
+    waveforms = np.zeros((num_clips, num_samples))
+    for i, clip in enumerate(clips):
+        waveforms[i] = clip.waveform
+    return waveforms
+        
+        
 def _trim_waveforms(waveforms, settings):
     start_index = signal_utils.seconds_to_frames(
         settings.waveform_start_time, _SAMPLE_RATE)
@@ -177,7 +275,7 @@ def _compute_spectrograms(waveforms, settings):
     
     num_examples = len(waveforms)
     params = settings.spectrogram_params
-    print_if_verbose = VerbosePrinter(settings.verbose)
+    print_if_verbose = ConditionalPrinter(settings.verbose)
     
     num_spectra, num_bins = _get_spectrogram_shape(waveforms, params)
 
@@ -305,22 +403,38 @@ def _normalize_spectrograms(spectrograms, settings):
         return None
     
     
-def _create_data_sets(features, classifications, settings):
+def _get_targets(clips):
+    targets = np.array([_get_target(c) for c in clips])
+    targets.shape = (len(targets), 1)
+    return targets
+
+
+def _get_target(clip):
+    return 1 if clip.classification.startswith('Call') else 0
+
+
+def _create_data_sets(features, targets, settings):
     
     num_examples = len(features)
     
-    assert(len(classifications) == num_examples)
+    assert(len(targets) == num_examples)
+    
+    train_size = settings.training_set_size
+    val_size = settings.validation_set_size
+    test_size = settings.test_set_size
+
+    assert(val_size + test_size < num_examples)
+    
+    if train_size is None:
+        train_size = num_examples - val_size - test_size
+        
+    assert(train_size + val_size + test_size <= num_examples)
     
     # Shuffle examples.
     permutation = np.random.permutation(num_examples)
     features = features[permutation]
-    classifications = classifications[permutation]
+    targets = targets[permutation]
     
-    # Targets are just classifications, each in {0, 1}.
-    targets = classifications
-    
-    val_size = settings.validation_set_size
-    test_size = settings.test_set_size
     test_start = num_examples - test_size
     val_start = test_start - val_size
     
@@ -389,10 +503,10 @@ def _create_classifier_model(input_length, settings):
         
     
 def _test_classifier(model, data_set, num_thresholds=101):
-     
+    
     features = data_set.features
     targets = data_set.targets
-     
+    
     values = model.predict(features, batch_size=len(features))
     
     thresholds = np.arange(num_thresholds) / float(num_thresholds - 1)

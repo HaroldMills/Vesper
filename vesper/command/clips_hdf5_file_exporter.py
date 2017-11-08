@@ -4,7 +4,6 @@
 import logging
 
 import h5py
-import numpy as np
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import StringAnnotation
@@ -67,11 +66,12 @@ class ClipsHdf5FileExporter:
             
             if len(samples) >= _MIN_CLIP_LENGTH:
                 
-                name = '/clips/{:06d}'.format(clip.id)
+                name = '/clips/{:08d}'.format(clip.id)
                 start_time = _format_datetime(clip.start_time)
                 
                 self._file[name] = samples[:_MIN_CLIP_LENGTH]
                 attrs = self._file[name].attrs
+                attrs['id'] = clip.id
                 attrs['station'] = clip.station.name
                 attrs['microphone'] = clip.mic_output.device.model.name
                 attrs['detector'] = clip.creating_processor.name
@@ -90,47 +90,8 @@ class ClipsHdf5FileExporter:
         
         
     def end_exports(self):
-        
-        clips = self._file['clips']
-        samples, classifications = _create_clip_arrays(clips)
-        
-        self._file['samples'] = samples
-        self._file['classifications'] = classifications
-        
-        self._file.close()
-            
-            
+        pass
+    
+
 def _format_datetime(dt):
     return dt.strftime(_START_TIME_FORMAT)
-
-
-def _create_clip_arrays(clips):
-    
-    num_clips = len(clips)
-    clip_length = _get_clip_length(clips)
-    
-    samples = np.zeros((num_clips, clip_length), dtype='int16')
-    classifications = np.zeros((num_clips, 1))
-    
-    i = 0
-    
-    for name in clips:
-        
-        clip_samples = clips[name]
-        attrs = clip_samples.attrs
-        
-        classification = attrs['classification']
-        code = 1 if classification.startswith('Call') else 0
-        
-        samples[i, :] = clip_samples
-        classifications[i] = code
-        
-        i += 1
-        
-    return samples, classifications
-            
-            
-def _get_clip_length(clips):
-    for name in clips:
-        samples = clips[name]
-        return len(samples)
