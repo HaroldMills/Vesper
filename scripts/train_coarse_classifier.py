@@ -12,13 +12,12 @@ from vesper.util.bunch import Bunch
 from vesper.util.clips_hdf5_file import ClipsHdf5File
 from vesper.util.conditional_printer import ConditionalPrinter
 from vesper.util.settings import Settings
-from vesper.util.spectrogram import Spectrogram
 import vesper.util.data_windows as data_windows
 import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-_FILE_PATH = Path('/Users/Harold/Desktop/clips.hdf5')
+_FILE_PATH = Path('/Users/Harold/Desktop/2017 Tseep Clips 22050.hdf5')
 
 
 _SETTINGS = {
@@ -42,9 +41,9 @@ _SETTINGS = {
         spectrogram_power_clipping_fraction=.001,
         normalize_spectrograms=True,
         
-        training_set_size=None,
-        validation_set_size=5000,
-        test_set_size=5000,
+        training_set_size=100000,
+        validation_set_size=10000,
+        test_set_size=0,
         
         num_epochs=5,
         batch_size=128,
@@ -77,19 +76,15 @@ _SETTINGS = {
 }
 
 
-# TODO: Get from HDF5 file? Or make independent and resample clips as needed?
-_SAMPLE_RATE = 22050
-
-
 def _main():
     
     settings = _SETTINGS['Tseep']
     
-    clips = _get_clips(_FILE_PATH, settings)
+    clips, sample_rate = _get_clips(_FILE_PATH, settings)
     
     if not settings.verbose:
         print('Computing features...')
-    features = _compute_features(clips, settings)
+    features = _compute_features(clips, sample_rate, settings)
     
     print('Getting targets from classifications...')
     targets = _get_targets(clips)
@@ -151,7 +146,9 @@ def _get_clips(file_path, settings):
         print('Clips include {} calls and {} noises.'.format(
             num_calls, num_noises))
     
-    return clips
+    sample_rate = file_.get_sample_rate()
+    
+    return clips, sample_rate
         
         
 def _get_num_read_clips(num_file_clips, settings):
@@ -209,7 +206,7 @@ def _sample_clips(clips, settings):
         return clips
         
         
-def _compute_features(clips, settings):
+def _compute_features(clips, sample_rate, settings):
     
     waveforms = _get_waveforms(clips)
     
@@ -217,7 +214,7 @@ def _compute_features(clips, settings):
     print_if_verbose = ConditionalPrinter(settings.verbose)
     
     print_if_verbose('Trimming waveforms...')
-    waveforms = _trim_waveforms(waveforms, settings)
+    waveforms = _trim_waveforms(waveforms, sample_rate, settings)
     
     print_if_verbose('Computing spectrograms...')
     start_time = time.time()
@@ -235,7 +232,7 @@ def _compute_features(clips, settings):
     
     print_if_verbose('Trimming spectrogram frequencies...')
     print_if_verbose('    input shape {}'.format(spectrograms.shape))
-    spectrograms = _trim_spectrograms(spectrograms, settings)
+    spectrograms = _trim_spectrograms(spectrograms, sample_rate, settings)
     print_if_verbose('    output shape {}'.format(spectrograms.shape))
     
     print_if_verbose('Clipping spectrogram powers...')
@@ -262,11 +259,11 @@ def _get_waveforms(clips):
     return waveforms
         
         
-def _trim_waveforms(waveforms, settings):
+def _trim_waveforms(waveforms, sample_rate, settings):
     start_index = signal_utils.seconds_to_frames(
-        settings.waveform_start_time, _SAMPLE_RATE)
+        settings.waveform_start_time, sample_rate)
     duration = signal_utils.seconds_to_frames(
-        settings.waveform_duration, _SAMPLE_RATE)
+        settings.waveform_duration, sample_rate)
     end_index = start_index + duration
     return waveforms[:, start_index:end_index]
     
@@ -306,18 +303,12 @@ def _compute_spectrogram(waveform, params):
     return tfa_utils.linear_to_log(gram, 1)
 
     
-def _compute_spectrogram_less_quickly(waveform, params):
-    sound = Bunch(samples=waveform, sample_rate=_SAMPLE_RATE)
-    spectrogram = Spectrogram(sound, params)
-    return spectrogram.spectra
-    
-    
-def _trim_spectrograms(spectrograms, params):
+def _trim_spectrograms(spectrograms, sample_rate, params):
     num_bins = spectrograms.shape[2]
     start_index = _freq_to_bin_num(
-        params.spectrogram_start_freq, _SAMPLE_RATE, num_bins)
+        params.spectrogram_start_freq, sample_rate, num_bins)
     end_index = _freq_to_bin_num(
-        params.spectrogram_end_freq, _SAMPLE_RATE, num_bins) + 1
+        params.spectrogram_end_freq, sample_rate, num_bins) + 1
     return spectrograms[:, :, start_index:end_index]
 
 

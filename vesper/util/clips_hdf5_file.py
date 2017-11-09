@@ -18,6 +18,11 @@ class ClipsHdf5File:
             return len(group)
         
         
+    def get_sample_rate(self):
+        with h5py.File(self._file_path) as f:
+            return f['clips'].attrs['sample_rate']
+ 
+    
     def read_clips(
             self, max_num_clips=None, notification_period=None, listener=None):
         
@@ -78,6 +83,6 @@ class ClipsHdf5File:
             detector=attrs['detector'],
             night=attrs['night'],
             start_time=attrs['start_time'],
-            sample_rate=attrs['sample_rate'],
+            original_sample_rate=attrs['original_sample_rate'],
             classification=attrs['classification']
         )

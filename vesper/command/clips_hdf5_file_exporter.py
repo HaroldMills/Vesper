@@ -4,16 +4,22 @@
 import logging
 
 import h5py
+import numpy as np
+import resampy
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import StringAnnotation
 import vesper.command.command_utils as command_utils
 import vesper.django.app.annotation_utils as annotation_utils
+import vesper.util.signal_utils as signal_utils
 
 
 _ANNOTATION_NAME = 'Classification'
 _ANNOTATION_VALUE_SPECS = ['Call*', 'Noise']
-_MIN_CLIP_LENGTH = 5205
+_OUTPUT_CLIP_DURATION = .236
+_OUTPUT_CLIP_SAMPLE_RATE = 22050
+_OUTPUT_CLIP_LENGTH = signal_utils.seconds_to_frames(
+    _OUTPUT_CLIP_DURATION, _OUTPUT_CLIP_SAMPLE_RATE)
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
@@ -49,6 +55,10 @@ class ClipsHdf5FileExporter:
             annotation_utils.create_string_annotation_values_regexp(
                 _ANNOTATION_VALUE_SPECS)
     
+        self._min_clip_lengths = {
+            _OUTPUT_CLIP_SAMPLE_RATE: _OUTPUT_CLIP_LENGTH
+        }
+        
     
     def export(self, clip):
         
@@ -62,22 +72,23 @@ class ClipsHdf5FileExporter:
         
         if self._annotation_values_regexp.match(value) is not None:
             
-            samples = clip.sound.samples
+            samples = self._get_output_samples(clip)
             
-            if len(samples) >= _MIN_CLIP_LENGTH:
+            if samples is not None:
                 
+                # Create dataset from clip samples.
                 name = '/clips/{:08d}'.format(clip.id)
-                start_time = _format_datetime(clip.start_time)
+                self._file[name] = samples
                 
-                self._file[name] = samples[:_MIN_CLIP_LENGTH]
+                # Set dataset attributes from clip metadata.
                 attrs = self._file[name].attrs
                 attrs['id'] = clip.id
                 attrs['station'] = clip.station.name
                 attrs['microphone'] = clip.mic_output.device.model.name
                 attrs['detector'] = clip.creating_processor.name
                 attrs['night'] = str(clip.date)
-                attrs['start_time'] = start_time
-                attrs['sample_rate'] = clip.sample_rate
+                attrs['start_time'] = _format_datetime(clip.start_time)
+                attrs['original_sample_rate'] = clip.sample_rate
                 attrs['classification'] = value
     
                 return True
@@ -89,9 +100,67 @@ class ClipsHdf5FileExporter:
             return False
         
         
+    def _get_output_samples(self, clip):
+        
+        samples = clip.sound.samples
+        sample_rate = clip.sound.sample_rate
+        
+        min_clip_length = self._get_min_clip_length(sample_rate)
+        
+        if len(samples) >= min_clip_length:
+            # clip long enough
+            
+            if sample_rate != _OUTPUT_CLIP_SAMPLE_RATE:
+                # clip not at output sample rate
+                
+                samples = resampy.resample(
+                    samples[:min_clip_length], sample_rate,
+                    _OUTPUT_CLIP_SAMPLE_RATE)
+                
+            return samples[:_OUTPUT_CLIP_LENGTH]
+        
+        else:
+            # clip too short
+            
+            return None
+        
+        
+    def _get_min_clip_length(self, sample_rate):
+        
+        try:
+            return self._min_clip_lengths[sample_rate]
+        
+        except KeyError:
+            # don't yet have minimum clip length for this sample rate
+            
+            n = signal_utils.seconds_to_frames(
+                _OUTPUT_CLIP_DURATION, sample_rate)
+            
+            while True:
+                
+                x = np.zeros(n)
+                y = resampy.resample(x, sample_rate, _OUTPUT_CLIP_SAMPLE_RATE)
+                
+                if len(y) >= _OUTPUT_CLIP_LENGTH:
+                    break
+                
+                else:
+                    # `n` samples at `sample_rate` resample to fewer than
+                    # `_OUTPUT_CLIP_LENGTH` samples at
+                    # `_OUTPUT_CLIP_SAMPLE_RATE`
+                    
+                    n += 1
+                    
+            # Cache computed length.
+            self._min_clip_lengths[sample_rate] = n
+            
+            return n
+            
+        
     def end_exports(self):
-        pass
+        self._file['/clips'].attrs['sample_rate'] = _OUTPUT_CLIP_SAMPLE_RATE
     
 
 def _format_datetime(dt):
     return dt.strftime(_START_TIME_FORMAT)
+
