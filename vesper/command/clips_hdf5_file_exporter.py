@@ -9,17 +9,23 @@ import resampy
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import StringAnnotation
+from vesper.util.settings import Settings
 import vesper.command.command_utils as command_utils
 import vesper.django.app.annotation_utils as annotation_utils
 import vesper.util.signal_utils as signal_utils
 
 
+# TODO: Make detector name and output sample rate command arguments.
+
+
+_DETECTOR_NAME = 'Thrush'
 _ANNOTATION_NAME = 'Classification'
 _ANNOTATION_VALUE_SPECS = ['Call*', 'Noise']
-_OUTPUT_CLIP_DURATION = .236
+_OUTPUT_CLIP_SETTINGS = {
+    'Tseep': Settings(duration=.236),  # 3000 / 22050 + .1
+    'Thrush': Settings(duration=.326)  # 5000 / 22050 + .1
+}
 _OUTPUT_CLIP_SAMPLE_RATE = 22050
-_OUTPUT_CLIP_LENGTH = signal_utils.seconds_to_frames(
-    _OUTPUT_CLIP_DURATION, _OUTPUT_CLIP_SAMPLE_RATE)
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
@@ -55,8 +61,14 @@ class ClipsHdf5FileExporter:
             annotation_utils.create_string_annotation_values_regexp(
                 _ANNOTATION_VALUE_SPECS)
     
+        self._output_clip_duration = \
+            _OUTPUT_CLIP_SETTINGS[_DETECTOR_NAME].duration
+            
+        self._output_clip_length = signal_utils.seconds_to_frames(
+            self._output_clip_duration, _OUTPUT_CLIP_SAMPLE_RATE)
+
         self._min_clip_lengths = {
-            _OUTPUT_CLIP_SAMPLE_RATE: _OUTPUT_CLIP_LENGTH
+            _OUTPUT_CLIP_SAMPLE_RATE: self._output_clip_length
         }
         
     
@@ -117,7 +129,7 @@ class ClipsHdf5FileExporter:
                     samples[:min_clip_length], sample_rate,
                     _OUTPUT_CLIP_SAMPLE_RATE)
                 
-            return samples[:_OUTPUT_CLIP_LENGTH]
+            return samples[:self._output_clip_length]
         
         else:
             # clip too short
@@ -134,14 +146,14 @@ class ClipsHdf5FileExporter:
             # don't yet have minimum clip length for this sample rate
             
             n = signal_utils.seconds_to_frames(
-                _OUTPUT_CLIP_DURATION, sample_rate)
+                self._output_clip_duration, sample_rate)
             
             while True:
                 
                 x = np.zeros(n)
                 y = resampy.resample(x, sample_rate, _OUTPUT_CLIP_SAMPLE_RATE)
                 
-                if len(y) >= _OUTPUT_CLIP_LENGTH:
+                if len(y) >= self._output_clip_length:
                     break
                 
                 else:

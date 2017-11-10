@@ -17,8 +17,14 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-_FILE_PATH = Path('/Users/Harold/Desktop/2017 Tseep Clips 22050.hdf5')
+# TODO: Use same training/validation/test split on every run.
+# TODO: Balance data in training epochs.
 
+
+_DETECTOR_NAME = 'Thrush'
+
+_FILE_PATH = Path(
+    '/Users/Harold/Desktop/2017 {} Clips 22050.hdf5'.format(_DETECTOR_NAME))
 
 _SETTINGS = {
      
@@ -41,9 +47,9 @@ _SETTINGS = {
         spectrogram_power_clipping_fraction=.001,
         normalize_spectrograms=True,
         
-        training_set_size=100000,
-        validation_set_size=10000,
-        test_set_size=0,
+        training_set_size=90000,
+        validation_set_size=5000,
+        test_set_size=5000,
         
         num_epochs=5,
         batch_size=128,
@@ -60,25 +66,55 @@ _SETTINGS = {
         
         verbose = True
         
+    ),
+             
+    'Thrush': Settings(
+        
+        detector_name='Thrush',
+        
+        waveform_start_time=.150,
+        waveform_duration=.175,
+        
+        spectrogram_params=Settings(
+            window=data_windows.create_window('Hann', 128),
+            hop_size=64,
+            dft_size=128,
+            ref_power=1),
+                      
+        spectrogram_start_freq=2000,
+        spectrogram_end_freq=5000,
+        
+        spectrogram_power_clipping_fraction=.001,
+        normalize_spectrograms=True,
+        
+        training_set_size=None,
+        validation_set_size=5000,
+        test_set_size=5000,
+        
+        num_epochs=20,
+        batch_size=128,
+        
+        # Sizes in units of the hidden layers of the classification
+        # neural network. All of the hidden layers are dense, and all
+        # use the RELU activation function. The final layer of the
+        # network comprises a single unit with a sigmoid activation
+        # function. Setting this to the empty list yields a logistic
+        # regression classifier.
+        hidden_layer_sizes = [32, 32],
+        
+        regularization_beta=.002,
+        
+        verbose = True
+        
     )
              
-#     'Tseep': Bunch(
-#         detector_name = 'Tseep',
-#         spectrogram_params=Bunch(
-#             window=data_windows.create_window('Hann', 256),
-#             hop_size=128,
-#             dft_size=256,
-#             ref_power=1),
-#         validation_set_size = 5000,
-#         test_set_size = 5000
-#     )
              
 }
 
 
 def _main():
     
-    settings = _SETTINGS['Tseep']
+    settings = _SETTINGS[_DETECTOR_NAME]
     
     clips, sample_rate = _get_clips(_FILE_PATH, settings)
     
