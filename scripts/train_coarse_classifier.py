@@ -19,6 +19,10 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 # TODO: Use same training/validation/test split on every run.
 # TODO: Balance data in training epochs.
+# TODO: Try using longer thrush waveforms.
+# TODO: Try adding convolutional layers.
+# TODO: Try learning a filter bank instead of using a spectrogram.
+# TODO: Try lots of random sets of hyperparameter values.
 
 
 _DETECTOR_NAME = 'Thrush'
@@ -35,15 +39,10 @@ _SETTINGS = {
         waveform_start_time=.080,
         waveform_duration=.150,
         
-        spectrogram_params=Settings(
-            window=data_windows.create_window('Hann', 64),
-            hop_size=32,
-            dft_size=64,
-            ref_power=1),
-                      
+        spectrogram_window_size=.005,
+        spectrogram_hop_size=.0025,
         spectrogram_start_freq=4000,
         spectrogram_end_freq=10000,
-        
         spectrogram_power_clipping_fraction=.001,
         normalize_spectrograms=True,
         
@@ -75,15 +74,10 @@ _SETTINGS = {
         waveform_start_time=.150,
         waveform_duration=.175,
         
-        spectrogram_params=Settings(
-            window=data_windows.create_window('Hann', 128),
-            hop_size=64,
-            dft_size=128,
-            ref_power=1),
-                      
+        spectrogram_window_size = .005,
+        spectrogram_hop_size = .0025,
         spectrogram_start_freq=2000,
         spectrogram_end_freq=5000,
-        
         spectrogram_power_clipping_fraction=.001,
         normalize_spectrograms=True,
         
@@ -254,7 +248,7 @@ def _compute_features(clips, sample_rate, settings):
     
     print_if_verbose('Computing spectrograms...')
     start_time = time.time()
-    spectrograms = _compute_spectrograms(waveforms, settings)
+    spectrograms = _compute_spectrograms(waveforms, sample_rate, settings)
     elapsed_time = time.time() - start_time
     
     spectrogram_rate = num_examples / elapsed_time
@@ -304,12 +298,23 @@ def _trim_waveforms(waveforms, sample_rate, settings):
     return waveforms[:, start_index:end_index]
     
     
-def _compute_spectrograms(waveforms, settings):
+def _compute_spectrograms(waveforms, sample_rate, settings):
     
     num_examples = len(waveforms)
-    params = settings.spectrogram_params
     print_if_verbose = ConditionalPrinter(settings.verbose)
     
+    window_size = signal_utils.seconds_to_frames(
+        settings.spectrogram_window_size, sample_rate)
+    hop_size = signal_utils.seconds_to_frames(
+        settings.spectrogram_hop_size, sample_rate)
+    dft_size = tfa_utils.get_dft_size(window_size)
+    
+    params = Settings(
+        window=data_windows.create_window('Hann', window_size),
+        hop_size=hop_size,
+        dft_size=dft_size,
+        ref_power=1)
+
     num_spectra, num_bins = _get_spectrogram_shape(waveforms, params)
 
     spectrograms = np.zeros(
