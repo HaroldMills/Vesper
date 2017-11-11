@@ -5,6 +5,7 @@ import time
 from keras.models import Sequential
 from keras.layers import Dense
 import keras
+import matplotlib.pyplot as plt
 import numpy as np
 
 from vesper.util.binary_classification_stats import BinaryClassificationStats
@@ -81,11 +82,11 @@ _SETTINGS = {
         spectrogram_power_clipping_fraction=.001,
         normalize_spectrograms=True,
         
-        training_set_size=None,
+        training_set_size=20000,
         validation_set_size=5000,
         test_set_size=5000,
         
-        num_epochs=20,
+        num_epochs=10,
         batch_size=128,
         
         # Sizes in units of the hidden layers of the classification
@@ -94,7 +95,7 @@ _SETTINGS = {
         # network comprises a single unit with a sigmoid activation
         # function. Setting this to the empty list yields a logistic
         # regression classifier.
-        hidden_layer_sizes = [32, 32],
+        hidden_layer_sizes = [16],
         
         regularization_beta=.002,
         
@@ -548,16 +549,27 @@ def _test_classifier(model, data_set, num_thresholds=101):
 
 def _show_stats(train_stats, val_stats):
     
-    import matplotlib.pyplot as plt
-    
+    plt.figure(1)
     plt.plot(
         train_stats.false_positive_rate, train_stats.true_positive_rate, 'b',
         val_stats.false_positive_rate, val_stats.true_positive_rate, 'g')
-    
-    plt.legend(['Training', 'Validation'])
-    
     plt.xlim((0, 1))
     plt.ylim((0, 1))
+    plt.title('{} Classifier ROC'.format(_DETECTOR_NAME))
+    plt.legend(['Training', 'Validation'])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    
+    plt.figure(2)
+    plt.plot(
+        train_stats.precision, train_stats.recall, 'b',
+        val_stats.precision, val_stats.recall, 'g')
+    plt.xlim((.9, 1))
+    plt.ylim((.8, 1))
+    plt.title('{} Classifier Precision vs. Recall'.format(_DETECTOR_NAME))
+    plt.legend(['Training', 'Validation'])
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
     
     plt.show()
         
