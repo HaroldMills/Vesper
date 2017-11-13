@@ -18,7 +18,7 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-# TODO: Use same training/validation/test split on every run.
+# TODO: Offer reproducible training option.
 # TODO: Balance data in training epochs.
 # TODO: Try using longer thrush waveforms.
 # TODO: Try adding convolutional layers.
