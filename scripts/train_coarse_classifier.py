@@ -29,7 +29,7 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 _DETECTOR_NAME = 'Thrush'
 
 _FILE_PATH = Path(
-    '/Users/Harold/Desktop/2017 {} Clips 22050.hdf5'.format(_DETECTOR_NAME))
+    '/Users/Harold/Desktop/2017 {} Clips 22050.h5'.format(_DETECTOR_NAME))
 
 _SETTINGS = {
      
