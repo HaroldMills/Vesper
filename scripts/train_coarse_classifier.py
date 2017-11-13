@@ -7,6 +7,7 @@ from keras.layers import Dense
 import keras
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
 
 from vesper.util.binary_classification_stats import BinaryClassificationStats
 from vesper.util.bunch import Bunch
@@ -28,8 +29,13 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 _DETECTOR_NAME = 'Thrush'
 
-_FILE_PATH = Path(
+_CLIPS_FILE_PATH = Path(
     '/Users/Harold/Desktop/2017 {} Clips 22050.h5'.format(_DETECTOR_NAME))
+
+_DATA_DIR_NAME = '{} Coarse Classifier 2.0'
+_MODEL_FILE_NAME = 'Keras Model.h5'
+_SETTINGS_FILE_NAME = 'Settings.yaml'
+
 
 _SETTINGS = {
      
@@ -37,15 +43,15 @@ _SETTINGS = {
         
         detector_name='Tseep',
         
-        waveform_start_time=.080,
-        waveform_duration=.150,
+        start_time=.080,
+        duration=.150,
         
         spectrogram_window_size=.005,
         spectrogram_hop_size=.0025,
         spectrogram_start_freq=4000,
         spectrogram_end_freq=10000,
         spectrogram_power_clipping_fraction=.001,
-        normalize_spectrograms=True,
+        spectrogram_normalization_enabled=True,
         
         training_set_size=90000,
         validation_set_size=5000,
@@ -72,15 +78,15 @@ _SETTINGS = {
         
         detector_name='Thrush',
         
-        waveform_start_time=.150,
-        waveform_duration=.175,
+        start_time=.150,
+        duration=.175,
         
         spectrogram_window_size = .005,
         spectrogram_hop_size = .0025,
         spectrogram_start_freq=2000,
         spectrogram_end_freq=5000,
         spectrogram_power_clipping_fraction=.001,
-        normalize_spectrograms=True,
+        spectrogram_normalization_enabled=True,
         
         training_set_size=20000,
         validation_set_size=5000,
@@ -111,11 +117,13 @@ def _main():
     
     settings = _SETTINGS[_DETECTOR_NAME]
     
-    clips, sample_rate = _get_clips(_FILE_PATH, settings)
+    print(_get_classifier_data_dir_path(_DETECTOR_NAME))
+    
+    clips = _get_clips(_CLIPS_FILE_PATH, settings)
     
     if not settings.verbose:
         print('Computing features...')
-    features = _compute_features(clips, sample_rate, settings)
+    features = _compute_features(clips, settings)
     
     print('Getting targets from classifications...')
     targets = _get_targets(clips)
@@ -125,6 +133,9 @@ def _main():
         
     print('Training classifier...')
     model = _train_classifier(train_set, settings)
+    
+    print('Saving classifier...')
+    _save_classifier(model, settings)
        
     print('Testing classifier...')
     train_stats = _test_classifier(model, train_set)
@@ -177,9 +188,9 @@ def _get_clips(file_path, settings):
         print('Clips include {} calls and {} noises.'.format(
             num_calls, num_noises))
     
-    sample_rate = file_.get_sample_rate()
+    settings.sample_rate = file_.get_sample_rate()
     
-    return clips, sample_rate
+    return clips
         
         
 def _get_num_read_clips(num_file_clips, settings):
@@ -237,7 +248,7 @@ def _sample_clips(clips, settings):
         return clips
         
         
-def _compute_features(clips, sample_rate, settings):
+def _compute_features(clips, settings):
     
     waveforms = _get_waveforms(clips)
     
@@ -245,11 +256,11 @@ def _compute_features(clips, sample_rate, settings):
     print_if_verbose = ConditionalPrinter(settings.verbose)
     
     print_if_verbose('Trimming waveforms...')
-    waveforms = _trim_waveforms(waveforms, sample_rate, settings)
+    waveforms = _trim_waveforms(waveforms, settings)
     
     print_if_verbose('Computing spectrograms...')
     start_time = time.time()
-    spectrograms = _compute_spectrograms(waveforms, sample_rate, settings)
+    spectrograms = _compute_spectrograms(waveforms, settings)
     elapsed_time = time.time() - start_time
     
     spectrogram_rate = num_examples / elapsed_time
@@ -263,7 +274,7 @@ def _compute_features(clips, sample_rate, settings):
     
     print_if_verbose('Trimming spectrogram frequencies...')
     print_if_verbose('    input shape {}'.format(spectrograms.shape))
-    spectrograms = _trim_spectrograms(spectrograms, sample_rate, settings)
+    spectrograms = _trim_spectrograms(spectrograms, settings)
     print_if_verbose('    output shape {}'.format(spectrograms.shape))
     
     print_if_verbose('Clipping spectrogram powers...')
@@ -271,9 +282,9 @@ def _compute_features(clips, sample_rate, settings):
     print_if_verbose('    {}'.format(power_clipping_range))
     
     print_if_verbose('Normalizing spectrograms...')
-    normalization = _normalize_spectrograms(spectrograms, settings)
-    print_if_verbose('    {}'.format(normalization))
-    print_if_verbose('    {} {}'.format(spectrograms.mean(), spectrograms.std()))
+    _normalize_spectrograms(spectrograms, settings)
+    print_if_verbose('    {}'.format(
+        settings.spectrogram_mean, settings.spectrogram_standard_dev))
     
     print_if_verbose('Flattening spectrograms...')
     features = spectrograms.reshape((num_examples, -1))
@@ -290,24 +301,24 @@ def _get_waveforms(clips):
     return waveforms
         
         
-def _trim_waveforms(waveforms, sample_rate, settings):
+def _trim_waveforms(waveforms, settings):
     start_index = signal_utils.seconds_to_frames(
-        settings.waveform_start_time, sample_rate)
+        settings.start_time, settings.sample_rate)
     duration = signal_utils.seconds_to_frames(
-        settings.waveform_duration, sample_rate)
+        settings.duration, settings.sample_rate)
     end_index = start_index + duration
     return waveforms[:, start_index:end_index]
     
     
-def _compute_spectrograms(waveforms, sample_rate, settings):
+def _compute_spectrograms(waveforms, settings):
     
     num_examples = len(waveforms)
     print_if_verbose = ConditionalPrinter(settings.verbose)
     
     window_size = signal_utils.seconds_to_frames(
-        settings.spectrogram_window_size, sample_rate)
+        settings.spectrogram_window_size, settings.sample_rate)
     hop_size = signal_utils.seconds_to_frames(
-        settings.spectrogram_hop_size, sample_rate)
+        settings.spectrogram_hop_size, settings.sample_rate)
     dft_size = tfa_utils.get_dft_size(window_size)
     
     params = Settings(
@@ -345,12 +356,12 @@ def _compute_spectrogram(waveform, params):
     return tfa_utils.linear_to_log(gram, 1)
 
     
-def _trim_spectrograms(spectrograms, sample_rate, params):
+def _trim_spectrograms(spectrograms, settings):
     num_bins = spectrograms.shape[2]
     start_index = _freq_to_bin_num(
-        params.spectrogram_start_freq, sample_rate, num_bins)
+        settings.spectrogram_start_freq, settings.sample_rate, num_bins)
     end_index = _freq_to_bin_num(
-        params.spectrogram_end_freq, sample_rate, num_bins) + 1
+        settings.spectrogram_end_freq, settings.sample_rate, num_bins) + 1
     return spectrograms[:, :, start_index:end_index]
 
 
@@ -410,17 +421,22 @@ def _clip_spectrogram_powers(spectrograms, settings):
 #            
 #         plt.show()
     
-        return min_power, max_power
-    
     else:
-        return None
+        
+        min_power = None
+        max_power = None
+        
+    settings.spectrogram_min_power = min_power
+    settings.spectrogram_max_power = max_power
+        
+    
     
     
 def _normalize_spectrograms(spectrograms, settings):
     
     """Normalizes spectrograms to have zero mean and unit variance."""
     
-    if settings.normalize_spectrograms:
+    if settings.spectrogram_normalization_enabled:
         
         # Subtract mean.
         mean = spectrograms.mean()
@@ -430,10 +446,13 @@ def _normalize_spectrograms(spectrograms, settings):
         std = spectrograms.std()
         spectrograms /= std
         
-        return mean, std
-    
     else:
-        return None
+        
+        mean = None
+        std = None
+        
+    settings.spectrogram_mean = mean
+    settings.spectrogram_standard_dev = std
     
     
 def _get_targets(clips):
@@ -535,6 +554,49 @@ def _create_classifier_model(input_length, settings):
     return model
         
     
+def _save_classifier(model, settings):
+    
+    dir_path = _get_classifier_data_dir_path(settings.detector_name)
+    dir_path.mkdir(exist_ok=True)
+    
+    path = dir_path.joinpath(_MODEL_FILE_NAME)
+    model.save(path)
+    print('Saved classifier to file "{}".'.format(path))
+    
+    settings = _create_classifier_settings(settings)
+    text = yaml.dump(settings, default_flow_style=False)
+    path = dir_path.joinpath(_SETTINGS_FILE_NAME)
+    path.write_text(text)
+    
+    
+def _get_classifier_data_dir_path(detector_name):
+    repo_path = Path(__file__).parent.parent
+    dir_name = _DATA_DIR_NAME.format(detector_name)
+    return repo_path.joinpath('vesper', 'mpg_ranch', dir_name)
+    
+    
+def _create_classifier_settings(s):
+    
+    return dict(
+        
+        detector_name=s.detector_name,
+        
+        sample_rate=float(s.sample_rate),
+        start_time=s.start_time,
+        duration=s.duration,
+        
+        spectrogram_window_size=s.spectrogram_window_size,
+        spectrogram_hop_size=s.spectrogram_hop_size,
+        spectrogram_start_freq=s.spectrogram_start_freq,
+        spectrogram_end_freq=s.spectrogram_end_freq,
+        spectrogram_min_power=float(s.spectrogram_min_power),
+        spectrogram_max_power=float(s.spectrogram_max_power),
+        spectrogram_mean=float(s.spectrogram_mean),
+        spectrogram_standard_dev=float(s.spectrogram_standard_dev)
+        
+    )
+
+
 def _test_classifier(model, data_set, num_thresholds=101):
     
     features = data_set.features
