@@ -54,7 +54,7 @@ _SETTINGS = {
         spectrogram_power_clipping_fraction=.001,
         spectrogram_normalization_enabled=True,
         
-        min_recall = .98,
+        min_recall=.98,
         
         training_set_size=120000,
         validation_set_size=5000,
@@ -69,7 +69,7 @@ _SETTINGS = {
         # network comprises a single unit with a sigmoid activation
         # function. Setting this to the empty list yields a logistic
         # regression classifier.
-        hidden_layer_sizes = [16],
+        hidden_layer_sizes=[16],
         
         regularization_beta=.002
         
@@ -89,7 +89,7 @@ _SETTINGS = {
         spectrogram_power_clipping_fraction=.001,
         spectrogram_normalization_enabled=True,
         
-        min_recall = .97,
+        min_recall=.97,
         
         training_set_size=None,
         validation_set_size=5000,
@@ -104,7 +104,7 @@ _SETTINGS = {
         # network comprises a single unit with a sigmoid activation
         # function. Setting this to the empty list yields a logistic
         # regression classifier.
-        hidden_layer_sizes = [16],
+        hidden_layer_sizes=[16],
         
         regularization_beta=.002
         
