@@ -242,8 +242,8 @@ def _compute_features(clips, settings):
     
     vprint = ConditionalPrinter(_VERBOSE)
     
-    vprint('Extracting waveforms...')
-    waveforms = _extract_waveforms(clips)
+    vprint('Collecting waveforms...')
+    waveforms = _collect_waveforms(clips)
     num_waveforms = len(waveforms)
     
     fc = FeatureComputer(settings)
@@ -290,7 +290,7 @@ def _compute_features(clips, settings):
     return features
 
     
-def _extract_waveforms(clips):
+def _collect_waveforms(clips):
     num_clips = len(clips)
     num_samples = len(clips[0].waveform)
     waveforms = np.zeros((num_clips, num_samples))
