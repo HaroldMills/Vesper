@@ -4,5 +4,6 @@ include vesper/django/app/static/vesper/*.html
 include vesper/django/app/static/vesper/*.css
 include vesper/django/app/static/vesper/*.js
 include vesper/scripts/*.spec
-recursive-include vesper *.yaml
+recursive-include vesper *.h5
 recursive-include vesper *.pkl
+recursive-include vesper *.yaml
