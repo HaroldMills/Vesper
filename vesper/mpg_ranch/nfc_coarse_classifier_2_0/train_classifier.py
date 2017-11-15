@@ -41,6 +41,7 @@ import vesper.util.numpy_utils as numpy_utils
 # TODO: Try adding convolutional layers.
 # TODO: Try learning a filter bank instead of using a spectrogram.
 # TODO: Try lots of random sets of hyperparameter values.
+# TODO: Try training several networks and using majority vote of best three.
 
 
 _CLIPS_FILE_PATH = '/Users/Harold/Desktop/2017 {} Clips 22050.h5'
@@ -117,7 +118,44 @@ _SETTINGS = {
         # network comprises a single unit with a sigmoid activation
         # function. Setting this to the empty list yields a logistic
         # regression classifier.
-        hidden_layer_sizes=[16],
+        hidden_layer_sizes = [16],
+        
+        # Got the following results for training networks of various
+        # sizes on 2017-11-15:
+        #
+        #     [8] 0.07 0.971 0.801
+        #     [10] 0.14 0.971 0.865
+        #     [12] 0.12 0.970 0.819
+        #     [14] 0.08 0.971 0.801
+        #     [16] 0.06 0.972 0.805
+        #     [18] 0.15 0.970 0.866
+        #     [20] 0.09 0.973 0.815
+        #     [22] 0.11 0.970 0.849
+        #     [24] 0.11 0.972 0.858
+        # 
+        #     [8] 0.09 0.971 0.833
+        #     [10] 0.08 0.972 0.790
+        #     [12] 0.11 0.971 0.851
+        #     [14] 0.11 0.971 0.841
+        #     [16] 0.09 0.972 0.834
+        #     [18] 0.16 0.970 0.819
+        #     [20] 0.13 0.971 0.852
+        #     [22] 0.11 0.971 0.847
+        #     [24] 0.12 0.971 0.833
+        # 
+        #     [8] 0.09 0.970 0.842
+        #     [10] 0.09 0.970 0.846
+        #     [12] 0.12 0.972 0.838
+        #     [14] 0.11 0.971 0.833
+        #     [16] 0.10 0.971 0.824
+        #     [18] 0.08 0.972 0.837
+        #     [20] 0.11 0.970 0.838
+        #     [22] 0.08 0.971 0.850
+        #     [24] 0.10 0.971 0.823
+        
+        # hidden_layer_sizes=[
+        #    [8], [10], [12], [14], [16], [18], [20], [22], [24]
+        # ],
         
         regularization_beta=.002
         
@@ -146,6 +184,9 @@ def _main():
     print('Creating training, validation, and test data sets...')
     train_set, val_set, _ = _create_data_sets(features, targets, settings)
         
+#     print('Training classifiers...')
+#     _train_classifiers(train_set, val_set, settings)
+    
     print('Training classifier...')
     model = _train_classifier(train_set, settings)
     
@@ -352,29 +393,49 @@ def _create_data_sets(features, targets, settings):
     return train_set, val_set, test_set
 
 
-def _train_classifier(train_set, settings):
+def _train_classifiers(train_set, val_set, settings):
+    
+    results = []
     
     input_length = train_set.features.shape[1]
-    model = _create_classifier_model(input_length, settings)
     
-    verbose = 2 if _VERBOSE else 0
+    for hidden_layer_sizes in settings.hidden_layer_sizes:
+        
+        print('Training classifier with hidden layer sizes {}...'.format(
+            hidden_layer_sizes))
+        
+        model = _create_classifier_model(
+            input_length, hidden_layer_sizes, settings.regularization_beta)
+        
+        verbose = 2 if _VERBOSE else 0
+    
+        model.fit(
+            train_set.features,
+            train_set.targets,
+            epochs=settings.num_epochs,
+            batch_size=settings.batch_size,
+            verbose=verbose)
 
-    model.fit(
-        train_set.features,
-        train_set.targets,
-        epochs=settings.num_epochs,
-        batch_size=settings.batch_size,
-        verbose=verbose)
+        stats = _test_classifier(model, val_set)
+        i = _find_classification_threshold_index(stats, settings.min_recall)
+        results.append(
+            (hidden_layer_sizes, stats.threshold[i], stats.recall[i],
+             stats.precision[i]))
+        
+    print(
+        'Classifier (hidden layer sizes, threshold, recall, precision) '
+        'tuples:')
+    for r in results:
+        print('    {} {:.2f} {:.3f} {:.3f}'.format(*r))
+        
+
+def _create_classifier_model(
+        input_length, hidden_layer_sizes, regularization_beta):
     
-    return model
-    
-       
-def _create_classifier_model(input_length, settings):
-    
-    layer_sizes = settings.hidden_layer_sizes + [1]
+    layer_sizes = hidden_layer_sizes + [1]
     num_layers = len(layer_sizes)
     
-    regularizer = keras.regularizers.l2(settings.regularization_beta)
+    regularizer = keras.regularizers.l2(regularization_beta)
     
     model = Sequential()
     
@@ -410,6 +471,37 @@ def _test_classifier(model, data_set, num_thresholds=101):
     return BinaryClassificationStats(targets, values, thresholds)
 
 
+def _find_classification_threshold_index(stats, min_recall):
+    
+    recall = stats.recall
+    
+    i = 0
+    while recall[i] >= min_recall:
+        i += 1
+        
+    return i - 1
+
+
+def _train_classifier(train_set, settings):
+    
+    input_length = train_set.features.shape[1]
+    model = _create_classifier_model(
+        input_length,
+        settings.hidden_layer_sizes,
+        settings.regularization_beta)
+    
+    verbose = 2 if _VERBOSE else 0
+
+    model.fit(
+        train_set.features,
+        train_set.targets,
+        epochs=settings.num_epochs,
+        batch_size=settings.batch_size,
+        verbose=verbose)
+    
+    return model
+    
+       
 def _show_stats(clip_type, train_stats, val_stats):
     
     plt.figure(1)
@@ -490,14 +582,8 @@ def _create_classifier_settings(s, stats):
     
     
 def _find_classification_threshold(stats, min_recall):
-    
-    recall = stats.recall
-    
-    i = 0
-    while recall[i] >= min_recall:
-        i += 1
-        
-    return float(stats.threshold[i - 1])
+    i = _find_classification_threshold_index(stats, min_recall)
+    return float(stats.threshold[i])
 
 
 if __name__ == '__main__':
