@@ -1,5 +1,4 @@
 from pathlib import Path
-import random
 import sys
 import time
 
@@ -19,9 +18,9 @@ from vesper.util.conditional_printer import ConditionalPrinter
 from vesper.util.settings import Settings
 import vesper.mpg_ranch.nfc_coarse_classifier_2_0.classifier_utils as \
     classifier_utils
+import vesper.util.numpy_utils as numpy_utils
 
 
-# TODO: Make training/validation/test split reproducible.
 # TODO: Offer reproducible training option.
 # TODO: Balance data in training epochs.
 # TODO: Try using longer thrush waveforms.
@@ -225,28 +224,6 @@ def _get_num_read_clips(num_file_clips, settings):
         return num_clips
     
         
-def _sample_clips(clips, settings):
-    
-    train_size = settings.training_set_size
-    
-    if train_size is None:
-        return clips
-    
-    else:
-        # training set size specified
-
-        val_size = settings.validation_set_size
-        test_size = settings.test_set_size
-        
-        n = train_size + val_size + test_size
-        
-        if n < len(clips):
-            indices = frozenset(random.sample(range(len(clips)), n))
-            clips = [c for i, c in enumerate(clips) if i in indices]
-        
-        return clips
-        
-        
 def _compute_features(clips, settings):
     
     vprint = ConditionalPrinter(_VERBOSE)
@@ -336,7 +313,7 @@ def _create_data_sets(features, targets, settings):
     assert(train_size + val_size + test_size <= num_examples)
     
     # Shuffle examples.
-    permutation = np.random.permutation(num_examples)
+    permutation = numpy_utils.reproducible_permutation(num_examples)
     features = features[permutation]
     targets = targets[permutation]
     

@@ -1,8 +1,7 @@
-import random
-
 import h5py
 
 from vesper.util.bunch import Bunch
+import vesper.util.numpy_utils as numpy_utils
 
 
 class ClipsHdf5File:
@@ -54,7 +53,8 @@ class ClipsHdf5File:
             else:
                 # not getting all clips
                 
-                keys = random.sample(group.keys(), num_clips)
+                keys = numpy_utils.reproducible_choice(
+                    list(group.keys()), num_clips, replace=False)
                 
                 for i, key in enumerate(keys):
                     
