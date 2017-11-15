@@ -1,3 +1,17 @@
+# The following commented code was an attempt (along with setting the
+# PYTHONHASHSEED environment variable to 0 in the PyDev run configuration
+# for this script) to make classifier training reproducible, but it didn't
+# work.
+# 
+# import random
+# random.seed(1)
+#  
+# import numpy as np
+# np.random.seed(1)
+#  
+# import tensorflow as tf
+# tf.set_random_seed(1)
+
 from pathlib import Path
 import sys
 import time
