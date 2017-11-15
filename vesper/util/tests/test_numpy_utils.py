@@ -66,3 +66,54 @@ class NumPyUtilsTests(TestCase):
             expected = np.array(expected)
             result = numpy_utils.find(x, y, tolerance=1)
             self._assert_arrays_equal(result, expected)
+            
+            
+    def test_reproducible_choice(self):
+        
+        choice = numpy_utils.reproducible_choice
+        
+        ns = [10, 20]
+        
+        for n in ns:
+            for size in range(n + 1):
+                for replace in [True, False]:
+                    x = np.arange(n)
+                    a = choice(x, size, replace)
+                    b = choice(x, size, replace)
+                    self._assert_arrays_equal(a, b)
+                    
+                    
+    def test_reproducible_permutation(self):
+        
+        permutation = numpy_utils.reproducible_permutation
+        
+        # integer argument
+        for n in range(10):
+            a = permutation(n)
+            b = permutation(n)
+            self._assert_arrays_equal(a, b)
+            
+        # array argument
+        ns = [10, 20]
+        for n in ns:
+            x = np.arange(n)
+            a = permutation(x)
+            b = permutation(x)
+            self._assert_arrays_equal(a, b)
+            
+            
+    def test_reproducible_shuffle(self):
+        
+        shuffle = numpy_utils.reproducible_shuffle
+        
+        ns = [10, 20]
+        
+        for n in ns:
+            
+            x = np.arange(n)
+            shuffle(x)
+            
+            y = np.arange(n)
+            shuffle(y)
+            
+            self._assert_arrays_equal(x, y)

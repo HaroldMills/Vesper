@@ -67,3 +67,37 @@ def find(x, y, tolerance=0):
             # i is the answer
             
             return i
+
+
+def reproducible_choice(x, size=None, replace=True, p=None):
+    
+    """
+    Like NumPy's `random.choice`, but always returns the same thing for
+    the same arguments.
+    """
+    
+    return _rs().choice(x, size, replace, p)
+
+
+def _rs():
+    return np.random.RandomState(seed=1)
+
+
+def reproducible_permutation(x):
+    
+    """
+    Like NumPy's `random.permutation`, but always returns the same thing
+    for a given argument.
+    """
+    
+    return _rs().permutation(x)
+
+
+def reproducible_shuffle(x):
+    
+    """
+    Like NumPy's `random.shuffle`, but always has the same effect on a
+    given argument.
+    """
+    
+    _rs().shuffle(x)
