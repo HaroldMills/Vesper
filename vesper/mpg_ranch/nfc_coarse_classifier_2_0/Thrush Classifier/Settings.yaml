@@ -1,0 +1,13 @@
+classification_threshold: 0.13
+clip_type: Thrush
+spectrogram_end_freq: 5000
+spectrogram_hop_size: 0.0025
+spectrogram_max_power: 86.18922759246823
+spectrogram_mean: 51.67524719238281
+spectrogram_min_power: 24.83598795318602
+spectrogram_standard_dev: 10.98478889465332
+spectrogram_start_freq: 2000
+spectrogram_window_size: 0.005
+waveform_duration: 0.175
+waveform_sample_rate: 22050.0
+waveform_start_time: 0.15

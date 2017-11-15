@@ -1,0 +1,13 @@
+classification_threshold: 0.23
+clip_type: Tseep
+spectrogram_end_freq: 10000
+spectrogram_hop_size: 0.0025
+spectrogram_max_power: 84.47950002288815
+spectrogram_mean: 45.64449691772461
+spectrogram_min_power: 20.32970339965817
+spectrogram_standard_dev: 10.174287796020508
+spectrogram_start_freq: 4000
+spectrogram_window_size: 0.005
+waveform_duration: 0.15
+waveform_sample_rate: 22050.0
+waveform_start_time: 0.08
