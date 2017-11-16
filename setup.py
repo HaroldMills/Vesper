@@ -29,7 +29,7 @@ setup(
         'pyyaml',
         'resampy',
         'scikit-learn',
-        'tensorflow'
+        'tensorflow<1.3'
     ],
       
     entry_points={
