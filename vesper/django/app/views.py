@@ -1090,9 +1090,19 @@ def _get_solar_event_times_json(station, night):
 
     
 def _get_solar_event_time(event, lat, lon, date, utc_to_local):
+    
     utc_time = ephem_utils.get_event_time(event, lat, lon, date)
-    local_time = utc_to_local(utc_time)
-    return _format_time(local_time)
+    
+    if utc_time is None:
+        # event does not exist for specified date (e.g. at high latitude)
+        
+        return None
+    
+    else:
+        # event exists for specified date
+        
+        local_time = utc_to_local(utc_time)
+        return _format_time(local_time)
 
 
 def _get_recordings_json(recordings, station):

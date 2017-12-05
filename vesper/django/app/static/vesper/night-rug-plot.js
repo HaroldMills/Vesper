@@ -114,10 +114,13 @@ class NightRugPlot {
 //			
 //		} else if (this._solarEventTimes !== null) {}
 			
-		if (this._solarEventTimes !== null) {
+	    const times = this._solarEventTimes;
+	    
+		if (times !== null && times['sunset'] !== null &&
+				times['sunrise'] !== null) {
 			
-			const startTime = this._solarEventTimes['sunset'] - padding;
-			const endTime = this._solarEventTimes['sunrise'] + padding;
+			const startTime = times['sunset'] - padding;
+			const endTime = times['sunrise'] + padding;
 			return [startTime, endTime];
 			
 		} else {
@@ -182,9 +185,16 @@ class NightRugPlot {
 			context.fillRect(0, 0, this._canvasWidth, height);
 			
 			for (const [startName, endName, color] of _UNDERLAY_SPEC) {
+				
 			    const startTime = this._solarEventTimes[startName];
 			    const endTime = this._solarEventTimes[endName];
-				this._drawRect(context, startTime, endTime, 0, height, color);
+			    
+			    if (startTime !== null && endTime !== null)
+			    	// start and end event times are defined
+			    	
+				    this._drawRect(
+				    	context, startTime, endTime, 0, height, color);
+			    
 			}
 			
 		}
@@ -631,7 +641,10 @@ function _getSolarEventTimes(solarEventTimeStrings) {
 		
 		for (const eventName of _SOLAR_EVENT_NAMES) {
 			const timeString = solarEventTimeStrings[eventName];
-			times[eventName] = _timeStringToHours(timeString);
+			if (timeString === null)
+				times[eventName] = null;
+			else
+			    times[eventName] = _timeStringToHours(timeString);
 		}
 		
 		return times;
