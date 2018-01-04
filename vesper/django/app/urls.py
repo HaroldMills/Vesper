@@ -50,7 +50,8 @@ urlpatterns = [
     url(r'^clips/(?P<clip_id>[0-9]+)/annotations/json/$',
         views.annotations_json, name='annotations'),
     
-    url(r'^clips/(?P<clip_id>[0-9]+)/annotations/(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$',
+    url((r'^clips/(?P<clip_id>[0-9]+)/annotations/'
+         r'(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$'),
         views.annotation, name='annotation'),
                
     url(r'^annotations/(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$',
@@ -61,11 +62,11 @@ urlpatterns = [
 
     url(r'^jobs/(?P<job_id>[0-9]+)/$', views.job, name='job'),
     
-#     url(r'^view/(?P<station_name>[a-zA-Z0-9_\-\.]+)/$',
-#         views.view_station, name='station')
+    # url(r'^view/(?P<station_name>[a-zA-Z0-9_\-\.]+)/$',
+    #     views.view_station, name='station')
 
-#     url((r'^view/(?P<station_name>[a-zA-Z0-9_\-\.]+)/'
-#          r'(?P<classification>[a-zA-Z0-9_\-\.]+)/$'),
-#         views.view_station, name='station')
+    # url((r'^view/(?P<station_name>[a-zA-Z0-9_\-\.]+)/'
+    #      r'(?P<classification>[a-zA-Z0-9_\-\.]+)/$'),
+    #     views.view_station, name='station')
 
 ]
