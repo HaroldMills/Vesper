@@ -25,7 +25,7 @@ function setTitle() {
 	const titleElement = document.getElementById('title');
 	titleElement.innerHTML = title;
 	
-	document.title = `Calendar - ${title}`;
+	document.title = `Clip Calendar - ${title}`;
 	
 }
 

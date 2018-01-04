@@ -76,7 +76,7 @@ class HttpError(Exception):
 _DEFAULT_NAVBAR_DATA = yaml.load('''
   
 - name: View
-  url_name: calendar
+  url_name: clip-calendar
     
 - name: Import
   dropdown:
@@ -192,7 +192,7 @@ _GET_AND_HEAD = ('GET', 'HEAD')
 
 
 def index(request):
-    return redirect(reverse('calendar'))
+    return redirect(reverse('clip-calendar'))
 
 
 @login_required
@@ -850,7 +850,7 @@ def _get_request_body_as_json(request):
     return _get_request_body(request, 'application/json', 'utf-8')
 
 
-def calendar(request):
+def clip_calendar(request):
     
     params = request.GET
         
@@ -892,7 +892,7 @@ def calendar(request):
         classification=annotation_value_spec,
         periods_json=periods_json)
     
-    return render(request, 'vesper/calendar.html', context)
+    return render(request, 'vesper/clip-calendar.html', context)
     
     
 def _get_calendar_query_object(
