@@ -166,7 +166,7 @@ def _create_navbar_right_items(request):
         item = Bunch(
             name=user.username,
             type='dropdown',
-            items = [
+            items=[
                 Bunch(
                     name='Log Out',
                     type='link',
@@ -182,6 +182,7 @@ def _create_navbar_right_items(request):
             url='/login/' + query)
         
     return [item]
+
 
 _navbar_items = _create_navbar_items()
 
@@ -835,7 +836,7 @@ def annotations(request, annotation_name):
         
         else:
             
-            return HttpResponseForbidden()            
+            return HttpResponseForbidden()
         
     else:
         return HttpResponseNotAllowed(['POST'])
@@ -896,7 +897,7 @@ def calendar(request):
     
 def _get_calendar_query_object(
         objects, type_name, params, preferences,
-        name_getter=lambda object: object.name):
+        name_getter=lambda o: o.name):
     
     if len(objects) == 0:
         return None
@@ -1072,15 +1073,19 @@ def _get_solar_event_times_json(station, night):
         
         # TODO: Fix issue 85 and then simplify the following code.
         
-        get = lambda e: _get_solar_event_time(e, lat, lon, night, utc_to_local)
+        def get(e):
+            return _get_solar_event_time(e, lat, lon, night, utc_to_local)
+        
         times['sunset'] = get('Sunset')
         times['civilDusk'] = get('Civil Dusk')
         times['nauticalDusk'] = get('Nautical Dusk')
         times['astronomicalDusk'] = get('Astronomical Dusk')
         
         next_day = night + _ONE_DAY
-        get = lambda e: _get_solar_event_time(
-            e, lat, lon, next_day, utc_to_local)
+        
+        def get(e):
+            return _get_solar_event_time(e, lat, lon, next_day, utc_to_local)
+
         times['astronomicalDawn'] = get('Astronomical Dawn')
         times['nauticalDawn'] = get('Nautical Dawn')
         times['civilDawn'] = get('Civil Dawn')
@@ -1114,7 +1119,8 @@ def _get_recordings_json(recordings, station):
     # instead of UTC times to clients.
     
     utc_to_local = station.utc_to_local
-    recording_dicts = [_get_recording_dict(r, utc_to_local) for r in recordings]
+    recording_dicts = [
+        _get_recording_dict(r, utc_to_local) for r in recordings]
     return json.dumps(recording_dicts)
 
     
