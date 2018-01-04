@@ -55,17 +55,43 @@ _RECORDING_DATA = {
         {
             'start_date': datetime.date(2006, 1, 1),
             'end_date': datetime.date(2007, 1, 1),
-            'start_time': datetime.time(13, 0),
-            'end_time': datetime.time(11, 0)
+            'start_time': datetime.time(12, 0, 0),
+            'end_time': datetime.time(11, 59, 59)
         }
     ]
                    
 }
 
-_CLASSIFICATIONS = {
-#     'calls': 'Call',
-#     'noise': 'Noise',
-#     'tones': 'Tone'
+# _CLASSIFICATION_ALIASES = {
+#     'Call': ['calls'],
+#     'Tone': ['tones']
+# }
+
+# Deline
+_CLASSIFICATION_ALIASES = {
+    'Call': [
+        'call', 'calls', 'calls2', 'warblers and sparrows', 'first set',
+        'second set', 'third set', 'fourth set', 'fifth set', 'six set',
+        'sixth set', 'seventh set', 'eighth set', 'ninth set', 'tenth set'],
+    'Call.CORE': ['common redpoll'],
+    'Call.GCTH': ['gray-cheeked thrush'],
+    'Call.Gull': ['gulls'],
+    'Call.HETH': ['hermit thrush'],
+    'Call.Interesting': ['interesting unid', 'interesting unided calls'],
+    'Call.Local WCSP': ['white-crowned sparrows local on ground'],
+    'Call.Longspur?': ['possible longspur'],
+    'Call.Pipit?': ['are these pipit'],
+    'Call.Shorebird': ['shorebird', 'shorebirds'],
+    'Call.Sparrow': ['sparrow', 'sparrows'],
+    'Call.SWTH': ['swainsons thrush'],
+    'Call.Thrush': ['thrush', 'thrushes'],
+    'Call.Tseep': ['tseep', 'tseeps'],
+    'Call.Uninteresting': [
+        'not very interesting', 'uninteresting-local', 'uninteresting local'],
+    'Call.Warbler': ['warbler', 'warblers'],
+    'Call.WRSA?': ['possible white-rumped sandpiper'],
+    'Noise': ['noise', 'noises'],
+    'Red Squirrel': ['red squirrel', 'red squirrels']
 }
 
 _NUM_RECORDING_CHANNELS = 1
@@ -109,6 +135,8 @@ class ClipImporter:
         self._recording_channels = self._get_recording_channels()
         self._annotation_info = self._get_annotation_info()
         
+        self._classifications = self._get_classifications()
+        
         self._logger.info('Beginning import...')
         
         start_time = time.time()
@@ -149,7 +177,8 @@ class ClipImporter:
         # Number of excluded files.
         count = self._parsed_count - self._eligible_count
         if count != 0:
-            units = create_units_text(count, 'audio file was', 'audio files were')
+            units = create_units_text(
+                count, 'audio file was', 'audio files were')
             log('{} {} excluded by date.'.format(count, units))
             
         # Number of failed imports.
@@ -219,6 +248,15 @@ class ClipImporter:
                     _ANNOTATION_NAME))
             
             
+    def _get_classifications(self):
+        classifications = {}
+        for classification, aliases in _CLASSIFICATION_ALIASES.items():
+            classifications[classification.lower()] = classification
+            for alias in aliases:
+                classifications[alias.lower()] = classification
+        return classifications
+                
+            
     def _import_clips(self, path):
         
         for (dir_path, _, file_names) in os.walk(path):
@@ -276,8 +314,15 @@ class ClipImporter:
         dir_names = tuple(reversed(parts[:-1]))
         
         # Get classification from file parent dir name if name indicates it.
-        classification = _CLASSIFICATIONS.get(dir_names[0])
-        if classification is not None:
+        key = dir_names[0].lower()
+        classification = self._classifications.get(key)
+        
+        if classification is None:
+            self._logger.warning((
+                'Could not find classification for file "{}". Clip will '
+                'be unclassified.').format(
+                    file_path))
+        else:
             dir_names = dir_names[1:]
             
         station = self._get_station(dir_names)
