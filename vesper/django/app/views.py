@@ -76,7 +76,13 @@ class HttpError(Exception):
 _DEFAULT_NAVBAR_DATA = yaml.load('''
   
 - name: View
-  url_name: clip-calendar
+  dropdown:
+  
+      - name: Clip Calendar
+        url_name: clip-calendar
+        
+      - name: Clip Album
+        url_name: clip-album
     
 - name: Import
   dropdown:
@@ -1177,6 +1183,71 @@ def _limit_index(index, min_index, max_index):
         return max_index
     else:
         return index
+    
+    
+def clip_album(request):
+    
+    params = request.GET
+        
+    preference_manager.instance.reload_preferences()
+    preferences = preference_manager.instance.preferences
+
+    sm_pairs = model_utils.get_station_mic_output_pairs_list()
+    get_ui_name = model_utils.get_station_mic_output_pair_ui_name
+    sm_pair = _get_calendar_query_object(
+        sm_pairs, 'station_mic', params, preferences, name_getter=get_ui_name)
+    station, mic_output = sm_pair
+    
+    detectors = model_utils.get_processors('Detector')
+    detector = _get_calendar_query_object(
+        detectors, 'detector', params, preferences)
+    
+    annotation_value_specs = \
+        model_utils.get_string_annotation_value_specs('Classification')
+    annotation_value_spec = _get_string_annotation_value_spec(
+        annotation_value_specs, params, preferences)
+    
+    sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
+    sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
+    
+    detector_names = [d.name for d in detectors]
+    detector_name = None if detector is None else detector.name
+    
+    annotation_name, annotation_value = \
+        _get_string_annotation_info(annotation_value_spec)
+        
+    clips = model_utils.get_clips(
+        station, mic_output, detector, None, annotation_name, annotation_value)
+    
+    clips_json = _get_clips_json(clips, station)
+    
+    settings_presets_json = _get_presets_json('Clip Album Settings')
+    commands_presets_json = _get_presets_json('Clip Album Commands')
+        
+    preferences = preference_manager.instance.preferences
+    
+    settings_preset_path = \
+        preferences.get('default_presets.Clip Album Settings')
+    commands_preset_path = \
+        preferences.get('default_presets.Clip Album Commands')
+        
+    context = _create_template_context(
+        request, 'View',
+        station_mic_names=sm_pair_ui_names,
+        station_mic_name=sm_pair_ui_name,
+        detector_names=detector_names,
+        detector_name=detector_name,
+        classifications=annotation_value_specs,
+        classification=annotation_value_spec,
+        solar_event_times_json='null',
+        recordings_json='[]',
+        clips_json=clips_json,
+        settings_presets_json=settings_presets_json,
+        settings_preset_path=settings_preset_path,
+        commands_presets_json=commands_presets_json,
+        commands_preset_path=commands_preset_path)
+    
+    return render(request, 'vesper/clip-album.html', context)
     
     
 @login_required

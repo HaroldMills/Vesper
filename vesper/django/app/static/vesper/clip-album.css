@@ -34,7 +34,17 @@ body {
   */
   height: 100%;
   margin: 0;
-  
+
+}
+
+.query-panel {
+  margin-top: 70px;
+  background: rgba(255, 185, 56, .9);
+}
+
+.form-spacing {
+  margin-left: 10px;
+  margin-right: 10px;
 }
 
 .settings-button {
@@ -57,6 +67,7 @@ body {
   color: black;
 }
 
+
 /* settings modal control labels */
 .modal-body .form-horizontal .control-label {
   width: auto;
@@ -72,13 +83,9 @@ body {
 }
 
 #title {
-	
   font-weight: bold;
   text-align: center;
-  
-  /* Puts title below navbar rather than behind it. */
-  margin-top: 70px;
-  
+  margin-top: 0;
 }
 
 #rug-plot {

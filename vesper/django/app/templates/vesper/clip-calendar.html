@@ -2,22 +2,27 @@
 <html lang="en">
 
 <head>
+
   {% if stations %}
     <title>Clip Calendar</title>
   {% else %}
     <title>Clip Calendar - Vesper</title>
   {% endif %}
+  
   {% include "vesper/header-prefix.html" %}
-  {% load staticfiles %}
-  <link rel="stylesheet" type="text/css" href="{% static 'vesper/clip-calendar.css' %}">
+  
   <script>
     const stationMicName = "{{station_mic_name|default_if_none:''}}";
     const detectorName = "{{detector_name|default_if_none:''}}";
     const classification = "{{classification}}";
     const periods = {{periods_json|safe}};
   </script>
+  
+  {% load staticfiles %}
   <script src="{% static 'vesper/ui-utils.js' %}"></script>
   <script src="{% static 'vesper/clip-calendar.js' %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static 'vesper/clip-calendar.css' %}">
+  
 </head>
 
 <body>

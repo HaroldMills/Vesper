@@ -6,6 +6,7 @@ urlpatterns = [
                
     url(r'^$', views.index, name='index'),
     url(r'^clip-calendar/$', views.clip_calendar, name='clip-calendar'),
+    url(r'^clip-album/$', views.clip_album, name='clip-album'),
     url(r'^night/$', views.night, name='night'),
     url(r'^test-command/$', views.test_command, name='test-command'),
     

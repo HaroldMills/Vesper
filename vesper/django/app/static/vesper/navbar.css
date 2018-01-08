@@ -4,8 +4,15 @@ being. It was taking too long to find all the rules needed to override the
 Bootstrap rules affecting the navbar.
  */
  
+/*
+We add 50 pixels to what would otherwise be a 20-pixel top margin to
+account for the navbar.
+TODO: Find a way to lay out components beneath the navbar without the body
+CSS having to know the height of the navbar. It seems like it should be
+possible to get what we want with only the navbar (and the layout) knowing
+its height.
+*/
 body {
-  /* The extra 50 pixels of the top margin are for the navbar. */
   margin-top: 70px;
   margin-left: 20px;
   margin-right: 20px;

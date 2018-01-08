@@ -9,10 +9,10 @@
   
   <script>
     const clipQuery = {
-    	'stationMicName': '{{station_mic_name}}',
-    	'detectorName': '{{detector_name}}',
-    	'classification': '{{classification}}',
-    	'date': '{{date}}'
+	    	'stationMicName': '{{station_mic_name}}',
+	    	'detectorName': '{{detector_name}}',
+	    	'classification': '{{classification}}',
+	    	'date': '{{date}}'
     };
     const solarEventTimes = {{solar_event_times_json|safe}};
     const recordings = {{recordings_json|safe}};
@@ -31,7 +31,7 @@
   <script src="{% static 'vesper/ui-utils.js' %}"></script>
   <script src="{% static 'vesper/night-rug-plot.js' %}"></script>
   <script src="{% static 'vesper/keyboard-command-interpreter.js' %}"></script>
-  <script src="{% static 'vesper/clip-album.js' %}"></script>
+  <script src="{% static 'vesper/clip-album-class.js' %}"></script>
   <script src="{% static 'vesper/night.js' %}"></script>
   <link rel="stylesheet" type="text/css" href="{% static 'vesper/night.css' %}">
   
