@@ -2779,7 +2779,8 @@ class ClipView {
 			
 			const labelParts = [];
 			
-			if (s.classificationIncluded && clip.annotations !== null) {
+			if (s.classificationIncluded && clip.annotations !== null &&
+			        clipQuery.classification.includes('*')) {
 				
 				let annotation = clip.annotations['Classification'];
 				
