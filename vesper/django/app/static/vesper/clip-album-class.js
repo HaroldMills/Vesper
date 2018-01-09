@@ -2772,6 +2772,7 @@ class ClipView {
 	     *     hidden_clasification_prefixes: [Call.]
 	     *     start_time_included: true
 	     */
+		
 		const clip = this.clip;
 		const s = this.settings.label;
 	
@@ -2779,8 +2780,7 @@ class ClipView {
 			
 			const labelParts = [];
 			
-			if (s.classificationIncluded && clip.annotations !== null &&
-			        clipQuery.classification.includes('*')) {
+			if (s.classificationIncluded && clip.annotations !== null) {
 				
 				let annotation = clip.annotations['Classification'];
 				
