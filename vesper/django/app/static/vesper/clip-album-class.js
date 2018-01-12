@@ -2941,14 +2941,18 @@ class SpectrogramClipViewDelegate extends ClipViewDelegate {
 //            console.log(
 //                `computing and drawing spectrogram for clip ${clip.num}...`);
 
-            const settings = this.settings.spectrogram;
+            const settings = _createLowLevelSpectrogramSettings(
+                this.settings.spectrogram, clip.sampleRate);
 
+//            console.log(
+//                clip.sampleRate, settings.window.length, settings.hopSize,
+//                settings.dftSize);
+            
             // Compute spectrogram, offscreen spectrogram canvas, and
             // spectrogram image data and put image data to canvas. The
             // spectrogram canvas and the spectrogram image data have the
 		    // same size as the spectrogram. 
-            this._spectrogram =
-                _computeSpectrogram(this._clip.samples, settings);
+            this._spectrogram = _computeSpectrogram(clip.samples, settings);
             this._spectrogramCanvas =
                 _createSpectrogramCanvas(this._spectrogram, settings);
             this._spectrogramImageData =
@@ -3062,18 +3066,44 @@ function _scaleSamples(samples, factor) {
 }
 
 
+function _createLowLevelSpectrogramSettings(settings, sampleRate) {
+    
+    const windowSize = Math.round(settings.windowSize * sampleRate);
+    const window = createDataWindow('Hann', windowSize);
+    const hopSize = Math.round(settings.hopSize * sampleRate);
+    const dftSize = _computeDftSize(
+        windowSize, settings.dftSizeExponentIncrement);
+    
+    return {
+        window: window,
+        hopSize: hopSize,
+        dftSize: dftSize,
+        referencePower: settings.referencePower,
+        lowPower: settings.lowPower,
+        highPower: settings.highPower,
+        smoothingEnabled: settings.smoothingEnabled,
+        timePaddingEnabled: settings.timePaddingEnabled
+    };
+    
+}
+
+
+function _computeDftSize(windowSize, exponentIncrement) {
+    
+    const exponent = Math.ceil(Math.log2(windowSize))
+    
+    if (exponentIncrement === undefined || exponentIncrement < 0)
+        exponentIncrement = 0;
+    
+    return Math.pow(2, exponent + exponentIncrement);
+    
+}
+
+
 function _computeSpectrogram(samples, settings) {
-	
-	// TODO: We need to guarantee somehow that if a window is present
-	// it is the correct one, e.g. that it is of the correct type and
-	// size.
-	if (!settings.hasOwnProperty('window'))
-	    settings.window = createDataWindow('Hann', settings.windowSize);
-	
 	const spectrogram = allocateSpectrogramStorage(samples.length, settings);
 	computeSpectrogram(samples, settings, spectrogram);
 	return spectrogram;
-	
 }
 
 
