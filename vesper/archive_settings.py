@@ -21,12 +21,12 @@ import vesper.archive_paths as archive_paths
 # TODO: Provide an upgrade path from SQLite for PostgreSQL, then deprecate
 # SQLite, and then eliminate the `database.engine` setting.
 
-# TODO: Add support for a `recordings_directory_path` setting.
-
 
 _DEFAULT_SETTINGS = Settings.create_from_yaml('''
 database:
     engine: SQLite
+    
+recording_dir_paths: []
 ''')
 
 
@@ -62,7 +62,7 @@ def _load_settings_file(archive_dir_path):
             print((
                 'Load failed for settings file "{}". Error message '
                 'was: {}').format(file_path, str(e)))
-            sys.exit(1)    
+            sys.exit(1)
     
     
 archive_settings = _create_settings()

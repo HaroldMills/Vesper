@@ -23,18 +23,14 @@ def initialize(archive_dir_path, archive_settings):
         archive_dir_path=archive_dir_path,
         sqlite_database_file_path=archive_dir_path / 'Archive Database.sqlite',
         presets_dir_path=archive_dir_path / 'Presets',
-#         recordings_dir_path=_create_recordings_dir_path(
-#             archive_dir_path, archive_settings),
+        recording_dir_paths=_create_recording_dir_paths(
+            archive_dir_path, archive_settings),
         clips_dir_path=archive_dir_path / 'Clips',
         job_logs_dir_path=archive_dir_path / 'Logs' / 'Jobs')
     
     
-# def _create_recordings_dir_path(archive_dir_path, archive_settings):
-#     
-#     recordings_dir_path = Path(archive_settings.recordings_directory_path)
-#     
-#     if recordings_dir_path.is_absolute():
-#         return recordings_dir_path
-#     
-#     else:
-#         return archive_dir_path / recordings_dir_path
+def _create_recording_dir_paths(archive_dir_path, archive_settings):
+    paths = archive_settings.recording_dir_paths
+    if len(paths) == 0:
+        paths = [archive_dir_path / 'Recordings']
+    return paths
