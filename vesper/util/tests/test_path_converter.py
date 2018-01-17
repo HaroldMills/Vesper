@@ -31,8 +31,9 @@ class PathConverterTests(TestCase):
             actual = converter.absolutize(rel_path)
             self.assertEqual(actual, abs_path)
             
-            actual = converter.relativize(abs_path)
+            root_dir_path, actual = converter.relativize(abs_path)
             self.assertEqual(actual, rel_path)
+            self.assertEqual(root_dir_path / actual, abs_path)
             
             
     def test_double_root_dir_conversion(self):

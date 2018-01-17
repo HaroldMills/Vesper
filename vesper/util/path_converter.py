@@ -113,8 +113,11 @@ class PathConverter:
         
         Returns
         -------
-        pathlib.Path
-            The relative version of the specified absolute path.
+        root_dir_path: pathlib.Path
+            The path of the first root directory whose path is a prefix
+            of `path`.
+        rel_path: pathlib.Path
+            The path relative to `root_dir_path` of `path`.
             
         Raises
         ------
@@ -127,10 +130,13 @@ class PathConverter:
             for dir_path in self._root_dir_paths:
                 
                 try:
-                    return path.relative_to(dir_path)
+                    rel_path = path.relative_to(dir_path)
                     
                 except ValueError:
-                    pass
+                    continue
+                
+                else:
+                    return dir_path, rel_path
             
             # If we get here, the specified path is not inside any of this
             # converter's root directories.
