@@ -1,3 +1,4 @@
+from pathlib import Path
 import os.path
 
 import numpy as np
@@ -25,6 +26,39 @@ _EXPECTED_COMPRESSION_NAME = 'not compressed'
 class AudioFileUtilsTests(TestCase):
 
 
+    def test_is_wave_file_path(self):
+        
+        positives = [
+            'bobo.wav',
+            'harold/bobo.wav',
+            '/Users/harold/bobo.wav'
+        ]
+        
+        negatives = [
+            'bobo',
+            'bobo.txt',
+            'harold/bobo.txt',
+            '/Users/harold/bobo.txt'
+        ]
+        
+        f = audio_file_utils.is_wave_file_path
+        
+        for p in positives:
+            self.assertTrue(f(p))
+            self.assertTrue(f(Path(p)))
+            
+        for p in negatives:
+            self.assertFalse(f(p))
+            self.assertFalse(f(Path(p)))
+            
+
+    def test_is_wave_file_path_errors(self):
+        f = audio_file_utils.is_wave_file_path
+        self._assert_raises(TypeError, f, 10)
+        self._assert_raises(TypeError, f, [])
+        self._assert_raises(TypeError, f, {})
+        
+        
     def test_get_wave_file_info(self):
         
         for file_name, expected_num_channels, expected_length, \

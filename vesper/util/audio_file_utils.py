@@ -5,6 +5,7 @@ For the time being, only .wav files are supported.
 """
 
 
+from pathlib import Path
 import numpy as np
 import wave
 
@@ -24,7 +25,17 @@ class UnsupportedAudioFileFormatError(AudioFileFormatError):
 
 
 def is_wave_file_path(path):
-    return path.endswith(WAVE_FILE_NAME_EXTENSION)
+    
+    if isinstance(path, Path):
+        return path.suffix == WAVE_FILE_NAME_EXTENSION
+    
+    elif isinstance(path, str):
+        return path.endswith(WAVE_FILE_NAME_EXTENSION)
+    
+    else:
+        raise TypeError(
+            'Bad type "{}" for file path.'.format(
+                path.__class__.__name__))
 
 
 def get_wave_file_info(path):
