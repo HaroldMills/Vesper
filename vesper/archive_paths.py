@@ -9,6 +9,8 @@ that module creates the archive settings.
 """
 
 
+from pathlib import Path
+
 from vesper.util.bunch import Bunch
 
 
@@ -24,13 +26,14 @@ def initialize(archive_dir_path, archive_settings):
         sqlite_database_file_path=archive_dir_path / 'Archive Database.sqlite',
         presets_dir_path=archive_dir_path / 'Presets',
         recording_dir_paths=_create_recording_dir_paths(
-            archive_dir_path, archive_settings),
+            archive_settings, archive_dir_path),
         clips_dir_path=archive_dir_path / 'Clips',
         job_logs_dir_path=archive_dir_path / 'Logs' / 'Jobs')
     
     
-def _create_recording_dir_paths(archive_dir_path, archive_settings):
+def _create_recording_dir_paths(archive_settings, archive_dir_path):
     paths = archive_settings.recording_dir_paths
     if len(paths) == 0:
-        paths = [archive_dir_path / 'Recordings']
-    return paths
+        return [archive_dir_path / 'Recordings']
+    else:
+        return [Path(p) for p in paths]
