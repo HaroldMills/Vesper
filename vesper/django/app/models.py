@@ -598,7 +598,7 @@ class RecordingFile(Model):
     
     def __str__(self):
         r = self.recording
-        return '{} / File {} / duration {:0.3f} h /"{}"'.format(
+        return '{} / File {} / duration {:0.3f} h / "{}"'.format(
             str(r), self.file_num, self.duration / 3600, self.path)
         
     class Meta:
@@ -722,7 +722,8 @@ class Clip(Model):
         
     class Meta:
         db_table = 'vesper_clip'
-        index_together = ('station', 'mic_output', 'date', 'creating_processor')
+        index_together = (
+            'station', 'mic_output', 'date', 'creating_processor')
         unique_together = (
             'recording_channel', 'start_time', 'creating_processor')
         
