@@ -12,6 +12,29 @@ _DATA_DIR_PATH = Path(test_utils.get_test_data_dir_path(__file__))
 class PathConverterTests(TestCase):
 
 
+    def test_init(self):
+        
+        cases = [
+            (_DATA_DIR_PATH,),
+            (Path('/one'), Path('/two'))
+        ]
+        
+        for paths in cases:
+            converter = PathConverter(paths)
+            self.assertEqual(converter.root_dir_paths, paths)
+        
+        
+    def test_init_errors(self):
+        
+        cases = [
+            (),
+            (Path('relative/path'),)
+        ]
+        
+        for paths in cases:
+            self._assert_raises(ValueError, PathConverter, paths)
+        
+        
     def test_single_root_dir_conversion(self):
         
         converter = PathConverter([_DATA_DIR_PATH])

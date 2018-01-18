@@ -8,31 +8,34 @@ class PathConverter:
     
     The conversions are performed relative to a sequence of one or more
     *root directory paths*.
+    
+    Parameters
+    ----------
+    root_dir_paths: sequence of pathlib.Path objects
+        The root directory paths of the converter.
+        Each root directory path must be absolute, and there must be
+        at least one root directory path.
+        
+    Attributes
+    ----------
+    root_dir_paths: tuple of pathlib.Path objects
+        The root directory paths of the converter.
+        Each root directory path is absolute, and there is at least one.
+        
+    Raises
+    ------
+    ValueError
+        if any of the specified root directory paths is not absolute,
+        or if no paths are specified.
+    
     """
     
     
     def __init__(self, root_dir_paths):
         
-        """
-        Initializes a `PathConverter`.
-        
-        Parameters
-        ----------
-        root_dir_paths: sequence of pathlib.Path objects
-            The root directory paths of the converter.
-            Each root directory path must be absolute, and there must be
-            at least one root directory path.
-            
-        Raises
-        ------
-        ValueError
-            if any of the specified root directory paths is not absolute,
-            or if no paths are specified.
-        """
-        
         self._check_root_dir_paths(root_dir_paths)
         
-        self._root_dir_paths = root_dir_paths
+        self._root_dir_paths = tuple(root_dir_paths)
         self._cache = {}
 
         
@@ -43,9 +46,14 @@ class PathConverter:
         
         for path in paths:
             if not path.is_absolute():
-                raise ValueError('Path "{}" is not absolute.')
+                raise ValueError('Path "{}" is not absolute.'.format(path))
         
         
+    @property
+    def root_dir_paths(self):
+        return self._root_dir_paths
+    
+    
     def absolutize(self, path):
         
         """
@@ -79,13 +87,18 @@ class PathConverter:
         else:
             # `path` is relative
             
-            for dir_path in self._root_dir_paths:
+            try:
+                return self._cache[path]
             
-                abs_path = dir_path / path
+            except KeyError:
                 
-                if abs_path.exists():
-                    self._cache[path] = abs_path
-                    return abs_path
+                for dir_path in self.root_dir_paths:
+                
+                    abs_path = dir_path / path
+                    
+                    if abs_path.exists():
+                        self._cache[path] = abs_path
+                        return abs_path
                 
             # If we get here, the specified path does not exist inside
             # any of this converter's root directories.
@@ -122,12 +135,13 @@ class PathConverter:
         Raises
         ------
         ValueError
-            If the specified path is already relative.
+            If the specified path is already relative, or does not include
+            any root directory path as a prefix.
         """
         
         if path.is_absolute():
             
-            for dir_path in self._root_dir_paths:
+            for dir_path in self.root_dir_paths:
                 
                 try:
                     rel_path = path.relative_to(dir_path)
@@ -140,7 +154,7 @@ class PathConverter:
             
             # If we get here, the specified path is not inside any of this
             # converter's root directories.
-            paths = ['    {}'.format(p) for p in self._root_dir_paths]
+            paths = ['    {}'.format(p) for p in self.root_dir_paths]
             raise ValueError(
                 ('Path "{}" could not be relativized, since it does not '
                  'begin with any of the following prefixes:\n').format(path) +
