@@ -120,9 +120,8 @@ const _DEFAULT_SETTINGS = {
         },
         
 		spectrogram: {
-			windowSize: 100,
-			hopSize: 50,
-			dftSize: 256,
+			windowSize: .005,
+			hopSize: .0025,
 			referencePower: 1e-9,
 			lowPower: 10,
 			highPower: 100,
