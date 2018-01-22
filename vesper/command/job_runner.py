@@ -9,8 +9,8 @@ the function, and hence the new process, must perform.
 """
 
 
+import json
 import logging
-import pprint
 import traceback
 
 from vesper.command.command import CommandSyntaxError
@@ -112,8 +112,7 @@ def run_job(job_info):
         command = _create_command(job_info.command_spec)
         
         # Log start message.
-        command_args = pprint.pformat(command.arguments, indent=1)
-        command_args = _indent_lines(command_args, 4)
+        command_args = json.dumps(command.arguments, sort_keys=False, indent=4)
         logger.info(
             'Job started for command "{}" with arguments:\n{}'.format(
                 command.name, command_args))
