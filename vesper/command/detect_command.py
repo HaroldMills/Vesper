@@ -63,7 +63,7 @@ class DetectCommand(Command):
         except Exception as e:
             self._logger.error((
                 'Collection of detectors to run on recordings on failed with '
-                    'an exception.\n'
+                'an exception.\n'
                 'The exception message was:\n'
                 '    {}\n'
                 'The archive was not modified.\n'
@@ -90,7 +90,7 @@ class DetectCommand(Command):
         except Exception as e:
             self._logger.error((
                 'Collection of recordings to run detectors on failed with '
-                    'an exception.\n'
+                'an exception.\n'
                 'The exception message was:\n'
                 '    {}\n'
                 'The archive was not modified.\n'
@@ -169,7 +169,7 @@ class DetectCommand(Command):
         if file_.path is None:
             
             self._logger.info(
-                'No path available for file {} of recording {}.'.format(
+                'Path missing for file {} of recording {}.'.format(
                     file_.num, recording))
         
         else:
@@ -178,7 +178,7 @@ class DetectCommand(Command):
                 abs_path = model_utils.get_recording_file_absolute_path(file_)
                 
             except ValueError as e:
-                self._logger.info(str(e))
+                self._logger.error(str(e))
                 
             else:
                 
@@ -251,7 +251,8 @@ class DetectCommand(Command):
                     detector_model, recording, recording_channel,
                     file_reader, file_start_index, job, self._logger)
                 
-                detector = _create_detector(detector_model, recording, listener)
+                detector = _create_detector(
+                    detector_model, recording, listener)
                 
                 # We add a `channel_num` attribute to each detector to keep
                 # track of which recording channel it is for.
