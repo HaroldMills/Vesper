@@ -161,7 +161,7 @@ class RecordingImporter:
         return rel_path
                                     
 
-    def _handle_bad_recording_file(self, file_path, condition, converter):
+    def _handle_bad_recording_file_path(self, file_path, condition, converter):
         
         paths = converter.root_dir_paths
 
@@ -251,10 +251,10 @@ class RecordingImporter:
                 new_text, old_text))
 
         if len(new_recordings) == 0:
-            self._logger.info('No recordings will be imported.')
+            log('No recordings will be imported.')
             
         else:
-            self._logger.info('The new recordings will be imported.')
+            log('The new recordings will be imported.')
             
 
     def _get_num_recordings_text(self, count, description):
