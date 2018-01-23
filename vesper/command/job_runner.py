@@ -9,6 +9,7 @@ the function, and hence the new process, must perform.
 """
 
 
+from datetime import date
 import json
 import logging
 import traceback
@@ -31,6 +32,17 @@ Raised Exception
 '''
 
 
+class _CommandArgsEncoder(json.JSONEncoder):
+    
+    def default(self, obj):
+        
+        if isinstance(obj, date):
+            return str(obj)
+        
+        else:
+            return super().default(obj)
+        
+        
 def run_job(job_info):
     
     """
@@ -112,7 +124,9 @@ def run_job(job_info):
         command = _create_command(job_info.command_spec)
         
         # Log start message.
-        command_args = json.dumps(command.arguments, sort_keys=False, indent=4)
+        command_args = json.dumps(
+            command.arguments, sort_keys=False, indent=4,
+            cls=_CommandArgsEncoder)
         logger.info(
             'Job started for command "{}" with arguments:\n{}'.format(
                 command.name, command_args))
