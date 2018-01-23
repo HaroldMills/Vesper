@@ -25,8 +25,6 @@ import vesper.archive_paths as archive_paths
 _DEFAULT_SETTINGS = Settings.create_from_yaml('''
 database:
     engine: SQLite
-    
-recording_dir_paths: []
 ''')
 
 

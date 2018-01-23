@@ -32,8 +32,12 @@ def initialize(archive_dir_path, archive_settings):
     
     
 def _create_recording_dir_paths(archive_settings, archive_dir_path):
-    paths = archive_settings.recording_dir_paths
-    if len(paths) == 0:
+    
+    try:
+        paths = archive_settings.recording_dir_paths
+        
+    except AttributeError:
         return [archive_dir_path / 'Recordings']
+    
     else:
         return [Path(p) for p in paths]
