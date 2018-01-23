@@ -15,24 +15,31 @@ class PathConverterTests(TestCase):
     def test_init(self):
         
         cases = [
+            (),
             (_DATA_DIR_PATH,),
-            (Path('/one'), Path('/two'))
+            ('/one', '/two')
         ]
         
         for paths in cases:
+            expected = tuple([_make_path_object(p) for p in paths])
             converter = PathConverter(paths)
-            self.assertEqual(converter.root_dir_paths, paths)
+            self.assertEqual(converter.root_dir_paths, expected)
         
         
     def test_init_errors(self):
         
         cases = [
-            (),
+            ('relative/path',),
             (Path('relative/path'),)
         ]
         
         for paths in cases:
             self._assert_raises(ValueError, PathConverter, paths)
+        
+        
+    def test_zero_root_dir_conversion(self):
+        converter = PathConverter([])
+        self._assert_raises(ValueError, converter.absolutize, Path('bobo'))
         
         
     def test_single_root_dir_conversion(self):
@@ -81,7 +88,7 @@ class PathConverterTests(TestCase):
         
         cases = [
             _DATA_DIR_PATH,              # already absolute
-            Path('A/nonexistent.wav')    # nonexistent
+            'A/nonexistent.wav'          # nonexistent
         ]
         
         for path in cases:
@@ -93,9 +100,13 @@ class PathConverterTests(TestCase):
         converter = PathConverter([_DATA_DIR_PATH])
         
         cases = [
-            Path('relative.wav'),         # already relative
-            Path(_DATA_DIR_PATH.parent)   # not within root dir
+            'relative.wav',             # already relative
+            _DATA_DIR_PATH.parent       # not within root dir
         ]
         
         for path in cases:
             self._assert_raises(ValueError, converter.relativize, path)
+
+
+def _make_path_object(p):
+    return p if isinstance(p, Path) else Path(p)

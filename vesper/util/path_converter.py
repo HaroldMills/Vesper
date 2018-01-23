@@ -1,49 +1,49 @@
 """Module containing class `PathConverter`."""
 
 
+from pathlib import Path
+
+
 class PathConverter:
 
     """
     Converts file system paths between relative and absolute forms.
     
-    The conversions are performed relative to a sequence of one or more
+    The conversions are performed relative to a sequence of
     *root directory paths*.
     
     Parameters
     ----------
-    root_dir_paths: sequence of pathlib.Path objects
+    root_dir_paths: sequence of str or pathlib.Path objects
         The root directory paths of the converter.
-        Each root directory path must be absolute, and there must be
-        at least one root directory path.
+        Each root directory path must be absolute.
         
     Attributes
     ----------
     root_dir_paths: tuple of pathlib.Path objects
         The root directory paths of the converter.
-        Each root directory path is absolute, and there is at least one.
+        Each root directory path is absolute.
         
     Raises
     ------
     ValueError
-        if any of the specified root directory paths is not absolute,
-        or if no paths are specified.
+        if any of the specified root directory paths is not absolute.
     
     """
     
     
     def __init__(self, root_dir_paths):
         
-        self._check_root_dir_paths(root_dir_paths)
+        # Ensure that root dir paths are all `Path` objects.
+        paths = [_make_path_object(p) for p in root_dir_paths]
         
-        self._root_dir_paths = tuple(root_dir_paths)
+        self._check_root_dir_paths(paths)
+        
+        self._root_dir_paths = tuple(paths)
         self._cache = {}
 
         
     def _check_root_dir_paths(self, paths):
-        
-        if len(paths) == 0:
-            raise ValueError('No root directory paths specified.')
-        
         for path in paths:
             if not path.is_absolute():
                 raise ValueError('Path "{}" is not absolute.'.format(path))
@@ -66,7 +66,7 @@ class PathConverter:
         
         Parameters
         ----------
-        path: pathlib.Path
+        path: str or pathlib.Path
             The relative path for which to find the absolute path.
             
         Returns
@@ -80,6 +80,9 @@ class PathConverter:
             If the specified path is already absolute, or if nothing
             is found at it.
         """
+        
+        # Ensure that path is a `Path` object.
+        path = _make_path_object(path)
         
         if path.is_absolute():
             raise ValueError('Path "{}" is not relative.'.format(path))
@@ -102,7 +105,7 @@ class PathConverter:
                 
             # If we get here, the specified path does not exist inside
             # any of this converter's root directories.
-            raise ValueError('Nothing found at path "{}".'.format(path))
+            raise ValueError('Could not find path "{}".'.format(path))
         
     
     def relativize(self, path):
@@ -121,7 +124,7 @@ class PathConverter:
         
         Parameters
         ----------
-        path: pathlib.Path
+        path: str or pathlib.Path
             The absolute path for which to find the relative path.
         
         Returns
@@ -138,6 +141,9 @@ class PathConverter:
             If the specified path is already relative, or does not include
             any root directory path as a prefix.
         """
+        
+        # Ensure that path is a `Path` object.
+        path = _make_path_object(path)
         
         if path.is_absolute():
             
@@ -164,3 +170,7 @@ class PathConverter:
             # `path` is relative
             
             raise ValueError('Path "{}" is not absolute.'.format(path))
+
+
+def _make_path_object(p):
+    return p if isinstance(p, Path) else Path(p)
