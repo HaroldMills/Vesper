@@ -416,7 +416,7 @@ def get_clips(
 
 def get_processors(type_, include_hidden=False):
     
-    processors = Processor.objects.filter(type=type).order_by('name')
+    processors = Processor.objects.filter(type=type_).order_by('name')
     
     if include_hidden:
         return processors
