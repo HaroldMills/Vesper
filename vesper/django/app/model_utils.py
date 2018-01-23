@@ -31,7 +31,8 @@ _ONE_DAY = datetime.timedelta(days=1)
 def get_station_mic_output_pairs_dict():
     
     """
-    Gets a mapping from (station, microphone output) pair UI names to the pairs.
+    Gets a mapping from (station, microphone output) pair UI names to the
+    pairs.
     """
     
     pairs = _get_station_mic_output_pairs()
@@ -298,16 +299,42 @@ def get_recording_file_absolute_path(file_):
     
     else:
         
-        path_converter = recording_file_path_converter.instance
-        rel_path = Path(file_.path)
+        path = Path(file_.path)
         
-        try:
-            return path_converter.absolutize(rel_path)
+        if path.is_absolute:
+            
+            # For now, at least, we allow this for backward compatibility.
+            # Maybe we should issue a deprecation warning, though, and
+            # encourage path relativization?
+            return path
         
-        except ValueError:
-            raise ValueError(
-                ('Could not find absolute path for file "{}" of '
-                 'recording {}.').format(rel_path, file_.recording))
+        else:
+        
+            path_converter = recording_file_path_converter.instance
+            rel_path = Path(file_.path)
+            
+            try:
+                return path_converter.absolutize(rel_path)
+             
+            except ValueError:
+                
+                paths = path_converter.root_dir_paths
+                
+                if len(paths) == 0:
+                    suffix = 'since there are no known recording directories.'
+                    
+                elif len(paths) == 1:
+                    suffix = 'in recording directory "{}".'.format(paths[0])
+                    
+                else:
+                    path_strings = ['"{}"'.format(p) for p in paths]
+                    paths_string = '[{}]'.format(', '.join(path_strings))
+                    suffix = \
+                        'in recording directories {}.'.format(paths_string)
+                    
+                raise ValueError(
+                    'Could not find recording file "{}" {}'.format(
+                        rel_path, suffix))
 
     
 def get_clip_counts(
@@ -387,7 +414,7 @@ def get_clips(
     return clips
 
 
-def get_processors(type, include_hidden=False):
+def get_processors(type_, include_hidden=False):
     
     processors = Processor.objects.filter(type=type).order_by('name')
     
@@ -396,7 +423,7 @@ def get_processors(type, include_hidden=False):
     
     else:
         hidden = _get_hidden_processors()
-        return [p for p in processors if (p.name, type) not in hidden]
+        return [p for p in processors if (p.name, type_) not in hidden]
 
 
 def _get_hidden_processors():
@@ -413,8 +440,8 @@ def _get_processor_pair(p):
         return None
     
 
-def get_processor(name, type):
-    return Processor.objects.get(name=name, type=type)
+def get_processor(name, type_):
+    return Processor.objects.get(name=name, type=type_)
 
 
 def create_clip_query_values_iterator(
