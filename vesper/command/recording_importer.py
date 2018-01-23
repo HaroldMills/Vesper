@@ -1,6 +1,7 @@
 """Module containing class `RecordingImporter`."""
 
 
+from pathlib import Path
 import itertools
 import logging
 import os
@@ -10,7 +11,8 @@ from django.db import transaction
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import (
     DeviceConnection, Job, Recording, RecordingChannel, RecordingFile, Station)
-from vesper.singletons import extension_manager, preset_manager
+from vesper.singletons import (
+    extension_manager, preset_manager, recording_file_path_converter)
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
 import vesper.util.audio_file_utils as audio_file_utils
@@ -40,7 +42,8 @@ class RecordingImporter:
     
     def __init__(self, args):
         self.paths = command_utils.get_required_arg('paths', args)
-        self.recursive = command_utils.get_optional_arg('recursive', args, True)
+        self.recursive = command_utils.get_optional_arg(
+            'recursive', args, True)
         spec = command_utils.get_optional_arg('recording_file_parser', args)
         self.file_parser = _create_file_parser(spec)
     
@@ -101,7 +104,7 @@ class RecordingImporter:
             
             for file_name in file_names:
                 file_path = os.path.join(dir_path, file_name)
-                file = self._get_recording_file(file_path)
+                file = self._get_recording_file(Path(file_path))
                 if file is not None:
                     files.append(file)
                 
@@ -119,23 +122,87 @@ class RecordingImporter:
             return None
         
         else:
-            
-            try:
-                f = self.file_parser.parse_file(file_path)
-            
-            except ValueError as e:
-                raise CommandExecutionError(
-                    'Error parsing recording file "{}": {}'.format(
-                        file_path, str(e)))
-                
-            if f.recorder is None:
-                f.recorder = _get_recorder(f)
-                
-            _set_recording_file_channel_info(f)
-                
-            return f
+            rel_path, abs_path = self._get_recording_file_paths(file_path)
+            file = self._parse_recording_file(abs_path)
+            file.path = rel_path
+            _set_recording_file_channel_info(file)
+            return file
             
     
+    def _get_recording_file_paths(self, file_path):
+        
+        if file_path.is_absolute():
+            
+            if not file_path.exists():
+                raise CommandExecutionError(
+                    'Purported recording file "{}" does not exist.')
+                
+            rel_path = self._get_relative_path(file_path)
+            return rel_path, file_path
+            
+        else:
+            # path is relative
+            
+            abs_path = self._get_absolute_path(file_path)
+            return file_path, abs_path
+                
+    
+    def _get_relative_path(self, file_path):
+        
+        converter = recording_file_path_converter.instance
+        
+        try:
+            _, rel_path = converter.relativize(file_path)
+            
+        except ValueError:
+            self._handle_bad_recording_file_path(
+                file_path, 'is not in', converter)
+            
+        return rel_path
+                                    
+
+    def _handle_bad_recording_file(self, file_path, condition, converter):
+        
+        paths = converter.root_dir_paths
+
+        if len(paths) == 1:
+            s = 'the recording directory "{}"'.format(paths[0])
+        else:
+            s = 'any of the recording directories [{}]'.format(
+                ', '.join(paths))
+            
+        raise CommandExecutionError(
+            'Recording file "{}" {} {}.'.format(file_path, condition, s))
+            
+
+    def _get_absolute_path(self, file_path):
+        
+        converter = recording_file_path_converter.instance
+        
+        try:
+            return converter.absolutize(file_path)
+            
+        except ValueError:
+            self._handle_bad_recording_file_path(
+                file_path, 'could not be located in', converter)
+
+
+    def _parse_recording_file(self, file_path):
+        
+        try:
+            file = self.file_parser.parse_file(str(file_path))
+        
+        except ValueError as e:
+            raise CommandExecutionError(
+                'Error parsing recording file "{}": {}'.format(
+                    file_path, str(e)))
+            
+        if file.recorder is None:
+            file.recorder = _get_recorder(file)
+            
+        return file
+            
+
     def _partition_recordings(self, recordings):
         
         new_recordings = []
@@ -236,12 +303,18 @@ class RecordingImporter:
             
             for file_num, f in enumerate(r.files):
                 
+                # We store all paths as POSIX paths, even on Windows,
+                # for portability, since Python's `pathlib` module
+                # recognizes the slash as a path separator on all
+                # platforms, but not the backslash.
+                path = f.path.as_posix()
+                
                 file = RecordingFile(
                     recording=recording,
                     file_num=file_num,
                     start_index=start_index,
                     length=f.length,
-                    path=f.path)
+                    path=path)
                 
                 file.save()
                 
@@ -259,7 +332,8 @@ class RecordingImporter:
 def _create_file_parser(spec):
     
     # Get parser name.
-    classes = extension_manager.instance.get_extensions('Recording File Parser')
+    classes = extension_manager.instance.get_extensions(
+        'Recording File Parser')
     name = spec.get('name')
     if name is None:
         raise CommandExecutionError(
@@ -315,30 +389,33 @@ def _get_recorder(file):
         'Audio Recorder', file.start_time, end_time)
     
     if len(station_recorders) == 0:
-        raise CommandExecutionError('Could not find recorder for file.')
+        raise CommandExecutionError(
+            'Could not find recorder for recording file "{}".'.format(
+                file.path))
     
     elif len(station_recorders) > 1:
         raise CommandExecutionError(
-            'Found more than one possible recorder for file.')
+            'Found more than one possible recorder for file "{}".'.format(
+                file.path))
     
     else:
         return station_recorders[0].device
         
         
-def _set_recording_file_channel_info(f):
+def _set_recording_file_channel_info(file):
     
-    mic_outputs = _get_recorder_mic_outputs(f.recorder, f.start_time)
+    mic_outputs = _get_recorder_mic_outputs(file.recorder, file.start_time)
     
-    if f.recorder_channel_nums is None:
+    if file.recorder_channel_nums is None:
         # file name did not indicate recorder channel numbers
         
-        if len(mic_outputs) != f.num_channels:
+        if len(mic_outputs) != file.num_channels:
             # number of connected mic outputs does not match number
             # of file channels
             
             raise CommandExecutionError((
                 'Could not infer recorder channel numbers for '
-                'recording file "{}".').format(f.path))
+                'recording file "{}".').format(file.path))
             
         else:
             # number of connected mic outputs matches number of file
@@ -346,12 +423,12 @@ def _set_recording_file_channel_info(f):
             
             # We assume that recorder inputs map to file channel numbers
             # in increasing order.
-            f.recorder_channel_nums = tuple(sorted(mic_outputs.keys()))
+            file.recorder_channel_nums = tuple(sorted(mic_outputs.keys()))
             
     
-    f.mic_outputs = tuple(
-        _get_mic_output(mic_outputs, i, f.path)
-        for i in f.recorder_channel_nums)
+    file.mic_outputs = tuple(
+        _get_mic_output(mic_outputs, i, file.path)
+        for i in file.recorder_channel_nums)
         
         
 def _get_recorder_mic_outputs(recorder, time):
@@ -381,4 +458,3 @@ def _get_mic_output(mic_outputs, channel_num, file_path):
         raise CommandExecutionError((
             'Could not find microphone output connected to recorder input '
             '{} for recording file "{}".').format(channel_num, file_path))
-        

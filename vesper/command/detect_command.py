@@ -149,47 +149,64 @@ class DetectCommand(Command):
             return
         
         for recording in recordings:
-            
+                    
             recording_files = recording.files.all()
             
             if len(recording_files) == 0:
                 self._logger.info(
                     'No file information available for {}.'.format(recording))
                 
-            for file_ in recording_files:
+            else:
                 
-                if file_.path is None:
-                    self._logger.info(
-                        'No path available for file {} of recording {}.'.format(
-                            file_.num, recording))
+                for file_ in recording_files:
+                    self._run_other_detectors_on_file(detector_models, file_)
                     
-                else:
                     
-                    self._log_detection_start(detector_models, file_.path)
-                    
-                    start_time = time.time()
-                    
-                    file_reader = WaveAudioFileReader(file_.path)
-                    
-                    detectors = self._create_detectors(
-                        detector_models, recording, file_reader,
-                        file_.start_index)
+    def _run_other_detectors_on_file(self, detector_models, file_):
                 
-                    for samples in _generate_sample_buffers(file_):
-                        for detector in detectors:
-                            channel_samples = samples[detector.channel_num]
-                            detector.detect(channel_samples)
-                            
+        recording = file_.recording
+        
+        if file_.path is None:
+            
+            self._logger.info(
+                'No path available for file {} of recording {}.'.format(
+                    file_.num, recording))
+        
+        else:
+            
+            try:
+                abs_path = model_utils.get_recording_file_absolute_path(file_)
+                
+            except ValueError as e:
+                self._logger.info(str(e))
+                
+            else:
+                
+                self._log_detection_start(detector_models, abs_path)
+                
+                start_time = time.time()
+                
+                file_reader = WaveAudioFileReader(str(abs_path))
+                
+                detectors = self._create_detectors(
+                    detector_models, recording, file_reader,
+                    file_.start_index)
+            
+                for samples in _generate_sample_buffers(abs_path):
                     for detector in detectors:
-                        detector.complete_detection()
+                        channel_samples = samples[detector.channel_num]
+                        detector.detect(channel_samples)
                         
-                    processing_time = time.time() - start_time
+                for detector in detectors:
+                    detector.complete_detection()
                     
-                    file_duration = file_.length / recording.sample_rate
-
-                    self._log_detection_performance(
-                        len(detector_models), recording.num_channels,
-                        file_duration, processing_time)
+                processing_time = time.time() - start_time
+                
+                file_duration = file_.length / recording.sample_rate
+    
+                self._log_detection_performance(
+                    len(detector_models), recording.num_channels,
+                    file_duration, processing_time)
                     
                 
     def _log_detection_start(self, detector_models, file_path):
@@ -268,11 +285,11 @@ class DetectCommand(Command):
         self._logger.info(message)
         
 
-def _generate_sample_buffers(file_):
+def _generate_sample_buffers(path):
     
     chunk_size = 1000000
     
-    reader = WaveAudioFileReader(file_.path)
+    reader = WaveAudioFileReader(str(path))
     start_index = 0
     
     while start_index < reader.length:
