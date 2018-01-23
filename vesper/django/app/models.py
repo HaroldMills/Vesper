@@ -598,8 +598,11 @@ class RecordingFile(Model):
     
     def __str__(self):
         r = self.recording
-        return '{} / File {} / duration {:0.3f} h / "{}"'.format(
-            str(r), self.file_num, self.duration / 3600, self.path)
+        s = '{} / File {} / duration {:0.3f} h'.format(
+            str(r), self.file_num, self.duration / 3600)
+        if self.path is not None:
+            s += ' / "{}"'.format(self.path)
+        return s
         
     class Meta:
         unique_together = ('recording', 'file_num')
