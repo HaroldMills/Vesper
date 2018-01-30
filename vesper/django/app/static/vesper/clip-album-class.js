@@ -188,6 +188,8 @@ class ClipAlbum {
 		
 		this._clipViews = this._createClipViews(this.settings);
 		
+        this._resizeThrottle = new _WindowResizeThrottle(this);
+        
 		this._layoutClasses = this._createLayoutClassesObject();
 		this._layout = this._createLayout(this.settings);
 		
@@ -296,6 +298,7 @@ class ClipAlbum {
 		} else {
 			
 		    this._layout.layOutClipViews(this.pageNum);
+		    this._resizeClipViewOverlayCanvasesIfNeeded();
 		    this._updateSelectionOutlines();
 		    
 		}
@@ -353,6 +356,34 @@ class ClipAlbum {
 	}
 	
 	
+	/*
+	 * We would like for the size of a clip view overlay canvas to track
+	 * its client size (i.e. its size on the screen), so that the canvas
+	 * contents are not degraded by resampling when they are drawn to the
+	 * screen. Ideally, we would accomplish this by listening for resize
+	 * events from the canvas, and resizing the canvas and rerendering its
+	 * contents whenever its client size changes. As of this writing,
+	 * however, there is no way to listen for such resize events (but see
+	 * the proposal https://wicg.github.io/ResizeObserver). As a partial
+	 * workaround, we implement this method and attempt to call it whenever
+	 * canvas resizes might be needed, for example when the window containing
+	 * a clip album resizes, or when the album navigates from one page to
+	 * another.
+	 */
+    _resizeClipViewOverlayCanvasesIfNeeded() {
+        
+        const clipViews = this._clipViews;
+        const [startNum, endNum] =
+            this._layout.getPageClipNumRange(this.pageNum);
+        
+        for (let i = startNum; i < endNum; i++) {
+            const clipView = clipViews[i];
+            clipView.resizeOverlayCanvasIfNeeded();
+        }
+        
+    }
+
+	
 	_updateSelectionOutlines() {
 		
 		const clipViews = this._clipViews;
@@ -363,7 +394,8 @@ class ClipAlbum {
 		
 		for (let i = startNum; i < endNum; i++) {
 			const style = clipViews[i].div.style;
-			const color = selection.contains(i) ? outline.color : 'transparent';
+			const color =
+			    selection.contains(i) ? outline.color : 'transparent';
 			style.outlineColor = color;
 			style.outlineWidth = `${outline.width}px`;
 		}
@@ -505,6 +537,7 @@ class ClipAlbum {
 			['play_selected_clip', [], _ => this._playSelectedClip()],
 			
 			['toggle_clip_labels', [], _ => this._toggleClipLabels()],
+			['toggle_clip_overlays', [], _ => this.toggleClipOverlays()],
 			
 			['annotate_clips', ['annotation_value'],
 				e => this._annotateClipsDelegate(e)],
@@ -537,6 +570,13 @@ class ClipAlbum {
 		this.settings.clipView.label.visible =
 			!this.settings.clipView.label.visible;
 		this._updateClipViewSettings(this.settings);
+	}
+	
+	
+	_toggleClipOverlays() {
+	    this.settings.clipView.overlays.visible =
+	        !this.settings.clipView.overlays.visible;
+	    this._updateClipViewSettings(this.settings);
 	}
 	
 	
@@ -1059,6 +1099,28 @@ Clip album layout settings by layout type:
 // class _UniformResizingClipViewsLayout { }
 
 
+class _WindowResizeThrottle {
+    
+    
+    constructor(clipAlbum) {
+        this.clipAlbum = clipAlbum;
+        this._resizing = false;
+        window.addEventListener('resize', () => this.onResize());
+    }
+    
+    
+    onResize() {
+        if (!this._resizing) {
+            this._resizing = true;
+            this.clipAlbum._resizeClipViewOverlayCanvasesIfNeeded();
+            this._resizing = false;
+        }
+    }
+    
+    
+}
+
+
 function _scrollToTop() {
 	window.scrollTo(0, 0);
 }
@@ -1343,31 +1405,31 @@ class _ClipLoader {
     
     _onAnnotationsXhrResponse(xhr, clip) {
     	
-    	// An annotations load operation can be canceled while in progress
-    	// by changing `clip.annotationsStatus` from `_CLIP_STATUS.LOADING`
-    	// to `_CLIP_STATUS_UNLOADED`. In this case we ignore the
-    	// annotations when they arrive.
-    	if (clip.annotationsStatus === _CLIP_STATUS.LOADING) {
-
-	    	if (xhr.status === 200) {
-	   	    	// request completed without error
-	    		
-	    		clip.annotations = JSON.parse(xhr.responseText);
-	    		clip.annotationsStatus = _CLIP_STATUS.LOADED;
-	    		
-	    	} else {
-	    		// request failed
-	    		
-	    		// TODO: Report error somehow.
-	    		
-	    		clip.annotations = null;
-	    		clip.annotationsStatus = _CLIP_STATUS.UNLOADED;
-	    		
-	    	}
-	    	
-	    	clip.view.onClipAnnotationsChanged();
-	    	
-    	}
+        	// An annotations load operation can be canceled while in progress
+        	// by changing `clip.annotationsStatus` from `_CLIP_STATUS.LOADING`
+        	// to `_CLIP_STATUS_UNLOADED`. In this case we ignore the
+        	// annotations when they arrive.
+        	if (clip.annotationsStatus === _CLIP_STATUS.LOADING) {
+    
+        	    	if (xhr.status === 200) {
+        	   	    	// request completed without error
+        	    		
+        	    		clip.annotations = JSON.parse(xhr.responseText);
+        	    		clip.annotationsStatus = _CLIP_STATUS.LOADED;
+        	    		
+        	    	} else {
+        	    		// request failed
+        	    		
+        	    		// TODO: Report error somehow.
+        	    		
+        	    		clip.annotations = null;
+        	    		clip.annotationsStatus = _CLIP_STATUS.UNLOADED;
+        	    		
+        	    	}
+        	    	
+        	    clip.view.onClipAnnotationsChanged();
+    	    	
+        	}
      	
     }
     
@@ -2398,6 +2460,11 @@ class ClipView {
 		this._label = null;
 		this._playButton = null;
 		
+		this._overlays = [
+//            new TimeFrequencyMarkerOverlay(
+//                this, 'Call Center Time', 'Call Center Freq')
+         ];
+		
 	}
 	
 	
@@ -2453,6 +2520,12 @@ class ClipView {
 	}
 	
 	
+	get overlayCanvas() {
+	    this._createUiElementsIfNeeded();
+	    return this._overlayCanvas;
+	}
+	
+	
 	get label() {
 		this._createUiElementsIfNeeded();
 		return this._label;
@@ -2465,6 +2538,11 @@ class ClipView {
 	}
 	
 	
+	get overlays() {
+	    return this._overlays;
+	}
+	
+	
 	_createUiElementsIfNeeded() {
 
 		if (this._div === null) {
@@ -2472,6 +2550,7 @@ class ClipView {
 			this._div = this._createDiv();
 			
 		    this._canvas = this._createCanvas();
+		    this._overlayCanvas = this._createOverlayCanvas();
 		    
 			this._label = this._createLabel();
 			this._styleLabel();
@@ -2519,6 +2598,17 @@ class ClipView {
 	    
 	    return canvas;
 	    
+	}
+	
+	
+	_createOverlayCanvas(div) {
+	    
+        const canvas = document.createElement('canvas');
+        canvas.className = 'clip-overlay-canvas';
+        this._div.appendChild(canvas);
+        
+        return canvas;
+        
 	}
 	
 	
@@ -2738,6 +2828,8 @@ class ClipView {
 
     
     onClipAnnotationsChanged() {
+        this._resizeOverlayCanvasIfNeeded();
+        this._renderOverlays();
      	this._renderLabel();
     }
     
@@ -2745,8 +2837,44 @@ class ClipView {
 	render() {
 		if (this._div !== null) {
 		    this._delegate.render();
+		    this._resizeOverlayCanvasIfNeeded();
+		    this._renderOverlays();
 		    this._renderLabel();
 		}
+	}
+	
+	
+	_renderOverlays() {
+        for (const overlay of this.overlays) {
+            overlay.render();
+        }
+	}
+	
+	
+	_resizeOverlayCanvasIfNeeded() {
+	    
+	    const canvas = this.overlayCanvas;
+	    const clientWidth = canvas.clientWidth;
+	    const clientHeight = canvas.clientHeight;
+	    
+	    const resizeNeeded = 
+	        clientWidth != 0 && clientHeight != 0 &&
+	        (canvas.width != clientWidth || canvas.height != clientHeight)
+	        
+	    if (resizeNeeded) {
+	        canvas.width = clientWidth;
+	        canvas.height = clientHeight;
+	    }
+	        
+	    return resizeNeeded;
+	        
+	}
+	
+	
+	resizeOverlayCanvasIfNeeded() {
+	    if (this._resizeOverlayCanvasIfNeeded()) {
+	        this._renderOverlays();
+	    }
 	}
 	
 	
@@ -2878,7 +3006,7 @@ class ClipViewDelegate {
 	 * Updates the canvas of this delegate's clip view after the clip's
 	 * samples have changed.
 	 * 
-	 * The canvas is available from this method as  `this.clipView._canvas`,
+	 * The canvas is available from this method as `this.clipView._canvas`,
 	 * the clip's audio data are available as `this.clip.audioBuffer`
 	 * (a Web Audio `AudioBuffer`), and the clip's samples are available as
 	 * `this.clip.samples`, a `Float32Array`.
@@ -2940,12 +3068,9 @@ class SpectrogramClipViewDelegate extends ClipViewDelegate {
 //            console.log(
 //                `computing and drawing spectrogram for clip ${clip.num}...`);
 
-            const settings = _createLowLevelSpectrogramSettings(
-                this.settings.spectrogram, clip.sampleRate);
-
-//            console.log(
-//                clip.sampleRate, settings.window.length, settings.hopSize,
-//                settings.dftSize);
+            const settings = this.settings.spectrogram;
+            
+            _augmentSpectrogramSettings(settings, clip.sampleRate);
             
             // Compute spectrogram, offscreen spectrogram canvas, and
             // spectrogram image data and put image data to canvas. The
@@ -2981,12 +3106,14 @@ class SpectrogramClipViewDelegate extends ClipViewDelegate {
 
 	
 	render() {
+	    
 		// For the time being we do nothing here, since apparently 
 		// an HTML canvas can resize images that have been drawn to
 		// it automatically. We will need to do something here (or
 		// somewhere, anyway) eventually to handle view settings
 		// changes, for example changes to spectrogram settings
 		// or color map settings.
+	    
 	}
 	
 	
@@ -3034,8 +3161,83 @@ class SpectrogramClipViewDelegate extends ClipViewDelegate {
 		}
 		
 	}
-
 	
+	
+}
+
+
+class TimeFrequencyMarkerOverlay {
+
+    
+    constructor(parent, timeAnnotationName, freqAnnotationName) {
+        this.parent = parent;
+        this.timeAnnotationName = timeAnnotationName;
+        this.freqAnnotationName = freqAnnotationName;
+    }
+    
+    
+    render() {
+        
+        const annotations = this.parent.clip.annotations;
+        
+        if (annotations !== null &&
+                annotations.hasOwnProperty(this.timeAnnotationName) &&
+                annotations.hasOwnProperty(this.freqAnnotationName)) {
+            
+            const time = parseFloat(annotations[this.timeAnnotationName]);
+            const freq = parseFloat(annotations[this.freqAnnotationName]);
+            
+            // console.log('TimeFrequencyMarkerOverlay.render', time, freq);
+            
+            this._render(time, freq);
+
+        }
+                
+    }
+    
+
+    _render(time, freq) {
+        
+        const clipView = this.parent;
+        const clip = clipView.clip;
+        const sampleRate = clip.sampleRate;
+        const canvas = clipView.overlayCanvas;
+        
+        /*
+         * TODO: Replace `_timeToViewCanvasX` and `_freqToViewCanvasY` with
+         * a single function?
+         */
+        
+        const startTime = 0;
+        const endTime = clip.span;
+        const x = Math.round(
+            _timeToViewCanvasX(time, canvas.width, startTime, endTime)) + .5;
+        
+        const [startFreq, endFreq] =
+            _getFreqRange(clipView.settings.spectrogram, sampleRate / 2.);
+        const y = Math.round(
+            _freqToViewCanvasY(freq, canvas.height, startFreq, endFreq)) + .5;
+        
+        const markerWidth = 11;
+        const delta = Math.floor(markerWidth / 2);
+        
+        const context = canvas.getContext('2d');
+        
+        context.strokeStyle = 'orange';
+        context.lineWidth = 1;
+        context.lineCap = 'butt';
+        context.lineStyle = 'solid';
+
+        context.beginPath();
+        context.moveTo(x - delta, y);
+        context.lineTo(x + delta, y);
+        context.moveTo(x, y - delta);
+        context.lineTo(x, y + delta);
+        context.stroke();
+        
+    }    
+
+    
 }
 
 
@@ -3065,25 +3267,12 @@ function _scaleSamples(samples, factor) {
 }
 
 
-function _createLowLevelSpectrogramSettings(settings, sampleRate) {
-    
-    const windowSize = Math.round(settings.windowSize * sampleRate);
-    const window = createDataWindow('Hann', windowSize);
-    const hopSize = Math.round(settings.hopSize * sampleRate);
-    const dftSize = _computeDftSize(
+function _augmentSpectrogramSettings(settings, sampleRate) {
+    const windowSize = Math.round(settings.windowDuration * sampleRate);
+    settings.window = createDataWindow('Hann', windowSize);
+    settings.hopSize = Math.round(settings.hopDuration * sampleRate);
+    settings.dftSize = _computeDftSize(
         windowSize, settings.dftSizeExponentIncrement);
-    
-    return {
-        window: window,
-        hopSize: hopSize,
-        dftSize: dftSize,
-        referencePower: settings.referencePower,
-        lowPower: settings.lowPower,
-        highPower: settings.highPower,
-        smoothingEnabled: settings.smoothingEnabled,
-        timePaddingEnabled: settings.timePaddingEnabled
-    };
-    
 }
 
 
@@ -3250,6 +3439,11 @@ function _getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
         
     }
     
+}
+
+
+function _timeToViewCanvasX(time, canvasWidth, startTime, endTime) {
+    return canvasWidth * time / (endTime - startTime);
 }
 
 

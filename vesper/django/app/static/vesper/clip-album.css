@@ -129,16 +129,28 @@ body {
 }
 
 .clip-canvas {
+  position: absolute;
+  left: 0px;
+  top: 0px;
   width: 100%;
   height: 100%;
+  z-index: 1;
   background-color: gray;
 }
 
+.clip-overlay-canvas {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  background-color: clear;
+}
 
 .clip:hover > button {
   visibility: visible;
 }
-
 
 /*
  * The top and bottom attributes of the play button are set in Javascript,
@@ -154,6 +166,7 @@ body {
   padding: 0;
   border: none;
   outline: none;
+  z-index: 3;
 }
 
 .clip-play-button:hover {
@@ -184,6 +197,7 @@ body {
   padding: 0;
   line-height: 1;
   overflow: hidden;
+  z-index: 3;
 }
 
 #footer {
