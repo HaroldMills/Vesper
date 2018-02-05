@@ -2,36 +2,41 @@
 <html lang="en">
 
 <head>
-  <title>Classify - Vesper</title>
-  {% include "vesper/header-prefix.html" %}
-  {% load staticfiles %}
-  {% load vesper_extras %}
-  <link rel="stylesheet" type="text/css" href="{% static 'vesper/command-form.css' %}">
-  <link rel="stylesheet" type="text/css" href="{% static 'vesper/classify-form.css' %}">
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Classify - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load staticfiles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/classify-form.css' %}">
+
 </head>
 
 <body>
 
-  {% include "vesper/navbar.html" %}
+    {% include "vesper/navbar.html" %}
 
-  <h2>Classify</h2>
-  
-  <p>
-    Runs an automatic classifier on some clips. The clips are specified as
-    a set of one or more detectors, one or more station/mic combinations,
-    and a range of dates. Classification runs as a Vesper job.
-  </p>
-  
-  <form class="form" role="form" action="{% url 'classify' %}" method="post">
-  
-    {{ form.classifier|form_element }}
-    {{ form.detectors|block_form_element }}
-    {{ form.station_mics|block_form_element }}
-    {{ form.start_date|form_element }}
-    {{ form.end_date|form_element }}
+    <h2>Classify</h2>
+
+    <p>
+        Runs an automatic classifier on some clips. The clips are specified as
+        a set of one or more detectors, one or more station/mic combinations,
+        and a range of dates. Classification runs as a Vesper job.
+    </p>
+
+    <form class="form" role="form" action="{% url 'classify' %}" method="post">
+
+        {{ form.classifier|form_element }}
+        {{ form.detectors|block_form_element }}
+        {{ form.station_mics|block_form_element }}
+        {{ form.start_date|form_element }}
+        {{ form.end_date|form_element }}
 
     <button type="submit" class="btn btn-default form-spacing command-form-spacing">Classify</button>
-    
+
   </form>
 
 </body>

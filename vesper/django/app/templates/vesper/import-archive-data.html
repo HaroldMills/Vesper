@@ -2,38 +2,43 @@
 <html lang="en">
 
 <head>
-  <title>Import Archive Data - Vesper</title>
-  {% include "vesper/header-prefix.html" %}
-  {% load staticfiles %}
-  {% load vesper_extras %}
-  <link rel="stylesheet" type="text/css" href="{% static 'vesper/command-form.css' %}">
-  <script src="{% static 'vesper/import-archive-data.js' %}"></script>
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Import Archive Data - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load staticfiles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+    <script type="module" src="{% static 'vesper/view/import-archive-data.js' %}"></script>
+
 </head>
 
 <body class="command-form-body">
 
-  {% include "vesper/navbar.html" %}
+    {% include "vesper/navbar.html" %}
 
-  <h2>Import Archive Data</h2>
-  
-  <p>
-    Imports archive data from YAML text into Vesper. The YAML can describe
-    stations, devices (such as microphones and recorders), which devices were
-    used at which stations during which time periods, and how the devices were
-    connected (for example, which microphones were connected to which recorder
-    channels). It can also describe algorithms, algorithm versions, and
-    processors. The import runs as a Vesper job. [Need to describe archive
-    data YAML format in more detail, perhaps on another page that we link to
-    here.]
-  </p>
-  
-  <form class="form" role="form" action="{% url 'import-archive-data' %}" method="post">
-  
-    {{ form.archive_data|block_form_element }}
-    
-    <button type="submit" class="btn btn-default form-spacing command-form-spacing">Import</button>
-    
-  </form>
+    <h2>Import Archive Data</h2>
+
+    <p>
+        Imports archive data from YAML text into Vesper. The YAML can describe
+        stations, devices (such as microphones and recorders), which devices were
+        used at which stations during which time periods, and how the devices were
+        connected (for example, which microphones were connected to which recorder
+        channels). It can also describe algorithms, algorithm versions, and
+        processors. The import runs as a Vesper job. [Need to describe archive
+        data YAML format in more detail, perhaps on another page that we link to
+        here.]
+    </p>
+
+    <form class="form" role="form" action="{% url 'import-archive-data' %}" method="post">
+
+        {{ form.archive_data|block_form_element }}
+
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Import</button>
+
+    </form>
 
 </body>
 

@@ -1,31 +1,31 @@
-<!-- 
+<!--
 This does not seem to work for nested dropdowns. The generated HTML looks
 right to me so the problem may be a Bootstrap limitation.
 -->
 
 <nav id="navbar" class="navbar navbar-inverse navbar-fixed-top">
-  <div class="container-fluid">
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#vesper-navbar">
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span> 
-      </button>
-      <span class="navbar-brand">Vesper<span>
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#vesper-navbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <span class="navbar-brand">Vesper<span>
+        </div>
+        <div class="collapse navbar-collapse" id="vesper-navbar">
+            <ul class="nav navbar-nav">
+                {% for item in navbar_items %}
+                    {% include "vesper/navbar-item.html" %}
+                {% endfor %}
+            </ul>
+          {% if navbar_right_items %}
+              <ul class="nav navbar-nav navbar-right">
+                  {% for item in navbar_right_items %}
+                      {% include "vesper/navbar-item.html" %}
+                  {% endfor %}
+              </ul>
+          {% endif %}
+        </div>
     </div>
-    <div class="collapse navbar-collapse" id="vesper-navbar">
-      <ul class="nav navbar-nav">
-        {% for item in navbar_items %}
-          {% include "vesper/navbar-item.html" %}
-        {% endfor %}
-      </ul>
-      {% if navbar_right_items %}
-        <ul class="nav navbar-nav navbar-right">
-          {% for item in navbar_right_items %}
-            {% include "vesper/navbar-item.html" %}
-          {% endfor %}
-        </ul>
-      {% endif %}
-    </div>
-  </div>
 </nav>

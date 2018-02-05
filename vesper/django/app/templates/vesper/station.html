@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>{{station.name}}</title>
+    <meta charset="utf-8">
+    <title>{{station.name}}</title>
 </head>
 <body>
-  <h1>{{station.name}}</h1>
-  <a href="{% url 'station-clips' station.name %}">Clips</a>
+    <h1>{{station.name}}</h1>
+    <a href="{% url 'station-clips' station.name %}">Clips</a>
 </body>
 </html>
 

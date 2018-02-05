@@ -3,116 +3,108 @@
 
 <head>
 
-  {% if stations %}
-    <title>Clip Album</title>
-  {% else %}
-    <title>Clip Album - Vesper</title>
-  {% endif %}
-  
-  {% include "vesper/header-prefix.html" %}
-  
-  <script>
-    const clipQuery = {
-      'stationMicName': '{{station_mic_name}}',
-      'detectorName': '{{detector_name}}',
-      'classification': '{{classification}}',
-      'date': null
-    };
-    const solarEventTimes = {{solar_event_times_json|safe}};
-    const recordings = {{recordings_json|safe}};
-    const clips = {{clips_json|safe}};
-    const settingsPresets = {{settings_presets_json|safe}};
-    const settingsPresetPath = '{{settings_preset_path|default:""}}';
-    const commandsPresets = {{commands_presets_json|safe}};
-    const commandsPresetPath = '{{commands_preset_path|default:""}}';
-  </script>
-  
-  {% load staticfiles %}
-  <script src="{% static 'vesper/dft.js' %}"></script>
-  <script src="{% static 'vesper/spectrogram.js' %}"></script>
-  <script src="{% static 'vesper/multiselection.js' %}"></script>
-  <script src="{% static 'vesper/array-utils.js' %}"><</script>
-  <script src="{% static 'vesper/ui-utils.js' %}"></script>
-  <script src="{% static 'vesper/night-rug-plot.js' %}"></script>
-  <script src="{% static 'vesper/keyboard-command-interpreter.js' %}"></script>
-  <script src="{% static 'vesper/clip-album-class.js' %}"></script>
-  <script src="{% static 'vesper/clip-album.js' %}"></script>
-  <link rel="stylesheet" type="text/css" href="{% static 'vesper/clip-album.css' %}">
-  
+    {% include "vesper/header-prefix.html" %}
+
+    {% if stations %}
+        <title>Clip Album</title>
+    {% else %}
+        <title>Clip Album - Vesper</title>
+    {% endif %}
+
+    <script>
+        const clipQuery = {
+            'stationMicName': '{{station_mic_name}}',
+            'detectorName': '{{detector_name}}',
+            'classification': '{{classification}}',
+            'date': null
+        };
+        const solarEventTimes = {{solar_event_times_json|safe}};
+        const recordings = {{recordings_json|safe}};
+        const clips = {{clips_json|safe}};
+        const settingsPresets = {{settings_presets_json|safe}};
+        const settingsPresetPath = '{{settings_preset_path|default:""}}';
+        const commandsPresets = {{commands_presets_json|safe}};
+        const commandsPresetPath = '{{commands_preset_path|default:""}}';
+    </script>
+
+    {% load staticfiles %}
+    <script type="module" src="{% static 'vesper/view/clip-album.js' %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-album.css' %}">
+
 </head>
 
 <body>
 
-  {% include "vesper/navbar.html" %}
-  
-  <div id="main-div" class="container">
-  
-	  <div class="panel panel-default query-panel">
-	
-	    <div class="panel-body">
-	  
-	      <form class="form-inline" role="form" action="{% url 'clip-album' %}" method="get">
-	      
-	        <div class="form-group form-spacing">
-	          <label for="station_mic">Station/mic:</label>
-	          <select class="form-control" id="station_mic" name="station_mic">
-	            {% for name in station_mic_names %}
-	              {% if name == station_mic_name %}
-	                <option selected>{{name}}</option>
-	              {% else %}
-	                <option>{{name}}</option>
-	              {% endif %}
-	            {% endfor %}
-	          </select>
+    {% include "vesper/navbar.html" %}
+
+    <div id="main-div" class="container">
+
+        <div class="panel panel-default query-panel">
+
+	        <div class="panel-body">
+
+	            <form class="form-inline" role="form" action="{% url 'clip-album' %}" method="get">
+
+        	        <div class="form-group form-spacing">
+        	            <label for="station_mic">Station/mic:</label>
+        	            <select class="form-control" id="station_mic" name="station_mic">
+        	                {% for name in station_mic_names %}
+        	                    {% if name == station_mic_name %}
+        	                        <option selected>{{name}}</option>
+        	                    {% else %}
+        	                        <option>{{name}}</option>
+        	                    {% endif %}
+        	                {% endfor %}
+        	            </select>
+        	        </div>
+
+        	        <div class="form-group form-spacing">
+        	            <label for="detector">Detector:</label>
+        	            <select class="form-control" id="detector" name="detector">
+        	                {% for name in detector_names %}
+        	                    {% if name == detector_name %}
+        	                        <option selected>{{name}}</option>
+        	                    {% else %}
+        	                        <option>{{name}}</option>
+        	                    {% endif %}
+        	                {% endfor %}
+        	            </select>
+        	        </div>
+
+        	        <div class="form-group form-spacing">
+        	            <label for="classification">Classification:</label>
+        	            <select class="form-control" id="classification" name="classification">
+        	                {% for c in classifications %}
+        	                    {% if c == classification %}
+        	                        <option selected>{{c}}</option>
+        	                    {% else %}
+        	                        <option>{{c}}</option>
+        	                    {% endif %}
+        	                {% endfor %}
+        	            </select>
+        	        </div>
+
+        	        <button type="submit" class="btn btn-default form-spacing">Submit</button>
+
+	            </form>
+
 	        </div>
-	        
-	        <div class="form-group form-spacing">
-	          <label for="detector">Detector:</label>
-	          <select class="form-control" id="detector" name="detector">
-	            {% for name in detector_names %}
-	              {% if name == detector_name %}
-	                <option selected>{{name}}</option>
-	              {% else %}
-	                <option>{{name}}</option>
-	              {% endif %}
-	            {% endfor %}
-	          </select>
-	        </div>
-	        
-	        <div class="form-group form-spacing">
-	          <label for="classification">Classification:</label>
-	          <select class="form-control" id="classification" name="classification">
-	            {% for c in classifications %}
-	              {% if c == classification %}
-	                <option selected>{{c}}</option>
-	              {% else %}
-	                <option>{{c}}</option>
-	              {% endif %}
-	            {% endfor %}
-	          </select>
-	        </div>
-	        
-	        <button type="submit" class="btn btn-default form-spacing">Submit</button>
-	      
-	      </form>
-	    
+
 	    </div>
-	    
-	  </div>
-	  
-  </div>
-	  
-  <button type="button" class="settings-button" data-toggle="modal" data-target="#settings-modal">
-    <span class="glyphicon glyphicon-cog settings-button-span"></span>
-  </button>
 
-  {% include "vesper/night-settings.html" %}
+    </div>
 
-  <h3 id="title"></h3>
-  <!-- <div id="rug-plot"></div> -->
-  <div id="clips"></div>
-  <!-- div id='footer'></div> -->
-		  
+    <button type="button" class="settings-button" data-toggle="modal" data-target="#settings-modal">
+        <span class="glyphicon glyphicon-cog settings-button-span"></span>
+    </button>
+
+    {% include "vesper/night-settings.html" %}
+
+    <h3 id="title"></h3>
+    <!-- <div id="rug-plot"></div> -->
+    <div id="clips"></div>
+    <!-- div id='footer'></div> -->
+
 </body>
 
 </html>

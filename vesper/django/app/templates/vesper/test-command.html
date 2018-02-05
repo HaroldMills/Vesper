@@ -2,20 +2,20 @@
 <html lang="en">
 
 <head>
-  <title>Test Command</title>
-  {% include "vesper/header-prefix.html" %}
+    {% include "vesper/header-prefix.html" %}
+    <title>Test Command</title>
 </head>
 
 <body>
 
-  {% include "vesper/navbar.html" %}
-  
-  <h2>Test Command</h2>
-  
-  <form action="{% url 'test-command' %}" method="post">
-    <input type="submit" value="Test">
-  </form>
-  
+    {% include "vesper/navbar.html" %}
+
+    <h2>Test Command</h2>
+
+    <form action="{% url 'test-command' %}" method="post">
+        <input type="submit" value="Test">
+    </form>
+
 </body>
 
 </html>

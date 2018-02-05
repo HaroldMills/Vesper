@@ -3,55 +3,47 @@
 
 <head>
 
-  <title>Clips New</title>
-  
-  {% include "vesper/header-prefix.html" %}
-  
-  <script>
-    const clipQuery = {
-	    	'stationMicName': '{{station_mic_name}}',
-	    	'detectorName': '{{detector_name}}',
-	    	'classification': '{{classification}}',
-	    	'date': '{{date}}'
-    };
-    const solarEventTimes = {{solar_event_times_json|safe}};
-    const recordings = {{recordings_json|safe}};
-    const clips = {{clips_json|safe}};
-    const settingsPresets = {{settings_presets_json|safe}};
-    const settingsPresetPath = '{{settings_preset_path|default:""}}';
-    const commandsPresets = {{commands_presets_json|safe}};
-    const commandsPresetPath = '{{commands_preset_path|default:""}}';
-  </script>
-  
-  {% load staticfiles %}
-  <script src="{% static 'vesper/dft.js' %}"></script>
-  <script src="{% static 'vesper/spectrogram.js' %}"></script>
-  <script src="{% static 'vesper/multiselection.js' %}"></script>
-  <script src="{% static 'vesper/array-utils.js' %}"><</script>
-  <script src="{% static 'vesper/ui-utils.js' %}"></script>
-  <script src="{% static 'vesper/night-rug-plot.js' %}"></script>
-  <script src="{% static 'vesper/keyboard-command-interpreter.js' %}"></script>
-  <script src="{% static 'vesper/clip-album-class.js' %}"></script>
-  <script src="{% static 'vesper/night.js' %}"></script>
-  <link rel="stylesheet" type="text/css" href="{% static 'vesper/night.css' %}">
-  
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Clips New</title>
+
+    <script>
+        const clipQuery = {
+    	    'stationMicName': '{{station_mic_name}}',
+    	    'detectorName': '{{detector_name}}',
+    	    'classification': '{{classification}}',
+    	    'date': '{{date}}'
+        };
+        const solarEventTimes = {{solar_event_times_json|safe}};
+        const recordings = {{recordings_json|safe}};
+        const clips = {{clips_json|safe}};
+        const settingsPresets = {{settings_presets_json|safe}};
+        const settingsPresetPath = '{{settings_preset_path|default:""}}';
+        const commandsPresets = {{commands_presets_json|safe}};
+        const commandsPresetPath = '{{commands_preset_path|default:""}}';
+    </script>
+
+    {% load staticfiles %}
+    <script type="module" src="{% static 'vesper/view/night.js' %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/night.css' %}">
+
 </head>
 
 <body>
 
-  {% include "vesper/navbar.html" %}
-  
-  <button type="button" class="settings-button" data-toggle="modal" data-target="#settings-modal">
-    <span class="glyphicon glyphicon-cog settings-button-span"></span>
-  </button>
+    {% include "vesper/navbar.html" %}
 
-  {% include "vesper/night-settings.html" %}
+    <button type="button" class="settings-button" data-toggle="modal" data-target="#settings-modal">
+        <span class="glyphicon glyphicon-cog settings-button-span"></span>
+    </button>
 
-  <h3 id="title"></h3>
-  <div id="rug-plot"></div>
-  <div id="clips"></div>
-  <!-- div id='footer'></div> -->
-  
+    {% include "vesper/night-settings.html" %}
+
+    <h3 id="title"></h3>
+    <div id="rug-plot"></div>
+    <div id="clips"></div>
+    <!-- div id='footer'></div> -->
+
 </body>
 
 </html>

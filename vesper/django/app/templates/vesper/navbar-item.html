@@ -1,19 +1,18 @@
 {% if item.type == 'link' %}
-  {% if item.name == active_navbar_item %}
-    <li class="active"><a href="{{item.url}}">{{item.name}}</a></li>
-  {% else %}
-    <li><a href="{{item.url}}">{{item.name}}</a></li>
-  {% endif %}
+    {% if item.name == active_navbar_item %}
+        <li class="active"><a href="{{item.url}}">{{item.name}}</a></li>
+    {% else %}
+        <li><a href="{{item.url}}">{{item.name}}</a></li>
+    {% endif %}
 {% else %}
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="none">
-      {{item.name}}<span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu">
-      {% for item in item.items %}
-        {% include "vesper/navbar-item.html" %}
-      {% endfor %}
-    </ul>
-  </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="none">
+            {{item.name}}<span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu">
+            {% for item in item.items %}
+                {% include "vesper/navbar-item.html" %}
+            {% endfor %}
+        </ul>
+    </li>
 {% endif %}
-

@@ -2,32 +2,36 @@
 <html lang="en">
 
 <head>
-  <title>Job {{job.id}}</title>
-  {% include "vesper/header-prefix.html" %}
-  {% load staticfiles %}
-  <link rel="stylesheet" type="text/css" href="{% static 'vesper/job.css' %}">
-  <script src="{% static 'vesper/job.js' %}"></script>
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Job {{job.id}}</title>
+
+    {% load staticfiles %}
+    <script type="module" src="{% static 'vesper/view/job.js' %}"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/job.css' %}">
+
 </head>
 
 <body>
 
-  {% include "vesper/navbar.html" %}
-  
-  <h2>Job {{job.id}} - {{command_name}}</h2>
-  
-  <h3>Full command:</h3>
-  <p>{{job.command}}</p>
-  
-  <h3>Start time:</h3>
-  <p>{{job.start_time}}</p>
-  
-  <h3>End time:</h3>
-  <p>{{job.end_time}}
-  
-  <h3>Status:</h3>
-  <p>{{job.status}}</p>
-  
-  <h3>Log:</h3>
-  <textarea class="log-text" id="textarea" rows="20" cols="100" readonly>{{job.log}}</textarea>
-  
+    {% include "vesper/navbar.html" %}
+
+    <h2>Job {{job.id}} - {{command_name}}</h2>
+
+    <h3>Full command:</h3>
+    <p>{{job.command}}</p>
+
+    <h3>Start time:</h3>
+    <p>{{job.start_time}}</p>
+
+    <h3>End time:</h3>
+    <p>{{job.end_time}}</p>
+
+    <h3>Status:</h3>
+    <p>{{job.status}}</p>
+
+    <h3>Log:</h3>
+    <textarea class="log-text" id="textarea" rows="20" cols="100" readonly>{{job.log}}</textarea>
+
 </body>

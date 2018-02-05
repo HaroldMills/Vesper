@@ -1,3 +1,6 @@
+# Django template filters for Vesper.
+
+
 from django import template
 from django.utils.safestring import mark_safe
 
@@ -14,7 +17,7 @@ def form_element(field):
 
 
 def _form_element(field, wrap_input_element):
-    
+
     if wrap_input_element:
         start_tag = '<div>'
         end_tag = '</div>'
@@ -35,8 +38,8 @@ def _form_element(field, wrap_input_element):
 @register.filter()
 def block_form_element(field):
     return _form_element(field, True)
-    
-    
+
+
 @register.filter()
 def form_checkbox(field):
     return mark_safe('''
@@ -45,4 +48,3 @@ def form_checkbox(field):
           {}
           {}
         </div>'''.format(_DIV_CLASS, field, field.label_tag(), field.errors))
-    

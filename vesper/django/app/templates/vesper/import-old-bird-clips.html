@@ -2,154 +2,62 @@
 <html lang="en">
 
 <head>
-  <title>Import Old Bird Clips - Vesper</title>
-  {% include "vesper/header-prefix.html" %}
-  {% load staticfiles %}
-  {% load vesper_extras %}
-  <link rel="stylesheet" type="text/css" href="{% static 'vesper/command-form.css' %}">
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Import Old Bird Clips - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load staticfiles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+
 </head>
 
 <body class="command-form-body">
 
-  {% include "vesper/navbar.html" %}
+    {% include "vesper/navbar.html" %}
 
-  <h2>Import Old Bird Clips</h2>
-  
-  <p>
-    Imports short audio files created by the Old Bird Tseep and Thrush detectors
-    into a Vesper archive.
-  </p>
-  
-  <p>
-    This command searches each of the specified directories recursivaly for
-    audio files (currently just .wav files). For each audio file it finds,
-    the command tries to parse information about a clip from the file's path
-    and contents, and if successful imports the clip into the archive. The
-    command copies each imported audio file into the archive, so if you
-    subsequently delete the original file it will have no effect on the
-    archive.
-  </p>
-  
-  <p>
-    The command adds recordings to the archive as needed to cover the nights
-    for which clips are imported. Each recording extends from 8:30 pm to
-    5:30 am on its night, and has one channel. The created recordings have
-    no audio data, only metadata.
-  </p>
-  
-  <p>
-    You can specify default directory paths via the
-    <span style="font-family: monospace;">import_old_bird_clips_defaults</span>
-    preference. The start and end dates are each optional.
-  </p>
+    <h2>Import Old Bird Clips</h2>
 
-  <!-- 
-  <p>
-    This command searches each of the specified directories recursivaly for
-    audio files (currently just .wav files). For each audio file found, the
-    command tries to parse information about a clip from the file's path and
-    contents, and if successful imports the clip into the archive.
-    The parsed information includes the following:
-  </p>
-    
-  <ul>
-    <li>Station</li>
-    <li>Detector.</li>
-    <li>Start Time</li>
-    <li>Classification (optional)</li>
-  </ul>
-  
-  <p>
-    The station, detector, and start time are required, but the
-    classification is optional.
-  </p>
-  
-  <p>
-    The clip's station is found from the closest ancestor directory
-    of the audio file whose name is also the name of an archive station.
-  </p>
-  
-  <p>
-    The clip's detector and start time are found from the audio file name,
-    which must be of the form:
-  </p>
-  
-  <p style="text-indent: 2em; font-family: monospace;">
-    &lt;detector&gt;_&lt;yyyy&gt;-&lt;ll&gt;-&lt;dd&gt;_&lt;hh&gt;.&lt;mm&gt;.&lt;ss&gt;_&lt;nn&gt;.wav
-  </p>
+    <p>
+        Imports short audio files created by the Old Bird Tseep and Thrush
+        detectors into a Vesper archive.
+    </p>
 
-  <p>
-    where:
-  </p>
-  
-  <ul>
-  
-    <li>
-      <span style="font-family: monospace;">&lt;detector&gt;</span>
-      is the clip's detector name, either
-      <span style="font-family: monospace;">Tseep</span> or
-      <span style="font-family: monospace;">Thrush</span>.
-    </li>
-    
-    <li>
-      <span style="font-family: monospace;">
-       &lt;yyyy&gt;-&lt;ll&gt;-&lt;dd&gt;_&lt;hh&gt;.&lt;mm&gt;.&lt;ss&gt;
-      </span>
-      is the clip's start time in the station time zone.
-    </li>
-    
-    <li>
-      <span style="font-family: monospace;">&lt;nn&gt;</span>
-      is a two-digit within-second serial number
-      (usually <span style="font-family: monospace;">00</span>)
-      as written by the Old Bird Tseep and Thrush detectors.
-    </li>
-    
-  </ul>
-    
-  <p>
-    An example file name is:
-  </p>
-  
-  <p style="text-indent: 2em; font-family: monospace;">
-    Tseep_2017-07-25_21.54.25_00.wav
-  </p>
-  
-  <p>
-    which is for a clip detected by the Old Bird Tseep detector with
-    a start time of 9:54:25 PM on July 25, 2017 and a within-second
-    serial number of 0.
-  </p>
-  
-  <p>
-    The clip's classification, if present, is found from the name of the
-    parent directory of the audio file.
-  </p>
-  
-  <p>
-    Each imported audio file is copied into the archive, so the original
-    can subsequently be deleted if desired with no effect on the archive.
-  </p>
-  
-  <p>
-    Recordings are added to the archive as needed to cover the nights for
-    which clips are imported. Each recording extends from 8:30 pm to
-    5:30 am on its night, and has one channel. The created recordings have
-    no audio data, only metadata.
-  </p>
+    <p>
+        This command searches each of the specified directories recursivaly for
+        audio files (currently just .wav files). For each audio file it finds,
+        the command tries to parse information about a clip from the file's path
+        and contents, and if successful imports the clip into the archive. The
+        command copies each imported audio file into the archive, so if you
+        subsequently delete the original file it will have no effect on the
+        archive.
+    </p>
 
-  -->
-    
-  <form class="form" role="form" action="{% url 'import-old-bird-clips' %}" method="post">
-  
-    {{ form.paths|block_form_element }}
-    {{ form.start_date|form_element }}
-    {{ form.end_date|form_element }}
+    <p>
+        The command adds recordings to the archive as needed to cover the nights
+        for which clips are imported. Each recording extends from 8:30 pm to
+        5:30 am on its night, and has one channel. The created recordings have
+        no audio data, only metadata.
+    </p>
 
-    <button type="submit" class="btn btn-default form-spacing command-form-spacing">Import</button>
-    
-  </form>
-    
+    <p>
+        You can specify default directory paths via the
+        <span style="font-family: monospace;">import_old_bird_clips_defaults</span>
+        preference. The start and end dates are each optional.
+    </p>
+
+    <form class="form" role="form" action="{% url 'import-old-bird-clips' %}" method="post">
+
+        {{ form.paths|block_form_element }}
+        {{ form.start_date|form_element }}
+        {{ form.end_date|form_element }}
+
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Import</button>
+
+    </form>
+
 </body>
 
 </html>

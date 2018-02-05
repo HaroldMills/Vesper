@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Clip {{clip.id}}</title>
+    <meta charset="utf-8">
+    <title>Clip {{clip.id}}</title>
 </head>
 <body>
-  <h1>Clip {{clip.id}}</h1>
-  <p>Station: {{clip.station.name}}</p>
-  <p>Start time: {{start_time}}</p>
-  <audio controls>
-    <source src="{% url 'clip-wav' clip.id %}" type="audio/wav">
-    Your browser does not support the <code>audio</code> HTML element.
-  </audio>
+    <h1>Clip {{clip.id}}</h1>
+    <p>Station: {{clip.station.name}}</p>
+    <p>Start time: {{start_time}}</p>
+    <audio controls>
+        <source src="{% url 'clip-wav' clip.id %}" type="audio/wav">
+        Your browser does not support the <code>audio</code> HTML element.
+    </audio>
 </body>
 </html>
