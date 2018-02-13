@@ -1,7 +1,7 @@
-import * as dft from '/static/vesper/signal/dft.js';
+import { Dft } from '/static/vesper/signal/dft.js';
 
 
-export function createDataWindow(name, size) {
+function createDataWindow(name, size) {
 
 	if (name === "Rectangular")
 		return createRectangularWindow(size);
@@ -15,7 +15,7 @@ export function createDataWindow(name, size) {
 }
 
 
-export function createRectangularWindow(size) {
+function createRectangularWindow(size) {
 	const w = new Float64Array(size);
 	for (let i = 0; i < size; i++)
 		w[i] = 1;
@@ -23,7 +23,7 @@ export function createRectangularWindow(size) {
 }
 
 
-export function createHannWindow(size) {
+function createHannWindow(size) {
 	const w = new Float64Array(size);
 	const f = Math.PI / size;
 	for (let i = 0; i < size; i++) {
@@ -34,7 +34,7 @@ export function createHannWindow(size) {
 }
 
 
-export function allocateSpectrogramStorage(inputLength, params) {
+function allocateSpectrogramStorage(inputLength, params) {
 	const p = params;
 	const spectrumSize = p.dftSize / 2 + 1;
 	return _allocateOutputSampleArrays(
@@ -58,7 +58,7 @@ function _getNumInputBlocks(inputLength, inputBlockSize, inputHopSize) {
 }
 
 
-export function computeSpectrogram(x, params, X) {
+function computeSpectrogram(x, params, X) {
 
 	const p = params;
 
@@ -91,7 +91,7 @@ export function computeSpectrogram(x, params, X) {
 			xx[i] = x[j++] * window[i];
 
 		// Compute DFT.
-		dft.realFft(xx, XX);
+		Dft.realFft(xx, XX);
 
 		// Compute DFT magnitude squared. We double the values in the
 		// non-DC and non-Fs/2 bins to include energy from the negative
@@ -147,3 +147,12 @@ function _computeDbValues(X, length, referencePower) {
 	}
 
 }
+
+
+export const Spectrogram = {
+    'createDataWindow': createDataWindow,
+    'createRectangularWindow': createRectangularWindow,
+    'createHannWindow': createHannWindow,
+    'allocateSpectrogramStorage': allocateSpectrogramStorage,
+    'computeSpectrogram': computeSpectrogram
+};

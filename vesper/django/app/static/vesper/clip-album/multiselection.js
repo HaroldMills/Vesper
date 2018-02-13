@@ -1,7 +1,7 @@
 'use strict'
 
 
-import * as ArrayUtils from '/static/vesper/util/array-utils.js';
+import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 
 
 export class Multiselection {

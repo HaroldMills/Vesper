@@ -1,13 +1,10 @@
-'use strict'
+import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 
 
-import * as ArrayUtils from '/static/vesper/util/array-utils.js';
+describe('ArrayUtils', () => {
 
 
-describe('ArrayUtils.rangeArray', () => {
-
-
-	it('invocation', () => {
+	it('rangeArray', () => {
 
 		const cases = [
 
@@ -44,13 +41,7 @@ describe('ArrayUtils.rangeArray', () => {
 	});
 
 
-});
-
-
-describe('ArrayUtils.arraysEqual', () => {
-
-
-	it('equal arrays', () => {
+	it('arraysEqual with equal arrays', () => {
 
 		const cases = [
 			[],
@@ -68,7 +59,7 @@ describe('ArrayUtils.arraysEqual', () => {
 	});
 
 
-	it('unequal arrays', () => {
+	it('arraysEqual with unequal arrays', () => {
 
 		const cases = [
 			[[], [1]],
@@ -83,13 +74,7 @@ describe('ArrayUtils.arraysEqual', () => {
 	});
 
 
-});
-
-
-describe('ArrayUtils.findLastLE', () => {
-
-
-	it('invocation', () => {
+	it('findLastLE', () => {
 
 		const cases = [
 

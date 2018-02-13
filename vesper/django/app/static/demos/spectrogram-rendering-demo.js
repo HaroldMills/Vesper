@@ -1,7 +1,7 @@
 'use strict'
 
 
-import * as Spectrogram from '/static/vesper/signal/spectrogram.js';
+import { Spectrogram } from '../signal/spectrogram.js';
 
 
 const sampleRate = 22050;

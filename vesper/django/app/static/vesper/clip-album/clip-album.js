@@ -1,6 +1,7 @@
 'use strict'
 
 
+import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { Clip } from '/static/vesper/clip-album/clip.js';
 import { ClipView } from '/static/vesper/clip-album/clip-view.js';
 import { CommandInterpreter, RegularFunction }
@@ -9,9 +10,7 @@ import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
 import { PreloadingClipManager }
     from '/static/vesper/clip-album/clip-manager.js';
-import * as ArrayUtils from '/static/vesper/util/array-utils.js';
-import * as Layout from '/static/vesper/clip-album/layout.js';
-import * as TFU from '/static/vesper/clip-album/time-frequency-utils.js';
+import { Layout } from '/static/vesper/clip-album/layout.js';
 
 
 /*
@@ -269,7 +268,7 @@ export class ClipAlbum {
 
 
 	_createLayout(settings) {
-		const layoutClass = Layout.layoutClasses[settings.layoutType];
+		const layoutClass = Layout.classes[settings.layoutType];
 		return new layoutClass(
 			this.elements.clipsDiv, this._clipViews, settings.layout);
 	}

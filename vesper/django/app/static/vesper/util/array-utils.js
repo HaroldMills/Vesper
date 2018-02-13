@@ -1,7 +1,4 @@
-'use strict'
-
-
-export function rangeArray(a, b = null, inc = 1) {
+function rangeArray(a, b = null, inc = 1) {
 
 	if (inc == 0) {
 		throw new Error('range increment must be nonzero');
@@ -31,7 +28,7 @@ export function rangeArray(a, b = null, inc = 1) {
 }
 
 
-export function arraysEqual(a, b) {
+function arraysEqual(a, b) {
 
 	if (a.length !== b.length)
 		return false;
@@ -56,7 +53,7 @@ export function arraysEqual(a, b) {
  * to x. The array must not be empty and its elements must be in nondecreasing
  * order.
  */
-export function findLastLE(a, x) {
+function findLastLE(a, x) {
 
 	if (x < a[0])
 		return -1;
@@ -85,3 +82,10 @@ export function findLastLE(a, x) {
 	}
 
 }
+
+
+export const ArrayUtils = {
+    'rangeArray': rangeArray,
+    'arraysEqual': arraysEqual,
+    'findLastLE': findLastLE
+};

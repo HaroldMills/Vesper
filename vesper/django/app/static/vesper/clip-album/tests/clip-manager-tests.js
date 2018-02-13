@@ -1,10 +1,10 @@
 'use strict'
 
 
+import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { CLIP_LOAD_STATUS } from '/static/vesper/clip-album/clip.js';
 import { PreloadingClipManager }
     from '/static/vesper/clip-album/clip-manager.js';
-import * as ArrayUtils from '/static/vesper/util/array-utils.js';
 
 
 class _TestClip {

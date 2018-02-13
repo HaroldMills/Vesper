@@ -1,10 +1,7 @@
-'use strict'
+import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 
 
-import * as ArrayUtils from '/static/vesper/util/array-utils.js';
-
-
-export class Layout {
+class _Layout {
 
 
 	constructor(div, clipViews, settings) {
@@ -36,7 +33,7 @@ export class Layout {
 
 
     _paginate() {
-		throw new Error('Layout._paginate not implemented');
+		throw new Error('_Layout._paginate not implemented');
     }
 
 
@@ -97,7 +94,7 @@ export class Layout {
 
 
     layOutClipViews(pageNum) {
-        throw new Error('Layout.layOutClipViews not implemented');
+        throw new Error('_Layout.layOutClipViews not implemented');
     }
 
 
@@ -175,7 +172,7 @@ Clip album layout settings by layout type:
 
 
 /* Layout that displays nonuniform, nonresizing clip views. */
-export class NonuniformNonresizingLayout extends Layout {
+export class NonuniformNonresizingLayout extends _Layout {
 
 
 	/**
@@ -308,7 +305,7 @@ export class NonuniformNonresizingLayout extends Layout {
 
 
 /** Layout that displays nonuniform, resizing clip views. */
-export class NonuniformResizingLayout extends Layout {
+export class NonuniformResizingLayout extends _Layout {
 
 
 	/**
@@ -548,4 +545,9 @@ function _createLayoutClassesObject() {
 }
 
 
-export const layoutClasses = _createLayoutClassesObject();
+const layoutClasses = _createLayoutClassesObject();
+
+
+export const Layout = {
+    'classes': _createLayoutClassesObject()
+};

@@ -1,6 +1,3 @@
-'use strict'
-
-
 import {
     NonuniformNonresizingLayout, NonuniformResizingLayout
 } from '/static/vesper/clip-album/layout.js';

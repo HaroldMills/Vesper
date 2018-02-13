@@ -1,40 +1,72 @@
-/*
- * Test functions for dft.js.
- */
+import { ArrayUtils } from '/static/vesper/util/array-utils.js';
+import { Dft } from '/static/vesper/signal/dft.js';
 
 
-function testDft() {
-	testRealFft();
-	testRealFftSpeed();
-	console.log("DFT tests complete");
-}
+describe('Dft', () => {
 
 
-function testRealFft() {
-	for (let dftSize of [4, 8, 16]) {
-		for (let freq = 0; freq < Math.floor(dftSize / 2) + 1; freq++) {
-			testRealFftAux(dftSize, freq, "cosine");
-			testRealFftAux(dftSize, freq, "sine");
+    it('realFft', () => {
+
+	    const dftSizes = [1, 2, 4, 8, 16];
+
+		for (const dftSize of dftSizes) {
+
+			for (let freq = 0; freq < Math.floor(dftSize / 2) + 1; freq++) {
+
+				expect(testRealFft(dftSize, freq, "cosine")).toBe(true);
+				expect(testRealFft(dftSize, freq, "sine")).toBe(true);
+
+			}
+
 		}
-	}
-	console.log("realFft tests passed")
-}
+
+	});
+
+
+	it('_bitReverse', () => {
+
+		const cases = [
+
+            [1, [0]],
+            [2, [0, 1]],
+            [4, [0, 2, 1, 3]],
+            [8, [0, 4, 2, 6, 1, 5, 3, 7]],
+            [16, [0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15]]
+
+        ]
+
+        for (const [length, expected] of cases) {
+
+            const input = new Float64Array(length);
+            for (let i = 0; i < length; i++)
+                input[i] = i;
+
+            const output = new Float64Array(length);
+
+            Dft._bitReverse(input, output);
+
+            // console.log(output.length, output);
+
+            expect(ArrayUtils.arraysEqual(output, expected)).toBe(true);
+
+        }
+
+	});
+
+
+});
 
 
 const EPSILON = 1e-9;
 
 
-function testRealFftAux(dftSize, freq, name) {
-	
+function testRealFft(dftSize, freq, name) {
 	const func = (name === "cosine" ? Math.cos : Math.sin);
 	const x = createSinusoid(dftSize, freq, func);
-	
 	const X = new Float64Array(dftSize)
-	
-	realFft(x, X);
+	Dft.realFft(x, X);
 	// showFft(dftSize, freq, name, x, X);
-	checkFft(X, x, dftSize, freq, name);
-	
+	return checkFft(X, x, dftSize, freq, name);
 }
 
 
@@ -53,7 +85,7 @@ function showFft(dftSize, freq, name, x, X) {
 	console.log(`${dftSize} ${freq} ${name} ${xNorm} ${XNorm}`);
 	for (let i = 0; i < X.length; i++)
 	    console.log(i, X[i]);
-	console.log("\n");	
+	console.log("\n");
 }
 
 
@@ -78,70 +110,42 @@ function dftNorm(x, n) {
 
 function checkFft(X, x, dftSize, freq, name) {
 	const expected = getExpectedOutput(x, dftSize, freq, name);
-	checkOutput(X, expected, dftSize, freq, name);
+	return checkOutput(X, expected, dftSize, freq, name);
 }
 
 
 function getExpectedOutput(x, dftSize, freq, name) {
-	
+
 	const X = new Float64Array(dftSize);
-	
+
 	const norm = aNorm(x, dftSize);
-	
+
 	if (name === "cosine")
-		
+
 		if (freq === 0 || freq === dftSize / 2)
 		    X[freq] = norm;
 		else
 			X[freq] = norm / Math.sqrt(2);
-	
+
 	else
 		// input is sine
-		
+
 		if (freq === 0 || freq === dftSize / 2)
 			X[freq] = 0;
 		else
 			X[dftSize - freq] = -norm / Math.sqrt(2);
-	
+
 	return X;
-	
+
 }
 
 
 function checkOutput(X, expected, dftSize, freq, name) {
 	for (let i = 0; i < dftSize; i++) {
-		if (Math.abs(X[i] - expected[i]) > EPSILON)
+		if (isNaN(X[i]) || Math.abs(X[i] - expected[i]) > EPSILON)
 			throw new Error(
 				`Computed DFT element ${i} value differs from expected ` +
 				`one: ${X[i]} ${expected[i]} ${dftSize} ${freq} ${name}`);
-	}	
-}
-
-
-function testRealFftSpeed() {
-
-	console.log("DFT sizes and times in microseconds:");
-	
-	for (let i = 5; i < 13; i++) {
-		
-		const numTrials = Math.round(100000 / i);
-		
-		const dftSize = Math.pow(2, i);
-		
-		const x = createSinusoid(dftSize, 1, Math.cos);
-		const X = new Float64Array(dftSize);
-		
-		const startTime = Date.now();
-	
-		for (let j = 0; j < numTrials; j++)
-		    realFft(x, X);
-		
-		const endTime = Date.now();
-		
-		const usPerDft = (endTime - startTime) / numTrials * 1000;
-		
-		console.log(dftSize, usPerDft);
-		
 	}
-	
+	return true;
 }

@@ -1,7 +1,7 @@
 'use strict'
 
 
-import * as TFU from '/static/vesper/clip-album/time-frequency-utils.js';
+import { TimeFrequencyUtils } from './time-frequency-utils.js';
 
 
 export class TimeFrequencyMarkerOverlay {
@@ -43,13 +43,13 @@ export class TimeFrequencyMarkerOverlay {
 
         const startTime = 0;
         const endTime = clip.span;
-        const x = Math.round(
-            TFU.timeToViewX(time, startTime, endTime, canvas.width)) + .5;
+        const x = Math.round(TimeFrequencyUtils.timeToViewX(
+            time, startTime, endTime, canvas.width)) + .5;
 
-        const [startFreq, endFreq] =
-            TFU.getFreqRange(clipView.settings.spectrogram, sampleRate / 2.);
-        const y = Math.round(
-            TFU.freqToViewY(freq, startFreq, endFreq, canvas.height)) + .5;
+        const [startFreq, endFreq] = TimeFrequencyUtils.getFreqRange(
+            clipView.settings.spectrogram, sampleRate / 2.);
+        const y = Math.round(TimeFrequencyUtils.freqToViewY(
+            freq, startFreq, endFreq, canvas.height)) + .5;
 
         const markerWidth = 11;
         const delta = Math.floor(markerWidth / 2);

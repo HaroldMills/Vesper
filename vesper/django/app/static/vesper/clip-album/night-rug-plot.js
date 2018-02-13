@@ -1,7 +1,7 @@
 'use strict'
 
 
-import * as ArrayUtils from '/static/vesper/util/array-utils.js';
+import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 
 
 const _DEFAULT_PLOT_LIMITS = [17.5, 31.5];

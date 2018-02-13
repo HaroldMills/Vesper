@@ -2,8 +2,8 @@
 
 
 import { ClipViewDelegate } from './clip-view-delegate.js';
-import * as Spectrogram from '../signal/spectrogram.js';
-import * as TFU from './time-frequency-utils.js';
+import { Spectrogram } from '../signal/spectrogram.js';
+import { TimeFrequencyUtils } from './time-frequency-utils.js';
 
 
 export class SpectrogramClipViewDelegate extends ClipViewDelegate {
@@ -105,7 +105,7 @@ export class SpectrogramClipViewDelegate extends ClipViewDelegate {
 
 			const settings = this.settings.spectrogram;
 			const [lowFreq, highFreq] =
-				TFU.getFreqRange(settings, clip.sampleRate / 2);
+			    TimeFrequencyUtils.getFreqRange(settings, clip.sampleRate / 2);
 			const deltaFreq = highFreq - lowFreq;
 			const freq = highFreq - (y - top) / (bottom - top) * deltaFreq;
 
@@ -264,7 +264,8 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
             settings, numSpectra, clip, canvas.width);
 
     // Get view frequency range.
-    const [startFreq, endFreq] = TFU.getFreqRange(settings, halfSampleRate);
+    const [startFreq, endFreq] =
+	    TimeFrequencyUtils.getFreqRange(settings, halfSampleRate);
 
     if (startFreq >= halfSampleRate)
         // view frequency range is above that of spectrogram, so no
@@ -275,8 +276,10 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
     const sStartFreq = startFreq;
     const sEndFreq = Math.min(endFreq, halfSampleRate);
 
-    const sStartFreqY = TFU.freqToGramY(sStartFreq, halfSampleRate, numBins);
-    const sEndFreqY = TFU.freqToGramY(sEndFreq, halfSampleRate, numBins);
+    const sStartFreqY =
+	    TimeFrequencyUtils.freqToGramY(sStartFreq, halfSampleRate, numBins);
+    const sEndFreqY =
+	    TimeFrequencyUtils.freqToGramY(sEndFreq, halfSampleRate, numBins);
 
     // The roles of sStartFreqY and sEndFreqY are reversed from what one
     // might expect in the following since frequency decreases (instead
@@ -285,8 +288,10 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
     const sHeight = sStartFreqY - sEndFreqY;
 
     const h = canvas.height
-    const dStartFreqY = TFU.freqToViewY(sStartFreq, startFreq, endFreq, h);
-    const dEndFreqY = TFU.freqToViewY(sEndFreq, startFreq, endFreq, h);
+    const dStartFreqY =
+	    TimeFrequencyUtils.freqToViewY(sStartFreq, startFreq, endFreq, h);
+    const dEndFreqY =
+	    TimeFrequencyUtils.freqToViewY(sEndFreq, startFreq, endFreq, h);
 
     const dY = dEndFreqY;
     const dHeight = dStartFreqY - dEndFreqY;
