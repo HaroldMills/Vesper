@@ -37,28 +37,20 @@ function createHannWindow(size) {
 function allocateSpectrogramStorage(inputLength, params) {
 	const p = params;
 	const spectrumSize = p.dftSize / 2 + 1;
-	return _allocateOutputSampleArrays(
-		inputLength, p.window.length, p.hopSize, spectrumSize)
+	const numSpectra = getNumSpectra(inputLength, p.window.length, p.hopSize);
+	return new Float32Array(numSpectra * spectrumSize);
 }
 
 
-function _allocateOutputSampleArrays(
-	    inputLength, inputBlockSize, inputHopSize, outputSampleArraySize) {
-	const numBlocks =
-		_getNumInputBlocks(inputLength, inputBlockSize, inputHopSize);
-	return new Float32Array(numBlocks * outputSampleArraySize);
-}
-
-
-function _getNumInputBlocks(inputLength, inputBlockSize, inputHopSize) {
-	if (inputLength < inputBlockSize)
+function getNumSpectra(inputLength, recordSize, hopSize) {
+	if (inputLength < recordSize)
 		return 0;
 	else
-		return 1 + Math.floor((inputLength - inputBlockSize) / inputHopSize);
+		return 1 + Math.floor((inputLength - recordSize) / hopSize);
 }
 
 
-function computeSpectrogram(x, params, X) {
+function computeSpectrogram(x, params, y) {
 
 	const p = params;
 
@@ -67,14 +59,14 @@ function computeSpectrogram(x, params, X) {
 	const hopSize = p.hopSize;
 	const dftSize = p.dftSize;
 	const inputLength = x.length;
-	const numSpectra = _getNumInputBlocks(inputLength, windowSize, hopSize);
+	const numSpectra = getNumSpectra(inputLength, windowSize, hopSize);
 	const spectrumSize = dftSize / 2 + 1;
 
 	// Allocate storage for windowed and zero padded DFT input.
     const xx = new Float64Array(dftSize);
 
     // Allocate storage for DFT output.
-    const XX = new Float64Array(dftSize);
+    const yy = new Float64Array(dftSize);
 
 	let inputStart = 0;
 	let inputEnd = inputStart + windowSize;
@@ -91,20 +83,20 @@ function computeSpectrogram(x, params, X) {
 			xx[i] = x[j++] * window[i];
 
 		// Compute DFT.
-		Dft.realFft(xx, XX);
+		Dft.realFft(xx, yy);
 
 		// Compute DFT magnitude squared. We double the values in the
 		// non-DC and non-Fs/2 bins to include energy from the negative
 		// frequency DFT bins.
-		X[k++] = XX[0] * XX[0];
+		y[k++] = yy[0] * yy[0];
 		i = 1;
 		j = dftSize - 1;
 		while (i < m) {
-			const re = XX[i++];
-		    const im = XX[j--];
-			X[k++] = 2 * (re * re + im * im);
+			const re = yy[i++];
+		    const im = yy[j--];
+			y[k++] = 2 * (re * re + im * im);
 		}
-		X[k++] = XX[m] * XX[m];
+		y[k++] = yy[m] * yy[m];
 
 		inputStart += hopSize;
 		inputEnd += hopSize;
@@ -113,15 +105,15 @@ function computeSpectrogram(x, params, X) {
 
 	if (p.referencePower !== null) {
         const outputLength = numSpectra * spectrumSize;
-        _computeDbValues(X, outputLength, p.referencePower);
+        computeDbValues(y, outputLength, p.referencePower);
 	}
 
-	return X;
+	return y;
 
 }
 
 
-function _computeDbValues(X, length, referencePower) {
+function computeDbValues(x, length, referencePower) {
 
 	/*
 	 * We clip ratios to a minimum value before taking logs to avoid
@@ -137,12 +129,12 @@ function _computeDbValues(X, length, referencePower) {
 
 	for (let i = 0; i < length; i++) {
 
-		let r = X[i] / referencePower;
+		let r = x[i] / referencePower;
 
 		if (r < minRatio)
-			X[i] = minDbValue;
+			x[i] = minDbValue;
 		else
-		    X[i] = 10 * Math.log10(r);
+		    x[i] = 10 * Math.log10(r);
 
 	}
 
@@ -154,5 +146,7 @@ export const Spectrogram = {
     'createRectangularWindow': createRectangularWindow,
     'createHannWindow': createHannWindow,
     'allocateSpectrogramStorage': allocateSpectrogramStorage,
-    'computeSpectrogram': computeSpectrogram
+	'getNumSpectra': getNumSpectra,
+    'computeSpectrogram': computeSpectrogram,
+	'computeDbValues': computeDbValues
 };
