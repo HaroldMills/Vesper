@@ -5,7 +5,7 @@
 
 
 /*
- * Computes the DFT of a real sequence.
+ * Computes the forward DFT of a real sequence.
  *
  * The DFT size n must be a power of two, and the input and output
  * arrays must have length n. On return, the output array contains the DFT
@@ -37,17 +37,17 @@
  * adapted to C by Bill Simpson in 1995 (see
  * https://www.jjj.de/fft/rsplitfft.c).
  */
-function realFft(input, output) {
+function computeRealForwardDft(input, output) {
 
     const n = input.length;
-    
+
     if (n == 1) {
-        
+
         output[0] = input[0];
-        
+
     } else {
         // `n` is at least two, and the following code will work
-        
+
         const x = output;
         const TWO_PI = 2 * Math.PI;
         const sqrt = Math.sqrt;
@@ -57,167 +57,167 @@ function realFft(input, output) {
             st1, cc1, ss1, cc3, ss3,
             e, a,
             rval, ival, mag;
-    
-        _bitReverse(input, output);
-    
+
+        bitReverseArrayElements(input, output);
+
         for (ix = 0, id = 4; ix < n; id *= 4) {
-    
+
             for (i0 = ix; i0 < n; i0 += id) {
-    
+
                 st1 = x[i0] - x[i0 + 1];
                 x[i0] += x[i0 + 1];
                 x[i0 + 1] = st1;
-    
+
             }
-    
+
             ix = 2 * (id - 1);
-    
+
         }
-    
+
         n2 = 2;
         nn = n >>> 1;
-    
+
         while ((nn = nn >>> 1)) {
-    
+
             ix = 0;
             n2 = n2 << 1;
             id = n2 << 1;
             n4 = n2 >>> 2;
             n8 = n2 >>> 3;
-    
+
             do {
-    
+
                 if (n4 !== 1) {
-    
+
                     for (i0 = ix; i0 < n; i0 += id) {
-    
+
                         i1 = i0;
                         i2 = i1 + n4;
                         i3 = i2 + n4;
                         i4 = i3 + n4;
-    
+
                         t1 = x[i3] + x[i4];
                         x[i4] -= x[i3];
-    
+
                         x[i3] = x[i1] - t1;
                         x[i1] += t1;
-    
+
                         i1 += n8;
                         i2 += n8;
                         i3 += n8;
                         i4 += n8;
-    
+
                         t1 = x[i3] + x[i4];
                         t2 = x[i3] - x[i4];
-    
+
                         t1 = -t1 * Math.SQRT1_2;
                         t2 *= Math.SQRT1_2;
-    
+
                         st1 = x[i2];
                         x[i4] = t1 + st1;
                         x[i3] = t1 - st1;
-    
+
                         x[i2] = x[i1] - t2;
                         x[i1] += t2;
-    
+
                     }
-    
+
                 } else {
-    
+
                     for (i0 = ix; i0 < n; i0 += id) {
-    
+
                         i1 = i0;
                         i2 = i1 + n4;
                         i3 = i2 + n4;
                         i4 = i3 + n4;
-    
+
                         t1 = x[i3] + x[i4];
                         x[i4] -= x[i3];
-    
+
                         x[i3] = x[i1] - t1;
                         x[i1] += t1;
-    
+
                     }
-    
+
                 }
-    
+
                 ix = (id << 1) - n2;
                 id = id << 2;
-    
+
             } while (ix < n);
-    
+
             e = TWO_PI / n2;
-    
+
             for (let j = 1; j < n8; j++) {
-    
+
                 a = j * e;
                 ss1 = Math.sin(a);
                 cc1 = Math.cos(a);
-    
+
                 // ss3 = sin(3 * a);
                 ss3 = 4 * ss1 * (0.75 - ss1 * ss1);
-    
+
                 // cc3 = cos(3 * a);
                 cc3 = 4 * cc1 * (cc1 * cc1 - 0.75);
-    
+
                 ix = 0; id = n2 << 1;
-    
+
                 do {
-    
+
                     for (i0 = ix; i0 < n; i0 += id) {
-    
+
                         i1 = i0 + j;
                         i2 = i1 + n4;
                         i3 = i2 + n4;
                         i4 = i3 + n4;
-    
+
                         i5 = i0 + n4 - j;
                         i6 = i5 + n4;
                         i7 = i6 + n4;
                         i8 = i7 + n4;
-    
+
                         t2 = x[i7] * cc1 - x[i3] * ss1;
                         t1 = x[i7] * ss1 + x[i3] * cc1;
-    
+
                         t4 = x[i8] * cc3 - x[i4] * ss3;
                         t3 = x[i8] * ss3 + x[i4] * cc3;
-    
+
                         st1 = t2 - t4;
                         t2 += t4;
                         t4 = st1;
-    
+
                         x[i8] = t2 + x[i6];
                         x[i3] = t2 - x[i6];
-    
+
                         st1 = t3 - t1;
                         t1 += t3;
                         t3 = st1;
-    
+
                         x[i4] = t3 + x[i2];
                         x[i7] = t3 - x[i2];
-    
+
                         x[i6] = x[i1] - t1;
                         x[i1] += t1;
-    
+
                         x[i2] = t4 + x[i5];
                         x[i5] -= t4;
-    
+
                     }
-    
+
                     ix = (id << 1) - n2;
                     id = id << 2;
-    
+
                 } while (ix < n);
-    
+
             }
-    
+
         }
-            
+
         // Scale output to make transform unitary.
         var f = 1 / sqrt(n);
         for (let i = 0; i < n; i++)
             x[i] *= f;
-        
+
     }
 
 }
@@ -233,7 +233,7 @@ function realFft(input, output) {
  * the output array, where `r(i)` is `i` with its rightmost `log2(n)`
  * bits reversed.
  */
-function _bitReverse(input, output) {
+function bitReverseArrayElements(input, output) {
 
     const n = input.length;
     const n2 = n >>> 1;
@@ -247,21 +247,21 @@ function _bitReverse(input, output) {
 
     if (n >= 4) {
         // `n` is at least four, so the following code will work
-        
+
         let i = 1, r = 0, h;
-        
+
         // Each iteration of this loop processes two values of `i`, the
         // first odd and the second even. When assignments are made to
         // elements of the output array, `r` is `i` with its rightmost
         // `log2(n)` bits reversed.
         do {
-    
+
             // Increment `r` so its rightmost `log2(n)` bits are the
             // reverse of those of `i`. Here we know that bit `log2(n2)`
             // from the right of `r` is zero, so we can increment `r` by
             // just complementing that bit.
             r += n2;
-    
+
             // At this point `i` is odd, so `r >= n2`. We do not need
             // to worry about performing redundant assignments here as
             // we do below since `i` will never attain the current value
@@ -271,9 +271,9 @@ function _bitReverse(input, output) {
             // those we perform when `i` attains the value `nm1 - r`.
             output[i] = input[r];
             output[r] = input[i];
-    
+
             i++;
-    
+
             // Increment `r`. Following the rules of binary incrementation,
             // but processing bits from left to right rather than from
             // right to left, complement the bits of `r` from left to
@@ -281,7 +281,7 @@ function _bitReverse(input, output) {
             // proceeding through the first zero bit.
             h = n2 << 1;
             while (h = h >> 1, !((r ^= h) & h));
-    
+
             // At this point `i` is even, so `r < n2`. We only perform
             // assignments if `r >= i` to avoid performing redundant
             // assignments in cases where `i` later attains the current
@@ -293,31 +293,31 @@ function _bitReverse(input, output) {
                 output[nm1 - i] = input[nm1 - r];
                 output[nm1 - r] = input[nm1 - i];
             }
-    
+
             i++;
-    
+
         } while (i < n2)
-            
+
     }
 
 }
 
 
-// The following is a version of the `_bitReverse` function that I
-// wrote as a clarification of the version above (that version is
-// from dsp.js). While I do believe the code of this function is
+// The following is a version of the `bitReverseArrayElements` function
+// that I wrote as a clarification of the version above (that version
+// is from dsp.js). While I do believe the code of this function is
 // clearer (`i` and `r` are more in sync, for example, and the code
 // that increments `r` when bit `log2(n2)` from the right is one is
 // easier to understand), it is unfortunately also a little slower,
 // so I have left it commented out.
 //
 // I also tried precomputing a table of bit-reversed indices and
-// passing that to the `realFft` function so it would not have to
-// reperform the bit reversal computations on each invocation, but
-// that complicated the use of `realFft` and (somewhat surprisingly)
-// did not speed things up.
+// passing that to the `computeRealForwardDft` function so it would
+// not have to reperform the bit reversal computations on each
+// invocation, but that complicated the use of `computeRealForwardDft`
+// and (somewhat surprisingly) did not speed things up.
 /*
-export function _bitReverse(input, output) {
+export function bitReverseArrayElements(input, output) {
 
     const n = input.length;
     const n2 = n / 2;
@@ -393,6 +393,6 @@ export function _bitReverse(input, output) {
 
 
 export const Dft = {
-    'realFft': realFft,
-    '_bitReverse': _bitReverse
+    'computeRealForwardDft': computeRealForwardDft,
+    'bitReverseArrayElements': bitReverseArrayElements
 };

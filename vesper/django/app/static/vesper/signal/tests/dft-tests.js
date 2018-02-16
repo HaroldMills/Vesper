@@ -8,7 +8,7 @@ describe('Dft', () => {
     beforeEach(() => addAlmostEqualMatcher());
 
 
-    it('realFft', () => {
+    it('computeRealForwardDft', () => {
 
 	    const dftSizes = [1, 2, 4, 8, 16];
 
@@ -26,7 +26,7 @@ describe('Dft', () => {
 	});
 
 
-	it('_bitReverse', () => {
+	it('bitReverseArrayElements', () => {
 
 		const cases = [
 
@@ -48,7 +48,7 @@ describe('Dft', () => {
 
             const output = new Float64Array(length);
 
-            Dft._bitReverse(input, output);
+            Dft.bitReverseArrayElements(input, output);
 
             // console.log(output.length, output);
 
@@ -65,7 +65,7 @@ describe('Dft', () => {
 function testSinusoidDft(dftSize, freq, funcName) {
     const x = createSinusoid(dftSize, freq, funcName);
     const X = new Float64Array(dftSize);
-    Dft.realFft(x, X);
+    Dft.computeRealForwardDft(x, X);
     // showDft(dftSize, freq, funcName, x, X);
     expect(arrayNorm(x)).toAlmostEqual(realDftNorm(X));
     const expected = getExpectedSinusoidDft(x, dftSize, freq, funcName);

@@ -22,7 +22,7 @@ function testRealFftSpeed() {
 		const startTime = Date.now();
 
 		for (let j = 0; j < numTrials; j++)
-		    Dft.realFft(x, X);
+		    Dft.computeRealForwardDft(x, X);
 
 		const endTime = Date.now();
 

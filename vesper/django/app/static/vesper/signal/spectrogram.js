@@ -83,7 +83,7 @@ function computeSpectrogram(x, params, y) {
 			xx[i] = x[j++] * window[i];
 
 		// Compute DFT.
-		Dft.realFft(xx, yy);
+		Dft.computeRealForwardDft(xx, yy);
 
 		// Compute DFT magnitude squared. We double the values in the
 		// non-DC and non-Fs/2 bins to include energy from the negative
