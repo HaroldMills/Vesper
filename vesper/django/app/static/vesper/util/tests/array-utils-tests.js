@@ -41,39 +41,6 @@ describe('ArrayUtils', () => {
 	});
 
 
-	it('arraysEqual with equal arrays', () => {
-
-		const cases = [
-			[],
-			[1],
-			[1, 2],
-			[1., 2., 3.],
-			['one', 'two', 'three']
-		];
-
-		for (const a of cases) {
-			const b = [...a];
-			expect(ArrayUtils.arraysEqual(a, b)).toBe(true);
-		}
-
-	});
-
-
-	it('arraysEqual with unequal arrays', () => {
-
-		const cases = [
-			[[], [1]],
-			[[1], [2]],
-			[[1], [1, 2]],
-			[[1], ['one']]
-		];
-
-		for (const [a, b] of cases)
-			expect(ArrayUtils.arraysEqual(a, b)).toBe(false);
-
-	});
-
-
 	it('findLastLE', () => {
 
 		const cases = [

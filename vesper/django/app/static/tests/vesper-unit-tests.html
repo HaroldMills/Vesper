@@ -5,14 +5,22 @@
     <meta charset="utf-8">
     <title>Vesper Unit Tests</title>
 
+    <!-- Include the following to test with Jasmine. -->
     <link rel="shortcut icon" type="image/png" href="/static/tests/jasmine-3.0.0/jasmine_favicon.png">
     <link rel="stylesheet" href="/static/tests/jasmine-3.0.0/jasmine.css">
-
     <script src="/static/tests/jasmine-3.0.0/jasmine.js"></script>
     <script src="/static/tests/jasmine-3.0.0/jasmine-html.js"></script>
     <script src="/static/tests/jasmine-3.0.0/boot.js"></script>
+    <script src="/static/tests/assert-utils.js"></script>
+    <script src="/static/tests/jasmine-additions.js"></script>
 
-    <!-- include spec files here... -->
+    <!-- Include the following to test with our Jasmine substitute. -->
+    <!--
+    <script src="/static/tests/assert-utils.js"></script>
+    <script src="/static/tests/test-framework.js"></script>
+-->
+
+    <!-- Spec modules go here. -->
     <script type="module" src="/static/vesper/clip-album/tests/layout-tests.js"></script>
     <script type="module" src="/static/vesper/clip-album/tests/clip-manager-tests.js"></script>
     <script type="module" src="/static/vesper/clip-album/tests/clip-tests.js"></script>
@@ -21,6 +29,7 @@
     <script type="module" src="/static/vesper/signal/tests/dft-tests.js"></script>
     <script type="module" src="/static/vesper/signal/tests/spectrogram-tests.js"></script>
     <script type="module" src="/static/vesper/util/tests/array-utils-tests.js"></script>
+
 
 </head>
 <body>

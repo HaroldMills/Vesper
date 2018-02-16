@@ -5,6 +5,9 @@ import { Dft } from '/static/vesper/signal/dft.js';
 describe('Dft', () => {
 
 
+    beforeEach(() => addAlmostEqualMatcher());
+
+
     it('realFft', () => {
 
 	    const dftSizes = [1, 2, 4, 8, 16];
@@ -13,8 +16,8 @@ describe('Dft', () => {
 
 			for (let freq = 0; freq < Math.floor(dftSize / 2) + 1; freq++) {
 
-				expect(testRealFft(dftSize, freq, "cosine")).toBe(true);
-				expect(testRealFft(dftSize, freq, "sine")).toBe(true);
+                testSinusoidDft(dftSize, freq, 'cosine');
+                testSinusoidDft(dftSize, freq, 'sine');
 
 			}
 
@@ -35,7 +38,9 @@ describe('Dft', () => {
 
         ]
 
-        for (const [length, expected] of cases) {
+        for (let [length, expected] of cases) {
+
+            expected = new Float64Array(expected);
 
             const input = new Float64Array(length);
             for (let i = 0; i < length; i++)
@@ -47,7 +52,7 @@ describe('Dft', () => {
 
             // console.log(output.length, output);
 
-            expect(ArrayUtils.arraysEqual(output, expected)).toBe(true);
+            expect(output).toEqual(expected);
 
         }
 
@@ -57,20 +62,19 @@ describe('Dft', () => {
 });
 
 
-const EPSILON = 1e-9;
-
-
-function testRealFft(dftSize, freq, name) {
-	const func = (name === "cosine" ? Math.cos : Math.sin);
-	const x = createSinusoid(dftSize, freq, func);
-	const X = new Float64Array(dftSize)
-	Dft.realFft(x, X);
-	// showFft(dftSize, freq, name, x, X);
-	return checkFft(X, x, dftSize, freq, name);
+function testSinusoidDft(dftSize, freq, funcName) {
+    const x = createSinusoid(dftSize, freq, funcName);
+    const X = new Float64Array(dftSize);
+    Dft.realFft(x, X);
+    // showDft(dftSize, freq, funcName, x, X);
+    expect(arrayNorm(x)).toAlmostEqual(realDftNorm(X));
+    const expected = getExpectedSinusoidDft(x, dftSize, freq, funcName);
+    expect(X).toAlmostEqual(expected);
 }
 
 
-function createSinusoid(length, freq, func) {
+function createSinusoid(length, freq, funcName) {
+    const func = (funcName === 'cosine' ? Math.cos : Math.sin);
 	const x = new Float64Array(length);
 	const f = 2 * Math.PI * freq / length;
 	for (let i = 0; i < length; i++)
@@ -79,17 +83,19 @@ function createSinusoid(length, freq, func) {
 }
 
 
-function showFft(dftSize, freq, name, x, X) {
-	const xNorm = aNorm(x, dftSize);
-	const XNorm = dftNorm(X, dftSize);
-	console.log(`${dftSize} ${freq} ${name} ${xNorm} ${XNorm}`);
+function showDft(dftSize, freq, funcName, x, X) {
+	const xNorm = arrayNorm(x);
+	const XNorm = realDftNorm(X);
+	console.log(
+        `${dftSize} ${freq} ${funcName} ${xNorm} ${XNorm}`);
 	for (let i = 0; i < X.length; i++)
 	    console.log(i, X[i]);
 	console.log("\n");
 }
 
 
-function aNorm(x, n) {
+function arrayNorm(x) {
+    const n = x.length;
 	let sum = 0;
 	for (let i = 0; i < n; ++i)
 		sum += x[i] * x[i];
@@ -97,30 +103,35 @@ function aNorm(x, n) {
 }
 
 
-function dftNorm(x, n) {
-	let sum = x[0] * x[0] + x[n / 2] * x[n / 2];
-	for (let i = 1; i < n / 2; i++) {
-		const re = x[i];
-		const im = x[n - i];
-		sum += 2 * (re * re + im * im);
-	}
+function realDftNorm(x) {
+
+    const n = x.length;
+	let sum = x[0] * x[0];
+
+    if (n > 1) {
+
+    	for (let i = 1; i < n / 2; i++) {
+    		const re = x[i];
+    		const im = x[n - i];
+    		sum += 2 * (re * re + im * im);
+    	}
+
+        sum += x[n / 2] * x[n / 2];
+
+    }
+
 	return Math.sqrt(sum);
+
 }
 
 
-function checkFft(X, x, dftSize, freq, name) {
-	const expected = getExpectedOutput(x, dftSize, freq, name);
-	return checkOutput(X, expected, dftSize, freq, name);
-}
-
-
-function getExpectedOutput(x, dftSize, freq, name) {
+function getExpectedSinusoidDft(x, dftSize, freq, funcName) {
 
 	const X = new Float64Array(dftSize);
 
-	const norm = aNorm(x, dftSize);
+	const norm = arrayNorm(x);
 
-	if (name === "cosine")
+	if (funcName === 'cosine')
 
 		if (freq === 0 || freq === dftSize / 2)
 		    X[freq] = norm;
@@ -137,15 +148,4 @@ function getExpectedOutput(x, dftSize, freq, name) {
 
 	return X;
 
-}
-
-
-function checkOutput(X, expected, dftSize, freq, name) {
-	for (let i = 0; i < dftSize; i++) {
-		if (isNaN(X[i]) || Math.abs(X[i] - expected[i]) > EPSILON)
-			throw new Error(
-				`Computed DFT element ${i} value differs from expected ` +
-				`one: ${X[i]} ${expected[i]} ${dftSize} ${freq} ${name}`);
-	}
-	return true;
 }

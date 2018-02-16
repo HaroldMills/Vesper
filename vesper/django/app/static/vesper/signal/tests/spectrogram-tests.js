@@ -1,6 +1,5 @@
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { Spectrogram } from '/static/vesper/signal/spectrogram.js';
-import { TestUtils } from '/static/tests/test-utils.js';
 
 
 /*
@@ -11,6 +10,9 @@ import { TestUtils } from '/static/tests/test-utils.js';
 
 
 describe('Spectrogram', () => {
+
+
+    beforeEach(() => addAlmostEqualMatcher());
 
 
     it('createRectangularWindow', () => {
@@ -24,7 +26,7 @@ describe('Spectrogram', () => {
 
     	for (let [size, expected] of cases) {
     		const window = Spectrogram.createRectangularWindow(size);
-            TestUtils.expectArraysAlmostEqual(window, expected);
+            expect(window).toAlmostEqual(expected);
     	}
 
 	});
@@ -40,7 +42,7 @@ describe('Spectrogram', () => {
 
     	for (const [size, expected] of cases) {
     		const window = Spectrogram.createHannWindow(size);
-            TestUtils.expectArraysAlmostEqual(window, expected);
+            expect(window).toAlmostEqual(expected);
     	}
 
 	});
@@ -63,7 +65,7 @@ describe('Spectrogram', () => {
 
     	for (const [args, expected] of cases) {
     		const window = Spectrogram.createDataWindow(...args);
-    		TestUtils.expectArraysAlmostEqual(window, expected);
+            expect(window).toAlmostEqual(expected);
     	}
 
     });
@@ -138,8 +140,8 @@ describe('Spectrogram', () => {
         Spectrogram.computeSpectrogram(x, params, y);
 
         expect(y.length).toBe(15);
-        TestUtils.expectArraysAlmostEqual(y.slice(0, 5), [0, 4, 0, 0, 0]);
-        TestUtils.expectArraysAlmostEqual(y.slice(10, 15), [0, 0, 4, 0, 0]);
+        expect(y.slice(0, 5)).toAlmostEqual([0, 4, 0, 0, 0]);
+        expect(y.slice(10, 15)).toAlmostEqual([0, 0, 4, 0, 0]);
 
     	// showSpectrogram(y, params.dftSize / 2 + 1);
 
@@ -162,8 +164,8 @@ describe('Spectrogram', () => {
         Spectrogram.computeSpectrogram(x, params, y);
 
         expect(y.length).toBe(15);
-        TestUtils.expectArraysAlmostEqual(y.slice(0, 5), [.5, 1, .25, 0, 0]);
-        TestUtils.expectArraysAlmostEqual(y.slice(10, 15), [0, .25, 1, .25, 0]);
+        expect(y.slice(0, 5)).toAlmostEqual([.5, 1, .25, 0, 0]);
+        expect(y.slice(10, 15)).toAlmostEqual([0, .25, 1, .25, 0]);
 
     	// showSpectrogram(y, params.dftSize / 2 + 1);
 
@@ -202,7 +204,7 @@ describe('Spectrogram', () => {
 
     	for (let [x, length, referencePower, expected] of cases) {
     		Spectrogram.computeDbValues(x, length, referencePower);
-            TestUtils.expectArraysAlmostEqual(x, expected);
+            expect(x).toAlmostEqual(expected);
     	}
 
     });
