@@ -1,101 +1,82 @@
 import { DataWindow } from '/static/vesper/signal/data-window.js';
 
 
-describe('DataWindow', () => {
+const _TEST_CASES = new Map([
 
+    ['Rectangular', [DataWindow.createRectangularWindow, [
+        [],
+        [1],
+        [1, 1],
+        [1, 1, 1],
+        [1, 1, 1, 1],
+        [1, 1, 1, 1, 1]
+    ]]],
+
+    ['Hann', [DataWindow.createHannWindow, [
+        [],
+        [0],
+        [0, 0],
+        [0, 1, 0],
+        [0, .75, .75, 0],
+        [0, .5, 1, .5, 0]
+    ]]]
+
+]);
+
+
+function _testWindow(name) {
+    const [windowFunction, expectedWindows] = _TEST_CASES.get(name);
+    _testWindowFunction(windowFunction, expectedWindows);
+}
+
+
+function _testWindowFunction(windowFunction, expectedWindows) {
+
+    for (const expectedWindow of expectedWindows) {
+
+        const size = expectedWindow.length;
+
+        // default `symmetric` argument (`true`)
+        let window = windowFunction(size);
+        expect(window).toAlmostEqual(expectedWindow);
+
+        // `symmetric` argument `true`
+        window = windowFunction(size, true);
+        expect(window).toAlmostEqual(expectedWindow);
+
+        // `symmetric` argument `false`
+        if (size !== 0) {
+            window = windowFunction(size - 1, false);
+            expect(window).toAlmostEqual(expectedWindow.slice(0, size - 1));
+        }
+
+    }
+
+}
+
+
+function _createWindowFunction(name) {
+    return function(size, symmetric = true) {
+        return DataWindow.createWindow(name, size, symmetric);
+    }
+}
+
+
+describe('DataWindow', () => {
 
     beforeEach(() => addAlmostEqualMatcher());
 
-
-    it('createRectangularWindow', () => {
-
-        function ones(n) {
-            const result = new Float64Array(n);
-            for (let i = 0; i < n; i++)
-                result[i] = 1;
-            return result;
-        }
-
-        for (let size = 0; size < 5; size++) {
-
-            const expected = ones(size);
-
-            // default `symmetric` argument
-            let window = DataWindow.createRectangularWindow(size);
-            expect(window).toEqual(expected);
-
-            // `symmetric` argument `true`
-            window = DataWindow.createRectangularWindow(size, true);
-            expect(window).toEqual(expected);
-
-            // `symmetric` argument `false`
-            window = DataWindow.createRectangularWindow(size, false);
-            expect(window).toEqual(expected);
-
-        }
-
-	});
-
-
-    it('createHannWindow', () => {
-
-        const cases = [
-            [],
-            [0],
-            [0, 0],
-    	    [0, 1, 0],
-    	    [0, .75, .75, 0],
-    	    [0, .5, 1, .5, 0]
-    	];
-
-        for (let size = 0; size < cases.length; size++) {
-
-            // default `symmetric` argument
-            let window = DataWindow.createHannWindow(size);
-            expect(window).toAlmostEqual(cases[size]);
-
-            // `symmetric` argument `true`
-            window = DataWindow.createHannWindow(size, true);
-            expect(window).toAlmostEqual(cases[size]);
-
-            // `symmetric` argument `false`
-            if (size < cases.length - 1) {
-                window = DataWindow.createHannWindow(size, false);
-                const expected = cases[size + 1].slice(0, size);
-                expect(window).toAlmostEqual(expected);
-            }
-
-        }
-
-	});
-
+    for (const windowName of _TEST_CASES.keys()) {
+        it(`create${windowName}Window`, () => {
+            _testWindow(windowName);
+        })
+    }
 
     it('createWindow', () => {
-
-        const cases = [
-
-    	    [['Rectangular', 0], []],
-    	    [['Rectangular', 1], [1]],
-    	    [['Rectangular', 2], [1, 1]],
-    	    [['Rectangular', 3], [1, 1, 1]],
-            [['Rectangular', 4], [1, 1, 1, 1]],
-            [['Rectangular', 5], [1, 1, 1, 1, 1]],
-
-            [['Hann', 0], []],
-            [['Hann', 1], [0]],
-            [['Hann', 2], [0, 0]],
-    	    [['Hann', 3], [0, 1, 0]],
-    	    [['Hann', 4], [0, .75, .75, 0]],
-    	    [['Hann', 5], [0, .5, 1, .5, 0]]
-
-    	];
-
-    	for (const [args, expected] of cases) {
-    		const window = DataWindow.createWindow(...args);
-            expect(window).toAlmostEqual(expected);
-    	}
-
+        for (const [name, [_, expectedWindows]] of _TEST_CASES) {
+            const windowFunction = _createWindowFunction(name);
+            _testWindowFunction(windowFunction, expectedWindows);
+        }
     });
-
 
 });
