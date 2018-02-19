@@ -2,6 +2,7 @@
 
 
 import { Spectrogram } from '../signal/spectrogram.js';
+import { Window } from '../signal/window.js';
 
 
 const sampleRate = 22050;
@@ -132,7 +133,7 @@ function getSpectrogramParams() {
 	const dftSize = Math.pow(2, Math.ceil(Math.log2(windowSize)));
 
 	return {
-		'window': Spectrogram.createDataWindow('Hann', windowSize),
+		'window': Window.createWindow('Hann', windowSize),
 		'hopSize': hopSize,
 		'dftSize': dftSize,
 		'referencePower': 1,

@@ -3,6 +3,7 @@
 
 import { ClipViewDelegate } from './clip-view-delegate.js';
 import { Spectrogram } from '../signal/spectrogram.js';
+import { Window } from '../signal/window.js';
 import { TimeFrequencyUtils } from './time-frequency-utils.js';
 
 
@@ -147,7 +148,7 @@ function _scaleSamples(samples, factor) {
 
 function _augmentSpectrogramSettings(settings, sampleRate) {
     const windowSize = Math.round(settings.windowDuration * sampleRate);
-    settings.window = Spectrogram.createDataWindow('Hann', windowSize);
+    settings.window = Window.createWindow('Hann', windowSize);
     settings.hopSize = Math.round(settings.hopDuration * sampleRate);
     settings.dftSize = _computeDftSize(
         windowSize, settings.dftSizeExponentIncrement);

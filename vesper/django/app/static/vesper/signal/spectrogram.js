@@ -1,39 +1,6 @@
 import { Dft } from '/static/vesper/signal/dft.js';
 
 
-function createDataWindow(name, size) {
-
-	if (name === "Rectangular")
-		return createRectangularWindow(size);
-
-	else if (name === "Hann")
-		return createHannWindow(size);
-
-	else
-		throw `Unrecognized window type "${name}".`;
-
-}
-
-
-function createRectangularWindow(size) {
-	const w = new Float64Array(size);
-	for (let i = 0; i < size; i++)
-		w[i] = 1;
-	return w;
-}
-
-
-function createHannWindow(size) {
-	const w = new Float64Array(size);
-	const f = Math.PI / size;
-	for (let i = 0; i < size; i++) {
-		const sine = Math.sin(f * i);
-		w[i] = sine * sine;
-	}
-	return w;
-}
-
-
 function allocateSpectrogramStorage(inputLength, params) {
 	const p = params;
 	const spectrumSize = p.dftSize / 2 + 1;
@@ -142,9 +109,6 @@ function computeDbValues(x, length, referencePower) {
 
 
 export const Spectrogram = {
-    'createDataWindow': createDataWindow,
-    'createRectangularWindow': createRectangularWindow,
-    'createHannWindow': createHannWindow,
     'allocateSpectrogramStorage': allocateSpectrogramStorage,
 	'getNumSpectra': getNumSpectra,
     'computeSpectrogram': computeSpectrogram,
