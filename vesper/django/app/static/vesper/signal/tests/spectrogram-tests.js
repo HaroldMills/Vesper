@@ -1,6 +1,6 @@
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { Spectrogram } from '/static/vesper/signal/spectrogram.js';
-import { Window } from '/static/vesper/signal/window.js';
+import { DataWindow } from '/static/vesper/signal/data-window.js';
 
 
 /*
@@ -74,7 +74,7 @@ describe('Spectrogram', () => {
         const x = createSpectrogramTestSignal();
 
     	const params = {
-    		"window": Window.createRectangularWindow(8),
+    		"window": DataWindow.createRectangularWindow(8),
     		"hopSize": 4,
     		"dftSize": 8,
     		"referencePower": null
@@ -98,7 +98,7 @@ describe('Spectrogram', () => {
         const x = createSpectrogramTestSignal();
 
     	const params = {
-    		"window": Window.createHannWindow(8),
+    		"window": DataWindow.createHannWindow(8),
     		"hopSize": 4,
     		"dftSize": 8,
     		"referencePower": null
@@ -122,7 +122,7 @@ describe('Spectrogram', () => {
         const x = createCosine(16, 4);
 
     	const params = {
-    		"window": Window.createHannWindow(8),
+    		"window": DataWindow.createHannWindow(8),
     		"hopSize": 4,
     		"dftSize": 16,
     		"referencePower": null

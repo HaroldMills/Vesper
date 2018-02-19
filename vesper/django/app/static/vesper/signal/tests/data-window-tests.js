@@ -1,7 +1,7 @@
-import { Window } from '/static/vesper/signal/window.js';
+import { DataWindow } from '/static/vesper/signal/data-window.js';
 
 
-describe('Window', () => {
+describe('DataWindow', () => {
 
 
     beforeEach(() => addAlmostEqualMatcher());
@@ -17,7 +17,7 @@ describe('Window', () => {
     	];
 
     	for (let [size, expected] of cases) {
-    		const window = Window.createRectangularWindow(size);
+    		const window = DataWindow.createRectangularWindow(size);
             expect(window).toAlmostEqual(expected);
     	}
 
@@ -33,7 +33,7 @@ describe('Window', () => {
     	];
 
     	for (const [size, expected] of cases) {
-    		const window = Window.createHannWindow(size);
+    		const window = DataWindow.createHannWindow(size);
             expect(window).toAlmostEqual(expected);
     	}
 
@@ -56,7 +56,7 @@ describe('Window', () => {
     	];
 
     	for (const [args, expected] of cases) {
-    		const window = Window.createWindow(...args);
+    		const window = DataWindow.createWindow(...args);
             expect(window).toAlmostEqual(expected);
     	}
 
