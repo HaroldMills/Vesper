@@ -17,13 +17,15 @@ Slepian
 export namespace DataWindow {
 
 
-	export function createWindow(name: string, size: number): Float64Array {
+	export function createWindow(
+		name: string, size: number, symmetric = true
+	): Float64Array {
 
 		if (name === 'Rectangular')
-			return createRectangularWindow(size);
+			return createRectangularWindow(size, symmetric);
 
 		else if (name === 'Hann')
-			return createHannWindow(size);
+			return createHannWindow(size, symmetric);
 
 		else
 			throw `Unrecognized window type "${name}".`;
@@ -31,22 +33,51 @@ export namespace DataWindow {
 	}
 
 
-	export function createRectangularWindow(size: number): Float64Array {
+	export function createRectangularWindow(
+		size: number, symmetric = true
+	): Float64Array {
+
+        _checkWindowSize(size);
+
 		const w = new Float64Array(size);
+
 		for (let i = 0; i < size; i++)
 			w[i] = 1;
+
 		return w;
+
 	}
 
 
-	export function createHannWindow(size: number): Float64Array {
+    function _checkWindowSize(size: number) {
+		if (size < 0)
+		    throw new Error('Window size must be nonnegative.');
+		else if (Math.floor(size) !== size)
+		    throw new Error('Window size must be an integer.');
+	}
+
+
+	export function createHannWindow(
+		size: number, symmetric = true
+	): Float64Array {
+
+        _checkWindowSize(size);
+
 		const w = new Float64Array(size);
-		const f = Math.PI / size;
-		for (let i = 0; i < size; i++) {
-			const sine = Math.sin(f * i);
-			w[i] = sine * sine;
+
+		if (size >= 2) {
+
+			const f = Math.PI / (symmetric ? size - 1 : size);
+
+			for (let i = 0; i < size; i++) {
+				const sine = Math.sin(f * i);
+				w[i] = sine * sine;
+			}
+
 		}
+
 		return w;
+
 	}
 
 }

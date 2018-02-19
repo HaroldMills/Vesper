@@ -98,7 +98,7 @@ describe('Spectrogram', () => {
         const x = createSpectrogramTestSignal();
 
     	const params = {
-    		"window": DataWindow.createHannWindow(8),
+    		"window": DataWindow.createHannWindow(8, false),
     		"hopSize": 4,
     		"dftSize": 8,
     		"referencePower": null
