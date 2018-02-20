@@ -402,4 +402,9 @@ describe('DataWindow', () => {
         }
     });
 
+    it('createWindow errors', () => {
+        expect(() => DataWindow.createWindow('Hann', -1)).toThrowError(Error);
+        expect(() => DataWindow.createWindow('Hann', .5)).toThrowError(Error);
+    });
+
 });
