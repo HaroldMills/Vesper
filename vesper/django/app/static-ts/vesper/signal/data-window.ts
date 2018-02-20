@@ -1,23 +1,37 @@
 /*
+ * Data windows for digital signal processing.
+ *
+ * The supported window types are:
+ *
+ *    Blackman
+ *    Hamming
+ *    Hann
+ *    Nuttall
+ *    Rectangular
+ *
+ * Both symmetric (for filtering) and non-symmetric (for spectral analysis)
+ * windows are supported. To create a window, call the
+ * `DataWindow.createWindow` function with appropriate arguments. For example,
+ * to create a non-symmetric Hann window of size 100:
+ *
+ *     window = DataWindow.createWindow('Hann', 100, false);
+ *
+ * and to create a symmetric Hamming window of size 101:
+ *
+ *     window = DataWindow.createWindow('Hamming', 101, true);
+ */
 
-Windows I'd like to offer:
 
-Rectangular
-Blackman [0.42, -0.50, 0.08]
-Hamming [0.54, -0.46]
-Hann [0.5, -0.5]
-Nuttall [0.3635819, -0.4891775, 0.1365995, -0.0106411]
-Gaussian
-Kaiser
-Slepian
-
-*/
+// TODO: Add Gaussian, Kaiser, and Slepian windows.
 
 
 export namespace DataWindow {
 
 
-	// sum-of-cosines window weights
+	// Sum-of-cosines window weights, from scipy.signal.windows module.
+	// Odd-indexed weights are negated compared to corresponding SciPy
+	// values since we sum cosines starting at zero radians rather than
+	// -pi radians.
 	const _BLACKMAN_WEIGHTS = new Float64Array([0.42, -0.50, 0.08]);
 	const _HAMMING_WEIGHTS = new Float64Array([.54, -.46]);
 	const _HANN_WEIGHTS = new Float64Array([.5, -.5]);
