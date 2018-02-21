@@ -5,12 +5,12 @@ export namespace Spectrogram {
 
 
 	export function allocateSpectrogramStorage(
-		inputLength: number, params: any
+		inputLength: number, settings: any
 	): Float32Array {
-		const p = params;
-		const spectrumSize = p.dftSize / 2 + 1;
+		const s = settings;
+		const spectrumSize = s.dftSize / 2 + 1;
 		const numSpectra =
-		    getNumSpectra(inputLength, p.window.length, p.hopSize);
+		    getNumSpectra(inputLength, s.window.length, s.hopSize);
 		return new Float32Array(numSpectra * spectrumSize);
 	}
 
@@ -26,15 +26,15 @@ export namespace Spectrogram {
 
 
 	export function computeSpectrogram(
-		x: Float32Array, params: any, y: Float32Array
+		x: Float32Array, settings: any, y: Float32Array
 	): Float32Array {
 
-		const p = params;
+		const s = settings;
 
-		const window = p.window;
+		const window = s.window;
 		const windowSize = window.length;
-		const hopSize = p.hopSize;
-		const dftSize = p.dftSize;
+		const hopSize = s.hopSize;
+		const dftSize = s.dftSize;
 		const inputLength = x.length;
 		const numSpectra = getNumSpectra(inputLength, windowSize, hopSize);
 		const spectrumSize = dftSize / 2 + 1;
@@ -80,9 +80,9 @@ export namespace Spectrogram {
 
 		}
 
-		if (p.referencePower !== null) {
+		if (s.referencePower !== null) {
 	        const outputLength = numSpectra * spectrumSize;
-	        computeDbValues(y, outputLength, p.referencePower);
+	        computeDbValues(y, outputLength, s.referencePower);
 		}
 
 		return y;

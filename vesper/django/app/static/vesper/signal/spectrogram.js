@@ -1,10 +1,10 @@
 import { Dft } from './dft.js';
 export var Spectrogram;
 (function (Spectrogram) {
-    function allocateSpectrogramStorage(inputLength, params) {
-        const p = params;
-        const spectrumSize = p.dftSize / 2 + 1;
-        const numSpectra = getNumSpectra(inputLength, p.window.length, p.hopSize);
+    function allocateSpectrogramStorage(inputLength, settings) {
+        const s = settings;
+        const spectrumSize = s.dftSize / 2 + 1;
+        const numSpectra = getNumSpectra(inputLength, s.window.length, s.hopSize);
         return new Float32Array(numSpectra * spectrumSize);
     }
     Spectrogram.allocateSpectrogramStorage = allocateSpectrogramStorage;
@@ -15,12 +15,12 @@ export var Spectrogram;
             return 1 + Math.floor((inputLength - recordSize) / hopSize);
     }
     Spectrogram.getNumSpectra = getNumSpectra;
-    function computeSpectrogram(x, params, y) {
-        const p = params;
-        const window = p.window;
+    function computeSpectrogram(x, settings, y) {
+        const s = settings;
+        const window = s.window;
         const windowSize = window.length;
-        const hopSize = p.hopSize;
-        const dftSize = p.dftSize;
+        const hopSize = s.hopSize;
+        const dftSize = s.dftSize;
         const inputLength = x.length;
         const numSpectra = getNumSpectra(inputLength, windowSize, hopSize);
         const spectrumSize = dftSize / 2 + 1;
@@ -49,9 +49,9 @@ export var Spectrogram;
             inputStart += hopSize;
             inputEnd += hopSize;
         }
-        if (p.referencePower !== null) {
+        if (s.referencePower !== null) {
             const outputLength = numSpectra * spectrumSize;
-            computeDbValues(y, outputLength, p.referencePower);
+            computeDbValues(y, outputLength, s.referencePower);
         }
         return y;
     }

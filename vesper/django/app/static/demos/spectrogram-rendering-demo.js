@@ -116,17 +116,18 @@ function updateSpectrogramForFile2(file) {
 
 function updateSpectrogram() {
 
-	const params = getSpectrogramParams();
-	const gram = Spectrogram.allocateSpectrogramStorage(samples.length, params);
-	Spectrogram.computeSpectrogram(samples, params, gram);
+	const settings = getSpectrogramSettings();
+	const gram =
+        Spectrogram.allocateSpectrogramStorage(samples.length, settings);
+	Spectrogram.computeSpectrogram(samples, settings, gram);
 
 	const canvas = document.getElementById('test-canvas');
-	renderSpectrogram(gram, params, canvas);
+	renderSpectrogram(gram, settings, canvas);
 
 }
 
 
-function getSpectrogramParams() {
+function getSpectrogramSettings() {
 
 	const windowSize = getWindowSize();
 	const hopSize = Math.round(windowSize * .25);
@@ -152,9 +153,9 @@ function getWindowSize() {
 }
 
 
-function renderSpectrogram(gram, params, canvas) {
+function renderSpectrogram(gram, settings, canvas) {
 
-	const numBins = params.dftSize / 2 + 1;
+	const numBins = settings.dftSize / 2 + 1;
 	const numSpectra = gram.length / numBins;
 
 	const gramCanvas = document.createElement('canvas');
@@ -168,9 +169,9 @@ function renderSpectrogram(gram, params, canvas) {
 	let spectrumNum = 0;
 	let spectrumStride = numBins;
 	let m = 0;
-	const delta = params.highPower - params.lowPower
+	const delta = settings.highPower - settings.lowPower
 	const a = 255 / delta;
-	const b = -255 * params.lowPower / delta;
+	const b = -255 * settings.lowPower / delta;
 	for (let i = 0; i < numBins; i++) {
 		let k = numBins - 1 - i
 	    for (let j = 0; j < numSpectra; j++) {
@@ -188,11 +189,11 @@ function renderSpectrogram(gram, params, canvas) {
 	const ctx = canvas.getContext('2d');
 	ctx.fillStyle = 'gray';
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	ctx.imageSmoothingEnabled = params.smoothingEnabled;
+	ctx.imageSmoothingEnabled = settings.smoothingEnabled;
 
-	if (params.timePaddingEnabled) {
+	if (settings.timePaddingEnabled) {
 		let [x, width] = getSpectrogramXExtent(
-			params, numSpectra, samples.length, canvas.width);
+			settings, numSpectra, samples.length, canvas.width);
 		ctx.drawImage(gramCanvas, x, 0, width, canvas.height);
 	} else {
 		ctx.drawImage(gramCanvas, 0, 0, canvas.width, canvas.height);
@@ -201,9 +202,9 @@ function renderSpectrogram(gram, params, canvas) {
 }
 
 
-function getSpectrogramXExtent(params, numSpectra, numSamples, canvasWidth) {
-    const startTime = params.window.length / 2 / sampleRate;
-    const spectrumPeriod = params.hopSize / sampleRate;
+function getSpectrogramXExtent(settings, numSpectra, numSamples, canvasWidth) {
+    const startTime = settings.window.length / 2 / sampleRate;
+    const spectrumPeriod = settings.hopSize / sampleRate;
     const endTime = startTime + (numSpectra - 1) * spectrumPeriod;
     const span = (numSamples - 1) / sampleRate;
     const pixelPeriod = span / canvasWidth;

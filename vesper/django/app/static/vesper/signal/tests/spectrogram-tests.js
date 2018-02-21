@@ -60,10 +60,10 @@ describe('Spectrogram', () => {
     it('allocateSpectrogramStorage', () => {
 
         const inputLength = 10;
-    	const params = { "window": [1, 1, 1, 1], "hopSize": 2, "dftSize": 8 }
+    	const settings = { "window": [1, 1, 1, 1], "hopSize": 2, "dftSize": 8 }
     	const expected = 20;
 
-    	const x = Spectrogram.allocateSpectrogramStorage(inputLength, params);
+    	const x = Spectrogram.allocateSpectrogramStorage(inputLength, settings);
         expect(x.length).toBe(expected);
 
     });
@@ -73,22 +73,22 @@ describe('Spectrogram', () => {
 
         const x = createSpectrogramTestSignal();
 
-    	const params = {
+    	const settings = {
     		"window": DataWindow.createRectangularWindow(8),
     		"hopSize": 4,
     		"dftSize": 8,
     		"referencePower": null
     	};
 
-        const y = Spectrogram.allocateSpectrogramStorage(x.length, params);
+        const y = Spectrogram.allocateSpectrogramStorage(x.length, settings);
 
-        Spectrogram.computeSpectrogram(x, params, y);
+        Spectrogram.computeSpectrogram(x, settings, y);
 
         expect(y.length).toBe(15);
         expect(y.slice(0, 5)).toAlmostEqual([0, 4, 0, 0, 0]);
         expect(y.slice(10, 15)).toAlmostEqual([0, 0, 4, 0, 0]);
 
-    	// showSpectrogram(y, params.dftSize / 2 + 1);
+    	// showSpectrogram(y, settings.dftSize / 2 + 1);
 
     });
 
@@ -97,22 +97,22 @@ describe('Spectrogram', () => {
 
         const x = createSpectrogramTestSignal();
 
-    	const params = {
+    	const settings = {
     		"window": DataWindow.createHannWindow(8, false),
     		"hopSize": 4,
     		"dftSize": 8,
     		"referencePower": null
     	};
 
-        const y = Spectrogram.allocateSpectrogramStorage(x.length, params);
+        const y = Spectrogram.allocateSpectrogramStorage(x.length, settings);
 
-        Spectrogram.computeSpectrogram(x, params, y);
+        Spectrogram.computeSpectrogram(x, settings, y);
 
         expect(y.length).toBe(15);
         expect(y.slice(0, 5)).toAlmostEqual([.5, 1, .25, 0, 0]);
         expect(y.slice(10, 15)).toAlmostEqual([0, .25, 1, .25, 0]);
 
-    	// showSpectrogram(y, params.dftSize / 2 + 1);
+    	// showSpectrogram(y, settings.dftSize / 2 + 1);
 
     });
 
@@ -121,21 +121,21 @@ describe('Spectrogram', () => {
 
         const x = createCosine(16, 4);
 
-    	const params = {
+    	const settings = {
     		"window": DataWindow.createHannWindow(8),
     		"hopSize": 4,
     		"dftSize": 16,
     		"referencePower": null
     	};
 
-        const y = Spectrogram.allocateSpectrogramStorage(x.length, params);
+        const y = Spectrogram.allocateSpectrogramStorage(x.length, settings);
 
-        Spectrogram.computeSpectrogram(x, params, y);
+        Spectrogram.computeSpectrogram(x, settings, y);
 
         expect(y.length).toBe(27);
 
     	// We rely on manual inspection of the spectrogram values for this test.
-    	// showSpectrogram(y, params.dftSize / 2 + 1);
+    	// showSpectrogram(y, settings.dftSize / 2 + 1);
 
     });
 
