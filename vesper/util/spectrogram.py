@@ -52,7 +52,7 @@ class Spectrogram(TimeFrequencyAnalysis):
                         the smallest power of two that is at least the
                         window size.
 
-                    ref_power : `float`
+                    reference_power : `float`
                         the reference power for the spectrogram, or `None`.
 
                         If the reference power is not `None`, the
@@ -66,7 +66,7 @@ class Spectrogram(TimeFrequencyAnalysis):
         self.dft_size, freqs = tfa_utils.get_dft_analysis_data(
             sound.sample_rate, settings.window.size, settings.dft_size)
 
-        self.ref_power = settings.ref_power
+        self.reference_power = settings.reference_power
 
         super(Spectrogram, self).__init__(
             sound, settings.window, settings.hop_size, freqs)
@@ -80,8 +80,8 @@ class Spectrogram(TimeFrequencyAnalysis):
 
         tfa_utils.scale_spectrogram(spectra, out=spectra)
 
-        if self.ref_power is not None:
-            tfa_utils.linear_to_log(spectra, self.ref_power, out=spectra)
+        if self.reference_power is not None:
+            tfa_utils.linear_to_log(spectra, self.reference_power, out=spectra)
 
         return spectra
 

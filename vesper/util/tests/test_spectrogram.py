@@ -50,7 +50,7 @@ class SpectrogramTests(TestCase):
             window=window,
             hop_size=hop_size,
             dft_size=dft_size,
-            ref_power=None)
+            reference_power=None)
 
         spectrogram = Spectrogram(sound, settings)
         spectra = spectrogram.spectra
