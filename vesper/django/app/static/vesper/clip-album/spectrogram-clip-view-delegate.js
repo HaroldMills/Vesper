@@ -26,6 +26,9 @@ import { TimeFrequencyUtils } from './time-frequency-utils.js';
 // TODO: Add some non-gray colormaps.
 
 
+const _REFERENCE_POWER = 1e-10;
+
+
 export class SpectrogramClipViewDelegate extends ClipViewDelegate {
 
 	onClipSamplesChanged() {
@@ -167,11 +170,12 @@ function _scaleSamples(samples, factor) {
 function _computeLowLevelSpectrogramSettings(settings, sampleRate) {
 
 	const s = settings;
-    const windowSize = Math.round(s.window.duration * sampleRate);
+	const floatWindowSize = s.window.duration * sampleRate;
+    const windowSize = Math.round(floatWindowSize);
     const window = DataWindow.createWindow(s.window.type, windowSize);
-    const hopSize = Math.round(s.hopDuration * sampleRate);
+    const hopSize = Math.round(s.hopSize / 100 * floatWindowSize);
     const dftSize = _computeDftSize(windowSize, s.dftSizeMultiplier);
-	const referencePower = s.referencePower;
+	const referencePower = _REFERENCE_POWER;
 
 	return {
 		window: window,
@@ -244,14 +248,8 @@ function _computeSpectrogramImage(spectrogram, canvas, imageData, settings) {
 	const numBins = canvas.height;
 	const data = imageData.data;
 
-	// Get scale factor and offset for mapping the range
-	// [lowPower, highPower] into the range [255 * highIndex, 255 * lowIndex].
-	const s = settings.display;
-	const [[lowPower, lowIndex], [highPower, highIndex]] = s.powerMapping;
-	const lowColor = 255 * lowIndex;
-	const highColor = 255 * highIndex;
-	const a = (highColor - lowColor) / (lowPower - highPower);
-	const b = highColor - a * lowPower;
+	// Get scale factor and offset for mapping power to color value.
+	const [a, b] = _getColorCoefficients(settings.display);
 
 	// Here is how we used to compute `a` and `b`, but the "-" in the
 	// computation of `b` should have been a "+". I will keep this around
@@ -281,6 +279,36 @@ function _computeSpectrogramImage(spectrogram, canvas, imageData, settings) {
 }
 
 
+function _getColorCoefficients(settings) {
+
+	const [startPower, endPower] = settings.powerRange;
+	const [startColor, endColor] = _getColorRange(settings);
+
+	const a = (endColor - startColor) / (endPower - startPower);
+	const b = endColor - a * endPower;
+
+	return [a, b];
+
+}
+
+
+function _getColorRange(settings) {
+
+	let [startColor, endColor] = settings.colorRange;
+
+	if (settings.reverseColormap) {
+		startColor = 1 - startColor;
+		endColor = 1 - endColor;
+	}
+
+    startColor = 255 * startColor;
+	endColor = 255 * endColor;
+
+	return [startColor, endColor];
+
+}
+
+
 function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
 
 	// Make sure clip view canvas has same size as spectrogram.
@@ -299,8 +327,7 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
 
 	// Draw spectrogram from clip spectrogram canvas, stretching as needed.
 
-    context.imageSmoothingEnabled = true;
-	    // settings.display.imageInterpolation === 'Bilinear';
+    context.imageSmoothingEnabled = settings.display.smoothImage;
 
     const numSpectra = gramCanvas.width;
     const numBins = gramCanvas.height;
@@ -354,11 +381,11 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
 
 function _getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
 
-    if (settings.display.timeStretchEnabled) {
-
-		return [0, canvasWidth];
-
-    } else {
+    // if (settings.display.timeStretchEnabled) {
+	//
+	// 	return [0, canvasWidth];
+	//
+    // } else {
 
 		const sampleRate = clip.sampleRate;
 		const startTime = settings.low.window.length / 2 / sampleRate;
@@ -370,6 +397,6 @@ function _getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
 		const width = (endTime - startTime) / pixelPeriod;
 		return [x, width];
 
-    }
+    // }
 
 }
