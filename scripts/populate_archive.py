@@ -15,6 +15,7 @@ django.setup()
 from django.db import transaction
 
 from vesper.archive.archive import Archive
+from vesper.archive.recording import Recording as OldRecording
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Recording, RecordingChannel,
     Station)
@@ -165,7 +166,8 @@ def _add_recordings():
         # which the clips were extracted, we can later find the precise
         # start indices of the clips in the recordings, and correct both
         # the clip start times and the recording durations in the archive.
-        r.length += int(5 * r.sample_rate)
+        length = r.length + 5 * r.sample_rate
+        r = OldRecording(r.station, r.start_time, length, r.sample_rate)
         
         recorder = recorder_input.device
         num_channels = len(channel_infos)
