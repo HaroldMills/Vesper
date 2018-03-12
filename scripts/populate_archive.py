@@ -47,14 +47,16 @@ import vesper.util.time_utils as time_utils
 #       if and only if the source archive does not include recording
 #       metadata.
 
-
+_ARCHIVE_DIR_PATH = r'C:\Users\Harold\Desktop\2012 MPG Ranch Desktop Archive'
+# _ARCHIVE_DIR_PATH = (
+#     '/Users/Harold/Desktop/NFC/Data/MPG Ranch/2012 MPG Ranch Desktop Archive')
 # _ARCHIVE_DIR_PATH = \
 #     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
 # _ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
 # _ARCHIVE_DIR_PATH = \
 #     r'Y:\Desktop\NFC\Data\MPG Ranch\2016 MPG Ranch Desktop Archive'
-_ARCHIVE_DIR_PATH = \
-    '/Users/Harold/Desktop/NFC/Data/MPG Ranch/2016 MPG Ranch Desktop Archive'
+# _ARCHIVE_DIR_PATH = \
+#     '/Users/Harold/Desktop/NFC/Data/MPG Ranch/2016 MPG Ranch Desktop Archive'
 # _ARCHIVE_DIR_PATH = r'F:\2016_archive'
 # _ARCHIVE_DIR_PATH = \
 #     r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive 0.1.0'
@@ -154,6 +156,17 @@ def _add_recordings():
         channel_infos.sort(key=lambda i: i[2].channel_num)
         
         r, _, recorder_input = channel_infos[0]
+        
+        # Extend the length of the recording artificially by five seconds.
+        # We do this because we have encountered cases where clips that
+        # were extracted from recordings are stamped with times that are
+        # up to a second past the end of the recording. We want to retain
+        # all clips, however. In cases where we have the recordings from
+        # which the clips were extracted, we can later find the precise
+        # start indices of the clips in the recordings, and correct both
+        # the clip start times and the recording durations in the archive.
+        r.length += int(5 * r.sample_rate)
+        
         recorder = recorder_input.device
         num_channels = len(channel_infos)
         span = (r.length - 1) / r.sample_rate
@@ -398,19 +411,30 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             num_excluded += 1
             continue
         
+        file_path = c.file_path
+        
+        if not (os.path.exists(file_path)):
+            print(
+                'Could not find clip file "{}". Clip will be ignored.'.format(
+                    file_path))
+            num_rejected += 1
+            continue
+        
         try:
             channel = _get_clip_recording_channel(c)
         except Exception:
-            print(
-                'Could not get recording channel for clip "{}".'.format(
-                    c.file_path))
+            print((
+                'Could not get recording channel for clip "{}". '
+                'Clip will be ignored').format(file_path))
             num_rejected += 1
             continue
         
         try:
             detector = _get_detector(c, detectors)
         except ValueError:
-            print('Could not get detector "{}".'.format(c.detector_name))
+            print((
+                'Could not get detector "{}" for clip "{}". '
+                'Clip will be ignored.').format(c.detector_name, file_path))
             num_rejected += 1
             continue
         
@@ -419,7 +443,7 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             recording = channel.recording
             station = recording.station
             mic_output = channel.mic_output
-            length = audio_file_utils.get_wave_file_info(c.file_path).length
+            length = audio_file_utils.get_wave_file_info(file_path).length
             sample_rate = recording.sample_rate
             start_time = c.start_time
             span = (length - 1) / sample_rate
@@ -444,7 +468,7 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
                 
             clip.save()
              
-            _copy_clip_sound_file(c.file_path, clip)
+            _copy_clip_sound_file(file_path, clip)
             
             if c.clip_class_name is not None:
                 
@@ -475,6 +499,8 @@ def _pause_file_exists():
                 
 def _include_clip(clip):
     
+    return True
+
     name = clip.clip_class_name
     
     if name is None or name == 'Outside':
