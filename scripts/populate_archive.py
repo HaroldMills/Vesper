@@ -104,6 +104,7 @@ _RECORDING_PROGRESS_PERIOD = 1000
 
 _SHOW_CLIPS = False
 _CLIP_PROGRESS_PERIOD = 10000
+_CLIP_FILES_AVAILABLE = True
 _NON_CALL_CLIP_INCLUSION_PROBABILITY = .11
 
 _PAUSE_FILE_PATH = '/Users/Harold/Desktop/Pause'
@@ -158,15 +159,16 @@ def _add_recordings():
         
         r, _, recorder_input = channel_infos[0]
         
-        # Extend the length of the recording artificially by five seconds.
+        # Extend the length of the recording artificially by two seconds.
         # We do this because we have encountered cases where clips that
         # were extracted from recordings are stamped with times that are
-        # up to a second past the end of the recording. We want to retain
-        # all clips, however. In cases where we have the recordings from
-        # which the clips were extracted, we can later find the precise
+        # up to a second past the end of the recording. This script
+        # rejects clips that don't seem to belong to any known recording,
+        # but we want to retain these. In cases where we have the recordings
+        # from which the clips were extracted, we can later find the precise
         # start indices of the clips in the recordings, and correct both
         # the clip start times and the recording durations in the archive.
-        length = r.length + 5 * r.sample_rate
+        length = r.length + 2 * r.sample_rate
         r = OldRecording(r.station, r.start_time, length, r.sample_rate)
         
         recorder = recorder_input.device
@@ -187,7 +189,10 @@ def _add_recordings():
         recording.save()
         
         if _SHOW_RECORDINGS:
-            print('Recording {} {}'.format(i, str(recording)))
+            # print('Recording {} {}'.format(i, str(recording)))
+            print('Recording {} {} / {} / {} / {} / {} / {}'.format(
+                i, station.name, r.start_time, r.length, r.sample_rate,
+                r.length / r.sample_rate, end_time))
 
         for _, mic_output, recorder_input in channel_infos:
             
@@ -415,7 +420,7 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
         
         file_path = c.file_path
         
-        if not (os.path.exists(file_path)):
+        if _CLIP_FILES_AVAILABLE and not (os.path.exists(file_path)):
             print(
                 'Could not find clip file "{}". Clip will be ignored.'.format(
                     file_path))
@@ -445,8 +450,11 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             recording = channel.recording
             station = recording.station
             mic_output = channel.mic_output
-            length = audio_file_utils.get_wave_file_info(file_path).length
             sample_rate = recording.sample_rate
+            if _CLIP_FILES_AVAILABLE:
+                length = audio_file_utils.get_wave_file_info(file_path).length
+            else:
+                length = c.duration * sample_rate
             start_time = c.start_time
             span = (length - 1) / sample_rate
             end_time = start_time + datetime.timedelta(seconds=span)
@@ -470,7 +478,8 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
                 
             clip.save()
              
-            _copy_clip_sound_file(file_path, clip)
+            if _CLIP_FILES_AVAILABLE:
+                _copy_clip_sound_file(file_path, clip)
             
             if c.clip_class_name is not None:
                 
@@ -516,13 +525,23 @@ def _include_clip(clip):
     
     
 def _get_clip_recording_channel(clip):
+    
     station, _, recorder_input = _get_recording_channel_info(clip.station.name)
-    return RecordingChannel.objects.get(
+    
+    # In an ideal world, we would just use `RecordingChannel.objects.get`
+    # here to get the unique channel that contains the clip. Unfortunately,
+    # however, the actual and purported sample rates of a recording tend to
+    # differ, and when the actual sample rate is higher than the purported
+    # one, the time intervals associated with consecutive recordings
+    # overlap. In such situations a given clip may have come from either
+    # the end of one recording or the beginning of the next.
+    return RecordingChannel.objects.filter(
         recording__station=station,
         recording__recorder=recorder_input.device,
         recording__start_time__lte=clip.start_time,
         recording__end_time__gt=clip.start_time,
-        channel_num=recorder_input.channel_num)
+        channel_num=recorder_input.channel_num
+    ).order_by('recording__start_time').first()
     
     
 def _get_detector(clip, detectors):
