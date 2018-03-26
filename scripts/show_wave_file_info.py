@@ -1,9 +1,11 @@
+"""
+Shows information about a .wav file, including information about each of
+its chunks.
+"""
+
+
 import wave
 
-
-# _FILE_PATH = (
-#     '/Volumes/MPG Ranch 2012-2015/fall_2014/ridge/'
-#     'ridge_100214_184410_132217.wav')
 
 _FILE_PATH = (
     '/Users/harold/Downloads/Ridge_20141022/RIDGE_20141023_082704.wav')
