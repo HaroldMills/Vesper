@@ -535,13 +535,18 @@ def _get_clip_recording_channel(clip):
     # one, the time intervals associated with consecutive recordings
     # overlap. In such situations a given clip may have come from either
     # the end of one recording or the beginning of the next.
-    return RecordingChannel.objects.filter(
+    channel = RecordingChannel.objects.filter(
         recording__station=station,
         recording__recorder=recorder_input.device,
         recording__start_time__lte=clip.start_time,
         recording__end_time__gt=clip.start_time,
         channel_num=recorder_input.channel_num
     ).order_by('recording__start_time').first()
+    
+    if channel is None:
+        raise Exception()
+    
+    return channel
     
     
 def _get_detector(clip, detectors):
