@@ -2,7 +2,8 @@
 
 
 import {
-	BuiltInFunction, Environment, CommandInterpreter, RegularFunction
+	BuiltInFunction, Environment, CommandInterpreter,
+	CompositeCommandInterpreter, RegularFunction
 } from '/static/vesper/clip-album/command-interpreter.js';
 
 
@@ -212,8 +213,17 @@ describe('CommandInterpreter', () => {
 		const environment = interpreter._environment;
 
 		function input(command) {
-			for (const c of command)
-				interpreter.handleKey(c);
+			let i = 0;
+			for (const c of command) {
+				const [status, name] = interpreter.handleKey(c);
+				const expectedStatus =
+				    i === command.length - 1 ?
+					CommandInterpreter.COMMAND_COMPLETE :
+					CommandInterpreter.COMMAND_INCOMPLETE;
+				expect(status).toBe(expectedStatus);
+				expect(name).toBe(command.slice(0, i + 1));
+				i += 1;
+			}
 		}
 
 		function expectValue(name, value) {
@@ -329,8 +339,17 @@ describe('CommandInterpreter', () => {
 		const environment = interpreter._environment;
 
 		function input(command) {
-			for (const c of command)
-				interpreter.handleKey(c);
+			let i = 0;
+			for (const c of command) {
+				const [status, name] = interpreter.handleKey(c);
+				const expectedStatus =
+				    i === command.length - 1 ?
+					CommandInterpreter.COMMAND_COMPLETE :
+					CommandInterpreter.COMMAND_INCOMPLETE;
+				expect(status).toBe(expectedStatus);
+				expect(name).toBe(command.slice(0, i + 1));
+				i += 1;
+			}
 		}
 
 		function expectSetValue(name, value) {
@@ -374,5 +393,72 @@ describe('CommandInterpreter', () => {
 		expectEnv();
 
 	});
+
+
+});
+
+
+describe('CompositeCommandInterpreter', () => {
+
+
+	it('handleKey', () => {
+
+        let message = null;
+
+		const functions = [
+			new RegularFunction(
+				'set_message', ['interpreterName', 'commandName'], e => {
+					const iName = e.getRequired('interpreterName');
+					const cName = e.getRequired('commandName');
+					message = `${iName} executed command ${cName}`;
+				}
+			)
+		];
+
+		const specA = {
+			'commands': {
+				'a': ['set_message', 'A', 'a'],
+				'mula': ['set_message', 'A', 'mula']
+			}
+		};
+
+		const specB = {
+			'commands': {
+				'b': ['set_message', 'B', 'b'],
+				'mulb': ['set_message', 'B', 'mulb']
+			}
+		};
+
+		const a = new CommandInterpreter(specA, functions);
+		const b = new CommandInterpreter(specB, functions);
+		const c = new CompositeCommandInterpreter([a, b]);
+
+        function input(interpreter, command) {
+			let status, name;
+			for (const c of command) {
+				[status, name] = interpreter.handleKey(c);
+				if (status === CommandInterpreter.COMMAND_UNRECOGNIZED)
+				    return status;
+			}
+			return status;
+		}
+
+        function test(interpreter, command, expectedStatus, expectedMessage) {
+			const status = input(interpreter, command);
+			expect(status).toBe(expectedStatus);
+			if (status === CommandInterpreter.COMMAND_COMPLETED)
+			    expect(message).toBe(expectedMessage);
+		}
+
+		const completed = CommandInterpreter.COMMAND_COMPLETE;
+		const unrecognized = CommandInterpreter.COMMAND_UNRECOGNIZED;
+
+        test(c, 'a', completed, 'A executed command "a".');
+		test(c, 'b', completed, 'B executed command "b".');
+		test(c, 'mula', completed, 'A executed command "mula".');
+		test(c, 'mulb', unrecognized, '');
+
+	});
+
 
 });

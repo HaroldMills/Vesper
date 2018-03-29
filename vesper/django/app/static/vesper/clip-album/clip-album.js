@@ -1,10 +1,8 @@
-'use strict'
-
-
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { Clip } from '/static/vesper/clip-album/clip.js';
-import { ClipView } from '/static/vesper/clip-album/clip-view.js';
-import { CommandInterpreter, RegularFunction }
+import { ClipView, ClipViewCommandInterpreter }
+    from '/static/vesper/clip-album/clip-view.js';
+import { CommandInterpreter, CompositeCommandInterpreter, RegularFunction }
     from '/static/vesper/clip-album/command-interpreter.js';
 import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
@@ -223,6 +221,7 @@ export class ClipAlbum {
 			clipManagerSettings, this.clips, this._layout.pageStartClipNums);
 
 		this.pageNum = 0;
+        this.activeView = null;
 
 	}
 
@@ -519,12 +518,45 @@ export class ClipAlbum {
 
 	set commands(commands) {
 		this._commands = commands;
- 		this._commandInterpreter =
- 			this._createCommandInterpreter(this._commands);
+        [this._viewCommandInterpreter, this._commandInterpreter] =
+            this._createCommandInterpreters();
 	}
 
 
-	_createCommandInterpreter(spec) {
+    _createCommandInterpreters() {
+
+        const viewInterpreter = this._createViewCommandInterpreter();
+
+        const albumInterpreter =
+            this._createAlbumCommandInterpreter(this.commands);
+
+        const commandInterpreter = new CompositeCommandInterpreter([
+            viewInterpreter,
+            albumInterpreter
+        ]);
+
+        return [viewInterpreter, commandInterpreter];
+
+    }
+
+
+    _createViewCommandInterpreter() {
+
+        const commands = {
+
+        	'commands': {
+                'm': ['set_time_frequency_marker'],
+                'c': ['clear_time_frequency_marker']
+        	}
+
+        };
+
+        return new ClipViewCommandInterpreter(commands);
+
+    }
+
+
+    _createAlbumCommandInterpreter() {
 
 		const functionData = [
 
@@ -562,7 +594,7 @@ export class ClipAlbum {
 		const functions = functionData.map(
 			args => new RegularFunction(...args));
 
-		return new CommandInterpreter(spec, functions);
+		return new CommandInterpreter(this.commands, functions);
 
 	}
 
@@ -836,6 +868,23 @@ export class ClipAlbum {
 	}
 
 
+    get activeView() {
+        return this._activeView;
+    }
+
+
+    set activeView(clipView) {
+
+        if (this._activeView !== clipView) {
+
+            this._activeView = clipView;
+            this._viewCommandInterpreter.clipView = clipView;
+
+        }
+
+    }
+
+
     onKeyPress(e) {
 
     	// We allow the use only of alphabetic, numeric, and symbolic
@@ -855,11 +904,16 @@ export class ClipAlbum {
 		// in response to the pressed key.
 		e.preventDefault();
 
-    	try {
-    	    this._commandInterpreter.handleKey(e.key);
-    	} catch (e) {
-    		window.alert(e.message);
-    	}
+        let status, name;
+
+        try {
+            [status, name] = this._commandInterpreter.handleKey(e.key);
+        } catch (e) {
+            window.alert(e.message);
+        }
+
+        if (status === CommandInterpreter.COMMAND_UNRECOGNIZED)
+            window.alert(`Unrecognized command name ${name}.`);
 
 	}
 

@@ -26,10 +26,190 @@ import { TimeFrequencyUtils } from './time-frequency-utils.js';
 // TODO: Add some non-gray colormaps.
 
 
+/*
+
+Some ideas for Vesper clip albums:
+
+* UI hierarchy:
+
+    Clip Album:
+        Displays a set of clips, with each clip in a clip view.
+
+    Clip View:
+        Displays information about one clip, e.g. one or more plots and
+        a label.
+
+    Clip Plot:
+        Graphical representation of one clip, e.g. a waveform or spectrogram.
+
+    Clip Plot Overlay:
+        Overlay on a clip plot, usually containing graphical elements
+        representing clip metadata, for example a time-frequency
+        marker. An overlay may support interaction via mouse and/or key
+        events, for example to edit the represented clip metadata.
+
+* Allow keyboard commands to apply to the clip under the mouse, regardless
+of the clip's selection status. This can be used for common operations like
+playing a clip, but it can also be used for less common operations like
+metadata creation. As an example of the latter, one might define the "m"
+command to annotate a clip with the current time and frequency of the mouse,
+and the "c" command to clear such an annotation. This requires two hands
+(one hand on the mouse and the other on the keyboard) rather than one
+(on the mouse), but provides more options (there are tens of buttons on
+the keyboard, but only two on the mouse) and leaves current mouse usage
+intact.
+
+* Currently, how clip album keypresses are handled does not depend on the
+mouse position. The clip album simply sends the keypress to the clip album's
+command interpreter. We will want to change this so that a given command
+can be handled differently depending on the mouse position. For example,
+the "m" command might mark a time-frequency point when the mouse is over
+a spectrogram view, mark a time point when it is over a waveform view, and
+classify the selected clips otherwise. A good way to do this might be to
+allow clip views and clip view overlays to have their own command
+interpreters, and deliver a keypress to chains of such interpreters
+depending on the mouse position. A keypress would propagate through
+the relevant chain either until some element in the chain handled it
+or until it came out the end. Such chains could be nested. For example,
+If the mouse is over a clip view, a keypress would be offered to it
+and then to the clip album. Internally, the clip view would offer
+the keypress to the relevant subview, and the subview would in turn
+offer it to its overlays and then to itself.
+
+We might handle mouse events in a similar fashion. Then we would have
+the option of using mouse clicks in clip views to create clip metadata
+if we wanted.
+
+I'd also like to work out how clip albums will relate to individual
+clip displays. A clip album shows a set of identically-configured
+clip displays, so some sharing of settings (like key bindings, for
+example) might be a good idea.
+
+* Generalize the clip view play button to a toolbar. Like the existing
+play button, the toolbar only appears when the mouse is in a view, but
+the toolbar can have any number of buttons on it. The toolbar might
+appear in some compact form when the mouse first enters a clip view,
+and then either expand to its full form if the user mouses over it
+or fade away after a few seconds.
+
+*/
+
+
+/*
+
+Overlays
+
+A clip subview overlay can draw on the subview's overlay canvas, and also
+send text to the view for display. For the time being, the view will display
+the text in the view's label, but this might change in the future, for
+example if we add a clip album footer.
+
+A clip subview overlay can also listen for overlay canvas mouse events,
+responding to them in various ways, for example by drawing on the overlay
+canvas, sending text to the view, or editing clip metadata.
+
+*/
+
+
+/*
+class ClipViewOverlay {
+
+
+    constructor(clipView) {
+		this._clipView = clipView;
+	}
+
+
+	get clipView() {
+		return this._clipView;
+	}
+
+
+}
+
+
+class AnnotatedTimeFrequencyPointOverlay extends ClipViewOverlay {
+
+
+	constructor(clipView, settings) {
+
+        // `settings` indicates the names of time and frequency
+		// annotations and time/frequency point marker display
+		// attributes.
+
+		super(clipView);
+
+		const canvas = clipView.overlayCanvas;
+		canvas.addEventListener('click', e => this._onClick(e));
+
+	}
+
+
+	_onClick(e) {
+		render();
+		this.clipView.startOverlayTextUpdates();
+		this._sendTimeFreqTextUpdate(e);
+	}
+
+
+	_onMouseMove(e) {
+		this._sendTimeFreqTextUpdate(e);
+	}
+
+
+	_onMouseLeave(e) {
+		this.clipView.endOverlayTextUpdates();
+	}
+
+
+}
+
+
+class MouseTimeFrequencyOverlay extends ClipViewOverlay {
+
+
+	constructor(clipView, settings) {
+
+        // `settings` might indicate which of several time and frequency
+		// indications the overlay might render. For example, the time
+		// and frequency might be rendered as text and/or as vertical
+		// and horizontal lines.
+
+		super(clipView);
+
+		const canvas = clipView.overlayCanvas;
+		canvas.addEventListener('mouseenter', e => this._onMouseEnter(e));
+	    canvas.addEventListener('mousemove', e => this._onMouseMove(e));
+	    canvas.addEventListener('mouseleave', e => this._onMouseLeave(e));
+
+	}
+
+
+	_onMouseEnter(e) {
+		this.clipView.startOverlayTextUpdates();
+		this._sendTimeFreqTextUpdate(e);
+	}
+
+
+	_onMouseMove(e) {
+		this._sendTimeFreqTextUpdate(e);
+	}
+
+
+	_onMouseLeave(e) {
+		this.clipView.endOverlayTextUpdates();
+	}
+
+
+}
+*/
+
+
 const _REFERENCE_POWER = 1e-10;
 
 
 export class SpectrogramClipViewDelegate extends ClipViewDelegate {
+
 
 	onClipSamplesChanged() {
 
@@ -90,6 +270,11 @@ export class SpectrogramClipViewDelegate extends ClipViewDelegate {
 		// or color map settings.
 
 	}
+
+
+    // onMouseEvent(event, name) {
+	// 	console.log('onMouseEvent', name, event.clientX, event.clientY);
+	// }
 
 
 	getMouseText(event, name) {

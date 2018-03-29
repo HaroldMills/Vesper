@@ -1,8 +1,87 @@
-'use strict'
-
-
+import { CommandInterpreter, RegularFunction }
+    from '/static/vesper/clip-album/command-interpreter.js';
 import { TimeFrequencyMarkerOverlay }
     from '/static/vesper/clip-album/time-frequency-marker-overlay.js';
+
+
+export class ClipViewCommandInterpreter extends CommandInterpreter {
+
+
+    // TODO: Document why we use a separate class for the functions
+    // (we can't refer to `this` before invoking `super`).
+    constructor(spec) {
+        const aux = new _ClipViewCommandInterpreterAux();
+        super(spec, aux.functions)
+        this._aux = aux;
+    }
+
+
+    get clipView() {
+        return this._aux.clipView;
+    }
+
+
+    set clipView(clipView) {
+        if (clipView !== this.clipView) {
+            this._aux.clipView = clipView;
+            if (clipView === null)
+                this._clearCommandAndLocals(this._environment);
+        }
+    }
+
+
+    handleKey(key) {
+        if (this.clipView === null) {
+            return [CommandInterpreter.COMMAND_UNRECOGNIZED, key];
+        } else {
+            return super.handleKey(key);
+        }
+    }
+
+
+}
+
+
+export class _ClipViewCommandInterpreterAux {
+
+
+    constructor() {
+        this._clipView = null;
+        this._functions = this._createFunctions();
+    }
+
+
+    _createFunctions() {
+
+        const functionData = [
+            ['set_time_frequency_marker', [],
+                _ => this.clipView._setTimeFrequencyMarker()],
+            ['clear_time_frequency_marker', [],
+                _ => this.clipView._clearTimeFrequencyMarker()]
+        ]
+
+        return functionData.map(
+            args => new RegularFunction(...args));
+
+    }
+
+
+    get clipView() {
+        return this._clipView;
+    }
+
+
+    set clipView(clipView) {
+        this._clipView = clipView;
+    }
+
+
+    get functions() {
+        return this._functions;
+    }
+
+
+}
 
 
 export class ClipView {
@@ -25,6 +104,8 @@ export class ClipView {
             new TimeFrequencyMarkerOverlay(
                 this, 'Call Center Time', 'Call Center Freq')
         ];
+
+        this._commandInterpreter = null;
 
 	}
 
@@ -104,6 +185,19 @@ export class ClipView {
 	}
 
 
+    _setTimeFrequencyMarker() {
+        const clip = this.clip;
+        console.log(
+            'ClipView._setTimeFrequencyMarker', clip.num, clip.id,
+            clip.annotations);
+    }
+
+
+    _clearTimeFrequencyMarker() {
+        console.log('ClipView._clearTimeFrequencyMarker', this.clip.num);
+    }
+
+
 	_createUiElementsIfNeeded() {
 
 		if (this._div === null) {
@@ -130,60 +224,55 @@ export class ClipView {
 
 	    div.className = 'clip';
 
-	    // We install event listeners on the div rather than the canvas
+	    // We install some mouse event listeners on the div rather than
+        // the overlay canvas (which is on top of the regular canvas)
 	    // since the label and button are children of the div (it does
-	    // not seem to work to make them children of the canvas: when
-	    // they are they are invisible), and we want to receive mousemove
-	    // events (via bubbling) whose targets are the label and the
-	    // button. We listen for mouseenter and mouseleave rather than
-	    // mouseover and mouseout since the latter would be delivered to
-	    // the div when the mouse moved into and out of it from and to
-	    // the label and the button, which we do not want. We only want
-	    // to know when the mouse enters and leaves the div from and to
-	    // the outside.
-	    div.addEventListener('mouseenter', e => this._onMouseEnter(e));
-	    div.addEventListener('mousemove', e => this._onMouseMove(e));
-	    div.addEventListener('mouseleave', e => this._onMouseLeave(e));
+	    // not seem to work to make them children of the overlay canvas:
+        // when they are they are invisible), and we want to receive
+        // mousemove events (via bubbling) whose targets are the label
+        // and the button. We also listen for mouseenter and mouseleave
+        // rather than mouseover and mouseout since the latter would be
+        // delivered to the div when the mouse moved into and out of it
+        // from and to the label and the button, which we do not want.
+        // We only want to know when the mouse enters and leaves the div
+        // from and to the outside.
+        //
+        // Note that we do not install a click listener on the div
+        // since we do not want to receive click events for the label
+        // and the play button. Instead, we install a click listener
+        // on the overlay canvas when we create that. Then we receive
+        // events for clicks on the parts of the overlay canvas that
+        // are not under the label or the play button.
+	    // div.addEventListener('mouseenter', e => this._onMouseEnter(e));
+	    // div.addEventListener('mousemove', e => this._onMouseMove(e));
+	    // div.addEventListener('mouseleave', e => this._onMouseLeave(e));
 
 	    return div;
 
 	}
 
 
-	_createCanvas(div) {
-
-	    const canvas = document.createElement('canvas');
-	    canvas.className = 'clip-canvas';
-	    canvas.addEventListener('click', e => this._onCanvasClick(e));
-	    this._div.appendChild(canvas);
-
-	    return canvas;
-
-	}
-
-
-	_createOverlayCanvas(div) {
-
-        const canvas = document.createElement('canvas');
-        canvas.className = 'clip-overlay-canvas';
-        this._div.appendChild(canvas);
-
-        return canvas;
-
-	}
-
-
 	_onMouseEnter(e) {
+        console.log('_onMouseEnter', this.label.innerHTML);
+        this.parent.activeView = this;
 		this._onMouseEvent(e, 'mouseenter');
 	}
 
 
 	_onMouseEvent(e, name) {
 
-		const text = this._delegate.getMouseText(e, name)
+        // this._delegate.onMouseEvent(e, name);
 
-		if (text !== null)
-			this.label.innerHTML = text;
+		const mouseText = this._delegate.getMouseText(e, name)
+
+        const activeView = this.parent.activeView;
+        const activeText =
+            activeView === null ? 'null' : activeView.clip.num.toString();
+
+        console.log('_onMouseEvent', name, mouseText, activeText);
+
+		if (mouseText !== null)
+			this.label.innerHTML = mouseText;
 		else
 			this._renderLabel();
 
@@ -191,16 +280,56 @@ export class ClipView {
 
 
 	_onMouseMove(e) {
+        this.parent.activeView = this;
 		this._onMouseEvent(e, 'mousemove');
 	}
 
 
 	_onMouseLeave(e) {
+        this.parent.activeView = null;
 		this._onMouseEvent(e, 'mouseleave');
 	}
 
 
-	_onCanvasClick(e) {
+    handleKeyPress(e) {
+        console.log('ClipView.handleKeyPress', e.key);
+        return (e.key === 'c' || e.key === 'm');
+    }
+
+
+    _createCanvas(div) {
+
+	    const canvas = document.createElement('canvas');
+	    canvas.className = 'clip-canvas';
+	    this._div.appendChild(canvas);
+
+	    return canvas;
+
+	}
+
+
+    _createOverlayCanvas(div) {
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'clip-overlay-canvas';
+
+        // See note in `_createDiv` method about why we install a click
+        // listener on the overlay canvas instead of on the containing div.
+        canvas.addEventListener('mouseenter', e => this._onMouseEnter(e));
+	    canvas.addEventListener('mousemove', e => this._onMouseMove(e));
+	    canvas.addEventListener('mouseleave', e => this._onMouseLeave(e));
+        canvas.addEventListener('click', e => this._onOverlayCanvasClick(e));
+
+        this._div.appendChild(canvas);
+
+        return canvas;
+
+	}
+
+
+    _onOverlayCanvasClick(e) {
+
+        console.log('_onOverlayCanvasClick');
 
 		const parent = this.parent;
 		const clipNum = this.clip.num;
