@@ -87,19 +87,17 @@ export class _ClipViewCommandInterpreterAux {
 export class ClipView {
 
 
-	constructor(parent, clip, settings, delegateClass) {
+	constructor(parent, clip, settings) {
 
 		this._parent = parent;
 		this._clip = clip;
 		this._settings = settings;
 
-		this._delegate = new delegateClass(this, this.clip, this.settings);
-
 		this._div = null;
 		this._label = null;
 		this._playButton = null;
 
-        // TODO: Delegate should create overlays, according to settings.
+        // TODO: Subclass should create this overlay, according to settings.
 		this._overlays = [
             new TimeFrequencyMarkerOverlay(
                 this, 'Call Center Time', 'Call Center Freq')
@@ -128,7 +126,6 @@ export class ClipView {
 	set settings(settings) {
 
 		this._settings = settings;
-		this._delegate.settings = settings;
 
 		if (this._div !== null) {
 			this._styleLabel();
@@ -261,9 +258,7 @@ export class ClipView {
 
 	_onMouseEvent(e, name) {
 
-        // this._delegate.onMouseEvent(e, name);
-
-		const mouseText = this._delegate.getMouseText(e, name)
+		const mouseText = this.getMouseText(e, name)
 
         const activeView = this.parent.activeView;
         const activeText =
@@ -276,6 +271,21 @@ export class ClipView {
 		else
 			this._renderLabel();
 
+	}
+
+
+    /**
+	 * Gets text to display for the current mouse position.
+	 *
+	 * This method is invoked whenever the mouse enters, leaves, or
+     * moves within a clip view. The arguments are the mouse event that
+     * triggered the invocation, along with an event name that is either
+     * "mouseenter", "mouseleave", or "mousemove". The method can return
+     * either text to display instead of the view's usual label, or `null`
+     * to display the usual label.
+	 */
+	getMouseText(event, name) {
+		return null;
 	}
 
 
@@ -513,7 +523,8 @@ export class ClipView {
      * and when they are unloaded.
      */
     onClipSamplesChanged() {
-        this._delegate.onClipSamplesChanged();
+        throw new Error(
+            'ClipView.onClipSamplesChanged method not implemented.');
     }
 
 
@@ -526,11 +537,17 @@ export class ClipView {
 
 	render() {
 		if (this._div !== null) {
-		    this._delegate.render();
+            // TODO: Do we need to resize canvas if needed here?
+		    this._render();
 		    this._resizeOverlayCanvasIfNeeded();
 		    this._renderOverlays();
 		    this._renderLabel();
 		}
+	}
+
+
+	_render() {
+		throw new Error('ClipView._render method not implemented.');
 	}
 
 

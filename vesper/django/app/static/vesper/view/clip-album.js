@@ -5,8 +5,8 @@ import { ClipAlbum } from '/static/vesper/clip-album/clip-album.js';
 
 // TODO: Clip album view should not know about this. Move it to the
 // clip album class or an extension manager.
-import { SpectrogramClipViewDelegate }
-    from '/static/vesper/clip-album/spectrogram-clip-view-delegate.js';
+import { SpectrogramClipView }
+    from '/static/vesper/clip-album/spectrogram-clip-view.js';
 
 
 let clipAlbum = null;
@@ -87,15 +87,15 @@ function createClipAlbum() {
         'clipsDiv': document.getElementById('clips')
     };
 
-    const clipViewDelegateClasses = {
-        'Spectrogram': SpectrogramClipViewDelegate
+    const clipViewClasses = {
+        'Spectrogram': SpectrogramClipView
     };
 
     const settings = _findPreset(settingsPresets, settingsPresetPath);
     const commands = _findPreset(commandsPresets, commandsPresetPath);
 
     clipAlbum = new ClipAlbum(
-        elements, clips, recordings, solarEventTimes, clipViewDelegateClasses,
+        elements, clips, recordings, solarEventTimes, clipViewClasses,
         settings, commands);
 
 }

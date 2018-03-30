@@ -185,13 +185,13 @@ export class ClipAlbum {
 
 
 	constructor(
-		    elements, clips, recordings, solarEventTimes,
-		    clipViewDelegateClasses, settings = null, commands = null) {
+		    elements, clips, recordings, solarEventTimes, clipViewClasses,
+            settings = null, commands = null) {
 
 		this._elements = elements;
 		this._clips = this._createClips(clips);
 
-		this._clipViewDelegateClasses = clipViewDelegateClasses;
+		this._clipViewClasses = clipViewClasses;
 
 		this._settings = settings === null ? _DEFAULT_SETTINGS : settings;
 		this.commands = commands === null ? _DEFAULT_COMMANDS : commands;
@@ -247,18 +247,13 @@ export class ClipAlbum {
 	_createClipViews(settings) {
 
 		const viewSettings = settings.clipView;
-		const delegateClass =
-			this.clipViewDelegateClasses[settings.clipViewType];
+		const viewClass = this.clipViewClasses[settings.clipViewType];
 
 		const clipViews = new Array(this.clips.length);
 
 		for (const [i, clip] of this.clips.entries()) {
-
-			clipViews[i] = new ClipView(
-				this, clip, viewSettings, delegateClass);
-
+			clipViews[i] = new viewClass(this, clip, viewSettings);
 			clip.view = clipViews[i];
-
 		}
 
 		return clipViews;
@@ -413,8 +408,8 @@ export class ClipAlbum {
 	}
 
 
-	get clipViewDelegateClasses() {
-		return this._clipViewDelegateClasses;
+	get clipViewClasses() {
+		return this._clipViewClasses;
 	}
 
 
