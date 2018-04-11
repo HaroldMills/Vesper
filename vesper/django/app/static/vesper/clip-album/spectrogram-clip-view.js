@@ -1,9 +1,16 @@
 import { ClipView }
     from '/static/vesper/clip-album/clip-view.js';
+import { TimeFrequencyPointOverlay }
+    from '/static/vesper/clip-album/time-frequency-point-overlay.js';
 import { TimeFrequencyUtils }
     from '/static/vesper/clip-album/time-frequency-utils.js';
 import { Spectrogram } from '/static/vesper/signal/spectrogram.js';
 import { DataWindow } from '/static/vesper/signal/data-window.js';
+
+
+const _OVERLAY_CLASSES = {
+    'Time-Frequency Point Overlay': TimeFrequencyPointOverlay
+}
 
 
 const _REFERENCE_POWER = 1e-10;
@@ -12,7 +19,51 @@ const _REFERENCE_POWER = 1e-10;
 export class SpectrogramClipView extends ClipView {
 
 
-    // TODO: Should we do something when settings are assigned to?
+    // TODO: Handle setting changes.
+
+
+    constructor(parent, clip, settings) {
+
+        super(parent, clip, settings);
+
+        const overlays = this._createOverlays(settings);
+        this._overlays = overlays.concat(this._overlays);
+
+    }
+
+
+    _createOverlays(settings) {
+
+        const overlays = [];
+
+        const overlaySettings = settings.spectrogram.overlays;
+
+        if (overlaySettings !== undefined) {
+
+            for (const s of overlaySettings) {
+
+                const overlayClass = _OVERLAY_CLASSES[s.type];
+
+                if (overlayClass === undefined)
+                    console.log(
+                        `Unrecognized spectrogram view overlay type ` +
+                        `"${s.type}".`);
+
+                else
+                    overlays.push(new overlayClass(this, s));
+
+            }
+
+        }
+
+        return overlays;
+
+    }
+
+
+    get commandableName() {
+		return 'Spectrogram Clip View';
+	}
 
 
     onClipSamplesChanged() {

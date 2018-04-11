@@ -1,9 +1,8 @@
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { Clip } from '/static/vesper/clip-album/clip.js';
-import { ClipView, ClipViewCommandInterpreter }
-    from '/static/vesper/clip-album/clip-view.js';
-import { CommandInterpreter, CompositeCommandInterpreter, RegularFunction }
-    from '/static/vesper/clip-album/command-interpreter.js';
+import { ClipView } from '/static/vesper/clip-album/clip-view.js';
+import { CommandableDelegate, KeyboardInputInterpreter }
+    from '/static/vesper/clip-album/keyboard-input-interpreter.js';
 import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
 import { PreloadingClipManager }
@@ -146,27 +145,32 @@ const _DEFAULT_SETTINGS = {
 };
 
 
-const _COMMAND_CHARS = new Set(
+// Set of keys that can be used in key bindings.
+const _ALLOWED_KEYS = new Set(
 	'abcdefghijklmnopqrstuvwxyz' +
 	'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
 	'`1234567890-=[]\\;\',./' +
 	'~!@#$%^&*()_+{}|:"<>?');
 
 
-const _DEFAULT_COMMANDS = {
+const _DEFAULT_KEY_BINDINGS = {
 
-	'globals': {
-		'annotation_name': 'Classification',
-		'annotation_scope': 'Selection'
-	},
+    'interpreter_initialization_commands': [
+        ['set_persistent_variable', 'annotation_name', 'Classification'],
+        ['set_persistent_variable', 'annotation_scope', 'Selection']
+    ],
 
-	'commands': {
-		'>': ['show_next_page'],
-		'<': ['show_previous_page'],
-	    '.': ['select_next_clip'],
-	    ',': ['select_previous_clip'],
-	    '/': ['play_selected_clip']
-	}
+    'key_bindings': {
+
+        'Clip Album': {
+            '>': ['show_next_page'],
+    		'<': ['show_previous_page'],
+    	    '.': ['select_next_clip'],
+    	    ',': ['select_previous_clip'],
+    	    '/': ['play_selected_clip']
+        }
+
+    }
 
 };
 
@@ -181,20 +185,59 @@ function setCursor(name) {
 }
 
 
+const _COMMAND_SPECS = [
+
+    ['show_next_page'],
+    ['show_previous_page'],
+
+    ['select_first_clip'],
+    ['select_next_clip'],
+    ['select_previous_clip'],
+
+    ['play_selected_clip'],
+
+    ['toggle_clip_labels'],
+    ['toggle_clip_overlays'],
+
+    ['annotate_clips', 'annotation_value'],
+    ['annotate_selected_clips', 'annotation_value'],
+    ['annotate_page_clips', 'annotation_value'],
+    ['annotate_all_clips', 'annotation_value'],
+
+    ['unannotate_clips'],
+    ['unannotate_selected_clips'],
+    ['unannotate_page_clips'],
+    ['unannotate_all_clips'],
+
+];
+
+
+const _commandableDelegate = new CommandableDelegate(_COMMAND_SPECS);
+
+
 export class ClipAlbum {
 
 
 	constructor(
 		    elements, clips, recordings, solarEventTimes, clipViewClasses,
-            settings = null, commands = null) {
+            settings = null, keyBindings = null) {
 
 		this._elements = elements;
 		this._clips = this._createClips(clips);
 
-		this._clipViewClasses = clipViewClasses;
+        // It's important to set the clip view class before the commands,
+        // since setting the commands creates a new command interpreter,
+        // a process that accesses the clip view class.
+        this._clipViewClasses = clipViewClasses;
+        this._clipViewClass = this.clipViewClasses[settings.clipViewType];
 
 		this._settings = settings === null ? _DEFAULT_SETTINGS : settings;
-		this.commands = commands === null ? _DEFAULT_COMMANDS : commands;
+
+        this._commandableDelegate = _commandableDelegate;
+
+        // This creates the keyboard input interpreter.
+		this.keyBindings =
+            keyBindings === null ? _DEFAULT_KEY_BINDINGS : keyBindings;
 
 		this._clipViews = this._createClipViews(this.settings);
 
@@ -203,9 +246,9 @@ export class ClipAlbum {
 		this._layout = this._createLayout(this.settings);
 
 		if (this.elements.rugPlotDiv !== null)
-        		this._rugPlot = new NightRugPlot(
-        			this, this.elements.rugPlotDiv, this.clips, recordings,
-        			solarEventTimes);
+    		this._rugPlot = new NightRugPlot(
+    			this, this.elements.rugPlotDiv, this.clips, recordings,
+    			solarEventTimes);
 		else
 		    this._rugPlot = null;
 
@@ -221,7 +264,6 @@ export class ClipAlbum {
 			clipManagerSettings, this.clips, this._layout.pageStartClipNums);
 
 		this.pageNum = 0;
-        this.activeView = null;
 
 	}
 
@@ -246,13 +288,11 @@ export class ClipAlbum {
 
 	_createClipViews(settings) {
 
-		const viewSettings = settings.clipView;
-		const viewClass = this.clipViewClasses[settings.clipViewType];
-
-		const clipViews = new Array(this.clips.length);
+        const viewSettings = settings.clipView;
+        const clipViews = new Array(this.clips.length);
 
 		for (const [i, clip] of this.clips.entries()) {
-			clipViews[i] = new viewClass(this, clip, viewSettings);
+			clipViews[i] = new this.clipViewClass(this, clip, viewSettings);
 			clip.view = clipViews[i];
 		}
 
@@ -413,6 +453,11 @@ export class ClipAlbum {
 	}
 
 
+    get clipViewClass() {
+        return this._clipViewClass;
+    }
+
+
 	get settings() {
 		return this._settings;
 	}
@@ -506,96 +551,69 @@ export class ClipAlbum {
 	}
 
 
-	get commands() {
-		return this._commands;
+	get keyBindings() {
+		return this._keyBindings;
 	}
 
 
-	set commands(commands) {
-		this._commands = commands;
-        [this._viewCommandInterpreter, this._commandInterpreter] =
-            this._createCommandInterpreters();
-	}
+	set keyBindings(keyBindings) {
+        this._keyBindings = keyBindings;
+        this._keyboardInputInterpreter =
+            this._createKeyboardInputInterpreter(keyBindings);
+    }
 
 
-    _createCommandInterpreters() {
+    _createKeyboardInputInterpreter(keyBindings) {
 
-        const viewInterpreter = this._createViewCommandInterpreter();
+        const oldInterpreter = this._keyboardInputInterpreter;
+        const newInterpreter = new KeyboardInputInterpreter(keyBindings);
 
-        const albumInterpreter =
-            this._createAlbumCommandInterpreter(this.commands);
+        if (oldInterpreter === undefined) {
+            // did not already have a keyboard input interpreter
 
-        const commandInterpreter = new CompositeCommandInterpreter([
-            viewInterpreter,
-            albumInterpreter
-        ]);
+            newInterpreter.pushCommandable(this);
 
-        return [viewInterpreter, commandInterpreter];
+        } else {
+            // already had a keyboard input interpreter
+
+            // I'm not sure we'll ever need this, since I'm not sure
+            // we'll ever create a new interpreter when the mouse is
+            // over a clip view, but just in case...
+
+            const commandables = [];
+
+            // Pop all commandables from old interpreter into `commandables`.
+            while (true) {
+                const commandable = oldInterpreter.popCommandable();
+                if (commandable === undefined)
+                    break;
+                else
+                    commandables.push(commandable);
+            }
+
+            // Push all commandables to new interpreter.
+            while (commandables.length !== 0)
+                newInterpreter.pushCommandable(commandables.pop());
+
+        }
+
+        return newInterpreter;
 
     }
 
 
-    _createViewCommandInterpreter() {
-
-        const commands = {
-
-        	'commands': {
-                'm': ['set_time_frequency_marker'],
-                'c': ['clear_time_frequency_marker']
-        	}
-
-        };
-
-        return new ClipViewCommandInterpreter(commands);
-
+    pushCommandable(commandable) {
+        this._keyboardInputInterpreter.pushCommandable(commandable);
     }
 
 
-    _createAlbumCommandInterpreter() {
-
-		const functionData = [
-
-			['show_next_page', [], _ => this._showNextPage()],
-			['show_previous_page', [], _ => this._showPreviousPage()],
-
-			['select_first_clip', [], _ => this._selectFirstClip()],
-			['select_next_clip', [], _ => this._selectNextClip()],
-			['select_previous_clip', [], _ => this._selectPreviousClip()],
-
-			['play_selected_clip', [], _ => this._playSelectedClip()],
-
-			['toggle_clip_labels', [], _ => this._toggleClipLabels()],
-			['toggle_clip_overlays', [], _ => this.toggleClipOverlays()],
-
-			['annotate_clips', ['annotation_value'],
-				e => this._annotateClipsDelegate(e)],
-			['annotate_selected_clips', ['annotation_value'],
-				e => this._annotateSelectedClipsDelegate(e)],
-			['annotate_page_clips', ['annotation_value'],
-				e => this._annotatePageClipsDelegate(e)],
-			['annotate_all_clips', ['annotation_value'],
-				e => this._annotateAllClipsDelegate(e)],
-
-			['unannotate_clips', [], e => this._unannotateClipsDelegate(e)],
-			['unannotate_selected_clips', [],
-				e => this._unannotateSelectedClipsDelegate(e)],
-			['unannotate_page_clips', [],
-				e => this._unannotatePageClipsDelegate(e)],
-			['unannotate_all_clips', [],
-				e => this._unannotateAllClipsDelegate(e)],
-
-		];
-
-		const functions = functionData.map(
-			args => new RegularFunction(...args));
-
-		return new CommandInterpreter(this.commands, functions);
-
-	}
+    popCommandable() {
+        return this._keyboardInputInterpreter.popCommandable();
+    }
 
 
-	_toggleClipLabels() {
-		this.settings.clipView.label.visible =
+    _toggleClipLabels() {
+        this.settings.clipView.label.visible =
 			!this.settings.clipView.label.visible;
 		this._updateClipViewSettings(this.settings);
 	}
@@ -605,44 +623,6 @@ export class ClipAlbum {
 	    this.settings.clipView.overlays.visible =
 	        !this.settings.clipView.overlays.visible;
 	    this._updateClipViewSettings(this.settings);
-	}
-
-
-	_annotateClipsDelegate(env) {
-
-		const scope = env.getRequired('annotation_scope');
-
-		switch (scope) {
-
-		case 'Selection':
-			this._annotateSelectedClipsDelegate(env);
-			break;
-
-		case 'Page':
-			this._annotatePageClipsDelegate(env);
-			break;
-
-		case 'All':
-			this._annotateAllClipsDelegate(env);
-			break;
-
-		default:
-			window.alert(`Unrecognized annotation scope "${scope}".`);
-
-		}
-
-	}
-
-
-	_annotateSelectedClipsDelegate(env) {
-
-		const name = env.getRequired('annotation_name');
-		const value = env.getRequired('annotation_value');
-		this._annotateSelectedClips(name, value);
-
-		// TODO: Optionally play selected clip.
-		this._selectNextClip();
-
 	}
 
 
@@ -721,18 +701,6 @@ export class ClipAlbum {
 	}
 
 
-	_annotatePageClipsDelegate(env) {
-
-		const name = env.getRequired('annotation_name');
-		const value = env.getRequired('annotation_value');
-		this._annotatePageClips(name, value);
-
-		// TODO: Optionally advance to next page, if there is one,
-		// select the first clip, and optionally play it.
-
-	}
-
-
 	_annotatePageClips(name, value) {
 		const [startClipNum, endClipNum] =
 			this.getPageClipNumRange(this.pageNum);
@@ -742,69 +710,8 @@ export class ClipAlbum {
 	}
 
 
-	_annotateAllClipsDelegate(env) {
-		const name = env.getRequired('annotation_name');
-		const value = env.getRequired('annotation_value');
-		this._annotateAllClips(name, value);
-	}
-
-
 	_annotateAllClips(name, value) {
 		this._annotateClips(name, value, this.clips);
-	}
-
-
-	_unannotateClipsDelegate(env) {
-
-		const scope = env.getRequired('annotation_scope');
-
-		switch (scope) {
-
-		case 'Selection':
-			this._unannotateSelectedClipsDelegate(env);
-			break;
-
-		case 'Page':
-			this._unannotatePageClipsDelegate(env);
-			break;
-
-		case 'All':
-			this._unannotateAllClipsDelegate(env);
-			break;
-
-		default:
-			window.alert(`Unrecognized annotation scope "${scope}".`);
-
-		}
-
-	}
-
-
-	_unannotateSelectedClipsDelegate(env) {
-
-		const name = env.getRequired('annotation_name');
-		this._annotateSelectedClips(name, null);
-
-		// TODO: Optionally play selected clip.
-		this._selectNextClip();
-
-	}
-
-
-	_unannotatePageClipsDelegate(env) {
-
-		const name = env.getRequired('annotation_name');
-		this._annotatePageClips(name, null)
-
-		// TODO: Optionally advance to next page, if there is one,
-		// select the first clip, and optionally play it.
-
-	}
-
-
-	_unannotateAllClipsDelegate(env) {
-		const name = env.getRequired('annotation_name');
-		this._annotateAllClips(name, null);
 	}
 
 
@@ -863,23 +770,6 @@ export class ClipAlbum {
 	}
 
 
-    get activeView() {
-        return this._activeView;
-    }
-
-
-    set activeView(clipView) {
-
-        if (this._activeView !== clipView) {
-
-            this._activeView = clipView;
-            this._viewCommandInterpreter.clipView = clipView;
-
-        }
-
-    }
-
-
     onKeyPress(e) {
 
     	// We allow the use only of alphabetic, numeric, and symbolic
@@ -888,7 +778,7 @@ export class ClipAlbum {
     	// modified keys and other keys (such as the space and enter
     	// keys) that are used by various operating systems and browsers
     	// in ways with which we don't want to interfere.
-	    if (e.ctrlKey || e.altKey || e.metaKey || !_COMMAND_CHARS.has(e.key))
+	    if (e.ctrlKey || e.altKey || e.metaKey || !_ALLOWED_KEYS.has(e.key))
 	    	return;
 
 //		console.log(
@@ -902,13 +792,13 @@ export class ClipAlbum {
         let status, name;
 
         try {
-            [status, name] = this._commandInterpreter.handleKey(e.key);
+            [status, name] = this._keyboardInputInterpreter.handleKey(e.key);
         } catch (e) {
             window.alert(e.message);
         }
 
-        if (status === CommandInterpreter.COMMAND_UNRECOGNIZED)
-            window.alert(`Unrecognized command name ${name}.`);
+        if (status === KeyboardInputInterpreter.KEY_SEQUENCE_UNRECOGNIZED)
+            window.alert(`Unrecognized key sequence "${name}".`);
 
 	}
 
@@ -1073,6 +963,175 @@ export class ClipAlbum {
 
 		}
 
+	}
+
+
+    // Commandable methods and command execution methods.
+
+
+    get commandableName() {
+        return 'Clip Album';
+    }
+
+
+    hasCommand(commandName) {
+        return this._commandableDelegate.hasCommand(commandName);
+    }
+
+
+    executeCommand(command, env) {
+        this._commandableDelegate.executeCommand(command, this, env);
+    }
+
+
+    _executeShowNextPageCommand(env) {
+        this._showNextPage();
+    }
+
+
+    _executeShowPreviousPageCommand(env) {
+        this._showPreviousPage();
+    }
+
+
+    _executeSelectFirstClipCommand(env) {
+        this._selectFirstClip();
+    }
+
+
+    _executeSelectNextClipCommand(env) {
+        this._selectNextClip();
+    }
+
+
+    _executeSelectPreviousClipCommand(env) {
+        this._selectPreviousClip();
+    }
+
+
+    _executePlaySelectedClipCommand(env) {
+        this._playSelectedClip();
+    }
+
+
+    _executeToggleClipLabelsCommand(env) {
+        this._toggleClipLabels();
+    }
+
+
+    _executeToggleClipOverlaysCommand(env) {
+        this._toggleClipOverlays();
+    }
+
+
+    _executeAnnotateClipsCommand(env) {
+
+		const scope = env.getRequired('annotation_scope');
+
+		switch (scope) {
+
+		case 'Selection':
+			this._executeAnnotateSelectedClipsCommand(env);
+			break;
+
+		case 'Page':
+			this._executeAnnotatePageClipsCommand(env);
+			break;
+
+		case 'All':
+			this._executeAnnotateAllClipsCommand(env);
+			break;
+
+		default:
+			window.alert(`Unrecognized annotation scope "${scope}".`);
+
+		}
+
+	}
+
+
+    _executeAnnotateSelectedClipsCommand(env) {
+
+		const name = env.getRequired('annotation_name');
+		const value = env.getRequired('annotation_value');
+		this._annotateSelectedClips(name, value);
+
+		// TODO: Optionally play selected clip.
+		this._selectNextClip();
+
+	}
+
+
+	_executeAnnotatePageClipsCommand(env) {
+
+		const name = env.getRequired('annotation_name');
+		const value = env.getRequired('annotation_value');
+		this._annotatePageClips(name, value);
+
+		// TODO: Optionally advance to next page, if there is one,
+		// select the first clip, and optionally play it.
+
+	}
+
+
+	_executeAnnotateAllClipsCommand(env) {
+		const name = env.getRequired('annotation_name');
+		const value = env.getRequired('annotation_value');
+		this._annotateAllClips(name, value);
+	}
+
+
+    _executeUnannotateClipsCommand(env) {
+
+		const scope = env.getRequired('annotation_scope');
+
+		switch (scope) {
+
+		case 'Selection':
+			this._executeUnannotateSelectedClipsCommand(env);
+			break;
+
+		case 'Page':
+			this._executeUnannotatePageClipsCommand(env);
+			break;
+
+		case 'All':
+			this._executeUnannotateAllClipsCommand(env);
+			break;
+
+		default:
+			window.alert(`Unrecognized annotation scope "${scope}".`);
+
+		}
+
+	}
+
+
+	_executeUnannotateSelectedClipsCommand(env) {
+
+		const name = env.getRequired('annotation_name');
+		this._annotateSelectedClips(name, null);
+
+		// TODO: Optionally play selected clip.
+		this._selectNextClip();
+
+	}
+
+
+	_executeUnannotatePageClipsCommand(env) {
+
+		const name = env.getRequired('annotation_name');
+		this._annotatePageClips(name, null)
+
+		// TODO: Optionally advance to next page, if there is one,
+		// select the first clip, and optionally play it.
+
+	}
+
+
+	_executeUnannotateAllClipsCommand(env) {
+		const name = env.getRequired('annotation_name');
+		this._annotateAllClips(name, null);
 	}
 
 

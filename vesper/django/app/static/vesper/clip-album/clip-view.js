@@ -1,89 +1,3 @@
-import { CommandInterpreter, RegularFunction }
-    from '/static/vesper/clip-album/command-interpreter.js';
-import { TimeFrequencyMarkerOverlay }
-    from '/static/vesper/clip-album/time-frequency-marker-overlay.js';
-
-
-export class ClipViewCommandInterpreter extends CommandInterpreter {
-
-
-    // TODO: Document why we use a separate class for the functions
-    // (we can't refer to `this` before invoking `super`).
-    constructor(spec) {
-        const aux = new _ClipViewCommandInterpreterAux();
-        super(spec, aux.functions)
-        this._aux = aux;
-    }
-
-
-    get clipView() {
-        return this._aux.clipView;
-    }
-
-
-    set clipView(clipView) {
-        if (clipView !== this.clipView) {
-            this._aux.clipView = clipView;
-            if (clipView === null)
-                this._clearCommandAndLocals(this._environment);
-        }
-    }
-
-
-    handleKey(key) {
-        if (this.clipView === null) {
-            return [CommandInterpreter.COMMAND_UNRECOGNIZED, key];
-        } else {
-            return super.handleKey(key);
-        }
-    }
-
-
-}
-
-
-export class _ClipViewCommandInterpreterAux {
-
-
-    constructor() {
-        this._clipView = null;
-        this._functions = this._createFunctions();
-    }
-
-
-    _createFunctions() {
-
-        const functionData = [
-            ['set_time_frequency_marker', [],
-                _ => this.clipView._setTimeFrequencyMarker()],
-            ['clear_time_frequency_marker', [],
-                _ => this.clipView._clearTimeFrequencyMarker()]
-        ]
-
-        return functionData.map(
-            args => new RegularFunction(...args));
-
-    }
-
-
-    get clipView() {
-        return this._clipView;
-    }
-
-
-    set clipView(clipView) {
-        this._clipView = clipView;
-    }
-
-
-    get functions() {
-        return this._functions;
-    }
-
-
-}
-
-
 export class ClipView {
 
 
@@ -97,13 +11,7 @@ export class ClipView {
 		this._label = null;
 		this._playButton = null;
 
-        // TODO: Subclass should create this overlay, according to settings.
-		this._overlays = [
-            new TimeFrequencyMarkerOverlay(
-                this, 'Call Center Time', 'Call Center Freq')
-        ];
-
-        this._commandInterpreter = null;
+        this._overlays = [];
 
 	}
 
@@ -133,6 +41,21 @@ export class ClipView {
 			this.render();
 		}
 
+	}
+
+
+	get commandableName() {
+		return 'Clip View';
+	}
+
+
+    hasCommand(commandName) {
+		return false;
+	}
+
+
+    executeCommand(command, env) {
+		throw new Error('The ClipView class does not support any commands.');
 	}
 
 
@@ -180,19 +103,6 @@ export class ClipView {
 	get overlays() {
 	    return this._overlays;
 	}
-
-
-    _setTimeFrequencyMarker() {
-        const clip = this.clip;
-        console.log(
-            'ClipView._setTimeFrequencyMarker', clip.num, clip.id,
-            clip.annotations);
-    }
-
-
-    _clearTimeFrequencyMarker() {
-        console.log('ClipView._clearTimeFrequencyMarker', this.clip.num);
-    }
 
 
 	_createUiElementsIfNeeded() {
@@ -250,21 +160,24 @@ export class ClipView {
 
 
 	_onMouseEnter(e) {
-        console.log('_onMouseEnter', this.label.innerHTML);
-        this.parent.activeView = this;
+        this._pushCommandables();
 		this._onMouseEvent(e, 'mouseenter');
 	}
+
+
+    _pushCommandables() {
+        this.parent.pushCommandable(this);
+		for (let i = this.overlays.length - 1; i >= 0; i--)
+		    this.parent.pushCommandable(this.overlays[i]);
+    }
 
 
 	_onMouseEvent(e, name) {
 
 		const mouseText = this.getMouseText(e, name)
 
-        const activeView = this.parent.activeView;
-        const activeText =
-            activeView === null ? 'null' : activeView.clip.num.toString();
-
-        console.log('_onMouseEvent', name, mouseText, activeText);
+        // if (name !== 'mousemove')
+        //     console.log('_onMouseEvent', name, mouseText);
 
 		if (mouseText !== null)
 			this.label.innerHTML = mouseText;
@@ -290,14 +203,20 @@ export class ClipView {
 
 
 	_onMouseMove(e) {
-        this.parent.activeView = this;
 		this._onMouseEvent(e, 'mousemove');
 	}
 
 
 	_onMouseLeave(e) {
-        this.parent.activeView = null;
+        this._popCommandables();
 		this._onMouseEvent(e, 'mouseleave');
+	}
+
+
+    _popCommandables() {
+		const n = 1 + this.overlays.length;
+		for (let i = 0; i < n; i++)
+		    this.parent.popCommandable();
 	}
 
 
@@ -552,9 +471,8 @@ export class ClipView {
 
 
 	_renderOverlays() {
-        for (const overlay of this.overlays) {
+        for (const overlay of this.overlays)
             overlay.render();
-        }
 	}
 
 
