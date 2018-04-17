@@ -129,9 +129,24 @@ export class SpectrogramClipView extends ClipView {
 	}
 
 
-    getMouseText(event, name) {
+    getMouseText(event) {
 
-		const x = event.clientX;
+        const tf = this.getMouseTimeAndFrequency(event);
+
+        if (tf === null)
+            return null;
+
+        else {
+            const [time, freq] = tf;
+            return `${time.toFixed(3)} s  ${freq.toFixed(1)} Hz`;
+        }
+
+    }
+
+
+    getMouseTimeAndFrequency(event) {
+
+        const x = event.clientX;
 		const y = event.clientY;
 
 	    // The sides of the bounding client rectangle of an HTML element
@@ -168,7 +183,7 @@ export class SpectrogramClipView extends ClipView {
 			const deltaFreq = highFreq - lowFreq;
 			const freq = highFreq - (y - top) / (bottom - top) * deltaFreq;
 
-			return `${time.toFixed(3)} s  ${freq.toFixed(1)} Hz`;
+			return [time, freq];
 
 		}
 

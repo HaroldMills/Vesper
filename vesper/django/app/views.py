@@ -658,8 +658,61 @@ def annotations_json(request, clip_id):
         content = _get_annotations_json(clip_id)
         return HttpResponse(content, content_type='application/json')
 
+    elif request.method == 'POST':
+
+        if request.user.is_authenticated():
+
+            try:
+                content = _get_request_body_as_json(request)
+            except HttpError as e:
+                return e.http_response
+
+            try:
+                content = json.loads(content)
+            except json.JSONDecodeError as e:
+                return HttpResponseBadRequest(
+                    reason='Could not decode request JSON')
+
+            # TODO: Typecheck JSON?
+
+            with archive_lock.atomic():
+                with transaction.atomic():
+
+                    clip = get_object_or_404(Clip, pk=clip_id)
+
+                    for name, value in content.items():
+
+                        # We respond with a 404 (Not Found) client error if
+                        # the named `AnnotationInfo` does not already exist.
+                        # This assumes that an `AnnotationInfo` is created
+                        # explicitly by a request at some other URL, not
+                        # implicitly by naming a nonexistent `AnnotationInfo`
+                        # at this URL.
+                        info = get_object_or_404(AnnotationInfo, name=name)
+
+                        user = request.user
+
+                        if value is None:
+                            model_utils.delete_clip_annotation(
+                                clip, info, creating_user=user)
+
+                        else:
+                            model_utils.annotate_clip(
+                                clip, info, value, creating_user=user)
+
+            return HttpResponse();
+
+        else:
+            # user not logged in
+
+            return HttpResponseForbidden()
+
     else:
-        return HttpResponseNotAllowed(_GET_AND_HEAD)
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+
+def _parse_json_request_body(request):
+    return {}
 
 
 def _get_annotations_json(clip_id):

@@ -88,6 +88,12 @@ export class ClipView {
 	}
 
 
+    get lastMouseEvent() {
+		this._createUiElementsIfNeeded();
+		return this._lastMouseEvent;
+	}
+
+
 	get label() {
 		this._createUiElementsIfNeeded();
 		return this._label;
@@ -113,6 +119,7 @@ export class ClipView {
 
 		    this._canvas = this._createCanvas();
 		    this._overlayCanvas = this._createOverlayCanvas();
+			this._lastMouseEvent = null;
 
 			this._label = this._createLabel();
 			this._styleLabel();
@@ -160,8 +167,8 @@ export class ClipView {
 
 
 	_onMouseEnter(e) {
-        this._pushCommandables();
-		this._onMouseEvent(e, 'mouseenter');
+		this._onMouseEvent(e);
+		this._pushCommandables();
 	}
 
 
@@ -172,9 +179,11 @@ export class ClipView {
     }
 
 
-	_onMouseEvent(e, name) {
+	_onMouseEvent(e) {
 
-		const mouseText = this.getMouseText(e, name)
+        this._lastMouseEvent = e;
+
+		const mouseText = this.getMouseText(e)
 
         // if (name !== 'mousemove')
         //     console.log('_onMouseEvent', name, mouseText);
@@ -191,25 +200,24 @@ export class ClipView {
 	 * Gets text to display for the current mouse position.
 	 *
 	 * This method is invoked whenever the mouse enters, leaves, or
-     * moves within a clip view. The arguments are the mouse event that
-     * triggered the invocation, along with an event name that is either
-     * "mouseenter", "mouseleave", or "mousemove". The method can return
-     * either text to display instead of the view's usual label, or `null`
-     * to display the usual label.
+     * moves within a clip view. The argument is the mouse event that
+     * triggered the invocation. The method can return either text to
+	 * display instead of the view's usual label, or `null` to display
+	 * the usual label.
 	 */
-	getMouseText(event, name) {
+	getMouseText(event) {
 		return null;
 	}
 
 
 	_onMouseMove(e) {
-		this._onMouseEvent(e, 'mousemove');
+		this._onMouseEvent(e);
 	}
 
 
 	_onMouseLeave(e) {
         this._popCommandables();
-		this._onMouseEvent(e, 'mouseleave');
+		this._onMouseEvent(e);
 	}
 
 
@@ -471,11 +479,19 @@ export class ClipView {
 
 
 	_renderOverlays() {
+		this._clearOverlayCanvas();
         for (const overlay of this.overlays)
             overlay.render();
 	}
 
 
+    _clearOverlayCanvas() {
+		const canvas = this.overlayCanvas;
+		const context = canvas.getContext('2d');
+		context.clearRect(0, 0, canvas.width, canvas.height);
+	}
+
+	
 	_resizeOverlayCanvasIfNeeded() {
 
 	    const canvas = this.overlayCanvas;

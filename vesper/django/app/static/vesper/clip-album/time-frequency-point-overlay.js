@@ -44,12 +44,101 @@ export class TimeFrequencyPointOverlay {
 
 
     _executeSetTimeFrequencyPointCommand(env) {
-        console.log('set time frequency point');
+
+        const e = this.clipView.lastMouseEvent;
+        const tf = this.clipView.getMouseTimeAndFrequency(e);
+
+        if (tf !== null)
+            this._setTimeFrequencyAnnotations(...tf);
+
+    }
+
+
+    _setTimeFrequencyAnnotations(time, frequency) {
+
+        const clip = this.clipView.clip;
+        const url = `/clips/${clip.id}/annotations/json/`;
+
+        const annotations = new Object();
+        annotations[this.timeAnnotationName] = time;
+        annotations[this.frequencyAnnotationName] = frequency;
+
+        this._postJson(url, annotations)
+        .then(r => this._onAnnotationsPostFulfilled(r, annotations))
+        .catch(this._onAnnotationsPostRejected);
+
+    }
+
+
+    _postJson(url, object) {
+
+        return fetch(url, {
+            method: 'POST',
+            body: JSON.stringify(object),
+            headers: new Headers({
+                'Content-Type': 'application/json; charset=utf-8'
+            }),
+            credentials: 'same-origin'
+        });
+
+    }
+
+
+    _onAnnotationsPostFulfilled(response, annotations) {
+
+        if (response.status === 200) {
+            // Update clip annotations and re-render.
+
+            const clip = this.clipView.clip;
+            const clip_annos = clip.annotations;
+
+            if (clip_annos !== null) {
+                // client has received clip annotations from server
+
+                for (const name of Object.getOwnPropertyNames(annotations)) {
+
+                    const value = annotations[name];
+
+                    if (value === null)
+                        delete clip_annos[name]
+                    else
+                        clip_annos[name] = value;
+
+                }
+
+            } else {
+                // client has not yet received clip annotations from server
+
+               // TODO: Not sure what we should do here. We can't
+               // update annotations we haven't yet received. Perhaps
+               // we should decline to post annotation changes until
+               // we have received the original annotations from the
+               // server.
+
+            }
+
+            clip.view.render();
+
+        } else {
+
+            window.alert(
+                `Clip annotation request failed with response ` +
+                `${response.status} (${response.statusText}).`);
+
+        }
+
+    }
+
+
+    _onAnnotationsPostRejected(error) {
+        window.alert(
+            `Clip annotation request failed with exception: ` +
+            `${error.message}.`);
     }
 
 
     _executeClearTimeFrequencyPointCommand(env) {
-        console.log('clear time frequency point');
+        this._setTimeFrequencyAnnotations(null, null);
     }
 
 

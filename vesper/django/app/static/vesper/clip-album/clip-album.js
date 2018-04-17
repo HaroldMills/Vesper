@@ -663,20 +663,29 @@ export class ClipAlbum {
 
 			for (const clip of clips) {
 
-				const annotations = clip.annotations
+				const annotations = clip.annotations;
 
 				if (annotations !== null) {
-					// client has clip annotations
+					// client has received clip annotations from server
 
 					if (annotationValue === null)
-						delete annotations[annotationName]
+						delete annotations[annotationName];
 					else
 						annotations[annotationName] = annotationValue;
 
 					if (this._isClipOnCurrentPage(clip))
 						clip.view.render();
 
-				}
+				} else {
+                    // client has not yet received clip annotations from server
+
+                   // TODO: Not sure what we should do here. We can't
+                   // update annotations we haven't yet received. Perhaps
+                   // we should decline to post annotation changes until
+                   // we have received the original annotations from the
+                   // server.
+
+                }
 
 			}
 
