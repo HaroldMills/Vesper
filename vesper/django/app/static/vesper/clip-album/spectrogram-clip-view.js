@@ -13,7 +13,11 @@ const _OVERLAY_CLASSES = {
 }
 
 
-const _REFERENCE_POWER = 1e-10;
+const _DEFAULT_SPECTRAL_INTERPOLATION_FACTOR = 1;
+const _DEFAULT_REFERENCE_POWER = 1e-10;
+const _DEFAULT_FREQUENCY_RANGE = [0, 12000];
+const _DEFAULT_COLORMAP = 'Gray';
+const _DEFAULT_REVERSE_COLORMAP = true;
 
 
 export class SpectrogramClipView extends ClipView {
@@ -26,8 +30,51 @@ export class SpectrogramClipView extends ClipView {
 
         super(parent, clip, settings);
 
+        this._updateSettingsIfNeeded();
+
         const overlays = this._createOverlays(settings);
         this._overlays = overlays.concat(this._overlays);
+
+    }
+
+
+    // Updates spectrogram settings from deprecated format to current
+    // format if needed.
+    _updateSettingsIfNeeded() {
+
+        if (this._settings.spectrogram.computation !== undefined)
+            // settings are already in current format
+
+            return;
+
+        const old = this._settings.spectrogram;
+
+        this._settings.spectrogram = {
+
+            'computation': {
+                'window': {
+                    'type': 'Hann',
+                    'size': old.windowSize / this.clip.sampleRate
+                },
+                'hopSize': 100 * old.hopSize / old.windowSize,
+                'spectralInterpolationFactor':
+                    old.dftSize / _getPowerOfTwoCeil(old.windowSize),
+                'referencePower': old.referencePower
+            },
+
+            'display': {
+                'frequencyRange': _DEFAULT_FREQUENCY_RANGE,
+                'powerRange': [old.lowPower, old.highPower],
+                'colormap': _DEFAULT_COLORMAP,
+                'reverseColormap': _DEFAULT_REVERSE_COLORMAP,
+                'smoothImage': old.smoothingEnabled
+            },
+
+            'overlays': []
+
+        }
+
+        console.log('_updateSettingsIfNeeded', this._settings.spectrogram);
 
     }
 
@@ -78,7 +125,7 @@ export class SpectrogramClipView extends ClipView {
 
             const settings = {};
             settings.high = this.settings.spectrogram.computation;
-			settings.low = _computeLowLevelSpectrogramSettings(
+			settings.low = _getLowLevelSpectrogramSettings(
 				settings.high, clip.sampleRate);
 			settings.display = this.settings.spectrogram.display;
 
@@ -219,15 +266,15 @@ function _scaleSamples(samples, factor) {
 }
 
 
-function _computeLowLevelSpectrogramSettings(settings, sampleRate) {
+function _getLowLevelSpectrogramSettings(settings, sampleRate) {
 
 	const s = settings;
-	const floatWindowSize = s.window.duration * sampleRate;
+	const floatWindowSize = s.window.size * sampleRate;
     const windowSize = Math.round(floatWindowSize);
     const window = DataWindow.createWindow(s.window.type, windowSize);
     const hopSize = Math.round(s.hopSize / 100 * floatWindowSize);
-    const dftSize = _computeDftSize(windowSize, s.dftSizeMultiplier);
-	const referencePower = _REFERENCE_POWER;
+    const dftSize = _getDftSize(windowSize, s);
+	const referencePower = _getReferencePower(s);
 
 	return {
 		window: window,
@@ -239,25 +286,43 @@ function _computeLowLevelSpectrogramSettings(settings, sampleRate) {
 }
 
 
-function _computeDftSize(windowSize, dftSizeMultiplier) {
+function _getDftSize(windowSize, settings) {
 
-    const minDftSize = Math.pow(2, Math.ceil(Math.log2(windowSize)))
+    const interpFactor =
+        settings.spectralInterpolationFactor |
+        _DEFAULT_SPECTRAL_INTERPOLATION_FACTOR;
 
-    if (Math.floor(dftSizeMultiplier) !== dftSizeMultiplier ||
-			dftSizeMultiplier <= 1 ||
-		    !_isPowerOfTwo(dftSizeMultiplier))
+    const powerOfTwoCeil = _getPowerOfTwoCeil(windowSize);
 
-        return minDftSize;
+    if (Math.floor(interpFactor) !== interpFactor ||
+			interpFactor <= 1 ||
+		    !_isPowerOfTwo(interpFactor))
+
+        return powerOfTwoCeil;
 
 	else
-	    return minDftSize * dftSizeMultiplier;
+	    return powerOfTwoCeil * interpFactor;
 
+}
+
+
+// Returns the smallest, positive, integer power of two that is at least `x`.
+function _getPowerOfTwoCeil(x) {
+    if (x <= 0)
+        return 1;
+    else
+        return Math.pow(2, Math.ceil(Math.log2(x)));
 }
 
 
 function _isPowerOfTwo(n) {
 	const log = Math.log2(n);
 	return Math.floor(log) === log;
+}
+
+
+function _getReferencePower(referencePower) {
+    return settings.referencePower || _DEFAULT_REFERENCE_POWER;
 }
 
 
@@ -346,7 +411,14 @@ function _getColorCoefficients(settings) {
 
 function _getColorRange(settings) {
 
-	let [startColor, endColor] = settings.colorRange;
+    // The idea of the following was to allow the user to specify a
+    // portion of a color map to use, rather than having to use the
+    // whole thing. I'm not sure that would actually be very useful,
+    // though, and it's one more thing for a user to learn about, so
+    // for the time being at least I've removed it.
+    // let [startColor, endColor] = settings.colorRange;
+
+    let [startColor, endColor] = [0, 1];
 
 	if (settings.reverseColormap) {
 		startColor = 1 - startColor;
