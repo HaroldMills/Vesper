@@ -35,8 +35,8 @@ import csv
 
 
 _FILE_PATH = Path((
-    r'Y:\Desktop\NFC\Data\MPG Ranch\2017 MPG Ranch Archive Analysis'
-    r'\Clip Counts.csv'))
+    '/Users/harold/Desktop/NFC/Data/MPG Ranch/'
+    '2017 MPG Ranch Archive Analysis/Clip Counts.csv'))
 
 
 _DETECTOR_SUBSTITUTIONS = {
@@ -129,4 +129,3 @@ def _show(items, name):
 
 if __name__ == '__main__':
     _main()
-    
