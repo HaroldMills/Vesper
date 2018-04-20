@@ -48,7 +48,10 @@ import vesper.util.time_utils as time_utils
 #       if and only if the source archive does not include recording
 #       metadata.
 
-_ARCHIVE_DIR_PATH = r'C:\Users\Harold\Desktop\2012 MPG Ranch Desktop Archive'
+# _ARCHIVE_DIR_PATH = r'C:\Users\Harold\Desktop\2012 MPG Ranch Desktop Archive'
+_ARCHIVE_DIR_PATH = (
+    '/Users/harold/Desktop/NFC/Data/Old Bird/Somerset-Yates/'
+    'Somerset-Yates Desktop Archive')
 # _ARCHIVE_DIR_PATH = (
 #     '/Users/Harold/Desktop/NFC/Data/MPG Ranch/2012 MPG Ranch Desktop Archive')
 # _ARCHIVE_DIR_PATH = \
