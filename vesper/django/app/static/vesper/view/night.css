@@ -116,6 +116,11 @@ body {
 .clip-row {
 }
 
+.clip {
+  background-color: gray;
+  outline-style: solid;
+}
+
 .clip-canvas {
   position: absolute;
   left: 0px;
