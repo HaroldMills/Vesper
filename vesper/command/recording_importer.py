@@ -12,7 +12,7 @@ from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import (
     DeviceConnection, Job, Recording, RecordingChannel, RecordingFile, Station)
 from vesper.singletons import (
-    extension_manager, preset_manager, recording_file_path_converter)
+    extension_manager, preset_manager, recording_manager)
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
 import vesper.util.audio_file_utils as audio_file_utils
@@ -149,27 +149,27 @@ class RecordingImporter:
     
     def _get_relative_path(self, file_path):
         
-        converter = recording_file_path_converter.instance
+        manager = recording_manager.instance
         
         try:
-            _, rel_path = converter.relativize(file_path)
+            _, rel_path = manager.get_relative_recording_file_path(file_path)
             
         except ValueError:
             self._handle_bad_recording_file_path(
-                file_path, 'is not in', converter)
+                file_path, 'is not in', manager)
             
         return rel_path
                                     
 
-    def _handle_bad_recording_file_path(self, file_path, condition, converter):
-        
-        paths = converter.root_dir_paths
+    def _handle_bad_recording_file_path(self, file_path, condition, manager):
 
-        if len(paths) == 1:
-            s = 'the recording directory "{}"'.format(paths[0])
+        dir_paths = manager.recording_dir_paths
+        
+        if len(dir_paths) == 1:
+            s = 'the recording directory "{}"'.format(dir_paths[0])
         else:
-            s = 'any of the recording directories [{}]'.format(
-                ', '.join(paths))
+            path_list = str(list(dir_paths))
+            s = 'any of the recording directories {}'.format(path_list)
             
         raise CommandExecutionError(
             'Recording file "{}" {} {}.'.format(file_path, condition, s))
@@ -177,14 +177,14 @@ class RecordingImporter:
 
     def _get_absolute_path(self, file_path):
         
-        converter = recording_file_path_converter.instance
+        manager = recording_manager.instance
         
         try:
-            return converter.absolutize(file_path)
+            return manager.get_absolute_recording_file_path(file_path)
             
         except ValueError:
             self._handle_bad_recording_file_path(
-                file_path, 'could not be located in', converter)
+                file_path, 'could not be found in', manager)
 
 
     def _parse_recording_file(self, file_path):

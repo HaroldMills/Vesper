@@ -175,7 +175,7 @@ class DetectCommand(Command):
         else:
             
             try:
-                abs_path = model_utils.get_recording_file_absolute_path(file_)
+                abs_path = model_utils.get_absolute_recording_file_path(file_)
                 
             except ValueError as e:
                 self._logger.error(str(e))

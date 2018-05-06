@@ -14,7 +14,7 @@ from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Clip, DeviceConnection, Processor,
     Recording, RecordingChannel, StationDevice, StringAnnotation,
     StringAnnotationEdit)
-from vesper.singletons import preference_manager, recording_file_path_converter
+from vesper.singletons import preference_manager, recording_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.annotation_utils as annotation_utils
 import vesper.util.time_utils as time_utils
@@ -292,7 +292,7 @@ def get_recording_dates(station, mic_output):
     return nights
 
 
-def get_recording_file_absolute_path(file_):
+def get_absolute_recording_file_path(file_):
     
     if file_.path is None:
         return None
@@ -301,7 +301,7 @@ def get_recording_file_absolute_path(file_):
         
         path = Path(file_.path)
         
-        if path.is_absolute:
+        if path.is_absolute():
             
             # For now, at least, we allow this for backward compatibility.
             # Maybe we should issue a deprecation warning, though, and
@@ -309,32 +309,10 @@ def get_recording_file_absolute_path(file_):
             return path
         
         else:
+            # path is relative
         
-            path_converter = recording_file_path_converter.instance
-            rel_path = Path(file_.path)
-            
-            try:
-                return path_converter.absolutize(rel_path)
-             
-            except ValueError:
-                
-                paths = path_converter.root_dir_paths
-                
-                if len(paths) == 0:
-                    suffix = 'since there are no known recording directories.'
-                    
-                elif len(paths) == 1:
-                    suffix = 'in recording directory "{}".'.format(paths[0])
-                    
-                else:
-                    path_strings = ['"{}"'.format(p) for p in paths]
-                    paths_string = '[{}]'.format(', '.join(path_strings))
-                    suffix = \
-                        'in recording directories {}.'.format(paths_string)
-                    
-                raise ValueError(
-                    'Could not find recording file "{}" {}'.format(
-                        rel_path, suffix))
+            manager = recording_manager.instance
+            return manager.get_absolute_recording_file_path(path)
 
     
 def get_clip_counts(

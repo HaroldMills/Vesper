@@ -4,9 +4,9 @@
 from vesper.archive_paths import archive_paths
 from vesper.command.job_manager import JobManager
 from vesper.util.extension_manager import ExtensionManager
-from vesper.util.path_converter import PathConverter
 from vesper.util.preference_manager import PreferenceManager
 from vesper.util.preset_manager import PresetManager
+from vesper.util.recording_manager import RecordingManager
 from vesper.util.singleton import Singleton
 
 
@@ -85,9 +85,9 @@ preference_manager = Singleton(_create_preference_manager)
 job_manager = Singleton(JobManager)
      
      
-def _create_recording_file_path_converter():
-    return PathConverter(archive_paths.recording_dir_paths)
+def _create_recording_manager():
+    return RecordingManager(
+        archive_paths.archive_dir_path, archive_paths.recording_dir_paths)
 
 
-recording_file_path_converter = \
-    Singleton(_create_recording_file_path_converter)
+recording_manager = Singleton(_create_recording_manager)
