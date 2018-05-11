@@ -7,7 +7,7 @@ import datetime
 import itertools
 
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, F
 import yaml
 
 from vesper.django.app.models import (
@@ -466,6 +466,15 @@ def create_date_iterator(start_date, end_date):
             date += _ONE_DAY
     
     
+def get_clip_annotations(clip):
+    
+    annotations = StringAnnotation.objects.filter(
+        clip_id=clip.id
+    ).annotate(name=F('info__name'))
+
+    return dict((a.name, a.value) for a in annotations)
+
+
 @archive_lock.atomic
 @transaction.atomic
 def annotate_clip(
