@@ -57,10 +57,19 @@ export class TimeFrequencyPointOverlay {
     _setTimeFrequencyAnnotations(time, frequency) {
 
         const clip = this.clipView.clip;
+        const startIndex = clip.startIndex;
+        
+        if (startIndex === null)
+            // clip start index unknown
+            
+            return;
+            
+        const index = startIndex + Math.round(time * clip.sampleRate);
+        
         const url = `/clips/${clip.id}/annotations/json/`;
 
         const annotations = new Object();
-        annotations[this.timeAnnotationName] = time;
+        annotations[this.timeAnnotationName] = index;
         annotations[this.frequencyAnnotationName] = frequency;
 
         this._postJson(url, annotations)
@@ -154,25 +163,30 @@ export class TimeFrequencyPointOverlay {
                 annotations.hasOwnProperty(this.timeAnnotationName) &&
                 annotations.hasOwnProperty(this.frequencyAnnotationName)) {
 
-            const time = parseFloat(annotations[this.timeAnnotationName]);
+            const index = parseInt(annotations[this.timeAnnotationName]);
             const freq = parseFloat(annotations[this.frequencyAnnotationName]);
 
-            // console.log('TimeFrequencyPointOverlay.render', time, freq);
-
-            this._render(time, freq);
+            this._render(index, freq);
 
         }
 
     }
 
 
-    _render(time, freq) {
+    _render(index, freq) {
 
         const clipView = this.clipView;
         const clip = clipView.clip;
+
+        if (clip.startIndex === null) 
+            // clip start index unknown
+
+            return;
+        
         const sampleRate = clip.sampleRate;
         const canvas = clipView.overlayCanvas;
 
+        const time = (index - clip.startIndex) / clip.sampleRate;
         const startTime = 0;
         const endTime = clip.span;
         const x = Math.round(TimeFrequencyUtils.timeToViewX(

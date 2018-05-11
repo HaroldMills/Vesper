@@ -9,10 +9,11 @@ export const CLIP_LOAD_STATUS = {
 export class Clip {
 
 
-	constructor(num, id, length, sampleRate, startTime) {
+	constructor(num, id, startIndex, length, sampleRate, startTime) {
 
 		this._num = num;
 		this._id = id;
+		this._startIndex = startIndex;
 		this._length = length;
 		this._sampleRate = sampleRate;
 		this._startTime = startTime;
@@ -36,6 +37,11 @@ export class Clip {
 	}
 
 
+	get startIndex() {
+	    return this._startIndex;
+	}
+	
+	
 	get length() {
 		return this._length;
 	}
