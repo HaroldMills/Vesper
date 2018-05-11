@@ -266,8 +266,6 @@ export class ClipView {
 
     _onOverlayCanvasClick(e) {
 
-        console.log('_onOverlayCanvasClick');
-
 		const parent = this.parent;
 		const clipNum = this.clip.num;
 
