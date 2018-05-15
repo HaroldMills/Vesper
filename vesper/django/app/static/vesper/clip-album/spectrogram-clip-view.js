@@ -224,9 +224,8 @@ export class SpectrogramClipView extends ClipView {
 
 			const time = (x - left) / (right - left) * clip.span;
 
-			const settings = this.settings.spectrogram;
-			const [lowFreq, highFreq] =
-			    TimeFrequencyUtils.getFreqRange(settings, clip.sampleRate / 2);
+			const [lowFreq, highFreq] = TimeFrequencyUtils.getFreqRange(
+                this.settings.spectrogram.display, clip.sampleRate / 2);
 			const deltaFreq = highFreq - lowFreq;
 			const freq = highFreq - (y - top) / (bottom - top) * deltaFreq;
 

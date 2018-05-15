@@ -193,7 +193,7 @@ export class TimeFrequencyPointOverlay {
             time, startTime, endTime, canvas.width)) + .5;
 
         const [startFreq, endFreq] = TimeFrequencyUtils.getFreqRange(
-            clipView.settings.spectrogram, sampleRate / 2.);
+            clipView.settings.spectrogram.display, sampleRate / 2.);
         const y = Math.round(TimeFrequencyUtils.freqToViewY(
             freq, startFreq, endFreq, canvas.height)) + .5;
 
