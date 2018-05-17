@@ -489,7 +489,7 @@ export class ClipView {
 		context.clearRect(0, 0, canvas.width, canvas.height);
 	}
 
-	
+
 	_resizeOverlayCanvasIfNeeded() {
 
 	    const canvas = this.overlayCanvas;
@@ -574,7 +574,7 @@ export class ClipView {
 
                 const [date, time] = clip.startTime.split(' ');
 
-		        if (clipQuery.date === null) {
+		        if (this.parent.clipQuery.date === null) {
 		            // clips may be for more than one night
 
 		            // include date in start time, but not year part

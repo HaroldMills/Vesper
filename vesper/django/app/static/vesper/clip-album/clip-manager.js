@@ -493,6 +493,42 @@ class _ClipLoader {
 	}
 
 
+    /*
+    Testing in May, 2018 revealed several limitations of the current
+    Safari Web Audio implementation :
+
+    1. One must use "webkitAudioContext" and "webkitOfflineAudioContext"
+       instead of "AudioContext" and "OfflineAudioContext". See
+       https://github.com/cwilso/AudioContext-MonkeyPatch/blob/gh-pages/
+       AudioContextMonkeyPatch.js for some JavaScript that remedies this
+       (as well as other problems: perhaps we can implement our own, simpler
+       remedy).
+
+    2. An offline audio context cannot have a sample rate of 22050 hertz.
+       Trying to create one results in the error message:
+
+           SyntaxError: The string did not match the expected pattern.
+
+       An offline audio context can have a sample rate of 44100, 48000, or
+       96000 hertz, and perhaps other rates that I didn't try.
+
+    3. Safari's implementation of the "decodeAudioData" method is not
+       promises-based, requiring a single argument, but instead requires
+       three arguments: the audio data, a success handler, and a failure
+       handler. See https://stackoverflow.com/questions/48597747/
+       how-to-play-a-sound-file-safari-with-web-audio-api.
+
+    Limitations 1 and 3 are straightforward to work around. Limitation 2
+    is not so easy. On Safari we can use Web Audio to decode, say, 22050
+    hertz audio to 44100 hertz, but we will use twice the storage for our
+    audio data than we would if the data were left at the lower rate.
+    Another option would be to not use Web Audio to decode data sent from
+    the server, and implement our own decoder instead. That decoder would
+    necessarily support fewer formats, in fact probably just one
+    uncompressed format. Hopefully we could still use Web Audio to play
+    clips from whatever their native rate, though this should be tested.
+    */
+
     _onAudioDataXhrResponse(xhr, clip) {
 
    	    if (xhr.status === 200) {
@@ -510,18 +546,28 @@ class _ClipLoader {
    	    		// 	`creating audio context for sample rate ${sampleRate}...`);
 
    	    		// Create context for this sample rate and add to cache.
-   	    		context = new OfflineAudioContext(1, 1, sampleRate);
-   	    		this._audioContexts.set(sampleRate, context);
+  	    		context = new OfflineAudioContext(1, 1, sampleRate);
+  	    		this._audioContexts.set(sampleRate, context);
 
    	    	}
 
-   	    	// TODO: Handle decode errors.
-   	    	context.decodeAudioData(xhr.response).then(
-   	    		audioBuffer => this._onAudioDataDecoded(audioBuffer, clip));
+    	    // context.decodeAudioData(xhr.response).then(
+   	    	// 	audioBuffer => this._onAudioDataDecoded(audioBuffer, clip));
+
+            // As of May, 2018, Safari does not support the single-argument
+            // promises version of `decodeAudioData` (used in the code
+            // commented out above), but it does support the three-argument
+            // version used below.
+            // TODO: Notify user of errors.
+            context.decodeAudioData(
+                xhr.response,
+                audioBuffer => this._onAudioDataDecoded(audioBuffer, clip),
+                error => console.log(
+                    `decode of clip ${clip.num} audio data failed.`));
 
     	} else {
 
-    		// TODO: Notify user of error.
+    		// TODO: Notify user of errors.
     		console.log(`request for clip ${clip.num} audio data failed`);
 
     	}

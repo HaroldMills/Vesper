@@ -11,15 +11,17 @@
         <title>Clip Calendar - Vesper</title>
     {% endif %}
 
-    <script>
-        const stationMicName = "{{station_mic_name|default_if_none:''}}";
-        const detectorName = "{{detector_name|default_if_none:''}}";
-        const classification = "{{classification}}";
-        const periods = {{periods_json|safe}};
+    <script type="module">
+        import { init } from '/static/vesper/view/clip-calendar.js';
+        init({
+            'stationMicName': "{{station_mic_name|default_if_none:''}}",
+            'detectorName': "{{detector_name|default_if_none:''}}",
+            'classification': "{{classification}}",
+            'periods': {{periods_json|safe}}
+        });
     </script>
 
     {% load staticfiles %}
-    <script type="module" src="{% static 'vesper/view/clip-calendar.js' %}"></script>
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-calendar.css' %}">
 
 </head>

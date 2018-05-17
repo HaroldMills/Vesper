@@ -1,6 +1,3 @@
-'use strict'
-
-
 const _NONZERO_COUNT_CIRCLE_COLOR = 'orange';
 const _ZERO_COUNT_CIRCLE_COLOR = '#A0A0A0';
 const _HIGHLIGHTED_CIRCLE_COLOR = '#00AA00';
@@ -10,6 +7,20 @@ const _RADIUS_SCALE_FACTOR = 7.5;
 let circles = null;
 let highlightedCircle = null;
 
+// Module-level state, set via `init` function.
+let state = null;
+
+
+export function init(state_) {
+
+    // Set module-level state.
+    state = state_
+
+	// Install event handlers.
+    window.onload = onLoad;
+
+}
+
 
 function onLoad() {
 	setTitle();
@@ -18,100 +29,101 @@ function onLoad() {
 
 
 function setTitle() {
-	
+
 	const title =
-		`${stationMicName} / ${detectorName} / ${classification} Clips`;
-	
+		`${state.stationMicName} / ${state.detectorName} / ` +
+		`${state.classification} Clips`;
+
 	const titleElement = document.getElementById('title');
 	titleElement.innerHTML = title;
-	
+
 	document.title = `Clip Calendar - ${title}`;
-	
+
 }
 
 
 function setCalendarPeriods() {
-	
+
 	const periodsDiv = document.getElementById('periods');
-	
-	if (stationMicName === 'None')
+
+	if (state.stationMicName === 'None')
 		periodsDiv.innerHTML = 'There are no stations in the archive.';
-			
-	else if (detectorName === 'None')
+
+	else if (state.detectorName === 'None')
 		periodsDiv.innerHTML = 'There are no detectors in the archive.';
-	
-	else if (periods.length === 0)
+
+	else if (state.periods.length === 0)
 		periodsDiv.innerHTML = 'There are no such clips in the archive.';
-	
+
 	else {
-		
+
 		// The server provides us with a Javascript array called `periods`,
 		// each element of which describes a calendar period. It also provides
 		// us with an empty <div> element with ID "periods" where the calendar
 		// periods should go. We populate the <div> according to the contents
 		// of the `periods` array.
-		
-		for (const period of periods)
+
+		for (const period of state.periods)
 			addCalendarPeriod(period, periodsDiv);
-			
+
 		circles = document.querySelectorAll('.circle');
-		
+
 		// Install mouse motion handler on calendar.
 		const calendar = document.getElementById('calendar');
 		calendar.addEventListener('mousemove', onMouseMove);
 		calendar.addEventListener('click', onMouseClick);
-		
+
 	}
 
 }
 
 
 function addCalendarPeriod(period, periodsDiv) {
-	
+
 	const periodDiv = document.createElement('div');
 	periodDiv.className = 'period';
-	
+
 	// Add period name.
 //	const nameHeading = document.createElement('h2');
 //	nameHeading.className = 'period-name';
 //	nameHeading.innerHTML = period.name;
 //	periodDiv.appendChild(nameHeading);
-	
+
 	// Add horizontal rule.
 	const rule = document.createElement('hr');
 	rule.className = 'period-rule';
 	periodDiv.appendChild(rule);
-	
+
 	// Add period rows.
 	const rows = getPeriodRows(period);
 	for (const row of rows)
 		addPeriodRow(row, periodDiv);
-	
+
 	periodsDiv.appendChild(periodDiv);
-	
+
 }
 
 
 function addPeriodRow(row, periodDiv) {
-	
+
 	const rowDiv = document.createElement('div');
 	rowDiv.className = 'row';
-	
+
 	for (const month of row)
 		addRowMonth(month, rowDiv);
-	
+
 	periodDiv.appendChild(rowDiv);
-	
+
 }
 
 
 function addRowMonth(month, rowDiv) {
-	
+
 	const monthDiv = document.createElement('div');
 	monthDiv.className = 'col-sm-4 month';
-	
+
 	if (month !== null) {
-		
+
 		// Add month name.
 		if (month.name !== null) {
 		    const nameHeading = document.createElement('h3');
@@ -119,96 +131,96 @@ function addRowMonth(month, rowDiv) {
 		    nameHeading.innerHTML = month.name;
 		    monthDiv.appendChild(nameHeading)
 		}
-		
+
 		// Add month days.
 		const daysDiv = document.createElement('div');
 		daysDiv.className = 'month-days';
 		for (const day of month.days)
 			addMonthDay(day, daysDiv)
 		monthDiv.appendChild(daysDiv);
-	
+
 	}
-	
+
 	rowDiv.appendChild(monthDiv);
-	
+
 }
 
 
 function addMonthDay(day, daysDiv) {
-	
+
 	const dayDiv = document.createElement('div');
 	dayDiv.className = 'day';
-	
+
 	if (day === null) {
-		
+
 		// Add empty div for layout.
 		const empty = document.createElement('div');
 		dayDiv.appendChild(empty);
-		
+
 	} else {
-		
+
 		// Get circle URL.
 		const date = formatDate(day.date);
 		const url = `/night?` +
-		            `station_mic=${stationMicName}&` +
-				    `detector=${detectorName}&` +
-				    `classification=${classification}&` +
+		            `station_mic=${state.stationMicName}&` +
+				    `detector=${state.detectorName}&` +
+				    `classification=${state.classification}&` +
 				    `date=${date}`;
-		
-		
+
+
 		// Add day number.
-		
+
 		let num = null;
-		
+
 		if (day.count === undefined) {
 			// no recordings for this day
-			
+
 			num = document.createElement('span');
-			
+
 		} else {
 			// one or more recordings for this day
-			
+
 		    num = document.createElement('a');
 	        num.href = url;
-		    
+
 		}
-		
+
 		num.innerHTML = day.date.getDate();
 		num.className = 'day-num';
 		dayDiv.appendChild(num);
-		
-		
+
+
 		// Add count circle.
 		if (day.count !== undefined) {
 			// one or more recordings for this day
-			
+
 			const circleDiv = document.createElement('div');
 			circleDiv.className = 'circle';
-			
+
 			// Set circle attributes.
 			circleDiv.setAttribute('data-url', url);
 			circleDiv.setAttribute('data-count', day.count.toString());
 			const radius = getCircleRadius(day.count).toFixed(1);
 			circleDiv.setAttribute('data-radius', radius);
-			
+
 			// Set circle size.
 			const diameter = 2 * radius;
 			const size = `${diameter}px`;
 			circleDiv.style.width = size;
 			circleDiv.style.height = size;
-			
+
 			// Set circle color.
 			circleDiv.style.background = getCircleColor(circleDiv);
 			circleDiv.style.opacity = .7;
-			
+
 			dayDiv.appendChild(circleDiv);
-			
+
 		}
-		
+
 	}
-	
+
 	daysDiv.appendChild(dayDiv);
-	
+
 }
 
 
@@ -219,50 +231,50 @@ function getCircleColor(circle) {
 
 
 function formatDate(d) {
-	
+
 	// Get four-digit year.
 	const yyyy = d.getFullYear().toString();
-	
+
 	// Get two-digit month.
 	let mm = (d.getMonth() + 1).toString();
 	if (mm.length === 1)
 		mm = '0' + mm;
-	
+
 	// Get two-digit day.
 	let dd = d.getDate().toString();
 	if (dd.length === 1)
 		dd = '0' + dd;
-	
+
 	return yyyy + '-' + mm + '-' + dd;
 
 }
 
 
 function getPeriodRows(period) {
-	
+
 	let months = period.months;
 	const numMonths = months.length;
-	
+
 	let initialMonths;
 	let finalMonths;
-	
+
 	if (numMonths > 3) {
-		
+
 		const numInitialEmptyMonths = (months[0].month - 1) % 3;
 		initialMonths = Array(numInitialEmptyMonths).fill(null);
-		
+
 		const m = (numInitialEmptyMonths + numMonths) % 3;
 		const numFinalEmptyMonths = m === 0 ? 0 : 3 - m;
 		finalMonths = Array(numFinalEmptyMonths).fill(null);
-		
+
 	} else {
 		// three or fewer months
-		
+
 		initialMonths = [];
 		finalMonths = Array(3 - numMonths).fill(null);
-		
+
 	}
-	
+
 	months = [].concat(initialMonths, months, finalMonths);
 
 	const rows = [];
@@ -271,52 +283,52 @@ function getPeriodRows(period) {
 		const monthInfos = rowMonths.map(getMonthInfo);
 		rows.push(monthInfos);
 	}
-	
+
 //    if (numMonths === 1) {
 //        // only one month in this period
-//        
+//
 //        // Suppress display of month name since it's same as period name.
 //        rows[0][0].name = null;
-//        
+//
 //    }
-        
+
 	return rows;
-	
+
 }
 
 
 function getMonthInfo(month) {
-	
+
 	if (month === null) {
-		
+
 		return null;
-		
+
 	} else {
-		
+
 	    const name = getMonthName(month.month) + ' ' + month.year;
 	    const numInitialEmptyDays = getWeekdayNumOfFirstMonthDay(month);
 	    const length = getMonthLength(month);
-	    
+
 	    // Create `dayCounts` object that maps day numbers (as strings)
 	    // to counts.
 	    const dayCounts = {}
 	    for (const dayCount of month.dayCounts) {
 	    	dayCounts[dayCount[0].toString()] = dayCount[1];
 	    }
-	    
+
 	    const days = Array(numInitialEmptyDays + length).fill(null);
-	    
+
 	    for (let dayNum = 1; dayNum <= length; dayNum++) {
 	    	const date = new Date(month.year, month.month - 1, dayNum);
 	        const count = dayCounts[dayNum.toString()]
 	        days[numInitialEmptyDays + dayNum - 1] =
 	            { 'date': date, 'count': count }
 	    }
-	    
+
 	    return { 'name': name, 'days': days }
-	    
+
 	}
-	
+
 }
 
 
@@ -329,7 +341,7 @@ const monthNames = [
  * Perhaps we could use the recent ECMAScript Internationalization API on
  * browsers that support it, and fall back on the current implementation
  * on browsers that don't (e.g. Safari)?
- * 
+ *
  * Relevant links:
  *     https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
  *         Global_Objects/DateTimeFormat
@@ -341,7 +353,7 @@ function getMonthName(month) {
 
 
 function getWeekdayNumOfFirstMonthDay(month) {
-	return (new Date(month.year, month.month - 1, 1)).getDay();	
+	return (new Date(month.year, month.month - 1, 1)).getDay();
 }
 
 
@@ -362,63 +374,63 @@ function onMouseMove(event) {
 
 	const x = event.pageX;
 	const y = event.pageY;
-	
+
 	const circle = getCircleUnderneath(x, y);
-	
+
 	if (circle !== highlightedCircle) {
 		// highlighted circle will change
-		
+
 		// Unhighlight old highlighted circle, if any.
 		if (highlightedCircle !== null) {
 		    highlightedCircle.style.backgroundColor =
 		    	getCircleColor(highlightedCircle);
 		    highlightedCircle.style.zIndex = '0';
 		}
-		
+
 		highlightedCircle = circle;
-		
+
 		// Highlight new highlighted circle, if any.
 		if (highlightedCircle !== null) {
 		    highlightedCircle.style.backgroundColor = _HIGHLIGHTED_CIRCLE_COLOR;
 		    highlightedCircle.style.zIndex = '1';
 		}
-		
+
 	}
-	
+
 }
 
 
 function getCircleUnderneath(x, y) {
-	
+
 	let circleUnderneath = null;
 	let distanceUnderneath = null;
-	
+
 	for (const circle of circles) {
-		
+
 		const rect = circle.getBoundingClientRect();
 		const left = rect.left + window.scrollX;
 		const top = rect.top + window.scrollY;
-		
+
 		const radius = parseInt(circle.getAttribute('data-radius'));
-		
+
 		const centerX = left + radius;
 		const centerY = top + radius;
-		
+
 		const distance = getDistance(x, y, centerX, centerY);
-		
+
 		if (distance <= radius &&
 		        (distanceUnderneath === null || distance < distanceUnderneath)) {
 			    // circle is underneath mouse, and its center is closer
 			    // to the mouse than the center of any other circle yet
 			    // encountered
-			
+
 			circleUnderneath = circle;
 			distanceUnderneath = distance;
-			
+
 		}
-		
+
 	}
-	
+
 	return circleUnderneath;
 
 }
@@ -435,19 +447,16 @@ function onMouseClick(event) {
 
 	const x = event.pageX;
 	const y = event.pageY;
-	
+
 	const circle = getCircleUnderneath(x, y);
-	
+
 	if (circle !== null) {
-		
+
 		const url = circle.getAttribute('data-url');
-		
+
 		if (url !== '')
 		    window.location.href = url;
-		
+
 	}
-	
+
 }
-
-
-window.onload = onLoad;

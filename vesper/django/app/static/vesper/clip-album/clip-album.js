@@ -219,10 +219,11 @@ export class ClipAlbum {
 
 
 	constructor(
-		    elements, clips, recordings, solarEventTimes, clipViewClasses,
-            settings = null, keyBindings = null) {
+		    elements, clipQuery, clips, recordings, solarEventTimes,
+            clipViewClasses, settings = null, keyBindings = null) {
 
 		this._elements = elements;
+        this._clipQuery = clipQuery;
 		this._clips = this._createClips(clips);
 
         // It's important to set the clip view class before the commands,
@@ -253,7 +254,7 @@ export class ClipAlbum {
 		    this._rugPlot = null;
 
 		// We use a Web Audio `AudioContext` object to play clips.
-		this._audioContext = new window.AudioContext();
+		this._audioContext = new AudioContext();
 
 		const clipManagerSettings = {
 			'maxNumClips': 2000,
@@ -345,7 +346,7 @@ export class ClipAlbum {
 
 	_updateTitle() {
 
-		const q = clipQuery;
+		const q = this.clipQuery;
 
 		const pageText = this._getTitlePageText();
 
@@ -441,6 +442,11 @@ export class ClipAlbum {
 	get elements() {
 		return this._elements;
 	}
+
+
+    get clipQuery() {
+        return this._clipQuery;
+    }
 
 
 	get clips() {

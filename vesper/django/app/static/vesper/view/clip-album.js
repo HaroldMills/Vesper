@@ -12,9 +12,26 @@ import { SpectrogramClipView }
 let clipAlbum = null;
 
 
+// Module-level state, set via `init` function.
+let state = null;
+
+
+export function init(state_) {
+
+    // Set module-level state.
+    state = state_;
+
+    // Install event handlers.
+    window.onload = onLoad;
+    window.onresize = onResize;
+    document.onkeypress = onKeyPress;
+
+}
+
+
 function onLoad() {
-    initSettingsModal();
-    createClipAlbum();
+	initSettingsModal();
+	createClipAlbum();
 }
 
 
@@ -91,12 +108,14 @@ function createClipAlbum() {
         'Spectrogram': SpectrogramClipView
     };
 
-    const settings = _findPreset(settingsPresets, settingsPresetPath);
-    const commands = _findPreset(commandsPresets, commandsPresetPath);
+    const settings = _findPreset(
+        state.settingsPresets, state.settingsPresetPath);
+    const commands = _findPreset(
+        state.commandsPresets, state.commandsPresetPath);
 
     clipAlbum = new ClipAlbum(
-        elements, clips, recordings, solarEventTimes, clipViewClasses,
-        settings, commands);
+        elements, state.clipQuery, state.clips, state.recordings,
+        state.solarEventTimes, clipViewClasses, settings, commands);
 
 }
 
@@ -128,10 +147,12 @@ function initSettingsModal() {
 //  showPresets('Clip Album Commands', commandsPresets);
 
     const settingsSelect = document.getElementById('settings');
-    populatePresetSelect(settingsSelect, settingsPresets, settingsPresetPath);
+    populatePresetSelect(
+        settingsSelect, state.settingsPresets, state.settingsPresetPath);
 
     const commandsSelect = document.getElementById('commands');
-    populatePresetSelect(commandsSelect, commandsPresets, commandsPresetPath);
+    populatePresetSelect(
+        commandsSelect, state.commandsPresets, state.commandsPresetPath);
 
     const okButton = document.getElementById('ok-button');
     okButton.onclick = onOkButtonClick;
@@ -164,11 +185,13 @@ function populatePresetSelect(select, presetInfos, presetPath) {
 
 function onOkButtonClick() {
 
-    if (settingsPresets.length > 0)
-        clipAlbum.settings = _getSelectedPreset('settings', settingsPresets);
+    if (state.settingsPresets.length > 0)
+        clipAlbum.settings = _getSelectedPreset(
+            'settings', state.settingsPresets);
 
-    if (commandsPresets.length > 0)
-        clipAlbum.commands = _getSelectedPreset('commands', commandsPresets);
+    if (state.commandsPresets.length > 0)
+        clipAlbum.commands = _getSelectedPreset(
+            'commands', state.commandsPresets);
 
 }
 
@@ -182,8 +205,3 @@ function _getSelectedPreset(selectId, presets) {
 function onKeyPress(e) {
     clipAlbum.onKeyPress(e);
 }
-
-
-window.onload = onLoad;
-window.onresize = onResize;
-document.onkeypress = onKeyPress;

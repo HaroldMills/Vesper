@@ -11,6 +11,26 @@
         <title>Clip Album - Vesper</title>
     {% endif %}
 
+    <script type="module">
+        import { init } from '/static/vesper/view/night.js';
+        init({
+            'clipQuery': {
+        	    'stationMicName': '{{station_mic_name}}',
+        	    'detectorName': '{{detector_name}}',
+        	    'classification': '{{classification}}',
+        	    'date': '{{date}}'
+            },
+            'solarEventTimes': {{solar_event_times_json|safe}},
+            'recordings': {{recordings_json|safe}},
+            'clips': {{clips_json|safe}},
+            'settingsPresets': {{settings_presets_json|safe}},
+            'settingsPresetPath': "{{settings_preset_path|default:''}}",
+            'commandsPresets': {{commands_presets_json|safe}},
+            'commandsPresetPath': "{{commands_preset_path|default:''}}"
+        });
+    </script>
+
+<!--
     <script>
         const clipQuery = {
             'stationMicName': '{{station_mic_name}}',
@@ -26,9 +46,9 @@
         const commandsPresets = {{commands_presets_json|safe}};
         const commandsPresetPath = '{{commands_preset_path|default:""}}';
     </script>
+-->
 
     {% load staticfiles %}
-    <script type="module" src="{% static 'vesper/view/clip-album.js' %}"></script>
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-album.css' %}">
 
 </head>
