@@ -34,7 +34,7 @@ def initialize(archive_dir_path, archive_settings):
 def _create_recording_dir_paths(archive_settings, archive_dir_path):
     
     try:
-        paths = archive_settings.recording_dir_paths
+        paths = archive_settings.recording_directories
         
     except AttributeError:
         return [archive_dir_path / 'Recordings']
