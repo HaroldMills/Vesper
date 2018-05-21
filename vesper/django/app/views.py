@@ -25,6 +25,8 @@ from vesper.django.app.export_clips_csv_file_form import \
 from vesper.django.app.export_clips_hdf5_file_form import \
     ExportClipsHdf5FileForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
+from vesper.django.app.update_recording_file_paths_form import \
+    UpdateRecordingFilePathsForm
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
@@ -476,6 +478,38 @@ def _create_export_clips_hdf5_file_command_spec(form):
             'start_date': data['start_date'],
             'end_date': data['end_date']
         }
+    }
+
+
+@login_required
+@csrf_exempt
+def update_recording_file_paths(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = UpdateRecordingFilePathsForm()
+
+    elif request.method == 'POST':
+
+        form = UpdateRecordingFilePathsForm(request.POST)
+
+        if form.is_valid():
+            command_spec = \
+                _create_update_recording_file_paths_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Other', form=form)
+
+    return render(request, 'vesper/update-recording-file-paths.html', context)
+
+
+def _create_update_recording_file_paths_command_spec(form):
+
+    return {
+        'name': 'update_recording_file_paths',
+        'arguments': {}
     }
 
 

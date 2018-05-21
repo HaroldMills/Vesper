@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Update Recording File Paths - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load staticfiles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+
+</head>
+
+<body>
+
+    {% include "vesper/navbar.html" %}
+
+    <h2>Update Recording File Paths</h2>
+
+    <p>
+        Updates all of the recording file paths of this archive. For each
+        recording file of the archive database, this command attempts to
+        locate the file by name in the archive's recording directories.
+        If the file is found, its path is updated in the archive database.
+        If the file is not found, an error message is logged and the path
+        stored for it in the archive database is not modified.
+    </p>
+    
+    <p>
+        The recording directories of an archive can be specified in the
+        <code>recording_directories</code> setting of the
+        <code>Archive Settings.yaml</code> file, located in the archive
+        directory. If that file is absent, or if it does not contain a
+        <code>recording_directories</code> settings, Vesper assumes that
+        recordings are located in the <code>Recordings</code> subdirectory
+        of the archive directory.
+    </p>
+
+    <!--
+        TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
+        of form elements. Or perhaps use django-bootstrap3 app? See
+        http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
+     -->
+
+    <form class="form" role="form" action="{% url 'update-recording-file-paths' %}" method="post">
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Update Paths</button>
+    </form>
+
+</body>
+
+</html>

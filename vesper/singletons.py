@@ -26,6 +26,7 @@ Command:
     - vesper.command.export_command.ExportCommand
     - vesper.command.import_command.ImportCommand
     - vesper.command.test_command.TestCommand
+    - vesper.command.update_recording_file_paths_command.UpdateRecordingFilePathsCommand
     
 Detector:
     - vesper.old_bird.old_bird_detector_redux_1_0.ThrushDetector
