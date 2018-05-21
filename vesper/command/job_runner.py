@@ -123,13 +123,22 @@ def run_job(job_info):
         # Create command from command spec.
         command = _create_command(job_info.command_spec)
         
-        # Log start message.
-        command_args = json.dumps(
-            command.arguments, sort_keys=False, indent=4,
-            cls=_CommandArgsEncoder)
-        logger.info(
-            'Job started for command "{}" with arguments:\n{}'.format(
-                command.name, command_args))
+        prefix = 'Job started for command "{}"'.format(command.name)
+        
+        if len(command.arguments) == 0:
+            logger.info('{} with no arguments.'.format(prefix))
+                        
+        else:
+            
+            logger.info('{} with arguments:'.format(prefix))
+            
+            # Log command arguments JSON.
+            args = json.dumps(
+                command.arguments, sort_keys=False, indent=4,
+                cls=_CommandArgsEncoder)
+            lines = args.splitlines()
+            for line in lines:
+                logger.info('    {}'.format(line))
     
         # Execute command.
         info = JobInfo(job_info.job_id, logging_config, job_info.stop_event)
