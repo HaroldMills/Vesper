@@ -268,10 +268,10 @@ function _scaleSamples(samples, factor) {
 function _getLowLevelSpectrogramSettings(settings, sampleRate) {
 
 	const s = settings;
-	const floatWindowSize = s.window.size * sampleRate;
+    const floatWindowSize = _getWindowSize(s.window.size, sampleRate);
     const windowSize = Math.round(floatWindowSize);
     const window = DataWindow.createWindow(s.window.type, windowSize);
-    const hopSize = Math.round(s.hopSize / 100 * floatWindowSize);
+    const hopSize = _getHopSize(s.hopSize, sampleRate, floatWindowSize);
     const dftSize = _getDftSize(windowSize, s);
 	const referencePower = _getReferencePower(s);
 
@@ -281,6 +281,39 @@ function _getLowLevelSpectrogramSettings(settings, sampleRate) {
 		dftSize: dftSize,
 		referencePower: referencePower
 	};
+
+}
+
+
+function _getWindowSize(size, sampleRate) {
+
+    // TODO: Add support for a variety of size units, for example:
+    //     100
+    //     100 samples
+    //     .005 s
+    //     .005 seconds
+    //     5 ms
+    //     5 milliseconds
+
+    return size * sampleRate;
+
+}
+
+
+function _getHopSize(size, sampleRate, windowSize) {
+
+    // TODO: Add support for a variety of size units, for example:
+    //     50
+    //     50 samples
+    //     .0025 s
+    //     .0025 seconds
+    //     2.5 ms
+    //     2.5 milliseconds
+    //     50%
+    //     50 %
+    //     50 percent
+
+    return Math.round(size / 100 * windowSize);
 
 }
 
