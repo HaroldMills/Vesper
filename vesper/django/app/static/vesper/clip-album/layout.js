@@ -413,7 +413,6 @@ export class NonuniformResizingLayout extends _Layout {
 
 		const xMargin = _toCssPercent(cv.xSpacing / 2.);
 		const yMargin = _toCssPercent(cv.ySpacing / 2.);
-		const margin = yMargin + ' ' + xMargin;
 
 		// Style the page div. It is important to set values for pretty
 		// much all of the flexbox properties here since we allow switching
@@ -426,7 +425,7 @@ export class NonuniformResizingLayout extends _Layout {
 		clipsDiv.style.alignContent = 'stretch';
 		clipsDiv.style.alignItems = 'stretch';
 		clipsDiv.style.width = 'auto';
-		clipsDiv.style.margin = margin;
+		clipsDiv.style.margin = '0';
 
 		const rowStartClipNums = this._pages[pageNum];
 		const clipViews = this.clipViews;
@@ -442,6 +441,7 @@ export class NonuniformResizingLayout extends _Layout {
 			rowDiv.style.flexDirection = 'row';
 			rowDiv.style.flex = '1 1 1px';
 			rowDiv.style.justifyContent = 'center';
+			rowDiv.style.margin = yMargin + ' 0';
 
 			if (i < rowStartClipNums.length) {
 				// row contains clips
@@ -481,9 +481,39 @@ export class NonuniformResizingLayout extends _Layout {
 				    clipDiv.style.minWidth = 'auto';
 				    clipDiv.style.width = 'auto';
 				    clipDiv.style.height = 'auto';
-				    clipDiv.style.margin = margin
+				    clipDiv.style.margin = '0 ' + xMargin;
 
 					rowDiv.appendChild(clipDiv);
+
+					// The following is a first attempt at a clip div that
+					// includes a label div above a view div. For some
+					// reason the spectrogram canvas takes up the whole
+					// clip div, even though its containing view div
+					// does not, thus hiding the label div.
+//					const clipDiv = document.createElement('div');
+//                    clipDiv.style.backgroundColor = 'gray';
+//                    clipDiv.style.display = 'flex';
+//                    clipDiv.style.flexDirection = 'column';
+//					
+//                    const labelDiv = document.createElement('div');
+//                    labelDiv.innerHTML = 'Bobo';
+//                    labelDiv.style.textAlign = 'center';
+//					labelDiv.style.flex = '1 1 auto';
+//                    clipDiv.appendChild(labelDiv);
+//					
+//                    const viewDiv = clipView.div;
+//                    viewDiv.className = 'clip';
+//                    viewDiv.style.flex = '1 1 auto';
+//                    clipDiv.appendChild(viewDiv);
+//                    
+//                    clipDiv.style.position = 'relative';
+//                    clipDiv.style.flex = '0 0 ' + _toCssPercent(width);
+//                    clipDiv.style.minWidth = 'auto';
+//                    clipDiv.style.width = 'auto';
+//                    clipDiv.style.height = 'auto';
+//                    clipDiv.style.margin = '0 ' + xMargin;
+
+                    rowDiv.appendChild(clipDiv);
 
 				}
 
