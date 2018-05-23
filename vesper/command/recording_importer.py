@@ -303,10 +303,10 @@ class RecordingImporter:
             
             for file_num, f in enumerate(r.files):
                 
-                # We store all paths as POSIX paths, even on Windows,
-                # for portability, since Python's `pathlib` module
-                # recognizes the slash as a path separator on all
-                # platforms, but not the backslash.
+                # We store all paths in the archive database as POSIX
+                # paths, even on Windows, for portability, since Python's
+                # `pathlib` module recognizes the slash as a path separator
+                # on all platforms, but not the backslash.
                 path = f.path.as_posix()
                 
                 file = RecordingFile(
@@ -326,7 +326,7 @@ class RecordingImporter:
             log = self._logger.info
             log('Imported recording {} with files:'.format(str(r.model)))
             for f in r.files:
-                log('    {}'.format(f.path))
+                log('    {}'.format(f.path.as_posix()))
             
 
 def _create_file_parser(spec):

@@ -78,16 +78,25 @@ class UpdateRecordingFilePathsCommand(Command):
                 self._get_recording_file_paths_aux(
                     child, recording_dir_path, recording_file_paths)
                 
+                
         # Visit files.
+        
         for child in children:
+            
             if not child.is_dir():
+                
                 try:
                     rel_path = child.relative_to(recording_dir_path)
                 except ValueError:
                     self._logger.error(
                         ('    Could not get path "{}" relative to directory '
                          '"{}".').format(child, recording_dir_path))
-                recording_file_paths[child.name] = str(rel_path)
+                    
+                # We store all paths in the archive database as POSIX
+                # paths, even on Windows, for portability, since Python's
+                # `pathlib` module recognizes the slash as a path separator
+                # on all platforms, but not the backslash.
+                recording_file_paths[child.name] = rel_path.as_posix()
                 
     
     
