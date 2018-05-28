@@ -12,7 +12,7 @@ SELECT
 FROM
     vesper_clip
 LEFT JOIN vesper_string_annotation
-    ON vesper_clip.id = vesper_string_annotation.clip_id
+    ON vesper_clip.id = vesper_string_annotation.clip_id and info_id = 1
 INNER JOIN vesper_station
     ON vesper_station.id = station_id
 INNER JOIN vesper_processor
