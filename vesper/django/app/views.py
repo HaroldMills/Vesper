@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 import yaml
 
+from vesper.django.app.adjust_clips_form import AdjustClipsForm
 from vesper.django.app.classify_form import ClassifyForm
 from vesper.django.app.delete_clips_form import DeleteClipsForm
 from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
@@ -25,14 +26,14 @@ from vesper.django.app.export_clips_csv_file_form import \
 from vesper.django.app.export_clips_hdf5_file_form import \
     ExportClipsHdf5FileForm
 from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
+from vesper.django.app.import_recordings_form import ImportRecordingsForm
+from vesper.django.app.models import (
+    AnnotationInfo, Clip, Job, Station, StringAnnotation)
 from vesper.django.app.update_recording_file_paths_form import \
     UpdateRecordingFilePathsForm
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
-from vesper.django.app.import_recordings_form import ImportRecordingsForm
-from vesper.django.app.models import (
-    AnnotationInfo, Clip, Job, Station, StringAnnotation)
 from vesper.singletons import job_manager, preference_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.annotation_utils as annotation_utils
@@ -586,6 +587,47 @@ def _create_delete_clips_command_spec(form):
             'start_date': data['start_date'],
             'end_date': data['end_date'],
             'retain_count': data['retain_count']
+        }
+    }
+
+
+@login_required
+@csrf_exempt
+def adjust_clips(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = AdjustClipsForm()
+
+    elif request.method == 'POST':
+
+        form = AdjustClipsForm(request.POST)
+
+        if form.is_valid():
+            command_spec = _create_adjust_clips_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Other', form=form)
+
+    return render(request, 'vesper/adjust-clips.html', context)
+
+
+def _create_adjust_clips_command_spec(form):
+
+    data = form.cleaned_data
+
+    return {
+        'name': 'adjust_clips',
+        'arguments': {
+            'detectors': data['detectors'],
+            'station_mics': data['station_mics'],
+            'classification': data['classification'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
+            'duration': data['duration'],
+            'annotation_name': data['annotation_name']
         }
     }
 

@@ -613,6 +613,10 @@ class RecordingFile(Model):
         return self.recording.sample_rate
     
     @property
+    def end_index(self):
+        return self.start_index + self.length
+    
+    @property
     def duration(self):
         return signal_utils.get_duration(self.length, self.sample_rate)
 

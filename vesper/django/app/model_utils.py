@@ -314,7 +314,66 @@ def get_absolute_recording_file_path(file_):
             manager = recording_manager.instance
             return manager.get_absolute_recording_file_path(path)
 
+
+def get_clip_recording_file(clip):
     
+    """
+    Gets the recording file containing the specified clip.
+    
+    Parameters
+    ----------
+    clip : Clip
+        the clip whose recording file is to be gotten.
+        
+    Returns
+    -------
+    RecordingFile or None
+        the recording file containing the specified clip, or `None` if
+        the recording has no files.
+        
+    Raises
+    ------
+    ValueError
+        If the clip is not contained by a single recording file, for
+        example if it straddles the boundary between two files.
+    """
+    
+    recording = clip.recording_channel.recording
+    files = recording.files
+    num_files = files.count()
+    
+    if num_files == 0:
+        return None
+    
+    else:
+        
+        for f in files.all().order_by('file_num'):
+            
+            file_end_index = f.end_index
+            
+            if clip.start_index < file_end_index:
+                # clip starts in this file
+                
+                if clip.end_index <= file_end_index:
+                    # clip is contained entirely in this file
+                    
+                    return f
+                
+                else:
+                    # clip is not contained entirely in this file
+                    
+                    raise ValueError(
+                        'Clip extends past end of recording file in which '
+                        'it starts.')
+            
+        # We should never get here, since by definition a clip is part of
+        # its parent recording.
+        raise ValueError(
+            'DATA INTEGRITY ERROR: Clip starts after end of last file of '
+            'parent recording. This is not supposed to happen, and should '
+            'be investigated ASAP.')
+
+
 def get_clip_counts(
         station, mic_output, detector, annotation_name=None,
         annotation_value=None):

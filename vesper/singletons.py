@@ -19,6 +19,7 @@ Classifier:
     - vesper.mpg_ranch.species_classifier.SpeciesClassifier
     
 Command:
+    - vesper.command.adjust_clips_command.AdjustClipsCommand
     - vesper.command.classify_command.ClassifyCommand
     - vesper.command.delete_clips_command.DeleteClipsCommand
     - vesper.command.delete_recordings_command.DeleteRecordingsCommand

@@ -33,8 +33,8 @@ urlpatterns = [
         name='update-recording-file-paths'),
     url(r'^delete-recordings/$', views.delete_recordings,
         name='delete-recordings'),
-    url(r'^delete-clips/$', views.delete_clips,
-        name='delete-clips'),
+    url(r'^delete-clips/$', views.delete_clips, name='delete-clips'),
+    url(r'^adjust-clips/$', views.adjust_clips, name='adjust-clips'),
 
     url(r'^stations/$', views.stations, name='stations'),
 
