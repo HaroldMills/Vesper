@@ -194,8 +194,15 @@ class RecordingManager:
                     end = 'there are no recording directories.'
                      
                 elif num_recording_dirs == 1:
-                    end = 'it is not in the recording directory "{}".'.format(
-                        self.recording_dir_paths[0])
+                    
+                    if not dir_path.exists():
+                        end = (
+                            'the recording directory "{}" could not be '
+                            'found.').format(self.recording_dir_paths[0])
+                    else:
+                        end = (
+                            'it is not in the recording directory '
+                            '"{}".').format(self.recording_dir_paths[0])
                          
                 else:
                     end = (
