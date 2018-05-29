@@ -40,6 +40,8 @@ _FILE_PATH = Path((
 
 
 _DETECTOR_SUBSTITUTIONS = {
+    'Old Bird Thrush Detector': 'Thrush',
+    'Old Bird Tseep Detector': 'Tseep',
     'Old Bird Thrush Detector Redux 1.1': 'Thrush',
     'Old Bird Tseep Detector Redux 1.1': 'Tseep'
 }
