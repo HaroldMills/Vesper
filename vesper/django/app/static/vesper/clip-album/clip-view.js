@@ -183,19 +183,41 @@ export class ClipView {
 
         this._lastMouseEvent = e;
 
-		const mouseText = this.getMouseText(e)
-
-        // if (name !== 'mousemove')
-        //     console.log('_onMouseEvent', name, mouseText);
-
-		if (mouseText !== null)
-			this.label.innerHTML = mouseText;
-		else
-			this._renderLabel();
+        // We must explicitly test for `mouseleave` in the following
+        // since the mouse position is (surprisingly) sometimes inside
+        // the view for such events. Even is the mouse event is not
+        // `mouseleave` we still call `_mouseInside` since we have
+        // found (again, surprisingly) that the mouse position is
+        // sometimes outside the view for `mousemove` events.
+        
+        if (e.type === 'mouseleave' || !this._mouseInside(e)) {
+            // mouse is outside of view
+            
+            this._renderLabel();
+            
+        } else {
+            // event is not mouseleave
+            
+    		const mouseText = this.getMouseText(e)
+    
+    		if (mouseText !== null) 
+    			this.label.innerHTML = mouseText;
+    		else
+    			this._renderLabel();
+    		
+        }
 
 	}
 
 
+    _mouseInside(e) {
+        const x = e.clientX;
+        const y = e.clientY;
+        const r = this.div.getBoundingClientRect();
+        return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    }
+    
+    
     /**
 	 * Gets text to display for the current mouse position.
 	 *

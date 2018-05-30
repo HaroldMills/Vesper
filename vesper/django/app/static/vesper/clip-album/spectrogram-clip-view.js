@@ -194,44 +194,34 @@ export class SpectrogramClipView extends ClipView {
     getMouseTimeAndFrequency(event) {
 
         const x = event.clientX;
-		const y = event.clientY;
+        const y = event.clientY;
+    
+        // The sides of the bounding client rectangle of an HTML element
+        // can have non-integer coordinates, but the mouse position has
+        // integer coordinates. We nudge the bounding rectangle coordinates
+        // to the nearest integers inside the rectangle for time-frequency
+        // computations so that the mouse position can attain the expected
+        // extremal times and frequencies. That is, we assign time zero
+        // to the leftmost mouse coordinate that is inside the rectangle,
+        // the clip duration to the righmost coordinate, the low view
+        // frequency to the bottommost coordinate, and the high view
+        // frequency to the topmost coordinate.
+        const r = this.div.getBoundingClientRect();
+        const left = Math.ceil(r.left);
+        const right = Math.floor(r.right);
+        const top = Math.ceil(r.top);
+        const bottom = Math.floor(r.bottom);
+    
+		const clip = this.clip;
 
-	    // The sides of the bounding client rectangle of an HTML element
-		// can have non-integer coordinates. We bump them to the nearest
-		// integers for comparison to the integer mouse coordinates, and
-		// assign time zero to the resulting left coordinate, the clip
-		// duration to the right coordinate, the low view frequency to
-		// the bottom coordinate, and the high view frequency to the top
-		// coordinate.
-		const r = this.div.getBoundingClientRect();
-		const left = Math.ceil(r.left);
-		const right = Math.floor(r.right);
-		const top = Math.ceil(r.top);
-		const bottom = Math.floor(r.bottom);
+		const time = (x - left) / (right - left) * clip.span;
 
-		if (x < left || x > right || y < top || y > bottom)
-			// mouse outside view
+		const [lowFreq, highFreq] = TimeFrequencyUtils.getFreqRange(
+            this.settings.spectrogram.display, clip.sampleRate / 2);
+		const deltaFreq = highFreq - lowFreq;
+		const freq = highFreq - (y - top) / (bottom - top) * deltaFreq;
 
-			// The mouse is outside of the view for mouseleave events, and
-			// (for some reason) even for some mousemove events.
-
-			return null;
-
-		else {
-			// mouse inside view
-
-			const clip = this.clip;
-
-			const time = (x - left) / (right - left) * clip.span;
-
-			const [lowFreq, highFreq] = TimeFrequencyUtils.getFreqRange(
-                this.settings.spectrogram.display, clip.sampleRate / 2);
-			const deltaFreq = highFreq - lowFreq;
-			const freq = highFreq - (y - top) / (bottom - top) * deltaFreq;
-
-			return [time, freq];
-
-		}
+		return [time, freq];
 
 	}
 
