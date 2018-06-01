@@ -11,13 +11,16 @@ describe('Clip', () => {
 
 		const num = 23;
 		const id = 24;
+		const startIndex = 100;
 		const length = 1000;
 		const sampleRate = 22050.;
 		const startTime = "2017-05-18 10:19:00 EDT";
-		const clip = new Clip(num, id, length, sampleRate, startTime);
+		const clip = new Clip(
+		    num, id, startIndex, length, sampleRate, startTime);
 
 		expect(clip.num).toBe(num);
 		expect(clip.id).toBe(id);
+		expect(clip.startIndex).toBe(startIndex);
 		expect(clip.length).toBe(length);
 		expect(clip.sampleRate).toBe(sampleRate);
 		expect(clip.startTime).toBe(startTime);
