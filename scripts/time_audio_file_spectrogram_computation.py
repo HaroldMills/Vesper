@@ -12,7 +12,7 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Harold/2018 Harold Archive/Recordings')
-FILE_PATH = DIR_PATH / 'Harold_2018-04-23_23.26.48_Z.wav'
+FILE_PATH = DIR_PATH / 'Harold_2018-06-01_00.05.45_Z.wav'
 
 APPROXIMATE_READ_SIZE = 100000
 
