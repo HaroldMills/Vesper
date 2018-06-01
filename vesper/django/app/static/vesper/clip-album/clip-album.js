@@ -219,10 +219,11 @@ export class ClipAlbum {
 
 
 	constructor(
-		    elements, clipQuery, clips, recordings, solarEventTimes,
+		    elements, readOnly, clipQuery, clips, recordings, solarEventTimes,
             clipViewClasses, settings = null, keyBindings = null) {
 
 		this._elements = elements;
+		this._readOnly = readOnly;
         this._clipQuery = clipQuery;
 		this._clips = this._createClips(clips);
 
@@ -444,6 +445,11 @@ export class ClipAlbum {
 	}
 
 
+	get readOnly() {
+	    return this._readOnly;
+	}
+	
+	
     get clipQuery() {
         return this._clipQuery;
     }

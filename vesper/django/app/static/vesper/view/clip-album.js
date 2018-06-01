@@ -30,7 +30,8 @@ export function init(state_) {
 
 
 function onLoad() {
-	initSettingsModal();
+    if (!state.archiveReadOnly)
+        initSettingsModal();
 	createClipAlbum();
 }
 
@@ -114,8 +115,9 @@ function createClipAlbum() {
         state.commandsPresets, state.commandsPresetPath);
 
     clipAlbum = new ClipAlbum(
-        elements, state.clipQuery, state.clips, state.recordings,
-        state.solarEventTimes, clipViewClasses, settings, commands);
+        elements, state.archiveReadOnly, state.clipQuery, state.clips,
+        state.recordings, state.solarEventTimes, clipViewClasses,
+        settings, commands);
 
 }
 

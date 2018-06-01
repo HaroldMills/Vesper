@@ -22,7 +22,8 @@
             'settingsPresets': {{settings_presets_json|safe}},
             'settingsPresetPath': "{{settings_preset_path|default:''}}",
             'commandsPresets': {{commands_presets_json|safe}},
-            'commandsPresetPath': "{{commands_preset_path|default:''}}"
+            'commandsPresetPath': "{{commands_preset_path|default:''}}",
+            'archiveReadOnly':  {{archive_read_only|yesno:"true,false"}}
         });
     </script>
 
@@ -35,11 +36,15 @@
 
     {% include "vesper/navbar.html" %}
 
-    <button type="button" class="settings-button" data-toggle="modal" data-target="#settings-modal">
-        <span class="glyphicon glyphicon-cog settings-button-span"></span>
-    </button>
-
-    {% include "vesper/night-settings.html" %}
+    {% if not archive_read_only %}
+    
+	    <button type="button" class="settings-button" data-toggle="modal" data-target="#settings-modal">
+	        <span class="glyphicon glyphicon-cog settings-button-span"></span>
+	    </button>
+	
+	    {% include "vesper/night-settings.html" %}
+	    
+	{% endif %}
 
     <h3 id="title"></h3>
     <div id="rug-plot"></div>

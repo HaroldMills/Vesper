@@ -272,12 +272,15 @@ export class ClipView {
         const canvas = document.createElement('canvas');
         canvas.className = 'clip-overlay-canvas';
 
-        // See note in `_createDiv` method about why we install a click
-        // listener on the overlay canvas instead of on the containing div.
         canvas.addEventListener('mouseenter', e => this._onMouseEnter(e));
 	    canvas.addEventListener('mousemove', e => this._onMouseMove(e));
 	    canvas.addEventListener('mouseleave', e => this._onMouseLeave(e));
-        canvas.addEventListener('click', e => this._onOverlayCanvasClick(e));
+	    
+        // See note in `_createDiv` method about why we install a click
+        // listener on the overlay canvas instead of on the containing div.
+	    if (!this.parent.readOnly)
+            canvas.addEventListener(
+                'click', e => this._onOverlayCanvasClick(e));
 
         this._div.appendChild(canvas);
 

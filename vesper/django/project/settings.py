@@ -17,6 +17,11 @@ from vesper.archive_settings import archive_settings
 from vesper.archive_paths import archive_paths
 
 
+# Set this `True` to omit UI and URLs that support archive modification,
+# including Django admin and login views.
+ARCHIVE_READ_ONLY = True
+
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

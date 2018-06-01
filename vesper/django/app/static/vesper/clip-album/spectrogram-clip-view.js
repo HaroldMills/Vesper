@@ -263,7 +263,7 @@ function _getLowLevelSpectrogramSettings(settings, sampleRate) {
     const window = DataWindow.createWindow(s.window.type, windowSize);
     const hopSize = _getHopSize(s.hopSize, sampleRate, floatWindowSize);
     const dftSize = _getDftSize(windowSize, s);
-	const referencePower = _getReferencePower(s);
+	const referencePower = _getReferencePower(s.referencePower);
 
 	return {
 		window: window,
@@ -344,7 +344,7 @@ function _isPowerOfTwo(n) {
 
 
 function _getReferencePower(referencePower) {
-    return settings.referencePower || _DEFAULT_REFERENCE_POWER;
+    return referencePower || _DEFAULT_REFERENCE_POWER;
 }
 
 
@@ -527,11 +527,13 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
 
 function _getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
 
-    // if (settings.display.timeStretchEnabled) {
-	//
-	// 	return [0, canvasWidth];
-	//
-    // } else {
+    if (settings.display.timeStretchEnabled) {
+        // spectrogram should be stretched to fill canvas width
+	
+	 	return [0, canvasWidth];
+	
+    } else {
+        // spectrogram should not be stretched to fill canvas width
 
 		const sampleRate = clip.sampleRate;
 		const startTime = settings.low.window.length / 2 / sampleRate;
@@ -543,6 +545,6 @@ function _getSpectrogramXExtent(settings, numSpectra, clip, canvasWidth) {
 		const width = (endTime - startTime) / pixelPeriod;
 		return [x, width];
 
-    // }
+    }
 
 }

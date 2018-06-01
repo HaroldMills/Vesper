@@ -17,14 +17,21 @@ Including another URLconf
 
 from django.conf import settings
 from django.conf.urls import include, url
-from django.contrib import admin
 
 
 urlpatterns = [
-    url(r'^', include('django.contrib.auth.urls')),
     url(r'^', include('vesper.django.app.urls')),
-    url(r'^admin/', admin.site.urls),
 ]
+
+
+if not settings.ARCHIVE_READ_ONLY:
+    
+    from django.contrib import admin
+    
+    urlpatterns += [
+        url(r'^', include('django.contrib.auth.urls')),
+        url(r'^admin/', admin.site.urls)
+    ]
 
 
 # Django Debug Toolbar

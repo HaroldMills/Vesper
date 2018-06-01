@@ -6,6 +6,7 @@ from django import forms, urls
 from django.db import transaction
 from django.db.models import F, Max, Min
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.http import (
     HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
@@ -89,37 +90,37 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
 
 - name: Import
   dropdown:
-
+ 
       - name: Archive Data
         url_name: import-archive-data
-
+ 
       - name: Recordings
         url_name: import-recordings
-
+ 
 - name: Detect
   url_name: detect
-
+ 
 - name: Classify
   url_name: classify
-
+ 
 - name: Export
   dropdown:
-
+ 
       - name: Clips CSV File
         url_name: export-clips-csv-file
-
+ 
       - name: Clip Sound Files
         url_name: export-clip-sound-files
-
+ 
 - name: Other
   dropdown:
-
+ 
       - name: Delete Recordings
         url_name: delete-recordings
-
+ 
       - name: Delete Clips
         url_name: delete-clips
-
+ 
 ''')
 
 
@@ -161,36 +162,41 @@ def _create_navbar_dropdown_item(data):
 
 def _create_navbar_right_items(request):
 
-    user = request.user
-
-    # The value of the "next" parameter is a URL that is embedded in the
-    # URL of which the "next" parameter is a part. We must quote the
-    # embedded URL to ensure that it does not interfere with parsing the
-    # containing URL.
-    query = '?next=' + quote(request.get_full_path())
-
-    if user.is_authenticated():
-        # user is logged in
-
-        item = Bunch(
-            name=user.username,
-            type='dropdown',
-            items=[
-                Bunch(
-                    name='Log Out',
-                    type='link',
-                    url='/logout/' + query)
-            ])
-
+    if settings.ARCHIVE_READ_ONLY:
+        return []
+    
     else:
-        # user is not logged in
-
-        item = Bunch(
-            name='Log In',
-            type='link',
-            url='/login/' + query)
-
-    return [item]
+        
+        user = request.user
+    
+        # The value of the "next" parameter is a URL that is embedded in the
+        # URL of which the "next" parameter is a part. We must quote the
+        # embedded URL to ensure that it does not interfere with parsing the
+        # containing URL.
+        query = '?next=' + quote(request.get_full_path())
+    
+        if user.is_authenticated():
+            # user is logged in
+    
+            item = Bunch(
+                name=user.username,
+                type='dropdown',
+                items=[
+                    Bunch(
+                        name='Log Out',
+                        type='link',
+                        url='/logout/' + query)
+                ])
+    
+        else:
+            # user is not logged in
+    
+            item = Bunch(
+                name='Log In',
+                type='link',
+                url='/login/' + query)
+    
+        return [item]
 
 
 _navbar_items = _create_navbar_items()
@@ -1178,7 +1184,8 @@ def night(request):
         settings_presets_json=settings_presets_json,
         settings_preset_path=settings_preset_path,
         commands_presets_json=commands_presets_json,
-        commands_preset_path=commands_preset_path)
+        commands_preset_path=commands_preset_path,
+        archive_read_only=settings.ARCHIVE_READ_ONLY)
 
     return render(request, 'vesper/night.html', context)
 
@@ -1369,7 +1376,8 @@ def clip_album(request):
         settings_presets_json=settings_presets_json,
         settings_preset_path=settings_preset_path,
         commands_presets_json=commands_presets_json,
-        commands_preset_path=commands_preset_path)
+        commands_preset_path=commands_preset_path,
+        archive_read_only=settings.ARCHIVE_READ_ONLY)
 
     return render(request, 'vesper/clip-album.html', context)
 
