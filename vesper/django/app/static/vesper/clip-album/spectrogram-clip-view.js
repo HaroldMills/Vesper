@@ -28,53 +28,12 @@ export class SpectrogramClipView extends ClipView {
 
     constructor(parent, clip, settings) {
 
+        settings = _updateSettingsIfNeeded(settings, clip.sampleRate);
+        
         super(parent, clip, settings);
-
-        this._updateSettingsIfNeeded();
 
         const overlays = this._createOverlays(settings);
         this._overlays = overlays.concat(this._overlays);
-
-    }
-
-
-    // Updates spectrogram settings from deprecated format to current
-    // format if needed.
-    _updateSettingsIfNeeded() {
-
-        if (this._settings.spectrogram.computation !== undefined)
-            // settings are already in current format
-
-            return;
-
-        const old = this._settings.spectrogram;
-
-        this._settings.spectrogram = {
-
-            'computation': {
-                'window': {
-                    'type': 'Hann',
-                    'size': old.windowSize / this.clip.sampleRate
-                },
-                'hopSize': 100 * old.hopSize / old.windowSize,
-                'spectralInterpolationFactor':
-                    old.dftSize / _getPowerOfTwoCeil(old.windowSize),
-                'referencePower': old.referencePower
-            },
-
-            'display': {
-                'frequencyRange': _DEFAULT_FREQUENCY_RANGE,
-                'powerRange': [old.lowPower, old.highPower],
-                'colormap': _DEFAULT_COLORMAP,
-                'reverseColormap': _DEFAULT_REVERSE_COLORMAP,
-                'smoothImage': old.smoothingEnabled
-            },
-
-            'overlays': []
-
-        }
-
-        console.log('_updateSettingsIfNeeded', this._settings.spectrogram);
 
     }
 
@@ -108,6 +67,19 @@ export class SpectrogramClipView extends ClipView {
     }
 
 
+    // Since we override the settings setter, we must also override
+    // the getter.
+    get settings() {
+        return super.settings;
+    }
+
+    
+    set settings(settings) {
+        settings = _updateSettingsIfNeeded(settings, this.clip.sampleRate);
+        super.settings = settings;
+    }
+    
+    
     get commandableName() {
 		return 'Spectrogram Clip View';
 	}
@@ -225,6 +197,45 @@ export class SpectrogramClipView extends ClipView {
 
 	}
 
+
+}
+
+
+function _updateSettingsIfNeeded(settings, sampleRate) {
+    
+    if (settings.spectrogram.computation === undefined) {
+
+        const old = settings.spectrogram;
+    
+        settings.spectrogram = {
+    
+            'computation': {
+                'window': {
+                    'type': 'Hann',
+                    'size': old.windowSize / sampleRate
+                },
+                'hopSize': 100 * old.hopSize / old.windowSize,
+                'spectralInterpolationFactor':
+                    old.dftSize === undefined ? 1 :
+                        old.dftSize / _getPowerOfTwoCeil(old.windowSize),
+                'referencePower': old.referencePower
+            },
+    
+            'display': {
+                'frequencyRange': _DEFAULT_FREQUENCY_RANGE,
+                'powerRange': [old.lowPower, old.highPower],
+                'colormap': _DEFAULT_COLORMAP,
+                'reverseColormap': _DEFAULT_REVERSE_COLORMAP,
+                'smoothImage': old.smoothingEnabled
+            },
+    
+            'overlays': []
+    
+        }
+        
+    }
+    
+    return settings;
 
 }
 
