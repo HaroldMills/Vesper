@@ -274,7 +274,7 @@ export class ClipAlbum {
 
 	_initUiElements() {
 	    
-	    let button;
+	    let anchor, button;
 	    
 	    // previous page button
 	    button = document.getElementById('previous-page-button');
@@ -289,17 +289,17 @@ export class ClipAlbum {
         this._nextPageButton = button;
         
         // go to page anchor
-        const anchor = document.getElementById('go-to-page-anchor');
+        anchor = document.getElementById('go-to-page-anchor');
         anchor.addEventListener(
             'click', e => this._onGoToPageAnchorClick(e));
         this._goToPageAnchor = anchor;
 
         // go to page modal
         this._installBootstrapEventListener(
-            '#go-to-page', 'shown.bs.modal',
+            '#go-to-page-modal', 'shown.bs.modal',
             (e) => this._onGoToPageModalShown());
         this._installBootstrapEventListener(
-            '#go-to-page', 'hidden.bs.modal',
+            '#go-to-page-modal', 'hidden.bs.modal',
             (e) => this._onGoToPageModalHidden());
         
         // go to page modal OK button

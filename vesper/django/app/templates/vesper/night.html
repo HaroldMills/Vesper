@@ -35,19 +35,9 @@
 <body>
 
     {% include "vesper/navbar.html" %}
-
-    {% if not archive_read_only %}
-    
-	    <button type="button" class="settings-button" data-toggle="modal" data-target="#settings-modal">
-	        <span class="glyphicon glyphicon-cog settings-button-span"></span>
-	    </button>
-	
-	    {% include "vesper/night-settings.html" %}
-	    
-	{% endif %}
-	
-	{% include "vesper/go-to-page.html" %}
-
+	{% include "vesper/go-to-page-modal.html" %}
+    {% include "vesper/clip-album-settings-modal.html" %}
+        
     <div id="title-div">
     
         <h3 id="title"></h3>
@@ -63,12 +53,16 @@
             </button>
 
             <div class="dropdown nav-dropdown">
+            
                 <button type="button" class="btn-xs btn-default dropdown-toggle nav-button" data-toggle="dropdown">
                     <span class="glyphicon glyphicon-option-vertical"></span>
                 </button>
+                
                 <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                    <li><a id="go-to-page-anchor" class="dropdown-item nav-anchor" href="#go-to-page" data-toggle="modal">Go To Page...</a></li>
+                    <li><a id="go-to-page-anchor" class="dropdown-item nav-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go To Page...</a></li>
+                    <li><a id="settings-anchor" class="dropdown-item nav-anchor" href="#settings" data-toggle="modal" data-target="#settings-modal">Settings...</a></li>
                 </ul>
+                                
             </div>
             
         </div>

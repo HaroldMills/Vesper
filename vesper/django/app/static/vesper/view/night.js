@@ -144,15 +144,17 @@ function initSettingsModal() {
 //	showPresets('Clip Album Settings', settingsPresets);
 //	showPresets('Clip Album Commands', commandsPresets);
 
-	const settingsSelect = document.getElementById('settings');
+	const settingsSelect =
+	    document.getElementById('settings-modal-settings-select');
 	populatePresetSelect(
         settingsSelect, state.settingsPresets, state.settingsPresetPath);
 
-	const commandsSelect = document.getElementById('commands');
+	const commandsSelect =
+	    document.getElementById('settings-modal-commands-select');
 	populatePresetSelect(
         commandsSelect, state.commandsPresets, state.commandsPresetPath);
 
-	const okButton = document.getElementById('ok-button');
+	const okButton = document.getElementById('settings-modal-ok-button');
 	okButton.onclick = onOkButtonClick;
 
 }
@@ -185,11 +187,11 @@ function onOkButtonClick() {
 
 	if (state.settingsPresets.length > 0)
 		clipAlbum.settings = _getSelectedPreset(
-            'settings', state.settingsPresets);
+            'settings-modal-settings-select', state.settingsPresets);
 
 	if (state.commandsPresets.length > 0)
 		clipAlbum.commands = _getSelectedPreset(
-            'commands', state.commandsPresets);
+            'settings-modal-commands-select', state.commandsPresets);
 
 }
 
