@@ -223,6 +223,8 @@ export class ClipAlbum {
             clipViewClasses, settings = null, keyBindings = null) {
 
 		this._elements = elements;
+		this._initUiElements();
+		
 		this._readOnly = readOnly;
         this._clipQuery = clipQuery;
 		this._clips = this._createClips(clips);
@@ -270,7 +272,147 @@ export class ClipAlbum {
 	}
 
 
-	_createClips(clipInfos) {
+	_initUiElements() {
+	    
+	    let button;
+	    
+	    // previous page button
+	    button = document.getElementById('previous-page-button');
+	    button.addEventListener(
+	        'click', e => this._onPreviousPageButtonClick(e));
+	    this._previousPageButton = button;
+ 
+	    // next page button
+        button = document.getElementById('next-page-button');
+        button.addEventListener(
+            'click', e => this._onNextPageButtonClick(e));
+        this._nextPageButton = button;
+        
+        // go to page anchor
+        const anchor = document.getElementById('go-to-page-anchor');
+        anchor.addEventListener(
+            'click', e => this._onGoToPageAnchorClick(e));
+        this._goToPageAnchor = anchor;
+
+        // go to page modal
+        this._installBootstrapEventListener(
+            '#go-to-page', 'shown.bs.modal',
+            (e) => this._onGoToPageModalShown());
+        this._installBootstrapEventListener(
+            '#go-to-page', 'hidden.bs.modal',
+            (e) => this._onGoToPageModalHidden());
+        
+        // go to page modal OK button
+        button = document.getElementById('go-to-page-modal-ok-button');
+        button.addEventListener(
+            'click', e => this._onGoToPageModalOkButtonClick(e));
+        
+        this._installKeyPressEventListener();
+
+	}
+	
+	
+	_onPreviousPageButtonClick(event) {
+	    this.pageNum -= 1;
+	}
+	
+
+	_onNextPageButtonClick(event) {
+	    this.pageNum += 1;
+	}
+	
+	
+	_onGoToPageAnchorClick(event) {
+	    
+	    if (this.numPages !== 0) {
+	        
+	        // Set label to include page number range.
+	        const label = document.getElementById('go-to-page-modal-label');
+	        label.innerHTML = `Page number (1 to ${this.numPages}):`;
+	        
+	        // Configure number input.
+	        const number = document.getElementById('go-to-page-modal-number');
+	        number.min = 1;
+	        number.max = this.numPages;
+	        number.value = '';
+	        
+	    }
+	    
+	}
+	
+	
+    /*
+     * We somewhat reluctantly use Bootstrap events for some purposes,
+     * since doing so requires explicit use of JQuery, which we prefer
+     * to avoid. For example, we use Bootstrap events to hear when a
+     * Bootstrap modal is shown or hidden, since it is much more difficult
+     * (or perhaps impossible: see
+     * https://stackoverflow.com/questions/24211185/
+     * twitter-bootstrap-why-do-modal-events-work-in-jquery-but-not-in-pure-js)
+     * to do this with regular HTML events. A Bootstrap modal can be
+     * hidden when (1) the user presses the OK button, (2) the user
+     * presses the close button, or (3) the user clicks on a portion of
+     * the page that isn't obscured by the modal. The "hidden.bs.modal"
+     * event is fired for all of these cases, allowing them to be handled
+     * by a single event listener. Things are not nearly as straightforward
+     * using just HTML events.
+     */
+    _installBootstrapEventListener(selector, eventName, listener) {
+        $(selector).on(eventName, listener)
+    }
+    
+    
+    _onGoToPageModalShown() {
+        
+        this._uninstallKeyPressEventListener();
+        
+        const number = document.getElementById('go-to-page-modal-number');
+        number.focus();
+        
+    }
+    
+    
+    _uninstallKeyPressEventListener() {
+        document.onkeypress = null;
+    }
+    
+    
+    _onGoToPageModalHidden() {
+        
+        this._installKeyPressEventListener();
+        
+        const number = document.getElementById('go-to-page-modal-number');
+        number.blur();
+        
+    }
+    
+    
+    _installKeyPressEventListener() {
+        document.onkeypress = e => this.onKeyPress(e);
+    }
+    
+    
+	_onGoToPageModalOkButtonClick(event) {
+	    
+	    const form = document.getElementById('go-to-page-modal-form');
+	    
+	    if (form.checkValidity()) {
+	        
+    	    const number = document.getElementById('go-to-page-modal-number');
+    	    const value = Number.parseInt(number.value);
+            this.pageNum = value - 1;
+            
+	    } else {
+	        
+	        event.preventDefault();
+	        event.stopImmediatePropagation();
+	        
+	    }
+	    
+	}
+	
+	
+    _createClips(clipInfos) {
 
 		const clips = [];
 
@@ -341,6 +483,7 @@ export class ClipAlbum {
 		}
 
 		this._updateTitle();
+		this._updateButtonStates();
 
 	}
 
@@ -393,6 +536,20 @@ export class ClipAlbum {
 	}
 
 
+	_updateButtonStates() {
+	    
+	    this._previousPageButton.disabled =
+	        this.numPages === 0 || this.pageNum === 0;
+	    
+	    this._nextPageButton.disabled =
+	        this.numPages === 0 || this.pageNum === this.numPages - 1;
+	    
+	    // TODO: Figure out why this doesn't disable the dropdown item.
+	    this._goToPageAnchor.disabled = this.numPages === 0;
+	    
+	}
+	
+	
 	/*
 	 * We would like for the size of a clip view overlay canvas to track
 	 * its client size (i.e. its size on the screen), so that the canvas
@@ -409,13 +566,17 @@ export class ClipAlbum {
 	 */
     _resizeClipViewOverlayCanvasesIfNeeded() {
 
-        const clipViews = this._clipViews;
-        const [startNum, endNum] =
-            this._layout.getPageClipNumRange(this.pageNum);
-
-        for (let i = startNum; i < endNum; i++) {
-            const clipView = clipViews[i];
-            clipView.resizeOverlayCanvasIfNeeded();
+        if (this.numPages > 0) {
+            
+            const clipViews = this._clipViews;
+            const [startNum, endNum] =
+                this._layout.getPageClipNumRange(this.pageNum);
+    
+            for (let i = startNum; i < endNum; i++) {
+                const clipView = clipViews[i];
+                clipView.resizeOverlayCanvasIfNeeded();
+            }
+            
         }
 
     }
@@ -758,13 +919,17 @@ export class ClipAlbum {
 
 	set pageNum(pageNum) {
 
-		if (pageNum >= 0 && pageNum < this.numPages) {
-			this._pageNum = pageNum;
+	    const newPageNum = this._clipPageNum(pageNum);
+	    
+	    if (this.numPages != 0 && newPageNum !== this.pageNum) {
+	        // page number will change
+
+			this._pageNum = newPageNum;
 			this._selection = this._createSelection();
-			const range = this.getPageClipNumRange(pageNum);
+			const range = this.getPageClipNumRange(newPageNum);
 			if (this._rugPlot !== null)
 			    this._rugPlot.setPageClipNumRange(range);
-			this._clipManager.pageNum = pageNum;
+			this._clipManager.pageNum = newPageNum;
 		}
 
 		this._update();
@@ -772,6 +937,20 @@ export class ClipAlbum {
 	}
 
 
+	_clipPageNum(pageNum) {
+	    
+	    if (this.numPages == 0 || pageNum < 0)
+	        return 0;
+	    
+	    else if (pageNum > this.numPages - 1)
+	        return this.numPages - 1;
+	    
+	    else
+	        return pageNum;
+	    
+	}
+	
+	
 	onResize() {
 	    if (this._rugPlot !== null)
 		    this._rugPlot.onResize();

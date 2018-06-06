@@ -71,10 +71,15 @@ body {
   background-color: transparent;
 }
 
-#title {
-	
-  font-weight: bold;
+#title-div {
+  display: inline-block;
   text-align: center;
+}
+
+#title {
+
+  display: inline-block;
+  font-weight: bold;
   
   /* Puts title below navbar rather than behind it. */
   margin-top: 70px;
@@ -107,6 +112,32 @@ body {
   margin: 0;
   padding: 0;
   background-color: transparent;
+}
+
+#nav-buttons {
+	display: inline-block;
+	vertical-align: text-bottom;
+	margin-left: 20px;
+}
+
+.nav-button:disabled {
+	color: #dddddd;
+}
+
+.nav-anchor:disabled {
+	color: #dddddd;
+}
+
+.nav-dropdown {
+    display: inline-block;
+}
+
+#go-to-page-modal-number {
+	width: 6em;
+}
+
+#go-to-page-modal-number:invalid {
+	box-shadow: 0 0 5px 1px red;
 }
 
 #clips {

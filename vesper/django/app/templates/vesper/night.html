@@ -45,10 +45,40 @@
 	    {% include "vesper/night-settings.html" %}
 	    
 	{% endif %}
+	
+	{% include "vesper/go-to-page.html" %}
 
-    <h3 id="title"></h3>
-    <div id="rug-plot"></div>
+    <div id="title-div">
+    
+        <h3 id="title"></h3>
+    
+        <div id="nav-buttons">
+        
+            <button id="previous-page-button" type="button" class="btn-xs btn-default nav-button" data-toggle="tooltip" title="Previous Page">
+                <span class="glyphicon glyphicon-chevron-left"></span>
+            </button>
+            
+            <button id="next-page-button" type="button" class="btn-xs btn-default nav-button" data-toggle="tooltip" title="Next Page">
+                <span class="glyphicon glyphicon-chevron-right"></span>
+            </button>
+
+            <div class="dropdown nav-dropdown">
+                <button type="button" class="btn-xs btn-default dropdown-toggle nav-button" data-toggle="dropdown">
+                    <span class="glyphicon glyphicon-option-vertical"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a id="go-to-page-anchor" class="dropdown-item nav-anchor" href="#go-to-page" data-toggle="modal">Go To Page...</a></li>
+                </ul>
+            </div>
+            
+        </div>
+        
+        <div id="rug-plot"></div>
+        
+    </div>
+
     <div id="clips"></div>
+    
     <!-- div id='footer'></div> -->
 
 </body>

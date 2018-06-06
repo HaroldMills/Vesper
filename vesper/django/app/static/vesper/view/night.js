@@ -21,7 +21,6 @@ export function init(state_) {
     // Install event handlers.
     window.onload = onLoad;
     window.onresize = onResize;
-    document.onkeypress = onKeyPress;
 
 }
 
@@ -198,9 +197,4 @@ function onOkButtonClick() {
 function _getSelectedPreset(selectId, presets) {
 	const select = document.getElementById(selectId);
 	return presets[select.selectedIndex][1];
-}
-
-
-function onKeyPress(e) {
-	clipAlbum.onKeyPress(e);
 }
