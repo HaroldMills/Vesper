@@ -27,22 +27,22 @@
   }
 }
 
-#nav-buttons {
+#title-buttons {
     display: inline-block;
     vertical-align: text-bottom;
     margin-left: 20px;
 }
 
-.nav-button:disabled {
+.title-button:disabled {
     color: #dddddd;
 }
 
-.nav-anchor:disabled {
-    color: #dddddd;
-}
-
-.nav-dropdown {
+.title-dropdown {
     display: inline-block;
+}
+
+.title-dropdown-anchor:disabled {
+    color: #dddddd;
 }
 
 .modal-select {

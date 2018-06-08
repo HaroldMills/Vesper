@@ -56,6 +56,36 @@ body {
   
 }
 
+#title-buttons {
+    display: inline-block;
+    vertical-align: text-bottom;
+    margin-left: 20px;
+}
+
+.title-button:disabled {
+    color: #dddddd;
+}
+
+.title-dropdown {
+    display: inline-block;
+}
+
+.title-dropdown-anchor:disabled {
+    color: #dddddd;
+}
+
+.modal-select {
+    width: auto;
+}
+
+#go-to-page-modal-number {
+    width: 6em;
+}
+
+#go-to-page-modal-number:invalid {
+    box-shadow: 0 0 5px 1px red;
+}
+
 #rug-plot {
   width: 95%;
   max-width: 600px;
@@ -82,36 +112,6 @@ body {
   margin: 0;
   padding: 0;
   background-color: transparent;
-}
-
-#nav-buttons {
-	display: inline-block;
-	vertical-align: text-bottom;
-	margin-left: 20px;
-}
-
-.nav-button:disabled {
-	color: #dddddd;
-}
-
-.nav-anchor:disabled {
-	color: #dddddd;
-}
-
-.nav-dropdown {
-    display: inline-block;
-}
-
-#go-to-page-modal-number {
-	width: 6em;
-}
-
-#go-to-page-modal-number:invalid {
-	box-shadow: 0 0 5px 1px red;
-}
-
-.modal-select {
-    width: auto;
 }
 
 #clips {
