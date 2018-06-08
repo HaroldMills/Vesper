@@ -565,9 +565,10 @@ export class ClipAlbum {
 	    nextButton.disabled =
 	        this.numPages === 0 || this.pageNum === this.numPages - 1;
 	    
-	    // TODO: Figure out why this doesn't disable the dropdown item.
         const anchor = document.getElementById('go-to-page-anchor');
-	    anchor.disabled = this.numPages === 0;
+        const disabled = this.numPages <= 1;
+        anchor.parentElement.className = disabled ? 'disabled' : '';
+	    anchor.disabled = disabled;
 	    
 	}
 	
