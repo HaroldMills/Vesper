@@ -1,12 +1,4 @@
-'use strict'
-
-
 import { ClipAlbum } from '/static/vesper/clip-album/clip-album.js';
-
-// TODO: Clip album view should not know about this. Move it to the
-// clip album class or an extension manager.
-import { SpectrogramClipView }
-    from '/static/vesper/clip-album/spectrogram-clip-view.js';
 
 
 let clipAlbum = null;
@@ -24,7 +16,6 @@ export function init(state_) {
     // Install event handlers.
     window.onload = onLoad;
     window.onresize = onResize;
-    document.onkeypress = onKeyPress;
 
 }
 
@@ -32,7 +23,7 @@ export function init(state_) {
 function onLoad() {
     if (!state.archiveReadOnly)
         initSettingsModal();
-	createClipAlbum();
+    createClipAlbum();
 }
 
 
@@ -98,112 +89,76 @@ pages defined send events in response to mouse clicks?]
 
 
 function createClipAlbum() {
-
-    const elements = {
-        'titleHeading': document.getElementById('title'),
-        'rugPlotDiv': document.getElementById('rug-plot'),
-        'clipsDiv': document.getElementById('clips')
-    };
-
-    const clipViewClasses = {
-        'Spectrogram': SpectrogramClipView
-    };
-
-    const settings = _findPreset(
-        state.settingsPresets, state.settingsPresetPath);
-    const commands = _findPreset(
-        state.commandsPresets, state.commandsPresetPath);
-
-    clipAlbum = new ClipAlbum(
-        elements, state.archiveReadOnly, state.clipQuery, state.clips,
-        state.recordings, state.solarEventTimes, clipViewClasses,
-        settings, commands);
-
-}
-
-
-function _findPreset(presetInfos, presetPath) {
-
-    for (const [path, preset] of presetInfos)
-        if (path.join('/') === presetPath)
-            return preset;
-
-    return null;
-
+	clipAlbum = new ClipAlbum(state);
 }
 
 
 function onResize() {
-    clipAlbum.onResize();
+	clipAlbum.onResize();
 }
 
 
 function initSettingsModal() {
 
-    // TODO: Rather than having the server send presets to the client,
-    // perhaps the client should retrieve the presets from the server
-    // with XHRs. We could set up URLs so that a client could request
-    // all presets of a specified type as JSON.
+	// TODO: Rather than having the server send presets to the client,
+	// perhaps the client should fetch the presets from the server.
+	// We could set up URLs so that a client could request all presets
+    // of a specified type as JSON.
 
-//  showPresets('Clip Album Settings', settingsPresets);
-//  showPresets('Clip Album Commands', commandsPresets);
-
-    const settingsSelect = document.getElementById('settings');
-    populatePresetSelect(
+	const settingsSelect =
+	    document.getElementById('settings-modal-settings-select');
+	populatePresetSelect(
         settingsSelect, state.settingsPresets, state.settingsPresetPath);
 
-    const commandsSelect = document.getElementById('commands');
-    populatePresetSelect(
-        commandsSelect, state.commandsPresets, state.commandsPresetPath);
+	const keyBindingsSelect =
+	    document.getElementById('settings-modal-key-bindings-select');
+	populatePresetSelect(
+        keyBindingsSelect, state.keyBindingsPresets,
+        state.keyBindingsPresetPath);
 
-    const okButton = document.getElementById('ok-button');
-    okButton.onclick = onOkButtonClick;
+    const okButton = document.getElementById('settings-modal-ok-button');
+	okButton.onclick = onOkButtonClick;
 
 }
 
 
 function showPresets(type_name, info) {
-    console.log(`${type_name} presets:`);
-    for (const [path, preset] of info)
-        console.log('    ' + path);
+	console.log(`${type_name} presets:`);
+	for (const [path, preset] of info)
+		console.log('    ' + path);
 }
 
 
 function populatePresetSelect(select, presetInfos, presetPath) {
 
-    for (const [i, [path, preset]] of presetInfos.entries()) {
+	for (const [i, [path, preset]] of presetInfos.entries()) {
 
-        const option = document.createElement('option');
-        option.text = path.join('/');
-        select.add(option);
+		const option = document.createElement('option');
+	    option.text = path.join('/');
+		select.add(option);
 
-        if (option.text === presetPath)
-            select.selectedIndex = i;
+		if (option.text === presetPath)
+			select.selectedIndex = i;
 
-    }
+	}
 
 }
 
 
 function onOkButtonClick() {
 
-    if (state.settingsPresets.length > 0)
-        clipAlbum.settings = _getSelectedPreset(
-            'settings', state.settingsPresets);
+	if (state.settingsPresets.length > 0)
+		clipAlbum.settings = _getSelectedPreset(
+            'settings-modal-settings-select', state.settingsPresets);
 
-    if (state.commandsPresets.length > 0)
-        clipAlbum.commands = _getSelectedPreset(
-            'commands', state.commandsPresets);
+	if (state.keyBindingsPresets.length > 0)
+		clipAlbum.commands = _getSelectedPreset(
+            'settings-modal-key-bindings-select', state.keyBindingsPresets);
 
 }
 
 
 function _getSelectedPreset(selectId, presets) {
-    const select = document.getElementById(selectId);
-    return presets[select.selectedIndex][1];
-}
-
-
-function onKeyPress(e) {
-    clipAlbum.onKeyPress(e);
+	const select = document.getElementById(selectId);
+	return presets[select.selectedIndex][1];
 }

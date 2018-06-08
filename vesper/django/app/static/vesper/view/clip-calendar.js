@@ -24,6 +24,7 @@ export function init(state_) {
 
 function onLoad() {
 	setTitle();
+	initClipQueryModal();
 	setCalendarPeriods();
 }
 
@@ -39,6 +40,36 @@ function setTitle() {
 
 	document.title = `Clip Calendar - ${title}`;
 
+}
+
+
+function initClipQueryModal() {
+    
+    const okButton = document.getElementById('clip-query-modal-ok-button');
+    okButton.onclick = onOkButtonClick;
+    
+}
+
+
+function onOkButtonClick(event) {
+
+    // TODO: Only set URL if query has changed.
+
+    const stationMic = document.getElementById(
+        'clip-query-modal-station-mic-select').value;
+    
+    const detector = document.getElementById(
+        'clip-query-modal-detector-select').value;
+    
+    const classification = document.getElementById(
+        'clip-query-modal-classification-select').value;
+    
+    const url =
+        `/clip-calendar/?station_mic=${stationMic}&detector=${detector}&` +
+        `classification=${classification}`;
+    
+    window.location.href = url;
+        
 }
 
 

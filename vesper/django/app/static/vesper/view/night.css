@@ -150,7 +150,6 @@ body {
   visibility: visible;
 }
 
-
 /*
  * The top and bottom attributes of the play button are set in Javascript,
  * since they depend on the label location.

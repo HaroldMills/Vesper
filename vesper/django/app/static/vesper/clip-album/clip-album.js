@@ -8,6 +8,9 @@ import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
 import { PreloadingClipManager }
     from '/static/vesper/clip-album/clip-manager.js';
 import { Layout } from '/static/vesper/clip-album/layout.js';
+import { SpectrogramClipView }
+    from '/static/vesper/clip-album/spectrogram-clip-view.js';
+
 
 
 /*
@@ -129,13 +132,11 @@ const _DEFAULT_SETTINGS = {
         },
 
 		spectrogram: {
-			windowSize: .005,
-			hopSize: .0025,
+			windowSize: 100,
+			hopSize: 20,
 			referencePower: 1e-9,
 			lowPower: 10,
 			highPower: 100,
-			startFrequency: 0,
-			endFrequency: 11000,
 			smoothingEnabled: true,
 			timePaddingEnabled: false
 		}
@@ -155,12 +156,12 @@ const _ALLOWED_KEYS = new Set(
 
 const _DEFAULT_KEY_BINDINGS = {
 
-    'interpreter_initialization_commands': [
+    interpreterInitializationCommands: [
         ['set_persistent_variable', 'annotation_name', 'Classification'],
         ['set_persistent_variable', 'annotation_scope', 'Selection']
     ],
 
-    'key_bindings': {
+    keyBindings: {
 
         'Clip Album': {
             '>': ['show_next_page'],
@@ -218,60 +219,76 @@ const _commandableDelegate = new CommandableDelegate(_COMMAND_SPECS);
 export class ClipAlbum {
 
 
-	constructor(
-		    elements, readOnly, clipQuery, clips, recordings, solarEventTimes,
-            clipViewClasses, settings = null, keyBindings = null) {
+    constructor(state) {
+        
+        this._elements = {
+            'titleHeading': document.getElementById('title'),
+            'rugPlotDiv': document.getElementById('rug-plot'),
+            'clipsDiv': document.getElementById('clips')
+        };
+        
+        this._initUiElements();
+        
+        this._readOnly = state.archiveReadOnly;
+        this._clipQuery = state.clipQuery;
+        this._clips = this._createClips(state.clips);
+        
+        this._settingsPresets = state.settingsPresets;
+        this._settingsPresetPath = state.settingsPresetPath;
+        const settings = _getPreset(
+            this.settingsPresets, this.settingsPresetPath);
 
-		this._elements = elements;
-		this._initUiElements();
-		
-		this._readOnly = readOnly;
-        this._clipQuery = clipQuery;
-		this._clips = this._createClips(clips);
-
-        // It's important to set the clip view class before the commands,
-        // since setting the commands creates a new command interpreter,
-        // a process that accesses the clip view class.
-        this._clipViewClasses = clipViewClasses;
-        this._clipViewClass = this.clipViewClasses[settings.clipViewType];
-
-		this._settings = settings === null ? _DEFAULT_SETTINGS : settings;
-
+        this._settings = settings === null ? _DEFAULT_SETTINGS : settings;
+        
+        // It's important to set the clip view class before the key
+        // bindings, since setting the key bindings creates a new
+        // keyboard input interpreter, a process that accesses the
+        // clip view class.
+        this._clipViewClasses = {
+            'Spectrogram': SpectrogramClipView
+        };
+        this._clipViewClass = this.clipViewClasses[this.settings.clipViewType];
+        
         this._commandableDelegate = _commandableDelegate;
-
+        
+        this._keyBindingsPresets = state.keyBindingsPresets;
+        this._keyBindingsPresetPath = state.keyBindingsPresetPath;
+        const keyBindings = _getPreset(
+            this.keyBindingsPresets, this.keyBindingsPresetPath);
+        
         // This creates the keyboard input interpreter.
-		this.keyBindings =
+        this.keyBindings =
             keyBindings === null ? _DEFAULT_KEY_BINDINGS : keyBindings;
-
-		this._clipViews = this._createClipViews(this.settings);
+        
+        this._clipViews = this._createClipViews(this.settings);
 
         this._resizeThrottle = new _WindowResizeThrottle(this);
 
-		this._layout = this._createLayout(this.settings);
+        this._layout = this._createLayout(this.settings);
 
-		if (this.elements.rugPlotDiv !== null)
-    		this._rugPlot = new NightRugPlot(
-    			this, this.elements.rugPlotDiv, this.clips, recordings,
-    			solarEventTimes);
-		else
-		    this._rugPlot = null;
+        if (this.elements.rugPlotDiv !== null)
+            this._rugPlot = new NightRugPlot(
+                this, this.elements.rugPlotDiv, this.clips, state.recordings,
+                state.solarEventTimes);
+        else
+            this._rugPlot = null;
 
-		// We use a Web Audio `AudioContext` object to play clips.
-		this._audioContext = new AudioContext();
+        // We use a Web Audio `AudioContext` object to play clips.
+        this._audioContext = new AudioContext();
 
-		const clipManagerSettings = {
-			'maxNumClips': 2000,
-			'numPrecedingPreloadedPages': 1,
-			'numFollowingPreloadedPages': 1
-		};
-		this._clipManager = new PreloadingClipManager(
-			clipManagerSettings, this.clips, this._layout.pageStartClipNums);
+        const clipManagerSettings = {
+            'maxNumClips': 2000,
+            'numPrecedingPreloadedPages': 1,
+            'numFollowingPreloadedPages': 1
+        };
+        this._clipManager = new PreloadingClipManager(
+            clipManagerSettings, this.clips, this._layout.pageStartClipNums);
 
-		this.pageNum = 0;
-
-	}
-
-
+        this.pageNum = 0;
+        
+    }
+    
+    
 	_initUiElements() {
 	    
 	    let anchor, button;
@@ -307,6 +324,12 @@ export class ClipAlbum {
         button.addEventListener(
             'click', e => this._onGoToPageModalOkButtonClick(e));
         
+        // clip query modal OK button
+        button = document.getElementById('clip-query-modal-ok-button');
+        if (button !== null)
+            button.addEventListener(
+                'click', e => this._onClipQueryModalOkButtonClick(e));
+        
         this._installKeyPressEventListener();
 
 	}
@@ -322,6 +345,7 @@ export class ClipAlbum {
 	}
 	
 	
+	// TODO: Move this to Bootstrap modal show event listener?
 	_onGoToPageAnchorClick(event) {
 	    
 	    if (this.numPages !== 0) {
@@ -412,6 +436,28 @@ export class ClipAlbum {
 	}
 	
 	
+    _onClipQueryModalOkButtonClick(event) {
+        
+        // TODO: Only set URL if query has changed.
+
+        const stationMic = document.getElementById(
+            'clip-query-modal-station-mic-select').value;
+        
+        const detector = document.getElementById(
+            'clip-query-modal-detector-select').value;
+        
+        const classification = document.getElementById(
+            'clip-query-modal-classification-select').value;
+        
+        const url =
+            `/clip-album/?station_mic=${stationMic}&detector=${detector}&` +
+            `classification=${classification}`;
+        
+        window.location.href = url;
+        
+    }
+
+
     _createClips(clipInfos) {
 
 		const clips = [];
@@ -631,6 +677,16 @@ export class ClipAlbum {
     }
 
 
+    get settingsPresets() {
+        return this._settingsPresets;
+    }
+    
+    
+    get settingsPresetPath() {
+        return this._settingsPresetPath;
+    }
+    
+    
 	get settings() {
 		return this._settings;
 	}
@@ -724,6 +780,16 @@ export class ClipAlbum {
 	}
 
 
+	get keyBindingsPresets() {
+	    return this._keyBindingsPresets;
+	}
+	
+	
+	get keyBindingsPresetPath() {
+	    return this._keyBindingsPresetPath;
+	}
+	
+	
 	get keyBindings() {
 		return this._keyBindings;
 	}
@@ -1357,6 +1423,23 @@ class _WindowResizeThrottle {
     }
 
 
+}
+
+
+function _getPreset(presetInfos, presetPath) {
+
+    for (const [path, preset] of presetInfos)
+        if (path.join('/') === presetPath)
+            return preset;
+
+    return null;
+
+}
+
+
+function _getSelectedPreset(selectId, presets) {
+    const select = document.getElementById(selectId);
+    return presets[select.selectedIndex][1];
 }
 
 

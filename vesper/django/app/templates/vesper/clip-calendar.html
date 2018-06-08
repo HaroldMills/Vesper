@@ -29,6 +29,7 @@
 <body>
 
     {% include "vesper/navbar.html" %}
+    {% include "vesper/clip-query-modal.html" %}
 
     <div id="main-div" class="container">
 
@@ -87,10 +88,28 @@
 
         <div id="calendar">
 
-            <h2 id="title" class="calendar-title">
-                <!-- The title is set by Javascript. -->
-            </h2>
+            <div id="title-div">
+            
+                <h3 id="title"></h3>
 
+		        <div id="nav-buttons">
+		        
+		            <div class="dropdown nav-dropdown">
+		            
+		                <button type="button" class="btn-xs btn-default dropdown-toggle nav-button" data-toggle="dropdown">
+		                    <span class="caret"></span>
+		                </button>
+		                
+		                <ul class="dropdown-menu dropdown-menu-right" role="menu">
+		                    <li><a id="clip-query-anchor" class="dropdown-item nav-anchor" href="#query" data-toggle="modal" data-target="#clip-query-modal">Edit Clip Query...</a></li>
+		                </ul>
+		                                
+		            </div>
+		            
+		        </div>
+		        
+		    </div>
+		    
             <div id="periods"></div>
 
         </div>

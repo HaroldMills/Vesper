@@ -12,7 +12,7 @@
     {% endif %}
 
     <script type="module">
-        import { init } from '/static/vesper/view/night.js';
+        import { init } from '/static/vesper/view/clip-album.js';
         init({
             'clipQuery': {
         	    'stationMicName': '{{station_mic_name}}',
@@ -25,8 +25,8 @@
             'clips': {{clips_json|safe}},
             'settingsPresets': {{settings_presets_json|safe}},
             'settingsPresetPath': "{{settings_preset_path|default:''}}",
-            'commandsPresets': {{commands_presets_json|safe}},
-            'commandsPresetPath': "{{commands_preset_path|default:''}}",
+            'keyBindingsPresets': {{commands_presets_json|safe}},
+            'keyBindingsPresetPath': "{{commands_preset_path|default:''}}",
             'archiveReadOnly': {{archive_read_only|yesno:"true,false"}}
         });
     </script>
@@ -39,6 +39,9 @@
 <body>
 
     {% include "vesper/navbar.html" %}
+    {% include "vesper/go-to-page-modal.html" %}
+    {% include "vesper/clip-query-modal.html" %}
+    {% include "vesper/clip-album-settings-modal.html" %}
 
     <div id="main-div" class="container">
 
@@ -97,19 +100,40 @@
 
     </div>
 
-    {% if not archive_read_only %}
-    
-        <button type="button" class="settings-button" data-toggle="modal" data-target="#settings-modal">
-            <span class="glyphicon glyphicon-cog settings-button-span"></span>
-        </button>
-    
-        {% include "vesper/night-settings.html" %}
-        
-    {% endif %}
+    <div id="title-div">
 
-    <h3 id="title"></h3>
-    <!-- <div id="rug-plot"></div> -->
+        <h3 id="title"></h3>
+    
+        <div id="nav-buttons">
+        
+            <button id="previous-page-button" type="button" class="btn-xs btn-default nav-button" data-toggle="tooltip" title="Previous Page">
+                <span class="glyphicon glyphicon-chevron-left"></span>
+            </button>
+            
+            <button id="next-page-button" type="button" class="btn-xs btn-default nav-button" data-toggle="tooltip" title="Next Page">
+                <span class="glyphicon glyphicon-chevron-right"></span>
+            </button>
+
+            <div class="dropdown nav-dropdown">
+            
+                <button type="button" class="btn-xs btn-default dropdown-toggle nav-button" data-toggle="dropdown">
+                    <span class="caret"></span>
+                </button>
+                
+                <ul class="dropdown-menu dropdown-menu-right" role="menu">
+                    <li><a id="go-to-page-anchor" class="dropdown-item nav-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go To Page...</a></li>
+                    <li><a id="settings-anchor" class="dropdown-item nav-anchor" href="#settings" data-toggle="modal" data-target="#settings-modal">Edit Settings...</a></li>
+                    <li><a id="clip-query-anchor" class="dropdown-item nav-anchor" href="#query" data-toggle="modal" data-target="#clip-query-modal">Edit Clip Query...</a></li>
+                </ul>
+                                
+            </div>
+            
+        </div>
+        
+    </div>
+        
     <div id="clips"></div>
+    
     <!-- div id='footer'></div> -->
 
 </body>

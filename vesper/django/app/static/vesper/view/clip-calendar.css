@@ -7,15 +7,46 @@
   margin-right: 10px;
 }
 
-.calendar-title {
+#main-div {
+  text-align: center;
+}
+
+#title-div {
+  display: inline-block;
+}
+
+#title {
+  display: inline-block;
   font-weight: bold;
   margin-bottom: 20px;
 }
 
 @media screen and (max-width: 767px) {
-  .calendar-title {
+  #title {
     text-align: center;
   }
+}
+
+#nav-buttons {
+    display: inline-block;
+    vertical-align: text-bottom;
+    margin-left: 20px;
+}
+
+.nav-button:disabled {
+    color: #dddddd;
+}
+
+.nav-anchor:disabled {
+    color: #dddddd;
+}
+
+.nav-dropdown {
+    display: inline-block;
+}
+
+.modal-select {
+    width: auto;
 }
 
 .period {

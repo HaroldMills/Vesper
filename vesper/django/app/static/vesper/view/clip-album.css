@@ -34,7 +34,7 @@ body {
   */
   height: 100%;
   margin: 0;
-
+  
 }
 
 .query-panel {
@@ -47,44 +47,18 @@ body {
   margin-right: 10px;
 }
 
-.settings-button {
-  background-color: transparent;
-  color: gray;
-  font-size: 1.4em;
-  position: absolute;
-  top: 55px;
-  right: 5px;
-  padding: 0;
-  border: none;
-  outline: none;
-}
-
-.settings-button:hover {
-  color: #606060;
-}
-
-.settings-button:active {
-  color: black;
-}
-
-
-/* settings modal control labels */
-.modal-body .form-horizontal .control-label {
-  width: auto;
-}
-
-/* settings modal controls */
-.modal-body .form-horizontal .form-control {
-  width: auto;
-}
-
 ::selection {
   background-color: transparent;
 }
 
-#title {
-  font-weight: bold;
+#title-div {
+  display: inline-block;
   text-align: center;
+}
+
+#title {
+  display: inline-block;
+  font-weight: bold;
   margin-top: 0;
 }
 
@@ -114,6 +88,36 @@ body {
   margin: 0;
   padding: 0;
   background-color: transparent;
+}
+
+#nav-buttons {
+	display: inline-block;
+	vertical-align: text-bottom;
+	margin-left: 20px;
+}
+
+.nav-button:disabled {
+	color: #dddddd;
+}
+
+.nav-anchor:disabled {
+	color: #dddddd;
+}
+
+.nav-dropdown {
+    display: inline-block;
+}
+
+#go-to-page-modal-number {
+	width: 6em;
+}
+
+#go-to-page-modal-number:invalid {
+	box-shadow: 0 0 5px 1px red;
+}
+
+.modal-select {
+    width: auto;
 }
 
 #clips {

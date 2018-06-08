@@ -21,8 +21,8 @@
             'clips': {{clips_json|safe}},
             'settingsPresets': {{settings_presets_json|safe}},
             'settingsPresetPath': "{{settings_preset_path|default:''}}",
-            'commandsPresets': {{commands_presets_json|safe}},
-            'commandsPresetPath': "{{commands_preset_path|default:''}}",
+            'keyBindingsPresets': {{commands_presets_json|safe}},
+            'keyBindingsPresetPath': "{{commands_preset_path|default:''}}",
             'archiveReadOnly':  {{archive_read_only|yesno:"true,false"}}
         });
     </script>
@@ -55,12 +55,12 @@
             <div class="dropdown nav-dropdown">
             
                 <button type="button" class="btn-xs btn-default dropdown-toggle nav-button" data-toggle="dropdown">
-                    <span class="glyphicon glyphicon-option-vertical"></span>
+                    <span class="caret"></span>
                 </button>
                 
                 <ul class="dropdown-menu dropdown-menu-right" role="menu">
                     <li><a id="go-to-page-anchor" class="dropdown-item nav-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go To Page...</a></li>
-                    <li><a id="settings-anchor" class="dropdown-item nav-anchor" href="#settings" data-toggle="modal" data-target="#settings-modal">Settings...</a></li>
+                    <li><a id="settings-anchor" class="dropdown-item nav-anchor" href="#settings" data-toggle="modal" data-target="#settings-modal">Edit Settings...</a></li>
                 </ul>
                                 
             </div>
