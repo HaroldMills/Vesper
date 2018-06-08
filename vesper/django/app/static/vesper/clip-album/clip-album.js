@@ -20,80 +20,6 @@ import { SpectrogramClipView }
  */
 
 
-/*
-settings:
-
-    layout_type: Nonuniform Resizing Clip Views
-
-    layout:
-
-        page:
-            width: seconds
-            height: rows
-
-        clip_view:
-            x_spacing: percent of page width
-            y_spacing: percent of page width
-            selection_outline_width: pixels
-            initial_padding: seconds
-            final_padding: seconds
-
-        clip_label:
-		    visible: true
-		    location: bottom
-		    color: white
-		    font_size: .8
-		    classification_included: true
-		    start_time_included: false
-		    hidden_classification_prefixes: ["Call."]
-
-    clip_view_type: Spectrogram
-
-    clip_view:
-
-        frequency_axis:
-            start: 5000
-            end: 11000
-
-	    spectrogram:
-		    window_size: 100
-		    hop_size: 25
-		    dft_size: 256
-		    reference_power: 1
-		    low_power: 10
-		    high_power: 100
-		    smoothing_enabled: true
-
-	    colors:
-	        spectrogram_colormap: gray
-
-
-For nonuniform clip view layouts, the time axis initial and final
-padding settings affect both clip view layout and content. This leads
-to a dilemma: in a clip album settings object, should those settings
-be considered layout settings or clip view settings? I have chosen
-to consider them layout settings, since then a change of layout type
-affects only layout settings, and never clip view settings. However,
-this leaves us with settings that affect clip view content in both
-the layout and clip view settings, which complicates clip view
-initialization and settings updates. A possible solution would be to
-augment the clip view settings of a clip album settings object with
-the relevant layout settings before initializing a clip view or
-updating its settings.
-
-A similar dilemma arises concerning clip label settings, and
-probably other display elements. Could we perhaps have a
-nonredundant, hierarchical settings namespace, but allow a given
-setting to appear in multiple places in the settings UI?
-
-Perhaps it would be be helpful to allow presets that specify values
-for some settings but not others. Then one could maintain settings
-presets for separate concerns (e.g. layouts, spectrogram parameters,
-spectrogram colors).
-
-*/
-
-
 const _DEFAULT_SETTINGS = {
 
 	layoutType: 'Nonuniform Resizing Clip Views',
@@ -221,20 +147,22 @@ export class ClipAlbum {
 
     constructor(state) {
         
+        this._readOnly = state.archiveReadOnly;
+        this._clipQuery = state.clipQuery;
+        this._clips = this._createClips(state.clips);
+        this._settingsPresets = state.settingsPresets;
+        this._settingsPresetPath = state.settingsPresetPath;
+        this._keyBindingsPresets = state.keyBindingsPresets;
+        this._keyBindingsPresetPath = state.keyBindingsPresetPath;
+        
         this._elements = {
             'titleHeading': document.getElementById('title'),
             'rugPlotDiv': document.getElementById('rug-plot'),
             'clipsDiv': document.getElementById('clips')
         };
-        
+            
         this._initUiElements();
         
-        this._readOnly = state.archiveReadOnly;
-        this._clipQuery = state.clipQuery;
-        this._clips = this._createClips(state.clips);
-        
-        this._settingsPresets = state.settingsPresets;
-        this._settingsPresetPath = state.settingsPresetPath;
         const settings = _getPreset(
             this.settingsPresets, this.settingsPresetPath);
 
@@ -251,8 +179,6 @@ export class ClipAlbum {
         
         this._commandableDelegate = _commandableDelegate;
         
-        this._keyBindingsPresets = state.keyBindingsPresets;
-        this._keyBindingsPresetPath = state.keyBindingsPresetPath;
         const keyBindings = _getPreset(
             this.keyBindingsPresets, this.keyBindingsPresetPath);
         
@@ -289,9 +215,27 @@ export class ClipAlbum {
     }
     
     
+    _createClips(clipInfos) {
+
+        const clips = [];
+
+        for (const entry of clipInfos.entries()) {
+            clips.push(this._createClip(entry));
+        }
+
+        return clips;
+
+    }
+
+
+    _createClip([clipNum, clipInfo]) {
+        return new Clip(clipNum, ...clipInfo);
+    }
+
+
 	_initUiElements() {
 	    
-	    let anchor, button;
+	    let button;
 	    
 	    // previous page button
 	    button = document.getElementById('previous-page-button');
@@ -306,29 +250,14 @@ export class ClipAlbum {
         this._nextPageButton = button;
         
         // go to page anchor
-        anchor = document.getElementById('go-to-page-anchor');
+        const anchor = document.getElementById('go-to-page-anchor');
         anchor.addEventListener(
             'click', e => this._onGoToPageAnchorClick(e));
         this._goToPageAnchor = anchor;
 
-        // go to page modal
-        this._installBootstrapEventListener(
-            '#go-to-page-modal', 'shown.bs.modal',
-            (e) => this._onGoToPageModalShown());
-        this._installBootstrapEventListener(
-            '#go-to-page-modal', 'hidden.bs.modal',
-            (e) => this._onGoToPageModalHidden());
-        
-        // go to page modal OK button
-        button = document.getElementById('go-to-page-modal-ok-button');
-        button.addEventListener(
-            'click', e => this._onGoToPageModalOkButtonClick(e));
-        
-        // clip query modal OK button
-        button = document.getElementById('clip-query-modal-ok-button');
-        if (button !== null)
-            button.addEventListener(
-                'click', e => this._onClipQueryModalOkButtonClick(e));
+        this._initGoToPageModal();
+        this._initSettingsModal();
+        this._initClipQueryModal();
         
         this._installKeyPressEventListener();
 
@@ -365,6 +294,26 @@ export class ClipAlbum {
 	}
 	
 	
+    _initGoToPageModal() {
+        
+        // shown listener
+        this._installBootstrapEventListener(
+            '#go-to-page-modal', 'shown.bs.modal',
+            (e) => this._onGoToPageModalShown());
+        
+        // hidden listener
+        this._installBootstrapEventListener(
+            '#go-to-page-modal', 'hidden.bs.modal',
+            (e) => this._onGoToPageModalHidden());
+        
+        // OK button click listener
+        const button = document.getElementById('go-to-page-modal-ok-button');
+        button.addEventListener(
+            'click', e => this._onGoToPageModalOkButtonClick());
+        
+    }
+    
+    
     /*
      * We somewhat reluctantly use Bootstrap events for some purposes,
      * since doing so requires explicit use of JQuery, which we prefer
@@ -416,27 +365,78 @@ export class ClipAlbum {
     }
     
     
-	_onGoToPageModalOkButtonClick(event) {
-	    
-	    const form = document.getElementById('go-to-page-modal-form');
-	    
-	    if (form.checkValidity()) {
-	        
-    	    const number = document.getElementById('go-to-page-modal-number');
-    	    const value = Number.parseInt(number.value);
+    _onGoToPageModalOkButtonClick() {
+        
+        const form = document.getElementById('go-to-page-modal-form');
+        
+        if (form.checkValidity()) {
+            
+            const number = document.getElementById('go-to-page-modal-number');
+            const value = Number.parseInt(number.value);
             this.pageNum = value - 1;
             
-	    } else {
-	        
-	        event.preventDefault();
-	        event.stopImmediatePropagation();
-	        
-	    }
-	    
-	}
-	
-	
-    _onClipQueryModalOkButtonClick(event) {
+        } else {
+            
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            
+        }
+        
+    }
+    
+    
+    _initSettingsModal() {
+
+        // TODO: Rather than having the server send presets to the client,
+        // perhaps the client should fetch the presets from the server.
+        // We could set up URLs so that a client could request all presets
+        // of a specified type as JSON.
+
+        const settingsSelect =
+            document.getElementById('settings-modal-settings-select');
+        _populatePresetSelect(
+            settingsSelect, this.settingsPresets, this.settingsPresetPath);
+
+        const keyBindingsSelect =
+            document.getElementById('settings-modal-key-bindings-select');
+        _populatePresetSelect(
+            keyBindingsSelect, this.keyBindingsPresets,
+            this.keyBindingsPresetPath);
+
+        const button = document.getElementById('settings-modal-ok-button');
+        button.addEventListener(
+            'click', e => this._onSettingsModalOkButtonClick());
+
+    }
+
+
+    _onSettingsModalOkButtonClick() {
+
+        if (this.settingsPresets.length > 0)
+            this.settings = _getSelectedPreset(
+                'settings-modal-settings-select', this.settingsPresets);
+
+        if (this.keyBindingsPresets.length > 0)
+            this.keyBindings = _getSelectedPreset(
+                'settings-modal-key-bindings-select', this.keyBindingsPresets);
+
+    }
+
+
+    _initClipQueryModal() {
+        
+        const button = document.getElementById('clip-query-modal-ok-button');
+        
+        // Some clip albums do not have a clip query modal, so we have
+        // to test for the existence of the OK button here.
+        if (button !== null)
+            button.addEventListener(
+                'click', e => this._onClipQueryModalOkButtonClick());
+        
+    }
+    
+    
+    _onClipQueryModalOkButtonClick() {
         
         // TODO: Only set URL if query has changed.
 
@@ -456,24 +456,6 @@ export class ClipAlbum {
         window.location.href = url;
         
     }
-
-
-    _createClips(clipInfos) {
-
-		const clips = [];
-
-		for (const entry of clipInfos.entries()) {
-			clips.push(this._createClip(entry));
-		}
-
-		return clips;
-
-	}
-
-
-	_createClip([clipNum, clipInfo]) {
-		return new Clip(clipNum, ...clipInfo);
-	}
 
 
 	_createClipViews(settings) {
@@ -1426,6 +1408,28 @@ class _WindowResizeThrottle {
 }
 
 
+function _populatePresetSelect(select, presetInfos, presetPath) {
+
+    for (const [i, [path, preset]] of presetInfos.entries()) {
+
+        const option = document.createElement('option');
+        option.text = path.join('/');
+        select.add(option);
+
+        if (option.text === presetPath)
+            select.selectedIndex = i;
+
+    }
+
+}
+
+
+function _getSelectedPreset(selectId, presets) {
+    const select = document.getElementById(selectId);
+    return presets[select.selectedIndex][1];
+}
+
+
 function _getPreset(presetInfos, presetPath) {
 
     for (const [path, preset] of presetInfos)
@@ -1437,12 +1441,6 @@ function _getPreset(presetInfos, presetPath) {
 }
 
 
-function _getSelectedPreset(selectId, presets) {
-    const select = document.getElementById(selectId);
-    return presets[select.selectedIndex][1];
-}
-
-
 function _scrollToTop() {
 	window.scrollTo(0, 0);
 }
@@ -1451,6 +1449,100 @@ function _scrollToTop() {
 function _scrollToBottom() {
 	window.scrollTo(0, document.body.scrollHeight);
 }
+
+
+/*
+ * Some of the notes below are out of date.
+ */
+
+
+/*
+
+Vesper currently displays one night's worth of clips in a clip album for
+a particular station/mic, detector, and classification. We would like to
+support the specification and display of clip albums for a wider range of
+queries, for example including species clip albums and tagged clip albums.
+
+Initially, the UI for specifying the clips for the more general type of
+clip album will be very similar to the UI for configuring a clip calendar.
+The page will have the same clip query controls toward the top, but will
+display a clip album rather than a calendar below the clip query controls.
+Inbetween the clip query controls and the clip album will be a title.
+
+The clip query controls and the title in the clip calendar and species
+album pages are somewhat redundant. I think it might be preferable
+to move the clip query controls into a modal. That will provide more
+room for the clip album display, and also allow the query controls to
+become more complicated, for example to allow the specification of tags.
+Moving the clip query controls to a model can be a separate task, though,
+that follows the initial implementation of the new clip album page.
+
+To implement the new clip album page:
+
+1. Separate title and rug plot from existing clip album and modify night
+clip album accordingly.
+
+2. Build new clip album page.
+
+We might actually implement a preliminary version of (2) first using the
+existing clip album class (or a minimally modified version of it) as a
+proof of concept, for example to see what happens when we try to display
+a clip album containing a million clips (e.g. all tseep clips from the
+Harold station from fall 2017).
+
+*/
+
+
+/*
+
+Need to pull title and rug plot out of clip album, making them separate
+components.
+
+Clip album will send `pageNumChanged` events. Night will register listener
+that updates title and rug plot in response to page changes.
+
+Rug plot will also send `pageSelected` events. Night will register
+listener that updates title and clip album in response.
+
+Update cycles will be avoided by having clip album and rug plot property
+setters do nothing when property value will not change.
+
+Perhaps rug plot should not be configured with clips and recordings, but
+rather with clip times and recording intervals.
+
+Rug plot pages are specified with an array of page start indices. Rug plot
+should be able to function with no pages defined. [Does a rug plot with no
+pages defined send events in response to mouse clicks?]
+
+*/
+
+
+/*
+
+For nonuniform clip view layouts, the time axis initial and final
+padding settings affect both clip view layout and content. This leads
+to a dilemma: in a clip album settings object, should those settings
+be considered layout settings or clip view settings? I have chosen
+to consider them layout settings, since then a change of layout type
+affects only layout settings, and never clip view settings. However,
+this leaves us with settings that affect clip view content in both
+the layout and clip view settings, which complicates clip view
+initialization and settings updates. A possible solution would be to
+augment the clip view settings of a clip album settings object with
+the relevant layout settings before initializing a clip view or
+updating its settings.
+
+A similar dilemma arises concerning clip label settings, and
+probably other display elements. Could we perhaps have a
+nonredundant, hierarchical settings namespace, but allow a given
+setting to appear in multiple places in the settings UI?
+
+Perhaps it would be be helpful to allow presets that specify values
+for some settings but not others. Then one could maintain settings
+presets for separate concerns (e.g. layouts, spectrogram parameters,
+spectrogram colors).
+
+*/
 
 
 /*
