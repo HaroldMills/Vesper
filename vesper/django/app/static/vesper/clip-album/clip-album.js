@@ -155,12 +155,6 @@ export class ClipAlbum {
         this._keyBindingsPresets = state.keyBindingsPresets;
         this._keyBindingsPresetPath = state.keyBindingsPresetPath;
         
-        this._elements = {
-            'titleHeading': document.getElementById('title'),
-            'rugPlotDiv': document.getElementById('rug-plot'),
-            'clipsDiv': document.getElementById('clips')
-        };
-            
         this._initUiElements();
         
         const settings = _getPreset(
@@ -192,9 +186,10 @@ export class ClipAlbum {
 
         this._layout = this._createLayout(this.settings);
 
-        if (this.elements.rugPlotDiv !== null)
+        const rugPlotDiv = document.getElementById('rug-plot');
+        if (rugPlotDiv !== null)
             this._rugPlot = new NightRugPlot(
-                this, this.elements.rugPlotDiv, this.clips, state.recordings,
+                this, rugPlotDiv, this.clips, state.recordings,
                 state.solarEventTimes);
         else
             this._rugPlot = null;
@@ -235,24 +230,18 @@ export class ClipAlbum {
 
 	_initUiElements() {
 	    
-	    let button;
-	    
+        this._clipsDiv = document.getElementById('clips');
+        
 	    // previous page button
-	    button = document.getElementById('previous-page-button');
-	    button.addEventListener(
+	    const prevButton = document.getElementById('previous-page-button');
+	    prevButton.addEventListener(
 	        'click', e => this._onPreviousPageButtonClick(e));
-	    this._previousPageButton = button;
  
 	    // next page button
-        button = document.getElementById('next-page-button');
-        button.addEventListener(
+        const nextButton = document.getElementById('next-page-button');
+        nextButton.addEventListener(
             'click', e => this._onNextPageButtonClick(e));
-        this._nextPageButton = button;
         
-        // go to page anchor
-        const anchor = document.getElementById('go-to-page-anchor');
-        this._goToPageAnchor = anchor;
-
         this._initGoToPageModal();
         this._initSettingsModal();
         this._initClipQueryModal();
@@ -478,7 +467,7 @@ export class ClipAlbum {
 	_createLayout(settings) {
 		const layoutClass = Layout.classes[settings.layoutType];
 		return new layoutClass(
-			this.elements.clipsDiv, this._clipViews, settings.layout);
+			this._clipsDiv, this._clipViews, settings.layout);
 	}
 
 
@@ -530,7 +519,8 @@ export class ClipAlbum {
 		if (q.date !== null)
 		    title = `${q.date} / ` + title;
 
-		this.elements.titleHeading.innerHTML = title;
+		const titleHeading = document.getElementById('title')
+		titleHeading.innerHTML = title;
 
 		document.title = `Clips - ${title}`;
 
@@ -568,14 +558,16 @@ export class ClipAlbum {
 
 	_updateButtonStates() {
 	    
-	    this._previousPageButton.disabled =
-	        this.numPages === 0 || this.pageNum === 0;
+	    const prevButton = document.getElementById('previous-page-button');
+	    prevButton.disabled = this.numPages === 0 || this.pageNum === 0;
 	    
-	    this._nextPageButton.disabled =
+        const nextButton = document.getElementById('next-page-button');
+	    nextButton.disabled =
 	        this.numPages === 0 || this.pageNum === this.numPages - 1;
 	    
 	    // TODO: Figure out why this doesn't disable the dropdown item.
-	    this._goToPageAnchor.disabled = this.numPages === 0;
+        const anchor = document.getElementById('go-to-page-anchor');
+	    anchor.disabled = this.numPages === 0;
 	    
 	}
 	
@@ -628,11 +620,6 @@ export class ClipAlbum {
 			style.outlineWidth = `${outline.width}px`;
 		}
 
-	}
-
-
-	get elements() {
-		return this._elements;
 	}
 
 
@@ -1159,7 +1146,7 @@ export class ClipAlbum {
 	_getYMargin() {
 
 		// Get y coordinate of top of clips div.
-		const clipsDivY = this.elements.clipsDiv.getBoundingClientRect().top;
+		const clipsDivY = this._clipsDiv.getBoundingClientRect().top;
 
 		// get y coordinate of top of first clip of current page.
 		const [startNum, _] = this.getPageClipNumRange(this.pageNum);
@@ -1175,7 +1162,7 @@ export class ClipAlbum {
 
 	_showClipViewRects() {
 		console.log('clip view bounding client rectangles:');
-		const r = this.elements.clipsDiv.getBoundingClientRect();
+		const r = this._clipsDiv.getBoundingClientRect();
 		console.log(r.left, r.top, r.width, r.height);
 		const [startNum, endNum] = this.getPageClipNumRange(this.pageNum);
 		for (let i = startNum; i < endNum; i++) {
