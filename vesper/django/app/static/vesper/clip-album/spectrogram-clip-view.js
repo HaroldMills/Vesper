@@ -15,7 +15,7 @@ const _OVERLAY_CLASSES = {
 
 const _DEFAULT_SPECTRAL_INTERPOLATION_FACTOR = 1;
 const _DEFAULT_REFERENCE_POWER = 1e-10;
-const _DEFAULT_FREQUENCY_RANGE = [0, 12000];
+const _DEFAULT_FREQUENCY_RANGE = [0, 11025];
 const _DEFAULT_COLORMAP = 'Gray';
 const _DEFAULT_REVERSE_COLORMAP = true;
 
@@ -218,7 +218,9 @@ function _updateSettingsIfNeeded(settings, sampleRate) {
                 'spectralInterpolationFactor':
                     old.dftSize === undefined ? 1 :
                         old.dftSize / _getPowerOfTwoCeil(old.windowSize),
-                'referencePower': old.referencePower
+                'referencePower':
+                    old.referencePower === undefined ?
+                        _DEFAULT_REFERENCE_POWER : old.referencePower
             },
     
             'display': {
@@ -226,7 +228,12 @@ function _updateSettingsIfNeeded(settings, sampleRate) {
                 'powerRange': [old.lowPower, old.highPower],
                 'colormap': _DEFAULT_COLORMAP,
                 'reverseColormap': _DEFAULT_REVERSE_COLORMAP,
-                'smoothImage': old.smoothingEnabled
+                'smoothImage':
+                    old.smoothingEnabled === undefined ? true :
+                        old.smoothingEnabled,
+                'timeStretchEnabled':
+                    old.timePaddingEnabled === undefined ? false :
+                        !old.timePaddingEnabled
             },
     
             'overlays': []
