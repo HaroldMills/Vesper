@@ -37,21 +37,12 @@ body {
   
 }
 
-.query-panel {
-  margin-top: 70px;
-  background: rgba(255, 185, 56, .9);
-}
-
-.form-spacing {
-  margin-left: 10px;
-  margin-right: 10px;
-}
-
 ::selection {
   background-color: transparent;
 }
 
 #title-div {
+  margin-top: 70px;
   display: inline-block;
   text-align: center;
 }
