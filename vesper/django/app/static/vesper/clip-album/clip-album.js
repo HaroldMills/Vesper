@@ -251,8 +251,6 @@ export class ClipAlbum {
         
         // go to page anchor
         const anchor = document.getElementById('go-to-page-anchor');
-        anchor.addEventListener(
-            'click', e => this._onGoToPageAnchorClick(e));
         this._goToPageAnchor = anchor;
 
         this._initGoToPageModal();
@@ -274,27 +272,12 @@ export class ClipAlbum {
 	}
 	
 	
-	// TODO: Move this to Bootstrap modal show event listener?
-	_onGoToPageAnchorClick(event) {
-	    
-	    if (this.numPages !== 0) {
-	        
-	        // Set label to include page number range.
-	        const label = document.getElementById('go-to-page-modal-label');
-	        label.innerHTML = `Page number (1 to ${this.numPages}):`;
-	        
-	        // Configure number input.
-	        const number = document.getElementById('go-to-page-modal-number');
-	        number.min = 1;
-	        number.max = this.numPages;
-	        number.value = '';
-	        
-	    }
-	    
-	}
-	
-	
     _initGoToPageModal() {
+        
+        // show listener
+        this._installBootstrapEventListener(
+            '#go-to-page-modal', 'show.bs.modal',
+            (e) => this._onGoToPageModalShow());
         
         // shown listener
         this._installBootstrapEventListener(
@@ -332,6 +315,25 @@ export class ClipAlbum {
      */
     _installBootstrapEventListener(selector, eventName, listener) {
         $(selector).on(eventName, listener)
+    }
+    
+    
+    _onGoToPageModalShow() {
+        
+        if (this.numPages !== 0) {
+            
+            // Set label to include page number range.
+            const label = document.getElementById('go-to-page-modal-label');
+            label.innerHTML = `Page number (1 to ${this.numPages}):`;
+            
+            // Configure number input.
+            const number = document.getElementById('go-to-page-modal-number');
+            number.min = 1;
+            number.max = this.numPages;
+            number.value = '';
+            
+        }
+        
     }
     
     
