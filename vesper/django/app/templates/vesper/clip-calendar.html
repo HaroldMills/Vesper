@@ -29,7 +29,7 @@
 <body>
 
     {% include "vesper/navbar.html" %}
-    {% include "vesper/clip-query-modal.html" %}
+    {% include "vesper/filter-clips-modal.html" %}
 
     <div id="main-div" class="container">
 
@@ -41,18 +41,10 @@
 
 		        <div id="title-buttons">
 		        
-		            <div class="dropdown title-dropdown">
-		            
-		                <button type="button" class="btn-xs btn-default dropdown-toggle title-button" data-toggle="dropdown">
-		                    <span class="caret"></span>
-		                </button>
-		                
-		                <ul class="dropdown-menu dropdown-menu-right" role="menu">
-		                    <li><a id="clip-query-anchor" class="dropdown-item title-dropdown-anchor" href="#query" data-toggle="modal" data-target="#clip-query-modal">Edit Clip Query...</a></li>
-		                </ul>
-		                                
-		            </div>
-		            
+                    <button id="filter-clips-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Filter Clips">
+                        <span class="glyphicon glyphicon-filter"></span>
+                    </button>
+                    
 		        </div>
 		        
 		    </div>

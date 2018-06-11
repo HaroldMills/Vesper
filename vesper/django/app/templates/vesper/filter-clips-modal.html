@@ -1,6 +1,6 @@
-<!-- Modal for clip query. -->
+<!-- Modal for clip filter. -->
 
-<div id="clip-query-modal" class="modal fade" role="dialog">
+<div id="filter-clips-modal" class="modal fade" role="dialog">
 
     <div class="modal-dialog">
 
@@ -8,7 +8,7 @@
 
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">Edit Clip Query</h4>
+                <h4 class="modal-title">Filter Clips</h4>
             </div>
 
             <form class="form-horizontal" role="form">
@@ -16,9 +16,9 @@
                 <div class="modal-body">
 
                     <div class="form-group">
-                        <label class="control-label col-sm-4" for="clip-query-modal-station-mic-select">Station/mic:</label>
+                        <label class="control-label col-sm-4" for="filter-clips-modal-station-mic-select">Station/mic:</label>
                         <div class="col-sm-6">
-                            <select id="clip-query-modal-station-mic-select" class="form-control modal-select">
+                            <select id="filter-clips-modal-station-mic-select" class="form-control modal-select">
                                 {% for name in station_mic_names %}
                                     {% if name == station_mic_name %}
                                         <option selected>{{name}}</option>
@@ -31,9 +31,9 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-4" for="clip-query-modal-detector-select">Detector:</label>
+                        <label class="control-label col-sm-4" for="filter-clips-modal-detector-select">Detector:</label>
                         <div class="col-sm-6">
-                            <select id="clip-query-modal-detector-select" class="form-control modal-select">
+                            <select id="filter-clips-modal-detector-select" class="form-control modal-select">
                                 {% for name in detector_names %}
                                     {% if name == detector_name %}
                                         <option selected>{{name}}</option>
@@ -46,9 +46,9 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="control-label col-sm-4" for="clip-query-modal-classification-select">Classification:</label>
+                        <label class="control-label col-sm-4" for="filter-clips-modal-classification-select">Classification:</label>
                         <div class="col-sm-6">
-                            <select id="clip-query-modal-classification-select" class="form-control modal-select">
+                            <select id="filter-clips-modal-classification-select" class="form-control modal-select">
                                 {% for c in classifications %}
                                     {% if c == classification %}
                                         <option selected>{{c}}</option>
@@ -63,7 +63,7 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" id="clip-query-modal-ok-button" class="btn btn-default" data-dismiss="modal">OK</button>
+                    <button type="submit" id="filter-clips-modal-ok-button" class="btn btn-default" data-dismiss="modal">OK</button>
                 </div>
             
             </form>

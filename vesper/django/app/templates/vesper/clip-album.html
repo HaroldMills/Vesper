@@ -14,7 +14,7 @@
     <script type="module">
         import { init } from '/static/vesper/view/clip-album.js';
         init({
-            'clipQuery': {
+            'clipFilter': {
         	    'stationMicName': '{{station_mic_name}}',
         	    'detectorName': '{{detector_name}}',
         	    'classification': '{{classification}}',
@@ -40,7 +40,7 @@
 
     {% include "vesper/navbar.html" %}
     {% include "vesper/go-to-page-modal.html" %}
-    {% include "vesper/clip-query-modal.html" %}
+    {% include "vesper/filter-clips-modal.html" %}
     {% include "vesper/clip-album-settings-modal.html" %}
 
     <div id="title-div">
@@ -66,7 +66,7 @@
                 <ul class="dropdown-menu dropdown-menu-right" role="menu">
                     <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go To Page...</a></li>
                     <li><a id="settings-anchor" class="dropdown-item title-dropdown-anchor" href="#settings" data-toggle="modal" data-target="#settings-modal">Edit Settings...</a></li>
-                    <li><a id="clip-query-anchor" class="dropdown-item title-dropdown-anchor" href="#query" data-toggle="modal" data-target="#clip-query-modal">Edit Clip Query...</a></li>
+                    <li><a id="filter-clips-anchor" class="dropdown-item title-dropdown-anchor" href="#filter-clips" data-toggle="modal" data-target="#filter-clips-modal">Filter Clips...</a></li>
                 </ul>
                                 
             </div>

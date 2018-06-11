@@ -12,7 +12,6 @@ import { SpectrogramClipView }
     from '/static/vesper/clip-album/spectrogram-clip-view.js';
 
 
-
 /*
  * TODO: Client should perform only those display pipeline functions that
  * are needed to update the display after a settings change. For example
@@ -148,7 +147,7 @@ export class ClipAlbum {
     constructor(state) {
         
         this._readOnly = state.archiveReadOnly;
-        this._clipQuery = state.clipQuery;
+        this._clipFilter = state.clipFilter;
         this._clips = this._createClips(state.clips);
         this._settingsPresets = state.settingsPresets;
         this._settingsPresetPath = state.settingsPresetPath;
@@ -244,7 +243,7 @@ export class ClipAlbum {
         
         this._initGoToPageModal();
         this._initSettingsModal();
-        this._initClipQueryModal();
+        this._initFilterClipsModal();
         
         this._installKeyPressEventListener();
 
@@ -414,31 +413,31 @@ export class ClipAlbum {
     }
 
 
-    _initClipQueryModal() {
+    _initFilterClipsModal() {
         
-        const button = document.getElementById('clip-query-modal-ok-button');
+        const button = document.getElementById('filter-clips-modal-ok-button');
         
-        // Some clip albums do not have a clip query modal, so we have
+        // Some clip albums do not have a filter clips modal, so we have
         // to test for the existence of the OK button here.
         if (button !== null)
             button.addEventListener(
-                'click', e => this._onClipQueryModalOkButtonClick());
+                'click', e => this._onFilterClipsModalOkButtonClick());
         
     }
     
     
-    _onClipQueryModalOkButtonClick() {
+    _onFilterClipsModalOkButtonClick() {
         
         // TODO: Only set URL if query has changed.
 
         const stationMic = document.getElementById(
-            'clip-query-modal-station-mic-select').value;
+            'filter-clips-modal-station-mic-select').value;
         
         const detector = document.getElementById(
-            'clip-query-modal-detector-select').value;
+            'filter-clips-modal-detector-select').value;
         
         const classification = document.getElementById(
-            'clip-query-modal-classification-select').value;
+            'filter-clips-modal-classification-select').value;
         
         const url =
             `/clip-album/?station_mic=${stationMic}&detector=${detector}&` +
@@ -509,15 +508,15 @@ export class ClipAlbum {
 
 	_updateTitle() {
 
-		const q = this.clipQuery;
+		const f = this.clipFilter;
 
 		const pageText = this._getTitlePageText();
 
-        let title = `${q.stationMicName} / ${q.detectorName} / ` +
-            `${q.classification} / ${pageText}`;
+        let title = `${f.stationMicName} / ${f.detectorName} / ` +
+            `${f.classification} / ${pageText}`;
 
-		if (q.date !== null)
-		    title = `${q.date} / ` + title;
+		if (f.date !== null)
+		    title = `${f.date} / ` + title;
 
 		const titleHeading = document.getElementById('title')
 		titleHeading.innerHTML = title;
@@ -629,8 +628,8 @@ export class ClipAlbum {
 	}
 	
 	
-    get clipQuery() {
-        return this._clipQuery;
+    get clipFilter() {
+        return this._clipFilter;
     }
 
 

@@ -599,7 +599,7 @@ export class ClipView {
 
                 const [date, time] = clip.startTime.split(' ');
 
-		        if (this.parent.clipQuery.date === null) {
+		        if (this.parent.clipFilter.date === null) {
 		            // clips may be for more than one night
 
 		            // include date in start time, but not year part

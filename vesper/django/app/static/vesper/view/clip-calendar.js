@@ -24,7 +24,7 @@ export function init(state_) {
 
 function onLoad() {
 	setTitle();
-	initClipQueryModal();
+    addButtonEventListeners();
 	setCalendarPeriods();
 }
 
@@ -43,26 +43,32 @@ function setTitle() {
 }
 
 
-function initClipQueryModal() {
+function addButtonEventListeners() {
     
-    const okButton = document.getElementById('clip-query-modal-ok-button');
-    okButton.onclick = onOkButtonClick;
+    // filter clips button
+    const filterButton = document.getElementById('filter-clips-button');
+    filterButton.addEventListener(
+        'click', e => $('#filter-clips-modal').modal('show'));
+
+    // filter clips modal OK button
+    const okButton = document.getElementById('filter-clips-modal-ok-button');
+    okButton.onclick = onFilterClipsModalOkButtonClick;
     
 }
 
 
-function onOkButtonClick(event) {
+function onFilterClipsModalOkButtonClick(event) {
 
     // TODO: Only set URL if query has changed.
 
     const stationMic = document.getElementById(
-        'clip-query-modal-station-mic-select').value;
+        'filter-clips-modal-station-mic-select').value;
     
     const detector = document.getElementById(
-        'clip-query-modal-detector-select').value;
+        'filter-clips-modal-detector-select').value;
     
     const classification = document.getElementById(
-        'clip-query-modal-classification-select').value;
+        'filter-clips-modal-classification-select').value;
     
     const url =
         `/clip-calendar/?station_mic=${stationMic}&detector=${detector}&` +
