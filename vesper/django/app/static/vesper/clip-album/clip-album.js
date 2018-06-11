@@ -263,46 +263,22 @@ export class ClipAlbum {
     _initGoToPageModal() {
         
         // show listener
-        this._installBootstrapEventListener(
-            '#go-to-page-modal', 'show.bs.modal',
-            (e) => this._onGoToPageModalShow());
+        $('#go-to-page-modal').on(
+            'show.bs.modal', (e) => this._onGoToPageModalShow());
         
         // shown listener
-        this._installBootstrapEventListener(
-            '#go-to-page-modal', 'shown.bs.modal',
-            (e) => this._onGoToPageModalShown());
+        $('#go-to-page-modal').on(
+            'shown.bs.modal', (e) => this._onGoToPageModalShown());
         
         // hidden listener
-        this._installBootstrapEventListener(
-            '#go-to-page-modal', 'hidden.bs.modal',
-            (e) => this._onGoToPageModalHidden());
+        $('#go-to-page-modal').on(
+            'hidden.bs.modal', (e) => this._onGoToPageModalHidden());
         
         // OK button click listener
         const button = document.getElementById('go-to-page-modal-ok-button');
         button.addEventListener(
             'click', e => this._onGoToPageModalOkButtonClick());
         
-    }
-    
-    
-    /*
-     * We somewhat reluctantly use Bootstrap events for some purposes,
-     * since doing so requires explicit use of JQuery, which we prefer
-     * to avoid. For example, we use Bootstrap events to hear when a
-     * Bootstrap modal is shown or hidden, since it is much more difficult
-     * (or perhaps impossible: see
-     * https://stackoverflow.com/questions/24211185/
-     * twitter-bootstrap-why-do-modal-events-work-in-jquery-but-not-in-pure-js)
-     * to do this with regular HTML events. A Bootstrap modal can be
-     * hidden when (1) the user presses the OK button, (2) the user
-     * presses the close button, or (3) the user clicks on a portion of
-     * the page that isn't obscured by the modal. The "hidden.bs.modal"
-     * event is fired for all of these cases, allowing them to be handled
-     * by a single event listener. Things are not nearly as straightforward
-     * using just HTML events.
-     */
-    _installBootstrapEventListener(selector, eventName, listener) {
-        $(selector).on(eventName, listener)
     }
     
     
