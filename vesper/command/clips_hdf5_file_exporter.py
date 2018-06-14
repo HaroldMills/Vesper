@@ -9,7 +9,6 @@ import resampy
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import StringAnnotation
-from vesper.util.settings import Settings
 import vesper.command.command_utils as command_utils
 import vesper.django.app.annotation_utils as annotation_utils
 import vesper.util.signal_utils as signal_utils
@@ -18,15 +17,37 @@ import vesper.util.signal_utils as signal_utils
 # TODO: Make detector name and output sample rate command arguments.
 
 
+# Settings for 2017 coarse classification examples export.
 _DETECTOR_NAME = 'Thrush'
-_ANNOTATION_NAME = 'Classification'
-_ANNOTATION_VALUE_SPECS = ['Call*', 'Noise']
-_OUTPUT_CLIP_SETTINGS = {
-    'Tseep': Settings(duration=.236),  # 3000 / 22050 + .1
-    'Thrush': Settings(duration=.326)  # 5000 / 22050 + .1
+_CLASSIFICATION_ANNOTATION_NAME = 'Classification'
+_CLASSIFICATIONS = ['Call*', 'Noise']
+_OTHER_ANNOTATION_NAMES = []
+_DEFAULT_ANNOTATION_VALUES = {}
+_OUTPUT_CLIP_MODE = 'Initial'
+_OUTPUT_CLIP_DURATIONS = {
+    'Tseep': .236,    # 3000 / 22050 + .1
+    'Thrush': .326    # 5000 / 22050 + .1
 }
 _OUTPUT_CLIP_SAMPLE_RATE = 22050
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
+
+# Settings for 2018 detector training.
+# _DETECTOR_NAME = 'Tseep'
+# _CLASSIFICATION_ANNOTATION_NAME = 'Classification'
+# _CLASSIFICATIONS = ['Call*', 'Noise']
+# _OTHER_ANNOTATION_NAMES = ['Call Center Index', 'Call Center Freq']
+# _DEFAULT_ANNOTATION_VALUES = {
+#     'Call Center Index': 0,
+#     'Call Center Freq': 0
+# }
+# _OUTPUT_CLIP_MODE = 'Center'
+# _OUTPUT_CLIP_DURATIONS = {
+#     'Tseep': 1,
+#     'Thrush': 1
+# }
+# _OUTPUT_CLIP_SAMPLE_RATE = 24000
+# _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
 _logger = logging.getLogger()
@@ -57,12 +78,11 @@ class ClipsHdf5FileExporter:
         except OSError as e:
             raise CommandExecutionError(str(e))
         
-        self._annotation_values_regexp = \
+        self._classifications_regexp = \
             annotation_utils.create_string_annotation_values_regexp(
-                _ANNOTATION_VALUE_SPECS)
+                _CLASSIFICATIONS)
     
-        self._output_clip_duration = \
-            _OUTPUT_CLIP_SETTINGS[_DETECTOR_NAME].duration
+        self._output_clip_duration = _OUTPUT_CLIP_DURATIONS[_DETECTOR_NAME]
             
         self._output_clip_length = signal_utils.seconds_to_frames(
             self._output_clip_duration, _OUTPUT_CLIP_SAMPLE_RATE)
@@ -74,15 +94,11 @@ class ClipsHdf5FileExporter:
     
     def export(self, clip):
         
-        try:
-            annotation = \
-                clip.string_annotations.get(info__name=_ANNOTATION_NAME)
-        except StringAnnotation.DoesNotExist:
-            return False
+        classification = self._get_annotation_value(
+            clip, _CLASSIFICATION_ANNOTATION_NAME)
         
-        value = annotation.value
-        
-        if self._annotation_values_regexp.match(value) is not None:
+        if classification is not None and \
+                self._classifications_regexp.match(classification) is not None:
             
             samples = self._get_output_samples(clip)
             
@@ -101,7 +117,11 @@ class ClipsHdf5FileExporter:
                 attrs['night'] = str(clip.date)
                 attrs['start_time'] = _format_datetime(clip.start_time)
                 attrs['original_sample_rate'] = clip.sample_rate
-                attrs['classification'] = value
+                
+                annotations = self._get_annotations(clip)
+                for name, value in annotations.items():
+                    name = name.lower().replace(' ', '_')
+                    attrs[name] = value
     
                 return True
             
@@ -112,6 +132,27 @@ class ClipsHdf5FileExporter:
             return False
         
         
+    def _get_annotation_value(self, clip, annotation_name):
+        
+        try:
+            annotation = clip.string_annotations.get(
+                info__name=annotation_name)
+            
+        except StringAnnotation.DoesNotExist:
+            return _DEFAULT_ANNOTATION_VALUES.get(annotation_name)
+        
+        else:
+            return annotation.value
+
+            
+    def _get_annotations(self, clip):
+        
+        names = [_CLASSIFICATION_ANNOTATION_NAME] + _OTHER_ANNOTATION_NAMES
+        
+        return dict(
+            [(name, self._get_annotation_value(clip, name)) for name in names])
+            
+            
     def _get_output_samples(self, clip):
         
         samples = clip.sound.samples
@@ -129,7 +170,11 @@ class ClipsHdf5FileExporter:
                     samples[:min_clip_length], sample_rate,
                     _OUTPUT_CLIP_SAMPLE_RATE)
                 
-            return samples[:self._output_clip_length]
+            if _OUTPUT_CLIP_MODE == 'Initial':
+                return self._get_output_samples_initial(samples)
+            
+            else:
+                return self._get_output_samples_center(samples)
         
         else:
             # clip too short
@@ -137,6 +182,15 @@ class ClipsHdf5FileExporter:
             return None
         
         
+    def _get_output_samples_initial(self, samples):
+        return samples[:self._output_clip_length]
+    
+    
+    def _get_output_samples_center(self, samples):
+        offset = (len(samples) - self._output_clip_length) // 2
+        return samples[offset:offset + self._output_clip_length]
+
+    
     def _get_min_clip_length(self, sample_rate):
         
         try:
@@ -175,4 +229,3 @@ class ClipsHdf5FileExporter:
 
 def _format_datetime(dt):
     return dt.strftime(_START_TIME_FORMAT)
-
