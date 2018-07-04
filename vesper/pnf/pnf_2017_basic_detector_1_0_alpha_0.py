@@ -511,7 +511,7 @@ class _SeriesProcessorChain(_SeriesProcessor):
 class TseepDetector(_Detector):
     
     
-    extension_name = 'PNF 2017 Basic Tseep Detector 1.0'
+    extension_name = 'PNF 2017 Basic Tseep Detector 1.0-alpha.0'
     
     
     def __init__(self, sample_rate, listener):
@@ -521,7 +521,7 @@ class TseepDetector(_Detector):
 class ThrushDetector(_Detector):
     
     
-    extension_name = 'PNF 2017 Basic Thrush Detector 1.0'
+    extension_name = 'PNF 2017 Basic Thrush Detector 1.0-alpha.0'
     
     
     def __init__(self, sample_rate, listener):
