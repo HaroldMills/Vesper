@@ -315,7 +315,7 @@ class _DetectorListener:
         self._logger = logger
         
         
-    def process_clip(self, start_index, length):
+    def process_clip(self, start_index, length, threshold=None):
         
         station = self._recording.station
         
