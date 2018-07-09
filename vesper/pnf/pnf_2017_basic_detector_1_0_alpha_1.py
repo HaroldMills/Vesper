@@ -24,6 +24,9 @@ _TSEEP_SETTINGS = Bunch(
     window_size=.005,                 # seconds
     hop_size=.0025,                   # seconds
     integration_time=.090,            # seconds
+    power_filter_cutoff_frequency=15,       # hertz
+    power_filter_transition_band_width=10,  # hertz
+    power_filter_length=31,           # taps
     delay=.020,                       # seconds
     thresholds=[2],                   # dimensionless
     min_transient_duration=.100,      # seconds
@@ -39,6 +42,9 @@ _THRUSH_SETTINGS = Bunch(
     window_size=.005,                 # seconds
     hop_size=.0025,                   # seconds
     integration_time=.180,            # seconds
+    power_filter_cutoff_frequency=15,       # hertz
+    power_filter_transition_band_width=10,  # hertz
+    power_filter_length=31,           # taps
     delay=.020,                       # seconds
     thresholds=[1.3],                 # dimensionless
     min_transient_duration=.100,      # seconds
@@ -111,18 +117,26 @@ class Detector:
             spectrograph.output_sample_rate)
         
         fs = frequency_integrator.output_sample_rate
-        integration_length = _seconds_to_samples(s.integration_time, fs)
-        time_integrator = _TimeIntegrator(
-            'Time Integrator', integration_length, fs)
         
-        fs = time_integrator.output_sample_rate
+        if s.integration_time is not None:
+            filter_length = _seconds_to_samples(s.integration_time, fs)
+            power_filter = _TimeIntegrator(
+                'Time Integrator', filter_length, fs)
+        
+        else:
+            power_filter = _PowerFilter(
+                'Power Filter', s.power_filter_cutoff_frequency,
+                s.power_filter_transition_band_width, s.power_filter_length,
+                fs)
+        
+        fs = power_filter.output_sample_rate
         delay = _seconds_to_samples(s.delay, fs)
         divider = _Divider('Divider', delay, fs)
         
         processors = [
             spectrograph,
             frequency_integrator,
-            time_integrator,
+            power_filter,
             divider
         ]
         
@@ -373,7 +387,25 @@ class _TimeIntegrator(_FirFilter):
         coefficients = np.ones(integration_length) / integration_length
         super().__init__(name, coefficients, input_sample_rate)
  
- 
+
+class _PowerFilter(_FirFilter):
+    
+    
+    def __init__(
+            self, name, cutoff_frequency, transition_band_width,
+            filter_length, input_sample_rate):
+        
+        # Design filter.
+        fc = cutoff_frequency
+        bw = transition_band_width
+        fs2 = input_sample_rate / 2
+        bands = np.array([0, fc, fc + bw, fs2]) / fs2
+        desired = np.array([1, 1, 0, 0])
+        coefficients = signal.firls(filter_length, bands, desired)
+        
+        super().__init__(name, coefficients, input_sample_rate)
+
+        
 class _Divider(_SignalProcessor):
      
      

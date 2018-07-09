@@ -38,21 +38,16 @@ DETECTOR_TYPE = 'Tseep'
 """The type of detector to run, either `'Tseep'` or `'Thrush'`."""
 
 
-# DETECTOR_VARIANTS = [
-#     (50, 100),
-#     (50, 200),
-#     (100, 200)
-# ]
-DETECTOR_VARIANTS = [
-    (20, 40),
-    (25, 50),
-    (30, 60),
-    (35, 70),
-    (40, 80),
-    (45, 90),
-    (50, 100),
-]
-"""Pairs of (integration_time, delay) settings for which to run detectors."""
+POWER_FILTER_LENGTH = 31
+"""The power filter length, in samples."""
+
+
+POWER_FILTER_CUTOFF_FREQUENCIES = [5, 10, 15, 20]
+"""Power filter cutoff frequencies for which to run detectors."""
+
+
+DELAYS = [20, 30, 40, 50, 60, 70, 80, 90, 100]
+"""Delays for which to run detectors."""
     
 
 INCLUDE_OLD_BIRD_DETECTOR = True
@@ -67,33 +62,39 @@ THRESHOLDS = utils.get_detection_thresholds()
 
 
 TSEEP_SETTINGS = Bunch(
-    start_frequency=6000,             # hertz
-    end_frequency=10000,              # hertz
-    window_size=.005,                 # seconds
-    hop_size=.0025,                   # seconds
-    integration_time=.090,            # seconds
-    delay=.020,                       # seconds
-    thresholds=THRESHOLDS,            # dimensionless
-    min_transient_duration=.100,      # seconds
-    max_transient_duration=.400,      # seconds
-    initial_clip_padding=.2,          # seconds
-    clip_duration=.6                  # seconds
+    start_frequency=6000,                     # hertz
+    end_frequency=10000,                      # hertz
+    window_size=.005,                         # seconds
+    hop_size=.0025,                           # seconds
+    integration_time=.090,                    # seconds
+    power_filter_cutoff_frequency=15,         # hertz
+    power_filter_transition_band_width=10,    # hertz
+    power_filter_length=POWER_FILTER_LENGTH,  # samples
+    delay=.020,                               # seconds
+    thresholds=THRESHOLDS,                    # dimensionless
+    min_transient_duration=.100,              # seconds
+    max_transient_duration=.400,              # seconds
+    initial_clip_padding=.2,                  # seconds
+    clip_duration=.6                          # seconds
 )
 """Settings for a detector very similar to the Old Bird Tseep detector."""
 
 
 THRUSH_SETTINGS = Bunch(
-    start_frequency=2800,             # hertz
-    end_frequency=5000,               # hertz
-    window_size=.005,                 # seconds
-    hop_size=.0025,                   # seconds
-    integration_time=.180,            # seconds
-    delay=.020,                       # seconds
-    thresholds=THRESHOLDS,            # dimensionless
-    min_transient_duration=.100,      # seconds
-    max_transient_duration=.400,      # seconds
-    initial_clip_padding=.2,          # seconds
-    clip_duration=.6                  # seconds
+    start_frequency=2800,                     # hertz
+    end_frequency=5000,                       # hertz
+    window_size=.005,                         # seconds
+    hop_size=.0025,                           # seconds
+    integration_time=.180,                    # seconds
+    power_filter_cutoff_frequency=15,         # hertz
+    power_filter_transition_band_width=10,    # hertz
+    power_filter_length=POWER_FILTER_LENGTH,  # samples
+    delay=.020,                               # seconds
+    thresholds=THRESHOLDS,                    # dimensionless
+    min_transient_duration=.100,              # seconds
+    max_transient_duration=.400,              # seconds
+    initial_clip_padding=.2,                  # seconds
+    clip_duration=.6                          # seconds
 )
 """Settings for a detector very similar to the Old Bird Thrush detector."""
 
@@ -124,7 +125,14 @@ misses become a problem.
 
 def main():
     
-    detector_settings = create_detector_settings()
+    for delay in DELAYS:
+        print('Running detectors for delay {}...'.format(delay))
+        run_detectors(delay)
+        
+        
+def run_detectors(delay):
+    
+    detector_settings = create_detector_settings(delay)
     
     args = [(detector_settings, i) for i in UNIT_NUMS]
     
@@ -133,18 +141,19 @@ def main():
         
     results = sorted(results)
     
-    write_clips_file(results)
+    write_clips_file(results, delay)
     
     
-def create_detector_settings():
+def create_detector_settings(delay):
     
     base_settings = \
         TSEEP_SETTINGS if DETECTOR_TYPE == 'Tseep' else THRUSH_SETTINGS
         
     # Create settings for range of integration times.
     settings = dict([
-        create_detector_settings_aux(DETECTOR_TYPE, base_settings, *pair)
-        for pair in DETECTOR_VARIANTS])
+        create_detector_settings_aux(
+            DETECTOR_TYPE, base_settings, cutoff, delay)
+        for cutoff in POWER_FILTER_CUTOFF_FREQUENCIES])
     
     if INCLUDE_OLD_BIRD_DETECTOR:
         
@@ -155,17 +164,16 @@ def create_detector_settings():
     return settings
 
 
-def create_detector_settings_aux(
-        detector_type, base_settings, integration_time, delay):
+def create_detector_settings_aux(detector_type, base_settings, cutoff, delay):
     
-    name = '{} {:03} {:03}'.format(detector_type, integration_time, delay)
+    name = '{} {:03} {:03}'.format(detector_type, cutoff, delay)
     
-    integration_time /= 1000
     delay /= 1000
     
     settings = Bunch(
         base_settings,
-        integration_time=integration_time,
+        integration_time=None,
+        power_filter_cutoff_frequency=cutoff,
         delay=delay,
         initial_clip_padding=.2,
         clip_duration=.6)
@@ -245,9 +253,10 @@ def round_(t):
     return round(10 * t) / 10
 
 
-def write_clips_file(results):
+def write_clips_file(results, delay):
     
-    file_path = utils.get_clips_file_path()
+    file_path = utils.get_clips_file_path(
+        DETECTOR_TYPE, POWER_FILTER_LENGTH, delay)
     
     with open(file_path, 'w') as file_:
         

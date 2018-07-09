@@ -81,8 +81,14 @@ for detectors for which reference thresholds are not specified in
 
 
 def main():
-    
-    detected_clips = get_detected_clips()
+    clip_file_paths = sorted(utils.WORKING_DIR_PATH.glob('*.csv'))
+    for path in clip_file_paths:
+        process_file(path)
+        
+        
+def process_file(file_path):
+        
+    detected_clips = get_detected_clips(file_path)
     show_detected_clip_counts(detected_clips)
         
     ground_truth_call_centers = get_ground_truth_call_centers()
@@ -99,12 +105,12 @@ def main():
     print('unaggregated_df', unaggregated_df.to_csv())
     print('aggregated_df', aggregated_df.to_csv())
     
-    plot_precision_vs_recall(unaggregated_df, aggregated_df)
+    file_name_base = file_path.name[:-len('.csv')]
+    plot_precision_vs_recall(file_name_base, unaggregated_df, aggregated_df)
     
     
-def get_detected_clips():
+def get_detected_clips(file_path):
     
-    file_path = utils.get_clips_file_path()
     clips = defaultdict(list)
         
     with open(file_path) as file_:
@@ -308,9 +314,9 @@ def to_percent(x):
     return round(1000 * x) / 10
 
 
-def plot_precision_vs_recall(unaggregated_df, aggregated_df):
+def plot_precision_vs_recall(file_name_base, unaggregated_df, aggregated_df):
     
-    file_path = utils.get_precision_vs_recall_plot_file_path()
+    file_path = utils.get_plot_file_path(file_name_base)
     
     with PdfPages(file_path) as pdf:
         
@@ -374,7 +380,7 @@ def plot_precision_vs_recall_aux(title_suffix, full_df, detector_names, pdf):
     plt.grid(which='both')
     plt.grid(which='minor', alpha=.4)
     axes.legend()
-    plt.title('Detector Precision vs. Recall, ' + title_suffix)
+    plt.title('Precision vs. Recall, ' + title_suffix)
     
     pdf.savefig()
     

@@ -23,17 +23,16 @@ RECORDINGS_DIR_PATH = Path(
 ANNOTATIONS_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/BirdVox/BirdVox-full-night/Dataset')
 
-WORKING_DIR_PATH = Path('/Users/harold/Desktop')
+WORKING_DIR_PATH = Path('/Users/harold/Desktop/Eval')
 
 RECORDING_FILE_NAME_FORMAT = 'BirdVox-full-night_wav-audio_unit{:02}.wav'
 
 ANNOTATIONS_FILE_NAME_FORMAT = \
     'BirdVox-full-night_csv-annotations_unit{:02}.csv'
 
-CLIPS_FILE_NAME = 'Clips.csv'
+CLIPS_FILE_NAME_FORMAT = '{} {} {:03}.csv'
 
-PRECISION_VS_RECALL_PLOT_FILE_NAME = \
-    'Detector Precision vs. Recall.pdf'
+PLOT_FILE_NAME_FORMAT = '{}.pdf'
 
 UNIT_NUMS = (1, 2, 3, 5, 7, 10)
 
@@ -43,7 +42,7 @@ UNIT_NUMS = (1, 2, 3, 5, 7, 10)
 MIN_DETECTION_THRESHOLD = 1.2
 MAX_DETECTION_THRESHOLD = 20
 DETECTION_THRESHOLDS_POWER = 3
-NUM_DETECTION_THRESHOLDS = 10
+NUM_DETECTION_THRESHOLDS = 40
 
 # Center frequency threshold separating tseep and thrush calls, in hertz.
 FREQ_THRESHOLD = 5000
@@ -66,12 +65,15 @@ def get_annotations_file_path(unit_num):
     return ANNOTATIONS_DIR_PATH / file_name
 
 
-def get_clips_file_path():
-    return WORKING_DIR_PATH / CLIPS_FILE_NAME
+def get_clips_file_path(detector_type, filter_length, delay):
+    file_name = CLIPS_FILE_NAME_FORMAT.format(
+        detector_type, filter_length, delay)
+    return WORKING_DIR_PATH / file_name
 
 
-def get_precision_vs_recall_plot_file_path():
-    return WORKING_DIR_PATH / PRECISION_VS_RECALL_PLOT_FILE_NAME
+def get_plot_file_path(file_name_base):
+    file_name = PLOT_FILE_NAME_FORMAT.format(file_name_base)
+    return WORKING_DIR_PATH / file_name
 
 
 def get_detection_thresholds():
