@@ -28,7 +28,7 @@ import csv
 import math
 import time
 
-from vesper.pnf.pnf_2017_basic_detector_1_0_alpha_1 import Detector
+from vesper.pnf.pnf_2018_basic_detector_1_0_alpha_1 import Detector
 from vesper.util.bunch import Bunch
 from scripts.detector_eval.wave_file_reader import WaveFileReader
 import scripts.detector_eval.utils as utils

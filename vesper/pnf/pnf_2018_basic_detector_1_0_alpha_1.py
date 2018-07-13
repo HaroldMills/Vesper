@@ -1,4 +1,4 @@
-"""Module containing PNF 2017 basic tseep and thrush detectors."""
+"""Module containing PNF 2018 basic tseep and thrush detectors."""
 
 
 # TODO: Modify detector interface to support any number of listeners.
@@ -652,7 +652,7 @@ class _SeriesProcessorChain(_SeriesProcessor):
 class TseepDetector(Detector):
     
     
-    extension_name = 'PNF 2017 Basic Tseep Detector 1.0-alpha.1'
+    extension_name = 'PNF 2018 Basic Tseep Detector 1.0-alpha.1'
     
     
     def __init__(self, sample_rate, listener):
@@ -662,7 +662,7 @@ class TseepDetector(Detector):
 class ThrushDetector(Detector):
     
     
-    extension_name = 'PNF 2017 Basic Thrush Detector 1.0-alpha.1'
+    extension_name = 'PNF 2018 Basic Thrush Detector 1.0-alpha.1'
     
     
     def __init__(self, sample_rate, listener):
