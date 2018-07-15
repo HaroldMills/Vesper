@@ -34,8 +34,10 @@ Detector:
     - vesper.old_bird.old_bird_detector_redux_1_0.TseepDetector
     - vesper.old_bird.old_bird_detector_redux_1_1.ThrushDetector
     - vesper.old_bird.old_bird_detector_redux_1_1.TseepDetector
-    - vesper.pnf.pnf_2018_basic_detector_1_0_alpha_1.ThrushDetector
-    - vesper.pnf.pnf_2018_basic_detector_1_0_alpha_1.TseepDetector    
+    - vesper.pnf.pnf_2018_baseline_detector_1_0.ThrushDetector
+    - vesper.pnf.pnf_2018_baseline_detector_1_0.TseepDetector
+    - vesper.pnf.pnf_energy_detector_1_0.ThrushDetector
+    - vesper.pnf.pnf_energy_detector_1_0.TseepDetector
     
 Exporter:
     - vesper.command.clip_sound_files_exporter.ClipSoundFilesExporter

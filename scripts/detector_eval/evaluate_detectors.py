@@ -1,11 +1,12 @@
 """
-Plots precision vs. recall curves for detectors run on the BirdVox-full-night
+Plots precision-recall curves for detectors run on the BirdVox-full-night
 recordings.
 
 The inputs required by this script are:
 
-1. The file "Clips.csv" produced by the run_detectors script. The directory
-containing this is specified by scripts.detector_eval.utils.WORKING_DIR_PATH.
+1. CSV files produced by the run_detectors script. The directory containing
+the files is specified by scripts.detector_eval.utils.WORKING_DIR_PATH.
+All CSV files in the directory are processed.
 
 2. The BirdVox-full-night CSV annotation files, as distributed with the
 BirdVox-full-night dataset. The directory containing these files is
@@ -13,9 +14,9 @@ specified by scripts.detector_eval.utils.ANNOTATIONS_DIR_PATH.
 
 The outputs produced by this script are:
 
-1. The file "Detector Precision vs. Recall.pdf", containing plots of
-detector precision vs. recall curves. The directory to which these files
-are written is specified by scripts.detector_eval.utils.WORKING_DIR_PATH.
+1. A PDF file for each input CSV file, containing plots of detector
+precision-recall curves. The directory to which these files are written
+is specified by scripts.detector_eval.utils.WORKING_DIR_PATH.
 """
 
 
@@ -36,10 +37,7 @@ def window(offset, duration):
     return (s2s(offset), s2s(duration))
 
 
-DETECTOR_CALL_CENTER_WINDOWS = {
-    'Old Bird Thrush': window(.2, .2),
-    'Old Bird Tseep': window(.2, .2)
-}
+DETECTOR_CALL_CENTER_WINDOWS = {}
 """
 Mapping from detector names to clip call center windows. For a
 detected clip to be considered a call, its window must contain a
@@ -48,8 +46,8 @@ BirdVox-full-night call center.
 
 
 DEFAULT_DETECTOR_CALL_CENTER_WINDOWS = {
-    'Thrush': window(.2, .2),
-    'Tseep': window(.2, .2)
+    'Thrush': window(.05, .2),
+    'Tseep': window(.05, .2)
 }
 """
 Mapping from detector types to default clip call center windows,
@@ -59,8 +57,8 @@ for detectors for which windows are not specified in
 
 
 DETECTOR_REFERENCE_THRESHOLDS = {
-    'Old Bird Thrush': 1.3,
-    'Old Bird Tseep': 2
+    'Baseline Thrush': 1.3,
+    'Baseline Tseep': 2
 }
 """
 Mapping from detector names to detector reference thresholds.
@@ -70,8 +68,8 @@ The plots produced by this script include dots at the reference thresholds.
 
 
 DEFAULT_DETECTOR_REFERENCE_THRESHOLDS = {
-    'Thrush': 3,
-    'Tseep': 5
+    'Thrush': 2.5,
+    'Tseep': 2.7
 }
 """
 Mapping from detector types to default detector reference thresholds,
@@ -84,6 +82,7 @@ def main():
     clip_file_paths = sorted(utils.WORKING_DIR_PATH.glob('*.csv'))
     for path in clip_file_paths:
         process_file(path)
+    utils.announce('Harold, your evaluation script has finished.')
         
         
 def process_file(file_path):
@@ -106,7 +105,8 @@ def process_file(file_path):
     print('aggregated_df', aggregated_df.to_csv())
     
     file_name_base = file_path.name[:-len('.csv')]
-    plot_precision_vs_recall(file_name_base, unaggregated_df, aggregated_df)
+    plot_precision_recall_curves(
+        file_name_base, unaggregated_df, aggregated_df)
     
     
 def get_detected_clips(file_path):
@@ -223,16 +223,8 @@ def get_detector_call_center_window(detector_name):
         return window
         
     else:
-        
         detector_type = get_detector_type(detector_name)
-        
-        window = DEFAULT_DETECTOR_CALL_CENTER_WINDOWS.get(detector_type)
-        
-        if window is not None:
-            return window
-        
-        else:
-            return None
+        return DEFAULT_DETECTOR_CALL_CENTER_WINDOWS.get(detector_type)
     
     
 def match_clips_with_calls(clips, call_center_indices, window):
@@ -314,7 +306,8 @@ def to_percent(x):
     return round(1000 * x) / 10
 
 
-def plot_precision_vs_recall(file_name_base, unaggregated_df, aggregated_df):
+def plot_precision_recall_curves(
+        file_name_base, unaggregated_df, aggregated_df):
     
     file_path = utils.get_plot_file_path(file_name_base)
     
@@ -322,18 +315,19 @@ def plot_precision_vs_recall(file_name_base, unaggregated_df, aggregated_df):
         
         detector_names = unaggregated_df['Detector'].unique()
         
-        plot_precision_vs_recall_aux(
+        plot_precision_recall_curves_aux(
             'All Units', aggregated_df, detector_names, pdf)
         
         for unit_num in utils.UNIT_NUMS:
             unit_name = 'Unit {}'.format(unit_num)
             unit_df = unaggregated_df.loc[unaggregated_df['Unit'] == unit_num]
             if unit_df.shape[0] != 0:
-                plot_precision_vs_recall_aux(
+                plot_precision_recall_curves_aux(
                     unit_name, unit_df, detector_names, pdf)
         
 
-def plot_precision_vs_recall_aux(title_suffix, full_df, detector_names, pdf):
+def plot_precision_recall_curves_aux(
+        title_suffix, full_df, detector_names, pdf):
     
     plt.figure(figsize=(6, 6))
     
@@ -341,36 +335,19 @@ def plot_precision_vs_recall_aux(title_suffix, full_df, detector_names, pdf):
     
     # Plot separate detector curves.
     for i, detector_name in enumerate(detector_names):
-        
-        reference_threshold = get_detector_reference_threshold(detector_name)
-
-        color = 'C{}'.format(i)
-        
-        # Plot curve.
         df = full_df.loc[full_df['Detector'] == detector_name]
-        precisions = df['Precision'].values
-        recalls = df['Recall'].values
-        label = detector_name
-        if reference_threshold is not None:
-            label += ' {}'.format(reference_threshold)
-        axes.plot(recalls, precisions, color=color, label=label)
-        
-        # Put marker at threshold nearest detector reference threshold.
-        if reference_threshold is not None:
-            k = None
-            min_diff = 1e6
-            for j, t in enumerate(df['Threshold'].values):
-                diff = abs(t - reference_threshold)
-                if diff < min_diff:
-                    k = j
-                    min_diff = diff
-            axes.plot([recalls[k]], [precisions[k]], marker='o', color=color)
-        
+        plot_precision_recall_curve(df, detector_name, i, axes)
+    
+    # Set title and axis labels.
+    plt.title('Precision vs. Recall, ' + title_suffix)
     plt.xlabel('Recall (%)')
     plt.ylabel('Precision (%)')
-    limits = (0, 100)
-    plt.xlim(limits)
-    plt.ylim(limits)
+    
+    # Set axis limits.
+    plt.xlim((0, 100))
+    plt.ylim((0, 100))
+    
+    # Configure grid.
     major_locator = MultipleLocator(25)
     minor_locator = MultipleLocator(5)
     axes.xaxis.set_major_locator(major_locator)
@@ -379,14 +356,37 @@ def plot_precision_vs_recall_aux(title_suffix, full_df, detector_names, pdf):
     axes.yaxis.set_minor_locator(minor_locator)
     plt.grid(which='both')
     plt.grid(which='minor', alpha=.4)
+    
+    # Show legend.
     axes.legend()
-    plt.title('Precision vs. Recall, ' + title_suffix)
     
     pdf.savefig()
     
     plt.close()
     
+
+def plot_precision_recall_curve(df, detector_name, i, axes):  
     
+    color = 'C{}'.format(i)
+        
+    precisions = df['Precision'].values
+    recalls = df['Recall'].values
+    label = detector_name
+    axes.plot(recalls, precisions, color=color, label=label)
+    
+    # Put marker at threshold nearest detector reference threshold.
+    reference_threshold = get_detector_reference_threshold(detector_name)
+    if reference_threshold is not None:
+        k = None
+        min_diff = 1e6
+        for j, t in enumerate(df['Threshold'].values):
+            diff = abs(t - reference_threshold)
+            if diff < min_diff:
+                k = j
+                min_diff = diff
+        axes.plot([recalls[k]], [precisions[k]], marker='o', color=color)
+
+  
 def get_detector_reference_threshold(detector_name):
     
     threshold = DETECTOR_REFERENCE_THRESHOLDS.get(detector_name)
@@ -402,7 +402,7 @@ def get_detector_reference_threshold(detector_name):
             return None
         
         else:
-            return DEFAULT_DETECTOR_REFERENCE_THRESHOLDS[detector_type]
+            return DEFAULT_DETECTOR_REFERENCE_THRESHOLDS.get(detector_type)
     
     
 if __name__ == '__main__':

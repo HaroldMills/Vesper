@@ -12,6 +12,7 @@ thresholds speeds up detector runs considerably during testing.
 
 
 from pathlib import Path
+import os
 
 import numpy as np
 
@@ -30,17 +31,15 @@ RECORDING_FILE_NAME_FORMAT = 'BirdVox-full-night_wav-audio_unit{:02}.wav'
 ANNOTATIONS_FILE_NAME_FORMAT = \
     'BirdVox-full-night_csv-annotations_unit{:02}.csv'
 
-CLIPS_FILE_NAME_FORMAT = '{} {} {:03}.csv'
+CLIPS_FILE_NAME_FORMAT = '{}.csv'
 
 PLOT_FILE_NAME_FORMAT = '{}.pdf'
 
 UNIT_NUMS = (1, 2, 3, 5, 7, 10)
 
-# Constants determining the thresholds for which detectors are run.
-# The Old Bird Tseep and Thrush thresholds (2 and 1.3, respectively)
-# are added to those generated from these constants.
-MIN_DETECTION_THRESHOLD = 1.2
-MAX_DETECTION_THRESHOLD = 20
+# Constants determining thresholds for which detectors are run.
+MIN_DETECTION_THRESHOLD = 1.05
+MAX_DETECTION_THRESHOLD = 10
 DETECTION_THRESHOLDS_POWER = 3
 NUM_DETECTION_THRESHOLDS = 40
 
@@ -65,9 +64,8 @@ def get_annotations_file_path(unit_num):
     return ANNOTATIONS_DIR_PATH / file_name
 
 
-def get_clips_file_path(detector_type, filter_length, delay):
-    file_name = CLIPS_FILE_NAME_FORMAT.format(
-        detector_type, filter_length, delay)
+def get_clips_file_path(detector_type):
+    file_name = CLIPS_FILE_NAME_FORMAT.format(detector_type)
     return WORKING_DIR_PATH / file_name
 
 
@@ -89,6 +87,15 @@ def get_detection_thresholds():
     t.append(1.3)   # Thrush
     t.append(2)     # Tseep
     
+    # Always include PNF Energy Detector thresholds.
+    t.append(2.5)   # Thrush
+    t.append(2.7)   # Tseep
+    
     t.sort()
     
     return t
+
+
+def announce(text):
+    command = 'say "{}"'.format(text)
+    os.system(command)
