@@ -22,14 +22,14 @@ setup(
         'django<1.12',
         'h5py',
         'jsonschema',
-        'keras',
+        'keras<2.2',
         'numpy',
         'pyephem',
         'pytz',
         'pyyaml',
         'resampy',
         'scikit-learn',
-        'tensorflow<1.3'
+        'tensorflow'
     ],
       
     entry_points={
