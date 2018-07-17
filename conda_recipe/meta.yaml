@@ -33,7 +33,7 @@ requirements:
     - resampy
     - scikit-learn
     - setuptools
-    - tensorflow
+    - tensorflow <1.3
 
   run:
     - django 1.11*
@@ -47,7 +47,7 @@ requirements:
     - pyyaml
     - resampy
     - scikit-learn
-    - tensorflow
+    - tensorflow <1.3
 
 test:
 
