@@ -91,6 +91,14 @@ preference_manager = Singleton(_create_preference_manager)
 job_manager = Singleton(JobManager)
      
      
+def _create_clip_manager():
+    from vesper.util.clip_manager import ClipManager
+    return ClipManager()
+
+
+clip_manager = Singleton(_create_clip_manager)
+                         
+                         
 def _create_recording_manager():
     return RecordingManager(
         archive_paths.archive_dir_path, archive_paths.recording_dir_paths)

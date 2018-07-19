@@ -35,7 +35,8 @@ from vesper.django.app.update_recording_file_paths_form import \
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
-from vesper.singletons import job_manager, preference_manager, preset_manager
+from vesper.singletons import (
+    clip_manager, job_manager, preference_manager, preset_manager)
 from vesper.util.bunch import Bunch
 import vesper.django.app.annotation_utils as annotation_utils
 import vesper.django.app.model_utils as model_utils
@@ -45,6 +46,8 @@ import vesper.old_bird.export_clip_counts_csv_file_utils as \
 import vesper.util.archive_lock as archive_lock
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
+from vesper.singletons import (
+    extension_manager, preset_manager, recording_manager)
 
 
 class HttpError(Exception):
@@ -698,7 +701,7 @@ def clip_wav(request, clip_id):
     # TODO: Set appropriate response status code on failure, e.g. if
     # there is no such clip or if its sound file is missing.
     clip = Clip.objects.get(id=clip_id)
-    content = clip.wav_file_contents
+    content = clip_manager.instance.get_wave_file_contents(clip)
     response = HttpResponse()
     response.write(content)
     response['Content-Type'] = 'audio/wav'
