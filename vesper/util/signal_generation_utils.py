@@ -3,7 +3,14 @@
 
 import numpy as np
 
+from vesper.util.bunch import Bunch
 import vesper.util.signal_utils as signal_utils
+
+
+def create_silence(duration, sample_rate):
+    length = signal_utils.seconds_to_frames(duration, sample_rate)
+    samples = np.zeros((1, length))
+    return Bunch(samples=samples, sample_rate=sample_rate)
 
 
 def add_tone(
