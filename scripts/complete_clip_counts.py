@@ -34,16 +34,16 @@ from pathlib import Path
 import csv
 
 
-_FILE_PATH = Path((
-    '/Users/harold/Desktop/NFC/Data/MPG Ranch/'
-    '2017 MPG Ranch Archive Analysis/Clip Counts.csv'))
+_FILE_PATH = Path('/Users/harold/Desktop/2017 MPG Ranch Clip Counts.csv')
 
 
 _DETECTOR_SUBSTITUTIONS = {
-    'Old Bird Thrush Detector': 'Thrush',
-    'Old Bird Tseep Detector': 'Tseep',
-    'Old Bird Thrush Detector Redux 1.1': 'Thrush',
-    'Old Bird Tseep Detector Redux 1.1': 'Tseep'
+    'Old Bird Thrush Detector': 'Old Bird Thrush',
+    'Old Bird Tseep Detector': 'Old Bird Tseep',
+    'Old Bird Thrush Detector Redux 1.1': 'Redux Thrush',
+    'Old Bird Tseep Detector Redux 1.1': 'Redux Tseep',
+    'PNF Thrush Energy Detector 1.0': 'PNF Thrush',
+    'PNF Tseep Energy Detector 1.0': 'PNF Tseep',
 }
 
 
