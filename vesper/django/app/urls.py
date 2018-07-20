@@ -48,6 +48,9 @@ if not settings.ARCHIVE_READ_ONLY:
             name='delete-recordings'),
         url(r'^delete-clips/$', views.delete_clips, name='delete-clips'),
         url(r'^adjust-clips/$', views.adjust_clips, name='adjust-clips'),
+        url(r'^transfer-call-classifications/$',
+            views.transfer_call_classifications,
+            name='transfer-call-classifications'),
     
         url(r'^stations/$', views.stations, name='stations'),
         url(r'^stations/(?P<station_name>[a-zA-Z0-9_\-\. ]+)/$',

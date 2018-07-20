@@ -30,6 +30,8 @@ from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, Station, StringAnnotation)
+from vesper.django.app.transfer_call_classifications_form import \
+    TransferCallClassificationsForm
 from vesper.django.app.update_recording_file_paths_form import \
     UpdateRecordingFilePathsForm
 from vesper.old_bird.export_clip_counts_csv_file_form import \
@@ -46,8 +48,6 @@ import vesper.old_bird.export_clip_counts_csv_file_utils as \
 import vesper.util.archive_lock as archive_lock
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
-from vesper.singletons import (
-    extension_manager, preset_manager, recording_manager)
 
 
 class HttpError(Exception):
@@ -637,6 +637,47 @@ def _create_adjust_clips_command_spec(form):
             'end_date': data['end_date'],
             'duration': data['duration'],
             'annotation_name': data['annotation_name']
+        }
+    }
+
+
+@login_required
+@csrf_exempt
+def transfer_call_classifications(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = TransferCallClassificationsForm()
+
+    elif request.method == 'POST':
+
+        form = TransferCallClassificationsForm(request.POST)
+
+        if form.is_valid():
+            command_spec = \
+                _create_transfer_call_classifications_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Other', form=form)
+
+    return render(
+        request, 'vesper/transfer-call-classifications.html', context)
+
+
+def _create_transfer_call_classifications_command_spec(form):
+
+    data = form.cleaned_data
+
+    return {
+        'name': 'transfer_call_classifications',
+        'arguments': {
+            'source_detector': data['source_detector'],
+            'target_detector': data['target_detector'],
+            'station_mics': data['station_mics'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
         }
     }
 

@@ -27,6 +27,7 @@ Command:
     - vesper.command.export_command.ExportCommand
     - vesper.command.import_command.ImportCommand
     - vesper.command.test_command.TestCommand
+    - vesper.command.transfer_call_classifications_command.TransferCallClassificationsCommand
     - vesper.command.update_recording_file_paths_command.UpdateRecordingFilePathsCommand
     
 Detector:

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Transfer Call Classifications - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load staticfiles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+
+</head>
+
+<body>
+
+    {% include "vesper/navbar.html" %}
+
+    <h2>Transfer Call Classifications</h2>
+
+    <p>
+        Transfers classifications from call clips of one detector to
+        unclassified clips of another detector. The detector from whose
+        clips classifications are transferred is called the *source*
+        detector and the detector whose clips receive the classifications
+        is called the *target* detector. The set of source detector call
+        clips is specified by the detector, a set of station/mic pairs,
+        and a range of dates. The transfer runs as a Vesper job. This
+        operation cannot be undone, so be careful!
+    </p>
+
+    <!--
+        TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
+        of form elements. Or perhaps use django-bootstrap3 app? See
+        http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
+    -->
+
+    <form class="form" role="form" action="{% url 'transfer-call-classifications' %}" method="post">
+
+        {{ form.source_detector|form_element }}
+        {{ form.target_detector|form_element }}
+        {{ form.station_mics|block_form_element }}
+        {{ form.start_date|form_element }}
+        {{ form.end_date|form_element }}
+
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Transfer</button>
+
+    </form>
+
+</body>
+
+</html>
