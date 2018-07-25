@@ -459,17 +459,36 @@ def get_processors(type_, include_hidden=False):
         return processors
     
     else:
-        hidden = _get_hidden_processors()
-        return [p for p in processors if (p.name, type_) not in hidden]
+        
+        hidden, types_included = _get_hidden_processors()
+        
+        if types_included:
+            return [p for p in processors if (p.name, type_) not in hidden]
+        
+        else:
+            return [p for p in processors if p.name not in hidden]
 
 
 def _get_hidden_processors():
+    
     preferences = preference_manager.instance.preferences
     processors = preferences.get('hidden_processors', [])
-    processors = [_get_processor_pair(p) for p in processors]
-    return frozenset(p for p in processors if p is not None)
+    
+    if _hidden_processors_include_types(processors):
+        processors = [_get_processor_pair(p) for p in processors]
+        return frozenset(p for p in processors if p is not None), True
+    
+    else:
+        return frozenset(processors), False
 
 
+def _hidden_processors_include_types(processors):
+    if len(processors) == 0:
+        return False
+    else:
+        return isinstance(processors[0], dict)
+    
+    
 def _get_processor_pair(p):
     try:
         return (p['name'], p['type'])
