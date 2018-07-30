@@ -7,6 +7,7 @@ from vesper.command.command import Command
 from vesper.django.app.models import AnnotationInfo, Job, Processor
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
+import vesper.util.time_utils as time_utils
 
 
 '''
@@ -40,8 +41,10 @@ matching.
 
 _CALL_START_WINDOWS = {
     'Old Bird Thrush Detector Redux 1.1': (.130, .220),
+    'PNF 2018 Baseline Thrush Detector 1.0': (.100, .150),
     'PNF Thrush Energy Detector 1.0': (.050, .125),
     'Old Bird Tseep Detector Redux 1.1': (.100, .135),
+    'PNF 2018 Baseline Tseep Detector 1.0': (.070, .105),
     'PNF Tseep Energy Detector 1.0': (.050, .115),
 }
 """
@@ -91,17 +94,16 @@ class TransferCallClassificationsCommand(Command):
             
         self._annotation_info = _get_annotation_info(self._annotation_name)
 
+        # When we match clips, we use times in seconds after a reference
+        # time, specifically midnight of the date specified for the
+        # start date parameter of this command.
+        self._reference_time = self._get_reference_time()
+        
         self._transfer_classifications()
         
         return True
     
     
-    def _transfer_classifications(self):
-        value_tuples = self._create_clip_query_values_iterator()
-        for _, station, mic_output, date in value_tuples:
-            self._transfer_classifications_aux(station, mic_output, date)
-            
-            
     def _create_clip_query_values_iterator(self):
         
         try:
@@ -115,6 +117,17 @@ class TransferCallClassificationsCommand(Command):
                 'The archive was not modified.')
 
 
+    def _get_reference_time(self):
+        d = self._start_date
+        return time_utils.create_utc_datetime(d.year, d.month, d.day)
+    
+    
+    def _transfer_classifications(self):
+        value_tuples = self._create_clip_query_values_iterator()
+        for _, station, mic_output, date in value_tuples:
+            self._transfer_classifications_aux(station, mic_output, date)
+            
+            
     def _transfer_classifications_aux(self, station, mic_output, date):
         
         source_clips = model_utils.get_clips(
@@ -159,16 +172,44 @@ class TransferCallClassificationsCommand(Command):
             # have both source clips and target clips
             
             source_centers = _get_call_start_window_centers(
-                source_clips, self._source_call_start_window)
+                source_clips, self._reference_time,
+                self._source_call_start_window)
             
             target_centers = _get_call_start_window_centers(
-                target_clips, self._target_call_start_window)
+                target_clips, self._reference_time,
+                self._target_call_start_window)
+            
+            # self._show_clips(
+            #     source_clips, source_centers, target_clips, target_centers)
             
             max_distance = _get_matching_max_distance(
                 self._source_call_start_window, self._target_call_start_window)
             
             return _match_events(source_centers, target_centers, max_distance)
         
+
+    def _show_clips(
+            self, source_clips, source_centers, target_clips, target_centers):
+        
+        source_start_times = [c.start_time for c in source_clips.all()]
+        target_start_times = [c.start_time for c in target_clips.all()]
+        
+        source_data = [
+            ('source', i, str(start_time), center)
+            for i, (start_time, center)
+            in enumerate(zip(source_start_times, source_centers))]
+        
+        target_data = [
+            ('target', i, str(start_time), center)
+            for i, (start_time, center)
+            in enumerate(zip(target_start_times, target_centers))]
+        
+        data = source_data + target_data
+        data.sort(key=lambda d: d[2])
+        
+        for d in data:
+            print(d)
+
 
     def _show_matches(self, matches, source_clips, target_clips):
         
@@ -222,13 +263,15 @@ def _get_call_start_window(detector_name):
             'The archive was not modified.')
 
 
-def _get_call_start_window_centers(clips, window):
+def _get_call_start_window_centers(clips, reference_time, window):
     
     # Get offset from start of clip to center of call start window.
     start, end = window
-    offset = start + (end - start) / 2
+    offset = (start + end) / 2
     
-    return [c.start_index / c.sample_rate + offset for c in clips.all()]
+    return [
+        (c.start_time - reference_time).total_seconds() + offset
+        for c in clips.all()]
 
 
 def _get_annotation_info(name):
