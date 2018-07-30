@@ -168,8 +168,8 @@ class DetectCommand(Command):
         
         if file_.path is None:
             
-            self._logger.info(
-                'Path missing for file {} of recording {}.'.format(
+            self._logger.error(
+                'Archive lacks path for file {} of recording {}.'.format(
                     file_.num, recording))
         
         else:
@@ -288,7 +288,7 @@ class DetectCommand(Command):
 
 def _generate_sample_buffers(path):
     
-    chunk_size = 1000000
+    chunk_size = 100000
     
     reader = WaveAudioFileReader(str(path))
     start_index = 0
