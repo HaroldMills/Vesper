@@ -4,6 +4,7 @@
 import logging
 
 from vesper.command.command import Command
+from vesper.django.app.models import AnnotationInfo, Job, Processor
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 
@@ -37,6 +38,22 @@ matching.
 '''
 
 
+_CALL_START_WINDOWS = {
+    'Old Bird Thrush Detector Redux 1.1': (.130, .220),
+    'PNF Thrush Energy Detector 1.0': (.050, .125),
+    'Old Bird Tseep Detector Redux 1.1': (.100, .135),
+    'PNF Tseep Energy Detector 1.0': (.050, .115),
+}
+"""
+Windows within clips where call starts occur.
+
+For a particular detector, a detected call will start within a certain
+limited window within the call's clip. This attribute maps detector
+names to call start window bounds. The units of the bounds are seconds
+after the clip start.
+"""
+
+
 _logger = logging.getLogger()
 
 
@@ -58,11 +75,21 @@ class TransferCallClassificationsCommand(Command):
         
     def execute(self, job_info):
         
-        self._job_info = job_info
+        self._job = Job.objects.get(id=job_info.job_id)
 
+        self._source_detector = _get_detector(self._source_detector_name)
+        self._target_detector = _get_detector(self._target_detector_name)
+        
+        self._source_call_start_window = \
+            _get_call_start_window(self._source_detector_name)
+        self._target_call_start_window = \
+            _get_call_start_window(self._target_detector_name)
+        
         self._annotation_name, self._annotation_value = \
             model_utils.get_clip_query_annotation_data(
                 'Classification', 'Call*')
+            
+        self._annotation_info = _get_annotation_info(self._annotation_name)
 
         self._transfer_classifications()
         
@@ -70,14 +97,11 @@ class TransferCallClassificationsCommand(Command):
     
     
     def _transfer_classifications(self):
-        
         value_tuples = self._create_clip_query_values_iterator()
-        
-        for detector, station, mic_output, date in value_tuples:
-            _logger.info('{} / {} / {} / {}'.format(
-                detector.name, station.name, mic_output.name, str(date)))
+        for _, station, mic_output, date in value_tuples:
+            self._transfer_classifications_aux(station, mic_output, date)
             
-
+            
     def _create_clip_query_values_iterator(self):
         
         try:
@@ -89,3 +113,185 @@ class TransferCallClassificationsCommand(Command):
             command_utils.log_and_reraise_fatal_exception(
                 e, 'Clip query values iterator construction',
                 'The archive was not modified.')
+
+
+    def _transfer_classifications_aux(self, station, mic_output, date):
+        
+        source_clips = model_utils.get_clips(
+            station, mic_output, self._source_detector, date,
+            self._annotation_name, self._annotation_value)
+                
+        target_clips = model_utils.get_clips(
+            station, mic_output, self._target_detector, date,
+            self._annotation_name, None)
+        
+        matches = self._match_clips_with_calls(source_clips, target_clips)
+        
+        _logger.info('{} -> {} / {} / {} / {} / {}  {} {}'.format(
+            self._source_detector.name, self._target_detector.name,
+            station.name, mic_output.name, date, source_clips.count(),
+            target_clips.count(), len(matches)))
+        
+        if len(matches) > 0:
+            
+            source_clips = list(source_clips.all())
+            target_clips = list(target_clips.all())
+            
+            # self._show_matches(matches, source_clips, target_clips)
+            
+            for i, j in matches:
+                self._transfer_classification(source_clips[i], target_clips[j])
+            
+
+    def _match_clips_with_calls(self, source_clips, target_clips):
+        
+        if source_clips.count() == 0 or target_clips.count() == 0:
+            # have no source clips or no target clips
+            
+            # In this simple case we know there are no matches, so
+            # we go ahead and return an empty list. We would get the
+            # same result if we executed the code in the `else` clause
+            # below, but that might waste considerable time (for example,
+            # if there are no source clips but many target clips).
+            return []
+        
+        else:
+            # have both source clips and target clips
+            
+            source_centers = _get_call_start_window_centers(
+                source_clips, self._source_call_start_window)
+            
+            target_centers = _get_call_start_window_centers(
+                target_clips, self._target_call_start_window)
+            
+            max_distance = _get_matching_max_distance(
+                self._source_call_start_window, self._target_call_start_window)
+            
+            return _match_events(source_centers, target_centers, max_distance)
+        
+
+    def _show_matches(self, matches, source_clips, target_clips):
+        
+        min_diff = 1e6
+        max_diff = -1e6
+        
+        for k, (i, j) in enumerate(matches):
+            
+            s = source_clips[i]
+            t = target_clips[j]
+            
+            fs = s.sample_rate
+            
+            diff = (t.start_index - s.start_index) / fs
+            
+            print('{} {:.3f} {:.3f} {:.3f}'.format(
+                k, s.start_index / fs, t.start_index / fs, diff))
+            
+            min_diff = min(diff, min_diff)
+            max_diff = max(diff, max_diff)
+            
+        print('diff range [{:.3f}, {:.3f}]'.format(min_diff, max_diff))
+        
+        
+    def _transfer_classification(self, source_clip, target_clip):
+        
+        # Get source clip classification.
+        annotations = model_utils.get_clip_annotations(source_clip)
+        classification = annotations.get(self._annotation_name)
+        
+        # Classify target clip. 
+        model_utils.annotate_clip(
+            target_clip, self._annotation_info, classification,
+            creating_job=self._job)
+            
+            
+def _get_detector(name):
+    try:
+        return model_utils.get_processor(name, 'Detector')
+    except Processor.DoesNotExist as e:
+        command_utils.log_and_reraise_fatal_exception(
+            e, 'Detector lookup', 'The archive was not modified.')
+
+
+def _get_call_start_window(detector_name):
+    try:
+        return _CALL_START_WINDOWS[detector_name]
+    except KeyError as e:
+        command_utils.log_and_reraise_fatal_exception(
+            e, 'Detector call start window lookup',
+            'The archive was not modified.')
+
+
+def _get_call_start_window_centers(clips, window):
+    
+    # Get offset from start of clip to center of call start window.
+    start, end = window
+    offset = start + (end - start) / 2
+    
+    return [c.start_index / c.sample_rate + offset for c in clips.all()]
+
+
+def _get_annotation_info(name):
+    try:
+        return AnnotationInfo.objects.get(type='String', name=name)
+    except AnnotationInfo.DoesNotExist as e:
+        command_utils.log_and_reraise_fatal_exception(
+            e, 'Annotation info lookup', 'The archive was not modified.')
+        
+        
+def _get_matching_max_distance(source_window, target_window):
+    
+    # Get source call start window duration.
+    start, end = source_window
+    source_duration = end - start
+    
+    # Get target call start window duration.
+    start, end = target_window
+    target_duration = end - start
+    
+    return (source_duration + target_duration) / 2
+
+
+# TODO: Characterize this algorithm. Does it find a maximal matching?
+# (I suspect so, since it matches a reference event to the *first*
+# available estimate event whose window contains it, which keeps as
+# many options open as possible for matching later reference events.)
+# If so, can the matching differ from that found by the mir_eval
+# algorithm, and does that matter? When there is more than one maximal
+# matching, this algorithm may not find the one that is optimal in the
+# sense that the sum of the distances between the paired references and
+# estimates is minimal. Is that of any practical importance? Could this
+# algorithm be modified to yield the optimal matching?
+def _match_events(references, estimates, max_distance):
+    
+    num_references = len(references)
+    num_estimates = len(estimates)
+    
+    i = 0
+    j = 0
+    
+    matches = []
+    
+    while i != num_references and j != num_estimates:
+        
+        diff = references[i] - estimates[j]
+        
+        if diff < -max_distance:
+            # reference i precedes estimate j by more than max distance
+            
+            i += 1
+            
+        elif diff > max_distance:
+            # reference i follows reference j by more than max distance
+            
+            j += 1
+            
+        else:
+            # reference i is within max distance of estimate j
+                        
+            matches.append((i, j))
+            
+            i += 1
+            j += 1
+            
+    return matches
