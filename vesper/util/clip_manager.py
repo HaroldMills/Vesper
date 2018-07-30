@@ -159,10 +159,11 @@ class ClipManager:
     
     
     def _clear_file_reader_cache(self):
-        for key, reader in self._file_reader_cache.items():
+        
+        for reader in self._file_reader_cache.values():
             reader.close()
-            del self._file_reader_cache[key]
-
+            
+        self._file_reader_cache = {}
     
     
 def _create_wave_file_contents(samples, sample_rate):
