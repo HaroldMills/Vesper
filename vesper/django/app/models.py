@@ -609,16 +609,33 @@ class RecordingFile(Model):
         db_table = 'vesper_recording_file'
         
     @property
-    def sample_rate(self):
-        return self.recording.sample_rate
-    
-    @property
     def end_index(self):
         return self.start_index + self.length
     
     @property
+    def num_channels(self):
+        return self.recording.num_channels
+    
+    @property
+    def sample_rate(self):
+        return self.recording.sample_rate
+    
+    @property
+    def start_time(self):
+        offset = signal_utils.get_duration(self.start_index, self.sample_rate)
+        return self.recording.start_time + datetime.timedelta(seconds=offset)
+    
+    @property
+    def end_time(self):
+        return self.start_time + datetime.timedelta(seconds=self.span)
+
+    @property
     def duration(self):
         return signal_utils.get_duration(self.length, self.sample_rate)
+
+    @property
+    def span(self):
+        return signal_utils.get_span(self.length, self.sample_rate)
 
 
 # The station, recorder, and sample rate of a clip are the station,

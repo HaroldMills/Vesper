@@ -16,6 +16,10 @@ import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.time_utils as time_utils
 
 
+# TODO: Consider creating a separate interval module, including intersection
+# functions.
+
+
 Interval = namedtuple('Interval', ('start', 'end'))
 Transition = namedtuple('Transition', ('time', 'state'))
 

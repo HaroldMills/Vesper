@@ -409,6 +409,8 @@ class Detector:
         for threshold, processor in self._series_processors.items():
             clips = processor.complete_processing([])
             self._notify_listener(clips, threshold)
+            if hasattr(self._listener, complete_processing):
+                self._listener.complete_processing(threshold)
         
 
 def _seconds_to_samples(duration, sample_rate):
