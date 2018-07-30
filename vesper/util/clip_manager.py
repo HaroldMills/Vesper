@@ -144,11 +144,10 @@ class ClipManager:
         except KeyError:
             # cache miss
             
-            # Close cached reader. We cache just one reader at a time,
-            # which goes a long way since in typical use our accesses
-            # don't switch files very often.
-            for reader in self._file_reader_cache.values():
-                reader.close()
+            # Clear cache. We cache just one reader at a time, which
+            # goes a long way since in typical use our accesses don't
+            # switch files very often.
+            self._clear_file_reader_cache()
             
             # Create new reader.
             reader = WaveAudioFileReader(str(path))
@@ -157,6 +156,13 @@ class ClipManager:
             self._file_reader_cache[path] = reader
             
         return reader
+    
+    
+    def _clear_file_reader_cache(self):
+        for key, reader in self._file_reader_cache.items():
+            reader.close()
+            del self._file_reader_cache[key]
+
     
     
 def _create_wave_file_contents(samples, sample_rate):
