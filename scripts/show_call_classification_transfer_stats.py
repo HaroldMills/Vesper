@@ -14,6 +14,8 @@ LOG_DIR_PATH = Path(
 
 
 def main():
+    show_stats('PNF 2018 Baseline Thrush Detector 1.0', 357)
+    show_stats('PNF 2018 Baseline Tseep Detector 1.0', 358)
     show_stats('PNF Thrush Energy Detector 1.0', 353)
     show_stats('PNF Tseep Energy Detector 1.0', 354)
     
