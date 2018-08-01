@@ -6,8 +6,8 @@ import vesper.django.app.model_utils as model_utils
 class TransferCallClassificationsForm(forms.Form):
     
 
-    source_detector = forms.ChoiceField(label='Source Detector')
-    target_detector = forms.ChoiceField(label='Target Detector')
+    source_detector = forms.ChoiceField(label='Source detector')
+    target_detector = forms.ChoiceField(label='Target detector')
     station_mics = forms.MultipleChoiceField(label='Station/mics')
     start_date = forms.DateField(label='Start date')
     end_date = forms.DateField(label='End date')
