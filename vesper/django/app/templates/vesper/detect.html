@@ -22,8 +22,27 @@
     <h2>Detect</h2>
 
     <p>
-        Runs one or more detectors on one or more recordings. The recordings are
-        specified as a set of one or more stations and a range of dates.
+        Runs one or more detectors on all channels of one or more recordings.
+        The recordings are specified as a set of one or more stations and a
+        range of dates.
+    </p>
+    
+    <p>
+        The time intervals on which the detectors are run can optionally be
+        limited via by selecting a <code>Detection Schedule</code> preset in
+        the <code>Schedule</code> field. If a schedule is selected, detectors
+        are run only on time intervals in the intersection of the recording
+        intervals and the schedule intervals.
+    </p>
+    
+    <p>
+        Check the <code>Create clip sound files</code> check box to create
+        a separate sound file in the archive for each detected clip, or
+        uncheck it to rely on on-the-fly clip extraction from recording
+        sound files to access clip samples.
+    </p>
+    
+    <p>
         Detection runs as a Vesper job.
     </p>
 
@@ -39,6 +58,8 @@
         {{ form.stations|block_form_element }}
         {{ form.start_date|form_element }}
         {{ form.end_date|form_element }}
+        {{ form.schedule|form_element }}
+        {{ form.create_clip_files|form_checkbox }}
 
         <button type="submit" class="btn btn-default form-spacing command-form-spacing">Detect</button>
 

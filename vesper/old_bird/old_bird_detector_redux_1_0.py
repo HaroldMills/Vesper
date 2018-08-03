@@ -271,6 +271,9 @@ class _Detector:
         clips = self._series_processor.complete_processing([fall])
         self._notify_listener(clips)
 
+        if hasattr(self._listener, 'complete_processing'):
+            self._listener.complete_processing()
+
 
 class _SignalProcessor:
     

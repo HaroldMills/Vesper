@@ -337,6 +337,9 @@ class _Detector:
         clips = self._series_processor.complete_processing([fall])
         self._notify_listener(clips)
 
+        if hasattr(self._listener, 'complete_processing'):
+            self._listener.complete_processing()
+            
 #         self._lines.sort()
 #         text = ''.join('{} {}\n'.format(i, s) for i, s in self._lines)
 #         with open(r'C:\Users\Harold\Desktop\Detector Output.txt', 'w') as f:

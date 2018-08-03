@@ -246,7 +246,9 @@ def _create_detect_command_spec(form):
             'detectors': data['detectors'],
             'stations': data['stations'],
             'start_date': data['start_date'],
-            'end_date': data['end_date']
+            'end_date': data['end_date'],
+            'schedule': data['schedule'],
+            'create_clip_files': data['create_clip_files']
         }
     }
 
