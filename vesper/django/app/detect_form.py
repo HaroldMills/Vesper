@@ -2,9 +2,19 @@ from django import forms
 
 from vesper.django.app.models import Station
 from vesper.singletons import preset_manager
+import vesper.django.app.form_utils as form_utils
 import vesper.django.app.model_utils as model_utils
 
 
+_FORM_TITLE = 'Detect'
+_SCHEDULE_FIELD_LABEL = 'Schedule'
+_CREATE_CLIP_FILES_LABEL = 'Create clip sound files'
+    
+    
+def _get_field_default(name, default):
+    return form_utils.get_field_default(_FORM_TITLE, name, default)
+    
+    
 class DetectForm(forms.Form):
     
 
@@ -12,11 +22,16 @@ class DetectForm(forms.Form):
     stations = forms.MultipleChoiceField(label='Stations')
     start_date = forms.DateField(label='Start date')
     end_date = forms.DateField(label='End date')
-    schedule = forms.ChoiceField(label='Schedule', required=False)
+    
+    schedule = forms.ChoiceField(
+        label=_SCHEDULE_FIELD_LABEL,
+        initial=_get_field_default(_SCHEDULE_FIELD_LABEL, None),
+        required=False)
     
     create_clip_files = forms.BooleanField(
-        label='Create clip sound files',
+        label=_CREATE_CLIP_FILES_LABEL,
         label_suffix='',
+        initial=_get_field_default(_CREATE_CLIP_FILES_LABEL, False),
         required=False)
     
     

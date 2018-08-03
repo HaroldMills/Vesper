@@ -7,15 +7,17 @@ from vesper.archive_paths import archive_paths
 import vesper.django.app.form_utils as form_utils
 
 
-_FORM_NAME = 'import_recordings'
+_FORM_TITLE = 'Import Recordings'
+_PATHS_FIELD_LABEL = 'File and/or directory paths'
+_RECURSIVE_FIELD_LABEL = 'Recursive'
     
     
-def _get_field_default(name, default):
-    return form_utils.get_field_default(_FORM_NAME, name, default)
+def _get_field_default(field_label, default):
+    return form_utils.get_field_default(_FORM_TITLE, field_label, default)
     
     
 def _get_paths_default():
-    paths = _get_field_default('paths', None)
+    paths = _get_field_default(_PATHS_FIELD_LABEL, None)
     if paths is None:
         paths = [str(p) for p in archive_paths.recording_dir_paths]
     return ''.join(p + '\n' for p in paths)
@@ -25,7 +27,7 @@ class ImportRecordingsForm(forms.Form):
     
 
     paths = forms.CharField(
-        label='File and/or directory paths',
+        label=_PATHS_FIELD_LABEL,
         initial=_get_paths_default(),
         widget=forms.Textarea(
             attrs={
@@ -40,9 +42,9 @@ class ImportRecordingsForm(forms.Form):
 
 
     recursive = forms.BooleanField(
-        label='Recursive',
+        label=_RECURSIVE_FIELD_LABEL,
         label_suffix='',
-        initial=_get_field_default('recursive', True),
+        initial=_get_field_default(_RECURSIVE_FIELD_LABEL, True),
         required=False,
         help_text='''
             Check the box to recursively include .wav files in subdirectories
