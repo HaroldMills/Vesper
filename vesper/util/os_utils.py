@@ -184,10 +184,10 @@ def read_file(path):
                 path, str(e)))
 
 
-def write_file(path, contents):
+def write_file(path, contents, mode='w'):
     
     try:
-        with open(path, 'w') as file_:
+        with open(path, mode) as file_:
             return file_.write(contents)
         
     except Exception as e:

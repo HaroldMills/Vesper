@@ -17,6 +17,10 @@ import yaml
 
 from vesper.django.app.adjust_clips_form import AdjustClipsForm
 from vesper.django.app.classify_form import ClassifyForm
+from vesper.django.app.create_clip_sound_files_form import \
+    CreateClipSoundFilesForm
+from vesper.django.app.delete_clip_sound_files_form import \
+    DeleteClipSoundFilesForm
 from vesper.django.app.delete_clips_form import DeleteClipsForm
 from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
@@ -123,6 +127,12 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
  
       - name: Delete Clips
         url_name: delete-clips
+        
+      - name: Create Clip Sound Files
+        url_name: create-clip-sound-files
+        
+      - name: Delete Clip Sound Files
+        url_name: delete-clip-sound-files
  
 ''')
 
@@ -639,6 +649,84 @@ def _create_adjust_clips_command_spec(form):
             'end_date': data['end_date'],
             'duration': data['duration'],
             'annotation_name': data['annotation_name']
+        }
+    }
+
+
+@login_required
+@csrf_exempt
+def create_clip_sound_files(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = CreateClipSoundFilesForm()
+
+    elif request.method == 'POST':
+
+        form = CreateClipSoundFilesForm(request.POST)
+
+        if form.is_valid():
+            command_spec = _create_create_clip_sound_files_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Other', form=form)
+
+    return render(request, 'vesper/create-clip-sound-files.html', context)
+
+
+def _create_create_clip_sound_files_command_spec(form):
+
+    data = form.cleaned_data
+
+    return {
+        'name': 'create_clip_sound_files',
+        'arguments': {
+            'detectors': data['detectors'],
+            'station_mics': data['station_mics'],
+            'classification': data['classification'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
+        }
+    }
+
+
+@login_required
+@csrf_exempt
+def delete_clip_sound_files(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = DeleteClipSoundFilesForm()
+
+    elif request.method == 'POST':
+
+        form = DeleteClipSoundFilesForm(request.POST)
+
+        if form.is_valid():
+            command_spec = _create_delete_clip_sound_files_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Other', form=form)
+
+    return render(request, 'vesper/delete-clip-sound-files.html', context)
+
+
+def _create_delete_clip_sound_files_command_spec(form):
+
+    data = form.cleaned_data
+
+    return {
+        'name': 'delete_clip_sound_files',
+        'arguments': {
+            'detectors': data['detectors'],
+            'station_mics': data['station_mics'],
+            'classification': data['classification'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
         }
     }
 
