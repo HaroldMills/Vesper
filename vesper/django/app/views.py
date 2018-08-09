@@ -17,15 +17,15 @@ import yaml
 
 from vesper.django.app.adjust_clips_form import AdjustClipsForm
 from vesper.django.app.classify_form import ClassifyForm
-from vesper.django.app.create_clip_sound_files_form import \
-    CreateClipSoundFilesForm
-from vesper.django.app.delete_clip_sound_files_form import \
-    DeleteClipSoundFilesForm
+from vesper.django.app.create_clip_audio_files_form import \
+    CreateClipAudioFilesForm
+from vesper.django.app.delete_clip_audio_files_form import \
+    DeleteClipAudioFilesForm
 from vesper.django.app.delete_clips_form import DeleteClipsForm
 from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
-from vesper.django.app.export_clip_sound_files_form import \
-    ExportClipSoundFilesForm
+from vesper.django.app.export_clip_audio_files_form import \
+    ExportClipAudioFilesForm
 from vesper.django.app.export_clips_csv_file_form import \
     ExportClipsCsvFileForm
 from vesper.django.app.export_clips_hdf5_file_form import \
@@ -116,8 +116,8 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
       - name: Clips CSV File
         url_name: export-clips-csv-file
  
-      - name: Clip Sound Files
-        url_name: export-clip-sound-files
+      - name: Clip Audio Files
+        url_name: export-clip-audio-files
  
 - name: Other
   dropdown:
@@ -128,11 +128,11 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
       - name: Delete Clips
         url_name: delete-clips
         
-      - name: Create Clip Sound Files
-        url_name: create-clip-sound-files
+      - name: Create Clip Audio Files
+        url_name: create-clip-audio-files
         
-      - name: Delete Clip Sound Files
-        url_name: delete-clip-sound-files
+      - name: Delete Clip Audio Files
+        url_name: delete-clip-audio-files
  
 ''')
 
@@ -413,17 +413,17 @@ def _create_export_clips_csv_file_command_spec(form):
 
 @login_required
 @csrf_exempt
-def export_clip_sound_files(request):
+def export_clip_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
-        form = ExportClipSoundFilesForm()
+        form = ExportClipAudioFilesForm()
 
     elif request.method == 'POST':
 
-        form = ExportClipSoundFilesForm(request.POST)
+        form = ExportClipAudioFilesForm(request.POST)
 
         if form.is_valid():
-            command_spec = _create_export_clip_sound_files_command_spec(form)
+            command_spec = _create_export_clip_audio_files_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -431,10 +431,10 @@ def export_clip_sound_files(request):
 
     context = _create_template_context(request, 'Export', form=form)
 
-    return render(request, 'vesper/export-clip-sound-files.html', context)
+    return render(request, 'vesper/export-clip-audio-files.html', context)
 
 
-def _create_export_clip_sound_files_command_spec(form):
+def _create_export_clip_audio_files_command_spec(form):
 
     data = form.cleaned_data
 
@@ -442,7 +442,7 @@ def _create_export_clip_sound_files_command_spec(form):
         'name': 'export',
         'arguments': {
             'exporter': {
-                'name': 'Clip Sound Files',
+                'name': 'Clip Audio Files',
                 'arguments': {
                     'output_dir_path': data['output_dir_path'],
                     'clip_file_name_formatter': {
@@ -655,17 +655,17 @@ def _create_adjust_clips_command_spec(form):
 
 @login_required
 @csrf_exempt
-def create_clip_sound_files(request):
+def create_clip_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
-        form = CreateClipSoundFilesForm()
+        form = CreateClipAudioFilesForm()
 
     elif request.method == 'POST':
 
-        form = CreateClipSoundFilesForm(request.POST)
+        form = CreateClipAudioFilesForm(request.POST)
 
         if form.is_valid():
-            command_spec = _create_create_clip_sound_files_command_spec(form)
+            command_spec = _create_create_clip_audio_files_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -673,15 +673,15 @@ def create_clip_sound_files(request):
 
     context = _create_template_context(request, 'Other', form=form)
 
-    return render(request, 'vesper/create-clip-sound-files.html', context)
+    return render(request, 'vesper/create-clip-audio-files.html', context)
 
 
-def _create_create_clip_sound_files_command_spec(form):
+def _create_create_clip_audio_files_command_spec(form):
 
     data = form.cleaned_data
 
     return {
-        'name': 'create_clip_sound_files',
+        'name': 'create_clip_audio_files',
         'arguments': {
             'detectors': data['detectors'],
             'station_mics': data['station_mics'],
@@ -694,17 +694,17 @@ def _create_create_clip_sound_files_command_spec(form):
 
 @login_required
 @csrf_exempt
-def delete_clip_sound_files(request):
+def delete_clip_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
-        form = DeleteClipSoundFilesForm()
+        form = DeleteClipAudioFilesForm()
 
     elif request.method == 'POST':
 
-        form = DeleteClipSoundFilesForm(request.POST)
+        form = DeleteClipAudioFilesForm(request.POST)
 
         if form.is_valid():
-            command_spec = _create_delete_clip_sound_files_command_spec(form)
+            command_spec = _create_delete_clip_audio_files_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -712,15 +712,15 @@ def delete_clip_sound_files(request):
 
     context = _create_template_context(request, 'Other', form=form)
 
-    return render(request, 'vesper/delete-clip-sound-files.html', context)
+    return render(request, 'vesper/delete-clip-audio-files.html', context)
 
 
-def _create_delete_clip_sound_files_command_spec(form):
+def _create_delete_clip_audio_files_command_spec(form):
 
     data = form.cleaned_data
 
     return {
-        'name': 'delete_clip_sound_files',
+        'name': 'delete_clip_audio_files',
         'arguments': {
             'detectors': data['detectors'],
             'station_mics': data['station_mics'],
@@ -830,7 +830,7 @@ def clip(request, clip_id):
 
 def clip_wav(request, clip_id):
     # TODO: Set appropriate response status code on failure, e.g. if
-    # there is no such clip or if its sound file is missing.
+    # there is no such clip or if its audio file is missing.
     clip = Clip.objects.get(id=clip_id)
     content = clip_manager.instance.get_wave_file_contents(clip)
     response = HttpResponse()

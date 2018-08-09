@@ -635,7 +635,7 @@ def _get_time_intervals_intersection(a, b):
 
 def _get_file_detection_intervals(file_, recording_intervals):
     
-    """Gets the sound file index intervals on which to run detectors."""
+    """Gets the audio file index intervals on which to run detectors."""
     
     file_interval = Interval(file_.start_time, file_.end_time)
     
@@ -652,7 +652,7 @@ def _get_file_detection_intervals(file_, recording_intervals):
 def _get_index_interval(time_interval, start_time, sample_rate):
     
     """
-    Gets the sound file index interval corresponding to the specified
+    Gets the audio file index interval corresponding to the specified
     time interval.
     """
     
@@ -861,12 +861,12 @@ class _DetectorListener:
                 for clip in clips:
                     
                     try:
-                        self._create_clip_sound_file(clip)
+                        self._create_clip_audio_file(clip)
                         
                     except Exception as e:
                         self._num_file_failures += 1
                         self._logger.error((
-                            '            Attempt to create sound file for '
+                            '            Attempt to create audio file for '
                             'clip {} failed with message: {}. Clip database '
                             'record was still created.').format(
                                 str(clip), str(e)))
@@ -879,7 +879,7 @@ class _DetectorListener:
 
 
     
-    def _create_clip_sound_file(self, clip):
+    def _create_clip_audio_file(self, clip):
         
         # Create clip directory if needed.
         dir_path = os.path.dirname(clip.wav_file_path)
@@ -918,7 +918,7 @@ class _DetectorListener:
                     self._num_database_failures + self._num_file_failures
                 
                 file_failures_text = ' and ' + text_utils.create_count_text(
-                    num_file_failures, 'sound file creation failure')
+                    num_file_failures, 'audio file creation failure')
                 
             else:
                 

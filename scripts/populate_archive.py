@@ -482,7 +482,7 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             clip.save()
              
             if _CLIP_FILES_AVAILABLE:
-                _copy_clip_sound_file(file_path, clip)
+                _copy_clip_audio_file(file_path, clip)
             
             if c.clip_class_name is not None:
                 
@@ -575,7 +575,7 @@ def _get_annotation_info(name, annotation_infos):
         raise ValueError('Unrecognized annotation "{}".'.format(name))
     
     
-def _copy_clip_sound_file(file_path, clip):
+def _copy_clip_audio_file(file_path, clip):
     
     # TODO: Would it be significantly faster to copy files via the OS
     # rather than reading their contents and then writing them?

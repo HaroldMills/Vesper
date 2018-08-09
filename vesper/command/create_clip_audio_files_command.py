@@ -1,4 +1,4 @@
-"""Module containing class `CreateClipSoundFilesCommand`."""
+"""Module containing class `CreateClipAudioFilesCommand`."""
 
 
 import logging
@@ -16,10 +16,10 @@ import vesper.util.text_utils as text_utils
 _logger = logging.getLogger()
 
 
-class CreateClipSoundFilesCommand(Command):
+class CreateClipAudioFilesCommand(Command):
     
     
-    extension_name = 'create_clip_sound_files'
+    extension_name = 'create_clip_audio_files'
     
     
     def __init__(self, args):
@@ -40,12 +40,12 @@ class CreateClipSoundFilesCommand(Command):
             model_utils.get_clip_query_annotation_data(
                 'Classification', self._classification)
 
-        self._create_clip_sound_files()
+        self._create_clip_audio_files()
         
         return True
     
     
-    def _create_clip_sound_files(self):
+    def _create_clip_audio_files(self):
         
         start_time = time.time()
         
@@ -64,13 +64,13 @@ class CreateClipSoundFilesCommand(Command):
             num_created_files = 0
             
             for clip in clips:
-                if self._create_clip_sound_file_if_needed(clip):
+                if self._create_clip_audio_file_if_needed(clip):
                     num_created_files += 1
                 
             # Log file creations for this detector/station/mic_output/date.
             count_text = text_utils.create_count_text(num_clips, 'clip')
             _logger.info((
-                'Created sound files for {} of {} for detector "{}", '
+                'Created audio files for {} of {} for detector "{}", '
                 'station "{}", mic output "{}", and date {}.').format(
                     num_created_files, count_text, detector.name,
                     station.name, mic_output.name, date))
@@ -100,7 +100,7 @@ class CreateClipSoundFilesCommand(Command):
                 'The archive was not modified.')
 
     
-    def _create_clip_sound_file_if_needed(self, clip):
+    def _create_clip_audio_file_if_needed(self, clip):
         
         try:
             
@@ -124,4 +124,4 @@ class CreateClipSoundFilesCommand(Command):
                     
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(
-                e, 'Creation of sound file for clip "{}"'.format(str(clip)))
+                e, 'Creation of audio file for clip "{}"'.format(str(clip)))

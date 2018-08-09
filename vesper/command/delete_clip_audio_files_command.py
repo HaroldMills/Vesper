@@ -1,4 +1,4 @@
-"""Module containing class `DeleteClipSoundFilesCommand`."""
+"""Module containing class `DeleteClipAudioFilesCommand`."""
 
 
 import logging
@@ -15,10 +15,10 @@ import vesper.util.text_utils as text_utils
 _logger = logging.getLogger()
 
 
-class DeleteClipSoundFilesCommand(Command):
+class DeleteClipAudioFilesCommand(Command):
     
     
-    extension_name = 'delete_clip_sound_files'
+    extension_name = 'delete_clip_audio_files'
     
     
     def __init__(self, args):
@@ -39,12 +39,12 @@ class DeleteClipSoundFilesCommand(Command):
             model_utils.get_clip_query_annotation_data(
                 'Classification', self._classification)
 
-        self._delete_clip_sound_files()
+        self._delete_clip_audio_files()
         
         return True
     
     
-    def _delete_clip_sound_files(self):
+    def _delete_clip_audio_files(self):
         
         start_time = time.time()
         
@@ -63,13 +63,13 @@ class DeleteClipSoundFilesCommand(Command):
             num_deleted_files = 0
             
             for clip in clips:
-                if self._delete_clip_sound_file_if_needed(clip):
+                if self._delete_clip_audio_file_if_needed(clip):
                     num_deleted_files += 1
                 
             # Log file deletions for this detector/station/mic_output/date.
             count_text = text_utils.create_count_text(num_clips, 'clip')
             _logger.info((
-                'Deleted sound files for {} of {} for detector "{}", '
+                'Deleted audio files for {} of {} for detector "{}", '
                 'station "{}", mic output "{}", and date {}.').format(
                     num_deleted_files, count_text, detector.name,
                     station.name, mic_output.name, date))
@@ -99,7 +99,7 @@ class DeleteClipSoundFilesCommand(Command):
                 'The archive was not modified.')
 
     
-    def _delete_clip_sound_file_if_needed(self, clip):
+    def _delete_clip_audio_file_if_needed(self, clip):
         
         try:
             
@@ -114,4 +114,4 @@ class DeleteClipSoundFilesCommand(Command):
                     
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(
-                e, 'Deletion of sound file for clip "{}"'.format(str(clip)))
+                e, 'Deletion of audio file for clip "{}"'.format(str(clip)))

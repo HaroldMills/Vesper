@@ -21,8 +21,8 @@ Classifier:
 Command:
     - vesper.command.adjust_clips_command.AdjustClipsCommand
     - vesper.command.classify_command.ClassifyCommand
-    - vesper.command.create_clip_sound_files_command.CreateClipSoundFilesCommand
-    - vesper.command.delete_clip_sound_files_command.DeleteClipSoundFilesCommand
+    - vesper.command.create_clip_audio_files_command.CreateClipAudioFilesCommand
+    - vesper.command.delete_clip_audio_files_command.DeleteClipAudioFilesCommand
     - vesper.command.delete_clips_command.DeleteClipsCommand
     - vesper.command.delete_recordings_command.DeleteRecordingsCommand
     - vesper.command.detect_command.DetectCommand
@@ -43,7 +43,7 @@ Detector:
     - vesper.pnf.pnf_energy_detector_1_0.TseepDetector
     
 Exporter:
-    - vesper.command.clip_sound_files_exporter.ClipSoundFilesExporter
+    - vesper.command.clip_audio_files_exporter.ClipAudioFilesExporter
     - vesper.mpg_ranch.clips_csv_file_exporter.ClipsCsvFileExporter
     - vesper.command.clips_hdf5_file_exporter.ClipsHdf5FileExporter
     
@@ -62,7 +62,7 @@ Recording File Parser:
     - vesper.mpg_ranch.recording_file_parser.RecordingFileParser
     
 Clip File Name Formatter:
-    - vesper.command.clip_sound_files_exporter.SimpleClipFileNameFormatter
+    - vesper.command.clip_audio_files_exporter.SimpleClipFileNameFormatter
     
 '''
 

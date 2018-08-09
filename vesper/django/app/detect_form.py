@@ -8,7 +8,7 @@ import vesper.django.app.model_utils as model_utils
 
 _FORM_TITLE = 'Detect'
 _SCHEDULE_FIELD_LABEL = 'Schedule'
-_CREATE_CLIP_FILES_LABEL = 'Create clip sound files'
+_CREATE_CLIP_FILES_LABEL = 'Create clip audio files'
     
     
 def _get_field_default(name, default):

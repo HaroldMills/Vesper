@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Create Clip Sound Files - Vesper</title>
+    <title>Create Clip Audio Files - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -18,12 +18,12 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Create Clip Sound Files</h2>
+    <h2>Create Clip Audio Files</h2>
 
     <p>
-        Creates sound files for clips of this archive. The clips are
+        Creates audio files for clips of this archive. The clips are
         specified as a set of detectors, a set of station/mic pairs, a
-        classification, and a range of dates. The sound files for the
+        classification, and a range of dates. The audio files for the
         recordings of which the clips are parts must be available to
         supply the clips' samples. The operation runs as a Vesper job.
     </p>
@@ -34,7 +34,7 @@
         http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
     -->
 
-    <form class="form" role="form" action="{% url 'create-clip-sound-files' %}" method="post">
+    <form class="form" role="form" action="{% url 'create-clip-audio-files' %}" method="post">
 
         {{ form.detectors|block_form_element }}
         {{ form.station_mics|block_form_element }}

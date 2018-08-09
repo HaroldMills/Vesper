@@ -318,7 +318,7 @@ class _DetectorMonitor(Thread):
                     
                     self._logger.info((
                         'Terminating {} detector since detector log indicates '
-                        'that sound file processing is complete...').format(
+                        'that audio file processing is complete...').format(
                             self.name))
                     self._detector_process.terminate()
                     break
@@ -394,7 +394,7 @@ class _DetectorMonitor(Thread):
         
         for file_path in file_paths:
             
-            # We've had problems attempting to read sound files before
+            # We've had problems attempting to read audio files before
             # the Old Bird detector has finished writing them, so we
             # do not attempt to read a file if it was last modified
             # within a certain number of seconds of the current time.
@@ -534,15 +534,15 @@ class _DetectorMonitor(Thread):
                         creating_processor=self._detector
                     )
                     
-                    # We must create the clip sound file after creating
+                    # We must create the clip audio file after creating
                     # the clip row in the database. The file's path
                     # depends on the clip ID, which is set as part of
                     # creating the clip row.
                     #
-                    # We create the sound file within the database
+                    # We create the audio file within the database
                     # transaction to ensure that the clip row and
-                    # sound file are created atomically.
-                    self._write_clip_sound_file(clip, samples)
+                    # audio file are created atomically.
+                    self._write_clip_audio_file(clip, samples)
                                     
         except Exception as e:
             self._logger.error((
@@ -554,7 +554,7 @@ class _DetectorMonitor(Thread):
             self._logger.info('Archived {} clip {}.'.format(self.name, clip))
 
 
-    def _write_clip_sound_file(self, clip, samples):
+    def _write_clip_audio_file(self, clip, samples):
         
         # Create clip directory if needed.
         dir_path = os.path.dirname(clip.wav_file_path)

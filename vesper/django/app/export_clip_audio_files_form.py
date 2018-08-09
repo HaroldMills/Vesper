@@ -3,7 +3,7 @@ from django import forms
 import vesper.django.app.model_utils as model_utils
 
 
-class ExportClipSoundFilesForm(forms.Form):
+class ExportClipAudioFilesForm(forms.Form):
     
 
     detectors = forms.MultipleChoiceField(label='Detectors')
@@ -32,7 +32,8 @@ class ExportClipSoundFilesForm(forms.Form):
         
         # Populate detectors field.
         detectors = model_utils.get_processors('Detector')
-        self.fields['detectors'].choices = [(d.name, d.name) for d in detectors]
+        self.fields['detectors'].choices = \
+            [(d.name, d.name) for d in detectors]
 
         # Populate station/mics field.
         names = model_utils.get_station_mic_output_pair_ui_names()

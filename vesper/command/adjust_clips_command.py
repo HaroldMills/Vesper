@@ -168,7 +168,7 @@ class AdjustClipsCommand(Command):
                     clip.length = length
                     clip.save()
                     
-                    self._update_clip_sound_file(clip, f)
+                    self._update_clip_audio_file(clip, f)
                     
                     return True
                 
@@ -227,7 +227,7 @@ class AdjustClipsCommand(Command):
             return int(round(self._duration * clip.sample_rate))
         
 
-    def _update_clip_sound_file(self, clip, recording_file):
+    def _update_clip_audio_file(self, clip, recording_file):
         
         # TODO: Create object that gets recording channel samples centered
         # around clips and use it here to get clip samples.
@@ -240,6 +240,6 @@ class AdjustClipsCommand(Command):
         samples = samples[clip.recording_channel.channel_num]
         samples.shape = (1, len(samples))
         
-        # Write new clip sound file.
+        # Write new clip audio file.
         path = clip.wav_file_path
         audio_file_utils.write_wave_file(path, samples, clip.sample_rate)

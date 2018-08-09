@@ -3,7 +3,7 @@ from django import forms
 import vesper.django.app.model_utils as model_utils
 
 
-class DeleteClipSoundFilesForm(forms.Form):
+class CreateClipAudioFilesForm(forms.Form):
     
 
     detectors = forms.MultipleChoiceField(label='Detectors')

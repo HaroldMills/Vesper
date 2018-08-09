@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Delete Clip Sound Files - Vesper</title>
+    <title>Delete Clip Audio Files - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -18,16 +18,16 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Delete Clip Sound Files</h2>
+    <h2>Delete Clip Audio Files</h2>
 
     <p>
-        Deletes sound files for clips of this archive. The clips are
+        Deletes audio files for clips of this archive. The clips are
         specified as a set of detectors, a set of station/mic pairs, a
         classification, and a range of dates. After the files are deleted,
         when needed Vesper will extract audio data for the clips on the fly
         from the recordings of which they are parts, assuming that the
         recordings are available. If the recordings are not available, you
-        probably don't want to delete the clip sound files. Be careful: this
+        probably don't want to delete the clip audio files. Be careful: this
         operation cannot be undone! The operation runs as a Vesper job.
     </p>
 
@@ -37,7 +37,7 @@
         http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
     -->
 
-    <form class="form" role="form" action="{% url 'delete-clip-sound-files' %}" method="post">
+    <form class="form" role="form" action="{% url 'delete-clip-audio-files' %}" method="post">
 
         {{ form.detectors|block_form_element }}
         {{ form.station_mics|block_form_element }}

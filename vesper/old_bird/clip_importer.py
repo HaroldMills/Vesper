@@ -372,7 +372,7 @@ class ClipImporter:
             creating_job=self._job,
             creating_processor=info.detector)
 
-        _copy_clip_sound_file(file_path, clip.wav_file_path)
+        _copy_clip_audio_file(file_path, clip.wav_file_path)
         
         if info.classification is not None:
             
@@ -597,7 +597,7 @@ def _assert_recording_contains_clip(recording, clip_start_time, clip_end_time):
         raise ValueError('Clip ends after recording that should contain it.')
     
     
-def _copy_clip_sound_file(from_path, to_path):
+def _copy_clip_audio_file(from_path, to_path):
     
     # Create clip directory if needed.
     dir_path = os.path.dirname(to_path)
