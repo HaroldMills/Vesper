@@ -44,13 +44,13 @@ def _get_selection_duration(selection):
     return end_time - start_time
 
 
-def detect_tseeps(sound):
-    return detect_events(sound, _DETECTOR_CONFIG)
+def detect_tseeps(audio):
+    return detect_events(audio, _DETECTOR_CONFIG)
 
 
-def detect_events(sound, config):
+def detect_events(audio, config):
 
-    spectrogram = Spectrogram(sound, config.spectrogram_settings)
+    spectrogram = Spectrogram(audio, config.spectrogram_settings)
 
     x, times = measurements.apply_measurement_to_spectra(
         measurements.entropy, spectrogram,

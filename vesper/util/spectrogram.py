@@ -8,24 +8,24 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 class Spectrogram(TimeFrequencyAnalysis):
 
 
-    def __init__(self, sound, settings):
+    def __init__(self, audio, settings):
 
         """
         Initializes this spectrogram.
 
         :Parameters:
 
-            sound : `object`
-                the sound of which to compute the spectrogram.
+            audio : `object`
+                the audio of which to compute the spectrogram.
 
                 This parameter must be a Python object with the
                 following attributes:
 
                     samples : NumPy array
-                        the samples of the sound
+                        audio samples
 
                     sample_rate : `float`
-                        the sample rate of the sound in hertz.
+                        the sample rate of the audio in hertz.
 
             settings : `object`
                 the spectrogram settings.
@@ -64,18 +64,18 @@ class Spectrogram(TimeFrequencyAnalysis):
 
 
         self.dft_size, freqs = tfa_utils.get_dft_analysis_data(
-            sound.sample_rate, settings.window.size, settings.dft_size)
+            audio.sample_rate, settings.window.size, settings.dft_size)
 
         self.reference_power = settings.reference_power
 
         super(Spectrogram, self).__init__(
-            sound, settings.window, settings.hop_size, freqs)
+            audio, settings.window, settings.hop_size, freqs)
 
 
     def _analyze(self):
 
         spectra = tfa_utils.compute_spectrogram(
-            self.sound.samples, self.window.samples, self.hop_size,
+            self.audio.samples, self.window.samples, self.hop_size,
             self.dft_size)
 
         tfa_utils.scale_spectrogram(spectra, out=spectra)
@@ -93,4 +93,4 @@ class Spectrogram(TimeFrequencyAnalysis):
 
     @property
     def freq_spacing(self):
-        return self.sound.sample_rate / self.dft_size
+        return self.audio.sample_rate / self.dft_size

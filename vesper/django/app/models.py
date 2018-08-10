@@ -753,7 +753,7 @@ class Clip(Model):
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._sound = None
+        self._audio = None
         
     @property
     def recording(self):
@@ -775,24 +775,6 @@ class Clip(Model):
             return self.start_index + self.length
         
     @property
-    def wav_file_contents(self):
-        with open(self.wav_file_path, 'rb') as file_:
-            return file_.read()
-        
-    @property
-    def wav_file_path(self):
-        return _create_clip_file_path(self.id)
-        
-    @property
-    def sound(self):
-        if self._sound is None:
-            path = self.wav_file_path
-            (samples, sample_rate) = audio_file_utils.read_wave_file(path)
-            samples = samples[0]
-            self._sound = Bunch(samples=samples, sample_rate=sample_rate)
-        return self._sound
-    
-    @property
     def duration(self):
         return signal_utils.get_duration(self.length, self.sample_rate)
     
@@ -801,35 +783,6 @@ class Clip(Model):
         return signal_utils.get_span(self.length, self._sample_rate)
 
 
-_CLIPS_DIR_FORMAT = (3, 3, 3)
-
-
-def _create_clip_file_path(clip_id):
-    id_parts = _get_clip_id_parts(clip_id, _CLIPS_DIR_FORMAT)
-    path_parts = id_parts[:-1]
-    id_ = ' '.join(id_parts)
-    file_name = 'Clip {}.wav'.format(id_)
-    path_parts.append(file_name)
-    return os.path.join(str(archive_paths.clips_dir_path), *path_parts)
-
-
-def _get_clip_id_parts(num, format_):
-    
-    # Format number as digit string with leading zeros.
-    num_digits = sum(format_)
-    f = '{:0' + str(num_digits) + 'd}'
-    digits = f.format(num)
-    
-    # Split string into parts.
-    i = 0
-    parts = []
-    for num_digits in format_:
-        parts.append(digits[i:i + num_digits])
-        i += num_digits
-        
-    return parts
-    
-    
 # Note that one might implement annotation value constraints as presets.
 # We choose not to do so, however, since the constraints provide important
 # information regarding the annotation values in the archive. We reserve

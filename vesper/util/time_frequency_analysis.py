@@ -35,7 +35,7 @@ import numpy as np
 # and the analysis window size and hop size, even if the input signal
 # is too short for the analysis to have any frames.
 
-# TODO: Consider unifying time/frequency analyses and sounds.
+# TODO: Consider unifying time/frequency analyses and audio segments.
 
 # TODO: Figure out how to deal with multichannel signals. It will be
 # important to figure this out early in the game, before we write lots
@@ -53,9 +53,9 @@ import numpy as np
 class TimeFrequencyAnalysis(object):
     
     
-    def __init__(self, sound, window, hop_size, freqs):
+    def __init__(self, audio, window, hop_size, freqs):
         
-        self.sound = sound
+        self.audio = audio
         self.window = window
         self.hop_size = hop_size
         self.freqs = freqs
@@ -71,15 +71,15 @@ class TimeFrequencyAnalysis(object):
         
     @property
     def analysis_rate(self):
-        return float(self.sound.sample_rate) / self.hop_size
+        return float(self.audio.sample_rate) / self.hop_size
          
 
     @property
     def times(self):
         if self._times is None:
-            sound = self.sound
+            audio = self.audio
             window = self.window
-            offset = (window.size - 1) / 2. / sound.sample_rate
+            offset = (window.size - 1) / 2. / audio.sample_rate
             num_analyses = len(self.analyses)
             self._times = offset + np.arange(num_analyses) / self.analysis_rate
         return self._times

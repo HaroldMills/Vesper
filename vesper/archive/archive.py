@@ -1056,7 +1056,7 @@ class _Clip:
         self._clip_class_name = clip_class_name
         
         self._file_path = None
-        self._sound = None
+        self._audio = None
         self._spectrogram = None
         self._instantaneous_frequencies = None
         
@@ -1103,25 +1103,25 @@ class _Clip:
         
         
 #     @property
-#     def sound(self):
+#     def audio(self):
 #         
-#         if self._sound is None:
-#             # sound not yet read from file
+#         if self._audio is None:
+#             # audio not yet read from file
 #             
-#             self._sound = sound_utils.read_sound_file(self.file_path)
+#             self._audio = audio_utils.read_audio_file(self.file_path)
 #             
-#             # Pad sound with zeros to make it at least `_MIN_CLIP_DURATION`
+#             # Pad audio with zeros to make it at least `_MIN_CLIP_DURATION`
 #             # seconds long. This is part of a temporary "fix" to GitHub
 #             # issue 30.
 #             if self._duration < _MIN_CLIP_DURATION:
 #                 min_length = \
-#                     int(round(_MIN_CLIP_DURATION * self._sound.sample_rate))
-#                 n = min_length - len(self._sound.samples)
+#                     int(round(_MIN_CLIP_DURATION * self._audio.sample_rate))
+#                 n = min_length - len(self._audio.samples)
 #                 if n > 0:
-#                     self._sound.samples = \
-#                         np.hstack((self._sound.samples, np.zeros(n)))
+#                     self._audio.samples = \
+#                         np.hstack((self._audio.samples, np.zeros(n)))
 #                 
-#         return self._sound
+#         return self._audio
     
     
     @property
@@ -1141,7 +1141,7 @@ class _Clip:
 
 
 #     def play(self):
-#         sound_utils.play_sound_file(self.file_path)
+#         audio_utils.play_audio_file(self.file_path)
         
         
     @property

@@ -117,9 +117,9 @@ class _Classifier:
         
     def _get_waveform(self, clip):
         
-        sound = clip.sound
-        waveform = sound.samples
-        sample_rate = sound.sample_rate
+        audio = clip.audio
+        waveform = audio.samples
+        sample_rate = audio.sample_rate
         
         classifier_sample_rate = self._settings.waveform_sample_rate
         

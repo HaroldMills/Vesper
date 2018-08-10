@@ -7,7 +7,7 @@ import datetime
 class Recording:
     
     """
-    Sound recording.
+    Audio recording.
     
     We currently store the metadata of a recording in an archive, but not
     its samples. We also support only single-channel recordings.

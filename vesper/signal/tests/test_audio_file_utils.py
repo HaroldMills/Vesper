@@ -48,17 +48,17 @@ class WaveAudioFileTests(TestCase):
             
             file_path = utils.create_test_audio_file_path(file_name)
             
-            sound = audio_file_utils.create_multichannel_array_signal(file_path)
+            audio = audio_file_utils.create_multichannel_array_signal(file_path)
             
-            self.assertIsInstance(sound, MultichannelArraySignal)
-            self.assertEqual(len(sound), num_channels)
-            self.assertEqual(sound.time_axis.length, length)
-            self.assertEqual(sound.time_axis.sample_rate, sample_rate)
-            self.assertEqual(sound.dtype, dtype)
+            self.assertIsInstance(audio, MultichannelArraySignal)
+            self.assertEqual(len(audio), num_channels)
+            self.assertEqual(audio.time_axis.length, length)
+            self.assertEqual(audio.time_axis.sample_rate, sample_rate)
+            self.assertEqual(audio.dtype, dtype)
             
             expected = utils.create_samples(
                 (num_channels, length), factor=1000, dtype=dtype)
-            utils.assert_arrays_equal(sound[:], expected, strict=True)
+            utils.assert_arrays_equal(audio[:], expected, strict=True)
         
         
     def test_create_multichannel_array_signal_errors(self):
@@ -83,15 +83,15 @@ class WaveAudioFileTests(TestCase):
             
             file_path = utils.create_test_audio_file_path(file_name)
             
-            sound = audio_file_utils.create_array_signal(file_path)
+            audio = audio_file_utils.create_array_signal(file_path)
             
-            self.assertIsInstance(sound, ArraySignal)
-            self.assertEqual(len(sound), length)
-            self.assertEqual(sound.time_axis.sample_rate, sample_rate)
-            self.assertEqual(sound.dtype, dtype)
+            self.assertIsInstance(audio, ArraySignal)
+            self.assertEqual(len(audio), length)
+            self.assertEqual(audio.time_axis.sample_rate, sample_rate)
+            self.assertEqual(audio.dtype, dtype)
             
             expected = utils.create_samples((length,), factor=1000, dtype=dtype)
-            utils.assert_arrays_equal(sound[:], expected, strict=True)
+            utils.assert_arrays_equal(audio[:], expected, strict=True)
 
 
     def test_create_array_signal_errors(self):

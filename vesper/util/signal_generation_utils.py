@@ -14,10 +14,10 @@ def create_silence(duration, sample_rate):
 
 
 def add_tone(
-        sound, start_time, duration, amplitude, frequency,
+        audio, start_time, duration, amplitude, frequency,
         channel_num=0, taper_duration=0):
     
-    fs = sound.sample_rate
+    fs = audio.sample_rate
     
     # Create tone.
     length = signal_utils.seconds_to_frames(duration, fs)
@@ -31,6 +31,6 @@ def add_tone(
         tone[:n] *= ramp
         tone[-n:] *= 1 - ramp
     
-    # Add tone to sound.
+    # Add tone to audio.
     start_index = signal_utils.seconds_to_frames(start_time, fs)
-    sound.samples[channel_num, start_index:start_index + length] += tone
+    audio.samples[channel_num, start_index:start_index + length] += tone

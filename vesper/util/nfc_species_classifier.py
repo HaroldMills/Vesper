@@ -31,14 +31,14 @@ class NfcSpeciesClassifier(object):
         
         # Our species classifiers are designed for clips with a particular
         # sample rate, so resample to that rate if needed.
-        sound = signal_utils.resample(clip.sound, _CLASSIFICATION_SAMPLE_RATE)
+        audio = signal_utils.resample(clip.audio, _CLASSIFICATION_SAMPLE_RATE)
         
-        selection = find_call(sound, self._config)
+        selection = find_call(audio, self._config)
         
         if selection is None:
             return None
         
-        call = extract_call(sound, selection, self._config)
+        call = extract_call(audio, selection, self._config)
         
         if call is None:
             return None
@@ -138,13 +138,13 @@ class CompositeSegmentClassifier(object):
         return predictions        
 
 
-def find_call(sound, config):
+def find_call(audio, config):
     
     # TODO: Why does `detect_tseeps` return selections in seconds?
     # TODO: We're tied to tseeps here since we call `detect_tseeps`.
     # Perhaps we should call `detect_events` with an appropriate
     # detector configuration instead.
-    selections = nfc_detection_utils.detect_tseeps(sound)
+    selections = nfc_detection_utils.detect_tseeps(audio)
     selection = nfc_detection_utils.get_longest_selection(selections)
     
     if selection is None:
@@ -152,16 +152,16 @@ def find_call(sound, config):
     
     else:
         start_time, end_time = selection
-        sample_rate = float(sound.sample_rate)
+        sample_rate = float(audio.sample_rate)
         start_index = seconds_to_frames(start_time, sample_rate)
         end_index = seconds_to_frames(end_time, sample_rate)
         return (start_index, end_index)
     
     
-def extract_call(sound, selection, config):
+def extract_call(audio, selection, config):
     
-    samples = sound.samples
-    sample_rate = sound.sample_rate
+    samples = audio.samples
+    sample_rate = audio.sample_rate
 
     start_index, end_index = selection
     center_index = (start_index + end_index - 1) // 2

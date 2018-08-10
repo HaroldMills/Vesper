@@ -43,7 +43,7 @@ class SpectrogramTests(TestCase):
         num_samples = dft_size * 2
         samples = self._create_test_signal(
             num_channels, num_samples, dft_size, bin_num)
-        sound = Bunch(samples=samples, sample_rate=_SAMPLE_RATE)
+        audio = Bunch(samples=samples, sample_rate=_SAMPLE_RATE)
 
         window = RectangularWindow(dft_size)
         settings = Bunch(
@@ -52,7 +52,7 @@ class SpectrogramTests(TestCase):
             dft_size=dft_size,
             reference_power=None)
 
-        spectrogram = Spectrogram(sound, settings)
+        spectrogram = Spectrogram(audio, settings)
         spectra = spectrogram.spectra
 
         expected = self._get_expected_spectra(

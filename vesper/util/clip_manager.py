@@ -3,10 +3,27 @@
 
 from io import BytesIO
 from threading import Lock
+import os.path
 
+from vesper.archive_paths import archive_paths
 from vesper.signal.wave_audio_file import WaveAudioFileReader
 from vesper.singletons import recording_manager
+from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
+
+
+'''
+
+New methods:
+
+* get_audio_file_path(clip)
+* has_own_audio_file(clip)
+* get_audio(clip)
+* get_audio_file_contents(clip)
+* create_audio_file(clip, samples)
+* delete_audio_file(clip)
+
+'''
 
 
 class ClipManager:
@@ -20,34 +37,41 @@ class ClipManager:
         self._read_lock = Lock()
         
         
-    def get_wave_file_contents(self, clip):
+    def get_audio_file_path(self, clip):
+        return _get_audio_file_path(clip.id)
+    
         
+    def has_own_audio_file(self, clip):
+        path = self.get_audio_file_path(clip)
+        return os.path.exists(path)
+        
+    
+    # TODO: Replace with `get_samples`, and return `None` if samples
+    # are not available?
+    def get_audio(self, clip):
+        samples = self._get_samples(clip)
+        sample_rate = clip.sample_rate
+        return Bunch(samples=samples, sample_rate=sample_rate)
+    
+    
+    # TODO: Log error message if samples cannot be found in either
+    # clip audio file or recording file?
+    def _get_samples(self, clip):
         try:
-            return clip.wav_file_contents
-            
+            return self._get_samples_from_clip_audio_file(clip)
         except FileNotFoundError:
-            
-            contents = self._get_wave_file_contents_from_recording(clip)
-            
-            if contents is None:
-                raise
-            
-            else:
-                return contents
-            
-            
-    def _get_wave_file_contents_from_recording(self, clip):
-        
-        samples = self.get_clip_samples_from_recording(clip)
-        
-        if samples is None:
+            return self._get_samples_from_recording(clip)
+        except FileNotFoundError:
             return None
-        
-        else:
-            return _create_wave_file_contents(samples, clip.sample_rate)
             
-            
-    def get_clip_samples_from_recording(self, clip):
+       
+    def _get_samples_from_clip_audio_file(self, clip):
+        path = self.get_audio_file_path(clip)
+        samples, _ = audio_file_utils.read_wave_file(path)
+        return samples[0]
+
+
+    def _get_samples_from_recording(self, clip):
         
         if clip.start_index is None:
             # clip start index unknown
@@ -136,7 +160,7 @@ class ClipManager:
         return samples[clip.channel_num]
     
     
-    def _get_wave_file_reader(self, path):
+    def _get_audio_file_reader(self, path):
         
         try:
             reader = self._file_reader_cache[path]
@@ -166,7 +190,69 @@ class ClipManager:
         self._file_reader_cache = {}
     
     
-def _create_wave_file_contents(samples, sample_rate):
+    def get_audio_file_contents(self, clip):
+        
+        try:
+            return self._get_audio_file_contents_from_clip_audio_file(clip)
+            
+        except FileNotFoundError:
+            
+            contents = self._get_audio_file_contents_from_recording(clip)
+            
+            if contents is None:
+                raise
+            
+            else:
+                return contents
+            
+            
+    def _get_audio_file_contents_from_clip_audio_file(self, clip):
+        path = self.get_audio_file_path(clip)
+        with open(path, 'rb') as file_:
+            return file_.read()
+        
+
+    def _get_audio_file_contents_from_recording(self, clip):
+        
+        samples = self._get_samples_from_recording(clip)
+        
+        if samples is None:
+            return None
+        
+        else:
+            return _create_audio_file_contents(samples, clip.sample_rate)
+            
+            
+_CLIPS_DIR_FORMAT = (3, 3, 3)
+
+
+def _get_audio_file_path(clip_id):
+    id_parts = _get_clip_id_parts(clip_id, _CLIPS_DIR_FORMAT)
+    path_parts = id_parts[:-1]
+    id_ = ' '.join(id_parts)
+    file_name = 'Clip {}.wav'.format(id_)
+    path_parts.append(file_name)
+    return os.path.join(str(archive_paths.clips_dir_path), *path_parts)
+
+
+def _get_clip_id_parts(num, format_):
+    
+    # Format number as digit string with leading zeros.
+    num_digits = sum(format_)
+    f = '{:0' + str(num_digits) + 'd}'
+    digits = f.format(num)
+    
+    # Split string into parts.
+    i = 0
+    parts = []
+    for num_digits in format_:
+        parts.append(digits[i:i + num_digits])
+        i += num_digits
+        
+    return parts
+    
+    
+def _create_audio_file_contents(samples, sample_rate):
     samples.shape = (1, len(samples))
     buffer = BytesIO()
     audio_file_utils.write_wave_file(buffer, samples, sample_rate)

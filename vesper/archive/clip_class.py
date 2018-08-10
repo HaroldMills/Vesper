@@ -7,9 +7,9 @@ from vesper.util.named import Named
 class ClipClass(Named):
     
     """
-    Class of sound clips.
+    Class of audio clips.
     
-    A `ClipClass` represents a class of sound clip, such as a nocturnal
+    A `ClipClass` represents a class of audio clip, such as a nocturnal
     flight call or a noise.
     
     A `ClipClass` has a *name* that comprises one or more dot-separated
