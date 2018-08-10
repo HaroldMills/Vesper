@@ -27,7 +27,7 @@ def create_directory(path):
     else:
         
         try:
-            os.makedirs(path)
+            os.makedirs(path, exist_ok=True)
             
         except OSError as e:
             message = (
@@ -36,6 +36,11 @@ def create_directory(path):
             raise OSError(message)
 
 
+def create_parent_directory(path):
+    dir_path = os.path.dirname(path)
+    create_directory(dir_path)
+    
+    
 def clear_directory(path):
     
     """
@@ -121,9 +126,12 @@ def delete_file(path, check_existence=True):
         raise OSError(message)
             
 
+
 def delete_files(dir_path, pattern=None, recursive=False):
-    # visitor = lambda p: print('delete file "{:s}"'.format(p))
-    visitor = lambda p: delete_file(p, check_existence=False)
+    
+    def visitor(path):
+        delete_file(path, check_existence=False)
+        
     visit_files(dir_path, visitor, pattern, recursive)
             
     
