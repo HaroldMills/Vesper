@@ -8,10 +8,10 @@ import time
 from django.db import transaction
 
 from vesper.command.command import Command
+from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
-import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 
 
@@ -44,6 +44,8 @@ class DeleteClipsCommand(Command):
                 'Classification', self._classification)
 
         retain_indices = self._get_retain_clip_indices()
+        
+        self._clip_manager = clip_manager.instance
         
         self._delete_clips(retain_indices)
         
@@ -172,10 +174,7 @@ class DeleteClipsCommand(Command):
                  
                 with transaction.atomic():
                  
-                    file_path = clip.wav_file_path
-                    if file_path is not None:
-                        os_utils.delete_file(file_path)
-                     
+                    self._clip_manager.delete_audio_file(clip)
                     clip.delete()
                     
         except Exception as e:

@@ -5,7 +5,7 @@ import logging
 import os.path
 
 from vesper.command.command import CommandExecutionError
-from vesper.singletons import extension_manager
+from vesper.singletons import clip_manager, extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.util.os_utils as os_utils
 
@@ -38,17 +38,19 @@ class ClipAudioFilesExporter:
     
     
     def begin_exports(self):
+        
         try:
             os_utils.create_directory(self._output_dir_path)
         except OSError as e:
             raise CommandExecutionError(str(e))
     
+        self._clip_manager = clip_manager.instance
+        
     
     def export(self, clip):
         file_name = self._file_name_formatter.get_file_name(clip)
         file_path = os.path.join(self._output_dir_path, file_name)
-        with open(file_path, 'wb') as file_:
-            file_.write(clip.wav_file_contents)
+        self._clip_manager.export_audio_file(clip, file_path)
         return True
         
         

@@ -8,12 +8,13 @@ from django.db import transaction
 
 from vesper.command.command import Command
 from vesper.django.app.models import AnnotationInfo, StringAnnotation
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.text_utils as text_utils
+from vesper.django.app.views import clip
 
 
 _logger = logging.getLogger()
@@ -65,6 +66,8 @@ class AdjustClipsCommand(Command):
             model_utils.get_clip_query_annotation_data(
                 'Classification', self._classification)
 
+        self._clip_manager = clip_manager.instance
+        
         self._adjust_clips()
         
         return True
@@ -168,7 +171,11 @@ class AdjustClipsCommand(Command):
                     clip.length = length
                     clip.save()
                     
-                    self._update_clip_audio_file(clip, f)
+                    # Update clip audio file.
+                    cm = self._clip_manager
+                    if cm.has_audio_file(clip):
+                        cm.delete_audio_file(clip)
+                        cm.create_audio_file(clip)
                     
                     return True
                 
@@ -225,21 +232,3 @@ class AdjustClipsCommand(Command):
         
         else:
             return int(round(self._duration * clip.sample_rate))
-        
-
-    def _update_clip_audio_file(self, clip, recording_file):
-        
-        # TODO: Create object that gets recording channel samples centered
-        # around clips and use it here to get clip samples.
-        
-        # Get new clip samples from recording file.
-        path = model_utils.get_absolute_recording_file_path(recording_file)
-        reader = WaveAudioFileReader(str(path))
-        start_index = clip.start_index - recording_file.start_index
-        samples = reader.read(start_index, clip.length)
-        samples = samples[clip.recording_channel.channel_num]
-        samples.shape = (1, len(samples))
-        
-        # Write new clip audio file.
-        path = clip.wav_file_path
-        audio_file_utils.write_wave_file(path, samples, clip.sample_rate)

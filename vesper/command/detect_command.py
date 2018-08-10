@@ -5,7 +5,6 @@ from collections import defaultdict
 import datetime
 import itertools
 import logging
-import os.path
 import random
 import time
 
@@ -16,13 +15,11 @@ from vesper.django.app.models import (
     Clip, Job, Processor, Recording, RecordingChannel, Station)
 from vesper.old_bird.old_bird_detector_runner import OldBirdDetectorRunner
 from vesper.signal.wave_audio_file import WaveAudioFileReader
-from vesper.singletons import extension_manager, preset_manager
+from vesper.singletons import clip_manager, extension_manager, preset_manager
 from vesper.util.schedule import Interval, Schedule
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
-import vesper.util.audio_file_utils as audio_file_utils
-import vesper.util.os_utils as os_utils
 import vesper.util.signal_utils as signal_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
@@ -735,10 +732,13 @@ class _DetectorListener:
         self._file_reader = file_reader
         self._job = job
         self._logger = logger
+        
+        self._clip_manager = clip_manager.instance
         self._clips = []
         self._num_clips = 0
         self._num_database_failures = 0
         self._num_file_failures = 0
+        
 #         self._num_transactions = 0
 #         self._total_transactions_duration = 0
         
@@ -861,7 +861,7 @@ class _DetectorListener:
                 for clip in clips:
                     
                     try:
-                        self._create_clip_audio_file(clip)
+                        self._clip_manager.create_audio_file(clip)
                         
                     except Exception as e:
                         self._num_file_failures += 1
@@ -878,21 +878,6 @@ class _DetectorListener:
 #                 self._num_clips, self._detector_model.name))
 
 
-    
-    def _create_clip_audio_file(self, clip):
-        
-        # Create clip directory if needed.
-        dir_path = os.path.dirname(clip.wav_file_path)
-        os_utils.create_directory(dir_path)
-
-        path = clip.wav_file_path
-        start_index = clip.start_index - self._file_start_index
-        samples = self._file_reader.read(start_index, clip.length)
-        samples = samples[self._recording_channel.channel_num]
-        samples.shape = (1, clip.length)
-        audio_file_utils.write_wave_file(path, samples, clip.sample_rate)
-
-    
     def complete_processing(self, threshold=None):
         
         # Archive remaining clips.

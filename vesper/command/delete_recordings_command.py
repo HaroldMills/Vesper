@@ -8,9 +8,9 @@ from django.db import transaction
 
 from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import Clip, Recording, Station
+from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.util.archive_lock as archive_lock
-import vesper.util.os_utils as os_utils
 
 
 class DeleteRecordingsCommand(Command):
@@ -31,6 +31,7 @@ class DeleteRecordingsCommand(Command):
         
         self._job_info = job_info
         self._logger = logging.getLogger()
+        self._clip_manager = clip_manager.instance
 
         recordings = self._get_recordings()  
         self._delete_recordings(recordings)
@@ -107,12 +108,14 @@ class DeleteRecordingsCommand(Command):
             
             with transaction.atomic():
             
+                # TODO: Consider moving file deletions outside of database
+                # transaction.
+                
                 clips = Clip.objects.filter(
                     recording_channel__recording=recording)
                 
+                # Delete clip files.
                 for clip in clips:
-                    file_path = clip.wav_file_path
-                    if file_path is not None:
-                        os_utils.delete_file(file_path)
+                    self._clip_manager.delete_audio_file(clip)
                 
                 recording.delete()

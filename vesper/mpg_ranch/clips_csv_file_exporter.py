@@ -9,6 +9,7 @@ import yaml
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo, StringAnnotation
+from vesper.singletons import clip_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
@@ -556,10 +557,11 @@ class FileNameMeasurement(object):
     name = 'File Name'
     
     def measure(self, clip):
-        if clip.wav_file_path is None:
+        audio_file_path = clip_manager.instance.get_audio_file_path(clip)
+        if audio_file_path is None:
             return None
         else:
-            return os.path.basename(clip.wav_file_path)
+            return os.path.basename(audio_file_path)
     
     
 class MoonAltitudeMeasurement(object):

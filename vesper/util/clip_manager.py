@@ -10,20 +10,7 @@ from vesper.signal.wave_audio_file import WaveAudioFileReader
 from vesper.singletons import recording_manager
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
-
-
-'''
-
-New methods:
-
-* get_audio_file_path(clip)
-* has_own_audio_file(clip)
-* get_audio(clip)
-* get_audio_file_contents(clip)
-* create_audio_file(clip, samples)
-* delete_audio_file(clip)
-
-'''
+import vesper.util.os_utils as os_utils
 
 
 class ClipManager:
@@ -41,7 +28,7 @@ class ClipManager:
         return _get_audio_file_path(clip.id)
     
         
-    def has_own_audio_file(self, clip):
+    def has_audio_file(self, clip):
         path = self.get_audio_file_path(clip)
         return os.path.exists(path)
         
@@ -58,14 +45,14 @@ class ClipManager:
     # clip audio file or recording file?
     def _get_samples(self, clip):
         try:
-            return self._get_samples_from_clip_audio_file(clip)
+            return self._get_samples_from_audio_file(clip)
         except FileNotFoundError:
             return self._get_samples_from_recording(clip)
         except FileNotFoundError:
             return None
             
        
-    def _get_samples_from_clip_audio_file(self, clip):
+    def _get_samples_from_audio_file(self, clip):
         path = self.get_audio_file_path(clip)
         samples, _ = audio_file_utils.read_wave_file(path)
         return samples[0]
@@ -94,7 +81,7 @@ class ClipManager:
                 if clip.end_index < file_.end_index:
                     # Clip ends in this file.
                 
-                    return self._read_clip_samples_from_recording_file(
+                    return self._get_samples_from_recording_file(
                         file_, clip)
                 
                 else:
@@ -106,7 +93,7 @@ class ClipManager:
         return None
     
     
-    def _read_clip_samples_from_recording_file(self, file_, clip):
+    def _get_samples_from_recording_file(self, file_, clip):
         
         try:
             path = self._rm.get_absolute_recording_file_path(file_.path)
@@ -153,7 +140,7 @@ class ClipManager:
         # was closed in step 2.
         
         with self._read_lock:
-            reader = self._get_wave_file_reader(path)
+            reader = self._get_audio_file_reader(path)
             start_index = clip.start_index - file_.start_index
             samples = reader.read(start_index, clip.length)
         
@@ -190,10 +177,14 @@ class ClipManager:
         self._file_reader_cache = {}
     
     
-    def get_audio_file_contents(self, clip):
+    def get_audio_file_contents(self, clip, media_type):
         
+        if media_type != 'audio/wav':
+            raise ValueError(
+                'Unrecognized media type "{}".'.format(media_type))
+            
         try:
-            return self._get_audio_file_contents_from_clip_audio_file(clip)
+            return self._get_audio_file_contents_from_audio_file(clip)
             
         except FileNotFoundError:
             
@@ -206,7 +197,7 @@ class ClipManager:
                 return contents
             
             
-    def _get_audio_file_contents_from_clip_audio_file(self, clip):
+    def _get_audio_file_contents_from_audio_file(self, clip):
         path = self.get_audio_file_path(clip)
         with open(path, 'rb') as file_:
             return file_.read()
@@ -223,6 +214,83 @@ class ClipManager:
             return _create_audio_file_contents(samples, clip.sample_rate)
             
             
+    def delete_audio_file(self, clip):
+        
+        """
+        Deletes the audio file of the specified clip.
+        
+        If the audio file is not present, this method does nothing.
+        
+        Parameters
+        ----------
+        clip : Clip
+            the clip whose audio file should be deleted.
+        """
+        
+        path = self.get_audio_file_path(clip)
+        os_utils.delete_file(path)
+        
+            
+    def create_audio_file(self, clip, samples=None):
+        
+        """
+        Creates an audio file for the specified clip.
+
+        If the audio file already exists, it is overwritten.
+        
+        Parameters
+        ----------
+        clip : Clip
+            the clip for which to create an audio file.
+            
+        samples : NumPy array
+            the clip's samples, or `None`.
+            
+            If this argument is `None`, the clip's samples are obtained
+            from its recording.
+        """
+        
+        if samples is None:
+            samples = self._get_samples_from_recording(clip)
+            
+        self._create_audio_file(clip, samples)
+        
+        
+    def _create_audio_file(self, clip, samples, path=None):
+        
+        # Get 2-D version of `samples` for call to
+        # `audio_file_utils.write_wave_file`.
+        # TODO: Enhance `audio_file_utils.write_wave_file` to obviate this.
+        samples = samples.reshape((1, samples.size))
+        
+        if path is None:
+            path = self.get_audio_file_path(clip)
+            
+        os_utils.create_parent_directory(path)
+        
+        audio_file_utils.write_wave_file(path, samples, clip.sample_rate)
+
+
+    def export_audio_file(self, clip, path):
+        
+        """
+        Exports an audio file for the specified clip.
+        
+        If the file already exists, it is overwritten.
+        
+        Parameters
+        ----------
+        clip : Clip
+            the clip to export.
+            
+        path : str
+            the path of the audio file to create.
+        """
+        
+        samples = self._get_samples(clip)
+        self._create_audio_file(clip, samples, path)        
+        
+        
 _CLIPS_DIR_FORMAT = (3, 3, 3)
 
 
@@ -253,7 +321,14 @@ def _get_clip_id_parts(num, format_):
     
     
 def _create_audio_file_contents(samples, sample_rate):
-    samples.shape = (1, len(samples))
+    
     buffer = BytesIO()
+    
+    # Get 2-D version of `samples` for call to
+    # `audio_file_utils.write_wave_file`.
+    # TODO: Enhance `audio_file_utils.write_wave_file` to obviate this.
+    samples = samples.reshape((1, samples.size))
+    
     audio_file_utils.write_wave_file(buffer, samples, sample_rate)
+    
     return buffer.getvalue()

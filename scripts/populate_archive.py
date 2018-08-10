@@ -7,6 +7,9 @@ import os
 import random
 import time
 
+from vesper.django.app.views import clip
+from vesper.singletons import clip_manager
+
 # Set up Django.
 os.environ['DJANGO_SETTINGS_MODULE'] = 'vesper.django.project.settings'
 import django
@@ -583,14 +586,14 @@ def _copy_clip_audio_file(file_path, clip):
     with open(file_path, 'rb') as file_:
         contents = file_.read()
          
-    # Create clip directory if needed.
-    dir_path = os.path.dirname(clip.wav_file_path)
-    os_utils.create_directory(dir_path)
+    clip_file_path = clip_manager.instance.get_audio_file_path(clip)
     
-    with open(clip.wav_file_path, 'wb') as file_:
+    os_utils.create_parent_directories(clip_file_path)
+    
+    with open(clip_file_path, 'wb') as file_:
         file_.write(contents)
 
-    # print('Wrote file "{}" for clip {}.'.format(clip.wav_file_path, clip.id))
+    # print('Wrote file "{}" for clip {}.'.format(clip_file_path, clip.id))
 
     
 if __name__ == '__main__':

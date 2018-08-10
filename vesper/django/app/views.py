@@ -832,10 +832,11 @@ def clip_wav(request, clip_id):
     # TODO: Set appropriate response status code on failure, e.g. if
     # there is no such clip or if its audio file is missing.
     clip = Clip.objects.get(id=clip_id)
-    content = clip_manager.instance.get_wave_file_contents(clip)
+    content_type = 'audio/wav'
+    content = clip_manager.instance.get_audio_file_contents(clip, content_type)
     response = HttpResponse()
     response.write(content)
-    response['Content-Type'] = 'audio/wav'
+    response['Content-Type'] = content_type
     response['Content-Length'] = len(content)
     return response
 

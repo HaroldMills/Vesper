@@ -2,13 +2,12 @@
 
 
 import logging
-import os.path
 import time
 
 from vesper.command.command import Command
+from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
-import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 
 
@@ -39,6 +38,8 @@ class DeleteClipAudioFilesCommand(Command):
             model_utils.get_clip_query_annotation_data(
                 'Classification', self._classification)
 
+        self._clip_manager = clip_manager.instance
+        
         self._delete_clip_audio_files()
         
         return True
@@ -103,14 +104,12 @@ class DeleteClipAudioFilesCommand(Command):
         
         try:
             
-            file_path = clip.wav_file_path
-            
-            if os.path.exists(file_path):
-                os_utils.delete_file(file_path, check_existence=False)
+            if self._clip_manager.has_audio_file(clip):
+                self._clip_manager.delete_audio_file(clip)
                 return True
             
             else:
-                return False               
+                return False
                     
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(

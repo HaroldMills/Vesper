@@ -2,14 +2,12 @@
 
 
 import logging
-import os.path
 import time
 
 from vesper.command.command import Command
 from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
-import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 
 
@@ -39,6 +37,8 @@ class CreateClipAudioFilesCommand(Command):
         self._annotation_name, self._annotation_value = \
             model_utils.get_clip_query_annotation_data(
                 'Classification', self._classification)
+            
+        self._clip_manager = clip_manager.instance
 
         self._create_clip_audio_files()
         
@@ -104,23 +104,12 @@ class CreateClipAudioFilesCommand(Command):
         
         try:
             
-            file_path = clip.wav_file_path
-            
-            if not os.path.exists(file_path):
-                
-                contents = clip_manager.instance.get_wave_file_contents(clip)
-                
-                # Create parent directories as needed.
-                dir_path = os.path.dirname(file_path)
-                if not os.path.exists(dir_path):
-                    os.makedirs(dir_path, exist_ok=True)
-                    
-                os_utils.write_file(file_path, contents, mode='wb')
-                
+            if not self._clip_manager.has_audio_file(clip):
+                self._clip_manager.create_audio_file(clip)
                 return True
             
             else:
-                return False               
+                return False
                     
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(

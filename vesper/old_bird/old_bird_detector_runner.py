@@ -13,6 +13,7 @@ from django.db import transaction
 
 from vesper.django.app.models import Clip, Job, RecordingChannel
 from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.singletons import clip_manager
 from vesper.util.logging_utils import append_stack_trace
 import vesper.util.archive_lock as archive_lock
 import vesper.util.audio_file_utils as audio_file_utils
@@ -262,6 +263,8 @@ class _DetectorMonitor(Thread):
         
         self._recording_file_reader = WaveAudioFileReader(recording_file.path)
         
+        self._clip_manager = clip_manager.instance
+        
         
     @property
     def _logger(self):
@@ -464,7 +467,8 @@ class _DetectorMonitor(Thread):
         # of some scaling that happens inside the detector) from the
         # recording samples. So we allow each clip sample to differ from
         # the corresponding recording sample by a magnitude of up to one.
-        indices = numpy_utils.find(clip_samples, recording_samples, tolerance=1)
+        indices = numpy_utils.find(
+            clip_samples, recording_samples, tolerance=1)
         
         if len(indices) == 0:
             self._logger.error((
@@ -542,7 +546,7 @@ class _DetectorMonitor(Thread):
                     # We create the audio file within the database
                     # transaction to ensure that the clip row and
                     # audio file are created atomically.
-                    self._write_clip_audio_file(clip, samples)
+                    self._clip_manager.create_audio_file(clip, samples)
                                     
         except Exception as e:
             self._logger.error((
@@ -552,17 +556,6 @@ class _DetectorMonitor(Thread):
         
         else:
             self._logger.info('Archived {} clip {}.'.format(self.name, clip))
-
-
-    def _write_clip_audio_file(self, clip, samples):
-        
-        # Create clip directory if needed.
-        dir_path = os.path.dirname(clip.wav_file_path)
-        os_utils.create_directory(dir_path)
-        
-        samples = samples.reshape((1, len(samples)))
-        audio_file_utils.write_wave_file(
-            clip.wav_file_path, samples, self._sample_rate)
 
 
     def _delete_file(self, file_path):
