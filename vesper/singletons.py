@@ -13,10 +13,8 @@ from vesper.util.singleton import Singleton
 _EXTENSIONS_SPEC = '''
 
 Classifier:
-    - vesper.mpg_ranch.coarse_classifier.CoarseClassifier
     - vesper.mpg_ranch.nfc_coarse_classifier_2_0.classifier.Classifier
     - vesper.mpg_ranch.outside_classifier.OutsideClassifier
-    - vesper.mpg_ranch.species_classifier.SpeciesClassifier
     
 Command:
     - vesper.command.adjust_clips_command.AdjustClipsCommand
@@ -37,10 +35,6 @@ Detector:
     - vesper.old_bird.old_bird_detector_redux_1_0.TseepDetector
     - vesper.old_bird.old_bird_detector_redux_1_1.ThrushDetector
     - vesper.old_bird.old_bird_detector_redux_1_1.TseepDetector
-    - vesper.pnf.pnf_2018_baseline_detector_1_0.ThrushDetector
-    - vesper.pnf.pnf_2018_baseline_detector_1_0.TseepDetector
-    - vesper.pnf.pnf_energy_detector_1_0.ThrushDetector
-    - vesper.pnf.pnf_energy_detector_1_0.TseepDetector
     
 Exporter:
     - vesper.command.clip_audio_files_exporter.ClipAudioFilesExporter
