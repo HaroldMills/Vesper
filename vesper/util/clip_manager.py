@@ -13,6 +13,10 @@ import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 
 
+class ClipManagerError(Exception):
+    pass
+
+
 class ClipManager:
     
     """Gets the audio data of the clips of a Vesper archive."""
@@ -33,23 +37,45 @@ class ClipManager:
         return os.path.exists(path)
         
     
-    # TODO: Replace with `get_samples`, and return `None` if samples
-    # are not available?
     def get_audio(self, clip):
         samples = self.get_samples(clip)
         sample_rate = clip.sample_rate
         return Bunch(samples=samples, sample_rate=sample_rate)
     
     
-    # TODO: Log error message if samples cannot be found in either
-    # clip audio file or recording file?
     def get_samples(self, clip):
+        
+        """
+        Gets the samples of the specified clip.
+        
+        The samples are read from the clip's audio file if there is one,
+        or from the clip's recording if not.
+        
+        Parameters
+        ----------
+        clip : Clip
+            the clip whose samples to get.
+            
+        Returns
+        -------
+        NumPy array
+            the samples of the specified clip.
+        
+        Raises
+        ------
+        ClipManagerError
+            If one of a certain set of error conditions occurs, for
+            example if neither a clip audio file or recording file
+            can be located for the specified clip.
+            
+        Exception
+            If some other error occurs, for example a file I/O error.
+        """
+        
         try:
             return self._get_samples_from_audio_file(clip)
         except FileNotFoundError:
             return self._get_samples_from_recording(clip)
-        except FileNotFoundError:
-            return None
             
        
     def _get_samples_from_audio_file(self, clip):
@@ -63,7 +89,7 @@ class ClipManager:
         if clip.start_index is None:
             # clip start index unknown
             
-            return None
+            self._handle_get_samples_error(clip, 'clip has no start index')
         
         # TODO: Make search for a file's clip more efficient.
         # The following code is O(n), where n is the number of
@@ -76,29 +102,39 @@ class ClipManager:
             
             if clip.start_index >= file_.start_index and \
                     clip.start_index < file_.end_index:
-                # Clip starts in this file.
+                # clip starts in this file.
                 
                 if clip.end_index < file_.end_index:
-                    # Clip ends in this file.
+                    # clip ends in this file.
                 
-                    return self._get_samples_from_recording_file(
-                        file_, clip)
-                
+                    return self._get_samples_from_recording_file(file_, clip)
+                        
                 else:
+                    # clip extends past end of file
                     
                     # TODO: Handle clips that cross file boundaries.
-                    return None
+                    self._handle_get_samples_error(
+                        clip, 'clip crosses a file boundary')
                 
         # If we get here, the clip was not found in a recording file.
-        return None
+        self._handle_get_samples_error(clip, 'clip is outside of recording')
     
     
+    def _handle_get_samples_error(self, clip, reason):
+        raise ClipManagerError((
+            'Could not get clip samples from recording file '
+            'since {}.').format(reason))
+        
+        
     def _get_samples_from_recording_file(self, file_, clip):
         
         try:
             path = self._rm.get_absolute_recording_file_path(file_.path)
+            
         except ValueError as e:
-            raise FileNotFoundError(str(e))
+            raise ClipManagerError((
+                'Could not read clip samples from recording file. '
+                '{}').format(str(e)))
         
         # Since the file reader cache may be shared among threads, we
         # use a lock to make getting a file reader for a clip and reading
@@ -187,14 +223,7 @@ class ClipManager:
             return self._get_audio_file_contents_from_audio_file(clip)
             
         except FileNotFoundError:
-            
-            contents = self._get_audio_file_contents_from_recording(clip)
-            
-            if contents is None:
-                raise
-            
-            else:
-                return contents
+            return self._get_audio_file_contents_from_recording(clip)
             
             
     def _get_audio_file_contents_from_audio_file(self, clip):
@@ -204,14 +233,8 @@ class ClipManager:
         
 
     def _get_audio_file_contents_from_recording(self, clip):
-        
         samples = self._get_samples_from_recording(clip)
-        
-        if samples is None:
-            return None
-        
-        else:
-            return _create_audio_file_contents(samples, clip.sample_rate)
+        return _create_audio_file_contents(samples, clip.sample_rate)
             
             
     def delete_audio_file(self, clip):

@@ -1,6 +1,7 @@
 from urllib.parse import quote
 import datetime
 import json
+import logging
 
 from django import forms, urls
 from django.db import transaction
@@ -10,7 +11,7 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.http import (
     HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
-    HttpResponseNotAllowed, HttpResponseRedirect)
+    HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseServerError)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 import yaml
@@ -829,11 +830,23 @@ def clip(request, clip_id):
 
 
 def clip_wav(request, clip_id):
-    # TODO: Set appropriate response status code on failure, e.g. if
-    # there is no such clip or if its audio file is missing.
-    clip = Clip.objects.get(id=clip_id)
+    
+    clip = get_object_or_404(Clip, pk=clip_id)
+    
     content_type = 'audio/wav'
-    content = clip_manager.instance.get_audio_file_contents(clip, content_type)
+    
+    try:
+        content = clip_manager.instance.get_audio_file_contents(
+            clip, content_type)
+        
+    except Exception as e:
+        logger = logging.getLogger('django.server')
+        logger.error((
+            'Attempt to get audio file contents for clip "{}" failed with '
+            '{} exception. Exception message was: {}').format(
+                str(clip), e.__class__.__name__, str(e)))
+        return HttpResponseServerError()
+
     response = HttpResponse()
     response.write(content)
     response['Content-Type'] = content_type

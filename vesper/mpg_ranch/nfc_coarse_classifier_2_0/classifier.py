@@ -119,16 +119,15 @@ class _Classifier:
         
     def _get_waveform(self, clip):
         
-        audio = self._clip_manager.get_audio(clip)
-        waveform = audio.samples
-        sample_rate = audio.sample_rate
+        samples = self._clip_manager.get_samples(clip)
+        sample_rate = clip.sample_rate
         
         classifier_sample_rate = self._settings.waveform_sample_rate
         
         if sample_rate != classifier_sample_rate:
-            # waveform is not at classifier sample rate
+            # samples are not at classifier sample rate
             
-            waveform = resampy.resample(
-                waveform, sample_rate, classifier_sample_rate)
+            samples = resampy.resample(
+                samples, sample_rate, classifier_sample_rate)
             
-        return waveform
+        return samples

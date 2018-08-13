@@ -158,9 +158,8 @@ class ClipsHdf5FileExporter:
             
     def _get_output_samples(self, clip):
         
-        audio = self._clip_manager.get_audio(clip)
-        samples = audio.samples
-        sample_rate = audio.sample_rate
+        samples = self._clip_manager.get_samples(clip)
+        sample_rate = clip.sample_rate
         
         min_clip_length = self._get_min_clip_length(sample_rate)
         
