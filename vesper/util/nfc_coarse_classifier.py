@@ -117,7 +117,6 @@ class NfcCoarseClassifier(object):
         super(NfcCoarseClassifier, self).__init__()
         self._config = config
         self._segment_classifier = segment_classifier
-        self._clip_manager = clip_manager.instance
         
         
     def classify_clip(self, clip):
@@ -132,7 +131,7 @@ class NfcCoarseClassifier(object):
         
         # Our classifiers are designed for clips with a particular sample
         # rate, so resample to that rate if needed.
-        audio = self._clip_manager.get_audio(clip)
+        audio = clip_manager.instance.get_audio(clip)
         audio = signal_utils.resample(audio, _CLASSIFICATION_SAMPLE_RATE)
         
         c = self._config
