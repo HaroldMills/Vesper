@@ -14,6 +14,7 @@ import yaml
 from vesper.command.annotator import Annotator
 from vesper.mpg_ranch.nfc_coarse_classifier_2_0.feature_computer import \
     FeatureComputer
+from vesper.singletons import clip_manager
 from vesper.util.settings import Settings
 import vesper.django.app.model_utils as model_utils
 import vesper.mpg_ranch.nfc_coarse_classifier_2_0.classifier_utils as \
@@ -68,6 +69,7 @@ class _Classifier:
         self._model = self._load_model()
         self._settings = self._load_settings()
         self._feature_computer = FeatureComputer(self._settings)
+        self._clip_manager = clip_manager.instance
     
     
     def _load_model(self):
@@ -117,7 +119,7 @@ class _Classifier:
         
     def _get_waveform(self, clip):
         
-        audio = clip.audio
+        audio = self._clip_manager.get_audio(clip)
         waveform = audio.samples
         sample_rate = audio.sample_rate
         

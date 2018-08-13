@@ -36,14 +36,14 @@ class ClipManager:
     # TODO: Replace with `get_samples`, and return `None` if samples
     # are not available?
     def get_audio(self, clip):
-        samples = self._get_samples(clip)
+        samples = self.get_samples(clip)
         sample_rate = clip.sample_rate
         return Bunch(samples=samples, sample_rate=sample_rate)
     
     
     # TODO: Log error message if samples cannot be found in either
     # clip audio file or recording file?
-    def _get_samples(self, clip):
+    def get_samples(self, clip):
         try:
             return self._get_samples_from_audio_file(clip)
         except FileNotFoundError:
@@ -287,7 +287,7 @@ class ClipManager:
             the path of the audio file to create.
         """
         
-        samples = self._get_samples(clip)
+        samples = self.get_samples(clip)
         self._create_audio_file(clip, samples, path)        
         
         

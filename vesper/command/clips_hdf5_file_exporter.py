@@ -9,6 +9,7 @@ import resampy
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import StringAnnotation
+from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.annotation_utils as annotation_utils
 import vesper.util.signal_utils as signal_utils
@@ -91,6 +92,8 @@ class ClipsHdf5FileExporter:
             _OUTPUT_CLIP_SAMPLE_RATE: self._output_clip_length
         }
         
+        self._clip_manager = clip_manager.instance
+        
     
     def export(self, clip):
         
@@ -155,8 +158,9 @@ class ClipsHdf5FileExporter:
             
     def _get_output_samples(self, clip):
         
-        samples = clip.audio.samples
-        sample_rate = clip.audio.sample_rate
+        audio = self._clip_manager.get_audio(clip)
+        samples = audio.samples
+        sample_rate = audio.sample_rate
         
         min_clip_length = self._get_min_clip_length(sample_rate)
         

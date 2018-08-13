@@ -3,6 +3,7 @@
 
 import numpy as np
 
+from vesper.singletons import clip_manager
 from vesper.util.bunch import Bunch
 from vesper.util.signal_utils import seconds_to_frames
 import vesper.util.nfc_classification_utils as nfc_classification_utils
@@ -20,6 +21,7 @@ class NfcSpeciesClassifier(object):
         super(NfcSpeciesClassifier, self).__init__()
         self._config = config
         self._segment_classifier = segment_classifier
+        self._clip_manager = clip_manager.instance
         
         
     @property
@@ -31,7 +33,8 @@ class NfcSpeciesClassifier(object):
         
         # Our species classifiers are designed for clips with a particular
         # sample rate, so resample to that rate if needed.
-        audio = signal_utils.resample(clip.audio, _CLASSIFICATION_SAMPLE_RATE)
+        audio = self._clip_manager.get_samples(clip)
+        audio = signal_utils.resample(audio, _CLASSIFICATION_SAMPLE_RATE)
         
         selection = find_call(audio, self._config)
         
