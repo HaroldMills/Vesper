@@ -21,7 +21,6 @@ class NfcSpeciesClassifier(object):
         super(NfcSpeciesClassifier, self).__init__()
         self._config = config
         self._segment_classifier = segment_classifier
-        self._clip_manager = clip_manager.instance
         
         
     @property
@@ -33,7 +32,7 @@ class NfcSpeciesClassifier(object):
         
         # Our species classifiers are designed for clips with a particular
         # sample rate, so resample to that rate if needed.
-        audio = self._clip_manager.get_samples(clip)
+        audio = clip_manager.instance.get_audio(clip)
         audio = signal_utils.resample(audio, _CLASSIFICATION_SAMPLE_RATE)
         
         selection = find_call(audio, self._config)
