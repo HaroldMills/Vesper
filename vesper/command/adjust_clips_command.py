@@ -12,7 +12,6 @@ from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
-import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.text_utils as text_utils
 from vesper.django.app.views import clip
 

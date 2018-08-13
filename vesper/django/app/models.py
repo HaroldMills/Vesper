@@ -13,8 +13,6 @@ from django.db.models import (
 import pytz
 
 from vesper.archive_paths import archive_paths
-from vesper.util.bunch import Bunch
-import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.signal_utils as signal_utils
