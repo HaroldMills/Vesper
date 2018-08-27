@@ -1,3 +1,4 @@
+from pathlib import Path
 import logging
 import os.path
 
@@ -11,17 +12,52 @@ class PreferenceManager:
     
     
     def __init__(self, preference_dir_path):
+        self._load_preferences(preference_dir_path)
+        self._stack = []
+        
+        
+    def _load_preferences(self, preference_dir_path):
+        self._preferences = _load_preferences(preference_dir_path)
         self._preference_dir_path = preference_dir_path
-        self.reload_preferences()
         
         
     def reload_preferences(self):
-        self._preferences = _load_preferences(self._preference_dir_path)
+        self._load_preferences(self._preference_dir_path)
         
         
     @property
     def preferences(self):
         return self._preferences
+    
+    
+    def _push_test_module_preferences(self, test_module_file_path):
+        
+        """
+        Pushes preferences for a unit test module.
+        
+        Some unit test modules require special preference values. Such
+        a module can push preference values using this function as part
+        of its setup, and pop them using the `_pop_test_preferences`
+        method as part of its teardown.
+        """
+        
+        test_module_file_path = Path(test_module_file_path)
+        test_module_dir_path = test_module_file_path.parent
+        test_module_name = test_module_file_path.stem
+        preference_dir_path = test_module_dir_path / 'data' / test_module_name
+            
+        # Push current preferences onto stack.
+        self._stack.append((self._preference_dir_path, self._preferences))
+        
+        # Load test preferences.
+        self._load_preferences(preference_dir_path)
+        
+        
+    def _pop_test_preferences(self):
+        
+        """Pops test preferences."""
+        
+        self._preference_dir_path, self._preferences = self._stack.pop()
     
     
 class _Preferences:
@@ -34,7 +70,7 @@ class _Preferences:
     def __getitem__(self, name):
         try:
             return _get_item(self._preferences, name)
-        except:
+        except Exception:
             raise KeyError(name)
         
         

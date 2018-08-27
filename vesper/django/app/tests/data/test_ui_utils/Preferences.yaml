@@ -1,0 +1,8 @@
+ui_names:
+    processors:
+        Tseep Detector: Tseep
+        
+hidden_objects:
+    processors:
+        - Species Classifier
+ 

@@ -1,6 +1,7 @@
 from django import forms
 
 import vesper.django.app.model_utils as model_utils
+import vesper.django.app.ui_utils as ui_utils
 
 
 class AdjustClipsForm(forms.Form):
@@ -21,9 +22,8 @@ class AdjustClipsForm(forms.Form):
         super().__init__(*args, **kwargs)
         
         # Populate detectors field.
-        detectors = model_utils.get_processors('Detector')
-        choices = [(d.name, d.name) for d in detectors]
-        self.fields['detectors'].choices = choices
+        self.fields['detectors'].choices = \
+            ui_utils.get_processor_choices('Detector')
         
         # Populate station/mics field.
         names = model_utils.get_station_mic_output_pair_ui_names()

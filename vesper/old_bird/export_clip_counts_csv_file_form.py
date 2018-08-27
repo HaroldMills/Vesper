@@ -2,6 +2,7 @@ from django import forms
 
 import vesper.django.app.form_utils as form_utils
 import vesper.django.app.model_utils as model_utils
+import vesper.django.app.ui_utils as ui_utils
 
 
 _FORM_NAME = 'export_clip_counts_csv_file'
@@ -35,8 +36,8 @@ class ExportClipCountsCsvFileForm(forms.Form):
         super().__init__(*args, **kwargs)
         
         # Populate detectors field.
-        detectors = model_utils.get_processors('Detector')
-        self.fields['detector'].choices = [(d.name, d.name) for d in detectors]
+        self.fields['detector'].choices = \
+            ui_utils.get_processor_choices('Detector')
 
         # Populate station/mics field.
         names = model_utils.get_station_mic_output_pair_ui_names()

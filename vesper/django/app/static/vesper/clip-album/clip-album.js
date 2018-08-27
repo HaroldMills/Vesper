@@ -488,7 +488,7 @@ export class ClipAlbum {
 
 		const pageText = this._getTitlePageText();
 
-        let title = `${f.stationMicName} / ${f.detectorName} / ` +
+        let title = `${f.stationMicName} / ${f.detector.uiName} / ` +
             `${f.classification} / ${pageText}`;
 
 		if (f.date !== null)

@@ -11,14 +11,16 @@
         <title>Clip Album - Vesper</title>
     {% endif %}
 
+    {% load vesper_extras %}
+
     <script type="module">
         import { init } from '/static/vesper/view/clip-album.js';
         init({
             'clipFilter': {
-        	    'stationMicName': '{{station_mic_name}}',
-        	    'detectorName': '{{detector_name}}',
-        	    'classification': '{{classification}}',
-        	    'date': null
+        	        'stationMicName': '{{station_mic_name}}',
+        	        'detector': {{detector|bunch_to_json|safe}},
+        	        'classification': '{{classification}}',
+        	        'date': null
             },
             'solarEventTimes': {{solar_event_times_json|safe}},
             'recordings': {{recordings_json|safe}},

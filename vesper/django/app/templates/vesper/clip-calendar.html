@@ -11,11 +11,13 @@
         <title>Clip Calendar - Vesper</title>
     {% endif %}
 
+    {% load vesper_extras %}
+
     <script type="module">
         import { init } from '/static/vesper/view/clip-calendar.js';
         init({
             'stationMicName': "{{station_mic_name|default_if_none:''}}",
-            'detectorName': "{{detector_name|default_if_none:''}}",
+            'detector': {{detector|bunch_to_json|safe}},
             'classification': "{{classification}}",
             'periods': {{periods_json|safe}}
         });
