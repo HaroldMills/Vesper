@@ -451,53 +451,22 @@ def get_clips(
     return clips
 
 
-def get_processors(type_, include_hidden=False):
+def get_processors(processor_type=None):
     
-    processors = Processor.objects.filter(type=type_).order_by('name')
-    
-    if include_hidden:
-        return processors
-    
+    if processor_type is None:
+        processors = Processor.objects.all()
     else:
+        processors = Processor.objects.filter(type=processor_type)
         
-        hidden, types_included = _get_hidden_processors()
-        
-        if types_included:
-            return [p for p in processors if (p.name, type_) not in hidden]
-        
-        else:
-            return [p for p in processors if p.name not in hidden]
+    return processors.order_by('name')
 
 
-def _get_hidden_processors():
+def get_processor(name, processor_type=None):
     
-    preferences = preference_manager.instance.preferences
-    processors = preferences.get('hidden_processors', [])
-    
-    if _hidden_processors_include_types(processors):
-        processors = [_get_processor_pair(p) for p in processors]
-        return frozenset(p for p in processors if p is not None), True
-    
+    if processor_type is None:
+        return Processor.objects.get(name=name)
     else:
-        return frozenset(processors), False
-
-
-def _hidden_processors_include_types(processors):
-    if len(processors) == 0:
-        return False
-    else:
-        return isinstance(processors[0], dict)
-    
-    
-def _get_processor_pair(p):
-    try:
-        return (p['name'], p['type'])
-    except Exception:
-        return None
-    
-
-def get_processor(name, type_):
-    return Processor.objects.get(name=name, type=type_)
+        return Processor.objects.get(name=name, type=processor_type)
 
 
 def create_clip_query_values_iterator(

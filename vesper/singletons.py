@@ -3,6 +3,7 @@
 
 from vesper.archive_paths import archive_paths
 from vesper.command.job_manager import JobManager
+from vesper.django.app.archive import Archive
 from vesper.util.extension_manager import ExtensionManager
 from vesper.util.preference_manager import PreferenceManager
 from vesper.util.preset_manager import PresetManager
@@ -103,3 +104,10 @@ def _create_recording_manager():
 
 
 recording_manager = Singleton(_create_recording_manager)
+
+
+def _create_archive():
+    return Archive()
+
+
+archive = Singleton(_create_archive)

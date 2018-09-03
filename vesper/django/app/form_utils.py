@@ -1,13 +1,10 @@
 """Utility functions pertaining to Django forms."""
 
 
-from vesper.singletons import preference_manager
+from vesper.singletons import archive, preference_manager
 
 
 _DEFAULTS_PREFERENCE_NAME = 'form_defaults'
-
-
-_preferences = preference_manager.instance.preferences
 
 
 # TODO: Preference manager should perform preference type checking, not
@@ -16,7 +13,8 @@ _preferences = preference_manager.instance.preferences
 
 def get_field_default(form_title, field_label, default):
     
-    form_defaults = _preferences.get(_DEFAULTS_PREFERENCE_NAME)
+    preferences = preference_manager.instance.preferences
+    form_defaults = preferences.get(_DEFAULTS_PREFERENCE_NAME)
     
     if isinstance(form_defaults, dict):
         
@@ -26,3 +24,10 @@ def get_field_default(form_title, field_label, default):
             return form_defaults.get(field_label, default)
         
     return default
+
+
+def get_processor_choices(processor_type):
+    archive_ = archive.instance
+    detectors = archive_.get_visible_processors(processor_type)
+    names = [archive_.get_processor_ui_name(d) for d in detectors]
+    return [(n, n) for n in names]

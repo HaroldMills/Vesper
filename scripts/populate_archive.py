@@ -588,7 +588,7 @@ def _copy_clip_audio_file(file_path, clip):
          
     clip_file_path = clip_manager.instance.get_audio_file_path(clip)
     
-    os_utils.create_parent_directories(clip_file_path)
+    os_utils.create_parent_directory(clip_file_path)
     
     with open(clip_file_path, 'wb') as file_:
         file_.write(contents)

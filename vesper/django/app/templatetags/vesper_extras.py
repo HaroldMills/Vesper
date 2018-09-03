@@ -1,8 +1,12 @@
 # Django template filters for Vesper.
 
 
+import json
+
 from django import template
 from django.utils.safestring import mark_safe
+
+import vesper.util.case_utils as case_utils
 
 
 register = template.Library()
@@ -48,3 +52,14 @@ def form_checkbox(field):
           {}
           {}
         </div>'''.format(_DIV_CLASS, field, field.label_tag(), field.errors))
+
+
+@register.filter()
+def to_json(obj):
+    obj = case_utils.snake_keys_to_camel(obj)
+    return json.dumps(obj)
+
+
+@register.filter()
+def bunch_to_json(bunch):
+    return to_json(bunch.__dict__)

@@ -43,7 +43,7 @@ from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.singletons import (
-    clip_manager, job_manager, preference_manager, preset_manager)
+    archive, clip_manager, job_manager, preference_manager, preset_manager)
 from vesper.util.bunch import Bunch
 import vesper.django.app.annotation_utils as annotation_utils
 import vesper.django.app.model_utils as model_utils
@@ -930,7 +930,7 @@ def annotations_json(request, clip_id):
                             model_utils.annotate_clip(
                                 clip, info, value, creating_user=user)
 
-            return HttpResponse();
+            return HttpResponse()
 
         else:
             # user not logged in
@@ -1137,6 +1137,8 @@ def _get_request_body_as_json(request):
 def clip_calendar(request):
 
     params = request.GET
+    
+    archive_ = archive.instance
 
     preference_manager.instance.reload_preferences()
     preferences = preference_manager.instance.preferences
@@ -1146,10 +1148,10 @@ def clip_calendar(request):
     sm_pair = _get_calendar_query_object(
         sm_pairs, 'station_mic', params, preferences, name_getter=get_ui_name)
 
-    detectors = model_utils.get_processors('Detector')
-    detector = _get_calendar_query_object(
-        detectors, 'detector', params, preferences)
-
+    detector_name = _get_calendar_query_field_value(
+        'detector', params, preferences)
+    detector = archive_.get_processor(detector_name)
+    
     annotation_value_specs = \
         model_utils.get_string_annotation_value_specs('Classification')
     annotation_value_spec = _get_string_annotation_value_spec(
@@ -1163,15 +1165,16 @@ def clip_calendar(request):
     sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
     sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
 
-    detector_names = [d.name for d in detectors]
-    detector_name = None if detector is None else detector.name
-
+    detectors = archive_.get_visible_processors('Detector')
+    detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
+    detector_ui_name = archive_.get_processor_ui_name(detector)
+    
     context = _create_template_context(
         request, 'View',
         station_mic_names=sm_pair_ui_names,
         station_mic_name=sm_pair_ui_name,
-        detector_names=detector_names,
-        detector_name=detector_name,
+        detector_names=detector_ui_names,
+        detector_name=detector_ui_name,
         classifications=annotation_value_specs,
         classification=annotation_value_spec,
         periods_json=periods_json)
@@ -1180,8 +1183,7 @@ def clip_calendar(request):
 
 
 def _get_calendar_query_object(
-        objects, type_name, params, preferences,
-        name_getter=lambda o: o.name):
+        objects, type_name, params, preferences, name_getter=lambda o: o.name):
 
     if len(objects) == 0:
         return None
@@ -1244,13 +1246,6 @@ def _get_string_annotation_info(annotation_value_spec):
     return annotation_name, annotation_value
 
 
-def _get_station_microphone_outputs_json(station_microphone_outputs):
-    station_microphone_output_names = dict(
-        (station_name, [o.name for o in outputs])
-        for station_name, outputs in station_microphone_outputs.items())
-    return json.dumps(station_microphone_output_names)
-
-
 def _get_periods_json(
         sm_pair, detector, annotation_name=None, annotation_value=None):
 
@@ -1274,6 +1269,8 @@ def _get_periods_json(
 def night(request):
 
     params = request.GET
+    
+    archive_ = archive.instance
 
     # TODO: Type check and range check query items.
     sm_pair_ui_name = params['station_mic']
@@ -1283,12 +1280,14 @@ def night(request):
 
     sm_pairs = model_utils.get_station_mic_output_pairs_dict()
     station, mic_output = sm_pairs[sm_pair_ui_name]
-
+    
+    detector = archive_.get_processor(detector_name)
+    detector_ui_name = archive_.get_processor_ui_name(detector)
+    
     date = time_utils.parse_date(*date_string.split('-'))
 
     solar_event_times_json = _get_solar_event_times_json(station, date)
 
-    detector = model_utils.get_processor(detector_name, 'Detector')
     time_interval = station.get_night_interval_utc(date)
 
     recordings = model_utils.get_recordings(station, mic_output, time_interval)
@@ -1323,7 +1322,7 @@ def night(request):
     context = _create_template_context(
         request, 'View',
         station_mic_name=sm_pair_ui_name,
-        detector_name=detector_name,
+        detector_name=detector_ui_name,
         classification=annotation_value_spec,
         date=date_string,
         solar_event_times_json=solar_event_times_json,
@@ -1468,6 +1467,8 @@ def clip_album(request):
 
     params = request.GET
 
+    archive_ = archive.instance
+
     preference_manager.instance.reload_preferences()
     preferences = preference_manager.instance.preferences
 
@@ -1477,10 +1478,10 @@ def clip_album(request):
         sm_pairs, 'station_mic', params, preferences, name_getter=get_ui_name)
     station, mic_output = sm_pair
 
-    detectors = model_utils.get_processors('Detector')
-    detector = _get_calendar_query_object(
-        detectors, 'detector', params, preferences)
-
+    detector_name = _get_calendar_query_field_value(
+        'detector', params, preferences)
+    detector = archive_.get_processor(detector_name)
+    
     annotation_value_specs = \
         model_utils.get_string_annotation_value_specs('Classification')
     annotation_value_spec = _get_string_annotation_value_spec(
@@ -1489,9 +1490,10 @@ def clip_album(request):
     sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
     sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
 
-    detector_names = [d.name for d in detectors]
-    detector_name = None if detector is None else detector.name
-
+    detectors = archive_.get_visible_processors('Detector')
+    detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
+    detector_ui_name = archive_.get_processor_ui_name(detector)
+    
     annotation_name, annotation_value = \
         _get_string_annotation_info(annotation_value_spec)
 
@@ -1503,8 +1505,6 @@ def clip_album(request):
     settings_presets_json = _get_presets_json('Clip Album Settings')
     commands_presets_json = _get_presets_json('Clip Album Commands')
 
-    preferences = preference_manager.instance.preferences
-
     settings_preset_path = \
         preferences.get('default_presets.Clip Album Settings')
     commands_preset_path = \
@@ -1514,8 +1514,8 @@ def clip_album(request):
         request, 'View',
         station_mic_names=sm_pair_ui_names,
         station_mic_name=sm_pair_ui_name,
-        detector_names=detector_names,
-        detector_name=detector_name,
+        detector_names=detector_ui_names,
+        detector_name=detector_ui_name,
         classifications=annotation_value_specs,
         classification=annotation_value_spec,
         solar_event_times_json='null',
