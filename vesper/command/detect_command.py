@@ -311,7 +311,9 @@ class DetectCommand(Command):
                 for file_ in recording_files:
                     for channel_num in range(num_channels):
                         runner = OldBirdDetectorRunner(self._job_info)
-                        runner.run_detectors(detectors, file_, channel_num)
+                        runner.run_detectors(
+                            detectors, file_, channel_num,
+                            self._create_clip_files)
 
         
     def _run_other_detectors(self, detector_models, recordings):
