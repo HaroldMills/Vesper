@@ -34,11 +34,11 @@
                         <label class="control-label col-sm-4" for="filter-clips-modal-detector-select">Detector:</label>
                         <div class="col-sm-6">
                             <select id="filter-clips-modal-detector-select" class="form-control modal-select">
-                                {% for archive_name, ui_name in detector_choices %}
-                                    {% if ui_name == detector.ui_name %}
-                                        <option value="{{archive_name}}" selected>{{ui_name}}</option>
+                                {% for name in detector_names %}
+                                    {% if name == detector_name %}
+                                        <option selected>{{name}}</option>
                                     {% else %}
-                                        <option value="{{archive_name}}">{{ui_name}}</option>
+                                        <option >{{name}}</option>
                                     {% endif %}
                                 {% endfor %}
                             </select>

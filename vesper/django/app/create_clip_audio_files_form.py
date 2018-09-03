@@ -1,7 +1,7 @@
 from django import forms
 
+import vesper.django.app.form_utils as form_utils
 import vesper.django.app.model_utils as model_utils
-import vesper.django.app.ui_utils as ui_utils
 
 
 class CreateClipAudioFilesForm(forms.Form):
@@ -20,7 +20,7 @@ class CreateClipAudioFilesForm(forms.Form):
         
         # Populate detectors field.
         self.fields['detectors'].choices = \
-            ui_utils.get_processor_choices('Detector')
+            form_utils.get_processor_choices('Detector')
         
         # Populate station/mics field.
         names = model_utils.get_station_mic_output_pair_ui_names()

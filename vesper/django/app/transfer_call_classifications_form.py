@@ -1,7 +1,7 @@
 from django import forms
 
+import vesper.django.app.form_utils as form_utils
 import vesper.django.app.model_utils as model_utils
-import vesper.django.app.ui_utils as ui_utils
 
 
 class TransferCallClassificationsForm(forms.Form):
@@ -19,7 +19,7 @@ class TransferCallClassificationsForm(forms.Form):
         super().__init__(*args, **kwargs)
         
         # Populate detector fields.
-        choices = ui_utils.get_processor_choices('Detector')
+        choices = form_utils.get_processor_choices('Detector')
         self.fields['source_detector'].choices = choices
         self.fields['target_detector'].choices = choices
         

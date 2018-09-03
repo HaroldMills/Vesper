@@ -17,7 +17,7 @@
         import { init } from '/static/vesper/view/clip-calendar.js';
         init({
             'stationMicName': "{{station_mic_name|default_if_none:''}}",
-            'detector': {{detector|bunch_to_json|safe}},
+            'detectorName': "{{detector_name|default_if_none:''}}",
             'classification': "{{classification}}",
             'periods': {{periods_json|safe}}
         });

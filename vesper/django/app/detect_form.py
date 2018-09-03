@@ -3,7 +3,6 @@ from django import forms
 from vesper.django.app.models import Station
 from vesper.singletons import preset_manager
 import vesper.django.app.form_utils as form_utils
-import vesper.django.app.ui_utils as ui_utils
 
 
 _FORM_TITLE = 'Detect'
@@ -41,7 +40,7 @@ class DetectForm(forms.Form):
         
         # Populate detectors field.
         self.fields['detectors'].choices = \
-            ui_utils.get_processor_choices('Detector')
+            form_utils.get_processor_choices('Detector')
         
         # Populate stations field.
         station_names = sorted(s.name for s in Station.objects.all())

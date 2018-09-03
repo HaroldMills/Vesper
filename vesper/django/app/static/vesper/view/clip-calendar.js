@@ -32,7 +32,7 @@ function onLoad() {
 function setTitle() {
 
 	const title =
-		`${state.stationMicName} / ${state.detector.uiName} / ` +
+		`${state.stationMicName} / ${state.detectorName} / ` +
 		`${state.classification} Clips`;
 
 	const titleElement = document.getElementById('title');
@@ -86,7 +86,7 @@ function setCalendarPeriods() {
 	if (state.stationMicName === 'None')
 		periodsDiv.innerHTML = 'There are no stations in the archive.';
 
-	else if (state.detector.archiveName === 'None')
+	else if (state.detectorName === 'None')
 		periodsDiv.innerHTML = 'There are no detectors in the archive.';
 
 	else if (state.periods.length === 0)
@@ -200,7 +200,7 @@ function addMonthDay(day, daysDiv) {
 		const date = formatDate(day.date);
 		const url = `/night?` +
 		            `station_mic=${state.stationMicName}&` +
-				    `detector=${state.detector.archiveName}&` +
+				    `detector=${state.detectorName}&` +
 				    `classification=${state.classification}&` +
 				    `date=${date}`;
 
