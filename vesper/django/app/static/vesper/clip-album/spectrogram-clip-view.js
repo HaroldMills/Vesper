@@ -4,12 +4,15 @@ import { TimeFrequencyPointOverlay }
     from '/static/vesper/clip-album/time-frequency-point-overlay.js';
 import { TimeFrequencyUtils }
     from '/static/vesper/clip-album/time-frequency-utils.js';
+import { TimePointOverlay }
+    from '/static/vesper/clip-album/time-point-overlay.js';
 import { Spectrogram } from '/static/vesper/signal/spectrogram.js';
 import { DataWindow } from '/static/vesper/signal/data-window.js';
 
 
 const _OVERLAY_CLASSES = {
-    'Time-Frequency Point Overlay': TimeFrequencyPointOverlay
+    'Time-Frequency Point Overlay': TimeFrequencyPointOverlay,
+    'Time Point Overlay': TimePointOverlay
 }
 
 

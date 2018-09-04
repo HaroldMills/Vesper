@@ -7,42 +7,36 @@ import { TimeFrequencyUtils }
 
 
 const _COMMAND_SPECS = [
-    ['set_time_frequency_point'],
-    ['clear_time_frequency_point']
+    ['set_time_point'],
+    ['clear_time_point']
 ];
 
 
 const _commandableDelegate = new CommandableDelegate(_COMMAND_SPECS);
 
 
-export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
+export class TimePointOverlay extends AnnotatingOverlay {
 
 
     constructor(clipView, settings) {
-        
-        super(
-            clipView, settings, 'Time-Frequency Point Overlay',
-            _commandableDelegate)
-            
-        this.timeAnnotationName = settings.timeAnnotationName;
-        this.frequencyAnnotationName = settings.frequencyAnnotationName;
-        
+        super(clipView, settings, 'Time Point Overlay', _commandableDelegate)
+        this.annotationName = settings.annotationName;
     }
 
 
-    _executeSetTimeFrequencyPointCommand(env) {
+    _executeSetTimePointCommand(env) {
 
         const e = this.clipView.lastMouseEvent;
         const tf = this.clipView.getMouseTimeAndFrequency(e);
 
         if (tf !== null)
-            this._setTimeFrequencyAnnotations(...tf);
+            this._setTimeAnnotation(tf[0]);
 
     }
 
 
-    _setTimeFrequencyAnnotations(time, frequency) {
-
+    _setTimeAnnotation(time) {
+        
         const clip = this.clipView.clip;
         
         let index = null;
@@ -57,7 +51,7 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
                 window.alert(
                     `Cannot annotate clip because its start index is ` +
                     `unknown.`);
-            
+                
                 return;
                 
             }
@@ -65,18 +59,17 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
             index = startIndex + Math.round(time * clip.sampleRate);
             
         }
-        
+            
         const annotations = new Object();
-        annotations[this.timeAnnotationName] = index;
-        annotations[this.frequencyAnnotationName] = frequency;
+        annotations[this.annotationName] = index;
 
         this._annotateClip(clip.id, annotations);
-
+        
     }
-
-
-    _executeClearTimeFrequencyPointCommand(env) {
-        this._setTimeFrequencyAnnotations(null, null);
+    
+    
+    _executeClearTimePointCommand(env) {
+        this._setAnnotation(null);
     }
 
 
@@ -85,24 +78,21 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
         const annotations = this.clipView.clip.annotations;
 
         // console.log(
-        //     `TimeFrequencyPointOverlay.render ${annotations} ` +
-        //     `${this.timeAnnotationName} ${this.frequencyAnnotationName}`);
+        //     `TimePointOverlay.render ${annotations} ` +
+        //     `${this.annotationName}`);
 
         if (annotations !== null &&
-                annotations.hasOwnProperty(this.timeAnnotationName) &&
-                annotations.hasOwnProperty(this.frequencyAnnotationName)) {
+                annotations.hasOwnProperty(this.annotationName)) {
 
-            const index = parseInt(annotations[this.timeAnnotationName]);
-            const freq = parseFloat(annotations[this.frequencyAnnotationName]);
-
-            this._render(index, freq);
+            const index = parseInt(annotations[this.annotationName]);
+            this._render(index);
 
         }
 
     }
 
 
-    _render(index, freq) {
+    _render(index) {
 
         const clipView = this.clipView;
         const clip = clipView.clip;
@@ -121,14 +111,6 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
         const x = Math.round(TimeFrequencyUtils.timeToViewX(
             time, startTime, endTime, canvas.width)) + .5;
 
-        const [startFreq, endFreq] = TimeFrequencyUtils.getFreqRange(
-            clipView.settings.spectrogram.display, sampleRate / 2.);
-        const y = Math.round(TimeFrequencyUtils.freqToViewY(
-            freq, startFreq, endFreq, canvas.height)) + .5;
-
-        const markerWidth = 11;
-        const delta = Math.floor(markerWidth / 2);
-
         const context = canvas.getContext('2d');
 
         context.strokeStyle = 'orange';
@@ -137,10 +119,8 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
         context.lineStyle = 'solid';
 
         context.beginPath();
-        context.moveTo(x - delta, y);
-        context.lineTo(x + delta, y);
-        context.moveTo(x, y - delta);
-        context.lineTo(x, y + delta);
+        context.moveTo(x, 0);
+        context.lineTo(x, canvas.height);
         context.stroke();
 
     }
