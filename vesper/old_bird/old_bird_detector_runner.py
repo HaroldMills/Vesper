@@ -463,6 +463,12 @@ class _DetectorMonitor(Thread):
         padding_length = int(round(_CLIP_SEARCH_PADDING * self._sample_rate))
         length = len(clip_samples) + 2 * padding_length
         
+        # Adjust start index and length if search interval would extend
+        # past start of file.
+        if start_index < 0:
+            length += start_index
+            start_index = 0
+        
         # Adjust length if seaarch interval would extend past end of file.
         end_index = start_index + length
         if end_index > self._recording_file_reader.length:
