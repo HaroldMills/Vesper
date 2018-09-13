@@ -3,7 +3,15 @@
 
 from collections import defaultdict
 
-from vesper.django.app.models import Processor
+import yaml
+
+from vesper.django.app.models import (
+    AnnotationConstraint, AnnotationInfo, Processor)
+
+
+_STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
+_STRING_ANNOTATION_VALUE_WILDCARD = '*'
+_STRING_ANNOTATION_VALUE_NONE = '-None-'
 
 
 class Archive:
@@ -26,6 +34,10 @@ class Archive:
         
         preferences = preference_manager.instance.preferences
         self._ui_names = preferences.get('ui_names', {})
+        
+        # TODO: Modify this to work with either newer "hidden_objects"
+        # preference or older "hidden_processors" preference (or perhaps
+        # even both).
         self._hidden_objects = preferences.get('hidden_objects', {})
         
         self._processors_by_type = None
@@ -50,9 +62,82 @@ class Archive:
         self._processor_ui_names = None
         """Mapping from processor archive names to processor UI names."""
     
+        self._string_anno_archive_value_tuples = None
+        """
+        Mapping from string annotation names to tuples of string annotation
+        archive values.
+        
+        The annotation values of each tuple are ordered lexicographically.
+        The mapping includes an item for every known string annotation.
+        """
+        
+        self._string_anno_ui_values = None
+        """
+        Mapping from string annotation names to mappings from annotation
+        archive and UI values to annotation UI values.
+        
+        The mapping includes an item for every known string annotation.
+        """
+        
+        self._string_anno_archive_values = None
+        """
+        Mapping from string annotation names to mappings from annotation
+        archive and UI values to annotation archive values.
+        
+        The mapping includes an item for every known string annotation.
+        """
+        
+        self._visible_string_anno_ui_values = None
+        """
+        Mapping from string annotation names to tuples of visible string
+        annotation UI values.
+        
+        The annotation values of each tuple are ordered lexicographically.
+        The mapping includes an item for every known string annotation.
+        """
+        
+        self._visible_string_anno_ui_value_specs = None
+        """
+        Mapping from string annotation names to tuples of visible string
+        annotation UI value specs.
+        
+        Except for three special specs at the beginning of each tuple
+        (unless one or more of the three are hidden), the specs of each
+        tuple are ordered lexicographically. The special specs are for
+        no value, any or no value, and any value, respectively.
+        """
+
         self._processor_cache_dirty = True
+        self._string_anno_values_cache_dirty = True
         
     
+    @property
+    def STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR(self):
+        return _STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR
+    
+    
+    @property
+    def STRING_ANNOTATION_VALUE_WILDCARD(self):
+        return _STRING_ANNOTATION_VALUE_WILDCARD
+    
+    
+    @property
+    def STRING_ANNOTATION_VALUE_ANY(self):
+        return _STRING_ANNOTATION_VALUE_WILDCARD
+    
+    
+    @property
+    def STRING_ANNOTATION_VALUE_NONE(self):
+        return _STRING_ANNOTATION_VALUE_NONE
+    
+    
+    @property
+    def STRING_ANNOTATION_VALUE_ANY_OR_NONE(self):
+        return ' | '.join([
+            _STRING_ANNOTATION_VALUE_WILDCARD,
+            _STRING_ANNOTATION_VALUE_NONE])
+            
+            
     def get_processors(self, processor_type):
         self._refresh_processor_cache_if_needed()
         return self._processors_by_type.get(processor_type, [])
@@ -128,6 +213,373 @@ class Archive:
             _handle_unrecognized_processor_name(processor.name)
         
         
+    def get_string_annotation_values(self, annotation_name):
+        self._refresh_string_annotation_values_cache_if_needed()
+        try:
+            return self._string_anno_archive_value_tuples[annotation_name]
+        except KeyError:
+            _handle_unrecognized_annotation_name(annotation_name)
+     
+    
+    def _refresh_string_annotation_values_cache_if_needed(self):
+        if self._string_anno_values_cache_dirty:
+            self.refresh_string_annotation_values_cache()
+             
+             
+    def refresh_string_annotation_values_cache(self):
+        
+        infos = AnnotationInfo.objects.all()
+        
+        self._string_anno_archive_value_tuples = dict(
+            (i.name, _get_string_annotation_archive_values(i.name))
+            for i in infos)
+        
+        ui_values_pref = self._ui_names.get('annotation_values', {})
+        
+        self._string_anno_ui_values = dict(
+            (i.name, ui_values_pref.get(i.name, {}))
+            for i in infos)
+        
+        self._string_anno_archive_values = dict(
+            (i.name, _invert(ui_values_pref.get(i.name, {})))
+            for i in infos)
+        
+        hidden_values_pref = self._hidden_objects.get('annotation_values', {})
+        
+        self._visible_string_anno_ui_values = dict(
+            (i.name, self._get_visible_string_annotation_ui_values(
+                i.name, hidden_values_pref))
+            for i in AnnotationInfo.objects.all())
+        
+        self._visible_string_anno_ui_value_specs = dict(
+            (i.name,
+             self._get_visible_string_annotation_ui_value_specs(
+                 i.name, hidden_values_pref))
+            for i in AnnotationInfo.objects.all())
+                
+        self._string_anno_values_cache_dirty = False
+         
+             
+    def _get_visible_string_annotation_ui_values(
+            self, annotation_name, hidden_values_pref):
+        
+        hidden_values = hidden_values_pref.get(annotation_name, [])
+        
+        hidden_archive_values = set(
+            self._get_string_annotation_archive_value(annotation_name, v)
+            for v in hidden_values)
+        
+        archive_values = \
+            self._string_anno_archive_value_tuples[annotation_name]
+        
+        visible_ui_values = sorted(
+            self._get_string_annotation_ui_value(annotation_name, v)
+            for v in archive_values
+            if v not in hidden_archive_values)
+            
+        return tuple(visible_ui_values)
+        
+        
+    def _get_visible_string_annotation_ui_value_specs(
+            self, annotation_name, hidden_values_pref):
+        
+        hidden_value_specs = hidden_values_pref.get(annotation_name, [])
+        
+        hidden_archive_value_specs = set(
+            self._get_string_annotation_archive_value(annotation_name, s)
+            for s in hidden_value_specs)
+        
+        archive_values = \
+            self._string_anno_archive_value_tuples[annotation_name]
+            
+        archive_value_specs = _get_string_annotation_archive_value_specs(
+            archive_values)
+        
+        visible_ui_value_specs = [
+            self._get_string_annotation_ui_value(annotation_name, s)
+            for s in archive_value_specs
+            if s not in hidden_archive_value_specs]
+        
+        return tuple(visible_ui_value_specs)
+        
+        
+    def get_string_annotation_archive_value(
+            self, annotation_name, annotation_value):
+        
+        self._refresh_string_annotation_values_cache_if_needed()
+        
+        return self._get_string_annotation_archive_value(
+            annotation_name, annotation_value)
+        
+        
+    # We define this method so we can call it instead of the public
+    # `get_string_annotation_archive_value` method from within the
+    # `_refresh_string_annotation_values_cache` method. Calling the
+    # public method would initiate an endless recursion.
+    def _get_string_annotation_archive_value(
+            self, annotation_name, annotation_value):
+        
+        return self._get_string_annotation_value(
+            annotation_name, annotation_value,
+            self._string_anno_archive_values)
+        
+        
+    def _get_string_annotation_value(
+            self, annotation_name, annotation_value, values):
+        
+        # Get mapping from archive and UI annotation values to archive
+        # or UI annotation values for the specified annotation name.
+        try:
+            values = values[annotation_name]
+        except KeyError:
+            _handle_unrecognized_annotation_name(annotation_name)
+            
+        # Get archive annotation value.
+        return values.get(annotation_value, annotation_value)
+     
+     
+    def get_string_annotation_ui_value(
+            self, annotation_name, annotation_value):
+        
+        self._refresh_string_annotation_values_cache_if_needed()
+        
+        return self._get_string_annotation_ui_value(
+            annotation_name, annotation_value)
+        
+        
+    # We define this method so we can call it instead of the public
+    # `get_string_annotation_ui_value` method from within the
+    # `_refresh_string_annotation_values_cache` method. Calling the
+    # public method would initiate an endless recursion.
+    def _get_string_annotation_ui_value(
+            self, annotation_name, annotation_value):
+        
+        return self._get_string_annotation_value(
+            annotation_name, annotation_value, self._string_anno_ui_values)
+    
+    
+    def get_visible_string_annotation_ui_values(self, annotation_name):
+        
+        self._refresh_string_annotation_values_cache_if_needed()
+        
+        try:
+            return self._visible_string_anno_ui_values[annotation_name]
+        except KeyError:
+            _handle_unrecognized_annotation_name(annotation_name)
+    
+    
+    def get_visible_string_annotation_ui_value_specs(
+            self, annotation_name):
+        
+        self._refresh_string_annotation_values_cache_if_needed()
+        
+        try:
+            return self._visible_string_anno_ui_value_specs[
+                annotation_name]
+        except KeyError:
+            _handle_unrecognized_annotation_name(annotation_name)
+    
+    
 def _handle_unrecognized_processor_name(name):
     raise ValueError(
         'Archive cache does not recognize processor name "{}".'.format(name))
+
+
+def _handle_unrecognized_annotation_name(name):
+    raise ValueError(
+        'Archive cache does not recognize annotation name "{}".'.format(name))
+
+
+def _get_string_annotation_archive_values(annotation_name):
+    
+    try:
+        info = AnnotationInfo.objects.get(name=annotation_name)
+    except AnnotationInfo.DoesNotExist:
+        return None
+    
+    constraint = info.constraint
+    
+    if constraint is None:
+        return None
+    
+    else:
+        
+        # We get the annotation values specified by the named constraint
+        # in a two-stage process. In the first stage, we retrieve the
+        # constraint's YAML, and the YAML of all of its ancestors, from
+        # the database, parse it into constraint dictionaries, and
+        # substitute parent constraint dictionaries for parent names.
+        # We also look for inheritance graph cycles in this stage and
+        # raise an exception if one is found.
+        #
+        # In the second stage, we create a flat tuple of annotation
+        # values from the graph of constraint dictionaries produced
+        # by the first stage.
+        #
+        # In retrospect I'm not sure it was really a good idea to
+        # separate the processing into two stages rather than doing
+        # it all in one. I don't think the single-stage processing
+        # would really be any more difficult to write or understand.
+
+        constraint = _get_string_annotation_constraint_dict(constraint.name)
+        values = _get_string_annotation_constraint_values(constraint)
+        return tuple(sorted(values))
+
+
+def _get_string_annotation_constraint_dict(constraint_name):
+    return _get_string_annotation_constraint_dict_aux(constraint_name, [])
+
+
+def _get_string_annotation_constraint_dict_aux(
+        constraint_name, visited_constraint_names):
+    
+    """
+    Gets the specified string annotation value constraint from the
+    database, parses its YAML to produce a constraint dictionary, and
+    recursively substitutes similarly parsed constraint dictionaries for
+    constraint names in the `extends` value (if there is one) of the result.
+    
+    This method detects cycles in constraint inheritance graphs, raising
+    a `ValueError` when one is found.
+    """
+    
+    if constraint_name in visited_constraint_names:
+        # constraint inheritance graph is cyclic
+        
+        i = visited_constraint_names.index(constraint_name)
+        cycle = ' -> '.join(visited_constraint_names[i:] + [constraint_name])
+        raise ValueError(
+            ('Cycle detected in constraint inheritance graph. '
+             'Cycle is: {}.').format(cycle))
+        
+    constraint = AnnotationConstraint.objects.get(name=constraint_name)
+    constraint = yaml.load(constraint.text)
+    
+    constraint['parents'] = _get_string_annotation_constraint_parents(
+        constraint, visited_constraint_names)
+    
+    return constraint
+        
+    
+def _get_string_annotation_constraint_parents(
+        constraint, visited_constraint_names):
+    
+    augmented_constraint_names = \
+        visited_constraint_names + [constraint['name']]
+    
+    extends = constraint.get('extends')
+    
+    if extends is None:
+        # constraint has no parents
+        
+        return []
+    
+    elif isinstance(extends, str):
+        # `extends` is a parent constraint name
+        
+        return [_get_string_annotation_constraint_dict_aux(
+            extends, augmented_constraint_names)]
+        
+    elif isinstance(extends, list):
+        # `extends` is a list of parent constraint names
+        
+        return [
+            _get_string_annotation_constraint_dict_aux(
+                name, augmented_constraint_names)
+            for name in extends]
+        
+    else:
+        class_name = extends.__class__.__name__
+        raise ValueError(
+            ('Unexpected type "{}" for value of string annotation '
+             'constraint "extends" item.').format(class_name))
+    
+
+def _get_string_annotation_constraint_values(constraint):
+    
+    parent_value_sets = [
+        _get_string_annotation_constraint_values(parent)
+        for parent in constraint['parents']]
+        
+    values = _get_string_annotation_constraint_own_values(constraint['values'])
+    
+    return values.union(*parent_value_sets)
+    
+    
+def _get_string_annotation_constraint_own_values(values):
+    
+    flattened_values = set()
+    
+    for value in values:
+        
+        if isinstance(value, str):
+            # value is string
+            
+            flattened_values.add(value)
+            
+        elif isinstance(value, dict):
+            
+            for parent, children in value.items():
+                
+                flattened_children = \
+                    _get_string_annotation_constraint_own_values(children)
+                
+                sep = _STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR
+                flattened_values |= set(
+                    parent + sep + child
+                    for child in flattened_children)
+                
+    return flattened_values
+
+
+def _invert(d):
+    return dict((v, k) for k, v in d.items())
+
+
+def _get_string_annotation_archive_value_specs(annotation_values):
+    
+    """
+    Gets a sorted list of annotation archive value specs derived from the
+    specified annotation archive values.
+    
+    In addition to the specified archive values, the list includes specs
+    for all ancestors of multicomponent values, as well as two wildcard
+    specs for each ancestor. The list begins with specs for no annotation,
+    any or no annotation, and any annotation.
+    """
+    
+    wildcard = _STRING_ANNOTATION_VALUE_WILDCARD
+    none = _STRING_ANNOTATION_VALUE_NONE
+    
+    default_specs = [
+        none,
+        wildcard + ' | ' + none,
+        wildcard
+    ]
+    
+    specs = set()
+    for value in annotation_values:
+        specs.add(value)
+        specs |= _get_string_annotation_archive_value_specs_aux(value)
+        
+    return default_specs + sorted(specs)
+        
+        
+def _get_string_annotation_archive_value_specs_aux(annotation_value):
+    
+    separator = _STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR
+    wildcard = _STRING_ANNOTATION_VALUE_WILDCARD
+    
+    components = annotation_value.split(separator)
+    
+    specs = []
+    
+    for i in range(1, len(components)):
+        
+        spec = separator.join(components[:i])
+        
+        specs.append(spec)
+        specs.append(spec + wildcard)
+        specs.append(spec + separator + wildcard)
+        
+    return frozenset(specs)
