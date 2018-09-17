@@ -123,6 +123,9 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
 - name: Other
   dropdown:
  
+      - name: Update Recording File Paths
+        url_name: update-recording-file-paths
+        
       - name: Delete Recordings
         url_name: delete-recordings
  
