@@ -28,6 +28,7 @@ def initialize(archive_dir_path, archive_settings):
         recording_dir_paths=_create_recording_dir_paths(
             archive_settings, archive_dir_path),
         clips_dir_path=archive_dir_path / 'Clips',
+        deferred_actions_dir_path=archive_dir_path / 'Deferred Actions',
         job_logs_dir_path=archive_dir_path / 'Logs' / 'Jobs')
     
     

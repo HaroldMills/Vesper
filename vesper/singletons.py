@@ -25,6 +25,7 @@ Command:
     - vesper.command.delete_clips_command.DeleteClipsCommand
     - vesper.command.delete_recordings_command.DeleteRecordingsCommand
     - vesper.command.detect_command.DetectCommand
+    - vesper.command.execute_deferred_actions_command.ExecuteDeferredActionsCommand
     - vesper.command.export_command.ExportCommand
     - vesper.command.import_command.ImportCommand
     - vesper.command.test_command.TestCommand

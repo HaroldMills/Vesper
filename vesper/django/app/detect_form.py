@@ -8,6 +8,7 @@ import vesper.django.app.form_utils as form_utils
 _FORM_TITLE = 'Detect'
 _SCHEDULE_FIELD_LABEL = 'Schedule'
 _CREATE_CLIP_FILES_LABEL = 'Create clip audio files'
+_DEFER_CLIP_CREATION_LABEL = 'Defer clip creation'
     
     
 def _get_field_default(name, default):
@@ -31,6 +32,12 @@ class DetectForm(forms.Form):
         label=_CREATE_CLIP_FILES_LABEL,
         label_suffix='',
         initial=_get_field_default(_CREATE_CLIP_FILES_LABEL, False),
+        required=False)
+    
+    defer_clip_creation = forms.BooleanField(
+        label=_DEFER_CLIP_CREATION_LABEL,
+        label_suffix='',
+        initial=_get_field_default(_DEFER_CLIP_CREATION_LABEL, False),
         required=False)
     
     

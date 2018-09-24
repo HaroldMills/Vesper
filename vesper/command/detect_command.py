@@ -5,11 +5,13 @@ from collections import defaultdict
 import datetime
 import itertools
 import logging
+import pickle
 import random
 import time
 
 from django.db import transaction
 
+from vesper.archive_paths import archive_paths
 from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import (
     Clip, Job, Processor, Recording, RecordingChannel, Station)
@@ -20,6 +22,7 @@ from vesper.util.schedule import Interval, Schedule
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
+import vesper.util.os_utils as os_utils
 import vesper.util.signal_utils as signal_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
@@ -93,6 +96,9 @@ End index of shuffled station-nights for which to run detectors, when
 """
 
 
+_DEFERRED_DATABASE_WRITES_FILE_NAME_FORMAT = 'Job {} Part {:03d}.pkl'
+
+
 class DetectCommand(Command):
     
     
@@ -109,6 +115,7 @@ class DetectCommand(Command):
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
         self._schedule_name = get('schedule', args)
+        self._defer_clip_creation = get('defer_clip_creation', args)
         self._create_clip_files = get('create_clip_files', args)
         
         self._schedule = _get_schedule(self._schedule_name)
@@ -536,7 +543,8 @@ class DetectCommand(Command):
                 listener = _DetectorListener(
                     detector_model, recording, recording_channel,
                     file_start_index, interval_start_index,
-                    self._create_clip_files, file_reader, job, self._logger)
+                    self._defer_clip_creation, self._create_clip_files,
+                    file_reader, job, self._logger)
                 
                 detector = _create_detector(
                     detector_model, recording, listener)
@@ -720,16 +728,24 @@ def _create_detector(detector_model, recording, listener):
 class _DetectorListener:
     
     
+    next_serial_number = 0
+    
+    
     def __init__(
             self, detector_model, recording, recording_channel,
-            file_start_index, interval_start_index, create_clip_files,
-            file_reader, job, logger):
+            file_start_index, interval_start_index, defer_clip_creation,
+            create_clip_files, file_reader, job, logger):
+        
+        # Give this detector listener a unique serial number.
+        self._serial_number = _DetectorListener.next_serial_number
+        _DetectorListener.next_serial_number += 1
         
         self._detector_model = detector_model
         self._recording = recording
         self._recording_channel = recording_channel
         self._file_start_index = file_start_index          # index in recording
         self._interval_start_index = interval_start_index  # index in file
+        self._defer_clip_creation = defer_clip_creation
         self._create_clip_files = create_clip_files
         self._file_reader = file_reader
         self._job = job
@@ -737,6 +753,7 @@ class _DetectorListener:
         
         self._clip_manager = clip_manager.instance
         self._clips = []
+        self._deferred_clips = []
         self._num_clips = 0
         self._num_database_failures = 0
         self._num_file_failures = 0
@@ -756,20 +773,40 @@ class _DetectorListener:
         
     def _archive_clips(self, threshold):
         
-        if _ARCHIVE_CLIPS:
+        if not _ARCHIVE_CLIPS:
+            return
+        
+        # TODO: Find out exactly what database queries are
+        # executed during detection (ideally, record the sequence
+        # of queries) to see if database interaction could be
+        # made more efficient, for example with a cache.
+        
+        recording_channel = self._recording_channel
+        detector_model = self._detector_model
+        start_offset = self._file_start_index + self._interval_start_index
+        creation_time = time_utils.get_utc_now()
+        
+        create_clip_files = self._create_clip_files
+        
+        if self._defer_clip_creation:
             
+            # TODO: Either mplement clip file creation for deferred
+            # clips or remove it for non-deferred clips.
+            
+            for start_index, length in self._clips:
+                start_index += start_offset
+                clip = [
+                    recording_channel.id, start_index, length, creation_time,
+                    self._job.id, detector_model.id]
+                self._deferred_clips.append(clip)
+                
+        else:
+            # database writes not deferred
+                
             station = self._recording.station
-            recording_channel = self._recording_channel
-            mic_output = recording_channel.mic_output
-            detector_model = self._detector_model
-            
-            start_offset = self._file_start_index + self._interval_start_index
             sample_rate = self._recording.sample_rate
-             
-            creation_time = time_utils.get_utc_now()
-            
-            create_clip_files = self._create_clip_files
-            
+            mic_output = recording_channel.mic_output
+        
             if create_clip_files:
                 clips = []
              
@@ -780,53 +817,51 @@ class _DetectorListener:
             
             failure_info = None
             
-            with archive_lock.atomic():
+            with archive_lock.atomic(), transaction.atomic():
                 
-                with transaction.atomic():
-                     
-                    for start_index, length in self._clips:
-                        
-                        try:
-                        
-                            # Get clip start time as a `datetime`.
-                            start_index += start_offset
-                            start_delta = datetime.timedelta(
-                                seconds=start_index / sample_rate)
-                            start_time = \
-                                self._recording.start_time + start_delta
-                             
-                            end_time = signal_utils.get_end_time(
-                                start_time, length, sample_rate)
+                for start_index, length in self._clips:
+                    
+                    try:
+                    
+                        # Get clip start time as a `datetime`.
+                        start_index += start_offset
+                        start_delta = datetime.timedelta(
+                            seconds=start_index / sample_rate)
+                        start_time = self._recording.start_time + start_delta
                          
-                            # It would be nice to use Django's `bulk_create`
-                            # here, but unfortunately that won't automatically
-                            # set clip IDs for us except (as of this writing)
-                            # if we're using PostgreSQL.
-                            clip = Clip.objects.create(
-                                station=station,
-                                mic_output=mic_output,
-                                recording_channel=recording_channel,
-                                start_index=start_index,
-                                length=length,
-                                sample_rate=sample_rate,
-                                start_time=start_time,
-                                end_time=end_time,
-                                date=station.get_night(start_time),
-                                creation_time=creation_time,
-                                creating_user=None,
-                                creating_job=self._job,
-                                creating_processor=detector_model
-                            )
-                            
-                            if create_clip_files:
-                                
-                                # Save clip so we can create clip file
-                                # outside of transaction.
-                                clips.append(clip)
+                        end_time = signal_utils.get_end_time(
+                            start_time, length, sample_rate)
+                     
+                        # It would be nice to use Django's
+                        # `bulk_create` here, but unfortunately that
+                        # won't automatically set clip IDs for us
+                        # except (as of this writing) if we're using
+                        # PostgreSQL.
+                        clip = Clip.objects.create(
+                            station=station,
+                            mic_output=mic_output,
+                            recording_channel=recording_channel,
+                            start_index=start_index,
+                            length=length,
+                            sample_rate=sample_rate,
+                            start_time=start_time,
+                            end_time=end_time,
+                            date=station.get_night(start_time),
+                            creation_time=creation_time,
+                            creating_user=None,
+                            creating_job=self._job,
+                            creating_processor=detector_model
+                        )
                         
-                        except Exception as e:
-                            failure_info = (start_time, length, str(e))
-                            break
+                        if create_clip_files:
+                            
+                            # Save clip so we can create clip file
+                            # outside of transaction.
+                            clips.append(clip)
+                    
+                    except Exception as e:
+                        failure_info = (start_time, length, str(e))
+                        break
 
 #             trans_end_time = time.time()
 #             self._num_transactions += 1
@@ -850,7 +885,8 @@ class _DetectorListener:
                 if batch_size == 1:
                     prefix = 'Clip'
                 else:
-                    prefix = 'All {} clips in this batch'.format(batch_size)
+                    prefix = 'All {} clips in this batch'.format(
+                        batch_size)
                     
                 self._logger.error((
                     '            Attempt to create database record for '
@@ -868,11 +904,11 @@ class _DetectorListener:
                     except Exception as e:
                         self._num_file_failures += 1
                         self._logger.error((
-                            '            Attempt to create audio file for '
-                            'clip {} failed with message: {}. Clip database '
-                            'record was still created.').format(
+                            '            Attempt to create audio file '
+                            'for clip {} failed with message: {}. Clip '
+                            'database record was still created.').format(
                                 str(clip), str(e)))
-                        
+                            
         self._clips = []
         
 #         self._logger.info(
@@ -884,10 +920,18 @@ class _DetectorListener:
         
         # Archive remaining clips.
         self._archive_clips(threshold)
-            
+        
         clips_text = text_utils.create_count_text(self._num_clips, 'clip')
         
-        if self._num_database_failures == 0 and self._num_file_failures == 0:
+        if self._defer_clip_creation:
+            
+            self._write_deferred_clips_file()
+            
+            self._logger.info((
+                '        Processed {} from detector "{}".').format(
+                    clips_text, self._detector_model.name))
+            
+        elif self._num_database_failures == 0 and self._num_file_failures == 0:
             
             self._logger.info((
                 '        Archived {} from detector "{}".').format(
@@ -920,3 +964,27 @@ class _DetectorListener:
 #         self._logger.info((
 #             '        Average database transaction duration was {} '
 #             'seconds.').format(avg))
+
+
+    def _write_deferred_clips_file(self):
+        
+        actions = {
+            'actions': [
+                {
+                    'name': 'create_clips',
+                    'arguments': {
+                        'clips': self._deferred_clips
+                    }
+                }
+            ]
+        }
+        
+        dir_path = archive_paths.deferred_actions_dir_path
+        os_utils.create_directory(dir_path)
+        
+        file_name = _DEFERRED_DATABASE_WRITES_FILE_NAME_FORMAT.format(
+            self._job.id, self._serial_number)
+        file_path = dir_path / file_name
+        
+        with open(file_path, 'wb') as file_:
+            pickle.dump(actions, file_)

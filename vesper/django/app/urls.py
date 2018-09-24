@@ -30,6 +30,8 @@ if not settings.ARCHIVE_READ_ONLY:
     
         url(r'^detect/$', views.detect, name='detect'),
         url(r'^classify/$', views.classify, name='classify'),
+        url(r'^execute-deferred-actions/$', views.execute_deferred_actions,
+            name='execute-deferred-actions'),
         
         url(r'^export-clip-counts-csv-file/$',
             views.export_clip_counts_csv_file,

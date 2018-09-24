@@ -43,6 +43,49 @@
     </p>
     
     <p>
+        Check the <code>Defer clip creation</code> check box to defer
+        clip creation to a later time. When the box is unchecked, this
+        command creates clips in the archive database as it runs. When
+        the box is checked, the command does not write any clips to the
+        database, but rather writes clip metadata to one or more
+        temporary files located in the <code>Deferred Actions</code>
+        subdirectory of the archive directory. You can then create the
+        clips in the database later by running the
+        <code>Execute Deferred Actions</code> command.
+    </p>
+    
+    <p>
+        If you run only one Vesper job at a time, and do not view clip
+        albums while your jobs are running, you can safely leave the
+        <code>Defer clip creation</code> check box unchecked, and will
+        never need to run the <code>Execute Deferred Actions</code>
+        command. If your archive uses the SQLite database (the default),
+        however, and you wish to run multiple detection and/or
+        classification jobs simultaneously, and/or view clip albums
+        while one or more such jobs are running, you should check the
+        <code>Defer clip creation</code> check box.
+    </p>
+     
+    <p>
+        You can run the <code>Execute Deferred Actions</code> command
+        just once to create clips deferred from multiple detection jobs.
+        For example, you can run two or more detection jobs
+        simultaneously, deferring clip creation, and then run the
+        <code>Execute Deferred Actions</code> command once to create
+        the clips from both jobs.
+    </p>
+    
+    <p>
+        Deferred clip creation is offered as a workaround to a
+        limitation of the SQLite database, which provides only limited
+        support for concurrent database access. If you run, say, two
+        detection jobs simultaneously and do not defer clip creation,
+        the two jobs may try to write to the database concurrently,
+        and if their use of the database is sufficiently heavy this
+        can cause database errors in the form of database lock timeouts.
+    </p>
+    
+    <p>
         Detection runs as a Vesper job.
     </p>
 
@@ -60,6 +103,7 @@
         {{ form.end_date|form_element }}
         {{ form.schedule|form_element }}
         {{ form.create_clip_files|form_checkbox }}
+        {{ form.defer_clip_creation|form_checkbox }}
 
         <button type="submit" class="btn btn-default form-spacing command-form-spacing">Detect</button>
 

@@ -25,6 +25,8 @@ from vesper.django.app.delete_clip_audio_files_form import \
 from vesper.django.app.delete_clips_form import DeleteClipsForm
 from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
+from vesper.django.app.execute_deferred_actions_form import \
+    ExecuteDeferredActionsForm
 from vesper.django.app.export_clip_audio_files_form import \
     ExportClipAudioFilesForm
 from vesper.django.app.export_clips_csv_file_form import \
@@ -104,12 +106,18 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
  
       - name: Recordings
         url_name: import-recordings
- 
-- name: Detect
-  url_name: detect
- 
-- name: Classify
-  url_name: classify
+
+- name: Process
+  dropdown:
+  
+    - name: Detect
+      url_name: detect
+     
+    - name: Classify
+      url_name: classify
+      
+    - name: Execute Deferred Actions
+      url_name: execute-deferred-actions
  
 - name: Export
   dropdown:
@@ -262,7 +270,8 @@ def _create_detect_command_spec(form):
             'start_date': data['start_date'],
             'end_date': data['end_date'],
             'schedule': data['schedule'],
-            'create_clip_files': data['create_clip_files']
+            'create_clip_files': data['create_clip_files'],
+            'defer_clip_creation': data['defer_clip_creation']
         }
     }
 
@@ -326,6 +335,37 @@ def _create_classify_command_spec(form):
             'start_date': data['start_date'],
             'end_date': data['end_date']
         }
+    }
+
+
+@login_required
+@csrf_exempt
+def execute_deferred_actions(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = ExecuteDeferredActionsForm()
+
+    elif request.method == 'POST':
+
+        form = ExecuteDeferredActionsForm(request.POST)
+
+        if form.is_valid():
+            command_spec = _create_execute_deferred_actions_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Import', form=form)
+
+    return render(request, 'vesper/execute-deferred-actions.html', context)
+
+
+def _create_execute_deferred_actions_command_spec(form):
+
+    return {
+        'name': 'execute_deferred_actions',
+        'arguments': {}
     }
 
 

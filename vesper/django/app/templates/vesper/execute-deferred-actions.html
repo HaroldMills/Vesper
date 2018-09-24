@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Execute Deferred Actions - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load staticfiles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+
+</head>
+
+<body class="command-form-body">
+
+    {% include "vesper/navbar.html" %}
+
+    <h2>Execute Deferred Actions</h2>
+
+    <p>
+        Executes archive actions that were deferred by previous Vesper jobs.
+    </p>
+
+    <p>
+        The actions are executed as a new Vesper job.
+    </p>
+    
+    <p>
+        WARNING: If your archive uses an SQLite database (the default),
+        we recommend that you NOT run any other jobs or perform any
+        other actions (for example, viewing clip albums) that access
+        the database during the execution of the new job. The
+        combination of Django and SQLite offer only limited support for
+        concurrent database access, so such accesses may cause the new
+        job to fail. The job executes all of its actions inside a single
+        database transaction, however, so if you do not heed this
+        warning and the job fails, any modifications to the database
+        made by the actions are rolled back and the job can be safely
+        rerun.
+    </p>
+    
+    <p>
+
+    <form class="form" role="form" action="{% url 'execute-deferred-actions' %}" method="post">
+
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Execute</button>
+
+    </form>
+
+</body>
+
+</html>
