@@ -30,7 +30,7 @@ def get_timing_text(elapsed_time, item_count, items_name):
     if elapsed_time > 0:
         
         rate = item_count / elapsed_time
-        return '{}, processing an average of {:.1f} {} per second'.format(
+        return '{}, an average of {:.1f} {} per second'.format(
             time_text, rate, items_name)
         
     else:
