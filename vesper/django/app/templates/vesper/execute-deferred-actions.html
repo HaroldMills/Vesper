@@ -21,13 +21,29 @@
     <h2>Execute Deferred Actions</h2>
 
     <p>
-        Executes archive actions that were deferred by previous Vesper jobs.
-    </p>
-
-    <p>
-        The actions are executed as a new Vesper job.
+        Executes archive actions that were deferred by one or more previous
+        Vesper jobs.
     </p>
     
+    <p>
+        Examples of actions that may have been deferred include clip creation
+        and annotation. The actions are executed as a Vesper job.
+    </p>
+    
+    <p>
+        WARNING: Do not start any jobs
+        that defer archive actions, and do not attempt to classify clips
+        manually in a clip album, during the execution of an
+        <code>Execute Deferred Actions</code> command. Conversely, do not
+        start an <code>Execute Deferred Actions</code> command while any
+        job that defers archive actions is running. Failure to heed
+        this warning may cause SQLite database lock timeouts during
+        attempted database writes. A future version of Vesper may enforce
+        this policy automatically, obviating this warning, but the current
+        version does not.
+    </p>
+    
+<!--
     <p>
         WARNING: If your archive uses an SQLite database (the default),
         we recommend that you NOT run any other jobs or perform any
@@ -41,6 +57,7 @@
         made by the actions are rolled back and the job can be safely
         rerun.
     </p>
+-->
     
     <p>
 
