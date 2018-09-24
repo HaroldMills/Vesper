@@ -270,7 +270,7 @@ def _create_detect_command_spec(form):
             'start_date': data['start_date'],
             'end_date': data['end_date'],
             'schedule': data['schedule'],
-            'create_clip_files': data['create_clip_files'],
+            # 'create_clip_files': data['create_clip_files'],
             'defer_clip_creation': data['defer_clip_creation']
         }
     }

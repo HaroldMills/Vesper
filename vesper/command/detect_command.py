@@ -99,6 +99,12 @@ End index of shuffled station-nights for which to run detectors, when
 _DEFERRED_DATABASE_WRITES_FILE_NAME_FORMAT = 'Job {} Part {:03d}.pkl'
 
 
+# TODO: Remove command argument and code for creating clip files if we
+# decide we really want to do that. (Do the same in other files as well:
+# do a global search for `create_clip_files`). For the time being, the
+# argument is always set `False` in the initializer below.
+
+
 class DetectCommand(Command):
     
     
@@ -116,7 +122,7 @@ class DetectCommand(Command):
         self._end_date = get('end_date', args)
         self._schedule_name = get('schedule', args)
         self._defer_clip_creation = get('defer_clip_creation', args)
-        self._create_clip_files = get('create_clip_files', args)
+        self._create_clip_files = False  # get('create_clip_files', args)
         
         self._schedule = _get_schedule(self._schedule_name)
         self._station_schedules = {}
@@ -789,9 +795,6 @@ class _DetectorListener:
         create_clip_files = self._create_clip_files
         
         if self._defer_clip_creation:
-            
-            # TODO: Either mplement clip file creation for deferred
-            # clips or remove it for non-deferred clips.
             
             for start_index, length in self._clips:
                 start_index += start_offset

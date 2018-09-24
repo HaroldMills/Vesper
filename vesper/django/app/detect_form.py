@@ -28,11 +28,11 @@ class DetectForm(forms.Form):
         initial=_get_field_default(_SCHEDULE_FIELD_LABEL, None),
         required=False)
     
-    create_clip_files = forms.BooleanField(
-        label=_CREATE_CLIP_FILES_LABEL,
-        label_suffix='',
-        initial=_get_field_default(_CREATE_CLIP_FILES_LABEL, False),
-        required=False)
+#     create_clip_files = forms.BooleanField(
+#         label=_CREATE_CLIP_FILES_LABEL,
+#         label_suffix='',
+#         initial=_get_field_default(_CREATE_CLIP_FILES_LABEL, False),
+#         required=False)
     
     defer_clip_creation = forms.BooleanField(
         label=_DEFER_CLIP_CREATION_LABEL,
