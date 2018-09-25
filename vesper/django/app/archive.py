@@ -35,10 +35,7 @@ class Archive:
         preferences = preference_manager.instance.preferences
         self._ui_names = preferences.get('ui_names', {})
         
-        # TODO: Modify this to work with either newer "hidden_objects"
-        # preference or older "hidden_processors" preference (or perhaps
-        # even both).
-        self._hidden_objects = preferences.get('hidden_objects', {})
+        self._hidden_objects = _get_hidden_objects(preferences)
         
         self._processors_by_type = None
         """
@@ -380,6 +377,23 @@ class Archive:
             _handle_unrecognized_annotation_name(annotation_name)
     
     
+def _get_hidden_objects(preferences):
+    
+    objects = preferences.get('hidden_objects', {})
+    
+    # Add processor names specified via older `hidden_processors` preference
+    # to processor names specified via newer  `hidden_objects` preference.
+    # The newer preference does not distinguish processors by type, so we
+    # ignore the processor types specified in the older preference.
+    processor_names = objects.get('processors', [])
+    old_processors = preferences.get('hidden_processors', [])
+    old_processor_names = [p['name'] for p in old_processors]
+    processor_names = sorted(frozenset(processor_names + old_processor_names))
+    objects['processors'] = processor_names
+    
+    return objects
+
+
 def _handle_unrecognized_processor_name(name):
     raise ValueError(
         'Archive cache does not recognize processor name "{}".'.format(name))
