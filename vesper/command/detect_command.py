@@ -14,10 +14,11 @@ from django.db import transaction
 from vesper.archive_paths import archive_paths
 from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import (
-    Clip, Job, Processor, Recording, RecordingChannel, Station)
+    Clip, Job, Recording, RecordingChannel, Station)
 from vesper.old_bird.old_bird_detector_runner import OldBirdDetectorRunner
 from vesper.signal.wave_audio_file import WaveAudioFileReader
-from vesper.singletons import clip_manager, extension_manager, preset_manager
+from vesper.singletons import (
+    archive, clip_manager, extension_manager, preset_manager)
 from vesper.util.schedule import Interval, Schedule
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
@@ -26,7 +27,6 @@ import vesper.util.os_utils as os_utils
 import vesper.util.signal_utils as signal_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
-from vesper.django.app.views import clip
 
 
 _RUN_DETECTORS = True
@@ -157,7 +157,9 @@ class DetectCommand(Command):
     def _get_detectors(self):
         
         try:
-            return [self._get_detector(name) for name in self._detector_names]
+            return [
+                archive.instance.get_processor(name)
+                for name in self._detector_names]
         
         except Exception as e:
             self._logger.error((
@@ -168,14 +170,6 @@ class DetectCommand(Command):
                 'The archive was not modified.\n'
                 'See below for exception traceback.').format(str(e)))
             raise
-            
-            
-    def _get_detector(self, name):
-        try:
-            return model_utils.get_processor(name, 'Detector')
-        except Processor.DoesNotExist:
-            raise CommandExecutionError(
-                'Unrecognized detector "{}".'.format(name))
             
             
     def _get_recording_lists(self):

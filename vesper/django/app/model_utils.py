@@ -11,21 +11,24 @@ from django.db.models import Count, F
 import yaml
 
 from vesper.django.app.models import (
-    AnnotationConstraint, AnnotationInfo, Clip, DeviceConnection, Processor,
+    AnnotationConstraint, AnnotationInfo, Clip, DeviceConnection,
     Recording, RecordingChannel, StationDevice, StringAnnotation,
     StringAnnotationEdit)
-from vesper.singletons import preference_manager, recording_manager
+from vesper.singletons import archive, recording_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.annotation_utils as annotation_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.archive_lock as archive_lock
 
 
+# TODO: Rename this module to `archive_utils`?
+
+# TODO: Decide on criteria for what belongs in this module and what
+# belongs in the `archive` singleton. One consideration is that the
+# singleton has state, while this module does not.
+
 # TODO: Review the queries in this module and ensure that results are
 # ordered when that is desirable.
-
-
-_ONE_DAY = datetime.timedelta(days=1)
 
 
 def get_station_mic_output_pairs_dict():
@@ -451,24 +454,6 @@ def get_clips(
     return clips
 
 
-def get_processors(processor_type=None):
-    
-    if processor_type is None:
-        processors = Processor.objects.all()
-    else:
-        processors = Processor.objects.filter(type=processor_type)
-        
-    return processors.order_by('name')
-
-
-def get_processor(name, processor_type=None):
-    
-    if processor_type is None:
-        return Processor.objects.get(name=name)
-    else:
-        return Processor.objects.get(name=name, type=processor_type)
-
-
 def create_clip_query_values_iterator(
         detector_names, sm_pair_ui_names, start_date, end_date):
     
@@ -477,7 +462,9 @@ def create_clip_query_values_iterator(
     # to a bad detector name, station/mic output pair, or date
     # range we do so before we start yielding query values.
     
-    detectors = [_get_detector(name) for name in detector_names]
+    archive_ = archive.instance
+    
+    detectors = [archive_.get_processor(name) for name in detector_names]
 
     sm_pairs_dict = get_station_mic_output_pairs_dict()
     sm_pairs = [sm_pairs_dict[name] for name in sm_pair_ui_names]
@@ -490,14 +477,6 @@ def create_clip_query_values_iterator(
                 yield (detector, station, mic_output, date)
            
          
-def _get_detector(name):
-    try:
-        return get_processor(name, 'Detector')
-    except Processor.DoesNotExist:
-        raise ValueError(
-            'Unrecognized detector "{}".'.format(name))
-
-
 _ONE_DAY = datetime.timedelta(days=1)
 
   
