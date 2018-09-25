@@ -1208,7 +1208,7 @@ def clip_calendar(request):
     sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
     sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
 
-    detectors = archive_.get_visible_processors('Detector')
+    detectors = archive_.get_visible_processors_of_type('Detector')
     detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
     detector_ui_name = archive_.get_processor_ui_name(detector)
     
@@ -1533,7 +1533,7 @@ def clip_album(request):
     sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
     sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
 
-    detectors = archive_.get_visible_processors('Detector')
+    detectors = archive_.get_visible_processors_of_type('Detector')
     detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
     detector_ui_name = archive_.get_processor_ui_name(detector)
     

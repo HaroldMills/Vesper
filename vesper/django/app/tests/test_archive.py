@@ -79,7 +79,7 @@ class ArchiveTests(TestCase):
         self._archive = Archive()
         
         
-    def test_get_processors(self):
+    def test_get_processors_of_type(self):
         
         cases = [
             ('Detector', ['Thrush Detector', 'Tseep Detector']),
@@ -88,12 +88,12 @@ class ArchiveTests(TestCase):
         ]
         
         for processor_type, expected_names in cases:
-            processors = self._archive.get_processors(processor_type)
+            processors = self._archive.get_processors_of_type(processor_type)
             names = [p.name for p in processors]
             self.assertEqual(names, expected_names)
             
             
-    def test_get_visible_processors(self):
+    def test_get_visible_processors_of_type(self):
         
         cases = [
             ('Detector', ['Thrush Detector', 'Tseep Detector']),
@@ -102,7 +102,8 @@ class ArchiveTests(TestCase):
         ]
         
         for processor_type, expected_names in cases:
-            processors = self._archive.get_visible_processors(processor_type)
+            processors = \
+                self._archive.get_visible_processors_of_type(processor_type)
             names = [p.name for p in processors]
             self.assertEqual(names, expected_names)
             

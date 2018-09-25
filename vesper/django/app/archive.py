@@ -138,7 +138,7 @@ class Archive:
             _STRING_ANNOTATION_VALUE_NONE])
             
             
-    def get_processors(self, processor_type):
+    def get_processors_of_type(self, processor_type):
         self._refresh_processor_cache_if_needed()
         return self._processors_by_type.get(processor_type, [])
     
@@ -192,7 +192,7 @@ class Archive:
             self._processor_ui_names[p.name] not in hidden_names]
         
         
-    def get_visible_processors(self, processor_type):
+    def get_visible_processors_of_type(self, processor_type):
         self._refresh_processor_cache_if_needed()
         return self._visible_processors_by_type.get(processor_type, [])
         

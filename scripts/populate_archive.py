@@ -22,6 +22,7 @@ from vesper.archive.recording import Recording as OldRecording
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Recording, RecordingChannel,
     Station)
+from vesper.singletons import archive
 import vesper.django.app.model_utils as model_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
@@ -383,7 +384,7 @@ def _add_clips():
     
 def _get_detectors():
     
-    detectors = model_utils.get_processors('Detector')
+    detectors = archive.instance.get_processors_of_type('Detector')
     detectors = dict((d.name, d) for d in detectors)
     
     for name, aliases in _DETECTOR_NAME_ALIASES.items():
