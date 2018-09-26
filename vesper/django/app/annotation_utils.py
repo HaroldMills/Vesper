@@ -51,26 +51,16 @@ import itertools
 import re
 
 
-SEPARATOR = '.'
+_SEPARATOR = '.'
 """Annotation value component separator."""
 
-WILDCARD = '*'
+_WILDCARD = '*'
 """Annotation value spec wildcard."""
 
-ANNOTATED_CLIPS = WILDCARD
-"""
-Annotation value spec for all annotated clips, regardless of annotation value.
-"""
-
-# TODO: Change this to 'None' when UI changes to handle more than just
-# "Classification" annotation.
-UNANNOTATED_CLIPS = 'Unclassified'
-"""Annotation value spec for all unannotated clips."""
-
-ALL_CLIPS = ANNOTATED_CLIPS + ' | ' + UNANNOTATED_CLIPS
-"""Annotation value spec for all clips, whether annotated or not."""
-
 _REGEXP_THAT_NEVER_MATCHES = 'a^'
+
+
+# TODO: Move the contents of this module to the `Archive` class?
 
 
 def create_string_annotation_values_regexp(annotation_value_specs):
@@ -84,18 +74,18 @@ def create_string_annotation_values_regexp(annotation_value_specs):
 
 def _create_regexp_terms(annotation_value_spec):
     
-    if annotation_value_spec == WILDCARD:
+    if annotation_value_spec == _WILDCARD:
         return [r'']
     
-    elif annotation_value_spec.endswith(SEPARATOR + WILDCARD):
-        prefix = _escape(annotation_value_spec[:-len(WILDCARD)])
+    elif annotation_value_spec.endswith(_SEPARATOR + _WILDCARD):
+        prefix = _escape(annotation_value_spec[:-len(_WILDCARD)])
         return [r'^{}.+'.format(prefix)]
     
-    elif annotation_value_spec.endswith(WILDCARD):
-        prefix = _escape(annotation_value_spec[:-len(WILDCARD)])
+    elif annotation_value_spec.endswith(_WILDCARD):
+        prefix = _escape(annotation_value_spec[:-len(_WILDCARD)])
         return [
             r'^{}$'.format(prefix),
-            r'^{}.+'.format(prefix + _escape(SEPARATOR))]
+            r'^{}.+'.format(prefix + _escape(_SEPARATOR))]
 
     else:
         return [_escape(annotation_value_spec)]

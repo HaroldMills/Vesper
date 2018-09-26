@@ -2,13 +2,6 @@ import vesper.django.app.annotation_utils as utils
 from vesper.tests.test_case import TestCase
 
 
-_DEFAULT_SPECS = [
-    utils.UNANNOTATED_CLIPS,
-    utils.ALL_CLIPS,
-    utils.ANNOTATED_CLIPS
-]
-
-
 class AnnotationUtilsTests(TestCase):
     
     
