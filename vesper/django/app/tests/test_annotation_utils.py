@@ -12,27 +12,6 @@ _DEFAULT_SPECS = [
 class AnnotationUtilsTests(TestCase):
     
     
-    def test_get_string_annotation_value_specs(self):
-        
-        cases = [
-            
-            ([], _DEFAULT_SPECS),
-            
-            (
-                ['Call.AMRE', 'Call.COYE', 'Noise'],
-                
-                 _DEFAULT_SPECS + [
-                     'Call', 'Call*', 'Call.*', 'Call.AMRE', 'Call.COYE',
-                     'Noise']
-             )
-                 
-        ]
-        
-        for values, expected in cases:
-            specs = utils.get_string_annotation_value_specs(values)
-            self.assertEqual(specs, expected)
-            
-            
     def test_create_string_annotation_values_regexp(self):
         
         cases = [

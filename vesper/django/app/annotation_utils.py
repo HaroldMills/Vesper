@@ -73,41 +73,6 @@ ALL_CLIPS = ANNOTATED_CLIPS + ' | ' + UNANNOTATED_CLIPS
 _REGEXP_THAT_NEVER_MATCHES = 'a^'
 
 
-def get_string_annotation_value_specs(annotation_values):
-    
-    """
-    Gets a sorted list of annotation value specs derived from the
-    specified annotation values.
-    
-    The list includes all of the specified values, as well as all
-    ancestors of any multicomponent values that are present,
-    """
-    
-    default_specs = [
-        UNANNOTATED_CLIPS,
-        ALL_CLIPS,
-        ANNOTATED_CLIPS,
-    ]
-    
-    specs = set()
-    for value in annotation_values:
-        specs.add(value)
-        specs |= _get_string_annotation_value_specs(value)
-        
-    return default_specs + sorted(specs)
-        
-        
-def _get_string_annotation_value_specs(annotation_value):
-    components = annotation_value.split(SEPARATOR)
-    specs = []
-    for i in range(1, len(components)):
-        spec = SEPARATOR.join(components[:i])
-        specs.append(spec)
-        specs.append(spec + WILDCARD)
-        specs.append(spec + SEPARATOR + WILDCARD)
-    return frozenset(specs)
-
-
 def create_string_annotation_values_regexp(annotation_value_specs):
     term_lists = [_create_regexp_terms(s) for s in annotation_value_specs]
     terms_list = list(itertools.chain.from_iterable(term_lists))

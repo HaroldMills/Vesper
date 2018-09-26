@@ -1195,13 +1195,13 @@ def clip_calendar(request):
         'detector', params, preferences)
     detector = archive_.get_processor(detector_name)
     
-    annotation_value_specs = \
-        model_utils.get_string_annotation_value_specs('Classification')
-    annotation_value_spec = _get_string_annotation_value_spec(
-        annotation_value_specs, params, preferences)
+    annotation_ui_value_specs = \
+        archive_.get_visible_string_annotation_ui_value_specs('Classification')
+    annotation_ui_value_spec = _get_string_annotation_ui_value_spec(
+        annotation_ui_value_specs, params, preferences)
 
     annotation_name, annotation_value = \
-        _get_string_annotation_info(annotation_value_spec)
+        _get_string_annotation_info(annotation_ui_value_spec)
     periods_json = _get_periods_json(
         sm_pair, detector, annotation_name, annotation_value)
 
@@ -1218,8 +1218,8 @@ def clip_calendar(request):
         station_mic_name=sm_pair_ui_name,
         detector_names=detector_ui_names,
         detector_name=detector_ui_name,
-        classifications=annotation_value_specs,
-        classification=annotation_value_spec,
+        classifications=annotation_ui_value_specs,
+        classification=annotation_ui_value_spec,
         periods_json=periods_json)
 
     return render(request, 'vesper/clip-calendar.html', context)
@@ -1259,21 +1259,32 @@ def _get_calendar_query_field_value(field_name, params, preferences):
         return preferences.get('calendar_defaults.' + field_name)
 
 
-def _get_string_annotation_value_spec(
-        annotation_value_specs, params, preferences):
+def _get_string_annotation_ui_value_spec(
+        annotation_ui_value_specs, params, preferences):
 
+    archive_ = archive.instance
+    
     spec = _get_calendar_query_field_value(
         'classification', params, preferences)
+    
+    spec = archive_.get_string_annotation_ui_value('Classification', spec)
 
-    if spec is None or spec not in annotation_value_specs:
-        spec = annotation_utils.ALL_CLIPS
+    if spec is None or spec not in annotation_ui_value_specs:
+        spec = archive_.STRING_ANNOTATION_VALUE_ANY_OR_NONE
 
     return spec
 
 
-def _get_string_annotation_info(annotation_value_spec):
+def _get_string_annotation_info(annotation_ui_value_spec):
 
-    if annotation_value_spec == annotation_utils.ALL_CLIPS:
+    archive_ = archive.instance
+    
+    value_spec = archive_.get_string_annotation_archive_value(
+        'Classification', annotation_ui_value_spec)
+    
+    if value_spec == archive_.STRING_ANNOTATION_VALUE_ANY_OR_NONE:
+        
+        # We set `annotation_name` to `None` to denote all clips.
         annotation_name = None
         annotation_value = None
 
@@ -1281,10 +1292,10 @@ def _get_string_annotation_info(annotation_value_spec):
 
         annotation_name = 'Classification'
 
-        if annotation_value_spec == annotation_utils.UNANNOTATED_CLIPS:
+        if value_spec == archive_.STRING_ANNOTATION_VALUE_NONE:
             annotation_value = None
         else:
-            annotation_value = annotation_value_spec
+            annotation_value = value_spec
 
     return annotation_name, annotation_value
 
@@ -1525,10 +1536,10 @@ def clip_album(request):
         'detector', params, preferences)
     detector = archive_.get_processor(detector_name)
     
-    annotation_value_specs = \
-        model_utils.get_string_annotation_value_specs('Classification')
-    annotation_value_spec = _get_string_annotation_value_spec(
-        annotation_value_specs, params, preferences)
+    annotation_ui_value_specs = \
+        archive_.get_visible_string_annotation_ui_value_specs('Classification')
+    annotation_ui_value_spec = _get_string_annotation_ui_value_spec(
+        annotation_ui_value_specs, params, preferences)
 
     sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
     sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
@@ -1538,7 +1549,7 @@ def clip_album(request):
     detector_ui_name = archive_.get_processor_ui_name(detector)
     
     annotation_name, annotation_value = \
-        _get_string_annotation_info(annotation_value_spec)
+        _get_string_annotation_info(annotation_ui_value_spec)
 
     clips = model_utils.get_clips(
         station, mic_output, detector, None, annotation_name, annotation_value)
@@ -1559,8 +1570,8 @@ def clip_album(request):
         station_mic_name=sm_pair_ui_name,
         detector_names=detector_ui_names,
         detector_name=detector_ui_name,
-        classifications=annotation_value_specs,
-        classification=annotation_value_spec,
+        classifications=annotation_ui_value_specs,
+        classification=annotation_ui_value_spec,
         solar_event_times_json='null',
         recordings_json='[]',
         clips_json=clips_json,

@@ -31,3 +31,10 @@ def get_processor_choices(processor_type):
     detectors = archive_.get_visible_processors_of_type(processor_type)
     names = [archive_.get_processor_ui_name(d) for d in detectors]
     return [(n, n) for n in names]
+
+
+def get_string_annotation_value_choices(annotation_name):
+    archive_ = archive.instance
+    specs = archive_.get_visible_string_annotation_ui_value_specs(
+        annotation_name)
+    return [(s, s) for s in specs]

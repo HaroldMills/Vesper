@@ -30,6 +30,5 @@ class DeleteClipsForm(forms.Form):
         self.fields['station_mics'].choices = choices
         
         # Populate classification field.
-        specs = model_utils.get_string_annotation_value_specs('Classification')
-        choices = [(s, s) for s in specs]
-        self.fields['classification'].choices = choices
+        self.fields['classification'].choices = \
+            form_utils.get_string_annotation_value_choices('Classification')
