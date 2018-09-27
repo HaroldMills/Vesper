@@ -21,11 +21,14 @@ build:
 
 requirements:
 
-  # Be careful about the dependencies included in this section.
-  # Including redundant dependencies (redundant because they are
-  # dependencies of packages that are already included) can cause
-  # problems, including build failures. Including NumPy seems to
-  # be especially problematic.
+  # Be careful about the packages included as dependencies in the
+  # lists below. Including redundant packages (redundant because
+  # they are dependencies of packages that are already included)
+  # can cause build failures.
+  #
+  # Note, however, that it appears to be necessary to include the
+  # Python package in both the build and run dependency lists,
+  # even though it would seem to be redundant.
   
   build:
     - django 1.11*
@@ -42,6 +45,7 @@ requirements:
     - jsonschema
     - keras
     - pyephem
+    - python
     - resampy
     - scikit-learn
  
