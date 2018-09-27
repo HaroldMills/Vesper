@@ -21,35 +21,30 @@ build:
 
 requirements:
 
+  # Be careful about the dependencies included in this section.
+  # Including redundant dependencies (redundant because they are
+  # dependencies of packages that are already included) can cause
+  # problems, including build failures. Including NumPy seems to
+  # be especially problematic.
+  
   build:
     - django 1.11*
-    - h5py
     - jsonschema
-    - keras <2.2
-    - numpy
+    - keras
     - pyephem
     - python
-    - pytz
-    - pyyaml
     - resampy
     - scikit-learn
     - setuptools
-    - tensorflow <1.3
-
+ 
   run:
     - django 1.11*
-    - h5py
     - jsonschema
-    - keras <2.2
-    - numpy
+    - keras
     - pyephem
-    - python
-    - pytz
-    - pyyaml
     - resampy
     - scikit-learn
-    - tensorflow <1.3
-
+ 
 test:
 
   imports:

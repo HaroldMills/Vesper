@@ -20,16 +20,11 @@ setup(
     install_requires=[
         'django>=1.11',
         'django<1.12',
-        'h5py',
         'jsonschema',
-        'keras<2.2',
-        'numpy',
+        'keras',
         'pyephem',
-        'pytz',
-        'pyyaml',
         'resampy',
-        'scikit-learn',
-        'tensorflow<1.3'
+        'scikit-learn'
     ],
       
     entry_points={
