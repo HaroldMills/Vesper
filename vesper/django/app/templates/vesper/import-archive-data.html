@@ -22,14 +22,26 @@
     <h2>Import Archive Data</h2>
 
     <p>
-        Imports archive data from YAML text into Vesper. The YAML can describe
-        stations, devices (such as microphones and recorders), which devices were
-        used at which stations during which time periods, and how the devices were
-        connected (for example, which microphones were connected to which recorder
-        channels). It can also describe algorithms, algorithm versions, and
-        processors. The import runs as a Vesper job. [Need to describe archive
-        data YAML format in more detail, perhaps on another page that we link to
-        here.]
+        Imports archive data represented as YAML text.
+    </p>
+    
+    <p>
+        The text can describe
+        stations, devices (such as microphones and recorders), which devices
+        were used at which stations during which time periods, and how the
+        devices were connected (for example, which microphones were connected
+        to which recorder channels). It can also processors and annotations.
+        [Need to describe archive data YAML format in more detail, perhaps
+        on another page that we link to here.]
+    </p>
+    
+    <p>
+        You can drag and drop a YAML file to the text area below to set the
+        contents of the text area to the contents of the file.
+    </p>
+
+    <p>
+        The import runs as a Vesper job.
     </p>
 
     <form class="form" role="form" action="{% url 'import-archive-data' %}" method="post">
