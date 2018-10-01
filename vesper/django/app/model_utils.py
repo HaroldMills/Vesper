@@ -24,9 +24,6 @@ import vesper.util.archive_lock as archive_lock
 # belongs in the `archive` singleton. One consideration is that the
 # singleton has state (e.g. caches), while this module does not.
 
-# TODO: Review the queries in this module and ensure that results are
-# ordered when that is desirable.
-
 
 def get_station_mic_output_pairs_dict():
     
@@ -110,6 +107,9 @@ def get_recording_channel_num_pairs(
     the station are returned. The start and/or end times of the time
     interval may also be `None`, denoting times of minus and plus
     infinity, respectively.
+    
+    The returned pairs are ordered by recording start time and channel
+    number.
     """
     
     # Get recordings for the specified station whose time intervals
@@ -141,13 +141,15 @@ def get_station_recordings(station, time_interval=None):
     the station are returned. The start and/or end times of the time
     interval may also be `None`, denoting times of minus and plus
     infinity, respectively.
+    
+    The returned recordings are ordered by start time.
     """
     
     
     if time_interval is None:
         # no time interval specified
         
-        return Recording.objects.filter(station=station)
+        recordings = Recording.objects.filter(station=station)
     
     else:
         
@@ -156,29 +158,31 @@ def get_station_recordings(station, time_interval=None):
         if start is None and end is None:
             # neither start nor end time specified
             
-            return Recording.objects.filter(station=station)
+            recordings = Recording.objects.filter(station=station)
         
         elif end is None:
             # start time specified, but not end time
             
-            return Recording.objects.filter(
+            recordings = Recording.objects.filter(
                 station=station).exclude(
                 end_time__lte=start)
                 
         elif start is None:
             # end time specified, but not start time
             
-            return Recording.objects.filter(
+            recordings = Recording.objects.filter(
                 station=station).exclude(
                 start_time__gte=end)
                 
         else:
             # both start and end times specified
             
-            return Recording.objects.filter(
+            recordings = Recording.objects.filter(
                 station=station).exclude(
                 end_time__lte=start).exclude(
                 start_time__gte=end)
+                
+    return recordings.order_by('start_time')
 
             
 def get_recorder_microphone_infos(station, microphone_output):
@@ -186,6 +190,8 @@ def get_recorder_microphone_infos(station, microphone_output):
     """
     Gets a mapping from (recorder_id, microphone_output_id) pairs
     to lists of (channel_num, start_time, end_time) bunches.
+    
+    The bunches are ordered by channel numbers and start times.
     """
     
     # Get recorders that were used at station.
@@ -210,9 +216,15 @@ def get_recorder_microphone_infos(station, microphone_output):
                 end_time=connection.end_time)
             rm_infos[key].append(info)
             
+        rm_infos[key].sort(key=_get_rm_info_sort_key)
+
     return rm_infos
         
         
+def _get_rm_info_sort_key(i):
+    return (i.channel_num, i.start_time)
+
+
 def get_microphone_output_channel_num(
         recording, microphone_output_id, recorder_microphone_infos):
     
@@ -289,7 +301,7 @@ def get_recording_dates(station, mic_output):
     
     nights = set(station.get_night(c.recording.start_time) for c in channels)
     
-    return nights
+    return sorted(nights)
 
 
 def get_absolute_recording_file_path(file_):
