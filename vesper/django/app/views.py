@@ -47,7 +47,6 @@ from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.singletons import (
     archive, clip_manager, job_manager, preference_manager, preset_manager)
 from vesper.util.bunch import Bunch
-import vesper.django.app.annotation_utils as annotation_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.old_bird.export_clip_counts_csv_file_utils as \
