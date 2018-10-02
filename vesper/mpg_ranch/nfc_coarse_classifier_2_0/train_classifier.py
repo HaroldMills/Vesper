@@ -44,7 +44,7 @@ import vesper.util.numpy_utils as numpy_utils
 # TODO: Try training several networks and using majority vote of best three.
 
 
-_CLIPS_FILE_PATH = '/Users/Harold/Desktop/2017 {} Clips 22050.h5'
+_CLIPS_FILE_PATH = '/Users/harold/Desktop/2017 {} Clips 22050.h5'
 
 _VERBOSE = True
 
@@ -118,7 +118,7 @@ _SETTINGS = {
         # network comprises a single unit with a sigmoid activation
         # function. Setting this to the empty list yields a logistic
         # regression classifier.
-        hidden_layer_sizes = [16],
+        hidden_layer_sizes=[16],
         
         # Got the following results for training networks of various
         # sizes on 2017-11-15:
@@ -292,11 +292,13 @@ def _compute_features(clips, settings):
     vprint('Trimming waveforms...')
     waveforms = fc.trim_waveforms(waveforms)
     
+    def show_clip_count(n):
+        vprint('    {}'.format(n))
+
     vprint('Computing spectrograms...')
     start_time = time.time()
-    listener = lambda n: vprint('    {}'.format(n))
     spectrograms = fc.compute_spectrograms(
-        waveforms, _NOTIFICATION_PERIOD, listener)
+        waveforms, _NOTIFICATION_PERIOD, show_clip_count)
     elapsed_time = time.time() - start_time
     spectrogram_rate = num_waveforms / elapsed_time
     spectrum_rate = spectrogram_rate * spectrograms[0].shape[0]
@@ -575,8 +577,8 @@ def _create_classifier_settings(s, stats):
         spectrogram_mean=float(s.spectrogram_mean),
         spectrogram_standard_dev=float(s.spectrogram_standard_dev),
         
-        classification_threshold=
-            _find_classification_threshold(stats, s.min_recall)
+        classification_threshold=_find_classification_threshold(
+            stats, s.min_recall)
         
     )
     
@@ -588,4 +590,3 @@ def _find_classification_threshold(stats, min_recall):
 
 if __name__ == '__main__':
     _main()
-    

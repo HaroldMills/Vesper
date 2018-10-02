@@ -14,6 +14,7 @@ def get_data_dir_path(clip_type):
     dir_name = _DATA_DIR_NAME.format(clip_type)
     return package_path.joinpath(dir_name)
 
+
 def get_model_file_path(clip_type):
     dir_path = get_data_dir_path(clip_type)
     return dir_path.joinpath(_MODEL_FILE_NAME)
