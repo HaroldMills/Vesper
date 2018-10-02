@@ -97,7 +97,7 @@ function updateTitle() {
 	const album = clipAlbum;
 	const [startIndex, endIndex] = album.getPageIndexBounds(album.pageNum);
 	const numClips = album.clips.length;
-	title.innerHTML = `Clips ${startIndex + 1} to ${endIndex} of ${numClips}`;
+	title.textContent = `Clips ${startIndex + 1} to ${endIndex} of ${numClips}`;
 }
 
 

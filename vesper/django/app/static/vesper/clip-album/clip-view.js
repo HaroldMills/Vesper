@@ -201,7 +201,7 @@ export class ClipView {
     		const mouseText = this.getMouseText(e)
     
     		if (mouseText !== null) 
-    			this.label.innerHTML = mouseText;
+    			this.label.textContent = mouseText;
     		else
     			this._renderLabel();
     		
@@ -615,7 +615,7 @@ export class ClipView {
 
 			}
 
-			this.label.innerHTML =
+			this.label.textContent =
 				(labelParts.length !== 0) ? labelParts.join(' ') : ''
 
 		}
