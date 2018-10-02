@@ -3,13 +3,14 @@ import { Clip } from '/static/vesper/clip-album/clip.js';
 import { ClipView } from '/static/vesper/clip-album/clip-view.js';
 import { CommandableDelegate, KeyboardInputInterpreter }
     from '/static/vesper/clip-album/keyboard-input-interpreter.js';
+import { Layout } from '/static/vesper/clip-album/layout.js';
 import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
 import { PreloadingClipManager }
     from '/static/vesper/clip-album/clip-manager.js';
-import { Layout } from '/static/vesper/clip-album/layout.js';
 import { SpectrogramClipView }
     from '/static/vesper/clip-album/spectrogram-clip-view.js';
+import { UrlUtils } from '/static/vesper/util/url-utils.js';
 
 
 /*
@@ -288,7 +289,7 @@ export class ClipAlbum {
             
             // Set label to include page number range.
             const label = document.getElementById('go-to-page-modal-label');
-            label.innerHTML = `Page number (1 to ${this.numPages}):`;
+            label.textContent = `Page number (1 to ${this.numPages}):`;
             
             // Configure number input.
             const number = document.getElementById('go-to-page-modal-number');
@@ -406,17 +407,21 @@ export class ClipAlbum {
         
         // TODO: Only set URL if query has changed.
 
-        const stationMic = document.getElementById(
-            'filter-clips-modal-station-mic-select').value;
+        const encode = UrlUtils.encodeQueryParameterValue;
         
-        const detector = document.getElementById(
-            'filter-clips-modal-detector-select').value;
+        const stationMic = encode(document.getElementById(
+            'filter-clips-modal-station-mic-select').value);
         
-        const classification = document.getElementById(
-            'filter-clips-modal-classification-select').value;
+        const detector = encode(document.getElementById(
+            'filter-clips-modal-detector-select').value);
+        
+        const classification = encode(document.getElementById(
+            'filter-clips-modal-classification-select').value);
         
         const url =
-            `/clip-album/?station_mic=${stationMic}&detector=${detector}&` +
+            `/clip-album/?` +
+            `station_mic=${stationMic}&` +
+            `detector=${detector}&` +
             `classification=${classification}`;
         
         window.location.href = url;
@@ -495,7 +500,7 @@ export class ClipAlbum {
 		    title = `${f.date} / ` + title;
 
 		const titleHeading = document.getElementById('title')
-		titleHeading.innerHTML = title;
+		titleHeading.textContent = title;
 
 		document.title = `Clips - ${title}`;
 

@@ -1,3 +1,6 @@
+import { UrlUtils } from '/static/vesper/util/url-utils.js';
+
+
 const _NONZERO_COUNT_CIRCLE_COLOR = 'orange';
 const _ZERO_COUNT_CIRCLE_COLOR = '#A0A0A0';
 const _HIGHLIGHTED_CIRCLE_COLOR = '#00AA00';
@@ -36,7 +39,7 @@ function setTitle() {
 		`${state.classification} Clips`;
 
 	const titleElement = document.getElementById('title');
-	titleElement.innerHTML = title;
+	titleElement.textContent = title;
 
 	document.title = `Clip Calendar - ${title}`;
 
@@ -61,17 +64,21 @@ function onFilterClipsModalOkButtonClick(event) {
 
     // TODO: Only set URL if query has changed.
 
-    const stationMic = document.getElementById(
-        'filter-clips-modal-station-mic-select').value;
+    const encode = UrlUtils.encodeQueryParameterValue;
     
-    const detector = document.getElementById(
-        'filter-clips-modal-detector-select').value;
+    const stationMic = encode(document.getElementById(
+        'filter-clips-modal-station-mic-select').value);
     
-    const classification = document.getElementById(
-        'filter-clips-modal-classification-select').value;
+    const detector = encode(document.getElementById(
+        'filter-clips-modal-detector-select').value);
+    
+    const classification = encode(document.getElementById(
+        'filter-clips-modal-classification-select').value);
     
     const url =
-        `/clip-calendar/?station_mic=${stationMic}&detector=${detector}&` +
+        `/clip-calendar/?` +
+        `station_mic=${stationMic}&` +
+        `detector=${detector}&` +
         `classification=${classification}`;
     
     window.location.href = url;
@@ -123,7 +130,7 @@ function addCalendarPeriod(period, periodsDiv) {
 	// Add period name.
 //	const nameHeading = document.createElement('h2');
 //	nameHeading.className = 'period-name';
-//	nameHeading.innerHTML = period.name;
+//	nameHeading.textContent = period.name;
 //	periodDiv.appendChild(nameHeading);
 
 	// Add horizontal rule.
@@ -165,7 +172,7 @@ function addRowMonth(month, rowDiv) {
 		if (month.name !== null) {
 		    const nameHeading = document.createElement('h3');
 		    nameHeading.className = 'month-name';
-		    nameHeading.innerHTML = month.name;
+		    nameHeading.textContent = month.name;
 		    monthDiv.appendChild(nameHeading)
 		}
 
@@ -196,13 +203,21 @@ function addMonthDay(day, daysDiv) {
 
 	} else {
 
+	    
 		// Get circle URL.
+	    
+	    const encode = UrlUtils.encodeQueryParameterValue;
+	    const stationMic = encode(state.stationMicName);
+	    const detector = encode(state.detectorName);
+	    const classification = encode(state.classification);
 		const date = formatDate(day.date);
-		const url = `/night?` +
-		            `station_mic=${state.stationMicName}&` +
-				    `detector=${state.detectorName}&` +
-				    `classification=${state.classification}&` +
-				    `date=${date}`;
+		
+		const url =
+		    `/night?` +
+		    `station_mic=${stationMic}&` +
+	        `detector=${detector}&` +
+			`classification=${classification}&` +
+			`date=${date}`;
 
 
 		// Add day number.
@@ -222,12 +237,13 @@ function addMonthDay(day, daysDiv) {
 
 		}
 
-		num.innerHTML = day.date.getDate();
+		num.textContent = day.date.getDate();
 		num.className = 'day-num';
 		dayDiv.appendChild(num);
 
 
 		// Add count circle.
+		
 		if (day.count !== undefined) {
 			// one or more recordings for this day
 
@@ -253,6 +269,7 @@ function addMonthDay(day, daysDiv) {
 			dayDiv.appendChild(circleDiv);
 
 		}
+		
 
 	}
 

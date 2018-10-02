@@ -16,9 +16,9 @@
     <script type="module">
         import { init } from '/static/vesper/view/clip-calendar.js';
         init({
-            'stationMicName': "{{station_mic_name|default_if_none:''}}",
-            'detectorName': "{{detector_name|default_if_none:''}}",
-            'classification': "{{classification}}",
+            'stationMicName': '{{station_mic_name|default_if_none:''|escapejs}}',
+            'detectorName': '{{detector_name|default_if_none:''|escapejs}}',
+            'classification': '{{classification|escapejs}}',
             'periods': {{periods_json|safe}}
         });
     </script>

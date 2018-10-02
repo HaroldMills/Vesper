@@ -17,9 +17,9 @@
         import { init } from '/static/vesper/view/clip-album.js';
         init({
             'clipFilter': {
-        	        'stationMicName': '{{station_mic_name}}',
-        	        'detectorName': '{{detector_name}}',
-        	        'classification': '{{classification}}',
+        	        'stationMicName': '{{station_mic_name|escapejs}}',
+        	        'detectorName': '{{detector_name|escapejs}}',
+        	        'classification': '{{classification|escapejs}}',
         	        'date': null
             },
             'solarEventTimes': {{solar_event_times_json|safe}},
