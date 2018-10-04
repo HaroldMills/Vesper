@@ -26,7 +26,6 @@ export class AnnotatingOverlay {
 
 
     executeCommand(command, env) {
-        console.log('AnnotatingOverlay.executeCommand', command);
         this._commandableDelegate.executeCommand(command, this, env);
     }
 
