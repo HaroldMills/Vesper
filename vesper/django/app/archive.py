@@ -269,12 +269,17 @@ class Archive:
         archive_values = \
             self._string_anno_archive_value_tuples[annotation_name]
         
-        visible_ui_values = sorted(
-            self._get_string_annotation_ui_value(annotation_name, v)
-            for v in archive_values
-            if v not in hidden_archive_values)
+        if archive_values is None:
+            return None
+        
+        else:
             
-        return tuple(visible_ui_values)
+            visible_ui_values = sorted(
+                self._get_string_annotation_ui_value(annotation_name, v)
+                for v in archive_values
+                if v not in hidden_archive_values)
+                
+            return tuple(visible_ui_values)
         
         
     def _get_visible_string_annotation_ui_value_specs(
@@ -289,15 +294,20 @@ class Archive:
         archive_values = \
             self._string_anno_archive_value_tuples[annotation_name]
             
-        archive_value_specs = _get_string_annotation_archive_value_specs(
-            archive_values)
+        if archive_values is None:
+            return None
         
-        visible_ui_value_specs = [
-            self._get_string_annotation_ui_value(annotation_name, s)
-            for s in archive_value_specs
-            if s not in hidden_archive_value_specs]
-        
-        return tuple(visible_ui_value_specs)
+        else:
+            
+            archive_value_specs = _get_string_annotation_archive_value_specs(
+                archive_values)
+            
+            visible_ui_value_specs = [
+                self._get_string_annotation_ui_value(annotation_name, s)
+                for s in archive_value_specs
+                if s not in hidden_archive_value_specs]
+            
+            return tuple(visible_ui_value_specs)
         
         
     def get_string_annotation_archive_value(
