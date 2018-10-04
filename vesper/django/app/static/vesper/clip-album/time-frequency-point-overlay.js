@@ -137,10 +137,19 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
         context.lineStyle = 'solid';
 
         context.beginPath();
-        context.moveTo(x - delta, y);
-        context.lineTo(x + delta, y);
-        context.moveTo(x, y - delta);
-        context.lineTo(x, y + delta);
+        
+        // Draw line segments that pass through point and span entire clip.
+        context.moveTo(x, 0);
+        context.lineTo(x, canvas.height);
+        context.moveTo(0, y);
+        context.lineTo(canvas.width, y);
+        
+        // Draw short line segments centered on point.
+//        context.moveTo(x - delta, y);
+//        context.lineTo(x + delta, y);
+//        context.moveTo(x, y - delta);
+//        context.lineTo(x, y + delta);
+        
         context.stroke();
 
     }
