@@ -216,8 +216,7 @@ export class ClipManager {
 			const start = this.pageStartClipNums[pageNum];
 			const end = this.pageStartClipNums[pageNum + 1];
 
-			for (let i = start; i < end; i++)
-				this._clipLoader.loadClip(this.clips[i]);
+			this._clipLoader.loadClips(this.clips, start, end);
 
     		this._loadedPageNums.add(pageNum);
     		this._numLoadedClips += this._getNumPageClips(pageNum);
@@ -234,9 +233,7 @@ export class ClipManager {
 
 		const start = this.pageStartClipNums[pageNum];
 		const end = this.pageStartClipNums[pageNum + 1];
-
-		for (let i = start; i < end; i++)
-			this._clipLoader.unloadClip(this.clips[i]);
+        this._clipLoader.unloadClips(this.clips, start, end);
 
 	}
 
@@ -283,8 +280,7 @@ export class ClipManager {
 			const start = this.pageStartClipNums[pageNum];
 			const end = this.pageStartClipNums[pageNum + 1];
 
-			for (let i = start; i < end; i++)
-				this._clipLoader.unloadClip(this.clips[i]);
+			this._clipLoader.unloadClips(this.clips, start, end);
 
     		this._loadedPageNums.delete(pageNum);
     		this._numLoadedClips -= this._getNumPageClips(pageNum);
@@ -458,6 +454,12 @@ class _ClipLoader {
     }
 
 
+    loadClips(clips, start, end) {
+        for (let i = start; i < end; i++)
+            this.loadClip(clips[i]);
+    }
+    
+    
 	loadClip(clip) {
 
 		if (clip.samplesStatus === CLIP_LOAD_STATUS.UNLOADED)
@@ -644,6 +646,12 @@ class _ClipLoader {
     }
 
 
+    unloadClips(clips, start, end) {
+        for (let i = start; i < end; i++)
+            this.unloadClip(this.clips[i]);        
+    }
+    
+    
     unloadClip(clip) {
 
 		clip.audioBuffer = null;
