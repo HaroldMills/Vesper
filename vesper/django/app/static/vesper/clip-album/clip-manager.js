@@ -10,6 +10,43 @@ export const PAGE_LOAD_STATUS = {
 }
 
 
+/*
+Testing in May, 2018 revealed several limitations of the current
+Safari Web Audio implementation :
+
+1. One must use "webkitAudioContext" and "webkitOfflineAudioContext"
+   instead of "AudioContext" and "OfflineAudioContext". See
+   https://github.com/cwilso/AudioContext-MonkeyPatch/blob/gh-pages/
+   AudioContextMonkeyPatch.js for some JavaScript that remedies this
+   (as well as other problems: perhaps we can implement our own, simpler
+   remedy).
+
+2. An offline audio context cannot have a sample rate of 22050 hertz.
+   Trying to create one results in the error message:
+
+       SyntaxError: The string did not match the expected pattern.
+
+   An offline audio context can have a sample rate of 44100, 48000, or
+   96000 hertz, and perhaps other rates that I didn't try.
+
+3. Safari's implementation of the "decodeAudioData" method is not
+   promises-based, requiring a single argument, but instead requires
+   three arguments: the audio data, a success handler, and a failure
+   handler. See https://stackoverflow.com/questions/48597747/
+   how-to-play-a-sound-file-safari-with-web-audio-api.
+
+Limitations 1 and 3 are straightforward to work around. Limitation 2
+is not so easy. On Safari we can use Web Audio to decode, say, 22050
+hertz audio to 44100 hertz, but we will use twice the storage for our
+audio data than we would if the data were left at the lower rate.
+Another option would be to not use Web Audio to decode data sent from
+the server, and implement our own decoder instead. That decoder would
+necessarily support fewer formats, in fact probably just one
+uncompressed format. Hopefully we could still use Web Audio to play
+clips from whatever their native rate, though this should be tested.
+*/
+
+
 // Loads and unloads clip samples and annotations on behalf of a clip album.
 //
 // Different clip managers may load clip data according to different policies.
@@ -463,186 +500,175 @@ class _ClipLoader {
 	loadClip(clip) {
 
 		if (clip.samplesStatus === CLIP_LOAD_STATUS.UNLOADED)
-			this._requestAudioData(clip);
+			this._loadClipSamples(clip);
 
 		if (clip.annotationsStatus === CLIP_LOAD_STATUS.UNLOADED)
-			this._requestAnnotations(clip);
+			this._loadClipAnnotations(clip);
 
 	}
 
 
-    _requestAudioData(clip) {
+//	async _loadClipSamples(clip) {
+//	    
+//        clip.samplesStatus = CLIP_LOAD_STATUS.LOADING;
+//        
+//	    try {
+//	        
+//	        const result = await fetch(clip.wavFileUrl);
+//	        const arrayBuffer = await result.arrayBuffer();
+//	        const audioBuffer = await this._decodeAudioData(arrayBuffer, clip);
+//	        this._onLoadClipSamplesSuccess(audioBuffer, clip);
+//	        
+//	    } catch(error) {
+//	        
+//	        this._onLoadClipSamplesFailure(error, clip);
+//	        
+//	    }
+//	    
+//	}
+	
+	
+	_loadClipSamples(clip) {
+	    
+        clip.samplesStatus = CLIP_LOAD_STATUS.LOADING;
 
-		// console.log(`requesting audio data for clip ${clip.num}...`);
-
-		clip.samplesStatus = CLIP_LOAD_STATUS.LOADING;
-
-		const xhr = new XMLHttpRequest();
-		xhr.open('GET', clip.wavFileUrl);
-		xhr.responseType = 'arraybuffer';
-		xhr.onload = () => this._onAudioDataXhrResponse(xhr, clip);
-		xhr.send();
-
-		// See comment in ClipView._createPlayButton for information
-		// regarding the following.
-//	    const context = new OfflineAudioContext(
-//          1, clip.length, clip.sampleRate);
-//	    const source = context.createMediaElementSource(audio);
-//	    source.connect(context.destination);
-//	    context.startRendering().then(audioBuffer =>
-//	        onAudioDecoded(audioBuffer, clip));
+        fetch(clip.wavFileUrl)
+        .then(r => r.arrayBuffer())
+        .then(b => this._decodeAudioData(b, clip))
+        .then(b => this._onLoadClipSamplesSuccess(b, clip))
+        .catch(e => this._onLoadClipSamplesFailure(e, clip));
 
 	}
+	
+	
+	_decodeAudioData(response, clip) {
+	    
+        const sampleRate = clip.sampleRate;
 
+        let context = this._audioContexts.get(sampleRate);
 
-    /*
-    Testing in May, 2018 revealed several limitations of the current
-    Safari Web Audio implementation :
+        if (context === undefined) {
+            // no context for this sample rate in cache
 
-    1. One must use "webkitAudioContext" and "webkitOfflineAudioContext"
-       instead of "AudioContext" and "OfflineAudioContext". See
-       https://github.com/cwilso/AudioContext-MonkeyPatch/blob/gh-pages/
-       AudioContextMonkeyPatch.js for some JavaScript that remedies this
-       (as well as other problems: perhaps we can implement our own, simpler
-       remedy).
+            // console.log(
+            //  `creating audio context for sample rate ${sampleRate}...`);
 
-    2. An offline audio context cannot have a sample rate of 22050 hertz.
-       Trying to create one results in the error message:
+            // Create context for this sample rate and add to cache.
+            context = new OfflineAudioContext(1, 1, sampleRate);
+            this._audioContexts.set(sampleRate, context);
 
-           SyntaxError: The string did not match the expected pattern.
+        }
 
-       An offline audio context can have a sample rate of 44100, 48000, or
-       96000 hertz, and perhaps other rates that I didn't try.
+        // As of October, 2018, Safari does not support the single-argument
+        // promises version of `decodeAudioData` used here. Instead, it
+        // supports only an older, three-argument, non-promises version
+        // of the function. I believe the three-argument version can be
+        // wrapped in a straightforward way to create a one-argument
+        // version if needed (see https://developer.mozilla.org/en-US/
+        // docs/Web/JavaScript/Guide/Using_promises#
+        // Creating_a_Promise_around_an_old_callback_API). Safari has
+        // other audio-related issues, however (see comment toward the
+        // top of this file for details), so we just don't support it
+        // for now.
+        return context.decodeAudioData(response);
+        
+	}
+	
+	
+    _onLoadClipSamplesSuccess(audioBuffer, clip) {
+        
+        // A samples load operation can be canceled while in progress
+        // by changing `clip.samplesStatus` from `CLIP_LOAD_STATUS.LOADING`
+        // to `CLIP_LOAD_STATUS_UNLOADED`. In this case we ignore the
+        // results of the operation.
+        
+        if (clip.samplesStatus === CLIP_LOAD_STATUS.LOADING) {
 
-    3. Safari's implementation of the "decodeAudioData" method is not
-       promises-based, requiring a single argument, but instead requires
-       three arguments: the audio data, a success handler, and a failure
-       handler. See https://stackoverflow.com/questions/48597747/
-       how-to-play-a-sound-file-safari-with-web-audio-api.
+            clip.audioBuffer = audioBuffer;
+            clip.samples = audioBuffer.getChannelData(0);
+            clip.samplesStatus = CLIP_LOAD_STATUS.LOADED;
 
-    Limitations 1 and 3 are straightforward to work around. Limitation 2
-    is not so easy. On Safari we can use Web Audio to decode, say, 22050
-    hertz audio to 44100 hertz, but we will use twice the storage for our
-    audio data than we would if the data were left at the lower rate.
-    Another option would be to not use Web Audio to decode data sent from
-    the server, and implement our own decoder instead. That decoder would
-    necessarily support fewer formats, in fact probably just one
-    uncompressed format. Hopefully we could still use Web Audio to play
-    clips from whatever their native rate, though this should be tested.
-    */
+            clip.view.onClipSamplesChanged();
 
-    _onAudioDataXhrResponse(xhr, clip) {
+        }
+        
+    }
+    
+    
+    _onLoadClipSamplesFailure(error, clip) {
+        
+        // A samples load operation can be canceled while in progress by
+        // changing `clip.samplesStatus` from `CLIP_LOAD_STATUS.LOADING`
+        // to `CLIP_LOAD_STATUS_UNLOADED`. In this case we ignore the
+        // results of the operation.
+        
+        if (clip.samplesStatus === CLIP_LOAD_STATUS.LOADING) {
 
-   	    if (xhr.status === 200) {
-
-   	    	// console.log(`received audio data for clip ${clip.num}...`);
-
-   	    	const sampleRate = clip.sampleRate;
-
-   	    	let context = this._audioContexts.get(sampleRate);
-
-   	    	if (context === undefined) {
-   	    		// no context for this sample rate in cache
-
-   	    		// console.log(
-   	    		// 	`creating audio context for sample rate ${sampleRate}...`);
-
-   	    		// Create context for this sample rate and add to cache.
-  	    		context = new OfflineAudioContext(1, 1, sampleRate);
-  	    		this._audioContexts.set(sampleRate, context);
-
-   	    	}
-
-    	    // context.decodeAudioData(xhr.response).then(
-   	    	// 	audioBuffer => this._onAudioDataDecoded(audioBuffer, clip));
-
-            // As of May, 2018, Safari does not support the single-argument
-            // promises version of `decodeAudioData` (used in the code
-            // commented out above), but it does support the three-argument
-            // version used below.
             // TODO: Notify user of errors.
-            context.decodeAudioData(
-                xhr.response,
-                audioBuffer => this._onAudioDataDecoded(audioBuffer, clip),
-                error => console.log(
-                    `decode of clip ${clip.num} audio data failed.`));
+            console.error(
+                `Load of clip ${clip.num} samples failed. ` +
+                `Error message was: ${error}.`);
+            
+            clip.samplesStatus = CLIP_LOAD_STATUS.UNLOADED;
 
-    	} else {
+            clip.view.onClipSamplesChanged();
 
-    		// TODO: Notify user of errors.
-    		console.log(`request for clip ${clip.num} audio data failed`);
+        }
+        
+    }
+    
+    
+    _loadClipAnnotations(clip) {
 
-    	}
+        clip.annotationsStatus = CLIP_LOAD_STATUS.LOADING;
 
+        fetch(clip.annotationsJsonUrl)
+        .then(r => r.json())
+        .then(a => this._onLoadClipAnnotationsSuccess(a, clip))
+        .catch(e => this._onLoadClipAnnotationsFailure(e, clip));
 
     }
+    
+    
+    _onLoadClipAnnotationsSuccess(annotations, clip) {
+        
+        // An annotations load operation can be canceled while in progress
+        // by changing `clip.annotationsStatus` from
+        // `CLIP_LOAD_STATUS.LOADING` to `CLIP_LOAD_STATUS_UNLOADED`.
+        // In this case we ignore the results of the operation.
 
-
-    // TODO: Create a SpectrogramRenderer class that encapsulates the
-    // spectrogram computation and rendering pipeline?
-	_onAudioDataDecoded(audioBuffer, clip) {
-
-        // console.log(`decoded audio data for clip ${clip.num}`);
-
-		// _showAudioBufferInfo(audioBuffer);
-
-   	    // An audio data load operation can be canceled while in progress
-    	// by changing `clip.samplesStatus` from `CLIP_LOAD_STATUS.LOADING`
-    	// to `CLIP_LOAD_STATUS_UNLOADED`. In this case we ignore the data
-    	// when they arrive.
-    	if (clip.samplesStatus === CLIP_LOAD_STATUS.LOADING) {
-
-			clip.audioBuffer = audioBuffer;
-		    clip.samples = audioBuffer.getChannelData(0);
-		    clip.samplesStatus = CLIP_LOAD_STATUS.LOADED;
-
-		    clip.view.onClipSamplesChanged();
-
-    	}
-
-	}
-
-
-    _requestAnnotations(clip) {
-
-	    clip.annotationsStatus = CLIP_LOAD_STATUS.LOADING;
-
-	    const xhr = new XMLHttpRequest();
-		xhr.open('GET', clip.annotationsJsonUrl);
-		xhr.onload = () => this._onAnnotationsXhrResponse(xhr, clip)
-		xhr.send();
-
+        if (clip.annotationsStatus === CLIP_LOAD_STATUS.LOADING) {
+            
+            clip.annotations = annotations;
+            clip.annotationsStatus = CLIP_LOAD_STATUS.LOADED;
+            clip.view.onClipAnnotationsChanged();
+            
+        }
+        
     }
-
-
-    _onAnnotationsXhrResponse(xhr, clip) {
-
-        	// An annotations load operation can be canceled while in progress
-        	// by changing `clip.annotationsStatus` from
-            // `CLIP_LOAD_STATUS.LOADING` to `CLIP_LOAD_STATUS_UNLOADED`.
-            // In this case we ignore the annotations when they arrive.
-        	if (clip.annotationsStatus === CLIP_LOAD_STATUS.LOADING) {
-
-        	    	if (xhr.status === 200) {
-        	   	    	// request completed without error
-
-        	    		clip.annotations = JSON.parse(xhr.responseText);
-        	    		clip.annotationsStatus = CLIP_LOAD_STATUS.LOADED;
-
-        	    	} else {
-        	    		// request failed
-
-        	    		// TODO: Report error somehow.
-
-        	    		clip.annotations = null;
-        	    		clip.annotationsStatus = CLIP_LOAD_STATUS.UNLOADED;
-
-        	    	}
-
-        	    clip.view.onClipAnnotationsChanged();
-
-        	}
-
+    
+    
+    _onLoadClipAnnotationsFailure(error, clip) {
+        
+        // An annotations load operation can be canceled while in progress
+        // by changing `clip.annotationsStatus` from
+        // `CLIP_LOAD_STATUS.LOADING` to `CLIP_LOAD_STATUS_UNLOADED`.
+        // In this case we ignore the results of the operation.
+        
+        if (clip.annotationsStatus === CLIP_LOAD_STATUS.LOADING) {
+            
+            // TODO: Notify user of errors.
+            console.error(
+                `Load of clip ${clip.num} annotations failed. ` +
+                `Error message was: ${error}.`);
+            
+            clip.annotations = null;
+            clip.annotationsStatus = CLIP_LOAD_STATUS.UNLOADED;
+            
+            clip.view.onClipAnnotationsChanged();
+            
+        }
+        
     }
 
 
