@@ -82,9 +82,17 @@ if not settings.ARCHIVE_READ_ONLY:
 
 
 # The above set of Vesper URLs has evolved as needed, and is incomplete
-# and (probably) inconsistent. The rest of this file contains the beginnings
-# of an attempt to design a more complete, consistent set of URLs.
+# and (probably) inconsistent. The rest of this file contains notes
+# regarding a more complete, consistent set of URLs.
 
+# URLs are limited to a couple thousand characters, which limits the number
+# of resources that can be specified by ID in GET requests. (GET requests
+# can have bodies, but they should "have no semantic meaning to the request"
+# according to https://groups.yahoo.com/neo/groups/rest-discuss/
+# conversations/messages/9962, so the IDs can't simply be moved there.)
+# So in the interest of simplicity, it might be best to support requests
+# for batches of audios, annotations, etc. by clip IDs only in some sort of
+# batch POST request, and not in GET requests.
 
 # Channel number specifications: 1,3,5-7
 # Date specifications: 20180412,20180414,20180416-20180418
@@ -125,7 +133,7 @@ Recordings:
         Methods:
             GET: Gets metadata for a recording.
 
-    /recordings/123456/samples/<format>:
+    /recordings/123456/audio/<format>:
         Methods:
             GET:
                 Query Parameters:
@@ -133,9 +141,9 @@ Recordings:
                     - start_index=10000
                     - end_index=20000
                 Description:
-                    Gets recording samples.
+                    Gets recording audio data.
             POST: >
-                Appends sample to a recording. The samples are converted
+                Appends audio data to a recording. The data are converted
                 from the specified format to the recording data format as
                 needed.
         Notes:
@@ -156,13 +164,14 @@ Clips:
                 Description:
                     Gets HTML for the specified clips.
             POST: >
-                Creates a new clip. Both metadata and samples are
+                Creates a new clip. Both metadata and audio data are
                 specified in request (or must we separate the two?).
 
     /clips/metadata/json:
         Methods:
             GET:
                 Query Parameters:
+                    - ids=1234,2345,3456
                     - station_mics=1
                     - detectors=1
                     - nights=20180412
@@ -170,6 +179,19 @@ Clips:
                     - annotations=Classification:AMRE
                 Description:
                     Gets metadata for the specified clips.
+
+    /clips/audio/<format>
+        Methods:
+            GET:
+                Query Parameters:
+                    - ids=1234,2345,3456
+                    - station_mics=1
+                    - detectors=1
+                    - nights=20180412
+                    - days=20180412
+                    - annotations=Classification:AMRE
+                Description:
+                    Gets the audio data of the specified clips.
 
     /clips/123456:
         Methods:
@@ -183,9 +205,9 @@ Clips:
                     - include_tags=true
                 Description: Gets metadata for a clip.
 
-    /clips/123456/samples/<format>:
+    /clips/123456/audio/<format>:
         Methods:
-            GET: Gets the samples of a clip.
+            GET: Gets the audio data of a clip.
         Notes:
             - <format> can be "wav", "i16", "i24", or "f32".
 
@@ -198,16 +220,15 @@ Clips:
         Methods:
             GET: Gets all tags for a clip.
             POST: Sets zero or more tags for a clip.
+            
 
+Batch operations:
 
-Annotations:
-
-    /annotations:
+    /batch:
         Methods:
             POST: >
-                Annotates zero or more clips. Request JSON specifies an
-                annotation info, an annotation value, and the clips to
-                be annotated. We might expand this to support multiple
-                annotations per clip, and perhaps different annotations
-                for different clips.
+                Reads or writes a batch of resources, e.g. clip audios
+                or annotations. The details of the operation, as well as
+                any data to be written, are specified in the request body
+                rather than in request query parameters.
 '''
