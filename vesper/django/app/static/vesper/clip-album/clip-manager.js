@@ -674,7 +674,7 @@ class _ClipLoader {
 
     unloadClips(clips, start, end) {
         for (let i = start; i < end; i++)
-            this.unloadClip(this.clips[i]);        
+            this.unloadClip(clips[i]);        
     }
     
     
