@@ -16,15 +16,15 @@ export const PAGE_LOAD_STATUS = {
 // and faster batch loading.
 const _BATCH_LOADS_ENABLED = true;
 
+// Maximum clip samples batch size, in clips. When batch loads are enabled,
+// the clip loader loads the samples of the clips of a clip album page in
+// batches of this size, except possibly for the last batch.
+const _MAX_CLIP_SAMPLES_BATCH_SIZE = 50;
+
 // Maximum clip annotations batch size, in clips. When batch loads are
 // enabled, the clip loader loads the annotations of the clips of a clip
 // album page in batches of this size, except possibly for the last batch.
 const _MAX_CLIP_ANNOTATIONS_BATCH_SIZE = 50;
-
-// Maximum clip samples batch size, in clips. When batch loads are enabled,
-// the clip loader loads the samples of the clips of a clip album page in
-// batches of this size, except possibly for the last batch.
-const _MAX_CLIP_SAMPLES_BATCH_SIZE = 10;
 
 // Set this `true` to randomly simulate load errors for both clip batches
 // and individual clips.
