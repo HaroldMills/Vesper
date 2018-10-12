@@ -1,5 +1,6 @@
 from urllib.parse import quote
 import datetime
+import itertools
 import json
 import logging
 
@@ -14,6 +15,7 @@ from django.http import (
     HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseServerError)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
+import numpy as np
 import yaml
 
 from vesper.django.app.adjust_clips_form import AdjustClipsForm
@@ -988,14 +990,17 @@ def _parse_json_request_body(request):
 
 
 def _get_annotations_json(clip_id):
+    annotations = _get_annotations(clip_id)
+    return json.dumps(annotations)
 
+
+def _get_annotations(clip_id):
+    
     annotations = StringAnnotation.objects.filter(
         clip_id=clip_id
     ).annotate(name=F('info__name'))
 
-    annotations_dict = dict((a.name, a.value) for a in annotations)
-
-    return json.dumps(annotations_dict)
+    return dict((a.name, a.value) for a in annotations)
 
 
 @csrf_exempt
@@ -1096,6 +1101,96 @@ def _parse_content_type(content_type):
     return Bunch(name=parts[0], params=params)
 
 
+@csrf_exempt
+def batch_read_clip_audios(request):
+    
+    if request.method == 'POST':
+        
+        
+        # Parse request content JSON.
+        
+        try:
+            content = _get_request_body_as_json(request)
+        except HttpError as e:
+            return e.http_response
+
+        try:
+            content = json.loads(content)
+        except json.JSONDecodeError as e:
+            return HttpResponseBadRequest(
+                reason='Could not decode request JSON')
+
+
+        # Get requested clip audios.
+        
+        clip_ids = content['clip_ids']
+        
+        clips = [get_object_or_404(Clip, pk=i) for i in clip_ids]
+
+        content_type = 'audio/wav'
+        
+        audios = []
+        
+        for clip in clips:
+            
+            try:
+                audio = clip_manager.instance.get_audio_file_contents(
+                    clip, content_type)
+                
+            except Exception as e:
+                logger = logging.getLogger('django.server')
+                logger.error((
+                    'Attempt to get audio file contents for clip "{}" failed '
+                    'with {} exception. Exception message was: {}').format(
+                        str(clip), e.__class__.__name__, str(e)))
+                return HttpResponseServerError()
+            
+            audios.append(audio)
+            
+            
+        # Concatenate alternating binary audio sizes and audios to make
+        # response content.
+        audio_sizes = [_get_uint32_bytes(len(a)) for a in audios]
+        pairs = zip(audio_sizes, audios)
+        parts = itertools.chain.from_iterable(pairs)
+        content = b''.join(parts)
+        
+        # Construct response
+        return HttpResponse(content, content_type='application/octet-stream')
+    
+    else:
+        return HttpResponseNotAllowed(['POST'])        
+
+
+def _get_uint32_bytes(i):
+    return np.array([i], dtype=np.dtype('<u4')).tobytes()
+
+
+@csrf_exempt
+def batch_read_clip_annotations(request):
+    
+    if request.method == 'POST':
+        
+        try:
+            content = _get_request_body_as_json(request)
+        except HttpError as e:
+            return e.http_response
+
+        try:
+            content = json.loads(content)
+        except json.JSONDecodeError as e:
+            return HttpResponseBadRequest(
+                reason='Could not decode request JSON')
+
+        clip_ids = content['clip_ids']
+        annotations = dict((i, _get_annotations(i)) for i in clip_ids)
+        content = json.dumps(annotations)       
+        return HttpResponse(content, content_type='application/json')
+    
+    else:
+        return HttpResponseNotAllowed(['POST'])        
+        
+        
 @csrf_exempt
 def annotations(request, annotation_name):
 

@@ -70,6 +70,14 @@ if not settings.ARCHIVE_READ_ONLY:
              r'(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$'),
             views.annotation, name='annotation'),
         
+        url(r'^batch/read/clip-audios/$',
+            views.batch_read_clip_audios,
+            name='batch-read-clip-audios'),
+        
+        url(r'^batch/read/clip-annotations/$',
+            views.batch_read_clip_annotations,
+            name='batch-read-clip-annotations'),
+        
         url(r'^annotations/(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$',
             views.annotations, name='annotations'),
 
