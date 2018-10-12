@@ -120,16 +120,6 @@ export class Clip {
 	}
 
 
-	get annotations() {
-		return this._annotations;
-	}
-
-
-	set annotations(annotations) {
-		this._annotations = annotations;
-	}
-
-
 	get annotationsUrl() {
 		return `${this.url}annotations/`;
 	}
