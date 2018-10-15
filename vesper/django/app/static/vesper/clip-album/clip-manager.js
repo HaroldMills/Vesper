@@ -280,25 +280,6 @@ export class ClipManager {
 	}
 
 
-	_loadPage(pageNum) {
-
-    	if (!this._loadedPageNums.has(pageNum)) {
-
-    		// console.log(`clip manager loading page ${pageNum}...`);
-
-			const start = this.pageStartClipNums[pageNum];
-			const end = this.pageStartClipNums[pageNum + 1];
-
-			this._clipLoader.loadClips(this.clips, start, end);
-
-    		this._loadedPageNums.add(pageNum);
-    		this._numLoadedClips += this._getNumPageClips(pageNum);
-
-    	}
-
-	}
-
-
 	_unloadPartiallyLoadedPage(pageNum) {
 
 		// console.log(
@@ -320,9 +301,8 @@ export class ClipManager {
 		for (const pageNum of unloadPageNums)
 			this._unloadPage(pageNum);
 
-		for (const pageNum of loadPageNums)
-			this._loadPage(pageNum);
-
+		this._loadPages(loadPageNums);
+		
 		this._pageNum = pageNum;
 
 		const pageNums = Array.from(this._loadedPageNums)
@@ -331,6 +311,39 @@ export class ClipManager {
 		// console.log(`clip manager num loaded clips ${this._numLoadedClips}`);
 
 	}
+
+
+	/**
+	 * Loads the specified pages of clips.
+	 * 
+	 * The pages are loaded one at a time, waiting for all requests to the
+	 * server for one page to complete before initiating the requests for
+	 * the next page. This helps ensure that the earlier pages load as
+	 * quickly as possible.
+	 */
+	async _loadPages(pageNums) {
+	    for (const pageNum of pageNums)
+	        await this._loadPage(pageNum);
+	}
+	
+	
+    async _loadPage(pageNum) {
+
+        if (!this._loadedPageNums.has(pageNum)) {
+
+            // console.log(`clip manager loading page ${pageNum}...`);
+
+            const start = this.pageStartClipNums[pageNum];
+            const end = this.pageStartClipNums[pageNum + 1];
+
+            await this._clipLoader.loadClips(this.clips, start, end);
+
+            this._loadedPageNums.add(pageNum);
+            this._numLoadedClips += this._getNumPageClips(pageNum);
+
+        }
+
+    }
 
 
 	/**
@@ -527,32 +540,36 @@ class _ClipLoader {
     }
 
 
-    loadClips(clips, start, end) {
+    async loadClips(clips, start, end) {
         
         if (_BATCH_LOADS_ENABLED) {
             // load clips in batches
             
-            this._batchLoadClipSamples(clips, start, end)
-            this._batchLoadClipAnnotations(clips, start, end);
+            return Promise.all([
+                this._batchLoadClipSamples(clips, start, end),
+                this._batchLoadClipAnnotations(clips, start, end)
+            ]);
         
         } else {
             // load clips one at a time
             
-            this._loadClipSamples(clips, start, end);
-            this._loadClipAnnotations(clips, start, end);
+            return Promise.all([
+                this._loadClipSamples(clips, start, end),
+                this._loadClipAnnotations(clips, start, end)
+            ]);
             
         }
-            
+
     }
     
     
-    _batchLoadClipSamples(clips, start, end) {
+    async _batchLoadClipSamples(clips, start, end) {
         
         const batches = this._getClipBatches(
-            clips, start, end, _MAX_CLIP_SAMPLES_BATCH_SIZE)
-            
-        for (const batch of batches)
-            this._loadClipBatchSamples(batch);
+            clips, start, end, _MAX_CLIP_SAMPLES_BATCH_SIZE);
+        
+        return Promise.all(
+            batches.map(b => this._loadClipBatchSamples(b)));
         
     }
     
@@ -581,7 +598,7 @@ class _ClipLoader {
     }
     
     
-    _loadClipBatchSamples(clips) {
+    async _loadClipBatchSamples(clips) {
         
         // Work only with clips for which samples are unloaded.
         clips = clips.filter(
@@ -594,11 +611,17 @@ class _ClipLoader {
             this._setClipBatchSamplesStatuses(
                 clips, CLIP_LOAD_STATUS.LOADING);
             
-            // Initiate load.
-            this._fetchClipBatchAudios(clips)
-            .then(r => r.arrayBuffer())
-            .then(b => this._decodeClipBatchAudios(clips, b))
-            .catch(e => this._onClipBatchSamplesLoadError(clips, e));
+            try {
+                
+                const result = await this._fetchClipBatchAudios(clips);
+                const arrayBuffer = await result.arrayBuffer();
+                return this._decodeClipBatchAudios(clips, arrayBuffer);
+                
+            } catch(error) {
+                
+                this._onClipBatchSamplesLoadError(clips, error);
+                
+            }
             
         }
         
@@ -637,7 +660,7 @@ class _ClipLoader {
     }
     
     
-    _fetchClipBatchAudios(clips) {
+    async _fetchClipBatchAudios(clips) {
         
         const clipIds = clips.map(clip => clip.id);
         
@@ -655,21 +678,18 @@ class _ClipLoader {
     }
     
     
-    _decodeClipBatchAudios(clips, buffer) {
+    async _decodeClipBatchAudios(clips, arrayBuffer) {
         
-//        this._throwRandomTestError(
-//            'A random test error was thrown from _decodeClipBatchAudios.');
-            
-            
+        
         // Get array of clip audios from buffer. Audios are stored one
         // after the other, with each prefixed with its size in bytes
         // in a 32-bit little-endian integer.
         
         const audios = [];
-        const dataView = new DataView(buffer);
+        const dataView = new DataView(arrayBuffer);
         let offset = 0;
         
-        while (offset < buffer.byteLength) {
+        while (offset < arrayBuffer.byteLength) {
             
             // Get audio size, a 32-bit little-endian integer.
             const size = dataView.getUint32(offset, true);
@@ -683,7 +703,7 @@ class _ClipLoader {
             // a way to create a new ArrayBuffer that is just a view
             // of a portion of an existing ArrayBuffer, i.e. without
             // copying the contents of the new ArrayBuffer.
-            const audio = buffer.slice(offset, offset + size);
+            const audio = arrayBuffer.slice(offset, offset + size);
             offset += size;
             
             audios.push(audio);
@@ -691,42 +711,44 @@ class _ClipLoader {
         }
         
         
-        // Decode audios and set clip samples.
+        // Get promises for individual clip audio decodes.
+        const promises = [];
         for (let i = 0; i < audios.length; i++) {
-            
-            const clip = clips[i];
-            
-            this._decodeAudio(audios[i], clip.sampleRate)
-            .then(b => this._setClipSamples(clip, b))
-            .catch(e => this._onClipSamplesLoadError(clip, e));
-            
+            const promise = this._decodeClipAudio(clips[i], audios[i]);
+            promises.push(promise);
         }
         
+        return Promise.all(promises);
+                
     }
     
     
-    _throwRandomTestError(message) {
-        if (_TEST_ERRORS_ENABLED && Math.random() <= _TEST_ERROR_PROBABILITY)
-            throw Error(message);
-    }
-
-    
-    _decodeAudio(arrayBuffer, sampleRate) {
+    async _decodeClipAudio(clip, arrayBuffer) {
         
-        const context = this._getAudioContext(sampleRate);
+        const context = this._getAudioContext(clip.sampleRate);
 
-        // As of October, 2018, Safari does not support the single-argument
-        // promises version of `decodeAudioData` used here. Instead, it
-        // supports only an older, three-argument, non-promises version
-        // of the function. I believe the three-argument version can be
-        // wrapped in a straightforward way to create a one-argument
-        // version if needed (see https://developer.mozilla.org/en-US/
-        // docs/Web/JavaScript/Guide/Using_promises#
-        // Creating_a_Promise_around_an_old_callback_API). Safari has
-        // other audio-related issues, however (see comment toward the
-        // top of this file for details), so we just don't support it
-        // for now.
-        return context.decodeAudioData(arrayBuffer);
+        try {
+            
+            // As of October, 2018, Safari does not support the
+            // single-argument promises version of `decodeAudioData` used
+            // here. Instead, it supports only an older, three-argument,
+            // non-promises version of the function. If needed, it would
+            // be pretty straightforward to wrap the three-argument
+            // version to make a standin for the single-argument version
+            // (see https://developer.mozilla.org/en-US/docs/Web/
+            // JavaScript/Guide/Using_promises#
+            // Creating_a_Promise_around_an_old_callback_API). Safari has
+            // other audio-related issues, however (see comment toward the
+            // top of this file for details), so we just don't support it
+            // for now.
+            const audioBuffer = await context.decodeAudioData(arrayBuffer);
+            
+            return this._setClipSamples(clip, audioBuffer);
+            
+        } catch(error) {
+            
+            this._onClipSamplesLoadError(clip, error);
+        }
         
     }
     
@@ -739,7 +761,7 @@ class _ClipLoader {
             // no context for this sample rate in cache
 
             // console.log(
-            //  `creating audio context for sample rate ${sampleRate}...`);
+            //     `creating audio context for sample rate ${sampleRate}...`);
 
             // Create context for this sample rate and add to cache.
             context = new OfflineAudioContext(1, 1, sampleRate);
@@ -774,6 +796,12 @@ class _ClipLoader {
     }
     
     
+    _throwRandomTestError(message) {
+        if (_TEST_ERRORS_ENABLED && Math.random() <= _TEST_ERROR_PROBABILITY)
+            throw Error(message);
+    }
+
+    
     _onClipSamplesLoadError(clip, error) {
         
         // A samples load operation can be canceled while in progress by
@@ -807,18 +835,18 @@ class _ClipLoader {
     }
     
     
-    _batchLoadClipAnnotations(clips, start, end) {
+    async _batchLoadClipAnnotations(clips, start, end) {
         
         const batches = this._getClipBatches(
             clips, start, end, _MAX_CLIP_ANNOTATIONS_BATCH_SIZE);
         
-        for (const batch of batches)
-            this._loadClipBatchAnnotations(batch);
+        return Promise.all(
+            batches.map(b => this._loadClipBatchAnnotations(b)));
         
     }
     
     
-    _loadClipBatchAnnotations(clips) {
+    async _loadClipBatchAnnotations(clips) {
         
         // Work only with clips for which annotations are unloaded.
         clips = clips.filter(
@@ -831,11 +859,21 @@ class _ClipLoader {
             this._setClipBatchAnnotationsStatuses(
                 clips, CLIP_LOAD_STATUS.LOADING);
             
-            // Initiate load.
-            this._fetchClipBatchAnnotations(clips)
-            .then(r => r.json())
-            .then(a => this._setClipBatchAnnotations(clips, a))
-            .catch(e => this._onClipBatchAnnotationsLoadError(clips, e))
+            
+            // Load annotations.
+            
+            try {
+                
+                const result = await this._fetchClipBatchAnnotations(clips);
+                const annotations = await result.json();
+                this._setClipBatchAnnotations(clips, annotations);
+                
+            } catch(error) {
+                
+                this._onClipBatchAnnotationsLoadError(clips, error);
+                
+            }
+            
             
         }
         
@@ -873,7 +911,7 @@ class _ClipLoader {
     }
     
     
-    _fetchClipBatchAnnotations(clips) {
+    async _fetchClipBatchAnnotations(clips) {
         
         const clipIds = clips.map(clip => clip.id);
         
@@ -928,88 +966,76 @@ class _ClipLoader {
     }
     
     
-    _loadClipSamples(clips, start, end) {
+    async _loadClipSamples(clips, start, end) {
         
-        for (let i = start; i < end; i++) {
+        clips = clips.slice(start, end);
+        
+        // Work only with clips for which samples are unloaded.
+        clips = clips.filter(
+            clip => clip.samplesStatus === CLIP_LOAD_STATUS.UNLOADED);
+        
+        if (clips.length > 0)
+            // some clips need loading
             
-            const clip = clips[i];
+            return Promise.all(
+                clips.map(c => this._loadClipSamplesAux(c)));
+        
+    }
             
-            if (clip.samplesStatus === CLIP_LOAD_STATUS.UNLOADED) {
-            
-                clip.samplesStatus = CLIP_LOAD_STATUS.LOADING;
-    
-                fetch(clip.wavFileUrl)
-                .then(r => r.arrayBuffer())
-                .then(b => this._decodeAudio(b, clip.sampleRate))
-                .then(b => this._setClipSamples(clip, b))
-                .catch(e => this._onClipSamplesLoadError(clip, e));
-                
-            }
+        
+    async _loadClipSamplesAux(clip) {
+        
+        clip.samplesStatus = CLIP_LOAD_STATUS.LOADING;
 
+        try {
+        
+            const response = await fetch(clip.wavFileUrl);
+            const arrayBuffer = await response.arrayBuffer();
+            return this._decodeClipAudio(clip, arrayBuffer);
+            
+        } catch(error) {
+            
+            this._onClipSamplesLoadError(clip, error);
+            
         }
         
     }
 
 
-    // The following is a version of the `_loadClipSamples` method that
-    // uses ECMAScript 2017's async/await keywords. I have chosen not
-    // to use these yet (as of October, 2018) since the default Eclipse
-    // JavaScript editor does not support them.
-//    _loadClipSamples(clips, start, end) {
-//        
-//        for (let i = start; i < end; i++) {
-//            
-//            const clip = clips[i];
-//            
-//            if (clip.samplesStatus === CLIP_LOAD_STATUS.UNLOADED) {
-//            
-//                clip.samplesStatus = CLIP_LOAD_STATUS.LOADING;
-//                
-//                async () => {
-//                    
-//                    try {
-//                        
-//                        const result = await fetch(clip.wavFileUrl);
-//                        const arrayBuffer = await result.arrayBuffer();
-//                        const audioBuffer = await this._decodeAudio(
-//                            arrayBuffer, clip.sampleRate);
-//                        this._setClipSamples(clip, audioBuffer);
-//                    
-//                    } catch(error) {
-//                        
-//                        this._onClipSamplesLoadError(clip, error)
-//                        
-//                    }
-//                    
-//                }
-//                
-//            }
-//            
-//        }
-//        
-//    }
-    
-    
-   _loadClipAnnotations(clips, start, end) {
+   async _loadClipAnnotations(clips, start, end) {
         
-        for (let i = start; i < end; i++) {
-            
-            const clip = clips[i];
-            
-            if (clip.annotationsStatus === CLIP_LOAD_STATUS.UNLOADED) {
-                
-                clip.annotationsStatus = CLIP_LOAD_STATUS.LOADING;
+       clips = clips.slice(start, end);
+       
+       // Work only with clips for which annotations are unloaded.
+       clips = clips.filter(
+           clip => clip.annotationsStatus === CLIP_LOAD_STATUS.UNLOADED);
+       
+       if (clips.length > 0)
+           // some clips need loading
+           
+           return Promise.all(
+               clips.map(c => this._loadClipAnnotationsAux(c)));
+       
+   }
+   
+   
+   async _loadClipAnnotationsAux(clip) {
+       
+       clip.annotationsStatus = CLIP_LOAD_STATUS.LOADING;
 
-                fetch(clip.annotationsJsonUrl)
-                .then(r => r.json())
-                .then(a => this._setClipAnnotations(clip, a))
-                .catch(e => this._onClipAnnotationsLoadError(clip, e));
-                
-            }
-            
-        }
-        
-    }
+       try {
+       
+           const response = await fetch(clip.annotationsJsonUrl);
+           const annotations = await response.json();
+           return this._setClipAnnotations(clip, annotations);
+           
+       } catch(error) {
+           
+           this._onClipAnnotationsLoadError(clip, error);
+           
+       }
+       
+   }
     
     
     _onClipAnnotationsLoadError(clip, error) {
