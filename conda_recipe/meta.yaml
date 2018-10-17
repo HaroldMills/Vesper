@@ -31,7 +31,7 @@ requirements:
   # even though it would seem to be redundant.
   
   build:
-    - django 1.11*
+    - django
     - jsonschema
     - keras
     - pyephem
@@ -41,7 +41,7 @@ requirements:
     - setuptools
  
   run:
-    - django 1.11*
+    - django
     - jsonschema
     - keras
     - pyephem

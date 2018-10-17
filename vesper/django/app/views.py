@@ -9,11 +9,11 @@ from django.db import transaction
 from django.db.models import F, Max, Min
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
-from django.core.urlresolvers import reverse
 from django.http import (
     HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
     HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseServerError)
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 import numpy as np
 import yaml
@@ -201,7 +201,7 @@ def _create_navbar_right_items(request):
         # containing URL.
         query = '?next=' + quote(request.get_full_path())
     
-        if user.is_authenticated():
+        if user.is_authenticated:
             # user is logged in
     
             item = Bunch(
@@ -934,7 +934,7 @@ def annotations_json(request, clip_id):
 
     elif request.method == 'POST':
 
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
 
             try:
                 content = _get_request_body_as_json(request)
@@ -1018,7 +1018,7 @@ def annotation(request, clip_id, annotation_name):
 
     elif request.method == 'PUT':
 
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
 
             clip = get_object_or_404(Clip, pk=clip_id)
             info = get_object_or_404(AnnotationInfo, name=name)
@@ -1042,7 +1042,7 @@ def annotation(request, clip_id, annotation_name):
 
     elif request.method == 'DELETE':
 
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
 
             clip = get_object_or_404(Clip, pk=clip_id)
             info = get_object_or_404(AnnotationInfo, name=name)
@@ -1202,7 +1202,7 @@ def annotations(request, annotation_name):
 
     if request.method == 'POST':
 
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
 
             try:
                 content = _get_request_body_as_json(request)

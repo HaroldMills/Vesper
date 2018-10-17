@@ -1,17 +1,21 @@
 from django.conf import settings
-from django.conf.urls import url
+from django.urls import path, register_converter
 
-from vesper.django.app import views
+import vesper.django.app.views as views
+from vesper.django.app.name_converter import NameConverter
+
+
+register_converter(NameConverter, 'name')
 
 
 urlpatterns = [
-    url(r'^$', views.index, name='index'),
-    url(r'^clip-calendar/$', views.clip_calendar, name='clip-calendar'),
-    url(r'^clip-album/$', views.clip_album, name='clip-album'),
-    url(r'^night/$', views.night, name='night'),
-    url(r'^clips/(?P<clip_id>[0-9]+)/wav/$', views.clip_wav, name='clip-wav'),
-    url(r'^clips/(?P<clip_id>[0-9]+)/annotations/json/$',
-        views.annotations_json, name='annotations')
+    path('', views.index, name='index'),
+    path('clip-calendar/', views.clip_calendar, name='clip-calendar'),
+    path('clip-album/', views.clip_album, name='clip-album'),
+    path('night/', views.night, name='night'),
+    path('clips/<int:clip_id>/wav/', views.clip_wav, name='clip-wav'),
+    path('clips/<int:clip_id>/annotations/json/', views.annotations_json,
+         name='annotations')
 ]
 
 
@@ -19,72 +23,70 @@ if not settings.ARCHIVE_READ_ONLY:
     
     urlpatterns += [
     
-        # url(r'^test-command/$', views.test_command, name='test-command'),
+        # path('test-command/', views.test_command, name='test-command'),
     
-        url(r'^import-archive-data/$', views.import_archive_data,
-            name='import-archive-data'),
-        url(r'^import-recordings/$', views.import_recordings,
-            name='import-recordings'),
-        url(r'^import-old-bird-clips/$', views.import_old_bird_clips,
-            name='import-old-bird-clips'),
+        path('import-archive-data/', views.import_archive_data,
+             name='import-archive-data'),
+        path('import-recordings/', views.import_recordings,
+             name='import-recordings'),
+        path('import-old-bird-clips/', views.import_old_bird_clips,
+             name='import-old-bird-clips'),
     
-        url(r'^detect/$', views.detect, name='detect'),
-        url(r'^classify/$', views.classify, name='classify'),
-        url(r'^execute-deferred-actions/$', views.execute_deferred_actions,
-            name='execute-deferred-actions'),
+        path('detect/', views.detect, name='detect'),
+        path('classify/', views.classify, name='classify'),
+        path('execute-deferred-actions/', views.execute_deferred_actions,
+             name='execute-deferred-actions'),
         
-        url(r'^export-clip-counts-csv-file/$',
-            views.export_clip_counts_csv_file,
-            name='export-clip-counts-csv-file'),
-        url(r'^export-clips-csv-file/$', views.export_clips_csv_file,
-            name='export-clips-csv-file'),
-        url(r'^export-clip-audio-files/$', views.export_clip_audio_files,
-            name='export-clip-audio-files'),
-        url(r'^export-clips-hdf5-file/$', views.export_clips_hdf5_file,
-            name='export-clips-hdf5-file'),
+        path('export-clip-counts-csv-file/',
+             views.export_clip_counts_csv_file,
+             name='export-clip-counts-csv-file'),
+        path('export-clips-csv-file/', views.export_clips_csv_file,
+             name='export-clips-csv-file'),
+        path('export-clip-audio-files/', views.export_clip_audio_files,
+             name='export-clip-audio-files'),
+        path('export-clips-hdf5-file/', views.export_clips_hdf5_file,
+             name='export-clips-hdf5-file'),
         
-        url(r'^update-recording-file-paths/$',
-            views.update_recording_file_paths,
-            name='update-recording-file-paths'),
-        url(r'^delete-recordings/$', views.delete_recordings,
-            name='delete-recordings'),
-        url(r'^adjust-clips/$', views.adjust_clips, name='adjust-clips'),
-        url(r'^delete-clips/$', views.delete_clips, name='delete-clips'),
-        url(r'^create-clip-audio-files/$', views.create_clip_audio_files,
-            name='create-clip-audio-files'),
-        url(r'^delete-clip-audio-files/$', views.delete_clip_audio_files,
-            name='delete-clip-audio-files'),
-        url(r'^transfer-call-classifications/$',
-            views.transfer_call_classifications,
-            name='transfer-call-classifications'),
+        path('update-recording-file-paths/',
+             views.update_recording_file_paths,
+             name='update-recording-file-paths'),
+        path('delete-recordings/', views.delete_recordings,
+             name='delete-recordings'),
+        path('adjust-clips/', views.adjust_clips, name='adjust-clips'),
+        path('delete-clips/', views.delete_clips, name='delete-clips'),
+        path('create-clip-audio-files/', views.create_clip_audio_files,
+             name='create-clip-audio-files'),
+        path('delete-clip-audio-files/', views.delete_clip_audio_files,
+             name='delete-clip-audio-files'),
+        path('transfer-call-classifications/',
+             views.transfer_call_classifications,
+             name='transfer-call-classifications'),
     
-        url(r'^stations/$', views.stations, name='stations'),
-        url(r'^stations/(?P<station_name>[a-zA-Z0-9_\-\. ]+)/$',
-            views.station, name='station'),
-        url(r'^stations/(?P<station_name>[a-zA-Z0-9_\-\. ]+)/clips/$',
-            views.station_clips, name='station-clips'),
+        path('stations/', views.stations, name='stations'),
+        path('stations/<name:station_name>/', views.station, name='station'),
+        path('stations/<name:station_name>/clips/', views.station_clips,
+             name='station-clips'),
     
-        url(r'^clips/$', views.clips, name='clips'),
-        url(r'^clips/(?P<clip_id>[0-9]+)/$', views.clip, name='clip'),
-        url((r'^clips/(?P<clip_id>[0-9]+)/annotations/'
-             r'(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$'),
-            views.annotation, name='annotation'),
+        path('clips/', views.clips, name='clips'),
+        path('clips/<int:clip_id>/', views.clip, name='clip'),
+        path('clips/<int:clip_id>/annotations/<name:annotation_name>/',
+             views.annotation, name='annotation'),
         
-        url(r'^batch/read/clip-audios/$',
-            views.batch_read_clip_audios,
-            name='batch-read-clip-audios'),
+        path('batch/read/clip-audios/',
+             views.batch_read_clip_audios,
+             name='batch-read-clip-audios'),
         
-        url(r'^batch/read/clip-annotations/$',
-            views.batch_read_clip_annotations,
-            name='batch-read-clip-annotations'),
+        path('batch/read/clip-annotations/',
+             views.batch_read_clip_annotations,
+             name='batch-read-clip-annotations'),
         
-        url(r'^annotations/(?P<annotation_name>[a-zA-Z0-9_\-\. ]+)/$',
-            views.annotations, name='annotations'),
+        path('annotations/<name:annotation_name>/', views.annotations,
+             name='annotations'),
 
-        url(r'^presets/(?P<preset_type_name>[a-zA-Z0-9_\-\. ]+)/json/$',
-            views.presets_json, name='presets-json'),
+        path('presets/<name:preset_type_name>/json/', views.presets_json,
+             name='presets-json'),
     
-        url(r'^jobs/(?P<job_id>[0-9]+)/$', views.job, name='job'),
+        path('jobs/<int:job_id>/', views.job, name='job'),
     
     ]
 

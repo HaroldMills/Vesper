@@ -1,4 +1,5 @@
-"""project URL Configuration
+"""
+Vesper URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
@@ -16,11 +17,11 @@ Including another URLconf
 
 
 from django.conf import settings
-from django.conf.urls import include, url
+from django.urls import include, path
 
 
 urlpatterns = [
-    url(r'^', include('vesper.django.app.urls')),
+    path('', include('vesper.django.app.urls')),
 ]
 
 
@@ -29,8 +30,8 @@ if not settings.ARCHIVE_READ_ONLY:
     from django.contrib import admin
     
     urlpatterns += [
-        url(r'^', include('django.contrib.auth.urls')),
-        url(r'^admin/', admin.site.urls)
+        path('', include('django.contrib.auth.urls')),
+        path('admin/', admin.site.urls)
     ]
 
 
@@ -42,5 +43,5 @@ if settings.INCLUDE_DJANGO_DEBUG_TOOLBAR:
     import debug_toolbar
      
     urlpatterns = [
-        url(r'^debug/', include(debug_toolbar.urls)),
+        path('debug/', include(debug_toolbar.urls)),
     ] + urlpatterns
