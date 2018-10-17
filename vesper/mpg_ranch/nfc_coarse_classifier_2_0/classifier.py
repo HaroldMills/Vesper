@@ -81,7 +81,7 @@ class _Classifier:
         import keras
         
         path = classifier_utils.get_model_file_path(self._clip_type)
-        return keras.models.load_model(path)
+        return keras.models.load_model(str(path))
     
     
     def _load_settings(self):
