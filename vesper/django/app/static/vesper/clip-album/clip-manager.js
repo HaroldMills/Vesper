@@ -91,24 +91,29 @@ clips from whatever their native rate, though this should be tested.
 // the server in a single request. Yet other managers may load data for all
 // the clips of an album greedily, regardless of which pages have or have not
 // been displayed.
+//
+// Several methods of the default clip loader were made asynchronous so it
+// guarantee that the clips of the current page would be loaded before
+// clips of other pages. This, in turn, made it necessary to make several
+// clip manager methods asynchronous to make them testable. Since the
+// constructor of a JavaScript class cannot be asynchronous (since it
+// cannot return a prommise), the clip manager constructor does not load
+// any clips, and it initializes the current page number to `null`. The
+// page number must be initialized after construction, for example to zero.
 export class ClipManager {
 
 
-	constructor(
-		    settings, clips, pageStartClipNums, pageNum = 0,
-		    clipLoader = null) {
+	constructor(settings, clips, pageStartClipNums, clipLoader = null) {
 
 		this._settings = settings;
 		this._clips = clips;
-		this._pageStartClipNums = null;
+		this._pageStartClipNums = pageStartClipNums;
 		this._pageNum = null;
 		this._clipLoader =
 		    clipLoader === null ? new _ClipLoader() : clipLoader;
 
 		this._loadedPageNums = new Set();
 		this._numLoadedClips = 0;
-
-		this.update(pageStartClipNums, pageNum);
 
 	}
 
@@ -133,13 +138,29 @@ export class ClipManager {
 	}
 
 
-	set pageNum(pageNum) {
-		if (pageNum != this.pageNum) {
-		    this.update(this.pageStartClipNums, pageNum);
-		}
+    // This is very similar to the `setPageNum` method below. It is not
+    // an `async` method (a setter cannot be an `async` method since it
+    // does not return a value), but if you don't care about that,
+    // invoking it is a little nicer syntactically.
+    set pageNum(pageNum) {
+        if (pageNum != this.pageNum)
+            this.update(this.pageStartClipNums, pageNum);
+    }
+
+
+	// This is very similar to the `pageNum` setter above, but you can
+	// await it.
+	async setPageNum(pageNum) {
+        if (pageNum != this.pageNum)
+            return this.update(this.pageStartClipNums, pageNum);
 	}
-
-
+	
+	
+	async incrementPageNum(increment) {
+	    return this.setPageNum(this.pageNum + increment);
+	}
+	
+	
 	/**
 	 * Updates this clip manager for the specified pagination and
 	 * page number.
@@ -147,7 +168,7 @@ export class ClipManager {
 	 * `pageStartClipNums` is a nonempty, increasing array of clip numbers.
 	 * `pageNum` is a page number in [0, `pageStartClipNums.length`).
 	 */
-	update(pageStartClipNums, pageNum) {
+	async update(pageStartClipNums, pageNum) {
 
 		// We assume that while `this._pageStartClipNums` and `this._pageNum`
 		// are both initialized to `null` in the constructor, this method
@@ -161,12 +182,12 @@ export class ClipManager {
 			// pagination will change
 
 			this._updatePagination(pageStartClipNums, pageNum);
-			this._updatePageNum(pageNum);
+			return this._updatePageNum(pageNum);
 
 	    } else if (pageNum !== this.pageNum) {
-	    	// pagination will not change, but page number will
+	    	    // pagination will not change, but page number will
 
-	    	this._updatePageNum(pageNum);
+	        return this._updatePageNum(pageNum);
 
 	    }
 
@@ -201,17 +222,8 @@ export class ClipManager {
 
 				} else if (status === PAGE_LOAD_STATUS.PARTIALLY_LOADED) {
 
-					if (requiredPageNums.has(i))
-						// page required under new pagination
-
-						// Load entire page.
-						this._loadPage(i);
-
-					else
-						// page not required under new pagination
-
-						// Unload part of page that is loaded.
-					    this._unloadPartiallyLoadedPage(i);
+					// Unload part of page that is loaded.
+					this._unloadPartiallyLoadedPage(i);
 
 				}
 
@@ -292,21 +304,23 @@ export class ClipManager {
 	}
 
 
-	_updatePageNum(pageNum) {
+	async _updatePageNum(pageNum) {
 
 	    // console.log(`clip manager updating for page ${pageNum}...`);
 
 		const [unloadPageNums, loadPageNums] = this._getUpdatePlan(pageNum);
 
+		console.log('_updatePageNum', unloadPageNums, loadPageNums);
+		
 		for (const pageNum of unloadPageNums)
 			this._unloadPage(pageNum);
 
-		this._loadPages(loadPageNums);
+		await this._loadPages(loadPageNums);
 		
 		this._pageNum = pageNum;
 
-		const pageNums = Array.from(this._loadedPageNums)
-	    pageNums.sort((a, b) => a - b);
+		// const pageNums = Array.from(this._loadedPageNums)
+	    // pageNums.sort((a, b) => a - b);
 		// console.log(`clip manager loaded pages: [${pageNums.join(', ')}]`);
 		// console.log(`clip manager num loaded clips ${this._numLoadedClips}`);
 
@@ -743,7 +757,7 @@ class _ClipLoader {
             // for now.
             const audioBuffer = await context.decodeAudioData(arrayBuffer);
             
-            return this._setClipSamples(clip, audioBuffer);
+            this._setClipSamples(clip, audioBuffer);
             
         } catch(error) {
             
@@ -1027,7 +1041,7 @@ class _ClipLoader {
        
            const response = await fetch(clip.annotationsJsonUrl);
            const annotations = await response.json();
-           return this._setClipAnnotations(clip, annotations);
+           this._setClipAnnotations(clip, annotations);
            
        } catch(error) {
            
