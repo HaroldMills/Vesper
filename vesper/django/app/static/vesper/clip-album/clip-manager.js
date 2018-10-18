@@ -310,8 +310,6 @@ export class ClipManager {
 
 		const [unloadPageNums, loadPageNums] = this._getUpdatePlan(pageNum);
 
-		console.log('_updatePageNum', unloadPageNums, loadPageNums);
-		
 		for (const pageNum of unloadPageNums)
 			this._unloadPage(pageNum);
 
