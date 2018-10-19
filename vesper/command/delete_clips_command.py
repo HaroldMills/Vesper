@@ -8,6 +8,7 @@ import time
 from django.db import transaction
 
 from vesper.command.command import Command
+from vesper.django.app.models import Clip
 from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
@@ -118,24 +119,39 @@ class DeleteClipsCommand(Command):
         
         for detector, station, mic_output, date in value_tuples:
             
+            # Get clips for this detector, station, mic_output, and date
             clips = model_utils.get_clips(
                 station, mic_output, detector, date, self._annotation_name,
                 self._annotation_value, order=False)
             
+            
+            # Figure out which clips should be deleted.
+            
             count = 0
             retained_count = 0
+            clips_to_delete = []
             
             for clip in clips:
                 
                 if index not in retain_indices:
-                    self._delete_clip(clip)
+                    clips_to_delete.append(clip)
                 else:
                     retained_count += 1
                     
                 count += 1
                 index += 1
                 
-            # Log deletions for this detector/station/mic_output/date.
+                
+            # Delete clips.
+            try:
+                self._delete_clip_batch(clips_to_delete)
+            except Exception as e:
+                batch_text = \
+                    _get_batch_text(detector, station, mic_output, date)
+                command_utils.log_and_reraise_fatal_exception(
+                    e, 'Deletion of clips for {}'.format(batch_text))
+
+            # Log deletions.
             if retaining_clips:
                 prefix = 'Deleted'
             else:
@@ -143,11 +159,9 @@ class DeleteClipsCommand(Command):
                 prefix = 'Deleted {} and retained {} of'.format(
                     deleted_count, retained_count)
             count_text = text_utils.create_count_text(count, 'clip')
-            _logger.info((
-                '{} {} for detector "{}", station "{}", mic output "{}", '
-                'and date {}.').format(
-                    prefix, count_text, detector.name, station.name,
-                    mic_output.name, date))
+            batch_text = _get_batch_text(detector, station, mic_output, date)
+            _logger.info(
+                '{} {} for {}.'.format(prefix, count_text, batch_text))
 
             total_retained_count += retained_count
                 
@@ -166,18 +180,34 @@ class DeleteClipsCommand(Command):
             prefix, count_text, timing_text))
 
 
-    def _delete_clip(self, clip):
+    def _delete_clip_batch(self, clips):
         
-        try:
+        with archive_lock.atomic():
+             
+            with transaction.atomic():
             
-            with archive_lock.atomic():
-                 
-                with transaction.atomic():
-                 
-                    self._clip_manager.delete_audio_file(clip)
-                    clip.delete()
+                # Delete clips in chunks to limit the number of clip IDs
+                # we pass to `Clip.objects.filter`.
+                
+                max_chunk_size = 1000
+                
+                for i in range(0, len(clips), max_chunk_size):
                     
-        except Exception as e:
-            command_utils.log_and_reraise_fatal_exception(
-                e, 'Deletion of clip "{}"'.format(str(clip)),
-                'The clip and associated annotations were not modified.')
+                    chunk = clips[i:i + max_chunk_size]
+                    
+                    # Delete clips from archive database.
+                    ids = [clip.id for clip in chunk]
+                    Clip.objects.filter(id__in=ids).delete()
+                    
+        # Delete clip audio files. We do this after the transaction so
+        # that if the transaction fails, leaving the clips in the
+        # database and raising an exception, we don't delete any clip
+        # files.
+        for clip in clips:
+            self._clip_manager.delete_audio_file(clip)
+
+
+def _get_batch_text(detector, station, mic_output, date):
+    return \
+        'detector "{}", station "{}", mic output "{}", and date {}'.format(
+            detector.name, station.name, mic_output.name, date)
