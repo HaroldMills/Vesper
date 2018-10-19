@@ -1,3 +1,9 @@
+# TODO: Incorporate mic output name into output.
+# TODO: Specify annotation info in query by name rather than by id.
+# TODO: Allow specification of stations/mic combos, detectors, nights,
+#     and classifications.
+
+
 """
 Completes a table of clip counts created by a database query.
 
