@@ -28,7 +28,7 @@ Troy
 Walnut
 Weber
 Willow
-'''.split('\n')[1:-1]
+'''.split()
 
 
 _COUNTS = np.array([
