@@ -4,51 +4,34 @@
 import logging
 
 import h5py
-import numpy as np
-import resampy
+import math
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import StringAnnotation
 from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.annotation_utils as annotation_utils
-import vesper.util.signal_utils as signal_utils
 
 
 # TODO: Make detector name and output sample rate command arguments.
 
 
-# Settings for 2017 coarse classification examples export.
-_DETECTOR_NAME = 'Thrush'
+# Settings for exports from 2017 MPG Ranch archive for 2018 coarse
+# classifier training.
+_DETECTOR_NAME = 'Tseep'
 _CLASSIFICATION_ANNOTATION_NAME = 'Classification'
 _CLASSIFICATIONS = ['Call*', 'Noise']
 _OTHER_ANNOTATION_NAMES = []
 _DEFAULT_ANNOTATION_VALUES = {}
-_OUTPUT_CLIP_MODE = 'Initial'
-_OUTPUT_CLIP_DURATIONS = {
-    'Tseep': .236,    # 3000 / 22050 + .1
-    'Thrush': .326    # 5000 / 22050 + .1
+_EXTRACTION_START_OFFSETS = {
+    'Tseep': -.1,
+    'Thrush': -.1
 }
-_OUTPUT_CLIP_SAMPLE_RATE = 22050
+_EXTRACTION_DURATIONS = {
+    'Tseep': .5,
+    'Thrush': .6
+}
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
-
-
-# Settings for 2018 detector training.
-# _DETECTOR_NAME = 'Tseep'
-# _CLASSIFICATION_ANNOTATION_NAME = 'Classification'
-# _CLASSIFICATIONS = ['Call*', 'Noise']
-# _OTHER_ANNOTATION_NAMES = ['Call Center Index', 'Call Center Freq']
-# _DEFAULT_ANNOTATION_VALUES = {
-#     'Call Center Index': 0,
-#     'Call Center Freq': 0
-# }
-# _OUTPUT_CLIP_MODE = 'Center'
-# _OUTPUT_CLIP_DURATIONS = {
-#     'Tseep': 1,
-#     'Thrush': 1
-# }
-# _OUTPUT_CLIP_SAMPLE_RATE = 24000
-# _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
 _logger = logging.getLogger()
@@ -83,15 +66,11 @@ class ClipsHdf5FileExporter:
             annotation_utils.create_string_annotation_values_regexp(
                 _CLASSIFICATIONS)
     
-        self._output_clip_duration = _OUTPUT_CLIP_DURATIONS[_DETECTOR_NAME]
+        self._extraction_start_offset = \
+            _EXTRACTION_START_OFFSETS[_DETECTOR_NAME]
             
-        self._output_clip_length = signal_utils.seconds_to_frames(
-            self._output_clip_duration, _OUTPUT_CLIP_SAMPLE_RATE)
-
-        self._min_clip_lengths = {
-            _OUTPUT_CLIP_SAMPLE_RATE: self._output_clip_length
-        }
-        
+        self._extraction_duration = _EXTRACTION_DURATIONS[_DETECTOR_NAME]
+            
         self._clip_manager = clip_manager.instance
         
     
@@ -103,9 +82,11 @@ class ClipsHdf5FileExporter:
         if classification is not None and \
                 self._classifications_regexp.match(classification) is not None:
             
-            samples = self._get_output_samples(clip)
+            result = self._extract_samples(clip)
             
-            if samples is not None:
+            if result is not None:
+                
+                samples, start_index = result
                 
                 # Create dataset from clip samples.
                 name = '/clips/{:08d}'.format(clip.id)
@@ -113,13 +94,16 @@ class ClipsHdf5FileExporter:
                 
                 # Set dataset attributes from clip metadata.
                 attrs = self._file[name].attrs
-                attrs['id'] = clip.id
+                attrs['clip_id'] = clip.id
                 attrs['station'] = clip.station.name
-                attrs['microphone'] = clip.mic_output.device.model.name
+                attrs['mic_output'] = clip.mic_output.name
                 attrs['detector'] = clip.creating_processor.name
-                attrs['night'] = str(clip.date)
-                attrs['start_time'] = _format_datetime(clip.start_time)
-                attrs['original_sample_rate'] = clip.sample_rate
+                attrs['date'] = str(clip.date)
+                attrs['sample_rate'] = clip.sample_rate
+                attrs['clip_start_time'] = _format_datetime(clip.start_time)
+                attrs['clip_start_index'] = clip.start_index
+                attrs['clip_length'] = clip.length
+                attrs['extraction_start_index'] = start_index
                 
                 annotations = self._get_annotations(clip)
                 for name, value in annotations.items():
@@ -156,78 +140,39 @@ class ClipsHdf5FileExporter:
             [(name, self._get_annotation_value(clip, name)) for name in names])
             
             
-    def _get_output_samples(self, clip):
+    def _extract_samples(self, clip):
         
-        samples = self._clip_manager.get_samples(clip)
         sample_rate = clip.sample_rate
         
-        min_clip_length = self._get_min_clip_length(sample_rate)
+        start_offset = _seconds_to_samples(
+            self._extraction_start_offset, sample_rate)
         
-        if len(samples) >= min_clip_length:
-            # clip long enough
-            
-            if sample_rate != _OUTPUT_CLIP_SAMPLE_RATE:
-                # clip not at output sample rate
-                
-                samples = resampy.resample(
-                    samples[:min_clip_length], sample_rate,
-                    _OUTPUT_CLIP_SAMPLE_RATE)
-                
-            if _OUTPUT_CLIP_MODE == 'Initial':
-                return self._get_output_samples_initial(samples)
-            
-            else:
-                return self._get_output_samples_center(samples)
-        
-        else:
-            # clip too short
-            
-            return None
-        
-        
-    def _get_output_samples_initial(self, samples):
-        return samples[:self._output_clip_length]
-    
-    
-    def _get_output_samples_center(self, samples):
-        offset = (len(samples) - self._output_clip_length) // 2
-        return samples[offset:offset + self._output_clip_length]
-
-    
-    def _get_min_clip_length(self, sample_rate):
+        length = _seconds_to_samples(self._extraction_duration, sample_rate)
         
         try:
-            return self._min_clip_lengths[sample_rate]
+            samples = \
+                self._clip_manager.get_samples(clip, start_offset, length)
         
-        except KeyError:
-            # don't yet have minimum clip length for this sample rate
-            
-            n = signal_utils.seconds_to_frames(
-                self._output_clip_duration, sample_rate)
-            
-            while True:
-                
-                x = np.zeros(n)
-                y = resampy.resample(x, sample_rate, _OUTPUT_CLIP_SAMPLE_RATE)
-                
-                if len(y) >= self._output_clip_length:
-                    break
-                
-                else:
-                    # `n` samples at `sample_rate` resample to fewer than
-                    # `_OUTPUT_CLIP_LENGTH` samples at
-                    # `_OUTPUT_CLIP_SAMPLE_RATE`
-                    
-                    n += 1
-                    
-            # Cache computed length.
-            self._min_clip_lengths[sample_rate] = n
-            
-            return n
-            
+        except Exception as e:
+            _logger.warning((
+                'Could not get samples for clip {}, so it will not appear '
+                'in output. Error message was: {}').format(str(clip), str(e)))
+            return None
         
+        start_index = clip.start_index + start_offset
+        
+        return samples, start_index
+    
+
     def end_exports(self):
-        self._file['/clips'].attrs['sample_rate'] = _OUTPUT_CLIP_SAMPLE_RATE
+        attrs = self._file['/clips'].attrs
+        attrs['extraction_start_offset'] = self._extraction_start_offset
+        attrs['extraction_duration'] = self._extraction_duration
+
+
+def _seconds_to_samples(duration, sample_rate):
+    sign = -1 if duration < 0 else 1
+    return sign * int(math.ceil(abs(duration) * sample_rate))
     
 
 def _format_datetime(dt):
