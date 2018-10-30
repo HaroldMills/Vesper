@@ -123,11 +123,17 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
 - name: Export
   dropdown:
  
+      # - name: Clip Counts CSV File
+      #   url_name: export-clip-counts-csv-file
+ 
       - name: Clips CSV File
         url_name: export-clips-csv-file
- 
+        
       - name: Clip Audio Files
         url_name: export-clip-audio-files
+        
+      # - name: Clips HDF5 File
+      #   url_name: export-clips-hdf5-file
  
 - name: Other
   dropdown:
