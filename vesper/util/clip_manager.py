@@ -43,23 +43,32 @@ class ClipManager:
         return Bunch(samples=samples, sample_rate=sample_rate)
     
     
-    def get_samples(self, clip):
+    def get_samples(self, clip, start_offset=None, length=None):
         
         """
-        Gets the samples of the specified clip.
+        Gets samples of the specified clip.
         
-        The samples are read from the clip's audio file if there is one,
-        or from the clip's recording if not.
+        The samples are read from the clip's audio file if there is one
+        and it contains all of the specified samples, or from the clip's
+        recording otherwise.
         
         Parameters
         ----------
         clip : Clip
-            the clip whose samples to get.
+            the clip for which to get samples.
+            
+        start_offset : int or None
+            offset from the start of the specified clip of the samples to
+            get, or `None` to get samples from the start of the clip.
+            
+        length : int or None
+            the number of samples to get, or `None` to get samples through
+            the end of the clip.
             
         Returns
         -------
         NumPy array
-            the samples of the specified clip.
+            the specified samples.
         
         Raises
         ------
@@ -72,20 +81,43 @@ class ClipManager:
             If some other error occurs, for example a file I/O error.
         """
         
-        try:
-            return self._get_samples_from_audio_file(clip)
-        except FileNotFoundError:
-            return self._get_samples_from_recording(clip)
+        # TODO: Add unit tests for this method.
+        
+        start_offset, length = \
+            _complete_clip_segment_spec(clip, start_offset, length)
+
+        if start_offset >= 0 and start_offset + length <= clip.length:
+            # all requested samples are in clip audio file if it exists
+            
+            try:
+                return self._get_samples_from_audio_file(
+                    clip, start_offset, length)
+                
+            except FileNotFoundError:
+                # clip audio file does not exist
+                
+                return self._get_samples_from_recording(
+                    clip, start_offset, length)
+                
+        else:
+            # some requested samples would not be in clip audio file
+            
+            return self._get_samples_from_recording(clip, start_offset, length)
             
        
-    def _get_samples_from_audio_file(self, clip):
+    def _get_samples_from_audio_file(self, clip, start_index, length):
         path = self.get_audio_file_path(clip)
         samples, _ = audio_file_utils.read_wave_file(path)
-        return samples[0]
+        end_index = start_index + length
+        return samples[0, start_index:end_index]
 
 
-    def _get_samples_from_recording(self, clip):
+    def _get_samples_from_recording(
+            self, clip, start_offset=None, length=None):
         
+        start_offset, length = \
+            _complete_clip_segment_spec(clip, start_offset, length)
+
         if clip.start_index is None:
             # clip start index unknown
             
@@ -98,16 +130,24 @@ class ClipManager:
         # require cacheing lists of recording files for recordings,
         # which is fine.
         
+        # Get start and end indices of samples in recording.
+        start_index = clip.start_index + start_offset
+        end_index = start_index + length
+        
         for file_ in clip.recording.files.all():
             
-            if clip.start_index >= file_.start_index and \
-                    clip.start_index < file_.end_index:
-                # clip starts in this file.
+            if start_index >= file_.start_index and \
+                    start_index < file_.end_index:
+                # samples start in this file.
                 
-                if clip.end_index < file_.end_index:
-                    # clip ends in this file.
+                if end_index < file_.end_index:
+                    # samples end in this file.
                 
-                    return self._get_samples_from_recording_file(file_, clip)
+                    # Get start index of samples in file.
+                    start_index -= file_.start_index
+                    
+                    return self._get_samples_from_recording_file(
+                        file_, clip.channel_num, start_index, length)
                         
                 else:
                     # clip extends past end of file
@@ -126,7 +166,8 @@ class ClipManager:
             'since {}.').format(reason))
         
         
-    def _get_samples_from_recording_file(self, file_, clip):
+    def _get_samples_from_recording_file(
+            self, file_, channel_num, start_index, length):
         
         try:
             path = self._rm.get_absolute_recording_file_path(file_.path)
@@ -177,10 +218,9 @@ class ClipManager:
         
         with self._read_lock:
             reader = self._get_audio_file_reader(path)
-            start_index = clip.start_index - file_.start_index
-            samples = reader.read(start_index, clip.length)
+            samples = reader.read(start_index, length)
         
-        return samples[clip.channel_num]
+        return samples[channel_num]
     
     
     def _get_audio_file_reader(self, path):
@@ -343,6 +383,17 @@ def _get_clip_id_parts(num, format_):
     return parts
     
     
+def _complete_clip_segment_spec(clip, start_offset, length):
+    
+    if start_offset is None:
+        start_offset = 0
+        
+    if length is None:
+        length = max(clip.length - start_offset, 0)
+        
+    return start_offset, length
+            
+
 def _create_audio_file_contents(samples, sample_rate):
     
     buffer = BytesIO()
