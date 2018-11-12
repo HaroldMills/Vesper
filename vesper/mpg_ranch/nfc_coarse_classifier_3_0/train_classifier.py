@@ -18,10 +18,10 @@ from vesper.util.settings import Settings
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-DATA_DIR_PATH = Path(
+DATA_DIR_PATH_FORMAT = (
     '/Users/harold/Desktop/NFC/Data/Vesper ML Datasets/'
-    'Coarse Classification/Tseep 100K/Training')
-DATA_FILE_NAME_FORMAT = 'Tseep 100K_Training_{}.tfrecords'
+    'Coarse Classification/{}/{}')
+DATA_FILE_NAME_FORMAT = '{}_{}_{}.tfrecords'
 
 EXAMPLE_FEATURES = {
     'waveform': tf.FixedLenFeature((), tf.string, default_value=''),
@@ -33,6 +33,8 @@ SETTINGS = {
     'Tseep': Settings(
         
         clip_type='Tseep',
+        
+        dataset_name='Tseep 100K',
         
         sample_rate=24000,
         
@@ -103,10 +105,11 @@ def show_spectrogram_dataset(settings):
 
 
 def create_spectrogram_dataset(
-        settings, batch_size=None, spectrogram_clipping_enabled=None,
+        settings, dataset_type, batch_size=None,
+        spectrogram_clipping_enabled=None,
         spectrogram_normalization_enabled=None):
     
-    dataset = create_base_dataset()
+    dataset = create_base_dataset(settings.dataset_name, dataset_type)
     
     batch_size = get_batch_size(settings, batch_size)
     if batch_size != 1:
@@ -131,9 +134,9 @@ def create_spectrogram_dataset(
     return dataset
     
 
-def create_base_dataset():
+def create_base_dataset(dataset_name, dataset_type):
     
-    file_path_pattern = create_data_file_path('*')
+    file_path_pattern = create_data_file_path(dataset_name, dataset_type, '*')
     
     # Get file paths matching pattern. Sort the paths for consistency.
     file_paths = sorted(tf.gfile.Glob(file_path_pattern))
@@ -141,9 +144,11 @@ def create_base_dataset():
     return tf.data.TFRecordDataset(file_paths).map(parse_example)
             
         
-def create_data_file_path(file_num):
-    file_name = DATA_FILE_NAME_FORMAT.format(file_num)
-    return str(DATA_DIR_PATH / file_name)
+def create_data_file_path(dataset_name, dataset_type, file_num):
+    dir_path = DATA_DIR_PATH_FORMAT.format(dataset_name, dataset_type)
+    file_name = DATA_FILE_NAME_FORMAT.format(
+        dataset_name, dataset_type, file_num)
+    return str(Path(dir_path) / file_name)
     
 
 def parse_example(example_proto):
@@ -218,9 +223,9 @@ def train_classifier(settings):
     if settings.spectrogram_normalization_pretraining_enabled:
         compute_spectrogram_normalization_settings(settings)
         
-    dataset = create_spectrogram_dataset(settings)
+    train_dataset = create_spectrogram_dataset(settings, 'Training')
     
-    show_dataset(dataset, 20)
+    show_dataset(train_dataset, 20)
     
     
 def compute_spectrogram_clipping_settings(settings):
@@ -238,7 +243,7 @@ def compute_spectrogram_clipping_settings(settings):
     log_epsilon = math.log(settings.spectrogram_log_epsilon)
     
     dataset = create_spectrogram_dataset(
-        settings, batch_size, spectrogram_clipping_enabled=False,
+        settings, 'Training', batch_size, spectrogram_clipping_enabled=False,
         spectrogram_normalization_enabled=False)
     iterator = dataset.make_one_shot_iterator()
     next_batch = iterator.get_next()
@@ -313,7 +318,7 @@ def compute_spectrogram_normalization_settings(settings):
     num_batches = int(round(num_examples / batch_size))
     
     dataset = create_spectrogram_dataset(
-        settings, batch_size, spectrogram_clipping_enabled=True,
+        settings, 'Training', batch_size, spectrogram_clipping_enabled=True,
         spectrogram_normalization_enabled=False)
     iterator = dataset.make_one_shot_iterator()
     next_batch = iterator.get_next()
