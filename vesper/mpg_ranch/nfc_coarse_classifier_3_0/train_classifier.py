@@ -88,133 +88,11 @@ def main():
     
     settings = SETTINGS['Tseep']
     
-    # show_spectrogram_dataset(settings)
-    
     train_classifier(settings)
     
+    # show_spectrogram_dataset(settings)
     
-def show_spectrogram_dataset(settings):
     
-    total_num_examples = 2 ** 13
-    batch_size = 2 ** 6
-    
-    dataset = create_spectrogram_dataset(settings, batch_size)
-    
-    num_batches = int(round(total_num_examples / batch_size))
-    show_dataset(dataset, num_batches)
-
-
-def create_spectrogram_dataset(
-        settings, dataset_type, batch_size=None,
-        spectrogram_clipping_enabled=None,
-        spectrogram_normalization_enabled=None):
-    
-    dataset = create_base_dataset(settings.dataset_name, dataset_type)
-    
-    batch_size = get_batch_size(settings, batch_size)
-    if batch_size != 1:
-        dataset = dataset.batch(batch_size)
-    
-    if spectrogram_clipping_enabled is not None:
-        settings = Settings(
-            settings,
-            spectrogram_clipping_enabled=spectrogram_clipping_enabled)
-        
-    if spectrogram_normalization_enabled is not None:
-        enabled = spectrogram_normalization_enabled  # to shorten line below
-        settings = Settings(
-            settings, spectrogram_normalization_enabled=enabled)
-
-    preprocessor = Preprocessor(settings)
-    
-    dataset = dataset.map(
-        preprocessor,
-        num_parallel_calls=settings.num_preprocessing_parallel_calls)
-    
-    return dataset
-    
-
-def create_base_dataset(dataset_name, dataset_type):
-    
-    file_path_pattern = create_data_file_path(dataset_name, dataset_type, '*')
-    
-    # Get file paths matching pattern. Sort the paths for consistency.
-    file_paths = sorted(tf.gfile.Glob(file_path_pattern))
-    
-    return tf.data.TFRecordDataset(file_paths).map(parse_example)
-            
-        
-def create_data_file_path(dataset_name, dataset_type, file_num):
-    dir_path = DATA_DIR_PATH_FORMAT.format(dataset_name, dataset_type)
-    file_name = DATA_FILE_NAME_FORMAT.format(
-        dataset_name, dataset_type, file_num)
-    return str(Path(dir_path) / file_name)
-    
-
-def parse_example(example_proto):
-    
-    example = tf.parse_single_example(example_proto, EXAMPLE_FEATURES)
-    
-    bytes_ = example['waveform']
-    waveform = tf.decode_raw(bytes_, out_type=tf.int16, little_endian=True)
-    
-    label = example['label']
-    
-    return waveform, label
-
-
-def get_batch_size(settings, batch_size):
-    
-    if batch_size is None:
-        
-        if settings.batch_size is not None:
-            batch_size = settings.batch_size
-        else:
-            batch_size = 1
-            
-        batch_size = settings.batch_size
-        
-    return batch_size
-        
-
-def show_dataset(dataset, num_batches):
-
-    print('output types', dataset.output_types)
-    print('output_shapes', dataset.output_shapes)
-    
-    iterator = dataset.make_one_shot_iterator()
-    next_batch = iterator.get_next()
-     
-    with tf.Session() as session:
-        
-        start_time = time.time()
-        
-        num_values = 0
-        values_sum = 0
-        squares_sum = 0
-        
-        for i in range(num_batches):
-                
-            x, labels = session.run(next_batch)
-                
-            x_class = x.__class__.__name__
-            labels_class = labels.__class__.__name__
-            
-            num_values += x.size
-            values_sum += x.sum()
-            squares_sum += (x ** 2).sum()
-            
-            mean = values_sum / num_values
-            sigma = math.sqrt(squares_sum / num_values - mean ** 2)
-            
-            print(
-                'Batch {} of {}: x {} {} {} {}, labels {} {}'.format(
-                    i + 1, num_batches, x_class, x.shape, mean, sigma,
-                    labels_class, labels.shape))
-            
-        print('Iteration took {} seconds.'.format(time.time() - start_time))
-                    
-
 def train_classifier(settings):
     
     if settings.spectrogram_clipping_pretraining_enabled:
@@ -309,6 +187,79 @@ def compute_spectrogram_clipping_settings(settings):
     s.spectrogram_clipping_max = max_value
     
     
+def create_spectrogram_dataset(
+        settings, dataset_type, batch_size=None,
+        spectrogram_clipping_enabled=None,
+        spectrogram_normalization_enabled=None):
+    
+    dataset = create_base_dataset(settings.dataset_name, dataset_type)
+    
+    batch_size = get_batch_size(settings, batch_size)
+    if batch_size != 1:
+        dataset = dataset.batch(batch_size)
+    
+    if spectrogram_clipping_enabled is not None:
+        settings = Settings(
+            settings,
+            spectrogram_clipping_enabled=spectrogram_clipping_enabled)
+        
+    if spectrogram_normalization_enabled is not None:
+        enabled = spectrogram_normalization_enabled  # to shorten line below
+        settings = Settings(
+            settings, spectrogram_normalization_enabled=enabled)
+
+    preprocessor = Preprocessor(settings)
+    
+    dataset = dataset.map(
+        preprocessor,
+        num_parallel_calls=settings.num_preprocessing_parallel_calls)
+    
+    return dataset
+    
+
+def create_base_dataset(dataset_name, dataset_type):
+    
+    file_path_pattern = create_data_file_path(dataset_name, dataset_type, '*')
+    
+    # Get file paths matching pattern. Sort the paths for consistency.
+    file_paths = sorted(tf.gfile.Glob(file_path_pattern))
+    
+    return tf.data.TFRecordDataset(file_paths).map(parse_example)
+            
+        
+def create_data_file_path(dataset_name, dataset_type, file_num):
+    dir_path = DATA_DIR_PATH_FORMAT.format(dataset_name, dataset_type)
+    file_name = DATA_FILE_NAME_FORMAT.format(
+        dataset_name, dataset_type, file_num)
+    return str(Path(dir_path) / file_name)
+    
+
+def parse_example(example_proto):
+    
+    example = tf.parse_single_example(example_proto, EXAMPLE_FEATURES)
+    
+    bytes_ = example['waveform']
+    waveform = tf.decode_raw(bytes_, out_type=tf.int16, little_endian=True)
+    
+    label = example['label']
+    
+    return waveform, label
+
+
+def get_batch_size(settings, batch_size):
+    
+    if batch_size is None:
+        
+        if settings.batch_size is not None:
+            batch_size = settings.batch_size
+        else:
+            batch_size = 1
+            
+        batch_size = settings.batch_size
+        
+    return batch_size
+        
+
 def compute_spectrogram_normalization_settings(settings):
     
     s = settings
@@ -363,6 +314,58 @@ def compute_spectrogram_normalization_settings(settings):
     s.spectrogram_normalization_offset = -mean / sigma
 
     
+def show_dataset(dataset, num_batches):
+
+    print('output types', dataset.output_types)
+    print('output_shapes', dataset.output_shapes)
+    
+    iterator = dataset.make_one_shot_iterator()
+    next_batch = iterator.get_next()
+     
+    with tf.Session() as session:
+        
+        start_time = time.time()
+        
+        num_values = 0
+        values_sum = 0
+        squares_sum = 0
+        
+        for i in range(num_batches):
+                
+            x, labels = session.run(next_batch)
+                
+            x_class = x.__class__.__name__
+            labels_class = labels.__class__.__name__
+            
+            num_values += x.size
+            values_sum += x.sum()
+            squares_sum += (x ** 2).sum()
+            
+            mean = values_sum / num_values
+            sigma = math.sqrt(squares_sum / num_values - mean ** 2)
+            
+            print(
+                'Batch {} of {}: x {} {} {} {}, labels {} {}'.format(
+                    i + 1, num_batches, x_class, x.shape, mean, sigma,
+                    labels_class, labels.shape))
+            
+        print('Iteration took {} seconds.'.format(time.time() - start_time))
+                    
+
+def show_spectrogram_dataset(settings):
+    
+    total_num_examples = 2 ** 9
+    batch_size = 2 ** 6
+    
+    dataset = create_spectrogram_dataset(
+        settings, 'Training', batch_size,
+        spectrogram_clipping_enabled=False,
+        spectrogram_normalization_enabled=False)
+    
+    num_batches = int(round(total_num_examples / batch_size))
+    show_dataset(dataset, num_batches)
+
+
 class Preprocessor:
     
     
