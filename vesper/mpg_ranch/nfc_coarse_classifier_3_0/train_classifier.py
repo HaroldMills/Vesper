@@ -36,26 +36,46 @@ SETTINGS = {
         
         sample_rate=24000,
         
+        # waveform slicing settings
         waveform_start_time=.080,
         waveform_duration=.150,
         
+        # spectrogram settings
         spectrogram_window_size=.005,
         spectrogram_hop_size=.5,
         spectrogram_log_epsilon=1e-10,
+        
+        # spectrogram frequency axis slicing settings
         spectrogram_start_freq=4000,
         spectrogram_end_freq=10000,
         
         # number of parallel calls for input and spectrogram computation
         num_preprocessing_parallel_calls=4,
         
-        # pretraining settings, for computing spectrogram clipping and
-        # normalization settings
+        # spectrogram clipping pretraining settings
+        spectrogram_clipping_pretraining_enabled=True,
         pretraining_num_examples=20000,
         pretraining_batch_size=1000,
-        pretraining_values_histogram_range=(-25, 50),
-        pretraining_values_histogram_num_bins=750,
+        pretraining_histogram_min=-25,
+        pretraining_histogram_max=50,
+        pretraining_histogram_num_bins=750,
         pretraining_clipped_values_fraction=.001,
-        pretraining_plot_value_distribution=False,
+        pretraining_value_distribution_plotting_enabled=False,
+        
+        # spectrogram normalization pretraining settings
+        spectrogram_normalization_pretraining_enabled=True,
+        
+        # spectrogram clipping settings
+        spectrogram_clipping_enabled=True,
+        spectrogram_clipping_min=None,
+        spectrogram_clipping_max=None,
+        
+        # spectrogram normalization settings
+        spectrogram_normalization_enabled=True,
+        spectrogram_normalization_scale_factor=None,
+        spectrogram_normalization_offset=None,
+        
+        batch_size=64,
         
     )
     
@@ -68,7 +88,7 @@ def main():
     
     # show_spectrogram_dataset(settings)
     
-    compute_spectrogram_clipping_and_normalization_settings(settings)
+    train_classifier(settings)
     
     
 def show_spectrogram_dataset(settings):
@@ -82,7 +102,9 @@ def show_spectrogram_dataset(settings):
     show_dataset(dataset, num_batches)
 
 
-def create_spectrogram_dataset(settings, batch_size=None):
+def create_spectrogram_dataset(
+        settings, batch_size=None, spectrogram_clipping_enabled=None,
+        spectrogram_normalization_enabled=None):
     
     dataset = create_base_dataset()
     
@@ -90,7 +112,18 @@ def create_spectrogram_dataset(settings, batch_size=None):
     if batch_size != 1:
         dataset = dataset.batch(batch_size)
     
+    if spectrogram_clipping_enabled is not None:
+        settings = Settings(
+            settings,
+            spectrogram_clipping_enabled=spectrogram_clipping_enabled)
+        
+    if spectrogram_normalization_enabled is not None:
+        enabled = spectrogram_normalization_enabled  # to shorten line below
+        settings = Settings(
+            settings, spectrogram_normalization_enabled=enabled)
+
     preprocessor = Preprocessor(settings)
+    
     dataset = dataset.map(
         preprocessor,
         num_parallel_calls=settings.num_preprocessing_parallel_calls)
@@ -151,6 +184,10 @@ def show_dataset(dataset, num_batches):
         
         start_time = time.time()
         
+        num_values = 0
+        values_sum = 0
+        squares_sum = 0
+        
         for i in range(num_batches):
                 
             x, labels = session.run(next_batch)
@@ -158,17 +195,32 @@ def show_dataset(dataset, num_batches):
             x_class = x.__class__.__name__
             labels_class = labels.__class__.__name__
             
+            num_values += x.size
+            values_sum += x.sum()
+            squares_sum += (x ** 2).sum()
+            
+            mean = values_sum / num_values
+            sigma = math.sqrt(squares_sum / num_values - mean ** 2)
+            
             print(
-                'Batch {} of {}: x {} {}, labels {} {}'.format(
-                    i + 1, num_batches, x_class, x.shape,
+                'Batch {} of {}: x {} {} {} {}, labels {} {}'.format(
+                    i + 1, num_batches, x_class, x.shape, mean, sigma,
                     labels_class, labels.shape))
             
         print('Iteration took {} seconds.'.format(time.time() - start_time))
                     
 
-def compute_spectrogram_clipping_and_normalization_settings(settings):
-    compute_spectrogram_clipping_settings(settings)
-    compute_spectrogram_normalization_settings(settings)
+def train_classifier(settings):
+    
+    if settings.spectrogram_clipping_pretraining_enabled:
+        compute_spectrogram_clipping_settings(settings)
+        
+    if settings.spectrogram_normalization_pretraining_enabled:
+        compute_spectrogram_normalization_settings(settings)
+        
+    dataset = create_spectrogram_dataset(settings)
+    
+    show_dataset(dataset, 20)
     
     
 def compute_spectrogram_clipping_settings(settings):
@@ -179,13 +231,15 @@ def compute_spectrogram_clipping_settings(settings):
     batch_size = s.pretraining_batch_size
     num_batches = int(round(num_examples / batch_size))
     
-    hist_range = s.pretraining_values_histogram_range
-    hist_min, hist_max = hist_range
-    num_bins = s.pretraining_values_histogram_num_bins
+    hist_min = s.pretraining_histogram_min
+    hist_max = s.pretraining_histogram_max
+    num_bins = s.pretraining_histogram_num_bins
     bin_size = (hist_max - hist_min) / num_bins
     log_epsilon = math.log(settings.spectrogram_log_epsilon)
     
-    dataset = create_spectrogram_dataset(settings, batch_size)
+    dataset = create_spectrogram_dataset(
+        settings, batch_size, spectrogram_clipping_enabled=False,
+        spectrogram_normalization_enabled=False)
     iterator = dataset.make_one_shot_iterator()
     next_batch = iterator.get_next()
      
@@ -203,7 +257,7 @@ def compute_spectrogram_clipping_settings(settings):
                 
             grams, _ = session.run(next_batch)
             
-            h, edges = np.histogram(grams, num_bins, hist_range)
+            h, edges = np.histogram(grams, num_bins, (hist_min, hist_max))
             histogram += h
             
             # If one of the histogram bins includes the log power to which
@@ -219,35 +273,35 @@ def compute_spectrogram_clipping_settings(settings):
             threshold = s.pretraining_clipped_values_fraction / 2
             min_index = np.searchsorted(cumsum, threshold, side='right')
             max_index = np.searchsorted(cumsum, 1 - threshold) + 1
-            min_power = edges[min_index]
-            max_power = edges[max_index]
+            min_value = edges[min_index]
+            max_value = edges[max_index]
                 
             # print(
             #     'Batch {} of {}: ({}, {})'.format(
-            #         i + 1, num_batches, min_power, max_power))
+            #         i + 1, num_batches, min_value, max_value))
             
         end_time = time.time()
         delta_time = end_time - start_time
         print(
             'Computed spectrogram clipping range in {} seconds.'.format(
                 delta_time))
-        print('Clipping range is ({}, {}).'.format(min_power, max_power))
+        print('Clipping range is ({}, {}).'.format(min_value, max_value))
 
     # Plot spectrogram value distribution and clipping limits.
-    if s.pretraining_plot_value_distribution:
+    if s.pretraining_value_distribution_plotting_enabled:
         import matplotlib.pyplot as plt
         distribution = histogram / histogram.sum()
         plt.figure(1)
         plt.plot(edges[:-1], distribution)
-        plt.axvline(min_power, color='r')
-        plt.axvline(max_power, color='r')
+        plt.axvline(min_value, color='r')
+        plt.axvline(max_value, color='r')
         plt.xlim((edges[0], edges[-1]))
         plt.title('Distribution of Spectrogram Values')
         plt.xlabel('Log Power')
         plt.show()
 
-    s.spectrogram_min_power = min_power
-    s.spectrogram_max_power = max_power
+    s.spectrogram_clipping_min = min_value
+    s.spectrogram_clipping_max = max_value
     
     
 def compute_spectrogram_normalization_settings(settings):
@@ -258,7 +312,9 @@ def compute_spectrogram_normalization_settings(settings):
     batch_size = s.pretraining_batch_size
     num_batches = int(round(num_examples / batch_size))
     
-    dataset = create_spectrogram_dataset(settings, batch_size)
+    dataset = create_spectrogram_dataset(
+        settings, batch_size, spectrogram_clipping_enabled=True,
+        spectrogram_normalization_enabled=False)
     iterator = dataset.make_one_shot_iterator()
     next_batch = iterator.get_next()
      
@@ -283,11 +339,11 @@ def compute_spectrogram_normalization_settings(settings):
             squares_sum += (grams ** 2).sum()
             
             mean = values_sum / num_values
-            standard_dev = math.sqrt(squares_sum / num_values - mean ** 2)
+            sigma = math.sqrt(squares_sum / num_values - mean ** 2)
             
             # print(
             #     'Batch {} of {}: ({}, {})'.format(
-            #         i + 1, num_batches, mean, standard_dev))
+            #         i + 1, num_batches, mean, sigma))
             
         end_time = time.time()
         delta_time = end_time - start_time
@@ -296,10 +352,10 @@ def compute_spectrogram_normalization_settings(settings):
             'seconds.').format(delta_time))
         print(
             'Normalization mean and standard deviation are ({}, {}).'.format(
-                mean, standard_dev))
+                mean, sigma))
         
-    s.spectrogram_mean = mean
-    s.spectrogram_standard_dev = standard_dev
+    s.spectrogram_normalization_scale_factor = 1 / sigma
+    s.spectrogram_normalization_offset = -mean / sigma
 
     
 class Preprocessor:
@@ -336,6 +392,8 @@ class Preprocessor:
         
         """Computes spectrograms for a batch of waveforms."""
         
+        s = self.settings
+        
         # Slice waveforms.
         waveforms = waveforms[..., self.time_start_index:self.time_end_index]
         
@@ -354,7 +412,18 @@ class Preprocessor:
         
         # Take natural log of squared spectrograms. Adding an epsilon
         # avoids log-of-zero errors.
-        grams = tf.log(grams + self.settings.spectrogram_log_epsilon)
+        grams = tf.log(grams + s.spectrogram_log_epsilon)
+        
+        # Clip spectrograms if indicated.
+        if self.settings.spectrogram_clipping_enabled:
+            grams = tf.clip_by_value(
+                grams, s.spectrogram_clipping_min, s.spectrogram_clipping_max)
+            
+        # Normalize spectrograms if indicated.
+        if self.settings.spectrogram_normalization_enabled:
+            grams = \
+                s.spectrogram_normalization_scale_factor * grams + \
+                s.spectrogram_normalization_offset
         
         return grams, labels
     
