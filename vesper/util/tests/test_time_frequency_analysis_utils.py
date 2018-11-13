@@ -72,6 +72,22 @@ class TimeFrequencyAnalysisUtilsTests(TestCase):
             self.assertTrue(np.array_equal(actual, expected))
 
 
+    def test_get_dft_bin_num(self):
+        
+        cases = [
+            ((0, 8000, 8), 0),
+            ((4000, 8000, 8), 4),
+            ((1000, 8000, 8), 1),
+            ((499, 8000, 8), 0),
+            ((501, 8000, 8), 1),
+            ((11024.5, 22050., 8), 4)
+        ]
+        
+        for args, expected in cases:
+            actual = tfa_utils.get_dft_bin_num(*args)
+            self.assertEqual(actual, expected)
+        
+        
     def test_get_num_analysis_records(self):
 
         cases = [

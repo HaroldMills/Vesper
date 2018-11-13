@@ -55,6 +55,21 @@ def get_dft_freqs(sample_rate, dft_size):
     return np.arange(num_freqs) * spacing
 
 
+def get_dft_bin_num(freq, sample_rate, dft_size):
+    
+    """
+    Gets the DFT bin number for a specified frequency.
+    
+    The bin number is in [0, `dft_size`).
+    """
+    
+    bin_size = sample_rate / dft_size
+    
+    # Modulo operation puts any frequency into the appropriate bin
+    # with number in [0, dft_size).
+    return int(round(freq / bin_size)) % dft_size
+
+
 def get_num_analysis_records(num_samples, record_size, hop_size):
 
     if record_size <= 0:
