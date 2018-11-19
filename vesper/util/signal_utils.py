@@ -3,8 +3,6 @@
 
 import datetime
 
-import scipy.signal as signal
-
 from vesper.util.bunch import Bunch
 
 
@@ -102,8 +100,12 @@ def resample(audio, target_sample_rate):
     else:
         # need to resample
         
+        # We put this import here instead of at the top of this module
+        # so  the module can be used in Python environments that don't
+        # include SciPy as long as this function is not called.
+        import scipy.signal as signal
+
         ratio = target_sample_rate / audio.sample_rate
         num_samples = int(round(len(audio.samples) * ratio))
         samples = signal.resample(audio.samples, num_samples)
         return Bunch(samples=samples, sample_rate=target_sample_rate)
-    
