@@ -26,21 +26,20 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-# TODO: Try random waveform slicing time offsets.
-# TODO: Try various combinations of batch normalization, dropout, and L2
-#       regularization.
 # TODO: Prepare Thrush HDF5 files.
 # TODO: Train thrush coarse classifier.
 # TODO: Figure out how to get sequence of training run precision-recall curves.
 # TODO: Figure out how to save and restore estimator.
 # TODO: Build Vesper classifier from saved estimator.
 # TODO: Look at clip albums of incorrectly classified clips.
+# TODO: Try dropout and L2 regularization.
+# TODO: Tune hyperparameters.
 
 # TODO: Does normalization matter with one input feature?
 # TODO: Evaluate on an initial part of training set.
 
 
-CLASSIFIER_NAME = 'Tseep BN 340K'
+CLASSIFIER_NAME = 'Tseep BN RS'
 
 ML_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML')
 DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Coarse Classification'
@@ -77,6 +76,10 @@ BASE_TSEEP_SETTINGS = Settings(
     # waveform slicing settings
     waveform_start_time=.080,
     waveform_duration=.150,
+    
+    # waveform slicing offset settings
+    random_waveform_slicing_offsets_enabled=False,
+    max_waveform_slicing_offset=.025,
     
     # spectrogram settings
     spectrogram_window_size=.005,
@@ -158,6 +161,7 @@ SETTINGS = {
         
         dataset_name='Tseep 100K',
         
+        
         batch_normalization_enabled=True,
         
         batch_size=64,
@@ -173,6 +177,19 @@ SETTINGS = {
         
         batch_size=64,
         num_training_steps=50000,
+        
+    )),    
+    
+    'Tseep BN RS': Settings(BASE_TSEEP_SETTINGS, Settings(
+        
+        dataset_name='Tseep 100K',
+        
+        random_waveform_slicing_offsets_enabled=True,
+        
+        batch_normalization_enabled=True,
+        
+        batch_size=64,
+        num_training_steps=20000,
         
     )),    
     
@@ -201,6 +218,8 @@ def main():
     # settings = SETTINGS[CLASSIFIER_NAME]
     # show_training_dataset(settings)
     # show_spectrogram_dataset(settings)
+    
+    # test_random_slicing_offsets()
     
     
 def save_checkpoint_results(classifier_name, min_step_num, max_step_num):
@@ -440,7 +459,6 @@ class Classifier:
         save_results(self.name, train_stats, val_stats)
         print('Done.')
             
-    
         
     def _evaluate(self, dataset_creator, num_thresholds=101):
         
@@ -649,6 +667,12 @@ def create_spectrogram_dataset(
     
     dataset = create_base_dataset(settings.dataset_name, dataset_type)
     
+    waveform_preprocessor = WaveformPreprocessor(settings)
+     
+    dataset = dataset.map(
+        waveform_preprocessor,
+        num_parallel_calls=settings.num_preprocessing_parallel_calls)
+    
     if num_repeats != 1:
         dataset = dataset.repeat(num_repeats)
     
@@ -670,10 +694,10 @@ def create_spectrogram_dataset(
         settings = Settings(
             settings, spectrogram_normalization_enabled=enabled)
 
-    preprocessor = Preprocessor(settings, feature_name)
+    spectrogram_preprocessor = SpectrogramPreprocessor(settings, feature_name)
     
     dataset = dataset.map(
-        preprocessor,
+        spectrogram_preprocessor,
         num_parallel_calls=settings.num_preprocessing_parallel_calls)
     
     return dataset
@@ -950,7 +974,80 @@ def show_spectrogram_dataset(settings):
     show_dataset(dataset, num_batches)
 
 
-class Preprocessor:
+def test_random_slicing_offsets():
+    
+    # Create dataset as NumPy array.
+    m = 10
+    n = 5
+    x = 100 * np.arange(m).reshape((m, 1)) + np.arange(n).reshape((1, n))
+
+    # Create TensorFlow dataset.
+    slicer = _RandomSlicer()
+    dataset = tf.data.Dataset.from_tensor_slices(x).map(slicer)
+    
+    # Show dataset.
+    iterator = dataset.make_one_shot_iterator()
+    x = iterator.get_next()
+     
+    with tf.Session() as session:
+        
+        while True:
+            
+            try:
+                x_ = session.run(x)
+                print(x_)
+                
+            except tf.errors.OutOfRangeError:
+                break    
+    
+    
+class _RandomSlicer:
+    
+    
+    def __init__(self):
+        self.max_offset = 2
+        self.length = 3
+        
+        
+    def __call__(self, x):
+        n = self.max_offset
+        i = tf.random.uniform((), -n, n, dtype=tf.int32)
+        return x[n + i:n + self.length + i]
+    
+    
+class WaveformPreprocessor:
+    
+    
+    def __init__(self, settings):
+        
+        s = settings
+        self.settings = s
+        
+        self.start_index, self.end_index, _, _, _, _, _ = \
+            get_low_level_preprocessing_settings(s)
+            
+        self.random_slicing_offsets_enabled = \
+            s.random_waveform_slicing_offsets_enabled
+        
+        if self.random_slicing_offsets_enabled:
+            self.max_slicing_offset = signal_utils.seconds_to_frames(
+                s.max_waveform_slicing_offset, s.sample_rate)
+            
+                
+    def __call__(self, waveform, label):
+        
+        if self.random_slicing_offsets_enabled:
+            n = self.max_slicing_offset
+            i = tf.random.uniform((), -n, n, dtype=tf.int32)
+            waveform = waveform[self.start_index + i:self.end_index + i]
+            
+        else:
+            waveform = waveform[self.start_index:self.end_index]
+            
+        return waveform, label
+    
+    
+class SpectrogramPreprocessor:
     
     
     def __init__(self, settings, output_feature_name='spectrogram'):
@@ -971,10 +1068,6 @@ class Preprocessor:
         """Computes spectrograms for a batch of waveforms."""
         
         s = self.settings
-        
-        # Slice waveforms.
-        waveforms = waveforms[
-            ..., self.time_start_index:self.time_end_index]
         
         # At this point the `waveforms` tensor has an unknown final
         # dimension. We know that the dimension is the sliced waveform
