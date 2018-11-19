@@ -28,18 +28,19 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 # TODO: Prepare Thrush HDF5 files.
 # TODO: Train thrush coarse classifier.
-# TODO: Figure out how to get sequence of training run precision-recall curves.
 # TODO: Figure out how to save and restore estimator.
 # TODO: Build Vesper classifier from saved estimator.
 # TODO: Look at clip albums of incorrectly classified clips.
 # TODO: Try dropout and L2 regularization.
 # TODO: Tune hyperparameters.
+# TODO: Evaluate on only initial portion of training data.
+# TODO: Figure out how to get sequence of training run precision-recall curves.
 
 # TODO: Does normalization matter with one input feature?
 # TODO: Evaluate on an initial part of training set.
 
 
-CLASSIFIER_NAME = 'Tseep BN RS'
+CLASSIFIER_NAME = 'Tseep Logistic Regression'
 
 ML_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML')
 DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Coarse Classification'
@@ -50,16 +51,16 @@ MODELS_DIR_PATH = ML_DIR_PATH / 'Models' / 'Coarse Classification'
 RESULTS_DIR_PATH = Path('/Users/harold/Desktop/ML Results')
 PR_PLOT_FILE_NAME_FORMAT = '{} PR.pdf'
 ROC_PLOT_FILE_NAME_FORMAT = '{} ROC.pdf'
-STATS_CSV_FILE_NAME_FORMAT = '{} Stats.csv'
+PR_CSV_FILE_NAME_FORMAT = '{} PR.csv'
 
-STATS_CSV_FILE_HEADER = (
+PR_CSV_FILE_HEADER = (
     'Threshold,'
     'Training Recall,'
     'Training Precision,'
     'Validation Recall,'
     'Validation Precision\n')
 
-STATS_CSV_FILE_ROW_FORMAT = '{:.2f},{:.3f},{:.3f},{:.3f},{:.3f}\n'
+PR_CSV_FILE_ROW_FORMAT = '{:.2f},{:.3f},{:.3f},{:.3f},{:.3f}\n'
 
 
 EXAMPLE_FEATURES = {
@@ -69,7 +70,7 @@ EXAMPLE_FEATURES = {
 
 BASE_TSEEP_SETTINGS = Settings(
     
-    dataset_name='Base Tseep Settings Dataset',
+    dataset_name='Tseep 100K',
     
     sample_rate=24000,
     
@@ -78,7 +79,7 @@ BASE_TSEEP_SETTINGS = Settings(
     waveform_duration=.150,
     
     # waveform slicing offset settings
-    random_waveform_slicing_offsets_enabled=False,
+    random_waveform_slicing_offsets_enabled=True,
     max_waveform_slicing_offset=.025,
     
     # spectrogram settings
@@ -116,90 +117,74 @@ BASE_TSEEP_SETTINGS = Settings(
     spectrogram_normalization_scale_factor=None,
     spectrogram_normalization_offset=None,
     
-    train_cnn=True,
-    hidden_layer_sizes=[16],
+    convolutional_layer_sizes=[16, 32],
+    hidden_dense_layer_sizes=[16],
     batch_normalization_enabled=True,
-    regularization_beta=.002,
+    l2_regularization_enabled=False,
+    l2_regularization_beta=.002,
     
     batch_size=64,
-    num_training_steps=50000
+    num_training_steps=10000,  # 50000
+    
+    precision_recall_plot_lower_axis_limit=.80,
+    precision_recall_plot_major_tick_interval=.05,
+    precision_recall_plot_minor_tick_interval=.01
     
 )
 
 
 SETTINGS = {
-     
+    
+    'Tseep Logistic Regression': Settings(BASE_TSEEP_SETTINGS, Settings(
+        convolutional_layer_sizes=[],
+        hidden_dense_layer_sizes=[],
+        l2_regularization_enabled=True,
+        precision_recall_plot_lower_axis_limit=0,
+        precision_recall_plot_major_tick_interval=.25,
+        precision_recall_plot_minor_tick_interval=.05
+    )),
+    
     'Tseep Baseline': Settings(BASE_TSEEP_SETTINGS, Settings(
         
-        dataset_name='Tseep 100K',
-        
-        train_cnn=False,
-        hidden_layer_sizes=[16],
-        regularization_beta=.002,
-        
-        batch_size=64,
-        num_training_steps=50000,
+        convolutional_layer_sizes=[],
+        hidden_dense_layer_sizes=[16]
         
     )),
     
-    'Tseep Test': Settings(BASE_TSEEP_SETTINGS, Settings(
-        
-        dataset_name='Tseep 100K',
+    'Tseep Quick': Settings(BASE_TSEEP_SETTINGS, Settings(
         
         pretraining_num_examples=1000,
         
-        train_cnn=False,
-        hidden_layer_sizes=[16],
-        regularization_beta=.002,
+        convolutional_layer_sizes=[],
+        hidden_dense_layer_sizes=[16],
         
-        batch_size=64,
         num_training_steps=1000,
+        
+        precision_recall_plot_lower_axis_limit=0,
+        precision_recall_plot_major_tick_interval=.25,
+        precision_recall_plot_minor_tick_interval=.05
         
     )),    
     
-    'Tseep BN': Settings(BASE_TSEEP_SETTINGS, Settings(
+    'Tseep': Settings(BASE_TSEEP_SETTINGS, Settings(
         
-        dataset_name='Tseep 100K',
-        
-        
-        batch_normalization_enabled=True,
-        
-        batch_size=64,
-        num_training_steps=4000,
+        num_training_steps=20000,
         
     )),    
     
     'Tseep No BN': Settings(BASE_TSEEP_SETTINGS, Settings(
         
-        dataset_name='Tseep 100K',
-        
         batch_normalization_enabled=False,
-        
-        batch_size=64,
         num_training_steps=50000,
         
     )),    
     
-    'Tseep BN RS': Settings(BASE_TSEEP_SETTINGS, Settings(
-        
-        dataset_name='Tseep 100K',
-        
-        random_waveform_slicing_offsets_enabled=True,
-        
-        batch_normalization_enabled=True,
-        
-        batch_size=64,
-        num_training_steps=20000,
-        
-    )),    
-    
-    'Tseep BN 340K': Settings(BASE_TSEEP_SETTINGS, Settings(
+    'Tseep 340K': Settings(BASE_TSEEP_SETTINGS, Settings(
         
         dataset_name='Tseep 340K',
         
         batch_normalization_enabled=True,
         
-        batch_size=64,
         num_training_steps=13000,
         
     )),    
@@ -286,7 +271,7 @@ class Classifier:
         self.settings = settings
         complete_settings(self.settings)
         
-        self.model = self._create_model()
+        self.model = create_model(self.settings)
         
         self.estimator = self._create_estimator()
         
@@ -308,110 +293,6 @@ class Classifier:
         
         return self.model.input_names[0]
     
-    
-    def _create_model(self):
-        
-        if self.settings.train_cnn:
-            return self._create_cnn_model()
-        
-        else:
-            return self._create_dnn_model()
-
-
-    def _create_dnn_model(self):
-         
-        s = self.settings
-        
-        layer_sizes = s.hidden_layer_sizes + [1]
-        num_layers = len(layer_sizes)
-         
-        regularizer = tf.keras.regularizers.l2(s.regularization_beta)
-         
-        model = tf.keras.Sequential()
-         
-        for i in range(num_layers):
-             
-            kwargs = {
-                'activation': 'sigmoid' if i == num_layers - 1 else 'relu',
-                'kernel_regularizer': regularizer
-            }
-             
-            if i == 0:
-                kwargs['input_dim'] = get_sliced_spectrogram_size(s)
-                 
-            model.add(tf.keras.layers.Dense(layer_sizes[i], **kwargs))
-             
-        model.compile(
-            optimizer='adam',
-            loss='binary_crossentropy',
-            metrics=['accuracy'])
-        
-        return model
-        
-    
-    def _create_cnn_model(self):
-        
-        s = self.settings
-        
-        if s.batch_normalization_enabled:
-            regularizer = None
-        else:
-            regularizer = tf.keras.regularizers.l2(s.regularization_beta)
-        
-        model = tf.keras.Sequential()
-        
-        # model.add(Conv2D(
-        #    16, kernel_size=(3, 3), activation='relu',
-        #    input_shape=input_shape))
-        # model.add(Conv2D(32, (3, 3), activation='relu'))
-        # model.add(MaxPooling2D(pool_size=(2, 2)))
-        # model.add(Dropout(.25))
-        # model.add(Flatten())
-        # model.add(Dense(32, activation='relu'))
-        # model.add(Dropout(.5))
-        # model.add(Dense(1, activation='sigmoid'))
-        
-        # Add channel dimension to spectrogram shape to make Conv2D input
-        # shape.
-        input_shape = get_sliced_spectrogram_shape(s) + (1,)
-        
-        model.add(tf.keras.layers.Conv2D(
-            16, kernel_size=(3, 3), activation='relu',
-            input_shape=input_shape,
-            kernel_regularizer=regularizer))
-        
-        if s.batch_normalization_enabled:
-            model.add(tf.keras.layers.BatchNormalization())
-        
-        model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
-        
-        model.add(tf.keras.layers.Conv2D(
-            32, kernel_size=(3, 3), activation='relu',
-            kernel_regularizer=regularizer))
-        
-        if s.batch_normalization_enabled:
-            model.add(tf.keras.layers.BatchNormalization())
-        
-        model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
-        
-        model.add(tf.keras.layers.Flatten())
-        
-        model.add(tf.keras.layers.Dense(
-            32, activation='relu', kernel_regularizer=regularizer))
-        
-        if s.batch_normalization_enabled:
-            model.add(tf.keras.layers.BatchNormalization())
-
-        model.add(tf.keras.layers.Dense(
-            1, activation='sigmoid', kernel_regularizer=regularizer))
-        
-        model.compile(
-            optimizer='adam',
-            loss='binary_crossentropy',
-            metrics=['accuracy'])
-    
-        return model
-
     
     def _create_estimator(self):
         
@@ -456,7 +337,7 @@ class Classifier:
         print('Evaluating classifier on validation dataset...')
         val_stats = self._evaluate(self.create_validation_dataset)
         print('Saving results...')
-        save_results(self.name, train_stats, val_stats)
+        save_results(self.name, train_stats, val_stats, self.settings)
         print('Done.')
             
         
@@ -498,6 +379,126 @@ class Classifier:
             self.settings, 'Validation', feature_name=self.model_input_name)
 
     
+def create_model(settings):
+    
+    print('Creating classifier model...')
+    
+    regularizer = create_regularizer(settings)
+    
+    model = tf.keras.Sequential()
+    add_convolutional_layers(model, settings, regularizer)
+    add_hidden_dense_layers(model, settings, regularizer)
+    add_output_layer(model, settings, regularizer)
+    
+    model.compile(
+        optimizer='adam',
+        loss='binary_crossentropy',
+        metrics=['accuracy'])
+    
+    print('Done creating classifier model.')
+    
+    return model
+
+        
+def create_regularizer(settings):
+    if settings.l2_regularization_enabled:
+        beta = settings.l2_regularization_beta
+        print((
+            'Loss will include L2 regularization term with beta of '
+            '{}.').format(beta))
+        return tf.keras.regularizers.l2(beta)
+    else:
+        return None
+        
+
+def add_convolutional_layers(model, settings, regularizer):
+    
+    num_layers = len(settings.convolutional_layer_sizes)
+    
+    for layer_num in range(num_layers):
+        
+        layer_size = settings.convolutional_layer_sizes[layer_num]
+        
+        kwargs = {
+            'filters': layer_size,
+            'kernel_size': (3, 3),
+            'activation': 'relu',
+            'kernel_regularizer': regularizer
+        }
+        
+        if layer_num == 0:
+            # first network layer
+            
+            # Specify input shape. The added dimension is for channel.
+            spectrogram_shape = get_sliced_spectrogram_shape(settings)
+            kwargs['input_shape'] = spectrogram_shape + (1,)
+            
+        model.add(tf.keras.layers.Conv2D(**kwargs))
+        
+        print(
+            'Added convolutional layer with {} kernels.'.format(layer_size))
+        
+        if settings.batch_normalization_enabled:
+            model.add(tf.keras.layers.BatchNormalization())
+            print('Added batch normalization.')
+        
+        model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
+        print('Adding max pooling.')
+
+    if num_layers != 0:
+        model.add(tf.keras.layers.Flatten())
+        print('Added flattening.')
+
+    
+def add_hidden_dense_layers(model, settings, regularizer):
+    
+    num_layers = len(settings.hidden_dense_layer_sizes)
+    
+    for layer_num in range(num_layers):
+        
+        layer_size = settings.hidden_dense_layer_sizes[layer_num]
+        
+        kwargs = {
+            'units': layer_size,
+            'activation': 'relu',
+            'kernel_regularizer': regularizer
+        }
+         
+        if layer_num == 0 and len(settings.convolutional_layer_sizes) == 0:
+            # first network layer
+            
+            kwargs['input_dim'] = get_sliced_spectrogram_size(settings)
+             
+        model.add(tf.keras.layers.Dense(**kwargs))
+        
+        print('Added dense layer with {} neurons.'.format(layer_size))
+        
+        if settings.batch_normalization_enabled:
+            model.add(tf.keras.layers.BatchNormalization())
+            print('Added batch normalization.')
+            
+
+def add_output_layer(model, settings, regularizer):
+    
+    kwargs = {
+        'units': 1,
+        'activation': 'sigmoid',
+        'kernel_regularizer': regularizer
+    }
+    
+    if len(settings.convolutional_layer_sizes) == 0 and \
+            len(settings.hidden_dense_layer_sizes) == 0:
+        # first network layer (if the output layer is also the first
+        # layer, the network will have a single neuron and perform
+        # logistic regression)
+        
+        kwargs['input_dim'] = get_sliced_spectrogram_size(settings)
+
+    model.add(tf.keras.layers.Dense(**kwargs))
+    
+    print('Added output layer.')
+    
+
 def get_dataset_labels(dataset):
     
     iterator = dataset.make_one_shot_iterator()
@@ -707,8 +708,6 @@ def create_base_dataset(dataset_name, dataset_type):
     
     file_path_pattern = create_data_file_path(dataset_name, dataset_type, '*')
     
-    # TODO: Use tf.data.Dataset.list_files instead of tf.gfile.Glob?
-    
     # Get file paths matching pattern. Sort the paths for consistency.
     file_paths = sorted(tf.gfile.Glob(file_path_pattern))
     
@@ -802,13 +801,15 @@ def compute_spectrogram_normalization_settings(settings):
     s.spectrogram_normalization_offset = -mean / std_dev
 
     
-def save_results(classifier_name, train_stats, val_stats):
-    plot_precision_recall_curves(classifier_name, train_stats, val_stats)
+def save_results(classifier_name, train_stats, val_stats, settings):
+    plot_precision_recall_curves(
+        classifier_name, train_stats, val_stats, settings)
     plot_roc_curves(classifier_name, train_stats, val_stats)
-    write_stats_csv_file(classifier_name, train_stats, val_stats)
+    write_precision_recall_csv_file(classifier_name, train_stats, val_stats)
         
         
-def plot_precision_recall_curves(classifier_name, train_stats, val_stats):
+def plot_precision_recall_curves(
+        classifier_name, train_stats, val_stats, settings):
     
     file_path = create_results_file_path(
         PR_PLOT_FILE_NAME_FORMAT, classifier_name)
@@ -829,12 +830,15 @@ def plot_precision_recall_curves(classifier_name, train_stats, val_stats):
         plt.ylabel('Precision')
         
         # Set axis limits.
-        plt.xlim((.8, 1))
-        plt.ylim((.8, 1))
+        lower_limit = settings.precision_recall_plot_lower_axis_limit
+        plt.xlim((lower_limit, 1))
+        plt.ylim((lower_limit, 1))
         
         # Configure grid.
-        major_locator = MultipleLocator(.05)
-        minor_locator = MultipleLocator(.01)
+        major_locator = MultipleLocator(
+            settings.precision_recall_plot_major_tick_interval)
+        minor_locator = MultipleLocator(
+            settings.precision_recall_plot_minor_tick_interval)
         axes = plt.gca()
         axes.xaxis.set_major_locator(major_locator)
         axes.xaxis.set_minor_locator(minor_locator)
@@ -894,14 +898,14 @@ def plot_roc_curves(classifier_name, train_stats, val_stats):
         plt.close()
 
 
-def write_stats_csv_file(classifier_name, train_stats, val_stats):
+def write_precision_recall_csv_file(classifier_name, train_stats, val_stats):
     
     file_path = create_results_file_path(
-        STATS_CSV_FILE_NAME_FORMAT, classifier_name)
+        PR_CSV_FILE_NAME_FORMAT, classifier_name)
     
     with open(file_path, 'w') as csv_file:
         
-        csv_file.write(STATS_CSV_FILE_HEADER)
+        csv_file.write(PR_CSV_FILE_HEADER)
         
         columns = (
             train_stats.threshold,
@@ -912,7 +916,7 @@ def write_stats_csv_file(classifier_name, train_stats, val_stats):
         )
         
         for row in zip(*columns):
-            csv_file.write(STATS_CSV_FILE_ROW_FORMAT.format(*row))
+            csv_file.write(PR_CSV_FILE_ROW_FORMAT.format(*row))
 
 
 def show_training_dataset(settings):
@@ -1108,14 +1112,16 @@ class SpectrogramPreprocessor:
                 s.spectrogram_normalization_scale_factor * grams + \
                 s.spectrogram_normalization_offset
         
-        if s.train_cnn:
+        if len(s.convolutional_layer_sizes) != 0:
+            # model is CNN
             
-            # Add channel dimension for Keras Conv2D layer compatibility.
+            # Add channel dimension for Keras `Conv2D` layer compatibility.
             grams = tf.expand_dims(grams, 3)
             
         else:
+            # model is DNN
             
-            # Flatten spectrograms for Keras Dense layer compatibility.
+            # Flatten spectrograms for Keras `Dense` layer compatibility.
             size = get_sliced_spectrogram_size(s)
             grams = tf.reshape(grams, (-1, size))
 
