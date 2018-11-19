@@ -17,7 +17,7 @@ from vesper.util.bunch import Bunch
 import vesper.util.os_utils as os_utils
 
 
-DATASET_NAME_PREFIX = 'Tseep 100K'
+DATASET_NAME_PREFIX = 'Tseep 340K'
 
 DATASET_CONFIGS = yaml.load('''
 
@@ -38,10 +38,22 @@ DATASET_CONFIGS = yaml.load('''
   train_dataset_size: [40000, 40000]
   val_dataset_size: [5000, 5000]
   test_dataset_size: [5000, 5000]
-    
+  
+- dataset_name_prefix: Tseep 340K
+  detector_name: Tseep
+  train_dataset_size: [158579, 158579]
+  val_dataset_size: [5000, 5000]
+  test_dataset_size: [5000, 5000]
+  
+- dataset_name_prefix: Tseep 1M
+  detector_name: Tseep
+  train_dataset_size: [490000, 490000]
+  val_dataset_size: [5000, 5000]
+  test_dataset_size: [5000, 5000]
+  
 ''')
 
-DATASETS_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML Datasets')
+DATASETS_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML/Datasets')
 
 INPUT_DIR_PATH = DATASETS_DIR_PATH / 'Clip HDF5 Files'
 
