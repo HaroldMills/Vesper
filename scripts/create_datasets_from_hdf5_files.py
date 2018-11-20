@@ -17,7 +17,7 @@ from vesper.util.bunch import Bunch
 import vesper.util.os_utils as os_utils
 
 
-DATASET_NAME_PREFIX = 'Tseep 340K'
+DATASET_NAME_PREFIX = 'Tseep !M'
 
 DATASET_CONFIGS = yaml.load('''
 
@@ -47,9 +47,9 @@ DATASET_CONFIGS = yaml.load('''
   
 - dataset_name_prefix: Tseep 1M
   detector_name: Tseep
-  train_dataset_size: [490000, 490000]
-  val_dataset_size: [5000, 5000]
-  test_dataset_size: [5000, 5000]
+  train_dataset_size: [480000, 480000]
+  val_dataset_size: [10000, 10000]
+  test_dataset_size: [10000, 10000]
   
 ''')
 
@@ -104,6 +104,10 @@ Tseep_MPG_Willow_2017_1.h5
 EXAMPLE_START_OFFSET = .1   # seconds
 EXAMPLE_DURATION = .4       # seconds
 EXAMPLE_SAMPLE_RATE = 24000
+
+CLIP_TYPE_NAMES = ('call', 'noise')
+CLIP_TYPE_CALL = 0
+CLIP_TYPE_NOISE = 1
 
 OUTPUT_DIR_PATH = DATASETS_DIR_PATH / 'Coarse Classification'
 OUTPUT_FILE_NAME_FORMAT = '{}_{}_{:04d}.tfrecords'
@@ -280,10 +284,10 @@ def show_input_stats(inputs, pairs):
 def get_dataset_clips(calls, noises, config):
 
     train_calls, val_calls, test_calls = \
-        get_dataset_clips_aux(calls, config, 0)
+        get_dataset_clips_aux(calls, config, CLIP_TYPE_CALL)
         
     train_noises, val_noises, test_noises = \
-        get_dataset_clips_aux(noises, config, 1)
+        get_dataset_clips_aux(noises, config, CLIP_TYPE_NOISE)
         
     return Bunch(
         train=Bunch(calls=train_calls, noises=train_noises),
@@ -291,14 +295,14 @@ def get_dataset_clips(calls, noises, config):
         test=Bunch(calls=test_calls, noises=test_noises))
         
         
-def get_dataset_clips_aux(clips, config, size_index):
+def get_dataset_clips_aux(clips, config, clip_type_index):
     
     # Get training, validation, and test set sizes from configuration.
-    train_size = config.train_dataset_size[size_index]
-    val_size = config.val_dataset_size[size_index]
-    test_size = config.test_dataset_size[size_index]
+    train_size = config.train_dataset_size[clip_type_index]
+    val_size = config.val_dataset_size[clip_type_index]
+    test_size = config.test_dataset_size[clip_type_index]
     
-    num_clips_needed = train_size + val_size + test_size
+    num_clips_needed = 1 + val_size + test_size
     if num_clips_needed > len(clips):
         raise ValueError((
             'Not enough clips for specified datasets. Needed {} '
@@ -319,6 +323,12 @@ def get_dataset_clips_aux(clips, config, size_index):
     if num_train_clips < train_size:
         # have fewer than requested number of training clips
         
+        clip_type_name = CLIP_TYPE_NAMES[clip_type_index]
+        print((
+            'Repeating some or all of {} {} clips as needed to provide '
+            '{} training clips...').format(
+                num_train_clips, clip_type_name, train_size))
+            
         # Repeat clips as needed, shuffling copies.
         n = train_size // num_train_clips
         r = train_size % num_train_clips
@@ -521,14 +531,14 @@ CREATE_DATASETS_TEST_CASES = [
 ''')]
 
 
-def test_create_datasets():
+def test_get_dataset_clips():
     
     for case in CREATE_DATASETS_TEST_CASES:
         
         calls = create_test_clips(case.num_calls, 'c')
         noises = create_test_clips(case.num_noises, 'n')
         
-        datasets = create_datasets(calls, noises, case)
+        datasets = get_dataset_clips(calls, noises, case)
         
         show_test_datasets(case, calls, noises, datasets)
 
