@@ -40,7 +40,7 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 # TODO: Evaluate on an initial part of training set.
 
 
-CLASSIFIER_NAME = 'Tseep Logistic Regression'
+CLASSIFIER_NAME = 'Tseep 1M'
 
 ML_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML')
 DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Coarse Classification'
@@ -124,7 +124,7 @@ BASE_TSEEP_SETTINGS = Settings(
     l2_regularization_beta=.002,
     
     batch_size=64,
-    num_training_steps=10000,  # 50000
+    num_training_steps=50000,
     
     precision_recall_plot_lower_axis_limit=.80,
     precision_recall_plot_major_tick_interval=.05,
@@ -145,48 +145,38 @@ SETTINGS = {
     )),
     
     'Tseep Baseline': Settings(BASE_TSEEP_SETTINGS, Settings(
-        
         convolutional_layer_sizes=[],
         hidden_dense_layer_sizes=[16]
-        
     )),
     
     'Tseep Quick': Settings(BASE_TSEEP_SETTINGS, Settings(
-        
         pretraining_num_examples=1000,
-        
         convolutional_layer_sizes=[],
         hidden_dense_layer_sizes=[16],
-        
         num_training_steps=1000,
-        
         precision_recall_plot_lower_axis_limit=0,
         precision_recall_plot_major_tick_interval=.25,
         precision_recall_plot_minor_tick_interval=.05
-        
     )),    
     
     'Tseep': Settings(BASE_TSEEP_SETTINGS, Settings(
-        
-        num_training_steps=20000,
-        
+        num_training_steps=20000
     )),    
     
     'Tseep No BN': Settings(BASE_TSEEP_SETTINGS, Settings(
-        
         batch_normalization_enabled=False,
-        num_training_steps=50000,
-        
+        num_training_steps=50000
     )),    
     
     'Tseep 340K': Settings(BASE_TSEEP_SETTINGS, Settings(
-        
         dataset_name='Tseep 340K',
-        
-        batch_normalization_enabled=True,
-        
-        num_training_steps=13000,
-        
+        num_training_steps=50000
+    )),    
+    
+    'Tseep 1M': Settings(BASE_TSEEP_SETTINGS, Settings(
+        dataset_name='Tseep 1M',
+        batch_size=128,
+        num_training_steps=20000
     )),    
     
 }
@@ -440,14 +430,14 @@ def add_convolutional_layers(model, settings, regularizer):
         
         if settings.batch_normalization_enabled:
             model.add(tf.keras.layers.BatchNormalization())
-            print('Added batch normalization.')
+            print('Added batch normalization layer.')
         
         model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
-        print('Adding max pooling.')
+        print('Added max pooling layer.')
 
     if num_layers != 0:
         model.add(tf.keras.layers.Flatten())
-        print('Added flattening.')
+        print('Added flattening layer.')
 
     
 def add_hidden_dense_layers(model, settings, regularizer):
@@ -475,7 +465,7 @@ def add_hidden_dense_layers(model, settings, regularizer):
         
         if settings.batch_normalization_enabled:
             model.add(tf.keras.layers.BatchNormalization())
-            print('Added batch normalization.')
+            print('Added batch normalization layer.')
             
 
 def add_output_layer(model, settings, regularizer):
