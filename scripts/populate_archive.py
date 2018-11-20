@@ -1,14 +1,13 @@
-"""Populates a Vesper web app archive from an old desktop app archive."""
+"""Populates a Vesper web archive from an old desktop archive."""
 
 
 from collections import defaultdict
 import datetime
 import os
 import random
+import sys
 import time
 
-from vesper.django.app.views import clip
-from vesper.singletons import clip_manager
 
 # Set up Django.
 os.environ['DJANGO_SETTINGS_MODULE'] = 'vesper.django.project.settings'
@@ -22,7 +21,7 @@ from vesper.archive.recording import Recording as OldRecording
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Recording, RecordingChannel,
     Station)
-from vesper.singletons import archive
+from vesper.singletons import archive, clip_manager
 import vesper.django.app.model_utils as model_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
@@ -52,28 +51,17 @@ import vesper.util.time_utils as time_utils
 #       if and only if the source archive does not include recording
 #       metadata.
 
-# _ARCHIVE_DIR_PATH = r'C:\Users\Harold\Desktop\2012 MPG Ranch Desktop Archive'
-_ARCHIVE_DIR_PATH = (
-    '/Users/harold/Desktop/NFC/Data/Old Bird/Somerset-Yates/'
-    'Somerset-Yates Desktop Archive')
-# _ARCHIVE_DIR_PATH = (
-#     '/Users/Harold/Desktop/NFC/Data/MPG Ranch/2012 MPG Ranch Desktop Archive')
-# _ARCHIVE_DIR_PATH = \
-#     r'C:\Users\Harold\Desktop\NFC\Data\MPG Ranch\MPG Ranch 2012-2014'
-# _ARCHIVE_DIR_PATH = r'E:\2015_NFC_Archive'
-# _ARCHIVE_DIR_PATH = \
-#     r'Y:\Desktop\NFC\Data\MPG Ranch\2016 MPG Ranch Desktop Archive'
-# _ARCHIVE_DIR_PATH = \
-#     '/Users/Harold/Desktop/NFC/Data/MPG Ranch/2016 MPG Ranch Desktop Archive'
-# _ARCHIVE_DIR_PATH = r'F:\2016_archive'
-# _ARCHIVE_DIR_PATH = \
-#     r'C:\Users\Harold\Desktop\NFC\Data\Vesper-Example-Archive 0.1.0'
 
 _CREATE_FAKE_RECORDINGS = False
 """Set `True` if and only if source archive does not contain recordings."""
 
-_CLIP_COUNT_LIMIT = 100000000
-"""The approximate maximum number of clips to process."""
+_CLIP_COUNT_LIMIT = 1000000000
+"""
+The approximate maximum number of clips to process.
+
+The script processes clips in variable, night-sized chunks, so the actual
+number of clips processed may differ from the specified number.
+"""
 
 _DETECTOR_NAME_ALIASES = {
     'Old Bird Thrush Detector': ['Thrush'],
@@ -110,8 +98,8 @@ _SHOW_RECORDINGS = False
 _RECORDING_PROGRESS_PERIOD = 1000
 
 _SHOW_CLIPS = False
-_CLIP_PROGRESS_PERIOD = 10000
 _CLIP_FILES_AVAILABLE = True
+_COPY_CLIP_FILES = True
 _NON_CALL_CLIP_INCLUSION_PROBABILITY = .11
 
 _PAUSE_FILE_PATH = '/Users/Harold/Desktop/Pause'
@@ -121,26 +109,37 @@ _ONE_NIGHT = datetime.timedelta(days=1)
 
 
 def _main():
+    
+    dest_archive_dir_path = os.getcwd()
+    source_archive_dir_path = sys.argv[1]
+
+    print(
+        'Populating archive "{}" from archive "{}"...'.format(
+            dest_archive_dir_path, source_archive_dir_path))
+    
     random.seed(0)
     _delete_data()
-    _add_data()
+    _add_recordings(source_archive_dir_path)
+    _add_clips(source_archive_dir_path)
     
 
 def _delete_data():
+    
+    print(
+        'Deleting any existing recordings, clips, and annotations from '
+        'destination archive...')
+    
+    # Deleting a recording also deletes it clips, and deleting a clip
+    # deletes its annotations.
     for recording in Recording.objects.all():
         recording.delete()
 
 
-def _add_data():
-    _add_recordings()
-    _add_clips()
-
-
-def _add_recordings():
+def _add_recordings(source_archive_dir_path):
     
     processing_start_time = time.time()
     
-    channel_recordings = _get_channel_recordings()
+    channel_recordings = _get_channel_recordings(source_archive_dir_path)
     
     # Partition recording channels into sets that belong to the same
     # recording. The result is a mapping from (station, start_time)
@@ -156,10 +155,12 @@ def _add_recordings():
     keys = sorted(channel_info_sets.keys(), key=lambda p: (p[0].name, p[1]))
     num_recordings = len(keys)
     
+    print('Adding recordings to destination archive...')
+    
     for i, (station, start_time) in enumerate(keys):
         
-        if i % _RECORDING_PROGRESS_PERIOD == 0:
-            print('Recording {} of {}...'.format(i, num_recordings))
+        if i % _RECORDING_PROGRESS_PERIOD == 0 and i != 0:
+            print('Added {} of {} recordings...'.format(i, num_recordings))
             
         channel_infos = list(channel_info_sets[(station, start_time)])
         channel_infos.sort(key=lambda i: i[2].channel_num)
@@ -221,13 +222,13 @@ def _add_recordings():
     rate = num_recordings / elapsed_time
     
     print((
-        'Processed {} recordings in {:.1f} seconds, an average of {:.1f} '
-        'recordings per second.').format(len(keys), elapsed_time, rate))
+        'Added a total of {} recordings in {:.1f} seconds, an average of '
+        '{:.1f} recordings per second.').format(len(keys), elapsed_time, rate))
         
         
-def _get_channel_recordings():
+def _get_channel_recordings(archive_dir_path):
     
-    archive = Archive(_ARCHIVE_DIR_PATH)
+    archive = Archive(archive_dir_path)
     archive.open()
     
     stations = archive.stations
@@ -327,13 +328,15 @@ def _correct(name, name_corrections):
 _clip_count = 0
 
 
-def _add_clips():
+def _add_clips(source_archive_dir_path):
+    
+    print('Adding clips to destination archive...')
     
     processing_start_time = time.time()
     
     global _clip_count
     
-    archive = Archive(_ARCHIVE_DIR_PATH)
+    archive = Archive(source_archive_dir_path)
     archive.open()
     stations = archive.stations
     start_night = archive.start_night
@@ -348,23 +351,40 @@ def _add_clips():
     
     for station in stations:
         
-        print('station "{}"...'.format(station.name))
-        
         night = start_night
         
         while night <= end_night:
             
             clips = archive.get_clips(station_name=station.name, night=night)
+            num_clips = len(clips)
             
-            m, n, p = _add_clips_aux(clips, night, detectors, annotation_infos)
+            if num_clips != 0:
             
-            num_added += m
-            num_rejected += n
-            num_excluded += p
-            night += _ONE_NIGHT
+                print(
+                    'Adding {} clips for station "{}", night {}...'.format(
+                        num_clips, station.name, night))
+                
+                start_time = time.time()
+                
+                with transaction.atomic():
+                    m, n, p = _add_clips_aux(
+                        clips, night, detectors, annotation_infos)
+                
+                elapsed_time = time.time() - start_time
+                rate = num_clips / elapsed_time
+                
+                print((
+                    'Processed {} clips in {:.1f} seconds, an average of '
+                    '{:.1f} clips per second.').format(
+                        num_clips, elapsed_time, rate))
             
-            if _clip_count >= _CLIP_COUNT_LIMIT:
-                break
+                num_added += m
+                num_rejected += n
+                num_excluded += p
+                night += _ONE_NIGHT
+                
+                if _clip_count >= _CLIP_COUNT_LIMIT:
+                    break
             
         if _clip_count >= _CLIP_COUNT_LIMIT:
             break
@@ -376,10 +396,12 @@ def _add_clips():
     rate = num_clips / elapsed_time
     
     print((
-        'Processed {} clips in {:.1f} seconds, an average of {:.1f} '
-        'clips per second.').format(num_clips, elapsed_time, rate))
-    print('Added {} clips, rejected {}, excluded {}.'.format(
-        num_added, num_rejected, num_excluded))
+        'Processed a total of {} clips in {:.1f} seconds, an average of '
+        '{:.1f} clips per second.').format(num_clips, elapsed_time, rate))
+        
+    print(
+        'Added a total of {} clips, rejected {}, excluded {}.'.format(
+            num_added, num_rejected, num_excluded))
     
     
 def _get_detectors():
@@ -415,9 +437,6 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
         
         _clip_count += 1
         
-        if _clip_count % _CLIP_PROGRESS_PERIOD == 0:
-            print('Clip {}...'.format(_clip_count))
-            
         if _clip_count % _PAUSE_CHECK_PERIOD == 0:
             _pause_if_indicated()
             
@@ -452,50 +471,52 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
             num_rejected += 1
             continue
         
-        with transaction.atomic():
+        # The code between here and the return statement used to be a
+        # single database transaction.
+        # with transaction.atomic():
             
-            recording = channel.recording
-            station = recording.station
-            mic_output = channel.mic_output
-            sample_rate = recording.sample_rate
-            if _CLIP_FILES_AVAILABLE:
-                length = audio_file_utils.get_wave_file_info(file_path).length
-            else:
-                length = c.duration * sample_rate
-            start_time = c.start_time
-            span = (length - 1) / sample_rate
-            end_time = start_time + datetime.timedelta(seconds=span)
-            creation_time = time_utils.get_utc_now()
+        recording = channel.recording
+        station = recording.station
+        mic_output = channel.mic_output
+        sample_rate = recording.sample_rate
+        if _CLIP_FILES_AVAILABLE:
+            length = audio_file_utils.get_wave_file_info(file_path).length
+        else:
+            length = c.duration * sample_rate
+        start_time = c.start_time
+        span = (length - 1) / sample_rate
+        end_time = start_time + datetime.timedelta(seconds=span)
+        creation_time = time_utils.get_utc_now()
+        
+        clip = Clip(
+            station=station,
+            mic_output=mic_output,
+            recording_channel=channel,
+            start_index=None,
+            length=length,
+            sample_rate=sample_rate,
+            start_time=start_time,
+            end_time=end_time,
+            date=night,
+            creation_time=creation_time,
+            creating_processor=detector)
+        
+        if _SHOW_CLIPS:
+            print('Clip', _clip_count, clip)
             
-            clip = Clip(
-                station=station,
-                mic_output=mic_output,
-                recording_channel=channel,
-                start_index=None,
-                length=length,
-                sample_rate=sample_rate,
-                start_time=start_time,
-                end_time=end_time,
-                date=night,
-                creation_time=creation_time,
-                creating_processor=detector)
+        clip.save()
+         
+        if _CLIP_FILES_AVAILABLE and _COPY_CLIP_FILES:
+            _copy_clip_audio_file(file_path, clip)
+        
+        if c.clip_class_name is not None:
             
-            if _SHOW_CLIPS:
-                print('Clip', _clip_count, clip)
-                
-            clip.save()
-             
-            if _CLIP_FILES_AVAILABLE:
-                _copy_clip_audio_file(file_path, clip)
-            
-            if c.clip_class_name is not None:
-                
-                # TODO: When this script becomes an importer, add the
-                # creating job to the following.
-                model_utils.annotate_clip(
-                    clip, annotation_info, c.clip_class_name)
-            
-            num_added += 1
+            # TODO: When this script becomes an importer, add the
+            # creating job to the following.
+            model_utils.annotate_clip(
+                clip, annotation_info, c.clip_class_name)
+        
+        num_added += 1
         
     return (num_added, num_rejected, num_excluded)
 
@@ -593,7 +614,7 @@ def _copy_clip_audio_file(file_path, clip):
     
     with open(clip_file_path, 'wb') as file_:
         file_.write(contents)
-
+    
     # print('Wrote file "{}" for clip {}.'.format(clip_file_path, clip.id))
 
     
