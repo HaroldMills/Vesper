@@ -534,8 +534,8 @@ def _show_stats(clip_type, train_stats, val_stats):
     
     plt.figure(2)
     plt.plot(
-        train_stats.precision, train_stats.recall, 'b',
-        val_stats.precision, val_stats.recall, 'g')
+        train_stats.recall, train_stats.precision, 'b',
+        val_stats.recall, val_stats.precision, 'g')
     plt.xlim((.9, 1))
     plt.ylim((.8, 1))
     plt.title('{} Classifier Precision vs. Recall'.format(clip_type))
