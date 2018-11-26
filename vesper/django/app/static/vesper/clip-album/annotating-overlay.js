@@ -5,6 +5,8 @@ export class AnnotatingOverlay {
             clipView, settings, defaultCommandableName, commandableDelegate) {
         
         this.clipView = clipView;
+        this.settings = settings;
+        
         this.commandableName =
             this._getCommandableName(settings, defaultCommandableName);
         this._commandableDelegate = commandableDelegate;
