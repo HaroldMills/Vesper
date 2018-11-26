@@ -17,7 +17,7 @@ from vesper.util.bunch import Bunch
 import vesper.util.os_utils as os_utils
 
 
-DATASET_NAME_PREFIX = 'Tseep !M'
+DATASET_NAME_PREFIX = 'Tseep 1M'
 
 DATASET_CONFIGS = yaml.load('''
 
