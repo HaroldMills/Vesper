@@ -45,7 +45,10 @@ import vesper.util.numpy_utils as numpy_utils
 # TODO: Try training several networks and using majority vote of best three.
 
 
-CLIPS_FILE_PATH = '/Users/harold/Desktop/2017 {} Clips 22050.h5'
+CLIPS_DIR_PATH = Path(
+    '/Users/harold/Desktop/NFC/Data/Vesper ML/Datasets/'
+    'Coarse Classification/2017')
+CLIPS_FILE_NAME_FORMAT = '2017 {} Clips 22050.h5'
 
 VERBOSE = True
 
@@ -174,8 +177,7 @@ def main():
     
     settings = SETTINGS[clip_type]
     
-    clips_file_path = Path(CLIPS_FILE_PATH.format(clip_type))
-    clips = get_clips(clips_file_path, settings)
+    clips = get_clips(clip_type, settings)
     
     if not VERBOSE:
         print('Computing features...')
@@ -216,7 +218,10 @@ def work_around_openmp_issue():
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
-def get_clips(file_path, settings):
+def get_clips(clip_type, settings):
+    
+    file_name = CLIPS_FILE_NAME_FORMAT.format(clip_type)
+    file_path = CLIPS_DIR_PATH / file_name
     
     file_ = ClipsHdf5File(file_path)
     
