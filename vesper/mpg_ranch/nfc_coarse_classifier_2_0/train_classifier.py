@@ -565,7 +565,7 @@ def save_classifier(model, settings, stats):
     
     path = classifier_utils.get_model_file_path(clip_type)
     path.parent.mkdir(exist_ok=True)
-    model.save(path)
+    model.save(str(path))
     
     settings = create_classifier_settings(settings, stats)
     text = yaml.dump(settings, default_flow_style=False)
