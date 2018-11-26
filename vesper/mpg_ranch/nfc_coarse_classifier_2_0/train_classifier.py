@@ -45,15 +45,15 @@ import vesper.util.numpy_utils as numpy_utils
 # TODO: Try training several networks and using majority vote of best three.
 
 
-_CLIPS_FILE_PATH = '/Users/harold/Desktop/2017 {} Clips 22050.h5'
+CLIPS_FILE_PATH = '/Users/harold/Desktop/2017 {} Clips 22050.h5'
 
-_VERBOSE = True
+VERBOSE = True
 
 # Progress notification period for clip reading and spectrogram computation
 # when output is verbose, in clips.
-_NOTIFICATION_PERIOD = 10000
+NOTIFICATION_PERIOD = 10000
 
-_SETTINGS = {
+SETTINGS = {
      
     'Tseep': Settings(
         
@@ -166,45 +166,45 @@ _SETTINGS = {
 }
 
 
-def _main():
+def main():
     
-    _work_around_openmp_issue()
+    work_around_openmp_issue()
 
     clip_type = sys.argv[1]
     
-    settings = _SETTINGS[clip_type]
+    settings = SETTINGS[clip_type]
     
-    clips_file_path = Path(_CLIPS_FILE_PATH.format(clip_type))
-    clips = _get_clips(clips_file_path, settings)
+    clips_file_path = Path(CLIPS_FILE_PATH.format(clip_type))
+    clips = get_clips(clips_file_path, settings)
     
-    if not _VERBOSE:
+    if not VERBOSE:
         print('Computing features...')
-    features = _compute_features(clips, settings)
+    features = compute_features(clips, settings)
     
     print('Getting targets from classifications...')
-    targets = _get_targets(clips)
+    targets = get_targets(clips)
     
     print('Creating training, validation, and test data sets...')
-    train_set, val_set, _ = _create_data_sets(features, targets, settings)
+    train_set, val_set, _ = create_data_sets(features, targets, settings)
         
 #     print('Training classifiers...')
 #     _train_classifiers(train_set, val_set, settings)
     
     print('Training classifier...')
-    model = _train_classifier(train_set, settings)
+    model = train_classifier(train_set, settings)
     
     print('Testing classifier...')
-    train_stats = _test_classifier(model, train_set)
-    val_stats = _test_classifier(model, val_set)
-    _show_stats(clip_type, train_stats, val_stats)
+    train_stats = test_classifier(model, train_set)
+    val_stats = test_classifier(model, val_set)
+    show_stats(clip_type, train_stats, val_stats)
 
     print('Saving classifier...')
-    _save_classifier(model, settings, val_stats)
+    save_classifier(model, settings, val_stats)
        
     print()
         
 
-def _work_around_openmp_issue():
+def work_around_openmp_issue():
 
     # Added this 2018-11-26 to work around a problem on macOS involving
     # potential confusion among multiple copies of the OpenMP runtime.
@@ -216,13 +216,13 @@ def _work_around_openmp_issue():
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
-def _get_clips(file_path, settings):
+def get_clips(file_path, settings):
     
     file_ = ClipsHdf5File(file_path)
     
     num_file_clips = file_.get_num_clips()
     
-    num_clips = _get_num_read_clips(num_file_clips, settings)
+    num_clips = get_num_read_clips(num_file_clips, settings)
     
     if num_clips != num_file_clips:
         s = '{} of {}'.format(num_clips, num_file_clips)
@@ -230,13 +230,13 @@ def _get_clips(file_path, settings):
         s = '{}'.format(num_clips)
     print('Reading {} clips from file "{}"...'.format(s, file_path))
     
-    if _VERBOSE:
+    if VERBOSE:
         start_time = time.time()
     
-    listener = (lambda n: print('    {}'.format(n))) if _VERBOSE else None
-    clips = file_.read_clips(num_clips, _NOTIFICATION_PERIOD, listener)
+    listener = (lambda n: print('    {}'.format(n))) if VERBOSE else None
+    clips = file_.read_clips(num_clips, NOTIFICATION_PERIOD, listener)
         
-    if _VERBOSE:
+    if VERBOSE:
         
         elapsed_time = time.time() - start_time
         elapsed_time = int(round(10 * elapsed_time)) / 10
@@ -261,7 +261,7 @@ def _get_clips(file_path, settings):
     return clips
         
         
-def _get_num_read_clips(num_file_clips, settings):
+def get_num_read_clips(num_file_clips, settings):
     
     train_size = settings.training_set_size
     val_size = settings.validation_set_size
@@ -294,12 +294,12 @@ def _get_num_read_clips(num_file_clips, settings):
         return num_clips
     
         
-def _compute_features(clips, settings):
+def compute_features(clips, settings):
     
-    vprint = ConditionalPrinter(_VERBOSE)
+    vprint = ConditionalPrinter(VERBOSE)
     
     vprint('Collecting waveforms...')
-    waveforms = _collect_waveforms(clips)
+    waveforms = collect_waveforms(clips)
     num_waveforms = len(waveforms)
     
     fc = FeatureComputer(settings)
@@ -313,7 +313,7 @@ def _compute_features(clips, settings):
     vprint('Computing spectrograms...')
     start_time = time.time()
     spectrograms = fc.compute_spectrograms(
-        waveforms, _NOTIFICATION_PERIOD, show_clip_count)
+        waveforms, NOTIFICATION_PERIOD, show_clip_count)
     elapsed_time = time.time() - start_time
     spectrogram_rate = num_waveforms / elapsed_time
     spectrum_rate = spectrogram_rate * spectrograms[0].shape[0]
@@ -348,7 +348,7 @@ def _compute_features(clips, settings):
     return features
 
     
-def _collect_waveforms(clips):
+def collect_waveforms(clips):
     num_clips = len(clips)
     num_samples = len(clips[0].waveform)
     waveforms = np.zeros((num_clips, num_samples))
@@ -357,17 +357,17 @@ def _collect_waveforms(clips):
     return waveforms
         
         
-def _get_targets(clips):
-    targets = np.array([_get_target(c) for c in clips])
+def get_targets(clips):
+    targets = np.array([get_target(c) for c in clips])
     targets.shape = (len(targets), 1)
     return targets
 
 
-def _get_target(clip):
+def get_target(clip):
     return 1 if clip.classification.startswith('Call') else 0
 
 
-def _create_data_sets(features, targets, settings):
+def create_data_sets(features, targets, settings):
     
     num_examples = len(features)
     
@@ -410,7 +410,7 @@ def _create_data_sets(features, targets, settings):
     return train_set, val_set, test_set
 
 
-def _train_classifiers(train_set, val_set, settings):
+def train_classifiers(train_set, val_set, settings):
     
     results = []
     
@@ -421,10 +421,10 @@ def _train_classifiers(train_set, val_set, settings):
         print('Training classifier with hidden layer sizes {}...'.format(
             hidden_layer_sizes))
         
-        model = _create_classifier_model(
+        model = create_classifier_model(
             input_length, hidden_layer_sizes, settings.regularization_beta)
         
-        verbose = 2 if _VERBOSE else 0
+        verbose = 2 if VERBOSE else 0
     
         model.fit(
             train_set.features,
@@ -433,8 +433,8 @@ def _train_classifiers(train_set, val_set, settings):
             batch_size=settings.batch_size,
             verbose=verbose)
 
-        stats = _test_classifier(model, val_set)
-        i = _find_classification_threshold_index(stats, settings.min_recall)
+        stats = test_classifier(model, val_set)
+        i = find_classification_threshold_index(stats, settings.min_recall)
         results.append(
             (hidden_layer_sizes, stats.threshold[i], stats.recall[i],
              stats.precision[i]))
@@ -446,7 +446,7 @@ def _train_classifiers(train_set, val_set, settings):
         print('    {} {:.2f} {:.3f} {:.3f}'.format(*r))
         
 
-def _create_classifier_model(
+def create_classifier_model(
         input_length, hidden_layer_sizes, regularization_beta):
     
     layer_sizes = hidden_layer_sizes + [1]
@@ -476,7 +476,7 @@ def _create_classifier_model(
     return model
         
     
-def _test_classifier(model, data_set, num_thresholds=101):
+def test_classifier(model, data_set, num_thresholds=101):
     
     features = data_set.features
     targets = data_set.targets
@@ -488,7 +488,7 @@ def _test_classifier(model, data_set, num_thresholds=101):
     return BinaryClassificationStats(targets, values, thresholds)
 
 
-def _find_classification_threshold_index(stats, min_recall):
+def find_classification_threshold_index(stats, min_recall):
     
     recall = stats.recall
     
@@ -499,15 +499,15 @@ def _find_classification_threshold_index(stats, min_recall):
     return i - 1
 
 
-def _train_classifier(train_set, settings):
+def train_classifier(train_set, settings):
     
     input_length = train_set.features.shape[1]
-    model = _create_classifier_model(
+    model = create_classifier_model(
         input_length,
         settings.hidden_layer_sizes,
         settings.regularization_beta)
     
-    verbose = 2 if _VERBOSE else 0
+    verbose = 2 if VERBOSE else 0
 
     model.fit(
         train_set.features,
@@ -519,7 +519,7 @@ def _train_classifier(train_set, settings):
     return model
     
        
-def _show_stats(clip_type, train_stats, val_stats):
+def show_stats(clip_type, train_stats, val_stats):
     
     plt.figure(1)
     plt.plot(
@@ -545,12 +545,12 @@ def _show_stats(clip_type, train_stats, val_stats):
     
     plt.show()
     
-    _print_stats(clip_type, 'training', train_stats)
+    print_stats(clip_type, 'training', train_stats)
     print()
-    _print_stats(clip_type, 'validation', val_stats)
+    print_stats(clip_type, 'validation', val_stats)
         
         
-def _print_stats(clip_type, name, stats):
+def print_stats(clip_type, name, stats):
     
     print('{} {} (threshold, recall, precision) triples:'.format(
         clip_type, name))
@@ -559,7 +559,7 @@ def _print_stats(clip_type, name, stats):
         print('    {:.2f} {:.3f} {:.3f}'.format(t, r, p))
         
         
-def _save_classifier(model, settings, stats):
+def save_classifier(model, settings, stats):
     
     clip_type = settings.clip_type
     
@@ -567,13 +567,13 @@ def _save_classifier(model, settings, stats):
     path.parent.mkdir(exist_ok=True)
     model.save(path)
     
-    settings = _create_classifier_settings(settings, stats)
+    settings = create_classifier_settings(settings, stats)
     text = yaml.dump(settings, default_flow_style=False)
     path = classifier_utils.get_settings_file_path(clip_type)
     path.write_text(text)
     
     
-def _create_classifier_settings(s, stats):
+def create_classifier_settings(s, stats):
     
     return dict(
         
@@ -592,16 +592,16 @@ def _create_classifier_settings(s, stats):
         spectrogram_mean=float(s.spectrogram_mean),
         spectrogram_standard_dev=float(s.spectrogram_standard_dev),
         
-        classification_threshold=_find_classification_threshold(
+        classification_threshold=find_classification_threshold(
             stats, s.min_recall)
         
     )
     
     
-def _find_classification_threshold(stats, min_recall):
-    i = _find_classification_threshold_index(stats, min_recall)
+def find_classification_threshold(stats, min_recall):
+    i = find_classification_threshold_index(stats, min_recall)
     return float(stats.threshold[i])
 
 
 if __name__ == '__main__':
-    _main()
+    main()
