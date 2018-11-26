@@ -381,11 +381,12 @@ def _add_clips(source_archive_dir_path):
                 num_added += m
                 num_rejected += n
                 num_excluded += p
-                night += _ONE_NIGHT
                 
                 if _clip_count >= _CLIP_COUNT_LIMIT:
                     break
-            
+                
+            night += _ONE_NIGHT
+
         if _clip_count >= _CLIP_COUNT_LIMIT:
             break
         
