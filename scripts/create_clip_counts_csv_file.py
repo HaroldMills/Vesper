@@ -74,6 +74,7 @@ CLASSIFICATION_SUBSTITUTIONS = {
 
 CSV_FILE_HEADER = ('Detector', 'Station', 'Date', 'Classification', 'Clips')
 
+WILDCARD_COARSE_CLASSIFICATIONS = ('Call', 'XCall')
 
 Row = namedtuple(
     'Row', ('detector', 'station', 'date', 'classification', 'clip_count'))
@@ -90,7 +91,8 @@ def main():
 #     print('Query returned {} clip counts.'.format(len(rows)))
 #     print()
     
-    rows = add_call_star_rows(rows)
+    for coarse_classification in WILDCARD_COARSE_CLASSIFICATIONS:
+        rows = add_wildcard_rows(rows, coarse_classification)
     
     write_csv_file(archive_dir_path, rows)
     
@@ -122,16 +124,18 @@ def perform_substitutions_aux(
     return Row(detector, station, date, classification, clip_count)
 
         
-def add_call_star_rows(rows):
+def add_wildcard_rows(rows, coarse_classification):
     
     call_counts = defaultdict(int)
     
     for r in rows:
-        if r.classification.startswith('Call'):
+        if r.classification.startswith(coarse_classification):
             key = (r.detector, r.station, r.date)
             call_counts[key] += int(r.clip_count)
             
-    new_rows = [create_call_star_row(k, v) for k, v in call_counts.items()]
+    new_rows = [
+        create_wildcard_row(k, v, coarse_classification)
+        for k, v in call_counts.items()]
     
     rows = rows + new_rows
     
@@ -140,8 +144,8 @@ def add_call_star_rows(rows):
     return rows
 
 
-def create_call_star_row(k, v):
-    t = k + ('Call*', v)
+def create_wildcard_row(k, v, coarse_classification):
+    t = k + (coarse_classification + '*', v)
     return Row(*t)
             
     
