@@ -13,6 +13,7 @@
 # tf.set_random_seed(1)
 
 from pathlib import Path
+import os
 import sys
 import time
 
@@ -167,6 +168,8 @@ _SETTINGS = {
 
 def _main():
     
+    _work_around_openmp_issue()
+
     clip_type = sys.argv[1]
     
     settings = _SETTINGS[clip_type]
@@ -200,6 +203,18 @@ def _main():
        
     print()
         
+
+def _work_around_openmp_issue():
+
+    # Added this 2018-11-26 to work around a problem on macOS involving
+    # potential confusion among multiple copies of the OpenMP runtime.
+    # The problem only appears to arise when I install TensorFlow using
+    # Conda rather than pip. I'm not sure where the multiple copies are
+    # coming from. Perhaps Conda and Xcode? See
+    # https://github.com/openai/spinningup/issues/16 for an example of
+    # another person encountering this issue.
+    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
 
 def _get_clips(file_path, settings):
     
