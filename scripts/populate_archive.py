@@ -481,7 +481,15 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
         mic_output = channel.mic_output
         sample_rate = recording.sample_rate
         if _CLIP_FILES_AVAILABLE:
-            length = audio_file_utils.get_wave_file_info(file_path).length
+            try:
+                length = audio_file_utils.get_wave_file_info(file_path).length
+            except Exception as e:
+                print((
+                    'Could not read audio file info for clip "{}". '
+                    'Error message was: {}. '
+                    'Clip will be ignored.').format(file_path, str(e)))
+                num_rejected += 1
+                continue
         else:
             length = c.duration * sample_rate
         start_time = c.start_time
@@ -508,7 +516,15 @@ def _add_clips_aux(clips, night, detectors, annotation_infos):
         clip.save()
          
         if _CLIP_FILES_AVAILABLE and _COPY_CLIP_FILES:
-            _copy_clip_audio_file(file_path, clip)
+            try:
+                _copy_clip_audio_file(file_path, clip)
+            except Exception as e:
+                print((
+                    'Copy failed for clip file "{}". '
+                    'Error message was: {}. '
+                    'Clip will be ignored.').format(file_path, str(e)))
+                num_rejected += 1
+                continue
         
         if c.clip_class_name is not None:
             
