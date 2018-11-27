@@ -26,18 +26,17 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-# TODO: Prepare Thrush HDF5 files.
-# TODO: Train thrush coarse classifier.
 # TODO: Figure out how to save and restore estimator.
 # TODO: Build Vesper classifier from saved estimator.
-# TODO: Look at clip albums of incorrectly classified clips.
+# TODO: Run tseep classifier on all 2017 clips.
+# TODO: Look at incorrectly classified clips and reclassify as needed.
+# TODO: Prepare Thrush HDF5 files.
+# TODO: Train thrush coarse classifier.
 # TODO: Try dropout and L2 regularization.
 # TODO: Tune hyperparameters.
 # TODO: Evaluate on only initial portion of training data.
 # TODO: Figure out how to get sequence of training run precision-recall curves.
-
-# TODO: Does normalization matter with one input feature?
-# TODO: Evaluate on an initial part of training set.
+# TODO: Consider simplifying normalization.
 
 
 CLASSIFIER_NAME = 'Tseep 1M'
