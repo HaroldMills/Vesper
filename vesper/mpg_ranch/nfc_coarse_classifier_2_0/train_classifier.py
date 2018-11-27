@@ -19,6 +19,8 @@ import time
 
 from keras.models import Sequential
 from keras.layers import Dense
+from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.ticker import MultipleLocator
 import keras
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,10 +47,24 @@ import vesper.util.numpy_utils as numpy_utils
 # TODO: Try training several networks and using majority vote of best three.
 
 
-CLIPS_DIR_PATH = Path(
+DATASET_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Vesper ML/Datasets/'
     'Coarse Classification/2017')
-CLIPS_FILE_NAME_FORMAT = '2017 {} Clips 22050.h5'
+DATASET_FILE_NAME_FORMAT = '2017 {} Clips 22050.h5'
+
+RESULTS_DIR_PATH = Path('/Users/harold/Desktop/ML Results')
+PR_PLOT_FILE_NAME_FORMAT = '{} 2017 PR.pdf'
+ROC_PLOT_FILE_NAME_FORMAT = '{} 2017 ROC.pdf'
+PR_CSV_FILE_NAME_FORMAT = '{} 2017 PR.csv'
+
+PR_CSV_FILE_HEADER = (
+    'Threshold,'
+    'Training Recall,'
+    'Training Precision,'
+    'Validation Recall,'
+    'Validation Precision\n')
+
+PR_CSV_FILE_ROW_FORMAT = '{:.2f},{:.3f},{:.3f},{:.3f},{:.3f}\n'
 
 VERBOSE = True
 
@@ -89,8 +105,12 @@ SETTINGS = {
         # regression classifier.
         hidden_layer_sizes=[16],
         
-        regularization_beta=.002
+        regularization_beta=.002,
         
+        precision_recall_plot_lower_axis_limit=.80,
+        precision_recall_plot_major_tick_interval=.05,
+        precision_recall_plot_minor_tick_interval=.01
+
     ),
              
     'Thrush': Settings(
@@ -161,8 +181,12 @@ SETTINGS = {
         #    [8], [10], [12], [14], [16], [18], [20], [22], [24]
         # ],
         
-        regularization_beta=.002
+        regularization_beta=.002,
         
+        precision_recall_plot_lower_axis_limit=.80,
+        precision_recall_plot_major_tick_interval=.05,
+        precision_recall_plot_minor_tick_interval=.01
+
     )
              
              
@@ -198,7 +222,7 @@ def main():
     print('Testing classifier...')
     train_stats = test_classifier(model, train_set)
     val_stats = test_classifier(model, val_set)
-    show_stats(clip_type, train_stats, val_stats)
+    save_results(clip_type, train_stats, val_stats, settings)
 
     print('Saving classifier...')
     save_classifier(model, settings, val_stats)
@@ -220,8 +244,7 @@ def work_around_openmp_issue():
 
 def get_clips(clip_type, settings):
     
-    file_name = CLIPS_FILE_NAME_FORMAT.format(clip_type)
-    file_path = CLIPS_DIR_PATH / file_name
+    file_path = create_dataset_file_path(clip_type)
     
     file_ = ClipsHdf5File(file_path)
     
@@ -266,6 +289,11 @@ def get_clips(clip_type, settings):
     return clips
         
         
+def create_dataset_file_path(clip_type):
+    file_name = DATASET_FILE_NAME_FORMAT.format(clip_type)
+    return DATASET_DIR_PATH / file_name
+
+
 def get_num_read_clips(num_file_clips, settings):
     
     train_size = settings.training_set_size
@@ -524,44 +552,118 @@ def train_classifier(train_set, settings):
     return model
     
        
-def show_stats(clip_type, train_stats, val_stats):
-    
-    plt.figure(1)
-    plt.plot(
-        train_stats.false_positive_rate, train_stats.true_positive_rate, 'b',
-        val_stats.false_positive_rate, val_stats.true_positive_rate, 'g')
-    plt.xlim((0, 1))
-    plt.ylim((0, 1))
-    plt.title('{} Classifier ROC'.format(clip_type))
-    plt.legend(['Training', 'Validation'])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    
-    plt.figure(2)
-    plt.plot(
-        train_stats.recall, train_stats.precision, 'b',
-        val_stats.recall, val_stats.precision, 'g')
-    plt.xlim((.9, 1))
-    plt.ylim((.8, 1))
-    plt.title('{} Classifier Precision vs. Recall'.format(clip_type))
-    plt.legend(['Training', 'Validation'])
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    
-    plt.show()
-    
-    print_stats(clip_type, 'training', train_stats)
-    print()
-    print_stats(clip_type, 'validation', val_stats)
+def save_results(clip_type, train_stats, val_stats, settings):
+    plot_precision_recall_curves(clip_type, train_stats, val_stats, settings)
+    plot_roc_curves(clip_type, train_stats, val_stats)
+    write_precision_recall_csv_file(clip_type, train_stats, val_stats)
         
         
-def print_stats(clip_type, name, stats):
+def plot_precision_recall_curves(clip_type, train_stats, val_stats, settings):
     
-    print('{} {} (threshold, recall, precision) triples:'.format(
-        clip_type, name))
+    file_path = create_results_file_path(PR_PLOT_FILE_NAME_FORMAT, clip_type)
     
-    for t, r, p in zip(stats.threshold, stats.recall, stats.precision):
-        print('    {:.2f} {:.3f} {:.3f}'.format(t, r, p))
+    with PdfPages(file_path) as pdf:
+        
+        plt.figure(figsize=(6, 6))
+        
+        # Plot training and validation curves.
+        plt.plot(
+            train_stats.recall, train_stats.precision, 'b',
+            val_stats.recall, val_stats.precision, 'g')
+        
+        # Set title, legend, and axis labels.
+        plt.title('{} Precision vs. Recall'.format(clip_type))
+        plt.legend(['Training', 'Validation'])
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        
+        # Set axis limits.
+        lower_limit = settings.precision_recall_plot_lower_axis_limit
+        plt.xlim((lower_limit, 1))
+        plt.ylim((lower_limit, 1))
+        
+        # Configure grid.
+        major_locator = MultipleLocator(
+            settings.precision_recall_plot_major_tick_interval)
+        minor_locator = MultipleLocator(
+            settings.precision_recall_plot_minor_tick_interval)
+        axes = plt.gca()
+        axes.xaxis.set_major_locator(major_locator)
+        axes.xaxis.set_minor_locator(minor_locator)
+        axes.yaxis.set_major_locator(major_locator)
+        axes.yaxis.set_minor_locator(minor_locator)
+        plt.grid(which='both')
+        plt.grid(which='minor', alpha=.4)
+
+        pdf.savefig()
+        
+        plt.close()
+
+
+def create_results_file_path(file_name_format, clip_type):
+    file_name = file_name_format.format(clip_type)
+    return RESULTS_DIR_PATH / file_name
+
+
+def plot_roc_curves(clip_type, train_stats, val_stats):
+    
+    file_path = create_results_file_path(
+        ROC_PLOT_FILE_NAME_FORMAT, clip_type)
+    
+    with PdfPages(file_path) as pdf:
+        
+        plt.figure(figsize=(6, 6))
+    
+        # Plot training and validation curves.
+        plt.plot(
+            train_stats.false_positive_rate, train_stats.true_positive_rate,
+            'b', val_stats.false_positive_rate, val_stats.true_positive_rate,
+            'g')
+        
+        # Set title, legend, and axis labels.
+        plt.title('{} ROC'.format(clip_type))
+        plt.legend(['Training', 'Validation'])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        
+        # Set axis limits.
+        plt.xlim((0, 1))
+        plt.ylim((0, 1))
+        
+        # Configure grid.
+        major_locator = MultipleLocator(.25)
+        minor_locator = MultipleLocator(.05)
+        axes = plt.gca()
+        axes.xaxis.set_major_locator(major_locator)
+        axes.xaxis.set_minor_locator(minor_locator)
+        axes.yaxis.set_major_locator(major_locator)
+        axes.yaxis.set_minor_locator(minor_locator)
+        plt.grid(which='both')
+        plt.grid(which='minor', alpha=.4)
+    
+        pdf.savefig()
+        
+        plt.close()
+
+
+def write_precision_recall_csv_file(clip_type, train_stats, val_stats):
+    
+    file_path = create_results_file_path(PR_CSV_FILE_NAME_FORMAT, clip_type)
+    
+    with open(file_path, 'w') as csv_file:
+        
+        csv_file.write(PR_CSV_FILE_HEADER)
+        
+        columns = (
+            train_stats.threshold,
+            train_stats.recall,
+            train_stats.precision,
+            val_stats.recall,
+            val_stats.precision
+        )
+        
+        for row in zip(*columns):
+            csv_file.write(PR_CSV_FILE_ROW_FORMAT.format(*row))
         
         
 def save_classifier(model, settings, stats):
