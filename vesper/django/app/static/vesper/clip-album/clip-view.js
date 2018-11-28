@@ -503,8 +503,10 @@ export class ClipView {
 
 	_renderOverlays() {
 		this._clearOverlayCanvas();
-        for (const overlay of this.overlays)
-            overlay.render();
+		if (this.settings.overlays.visible) {
+            for (const overlay of this.overlays)
+                overlay.render();
+		}
 	}
 
 
