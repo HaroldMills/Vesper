@@ -26,6 +26,10 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
             
         this.timeAnnotationName = settings.timeAnnotationName;
         this.frequencyAnnotationName = settings.frequencyAnnotationName;
+        this.markerType = settings.markerType;
+        
+        if (this.markerType === undefined)
+            this.markerType = 'Plus Sign';
         
     }
 
@@ -138,17 +142,27 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
 
         context.beginPath();
         
-        // Draw line segments that pass through point and span entire clip.
-        context.moveTo(x, 0);
-        context.lineTo(x, canvas.height);
-        context.moveTo(0, y);
-        context.lineTo(canvas.width, y);
-        
-        // Draw short line segments centered on point.
-//        context.moveTo(x - delta, y);
-//        context.lineTo(x + delta, y);
-//        context.moveTo(x, y - delta);
-//        context.lineTo(x, y + delta);
+        if (this.markerType === 'Crosshairs') {
+            
+            // Draw crosshairs through point.
+            context.moveTo(x, 0);
+            context.lineTo(x, canvas.height);
+            context.moveTo(0, y);
+            context.lineTo(canvas.width, y);
+            
+        } else if (this.markerType === null) {
+            
+            // Draw nothing.
+            
+        } else {
+            
+            // Draw plus sign centered on point.
+            context.moveTo(x - delta, y);
+            context.lineTo(x + delta, y);
+            context.moveTo(x, y - delta);
+            context.lineTo(x, y + delta);
+            
+        }
         
         context.stroke();
 
