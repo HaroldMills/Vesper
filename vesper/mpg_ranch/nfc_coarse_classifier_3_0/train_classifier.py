@@ -7,12 +7,14 @@ whether or not a clip contains a nocturnal flight call.
 
 
 from pathlib import Path
+import bisect
 import functools
 import glob
 import math
 import os
 import shutil
 import time
+import yaml
 
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import MultipleLocator
@@ -22,6 +24,8 @@ import tensorflow as tf
 
 from vesper.util.binary_classification_stats import BinaryClassificationStats
 from vesper.util.settings import Settings
+import vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier_utils as \
+    classifier_utils
 import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
@@ -39,7 +43,7 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 # TODO: Consider simplifying normalization.
 
 
-CLASSIFIER_NAME = 'Tseep 1M'
+CLASSIFIER_NAME = 'Tseep Quick'
 
 ML_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML')
 DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Coarse Classification'
@@ -127,7 +131,9 @@ BASE_TSEEP_SETTINGS = Settings(
     
     precision_recall_plot_lower_axis_limit=.80,
     precision_recall_plot_major_tick_interval=.05,
-    precision_recall_plot_minor_tick_interval=.01
+    precision_recall_plot_minor_tick_interval=.01,
+    
+    min_classifier_recall=.98
     
 )
 
@@ -247,6 +253,8 @@ def train_and_evaluate_classifier(name):
      
     classifier.evaluate()
     
+    classifier.save()
+    
 
 class Classifier:
     
@@ -322,11 +330,12 @@ class Classifier:
 
     def evaluate(self):
         print('Evaluating classifier on training dataset...')
-        train_stats = self._evaluate(self.create_short_training_dataset)
+        self.train_stats = self._evaluate(self.create_short_training_dataset)
         print('Evaluating classifier on validation dataset...')
-        val_stats = self._evaluate(self.create_validation_dataset)
+        self.val_stats = self._evaluate(self.create_validation_dataset)
         print('Saving results...')
-        save_results(self.name, train_stats, val_stats, self.settings)
+        save_results(
+            self.name, self.train_stats, self.val_stats, self.settings)
         print('Done.')
             
         
@@ -366,8 +375,46 @@ class Classifier:
     def create_validation_dataset(self):
         return create_spectrogram_dataset(
             self.settings, 'Validation', feature_name=self.model_input_name)
+        
+        
+    def save(self):
+        
+        clip_type = self.name.split()[0]
+        
+        path = classifier_utils.get_model_file_path(clip_type)
+        path.parent.mkdir(exist_ok=True)
+        self.model.save(str(path))
+
+        self.settings.classification_threshold = find_classification_threshold(
+            self.val_stats, self.settings.min_classifier_recall)
+        
+        settings = self.settings.__dict__
+        text = yaml.dump(settings, default_flow_style=False)
+        path = classifier_utils.get_settings_file_path(clip_type)
+        path.write_text(text)
 
     
+def find_classification_threshold(stats, min_recall):
+    
+    # Find index of last recall that is at least `min_recall`.
+    # `stats.recall` is nonincreasing, so we flip it before using
+    # `bisect.bisect_left`, and then flip the resulting index.
+    recalls = np.flip(stats.recall)
+    i = bisect.bisect_left(recalls, min_recall)
+    i = len(recalls) - 1 - i
+    
+    # The float conversion in the following ensures that the assigned
+    # type is Python's `float` instead of a NumPy type. The latter
+    # doesn't play nicely with `yaml.dump`.
+    threshold = float(stats.threshold[i])
+    
+#     print('recalls', stats.recall)
+#     print('thresholds', stats.threshold)
+#     print(min_recall, i, threshold, threshold.__class__.__name__)
+    
+    return threshold
+
+
 def create_model(settings):
     
     print('Creating classifier model...')
@@ -477,9 +524,8 @@ def add_output_layer(model, settings, regularizer):
     
     if len(settings.convolutional_layer_sizes) == 0 and \
             len(settings.hidden_dense_layer_sizes) == 0:
-        # first network layer (if the output layer is also the first
-        # layer, the network will have a single neuron and perform
-        # logistic regression)
+        # output layer is only network layer (i.e. the network will
+        # have a single neuron and perform logistic regression)
         
         kwargs['input_dim'] = get_sliced_spectrogram_size(settings)
 
@@ -645,8 +691,11 @@ def compute_spectrogram_clipping_settings(settings):
         plt.xlabel('Log Power')
         plt.show()
 
-    s.spectrogram_clipping_min = min_value
-    s.spectrogram_clipping_max = max_value
+    # The float conversions in the following ensure that the assigned
+    # type is Python's `float` instead of a NumPy type. The latter
+    # doesn't play nicely with `yaml.dump`.
+    s.spectrogram_clipping_min = float(min_value)
+    s.spectrogram_clipping_max = float(max_value)
     
     
 def create_spectrogram_dataset(
@@ -786,8 +835,11 @@ def compute_spectrogram_normalization_settings(settings):
             'Normalization mean and standard deviation are ({}, {}).'.format(
                 mean, std_dev))
         
-    s.spectrogram_normalization_scale_factor = 1 / std_dev
-    s.spectrogram_normalization_offset = -mean / std_dev
+    # The float conversions in the following ensure that the assigned
+    # type is Python's `float` instead of a NumPy type. The latter
+    # doesn't play nicely with `yaml.dump`.
+    s.spectrogram_normalization_scale_factor = float(1 / std_dev)
+    s.spectrogram_normalization_offset = float(-mean / std_dev)
 
     
 def save_results(classifier_name, train_stats, val_stats, settings):
