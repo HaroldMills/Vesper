@@ -30,6 +30,7 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
+# TODO: Don't use random slicing offset during prediction.
 # TODO: Figure out how to save and restore estimator.
 # TODO: Build Vesper classifier from saved estimator.
 # TODO: Run tseep classifier on all 2017 clips.
@@ -245,14 +246,10 @@ def work_around_openmp_issue():
 
 
 def train_and_evaluate_classifier(name):
-    
     settings = SETTINGS[name]
-     
     classifier = Classifier(name, settings)
     classifier.train()
-     
     classifier.evaluate()
-    
     classifier.save()
     
 
@@ -313,11 +310,11 @@ class Classifier:
                 s.num_training_steps))
         
         train_spec = tf.estimator.TrainSpec(
-            input_fn=self.create_training_dataset,
+            input_fn=self._create_training_dataset,
             max_steps=s.num_training_steps)
         
         eval_spec = tf.estimator.EvalSpec(
-            input_fn=self.create_validation_dataset,
+            input_fn=self._create_validation_dataset,
             steps=None,
             start_delay_secs=30,
             throttle_secs=30)
@@ -330,9 +327,9 @@ class Classifier:
 
     def evaluate(self):
         print('Evaluating classifier on training dataset...')
-        self.train_stats = self._evaluate(self.create_short_training_dataset)
+        self.train_stats = self._evaluate(self._create_short_training_dataset)
         print('Evaluating classifier on validation dataset...')
-        self.val_stats = self._evaluate(self.create_validation_dataset)
+        self.val_stats = self._evaluate(self._create_validation_dataset)
         print('Saving results...')
         save_results(
             self.name, self.train_stats, self.val_stats, self.settings)
@@ -361,18 +358,19 @@ class Classifier:
         return BinaryClassificationStats(labels, predictions, thresholds)
         
         
-    def create_training_dataset(self):
+    def _create_training_dataset(self):
         return create_spectrogram_dataset(
             self.settings, 'Training', feature_name=self.model_input_name,
-            num_repeats=100, shuffle=True)
+            num_repeats=None, shuffle=True)
     
     
-    def create_short_training_dataset(self):
+    def _create_short_training_dataset(self):
         return create_spectrogram_dataset(
-            self.settings, 'Training', feature_name=self.model_input_name)
+            self.settings, 'Training', feature_name=self.model_input_name,
+            num_repeats=1)
 
 
-    def create_validation_dataset(self):
+    def _create_validation_dataset(self):
         return create_spectrogram_dataset(
             self.settings, 'Validation', feature_name=self.model_input_name)
         
@@ -706,14 +704,16 @@ def create_spectrogram_dataset(
     
     dataset = create_base_dataset(settings.dataset_name, dataset_type)
     
+    if num_repeats is None:
+        dataset = dataset.repeat()
+    elif num_repeats != 1:
+        dataset = dataset.repeat(num_repeats)
+    
     waveform_preprocessor = WaveformPreprocessor(settings)
      
     dataset = dataset.map(
         waveform_preprocessor,
         num_parallel_calls=settings.num_preprocessing_parallel_calls)
-    
-    if num_repeats != 1:
-        dataset = dataset.repeat(num_repeats)
     
     batch_size = get_batch_size(settings, batch_size)
 
@@ -733,10 +733,10 @@ def create_spectrogram_dataset(
         settings = Settings(
             settings, spectrogram_normalization_enabled=enabled)
 
-    spectrogram_preprocessor = SpectrogramPreprocessor(settings, feature_name)
+    spectrogram_computer = SpectrogramComputer(settings, feature_name)
     
     dataset = dataset.map(
-        spectrogram_preprocessor,
+        spectrogram_computer,
         num_parallel_calls=settings.num_preprocessing_parallel_calls)
     
     return dataset
@@ -1021,14 +1021,32 @@ def show_spectrogram_dataset(settings):
 
 def test_random_slicing_offsets():
     
+    """
+    Tests the use of random slicing offsets for data augmentation.
+    
+    Random slicing offsets are used in the `WaveformPreprocessor` class
+    to distribute NFC onsets more evenly within the training dataset.
+    """
+    
+    class RandomSlicer:
+        
+        def __init__(self):
+            self.max_offset = 2
+            self.length = 3
+            
+        def __call__(self, x):
+            n = self.max_offset
+            i = tf.random.uniform((), -n, n, dtype=tf.int32)
+            return x[n + i:n + self.length + i]
+    
     # Create dataset as NumPy array.
     m = 10
-    n = 5
+    n = 6
     x = 100 * np.arange(m).reshape((m, 1)) + np.arange(n).reshape((1, n))
 
     # Create TensorFlow dataset.
-    slicer = _RandomSlicer()
-    dataset = tf.data.Dataset.from_tensor_slices(x).map(slicer)
+    slicer = RandomSlicer()
+    dataset = tf.data.Dataset.from_tensor_slices(x).repeat(2).map(slicer)
     
     # Show dataset.
     iterator = dataset.make_one_shot_iterator()
@@ -1044,20 +1062,6 @@ def test_random_slicing_offsets():
                 
             except tf.errors.OutOfRangeError:
                 break    
-    
-    
-class _RandomSlicer:
-    
-    
-    def __init__(self):
-        self.max_offset = 2
-        self.length = 3
-        
-        
-    def __call__(self, x):
-        n = self.max_offset
-        i = tf.random.uniform((), -n, n, dtype=tf.int32)
-        return x[n + i:n + self.length + i]
     
     
 class WaveformPreprocessor:
@@ -1092,7 +1096,7 @@ class WaveformPreprocessor:
         return waveform, label
     
     
-class SpectrogramPreprocessor:
+class SpectrogramComputer:
     
     
     def __init__(self, settings, output_feature_name='spectrogram'):
@@ -1100,9 +1104,11 @@ class SpectrogramPreprocessor:
         self.settings = settings
         self.output_feature_name = output_feature_name
         
-        (self.time_start_index, self.time_end_index, self.window_size,
-         self.hop_size, self.dft_size, self.freq_start_index,
-         self.freq_end_index) = get_low_level_preprocessing_settings(settings)
+        (time_start_index, time_end_index, self.window_size, self.hop_size,
+         self.dft_size, self.freq_start_index, self.freq_end_index) = \
+            get_low_level_preprocessing_settings(settings)
+         
+        self.waveform_length = time_end_index - time_start_index
                 
         self.window_fn = functools.partial(
             tf.contrib.signal.hann_window, periodic=True)
@@ -1114,16 +1120,12 @@ class SpectrogramPreprocessor:
         
         s = self.settings
         
-        # At this point the `waveforms` tensor has an unknown final
-        # dimension. We know that the dimension is the sliced waveform
-        # length, however, so we set it. If the dimension remains
-        # unknown, the `Classifier.create_cnn_model` method fails,
-        # though the `Classifier.create_dnn_model` method does not.
-        waveform_length = self.time_end_index - self.time_start_index
-        dims = list(waveforms.shape.dims)
-        dims[-1] = tf.Dimension(waveform_length)
-        shape = tf.TensorShape(dims)
-        waveforms.set_shape(shape)
+        # At this point the `waveforms` tensor has a final dimension of
+        # `None`, even though we know that the dimension is the sliced
+        # waveform length. We set the dimension since if we don't and
+        # the model includes at least one convolutional layer, then the
+        # `Classifier.train` method raises an exception.
+        self._fix_waveform_batch_shape(waveforms)
 
         # Compute STFTs.
         waveforms = tf.cast(waveforms, tf.float32)
@@ -1174,6 +1176,13 @@ class SpectrogramPreprocessor:
         labels = tf.reshape(labels, (-1, 1))
         
         return features, labels
+    
+    
+    def _fix_waveform_batch_shape(self, waveforms):
+        dims = list(waveforms.shape.dims)
+        dims[-1] = tf.Dimension(self.waveform_length)
+        shape = tf.TensorShape(dims)
+        waveforms.set_shape(shape)
     
         
 if __name__ == '__main__':
