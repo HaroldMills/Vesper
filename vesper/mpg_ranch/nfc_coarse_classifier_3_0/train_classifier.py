@@ -121,7 +121,7 @@ BASE_TSEEP_SETTINGS = Settings(
     spectrogram_normalization_offset=None,
     
     convolutional_layer_sizes=[16, 32],
-    hidden_dense_layer_sizes=[16],
+    dense_layer_sizes=[16],
     batch_normalization_enabled=True,
     l2_regularization_enabled=False,
     l2_regularization_beta=.002,
@@ -142,7 +142,7 @@ SETTINGS = {
     
     'Tseep Logistic Regression': Settings(BASE_TSEEP_SETTINGS, Settings(
         convolutional_layer_sizes=[],
-        hidden_dense_layer_sizes=[],
+        dense_layer_sizes=[],
         l2_regularization_enabled=True,
         precision_recall_plot_lower_axis_limit=0,
         precision_recall_plot_major_tick_interval=.25,
@@ -151,13 +151,13 @@ SETTINGS = {
     
     'Tseep Baseline': Settings(BASE_TSEEP_SETTINGS, Settings(
         convolutional_layer_sizes=[],
-        hidden_dense_layer_sizes=[16]
+        dense_layer_sizes=[16]
     )),
     
     'Tseep Quick': Settings(BASE_TSEEP_SETTINGS, Settings(
         pretraining_num_examples=1000,
         convolutional_layer_sizes=[],
-        hidden_dense_layer_sizes=[16],
+        dense_layer_sizes=[16],
         num_training_steps=1000,
         precision_recall_plot_lower_axis_limit=0,
         precision_recall_plot_major_tick_interval=.25,
@@ -488,11 +488,11 @@ def add_convolutional_layers(model, settings, regularizer):
     
 def add_hidden_dense_layers(model, settings, regularizer):
     
-    num_layers = len(settings.hidden_dense_layer_sizes)
+    num_layers = len(settings.dense_layer_sizes)
     
     for layer_num in range(num_layers):
         
-        layer_size = settings.hidden_dense_layer_sizes[layer_num]
+        layer_size = settings.dense_layer_sizes[layer_num]
         
         kwargs = {
             'units': layer_size,
@@ -523,7 +523,7 @@ def add_output_layer(model, settings, regularizer):
     }
     
     if len(settings.convolutional_layer_sizes) == 0 and \
-            len(settings.hidden_dense_layer_sizes) == 0:
+            len(settings.dense_layer_sizes) == 0:
         # output layer is only network layer (i.e. the network will
         # have a single neuron and perform logistic regression)
         
