@@ -140,7 +140,8 @@ def annotate_old_bird_calls():
                         str(call_center_index), creating_user=user)
                     
                     # Get ground truth clip call center frequency.
-                    annotations = get_clip_annotations(ground_truth_clip)
+                    annotations = \
+                        model_utils.get_clip_annotations(ground_truth_clip)
                     call_center_freq = annotations[CENTER_FREQ_ANNOTATION_NAME]
 
                     # Annotate Old Bird clip call center frequency.
@@ -153,17 +154,6 @@ def annotate_old_bird_calls():
                         annotation_value, creating_user=user)
                         
     return rows
-
-
-# This function will be in `vesper.django.model_utils` as of Vesper version
-# 0.3.15. We include it here so this script will work with version 0.3.14.
-def get_clip_annotations(clip):
-    
-    annotations = StringAnnotation.objects.filter(
-        clip_id=clip.id
-    ).annotate(name=F('info__name'))
-
-    return dict((a.name, a.value) for a in annotations)
 
 
 def create_raw_df(rows):
