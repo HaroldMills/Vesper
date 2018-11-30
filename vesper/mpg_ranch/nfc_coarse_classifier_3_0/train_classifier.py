@@ -98,19 +98,6 @@ BASE_TSEEP_SETTINGS = Settings(
     # number of parallel calls for input and spectrogram computation
     num_preprocessing_parallel_calls=4,
     
-    # spectrogram clipping pretraining settings
-    spectrogram_clipping_pretraining_enabled=True,
-    pretraining_num_examples=20000,
-    pretraining_batch_size=1000,
-    pretraining_histogram_min=-25,
-    pretraining_histogram_max=50,
-    pretraining_histogram_num_bins=750,
-    pretraining_clipped_values_fraction=.001,
-    pretraining_value_distribution_plotting_enabled=False,
-    
-    # spectrogram normalization pretraining settings
-    spectrogram_normalization_pretraining_enabled=True,
-    
     # spectrogram clipping settings
     spectrogram_clipping_enabled=True,
     spectrogram_clipping_min=None,
@@ -121,19 +108,34 @@ BASE_TSEEP_SETTINGS = Settings(
     spectrogram_normalization_scale_factor=None,
     spectrogram_normalization_offset=None,
     
+    # spectrogram clipping and normalization pretraining settings
+    spectrogram_clipping_pretraining_enabled=True,
+    spectrogram_normalization_pretraining_enabled=True,
+    pretraining_num_examples=20000,
+    pretraining_batch_size=100,
+    pretraining_histogram_min=-25,
+    pretraining_histogram_max=50,
+    pretraining_histogram_num_bins=750,
+    pretraining_clipped_values_fraction=.001,
+    pretraining_value_distribution_plotting_enabled=False,
+    
+    # neural network settings
     convolutional_layer_sizes=[16, 32],
     dense_layer_sizes=[16],
     batch_normalization_enabled=True,
     l2_regularization_enabled=False,
     l2_regularization_beta=.002,
     
-    batch_size=64,
+    # neural network training settings
+    training_batch_size=64,
     num_training_steps=50000,
     
+    # training results settings
     precision_recall_plot_lower_axis_limit=.80,
     precision_recall_plot_major_tick_interval=.05,
     precision_recall_plot_minor_tick_interval=.01,
     
+    # classifier performance settings
     min_classifier_recall=.98
     
 )
@@ -260,12 +262,12 @@ class Classifier:
         
         self.name = name
         
-        shutil.rmtree(self.model_dir_path, ignore_errors=True)
-        
-        self.settings = settings
-        complete_settings(self.settings)
+        self.settings = complete_settings(settings)
         
         self.model = create_model(self.settings)
+        
+        # Remove old model dir path for a cold start.
+        shutil.rmtree(self.model_dir_path, ignore_errors=True)
         
         self.estimator = self._create_estimator()
         
@@ -320,9 +322,15 @@ class Classifier:
             throttle_secs=30)
         
         start_time = time.time()
+        
         tf.estimator.train_and_evaluate(self.estimator, train_spec, eval_spec)
-        delta_time = time.time() - start_time
-        print('Training took {} seconds.'.format(delta_time))
+        
+        elapsed_time = time.time() - start_time
+        rate = s.num_training_steps / elapsed_time
+        print((
+            'Training took {:.1f} seconds for {} steps, a rate of {:.1f} '
+            'steps per second.').format(
+                elapsed_time, s.num_training_steps, rate))
 
 
     def evaluate(self):
@@ -340,6 +348,8 @@ class Classifier:
         
         labels = get_dataset_labels(dataset_creator())
         
+        start_time = time.time()
+        
         predictions = self.estimator.predict(input_fn=dataset_creator)
         
         # At this point `predictions` is an iterator that yields
@@ -349,6 +359,14 @@ class Classifier:
         predictions = np.array(
             [list(p.values())[0][0] for p in predictions])
         
+        elapsed_time = time.time() - start_time
+        num_slices = len(predictions)
+        rate = num_slices / elapsed_time
+        print((
+            'Evaluated classifier on {} waveform slices in {:.1f} seconds, '
+            'a rate of {:.1f} slices per second.').format(
+                num_slices, elapsed_time, rate))
+            
         # pairs = list(zip(labels, predictions))
         # for i, pair in enumerate(pairs[:200]):
         #     print(i, pair)
@@ -359,20 +377,27 @@ class Classifier:
         
         
     def _create_training_dataset(self):
-        return create_spectrogram_dataset(
-            self.settings, 'Training', feature_name=self.model_input_name,
-            num_repeats=None, shuffle=True)
+        return self._create_dataset(
+            'Training', num_repeats=None, shuffle=True)
     
     
+    def _create_dataset(
+            self, dataset_type, num_repeats=1, shuffle=False):
+        
+        s = self.settings
+        
+        return create_on_disk_spectrogram_dataset(
+            s.dataset_name, dataset_type, s, num_repeats=num_repeats,
+            shuffle=shuffle, batch_size=s.training_batch_size,
+            feature_name=self.model_input_name)
+        
+        
     def _create_short_training_dataset(self):
-        return create_spectrogram_dataset(
-            self.settings, 'Training', feature_name=self.model_input_name,
-            num_repeats=1)
+        return self._create_dataset('Training')
 
 
     def _create_validation_dataset(self):
-        return create_spectrogram_dataset(
-            self.settings, 'Validation', feature_name=self.model_input_name)
+        return self._create_dataset('Validation')
         
         
     def save(self):
@@ -558,11 +583,27 @@ def get_dataset_labels(dataset):
     
 def complete_settings(settings):
     
-    if settings.spectrogram_clipping_pretraining_enabled:
-        compute_spectrogram_clipping_settings(settings)
+    # Copy settings so we don't modify the originals.
+    s = Settings(settings)
+    
+    if s.spectrogram_clipping_enabled and \
+            s.spectrogram_clipping_pretraining_enabled:
         
-    if settings.spectrogram_normalization_pretraining_enabled:
-        compute_spectrogram_normalization_settings(settings)
+        min_value, max_value = compute_spectrogram_clipping_settings(s)
+        
+        s.spectrogram_clipping_min = min_value
+        s.spectrogram_clipping_max = max_value
+
+        
+    if s.spectrogram_normalization_enabled and \
+            s.spectrogram_normalization_pretraining_enabled:
+        
+        scale_factor, offset = compute_spectrogram_normalization_settings(s)
+        
+        s.spectrogram_normalization_scale_factor = scale_factor
+        s.spectrogram_normalization_offset = offset
+        
+    return s
             
 
 def get_sliced_spectrogram_shape(settings):
@@ -613,7 +654,11 @@ def get_low_level_preprocessing_settings(settings):
 
 def compute_spectrogram_clipping_settings(settings):
     
-    s = settings
+    # Get new settings with spectrogram clipping and normalization disabled.
+    s = Settings(
+        settings,
+        spectrogram_clipping_enabled=False,
+        spectrogram_normalization_enabled=False)
     
     num_examples = s.pretraining_num_examples
     batch_size = s.pretraining_batch_size
@@ -625,10 +670,9 @@ def compute_spectrogram_clipping_settings(settings):
     bin_size = (hist_max - hist_min) / num_bins
     log_epsilon = math.log(settings.spectrogram_log_epsilon)
     
-    dataset = create_spectrogram_dataset(
-        settings, 'Training', batch_size=batch_size,
-        spectrogram_clipping_enabled=False,
-        spectrogram_normalization_enabled=False)
+    dataset = create_on_disk_spectrogram_dataset(
+        s.dataset_name, 'Training', s, batch_size=batch_size)
+    
     iterator = dataset.make_one_shot_iterator()
     next_batch = iterator.get_next()
      
@@ -670,12 +714,12 @@ def compute_spectrogram_clipping_settings(settings):
             #     'Batch {} of {}: ({}, {})'.format(
             #         i + 1, num_batches, min_value, max_value))
             
-        end_time = time.time()
-        delta_time = end_time - start_time
+        elapsed_time = time.time() - start_time
         print(
-            'Computed spectrogram clipping range in {} seconds.'.format(
-                delta_time))
-        print('Clipping range is ({}, {}).'.format(min_value, max_value))
+            'Computed spectrogram clipping range in {:.1f} seconds.'.format(
+                elapsed_time))
+        print(
+            'Clipping range is ({:.1f}, {:.1f}).'.format(min_value, max_value))
 
     # Plot spectrogram value distribution and clipping limits.
     if s.pretraining_value_distribution_plotting_enabled:
@@ -692,57 +736,23 @@ def compute_spectrogram_clipping_settings(settings):
     # The float conversions in the following ensure that the assigned
     # type is Python's `float` instead of a NumPy type. The latter
     # doesn't play nicely with `yaml.dump`.
-    s.spectrogram_clipping_min = float(min_value)
-    s.spectrogram_clipping_max = float(max_value)
+    min_value = float(min_value)
+    max_value = float(max_value)
+    
+    return min_value, max_value
     
     
-def create_spectrogram_dataset(
-        settings, dataset_type, feature_name='spectrogram',
-        num_repeats=1, shuffle=False, batch_size=None,
-        spectrogram_clipping_enabled=None,
-        spectrogram_normalization_enabled=None):
+def create_on_disk_spectrogram_dataset(
+        dataset_name, dataset_type, settings, num_repeats=1, shuffle=False,
+        batch_size=1, feature_name='spectrogram'):
     
-    dataset = create_base_dataset(settings.dataset_name, dataset_type)
+    dataset = create_on_disk_waveform_dataset(dataset_name, dataset_type)
     
-    if num_repeats is None:
-        dataset = dataset.repeat()
-    elif num_repeats != 1:
-        dataset = dataset.repeat(num_repeats)
-    
-    waveform_preprocessor = WaveformPreprocessor(settings)
-     
-    dataset = dataset.map(
-        waveform_preprocessor,
-        num_parallel_calls=settings.num_preprocessing_parallel_calls)
-    
-    batch_size = get_batch_size(settings, batch_size)
+    return create_spectrogram_dataset(
+        dataset, settings, num_repeats, shuffle, batch_size, feature_name)
 
-    if shuffle:
-        dataset = dataset.shuffle(10 * batch_size)
-        
-    if batch_size != 1:
-        dataset = dataset.batch(batch_size)
-    
-    if spectrogram_clipping_enabled is not None:
-        settings = Settings(
-            settings,
-            spectrogram_clipping_enabled=spectrogram_clipping_enabled)
-        
-    if spectrogram_normalization_enabled is not None:
-        enabled = spectrogram_normalization_enabled  # to shorten line below
-        settings = Settings(
-            settings, spectrogram_normalization_enabled=enabled)
 
-    spectrogram_computer = SpectrogramComputer(settings, feature_name)
-    
-    dataset = dataset.map(
-        spectrogram_computer,
-        num_parallel_calls=settings.num_preprocessing_parallel_calls)
-    
-    return dataset
-    
-
-def create_base_dataset(dataset_name, dataset_type):
+def create_on_disk_waveform_dataset(dataset_name, dataset_type):
     
     file_path_pattern = create_data_file_path(dataset_name, dataset_type, '*')
     
@@ -771,30 +781,51 @@ def parse_example(example_proto):
     return waveform, label
 
 
-def get_batch_size(settings, batch_size):
+def create_spectrogram_dataset(
+        waveform_dataset, settings, num_repeats=1, shuffle=False, batch_size=1,
+        feature_name='spectrogram'):
     
-    if batch_size is not None:
-        return batch_size
+    dataset = waveform_dataset
     
-    elif settings.batch_size is not None:
-        return settings.batch_size
+    if num_repeats is None:
+        dataset = dataset.repeat()
+    elif num_repeats != 1:
+        dataset = dataset.repeat(num_repeats)
     
-    else:
-        return 1
-
+    waveform_preprocessor = WaveformPreprocessor(settings)
+     
+    dataset = dataset.map(
+        waveform_preprocessor,
+        num_parallel_calls=settings.num_preprocessing_parallel_calls)
+    
+    if shuffle:
+        dataset = dataset.shuffle(10 * batch_size)
+        
+    if batch_size != 1:
+        dataset = dataset.batch(batch_size)
+    
+    spectrogram_computer = SpectrogramComputer(settings, feature_name)
+    
+    dataset = dataset.map(
+        spectrogram_computer,
+        num_parallel_calls=settings.num_preprocessing_parallel_calls)
+    
+    return dataset
+    
 
 def compute_spectrogram_normalization_settings(settings):
     
-    s = settings
+    # Get settings with spectrogram normalization disabled.
+    s = Settings(
+        settings, spectrogram_normalization_enabled=False)
     
     num_examples = s.pretraining_num_examples
     batch_size = s.pretraining_batch_size
     num_batches = int(round(num_examples / batch_size))
     
-    dataset = create_spectrogram_dataset(
-        settings, 'Training', batch_size=batch_size,
-        spectrogram_clipping_enabled=True,
-        spectrogram_normalization_enabled=False)
+    dataset = create_on_disk_spectrogram_dataset(
+        s.dataset_name, 'Training', s, batch_size=batch_size)
+
     iterator = dataset.make_one_shot_iterator()
     next_batch = iterator.get_next()
      
@@ -826,20 +857,22 @@ def compute_spectrogram_normalization_settings(settings):
             #     'Batch {} of {}: ({}, {})'.format(
             #         i + 1, num_batches, mean, std_dev))
             
-        end_time = time.time()
-        delta_time = end_time - start_time
+        elapsed_time = time.time() - start_time
         print((
-            'Computed spectrogram normalization settings in {} '
-            'seconds.').format(delta_time))
-        print(
-            'Normalization mean and standard deviation are ({}, {}).'.format(
+            'Computed spectrogram normalization settings in {:.1f} '
+            'seconds.').format(elapsed_time))
+        print((
+            'Normalization mean and standard deviation are '
+            '({:.1f}, {:.1f}).').format(
                 mean, std_dev))
         
     # The float conversions in the following ensure that the assigned
     # type is Python's `float` instead of a NumPy type. The latter
     # doesn't play nicely with `yaml.dump`.
-    s.spectrogram_normalization_scale_factor = float(1 / std_dev)
-    s.spectrogram_normalization_offset = float(-mean / std_dev)
+    scale_factor = float(1 / std_dev)
+    offset = float(-mean / std_dev)
+    
+    return scale_factor, offset
 
     
 def save_results(classifier_name, train_stats, val_stats, settings):
@@ -961,8 +994,9 @@ def write_precision_recall_csv_file(classifier_name, train_stats, val_stats):
 
 
 def show_training_dataset(settings):
-    complete_settings(settings)
-    dataset = create_spectrogram_dataset(settings, 'Training')
+    settings = complete_settings(settings)
+    dataset = create_on_disk_spectrogram_dataset(
+        settings.dataset_name, 'Training')
     show_dataset(dataset, 20)
         
     
@@ -1010,10 +1044,14 @@ def show_spectrogram_dataset(settings):
     total_num_examples = 2 ** 9
     batch_size = 2 ** 6
     
-    dataset = create_spectrogram_dataset(
-        settings, 'Training', batch_size=batch_size,
+    # Show unclipped and unnormalized spectrograms.
+    s = Settings(
+        settings,
         spectrogram_clipping_enabled=False,
         spectrogram_normalization_enabled=False)
+    
+    dataset = create_on_disk_spectrogram_dataset(
+        s.dataset_name, 'Training', s, batch_size=batch_size)
     
     num_batches = int(round(total_num_examples / batch_size))
     show_dataset(dataset, num_batches)
