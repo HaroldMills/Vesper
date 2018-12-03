@@ -32,7 +32,6 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 # TODO: Change spectrogram hop size units to percent.
 # TODO: Don't use random slicing offset during inference.
-# TODO: Reconsider clipping limits given Tseep onset times and random offsets.
 # TODO: Figure out how to save and restore estimator.
 # TODO: Build Vesper classifier from saved estimator.
 # TODO: Run tseep classifier on all 2017 clips.
@@ -103,13 +102,17 @@ BASE_TSEEP_SETTINGS = Settings(
     # this widens the window within which onsets can occur by
     # max_waveform_time_offset seconds on each end.
     
-    # waveform slicing settings
-    waveform_start_time=.080,
-    waveform_duration=.150,
+    # location of event onset window in training dataset waveforms
+    dataset_onset_window_start_time=.090,
+    dataset_onset_window_duration=.050,
     
-    # waveform slicing offset settings
+    # random waveform time offsets data augmentation settings
     random_waveform_time_offsets_enabled=True,
     max_waveform_time_offset=.025,
+    
+    # waveform settings
+    waveform_initial_padding=.030,
+    waveform_duration=.200,
     
     # spectrogram settings
     spectrogram_window_size=.005,
@@ -611,6 +614,8 @@ def complete_settings(settings):
     # Copy settings so we don't modify the originals.
     s = Settings(settings)
     
+    s.waveform_start_time = get_waveform_start_time(settings)
+        
     if s.spectrogram_clipping_enabled and \
             s.spectrogram_clipping_pretraining_enabled:
         
@@ -630,6 +635,18 @@ def complete_settings(settings):
         
     return s
             
+
+def get_waveform_start_time(settings):
+    
+    s = settings
+    
+    start_time = s.dataset_onset_window_start_time - s.waveform_initial_padding
+    
+    if s.random_waveform_time_offsets_enabled:
+        start_time -= s.max_waveform_time_offset
+        
+    return start_time
+
 
 def get_sliced_spectrogram_shape(settings):
     
@@ -1217,6 +1234,8 @@ class SpectrogramComputer:
             grams = \
                 s.spectrogram_normalization_scale_factor * grams + \
                 s.spectrogram_normalization_offset
+        
+        # TODO: Move gram reshaping into model.
         
         if len(s.convolutional_layer_sizes) != 0:
             # model is CNN
