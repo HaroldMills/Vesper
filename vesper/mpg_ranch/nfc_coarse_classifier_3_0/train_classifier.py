@@ -30,7 +30,8 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-# TODO: Don't use random slicing offset during inference.
+# TODO: Include both augmented and unaugmented data curves in evaluation plots.
+# TODO: Reformat create_regularizer function.
 # TODO: Figure out how to save and restore estimator.
 # TODO: Build Vesper classifier from saved estimator.
 # TODO: Run tseep classifier on all 2017 clips.
@@ -157,7 +158,14 @@ BASE_TSEEP_SETTINGS = Settings(
     training_batch_size=64,
     num_training_steps=50000,
     
-    # training results settings
+    # Whether or not data augmentation is enabled during evaluation.
+    # A good rule of thumb is to disable data augmentation when evaluating
+    # the trained classifier for coarse classification of Old Bird detector
+    # clips, and to enable it when evaluating the trained classifier for
+    # detection.
+    evaluation_data_augmentation_enabled=True,
+    
+    # evaluation plot settings
     precision_recall_plot_lower_axis_limit=.80,
     precision_recall_plot_major_tick_interval=.05,
     precision_recall_plot_minor_tick_interval=.01,
@@ -362,7 +370,8 @@ class Classifier:
 
     def evaluate(self):
         print('Evaluating classifier on training dataset...')
-        self.train_stats = self._evaluate(self._create_short_training_dataset)
+        self.train_stats = \
+            self._evaluate(self._create_evaluation_training_dataset)
         print('Evaluating classifier on validation dataset...')
         self.val_stats = self._evaluate(self._create_validation_dataset)
         print('Saving results...')
@@ -405,26 +414,26 @@ class Classifier:
         
     def _create_training_dataset(self):
         return self._create_dataset(
-            'Training', num_repeats=None, shuffle=True)
+            'Training', 'Training', num_repeats=None, shuffle=True)
     
     
     def _create_dataset(
-            self, dataset_type, num_repeats=1, shuffle=False):
+            self, dataset_part, mode, num_repeats=1, shuffle=False):
         
         s = self.settings
         
         return create_on_disk_spectrogram_dataset(
-            s.dataset_name, dataset_type, s, num_repeats=num_repeats,
+            s.dataset_name, dataset_part, mode, s, num_repeats=num_repeats,
             shuffle=shuffle, batch_size=s.training_batch_size,
             feature_name=self.model_input_name)
         
         
-    def _create_short_training_dataset(self):
-        return self._create_dataset('Training')
+    def _create_evaluation_training_dataset(self):
+        return self._create_dataset('Training', 'Evaluation')
 
 
     def _create_validation_dataset(self):
-        return self._create_dataset('Validation')
+        return self._create_dataset('Validation', 'Evaluation')
         
         
     def save(self):
@@ -651,7 +660,7 @@ def get_sliced_spectrogram_shape(settings):
     
     (time_start_index, time_end_index, window_size, hop_size, _,
      freq_start_index, freq_end_index) = \
-        get_low_level_preprocessing_settings(settings)
+        get_low_level_preprocessing_settings('Training', settings)
                 
     num_samples = time_end_index - time_start_index
     num_spectra = tfa_utils.get_num_analysis_records(
@@ -667,14 +676,17 @@ def get_sliced_spectrogram_size(settings):
     return num_spectra * num_bins
 
 
-def get_low_level_preprocessing_settings(settings):
+def get_low_level_preprocessing_settings(mode, settings):
     
     s = settings
     fs = s.sample_rate
     s2f = signal_utils.seconds_to_frames
     
     # time slicing
-    time_start_index = s2f(s.waveform_start_time, fs)
+    if mode == 'Inference':
+        time_start_index = 0
+    else:
+        time_start_index = s2f(s.waveform_start_time, fs)
     length = s2f(s.waveform_duration, fs)
     time_end_index = time_start_index + length
     
@@ -713,7 +725,7 @@ def compute_spectrogram_clipping_settings(settings):
     log_epsilon = math.log(settings.spectrogram_log_epsilon)
     
     dataset = create_on_disk_spectrogram_dataset(
-        s.dataset_name, 'Training', s, batch_size=batch_size)
+        s.dataset_name, 'Training', 'Training', s, batch_size=batch_size)
     
     iterator = dataset.make_one_shot_iterator()
     next_batch = iterator.get_next()
@@ -785,18 +797,19 @@ def compute_spectrogram_clipping_settings(settings):
     
     
 def create_on_disk_spectrogram_dataset(
-        dataset_name, dataset_type, settings, num_repeats=1, shuffle=False,
-        batch_size=1, feature_name='spectrogram'):
+        dataset_name, dataset_part, mode, settings, num_repeats=1,
+        shuffle=False, batch_size=1, feature_name='spectrogram'):
     
-    dataset = create_on_disk_waveform_dataset(dataset_name, dataset_type)
+    dataset = create_on_disk_waveform_dataset(dataset_name, dataset_part)
     
     return create_spectrogram_dataset(
-        dataset, settings, num_repeats, shuffle, batch_size, feature_name)
+        dataset, mode, settings, num_repeats, shuffle, batch_size,
+        feature_name)
 
 
-def create_on_disk_waveform_dataset(dataset_name, dataset_type):
+def create_on_disk_waveform_dataset(dataset_name, dataset_part):
     
-    file_path_pattern = create_data_file_path(dataset_name, dataset_type, '*')
+    file_path_pattern = create_data_file_path(dataset_name, dataset_part, '*')
     
     # Get file paths matching pattern. Sort the paths for consistency.
     file_paths = sorted(tf.gfile.Glob(file_path_pattern))
@@ -804,10 +817,10 @@ def create_on_disk_waveform_dataset(dataset_name, dataset_type):
     return tf.data.TFRecordDataset(file_paths).map(parse_example)
             
         
-def create_data_file_path(dataset_name, dataset_type, file_num):
-    dir_path = DATASETS_DIR_PATH / dataset_name / dataset_type
+def create_data_file_path(dataset_name, dataset_part, file_num):
+    dir_path = DATASETS_DIR_PATH / dataset_name / dataset_part
     file_name = DATA_FILE_NAME_FORMAT.format(
-        dataset_name, dataset_type, file_num)
+        dataset_name, dataset_part, file_num)
     return str(dir_path / file_name)
     
 
@@ -824,8 +837,8 @@ def parse_example(example_proto):
 
 
 def create_spectrogram_dataset(
-        waveform_dataset, settings, num_repeats=1, shuffle=False, batch_size=1,
-        feature_name='spectrogram'):
+        waveform_dataset, mode, settings, num_repeats=1, shuffle=False,
+        batch_size=1, feature_name='spectrogram'):
     
     dataset = waveform_dataset
     
@@ -834,7 +847,7 @@ def create_spectrogram_dataset(
     elif num_repeats != 1:
         dataset = dataset.repeat(num_repeats)
     
-    waveform_preprocessor = WaveformPreprocessor(settings)
+    waveform_preprocessor = WaveformPreprocessor(mode, settings)
      
     dataset = dataset.map(
         waveform_preprocessor,
@@ -846,7 +859,7 @@ def create_spectrogram_dataset(
     if batch_size != 1:
         dataset = dataset.batch(batch_size)
     
-    spectrogram_computer = SpectrogramComputer(settings, feature_name)
+    spectrogram_computer = SpectrogramComputer(mode, settings, feature_name)
     
     dataset = dataset.map(
         spectrogram_computer,
@@ -858,15 +871,14 @@ def create_spectrogram_dataset(
 def compute_spectrogram_normalization_settings(settings):
     
     # Get settings with spectrogram normalization disabled.
-    s = Settings(
-        settings, spectrogram_normalization_enabled=False)
+    s = Settings(settings, spectrogram_normalization_enabled=False)
     
     num_examples = s.pretraining_num_examples
     batch_size = s.pretraining_batch_size
     num_batches = int(round(num_examples / batch_size))
     
     dataset = create_on_disk_spectrogram_dataset(
-        s.dataset_name, 'Training', s, batch_size=batch_size)
+        s.dataset_name, 'Training', 'Training', s, batch_size=batch_size)
 
     iterator = dataset.make_one_shot_iterator()
     next_batch = iterator.get_next()
@@ -1038,7 +1050,7 @@ def write_precision_recall_csv_file(classifier_name, train_stats, val_stats):
 def show_training_dataset(settings):
     settings = complete_settings(settings)
     dataset = create_on_disk_spectrogram_dataset(
-        settings.dataset_name, 'Training')
+        settings.dataset_name, 'Training', 'Training')
     show_dataset(dataset, 20)
         
     
@@ -1093,7 +1105,7 @@ def show_spectrogram_dataset(settings):
         spectrogram_normalization_enabled=False)
     
     dataset = create_on_disk_spectrogram_dataset(
-        s.dataset_name, 'Training', s, batch_size=batch_size)
+        s.dataset_name, 'Training', 'Training', s, batch_size=batch_size)
     
     num_batches = int(round(total_num_examples / batch_size))
     show_dataset(dataset, num_batches)
@@ -1147,16 +1159,21 @@ def test_random_time_offsets():
 class WaveformPreprocessor:
     
     
-    def __init__(self, settings):
+    def __init__(self, mode, settings):
+        
+        # `mode` can be 'Training', 'Evaluation', or 'Inference'.
+
+        self.mode = mode
+        self.settings = settings
         
         s = settings
-        self.settings = s
         
         self.start_index, self.end_index, _, _, _, _, _ = \
-            get_low_level_preprocessing_settings(s)
+            get_low_level_preprocessing_settings(mode, s)
             
+        augmentation_enabled = is_data_augmentation_enabled(mode, s)
         self.random_time_offsets_enabled = \
-            s.random_waveform_time_offsets_enabled
+            augmentation_enabled and s.random_waveform_time_offsets_enabled
         
         if self.random_time_offsets_enabled:
             self.max_time_offset = signal_utils.seconds_to_frames(
@@ -1176,17 +1193,23 @@ class WaveformPreprocessor:
         return waveform, label
     
     
+def is_data_augmentation_enabled(mode, settings):
+    return \
+        mode == 'Training' or \
+        mode == 'Evaluation' and settings.evaluation_data_augmentation_enabled
+        
+        
 class SpectrogramComputer:
     
     
-    def __init__(self, settings, output_feature_name='spectrogram'):
+    def __init__(self, mode, settings, output_feature_name='spectrogram'):
         
         self.settings = settings
         self.output_feature_name = output_feature_name
         
         (time_start_index, time_end_index, self.window_size, self.hop_size,
          self.dft_size, self.freq_start_index, self.freq_end_index) = \
-            get_low_level_preprocessing_settings(settings)
+            get_low_level_preprocessing_settings(mode, settings)
          
         self.waveform_length = time_end_index - time_start_index
                 
