@@ -30,7 +30,6 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-# TODO: Change spectrogram hop size units to percent.
 # TODO: Don't use random slicing offset during inference.
 # TODO: Figure out how to save and restore estimator.
 # TODO: Build Vesper classifier from saved estimator.
@@ -116,7 +115,7 @@ BASE_TSEEP_SETTINGS = Settings(
     
     # spectrogram settings
     spectrogram_window_size=.005,
-    spectrogram_hop_size=.5,
+    spectrogram_hop_size=50,
     spectrogram_log_epsilon=1e-10,
     
     # spectrogram frequency axis slicing settings
@@ -681,7 +680,8 @@ def get_low_level_preprocessing_settings(settings):
     
     # spectrogram
     window_size = s2f(s.spectrogram_window_size, fs)
-    hop_size = s2f(s.spectrogram_window_size * s.spectrogram_hop_size, fs)
+    fraction = s.spectrogram_hop_size / 100
+    hop_size = s2f(s.spectrogram_window_size * fraction, fs)
     dft_size = tfa_utils.get_dft_size(window_size)
     
     # frequency slicing
