@@ -31,7 +31,6 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
 # TODO: Include both augmented and unaugmented data curves in evaluation plots.
-# TODO: Reformat create_regularizer function.
 # TODO: Figure out how to save and restore estimator.
 # TODO: Build Vesper classifier from saved estimator.
 # TODO: Run tseep classifier on all 2017 clips.
@@ -369,14 +368,21 @@ class Classifier:
 
 
     def evaluate(self):
+        
         print('Evaluating classifier on training dataset...')
+        
         self.train_stats = \
             self._evaluate(self._create_evaluation_training_dataset)
+            
         print('Evaluating classifier on validation dataset...')
+        
         self.val_stats = self._evaluate(self._create_validation_dataset)
+        
         print('Saving results...')
+        
         save_results(
             self.name, self.train_stats, self.val_stats, self.settings)
+        
         print('Done.')
             
         
@@ -496,12 +502,17 @@ def create_model(settings):
 
         
 def create_regularizer(settings):
+    
     if settings.l2_regularization_enabled:
+        
         beta = settings.l2_regularization_beta
+        
         print((
             'Loss will include L2 regularization term with beta of '
             '{}.').format(beta))
+        
         return tf.keras.regularizers.l2(beta)
+    
     else:
         return None
         
