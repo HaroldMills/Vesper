@@ -30,7 +30,9 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-# TODO: Don't use random slicing offset during prediction.
+# TODO: Change spectrogram hop size units to percent.
+# TODO: Don't use random slicing offset during inference.
+# TODO: Reconsider clipping limits given Tseep onset times and random offsets.
 # TODO: Figure out how to save and restore estimator.
 # TODO: Build Vesper classifier from saved estimator.
 # TODO: Run tseep classifier on all 2017 clips.
@@ -78,13 +80,36 @@ BASE_TSEEP_SETTINGS = Settings(
     
     sample_rate=24000,
     
+    # The onsets of calls in clips created by Vesper's Old Bird Tseep
+    # Detector Redux 1.1 occur in a window that starts roughly 90 ms into
+    # the clips and is 50 ms wide. The onsets are not uniformly
+    # distributed within this window: the location of an onset in the
+    # window depends on the strength and bandwidth of the onset, and more
+    # onsets occur later in the window than earlier. In the future, I hope
+    # to narrow this window in our detector and classifier training datasets,
+    # and make the distribution of onsets within the window more uniform.
+    #
+    # Random waveform time offsets are a data augmentation method that
+    # can be applied during training to distribute event onsets more evenly
+    # in time. (An event is whatever tripped a detector to create a training
+    # clip, whether or not the event was a call.) When random waveform
+    # time offsets are enabled, an offset uniformly distributed in the
+    # interval [-max_waveform_time_offset, max_waveform_time_offset] is
+    # added to the bounds of each slice of a dataset waveform that is
+    # extracted for training. The distribution of onsets after data
+    # augmentation is the distribution before augmentation convolved with
+    # the uniform distribution over
+    # [-max_waveform_time_offset, max_waveform_time_offset]. Note that
+    # this widens the window within which onsets can occur by
+    # max_waveform_time_offset seconds on each end.
+    
     # waveform slicing settings
     waveform_start_time=.080,
     waveform_duration=.150,
     
     # waveform slicing offset settings
-    random_waveform_slicing_offsets_enabled=True,
-    max_waveform_slicing_offset=.025,
+    random_waveform_time_offsets_enabled=True,
+    max_waveform_time_offset=.025,
     
     # spectrogram settings
     spectrogram_window_size=.005,
@@ -202,7 +227,7 @@ def main():
     # show_training_dataset(settings)
     # show_spectrogram_dataset(settings)
     
-    # test_random_slicing_offsets()
+    # test_random_time_offsets()
     
     
 def save_checkpoint_results(classifier_name, min_step_num, max_step_num):
@@ -1057,13 +1082,13 @@ def show_spectrogram_dataset(settings):
     show_dataset(dataset, num_batches)
 
 
-def test_random_slicing_offsets():
+def test_random_time_offsets():
     
     """
     Tests the use of random slicing offsets for data augmentation.
     
     Random slicing offsets are used in the `WaveformPreprocessor` class
-    to distribute NFC onsets more evenly within the training dataset.
+    to distribute NFC onset times more evenly during classifier training.
     """
     
     class RandomSlicer:
@@ -1113,18 +1138,18 @@ class WaveformPreprocessor:
         self.start_index, self.end_index, _, _, _, _, _ = \
             get_low_level_preprocessing_settings(s)
             
-        self.random_slicing_offsets_enabled = \
-            s.random_waveform_slicing_offsets_enabled
+        self.random_time_offsets_enabled = \
+            s.random_waveform_time_offsets_enabled
         
-        if self.random_slicing_offsets_enabled:
-            self.max_slicing_offset = signal_utils.seconds_to_frames(
-                s.max_waveform_slicing_offset, s.sample_rate)
+        if self.random_time_offsets_enabled:
+            self.max_time_offset = signal_utils.seconds_to_frames(
+                s.max_waveform_time_offset, s.sample_rate)
             
                 
     def __call__(self, waveform, label):
         
-        if self.random_slicing_offsets_enabled:
-            n = self.max_slicing_offset
+        if self.random_time_offsets_enabled:
+            n = self.max_time_offset
             i = tf.random.uniform((), -n, n, dtype=tf.int32)
             waveform = waveform[self.start_index + i:self.end_index + i]
             
