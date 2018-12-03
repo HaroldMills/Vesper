@@ -1200,12 +1200,8 @@ class SpectrogramComputer:
         
         s = self.settings
         
-        # At this point the `waveforms` tensor has a final dimension of
-        # `None`, even though we know that the dimension is the sliced
-        # waveform length. We set the dimension since if we don't and
-        # the model includes at least one convolutional layer, then the
-        # `Classifier.train` method raises an exception.
-        self._fix_waveform_batch_shape(waveforms)
+        # Set final dimension of waveforms.
+        self._set_waveforms_shape(waveforms)
 
         # Compute STFTs.
         waveforms = tf.cast(waveforms, tf.float32)
@@ -1235,21 +1231,8 @@ class SpectrogramComputer:
                 s.spectrogram_normalization_scale_factor * grams + \
                 s.spectrogram_normalization_offset
         
-        # TODO: Move gram reshaping into model.
-        
-        if len(s.convolutional_layer_sizes) != 0:
-            # model is CNN
-            
-            # Add channel dimension for Keras `Conv2D` layer compatibility.
-            grams = tf.expand_dims(grams, 3)
-            
-        else:
-            # model is DNN
-            
-            # Flatten spectrograms for Keras `Dense` layer compatibility.
-            size = get_sliced_spectrogram_size(s)
-            grams = tf.reshape(grams, (-1, size))
-
+        # Reshape spectrograms for input into Keras neural network.
+        grams = self._reshape_grams(grams)
         
         # Create features dictionary.
         features = {self.output_feature_name: grams}
@@ -1260,12 +1243,48 @@ class SpectrogramComputer:
         return features, labels
     
     
-    def _fix_waveform_batch_shape(self, waveforms):
+    def _set_waveforms_shape(self, waveforms):
+        
+        """
+        Sets the final dimension of a batch of waveforms.
+        
+        When we receive a batch of waveforms its final dimension is
+        `None`, even though we know that the dimension is the sliced
+        waveform length. We set the dimension since if we don't and
+        the model includes at least one convolutional layer, then
+        the `Classifier.train` method raises an exception.
+        """
+        
         dims = list(waveforms.shape.dims)
         dims[-1] = tf.Dimension(self.waveform_length)
         shape = tf.TensorShape(dims)
         waveforms.set_shape(shape)
-    
         
+        
+    def _reshape_grams(self, grams):
+        
+        """
+        Reshapes a batch of spectrograms for input to a Keras neural network.
+        
+        The batch must be reshaped differently depending on whether the
+        network's input layer is convolutional or dense.
+        """
+        
+        s = self.settings
+        
+        if len(s.convolutional_layer_sizes) != 0:
+            # model is CNN
+            
+            # Add channel dimension for Keras `Conv2D` layer compatibility.
+            return tf.expand_dims(grams, 3)
+            
+        else:
+            # model is DNN
+            
+            # Flatten spectrograms for Keras `Dense` layer compatibility.
+            size = get_sliced_spectrogram_size(s)
+            return tf.reshape(grams, (-1, size))
+
+    
 if __name__ == '__main__':
     main()
