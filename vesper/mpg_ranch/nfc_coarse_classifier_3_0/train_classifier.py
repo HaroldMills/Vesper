@@ -8,7 +8,6 @@ whether or not a clip contains a nocturnal flight call.
 
 from pathlib import Path
 import bisect
-import functools
 import glob
 import math
 import os
@@ -22,12 +21,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
+from vesper.mpg_ranch.nfc_coarse_classifier_3_0.preprocessor import \
+    Preprocessor
 from vesper.util.binary_classification_stats import BinaryClassificationStats
 from vesper.util.settings import Settings
 import vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier_utils as \
     classifier_utils
-import vesper.util.signal_utils as signal_utils
-import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
 # TODO: Include both augmented and unaugmented data curves in evaluation plots.
@@ -74,10 +73,6 @@ EXAMPLE_FEATURES = {
 DATASET_PART_TRAINING = 'Training'
 DATASET_PART_VALIDATION = 'Validation'
 DATASET_PART_TEST = 'Test'
-
-PREPROC_MODE_TRAINING = 'Training'
-PREPROC_MODE_EVALUATION = 'Evaluation'
-PREPROC_MODE_INFERENCE = 'Inference'
 
 BASE_TSEEP_SETTINGS = Settings(
     
@@ -425,8 +420,8 @@ class Classifier:
         
     def _create_training_dataset(self):
         return self._create_dataset(
-            DATASET_PART_TRAINING, PREPROC_MODE_TRAINING, num_repeats=None,
-            shuffle=True)
+            DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING,
+            num_repeats=None, shuffle=True)
     
     
     def _create_dataset(
@@ -443,12 +438,12 @@ class Classifier:
         
     def _create_evaluation_training_dataset(self):
         return self._create_dataset(
-            DATASET_PART_TRAINING, PREPROC_MODE_EVALUATION)
+            DATASET_PART_TRAINING, Preprocessor.MODE_EVALUATION)
 
 
     def _create_validation_dataset(self):
         return self._create_dataset(
-            DATASET_PART_VALIDATION, PREPROC_MODE_EVALUATION)
+            DATASET_PART_VALIDATION, Preprocessor.MODE_EVALUATION)
         
         
     def save(self):
@@ -545,7 +540,8 @@ def add_convolutional_layers(model, settings, regularizer):
             # first network layer
             
             # Specify input shape. The added dimension is for channel.
-            spectrogram_shape = get_sliced_spectrogram_shape(settings)
+            spectrogram_shape = \
+                Preprocessor.get_sliced_spectrogram_shape(settings)
             kwargs['input_shape'] = spectrogram_shape + (1,)
             
         model.add(tf.keras.layers.Conv2D(**kwargs))
@@ -582,7 +578,8 @@ def add_hidden_dense_layers(model, settings, regularizer):
         if layer_num == 0 and len(settings.convolutional_layer_sizes) == 0:
             # first network layer
             
-            kwargs['input_dim'] = get_sliced_spectrogram_size(settings)
+            kwargs['input_dim'] = \
+                Preprocessor.get_sliced_spectrogram_size(settings)
              
         model.add(tf.keras.layers.Dense(**kwargs))
         
@@ -606,7 +603,8 @@ def add_output_layer(model, settings, regularizer):
         # output layer is only network layer (i.e. the network will
         # have a single neuron and perform logistic regression)
         
-        kwargs['input_dim'] = get_sliced_spectrogram_size(settings)
+        kwargs['input_dim'] = \
+            Preprocessor.get_sliced_spectrogram_size(settings)
 
     model.add(tf.keras.layers.Dense(**kwargs))
     
@@ -676,56 +674,6 @@ def get_waveform_start_time(settings):
     return start_time
 
 
-def get_sliced_spectrogram_shape(settings):
-    
-    (time_start_index, time_end_index, window_size, hop_size, _,
-     freq_start_index, freq_end_index) = \
-        get_low_level_preproc_settings(PREPROC_MODE_TRAINING, settings)
-                
-    num_samples = time_end_index - time_start_index
-    num_spectra = tfa_utils.get_num_analysis_records(
-        num_samples, window_size, hop_size)
-    
-    num_bins = freq_end_index - freq_start_index
-    
-    return (num_spectra, num_bins)
-    
-    
-def get_sliced_spectrogram_size(settings):
-    num_spectra, num_bins = get_sliced_spectrogram_shape(settings)
-    return num_spectra * num_bins
-
-
-def get_low_level_preproc_settings(preproc_mode, settings):
-    
-    s = settings
-    fs = s.sample_rate
-    s2f = signal_utils.seconds_to_frames
-    
-    # time slicing
-    if preproc_mode == PREPROC_MODE_INFERENCE:
-        time_start_index = 0
-    else:
-        time_start_index = s2f(s.waveform_start_time, fs)
-    length = s2f(s.waveform_duration, fs)
-    time_end_index = time_start_index + length
-    
-    # spectrogram
-    window_size = s2f(s.spectrogram_window_size, fs)
-    fraction = s.spectrogram_hop_size / 100
-    hop_size = s2f(s.spectrogram_window_size * fraction, fs)
-    dft_size = tfa_utils.get_dft_size(window_size)
-    
-    # frequency slicing
-    f2i = tfa_utils.get_dft_bin_num
-    freq_start_index = f2i(s.spectrogram_start_freq, fs, dft_size)
-    freq_end_index = f2i(s.spectrogram_end_freq, fs, dft_size) + 1
-    
-    return (
-        time_start_index, time_end_index, window_size, hop_size, dft_size,
-        freq_start_index, freq_end_index)
-
-
 def compute_spectrogram_clipping_settings(settings):
     
     # Get new settings with spectrogram clipping and normalization disabled.
@@ -745,7 +693,7 @@ def compute_spectrogram_clipping_settings(settings):
     log_epsilon = math.log(settings.spectrogram_log_epsilon)
     
     dataset = create_on_disk_spectrogram_dataset(
-        s.dataset_name, DATASET_PART_TRAINING, PREPROC_MODE_TRAINING, s,
+        s.dataset_name, DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING, s,
         batch_size=batch_size)
     
     iterator = dataset.make_one_shot_iterator()
@@ -861,6 +809,8 @@ def create_spectrogram_dataset(
         waveform_dataset, preproc_mode, settings, num_repeats=1,
         shuffle=False, batch_size=1, feature_name='spectrogram'):
     
+    preprocessor = Preprocessor(preproc_mode, settings, feature_name)
+    
     dataset = waveform_dataset
     
     if num_repeats is None:
@@ -868,10 +818,10 @@ def create_spectrogram_dataset(
     elif num_repeats != 1:
         dataset = dataset.repeat(num_repeats)
     
-    waveform_preprocessor = WaveformPreprocessor(preproc_mode, settings)
+    # waveform_preprocessor = WaveformPreprocessor(preproc_mode, settings)
      
     dataset = dataset.map(
-        waveform_preprocessor,
+        preprocessor.preprocess_waveform,
         num_parallel_calls=settings.num_preproc_parallel_calls)
     
     if shuffle:
@@ -880,11 +830,11 @@ def create_spectrogram_dataset(
     if batch_size != 1:
         dataset = dataset.batch(batch_size)
     
-    spectrogram_computer = SpectrogramComputer(
-        preproc_mode, settings, feature_name)
+    # spectrogram_computer = SpectrogramComputer(
+    #     preproc_mode, settings, feature_name)
     
     dataset = dataset.map(
-        spectrogram_computer,
+        preprocessor.compute_spectrograms,
         num_parallel_calls=settings.num_preproc_parallel_calls)
     
     return dataset
@@ -900,7 +850,7 @@ def compute_spectrogram_normalization_settings(settings):
     num_batches = int(round(num_examples / batch_size))
     
     dataset = create_on_disk_spectrogram_dataset(
-        s.dataset_name, DATASET_PART_TRAINING, PREPROC_MODE_TRAINING, s,
+        s.dataset_name, DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING, s,
         batch_size=batch_size)
 
     iterator = dataset.make_one_shot_iterator()
@@ -1073,7 +1023,8 @@ def write_precision_recall_csv_file(classifier_name, train_stats, val_stats):
 def show_training_dataset(settings):
     settings = complete_settings(settings)
     dataset = create_on_disk_spectrogram_dataset(
-        settings.dataset_name, DATASET_PART_TRAINING, PREPROC_MODE_TRAINING)
+        settings.dataset_name, DATASET_PART_TRAINING,
+        Preprocessor.MODE_TRAINING)
     show_dataset(dataset, 20)
         
     
@@ -1128,7 +1079,7 @@ def show_spectrogram_dataset(settings):
         spectrogram_normalization_enabled=False)
     
     dataset = create_on_disk_spectrogram_dataset(
-        s.dataset_name, DATASET_PART_TRAINING, PREPROC_MODE_TRAINING, s,
+        s.dataset_name, DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING, s,
         batch_size=batch_size)
     
     num_batches = int(round(total_num_examples / batch_size))
@@ -1179,175 +1130,6 @@ def test_random_time_shifting():
             except tf.errors.OutOfRangeError:
                 break    
     
-    
-class WaveformPreprocessor:
-    
-    
-    def __init__(self, preproc_mode, settings):
-        
-        # `preproc_mode` can be `PREPROC_MODE_TRAINING`,
-        # `PREPROC_MODE_EVALUATION`, or `PREPROC_MODE_INFERENCE`.
-        #
-        # When `preproc_mode` is `PREPROC_MODE_TRAINING`, dataset examples
-        # are preprocessed according to certain settings that control
-        # waveform slicing and data augmentation.
-        #
-        # When `preproc_mode` is `PREPROC_MODE_EVALUATION`, dataset examples
-        # are processed as when it is `PREPROC_MODE_TRAINING`, except that
-        # data augmentation can be turned on or off via the
-        # `evaluation_data_augmentation_enabled` setting.
-        #
-        # When `preproc_mode` is `PREPROC_MODE_INFERENCE`, dataset waveforms
-        # are not sliced as they are when it is `PREPROC_MODE_TRAINING` or
-        # `PREPROC_MODE_EVALUATION`. Instead, the slicing start index is
-        # always zero. Data augmentation is also disabled.
-
-        s = settings
-        
-        self.start_index, self.end_index, _, _, _, _, _ = \
-            get_low_level_preproc_settings(preproc_mode, s)
-            
-        augmentation_enabled = \
-            is_data_augmentation_enabled(preproc_mode, s)
-            
-        self.random_time_shifting_enabled = \
-            augmentation_enabled and s.random_waveform_time_shifting_enabled
-        
-        if self.random_time_shifting_enabled:
-            self.max_time_shift = signal_utils.seconds_to_frames(
-                s.max_waveform_time_shift, s.sample_rate)
-            
-                
-    def __call__(self, waveform, label):
-        
-        if self.random_time_shifting_enabled:
-            n = self.max_time_shift
-            i = tf.random.uniform((), -n, n, dtype=tf.int32)
-            waveform = waveform[self.start_index + i:self.end_index + i]
-            
-        else:
-            waveform = waveform[self.start_index:self.end_index]
-            
-        return waveform, label
-    
-    
-def is_data_augmentation_enabled(preproc_mode, settings):
-    return \
-        preproc_mode == PREPROC_MODE_TRAINING or \
-        preproc_mode == PREPROC_MODE_EVALUATION and \
-        settings.evaluation_data_augmentation_enabled
-        
-        
-class SpectrogramComputer:
-    
-    
-    def __init__(
-            self, preproc_mode, settings, output_feature_name='spectrogram'):
-        
-        self.settings = settings
-        self.output_feature_name = output_feature_name
-        
-        (time_start_index, time_end_index, self.window_size, self.hop_size,
-         self.dft_size, self.freq_start_index, self.freq_end_index) = \
-            get_low_level_preproc_settings(preproc_mode, settings)
-         
-        self.waveform_length = time_end_index - time_start_index
-                
-        self.window_fn = functools.partial(
-            tf.contrib.signal.hann_window, periodic=True)
-        
-        
-    def __call__(self, waveforms, labels):
-        
-        """Computes spectrograms for a batch of waveforms."""
-        
-        s = self.settings
-        
-        # Set final dimension of waveforms.
-        self._set_waveforms_shape(waveforms)
-
-        # Compute STFTs.
-        waveforms = tf.cast(waveforms, tf.float32)
-        stfts = tf.contrib.signal.stft(
-            waveforms, self.window_size, self.hop_size,
-            fft_length=self.dft_size, window_fn=self.window_fn)
-        
-        # Slice STFTs along frequency axis.
-        stfts = stfts[..., self.freq_start_index:self.freq_end_index]
-        
-        # Get STFT magnitudes squared, i.e. squared spectrograms.
-        grams = tf.real(stfts * tf.conj(stfts))
-        # gram = tf.abs(stft) ** 2
-        
-        # Take natural log of squared spectrograms. Adding an epsilon
-        # avoids log-of-zero errors.
-        grams = tf.log(grams + s.spectrogram_log_epsilon)
-        
-        # Clip spectrograms if indicated.
-        if s.spectrogram_clipping_enabled:
-            grams = tf.clip_by_value(
-                grams, s.spectrogram_clipping_min, s.spectrogram_clipping_max)
-            
-        # Normalize spectrograms if indicated.
-        if s.spectrogram_normalization_enabled:
-            grams = \
-                s.spectrogram_normalization_scale_factor * grams + \
-                s.spectrogram_normalization_offset
-        
-        # Reshape spectrograms for input into Keras neural network.
-        grams = self._reshape_grams(grams)
-        
-        # Create features dictionary.
-        features = {self.output_feature_name: grams}
-        
-        # Reshape labels into a single 2D column.
-        labels = tf.reshape(labels, (-1, 1))
-        
-        return features, labels
-    
-    
-    def _set_waveforms_shape(self, waveforms):
-        
-        """
-        Sets the final dimension of a batch of waveforms.
-        
-        When we receive a batch of waveforms its final dimension is
-        `None`, even though we know that the dimension is the sliced
-        waveform length. We set the dimension since if we don't and
-        the model includes at least one convolutional layer, then
-        the `Classifier.train` method raises an exception.
-        """
-        
-        dims = list(waveforms.shape.dims)
-        dims[-1] = tf.Dimension(self.waveform_length)
-        shape = tf.TensorShape(dims)
-        waveforms.set_shape(shape)
-        
-        
-    def _reshape_grams(self, grams):
-        
-        """
-        Reshapes a batch of spectrograms for input to a Keras neural network.
-        
-        The batch must be reshaped differently depending on whether the
-        network's input layer is convolutional or dense.
-        """
-        
-        s = self.settings
-        
-        if len(s.convolutional_layer_sizes) != 0:
-            # model is CNN
-            
-            # Add channel dimension for Keras `Conv2D` layer compatibility.
-            return tf.expand_dims(grams, 3)
-            
-        else:
-            # model is DNN
-            
-            # Flatten spectrograms for Keras `Dense` layer compatibility.
-            size = get_sliced_spectrogram_size(s)
-            return tf.reshape(grams, (-1, size))
-
     
 if __name__ == '__main__':
     main()
