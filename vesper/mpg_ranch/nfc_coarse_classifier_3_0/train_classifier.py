@@ -94,27 +94,25 @@ BASE_TSEEP_SETTINGS = Settings(
     # to narrow this window in our detector and classifier training datasets,
     # and make the distribution of onsets within the window more uniform.
     #
-    # Random waveform time offsets are a data augmentation method that
-    # can be applied during training to distribute event onsets more evenly
-    # in time. (An event is whatever tripped a detector to create a training
-    # clip, whether or not the event was a call.) When random waveform
-    # time offsets are enabled, an offset uniformly distributed in the
-    # interval [-max_waveform_time_offset, max_waveform_time_offset] is
-    # added to the bounds of each slice of a dataset waveform that is
-    # extracted for training. The distribution of onsets after data
-    # augmentation is the distribution before augmentation convolved with
-    # the uniform distribution over
-    # [-max_waveform_time_offset, max_waveform_time_offset]. Note that
-    # this widens the window within which onsets can occur by
-    # max_waveform_time_offset seconds on each end.
+    # Random waveform time shifting is a data augmentation method that can
+    # be applied to distribute training clip event onsets more evenly in
+    # time. (An event is whatever tripped a detector to create a training
+    # clip, whether or not the event was a call.) When random waveform time
+    # shifting is enabled, each dataset waveform is shifted in time by an
+    # amount drawn from the uniform distribution over
+    # [-max_waveform_time_shift, max_waveform_time_shift] before the
+    # waveform is sliced. The distribution of onsets after shifting is the
+    # distribution before shifting convolved with the (uniform) shift
+    # distribution. Note that this widens the window within which onsets
+    # can occur by max_waveform_time_shift seconds on each end.
     
     # location of event onset window in training dataset waveforms
     dataset_onset_window_start_time=.090,
     dataset_onset_window_duration=.050,
     
-    # random waveform time offsets data augmentation settings
-    random_waveform_time_offsets_enabled=True,
-    max_waveform_time_offset=.025,
+    # random waveform time shifting data augmentation settings
+    random_waveform_time_shifting_enabled=True,
+    max_waveform_time_shift=.025,
     
     # waveform settings
     waveform_initial_padding=.030,
@@ -243,7 +241,7 @@ def main():
     # show_training_dataset(settings)
     # show_spectrogram_dataset(settings)
     
-    # test_random_time_offsets()
+    # test_random_time_shifting()
     
     
 def save_checkpoint_results(classifier_name, min_step_num, max_step_num):
@@ -672,8 +670,8 @@ def get_waveform_start_time(settings):
     
     start_time = s.dataset_onset_window_start_time - s.waveform_initial_padding
     
-    if s.random_waveform_time_offsets_enabled:
-        start_time -= s.max_waveform_time_offset
+    if s.random_waveform_time_shifting_enabled:
+        start_time -= s.max_waveform_time_shift
         
     return start_time
 
@@ -1137,23 +1135,23 @@ def show_spectrogram_dataset(settings):
     show_dataset(dataset, num_batches)
 
 
-def test_random_time_offsets():
+def test_random_time_shifting():
     
     """
-    Tests the use of random slicing offsets for data augmentation.
+    Tests random time shifting for data augmentation.
     
-    Random slicing offsets are used in the `WaveformPreprocessor` class
-    to distribute NFC onset times more evenly during classifier training.
+    Random time shifting is used by the `WaveformPreprocessor` class to
+    distribute NFC onset times more evenly during classifier training.
     """
     
-    class RandomSlicer:
+    class ShiftingSlicer:
         
         def __init__(self):
-            self.max_offset = 2
+            self.max_shift = 2
             self.length = 3
             
         def __call__(self, x):
-            n = self.max_offset
+            n = self.max_shift
             i = tf.random.uniform((), -n, n, dtype=tf.int32)
             return x[n + i:n + self.length + i]
     
@@ -1163,7 +1161,7 @@ def test_random_time_offsets():
     x = 100 * np.arange(m).reshape((m, 1)) + np.arange(n).reshape((1, n))
 
     # Create TensorFlow dataset.
-    slicer = RandomSlicer()
+    slicer = ShiftingSlicer()
     dataset = tf.data.Dataset.from_tensor_slices(x).repeat(2).map(slicer)
     
     # Show dataset.
@@ -1212,18 +1210,18 @@ class WaveformPreprocessor:
         augmentation_enabled = \
             is_data_augmentation_enabled(preproc_mode, s)
             
-        self.random_time_offsets_enabled = \
-            augmentation_enabled and s.random_waveform_time_offsets_enabled
+        self.random_time_shifting_enabled = \
+            augmentation_enabled and s.random_waveform_time_shifting_enabled
         
-        if self.random_time_offsets_enabled:
-            self.max_time_offset = signal_utils.seconds_to_frames(
-                s.max_waveform_time_offset, s.sample_rate)
+        if self.random_time_shifting_enabled:
+            self.max_time_shift = signal_utils.seconds_to_frames(
+                s.max_waveform_time_shift, s.sample_rate)
             
                 
     def __call__(self, waveform, label):
         
-        if self.random_time_offsets_enabled:
-            n = self.max_time_offset
+        if self.random_time_shifting_enabled:
+            n = self.max_time_shift
             i = tf.random.uniform((), -n, n, dtype=tf.int32)
             waveform = waveform[self.start_index + i:self.end_index + i]
             
