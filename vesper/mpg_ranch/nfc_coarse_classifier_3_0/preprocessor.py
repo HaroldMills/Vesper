@@ -1,5 +1,6 @@
 import functools
 
+import numpy as np
 import tensorflow as tf
 
 import vesper.util.signal_utils as signal_utils
@@ -244,3 +245,56 @@ def _is_data_augmentation_enabled(preproc_mode, settings):
         preproc_mode == Preprocessor.MODE_TRAINING or \
         preproc_mode == Preprocessor.MODE_EVALUATION and \
         settings.evaluation_data_augmentation_enabled
+
+
+def _main():
+    _test_random_time_shifting()
+    
+    
+def _test_random_time_shifting():
+    
+    """
+    Tests random time shifting for data augmentation.
+    
+    Random time shifting is used by the `WaveformPreprocessor` class to
+    distribute NFC onset times more evenly during classifier training.
+    """
+    
+    class ShiftingSlicer:
+        
+        def __init__(self):
+            self.max_shift = 2
+            self.length = 3
+            
+        def __call__(self, x):
+            n = self.max_shift
+            i = tf.random.uniform((), -n, n, dtype=tf.int32)
+            return x[n + i:n + self.length + i]
+    
+    # Create dataset as NumPy array.
+    m = 10
+    n = 6
+    x = 100 * np.arange(m).reshape((m, 1)) + np.arange(n).reshape((1, n))
+
+    # Create TensorFlow dataset.
+    slicer = ShiftingSlicer()
+    dataset = tf.data.Dataset.from_tensor_slices(x).repeat(2).map(slicer)
+    
+    # Show dataset.
+    iterator = dataset.make_one_shot_iterator()
+    x = iterator.get_next()
+     
+    with tf.Session() as session:
+        
+        while True:
+            
+            try:
+                x_ = session.run(x)
+                print(x_)
+                
+            except tf.errors.OutOfRangeError:
+                break    
+    
+
+if __name__ == '__main__':
+    _main()

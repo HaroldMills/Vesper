@@ -8,7 +8,6 @@ whether or not a clip contains a nocturnal flight call.
 
 from pathlib import Path
 import bisect
-import glob
 import math
 import os
 import shutil
@@ -228,47 +227,12 @@ def main():
     
     work_around_openmp_issue()
     
-    # save_checkpoint_results('Tseep BN', 2000, 8000)
-    
     train_and_evaluate_classifier(CLASSIFIER_NAME)
     
-    # settings = SETTINGS[CLASSIFIER_NAME]
-    # show_training_dataset(settings)
-    # show_spectrogram_dataset(settings)
-    
-    # test_random_time_shifting()
+    # show_training_dataset(CLASSIFIER_NAME)
+    # show_spectrogram_dataset(CLASSIFIER_NAME)
     
     
-def save_checkpoint_results(classifier_name, min_step_num, max_step_num):
-    
-    model_dir_path = MODELS_DIR_PATH / classifier_name
-    
-    step_nums = get_checkpoint_step_nums(model_dir_path)
-    
-    for step_num in step_nums:
-        
-        if min_step_num <= step_num and step_num <= max_step_num:
-            
-            checkpoint_path = model_dir_path / 'model.ckpt-*'.format(step_num)
-            
-            print(checkpoint_path)
-            
-#             ws = tf.estimator.WarmStartSettings(
-#                 ckpt_to_initialize_from=checkpoint_path)
-    
-    
-def get_checkpoint_step_nums(model_dir_path):
-    pattern = model_dir_path / 'model.ckpt-*.index'
-    file_paths = glob.glob(str(pattern))
-    return sorted(get_checkpoint_step_num(p) for p in file_paths)
-
-
-def get_checkpoint_step_num(file_path):
-    file_name = Path(file_path).name
-    step_num = file_name.split('-')[1].split('.')[0]
-    return int(step_num)
-
-
 def work_around_openmp_issue():
 
     # Added this 2018-11-13 to work around a problem on macOS involving
@@ -282,365 +246,19 @@ def work_around_openmp_issue():
 
 
 def train_and_evaluate_classifier(name):
-    settings = SETTINGS[name]
+    settings = get_settings(name)
     classifier = Classifier(name, settings)
     classifier.train()
     classifier.evaluate()
     classifier.save()
     
 
-class Classifier:
-    
-    
-    def __init__(self, name, settings):
-        
-        self.name = name
-        
-        self.settings = complete_settings(settings)
-        
-        self.model = create_model(self.settings)
-        
-        # Remove old model dir path for a cold start.
-        shutil.rmtree(self.model_dir_path, ignore_errors=True)
-        
-        self.estimator = self._create_estimator()
-        
-        
-    @property
-    def model_dir_path(self):
-        return MODELS_DIR_PATH / self.name
-    
-    
-    @property
-    def model_input_name(self):
-        
-        """
-        The name assigned by the Keras model to its input.
-        
-        We use this as a feature name in training and evaluation datasets
-        to tell TensorFlow what data to feed to the model.
-        """
-        
-        return self.model.input_names[0]
-    
-    
-    def _create_estimator(self):
-        
-        config = tf.estimator.RunConfig(
-            save_summary_steps=100,
-            save_checkpoints_steps=200,
-            keep_checkpoint_max=None)
-        
-        return tf.keras.estimator.model_to_estimator(
-            self.model,
-            model_dir=self.model_dir_path,
-            config=config)
-        
-        
-    def train(self):
-        
-        s = self.settings
-        
-        print(
-            'Training classifier for {} steps...'.format(
-                s.num_training_steps))
-        
-        train_spec = tf.estimator.TrainSpec(
-            input_fn=self._create_training_dataset,
-            max_steps=s.num_training_steps)
-        
-        eval_spec = tf.estimator.EvalSpec(
-            input_fn=self._create_validation_dataset,
-            steps=None,
-            start_delay_secs=30,
-            throttle_secs=30)
-        
-        start_time = time.time()
-        
-        tf.estimator.train_and_evaluate(self.estimator, train_spec, eval_spec)
-        
-        elapsed_time = time.time() - start_time
-        rate = s.num_training_steps / elapsed_time
-        print((
-            'Training took {:.1f} seconds for {} steps, a rate of {:.1f} '
-            'steps per second.').format(
-                elapsed_time, s.num_training_steps, rate))
-
-
-    def evaluate(self):
-        
-        print('Evaluating classifier on training dataset...')
-        
-        self.train_stats = \
-            self._evaluate(self._create_evaluation_training_dataset)
-            
-        print('Evaluating classifier on validation dataset...')
-        
-        self.val_stats = self._evaluate(self._create_validation_dataset)
-        
-        print('Saving results...')
-        
-        save_results(
-            self.name, self.train_stats, self.val_stats, self.settings)
-        
-        print('Done.')
-            
-        
-    def _evaluate(self, dataset_creator, num_thresholds=101):
-        
-        labels = get_dataset_labels(dataset_creator())
-        
-        start_time = time.time()
-        
-        predictions = self.estimator.predict(input_fn=dataset_creator)
-        
-        # At this point `predictions` is an iterator that yields
-        # dictionaries, each of which contains a single item whose
-        # value is an array containing one element, a prediction.
-        # Extract the predictions into a NumPy array.
-        predictions = np.array(
-            [list(p.values())[0][0] for p in predictions])
-        
-        elapsed_time = time.time() - start_time
-        num_slices = len(predictions)
-        rate = num_slices / elapsed_time
-        print((
-            'Evaluated classifier on {} waveform slices in {:.1f} seconds, '
-            'a rate of {:.1f} slices per second.').format(
-                num_slices, elapsed_time, rate))
-            
-        # pairs = list(zip(labels, predictions))
-        # for i, pair in enumerate(pairs[:200]):
-        #     print(i, pair)
-            
-        thresholds = np.arange(num_thresholds) / float(num_thresholds - 1)
-    
-        return BinaryClassificationStats(labels, predictions, thresholds)
-        
-        
-    def _create_training_dataset(self):
-        return self._create_dataset(
-            DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING,
-            num_repeats=None, shuffle=True)
-    
-    
-    def _create_dataset(
-            self, dataset_part, preproc_mode, num_repeats=1, shuffle=False):
-        
-        s = self.settings
-        
-        return create_on_disk_spectrogram_dataset(
-            s.dataset_name, dataset_part, preproc_mode, s,
-            num_repeats=num_repeats, shuffle=shuffle,
-            batch_size=s.training_batch_size,
-            feature_name=self.model_input_name)
-        
-        
-    def _create_evaluation_training_dataset(self):
-        return self._create_dataset(
-            DATASET_PART_TRAINING, Preprocessor.MODE_EVALUATION)
-
-
-    def _create_validation_dataset(self):
-        return self._create_dataset(
-            DATASET_PART_VALIDATION, Preprocessor.MODE_EVALUATION)
-        
-        
-    def save(self):
-        
-        clip_type = self.name.split()[0]
-        
-        path = classifier_utils.get_model_file_path(clip_type)
-        path.parent.mkdir(exist_ok=True)
-        self.model.save(str(path))
-
-        self.settings.classification_threshold = find_classification_threshold(
-            self.val_stats, self.settings.min_classifier_recall)
-        
-        settings = self.settings.__dict__
-        text = yaml.dump(settings, default_flow_style=False)
-        path = classifier_utils.get_settings_file_path(clip_type)
-        path.write_text(text)
-
-    
-def find_classification_threshold(stats, min_recall):
-    
-    # Find index of last recall that is at least `min_recall`.
-    # `stats.recall` is nonincreasing, so we flip it before using
-    # `bisect.bisect_left`, and then flip the resulting index.
-    recalls = np.flip(stats.recall)
-    i = bisect.bisect_left(recalls, min_recall)
-    i = len(recalls) - 1 - i
-    
-    # The float conversion in the following ensures that the assigned
-    # type is Python's `float` instead of a NumPy type. The latter
-    # doesn't play nicely with `yaml.dump`.
-    threshold = float(stats.threshold[i])
-    
-#     print('recalls', stats.recall)
-#     print('thresholds', stats.threshold)
-#     print(min_recall, i, threshold, threshold.__class__.__name__)
-    
-    return threshold
-
-
-def create_model(settings):
-    
-    print('Creating classifier model...')
-    
-    regularizer = create_regularizer(settings)
-    
-    model = tf.keras.Sequential()
-    add_convolutional_layers(model, settings, regularizer)
-    add_hidden_dense_layers(model, settings, regularizer)
-    add_output_layer(model, settings, regularizer)
-    
-    model.compile(
-        optimizer='adam',
-        loss='binary_crossentropy',
-        metrics=['accuracy'])
-    
-    print('Done creating classifier model.')
-    
-    return model
-
-        
-def create_regularizer(settings):
-    
-    if settings.l2_regularization_enabled:
-        
-        beta = settings.l2_regularization_beta
-        
-        print((
-            'Loss will include L2 regularization term with beta of '
-            '{}.').format(beta))
-        
-        return tf.keras.regularizers.l2(beta)
-    
-    else:
-        return None
-        
-
-def add_convolutional_layers(model, settings, regularizer):
-    
-    num_layers = len(settings.convolutional_layer_sizes)
-    
-    for layer_num in range(num_layers):
-        
-        layer_size = settings.convolutional_layer_sizes[layer_num]
-        
-        kwargs = {
-            'filters': layer_size,
-            'kernel_size': (3, 3),
-            'activation': 'relu',
-            'kernel_regularizer': regularizer
-        }
-        
-        if layer_num == 0:
-            # first network layer
-            
-            # Specify input shape. The added dimension is for channel.
-            spectrogram_shape = \
-                Preprocessor.get_sliced_spectrogram_shape(settings)
-            kwargs['input_shape'] = spectrogram_shape + (1,)
-            
-        model.add(tf.keras.layers.Conv2D(**kwargs))
-        
-        print(
-            'Added convolutional layer with {} kernels.'.format(layer_size))
-        
-        if settings.batch_normalization_enabled:
-            model.add(tf.keras.layers.BatchNormalization())
-            print('Added batch normalization layer.')
-        
-        model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
-        print('Added max pooling layer.')
-
-    if num_layers != 0:
-        model.add(tf.keras.layers.Flatten())
-        print('Added flattening layer.')
-
-    
-def add_hidden_dense_layers(model, settings, regularizer):
-    
-    num_layers = len(settings.dense_layer_sizes)
-    
-    for layer_num in range(num_layers):
-        
-        layer_size = settings.dense_layer_sizes[layer_num]
-        
-        kwargs = {
-            'units': layer_size,
-            'activation': 'relu',
-            'kernel_regularizer': regularizer
-        }
-         
-        if layer_num == 0 and len(settings.convolutional_layer_sizes) == 0:
-            # first network layer
-            
-            kwargs['input_dim'] = \
-                Preprocessor.get_sliced_spectrogram_size(settings)
-             
-        model.add(tf.keras.layers.Dense(**kwargs))
-        
-        print('Added dense layer with {} neurons.'.format(layer_size))
-        
-        if settings.batch_normalization_enabled:
-            model.add(tf.keras.layers.BatchNormalization())
-            print('Added batch normalization layer.')
-            
-
-def add_output_layer(model, settings, regularizer):
-    
-    kwargs = {
-        'units': 1,
-        'activation': 'sigmoid',
-        'kernel_regularizer': regularizer
-    }
-    
-    if len(settings.convolutional_layer_sizes) == 0 and \
-            len(settings.dense_layer_sizes) == 0:
-        # output layer is only network layer (i.e. the network will
-        # have a single neuron and perform logistic regression)
-        
-        kwargs['input_dim'] = \
-            Preprocessor.get_sliced_spectrogram_size(settings)
-
-    model.add(tf.keras.layers.Dense(**kwargs))
-    
-    print('Added output layer.')
-    
-
-def get_dataset_labels(dataset):
-    
-    iterator = dataset.make_one_shot_iterator()
-    next_batch = iterator.get_next()
-     
-    with tf.Session() as session:
-        
-        label_batches = []
-        num_labels = 0
-        
-        while True:
-            
-            try:
-                _, labels = session.run(next_batch)
-                labels = labels.flatten()
-                label_batches.append(labels.flatten())
-                num_labels += labels.size
-                
-            except tf.errors.OutOfRangeError:
-                break
-            
-    return np.concatenate(label_batches)
-    
-    
-def complete_settings(settings):
+def get_settings(name):
     
     # Copy settings so we don't modify the originals.
-    s = Settings(settings)
+    s = Settings(SETTINGS[name])
     
-    s.waveform_start_time = get_waveform_start_time(settings)
+    s.waveform_start_time = get_waveform_start_time(s)
         
     if s.spectrogram_clipping_enabled and \
             s.spectrogram_clipping_pretraining_enabled:
@@ -902,6 +520,330 @@ def compute_spectrogram_normalization_settings(settings):
     return scale_factor, offset
 
     
+class Classifier:
+    
+    
+    def __init__(self, name, settings):
+        
+        self.name = name
+        self.settings = settings
+        
+        self.model = create_model(self.settings)
+        
+        # Remove old model dir path for a cold start.
+        shutil.rmtree(self.model_dir_path, ignore_errors=True)
+        
+        self.estimator = self._create_estimator()
+        
+        
+    @property
+    def model_dir_path(self):
+        return MODELS_DIR_PATH / self.name
+    
+    
+    @property
+    def model_input_name(self):
+        
+        """
+        The name assigned by the Keras model to its input.
+        
+        We use this as a feature name in training and evaluation datasets
+        to tell TensorFlow what data to feed to the model.
+        """
+        
+        return self.model.input_names[0]
+    
+    
+    def _create_estimator(self):
+        
+        config = tf.estimator.RunConfig(
+            save_summary_steps=100,
+            save_checkpoints_steps=200,
+            keep_checkpoint_max=None)
+        
+        return tf.keras.estimator.model_to_estimator(
+            self.model,
+            model_dir=self.model_dir_path,
+            config=config)
+        
+        
+    def train(self):
+        
+        s = self.settings
+        
+        print(
+            'Training classifier for {} steps...'.format(
+                s.num_training_steps))
+        
+        train_spec = tf.estimator.TrainSpec(
+            input_fn=self._create_training_dataset,
+            max_steps=s.num_training_steps)
+        
+        eval_spec = tf.estimator.EvalSpec(
+            input_fn=self._create_validation_dataset,
+            steps=None,
+            start_delay_secs=30,
+            throttle_secs=30)
+        
+        start_time = time.time()
+        
+        tf.estimator.train_and_evaluate(self.estimator, train_spec, eval_spec)
+        
+        elapsed_time = time.time() - start_time
+        rate = s.num_training_steps / elapsed_time
+        print((
+            'Training took {:.1f} seconds for {} steps, a rate of {:.1f} '
+            'steps per second.').format(
+                elapsed_time, s.num_training_steps, rate))
+
+
+    def evaluate(self):
+        
+        print('Evaluating classifier on training dataset...')
+        
+        self.train_stats = \
+            self._evaluate(self._create_evaluation_training_dataset)
+            
+        print('Evaluating classifier on validation dataset...')
+        
+        self.val_stats = self._evaluate(self._create_validation_dataset)
+        
+        print('Saving results...')
+        
+        save_results(
+            self.name, self.train_stats, self.val_stats, self.settings)
+        
+        print('Done.')
+            
+        
+    def _evaluate(self, dataset_creator, num_thresholds=101):
+        
+        labels = get_dataset_labels(dataset_creator())
+        
+        start_time = time.time()
+        
+        predictions = self.estimator.predict(input_fn=dataset_creator)
+        
+        # At this point `predictions` is an iterator that yields
+        # dictionaries, each of which contains a single item whose
+        # value is an array containing one element, a prediction.
+        # Extract the predictions into a NumPy array.
+        predictions = np.array(
+            [list(p.values())[0][0] for p in predictions])
+        
+        elapsed_time = time.time() - start_time
+        num_slices = len(predictions)
+        rate = num_slices / elapsed_time
+        print((
+            'Evaluated classifier on {} waveform slices in {:.1f} seconds, '
+            'a rate of {:.1f} slices per second.').format(
+                num_slices, elapsed_time, rate))
+            
+        # pairs = list(zip(labels, predictions))
+        # for i, pair in enumerate(pairs[:200]):
+        #     print(i, pair)
+            
+        thresholds = np.arange(num_thresholds) / float(num_thresholds - 1)
+    
+        return BinaryClassificationStats(labels, predictions, thresholds)
+        
+        
+    def _create_training_dataset(self):
+        return self._create_dataset(
+            DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING,
+            num_repeats=None, shuffle=True)
+    
+    
+    def _create_dataset(
+            self, dataset_part, preproc_mode, num_repeats=1, shuffle=False):
+        
+        s = self.settings
+        
+        return create_on_disk_spectrogram_dataset(
+            s.dataset_name, dataset_part, preproc_mode, s,
+            num_repeats=num_repeats, shuffle=shuffle,
+            batch_size=s.training_batch_size,
+            feature_name=self.model_input_name)
+        
+        
+    def _create_evaluation_training_dataset(self):
+        return self._create_dataset(
+            DATASET_PART_TRAINING, Preprocessor.MODE_EVALUATION)
+
+
+    def _create_validation_dataset(self):
+        return self._create_dataset(
+            DATASET_PART_VALIDATION, Preprocessor.MODE_EVALUATION)
+        
+        
+    def save(self):
+        
+        clip_type = self.name.split()[0]
+        
+        path = classifier_utils.get_model_file_path(clip_type)
+        path.parent.mkdir(exist_ok=True)
+        self.model.save(str(path))
+
+        self.settings.classification_threshold = find_classification_threshold(
+            self.val_stats, self.settings.min_classifier_recall)
+        
+        settings = self.settings.__dict__
+        text = yaml.dump(settings, default_flow_style=False)
+        path = classifier_utils.get_settings_file_path(clip_type)
+        path.write_text(text)
+
+    
+def create_model(settings):
+    
+    print('Creating classifier model...')
+    
+    regularizer = create_regularizer(settings)
+    
+    model = tf.keras.Sequential()
+    add_convolutional_layers(model, settings, regularizer)
+    add_hidden_dense_layers(model, settings, regularizer)
+    add_output_layer(model, settings, regularizer)
+    
+    model.compile(
+        optimizer='adam',
+        loss='binary_crossentropy',
+        metrics=['accuracy'])
+    
+    print('Done creating classifier model.')
+    
+    return model
+
+        
+def create_regularizer(settings):
+    
+    if settings.l2_regularization_enabled:
+        
+        beta = settings.l2_regularization_beta
+        
+        print((
+            'Loss will include L2 regularization term with beta of '
+            '{}.').format(beta))
+        
+        return tf.keras.regularizers.l2(beta)
+    
+    else:
+        return None
+        
+
+def add_convolutional_layers(model, settings, regularizer):
+    
+    num_layers = len(settings.convolutional_layer_sizes)
+    
+    for layer_num in range(num_layers):
+        
+        layer_size = settings.convolutional_layer_sizes[layer_num]
+        
+        kwargs = {
+            'filters': layer_size,
+            'kernel_size': (3, 3),
+            'activation': 'relu',
+            'kernel_regularizer': regularizer
+        }
+        
+        if layer_num == 0:
+            # first network layer
+            
+            # Specify input shape. The added dimension is for channel.
+            spectrogram_shape = \
+                Preprocessor.get_sliced_spectrogram_shape(settings)
+            kwargs['input_shape'] = spectrogram_shape + (1,)
+            
+        model.add(tf.keras.layers.Conv2D(**kwargs))
+        
+        print(
+            'Added convolutional layer with {} kernels.'.format(layer_size))
+        
+        if settings.batch_normalization_enabled:
+            model.add(tf.keras.layers.BatchNormalization())
+            print('Added batch normalization layer.')
+        
+        model.add(tf.keras.layers.MaxPooling2D(pool_size=(2, 2)))
+        print('Added max pooling layer.')
+
+    if num_layers != 0:
+        model.add(tf.keras.layers.Flatten())
+        print('Added flattening layer.')
+
+    
+def add_hidden_dense_layers(model, settings, regularizer):
+    
+    num_layers = len(settings.dense_layer_sizes)
+    
+    for layer_num in range(num_layers):
+        
+        layer_size = settings.dense_layer_sizes[layer_num]
+        
+        kwargs = {
+            'units': layer_size,
+            'activation': 'relu',
+            'kernel_regularizer': regularizer
+        }
+         
+        if layer_num == 0 and len(settings.convolutional_layer_sizes) == 0:
+            # first network layer
+            
+            kwargs['input_dim'] = \
+                Preprocessor.get_sliced_spectrogram_size(settings)
+             
+        model.add(tf.keras.layers.Dense(**kwargs))
+        
+        print('Added dense layer with {} neurons.'.format(layer_size))
+        
+        if settings.batch_normalization_enabled:
+            model.add(tf.keras.layers.BatchNormalization())
+            print('Added batch normalization layer.')
+            
+
+def add_output_layer(model, settings, regularizer):
+    
+    kwargs = {
+        'units': 1,
+        'activation': 'sigmoid',
+        'kernel_regularizer': regularizer
+    }
+    
+    if len(settings.convolutional_layer_sizes) == 0 and \
+            len(settings.dense_layer_sizes) == 0:
+        # output layer is only network layer (i.e. the network will
+        # have a single neuron and perform logistic regression)
+        
+        kwargs['input_dim'] = \
+            Preprocessor.get_sliced_spectrogram_size(settings)
+
+    model.add(tf.keras.layers.Dense(**kwargs))
+    
+    print('Added output layer.')
+    
+
+def get_dataset_labels(dataset):
+    
+    iterator = dataset.make_one_shot_iterator()
+    next_batch = iterator.get_next()
+     
+    with tf.Session() as session:
+        
+        label_batches = []
+        num_labels = 0
+        
+        while True:
+            
+            try:
+                _, labels = session.run(next_batch)
+                labels = labels.flatten()
+                label_batches.append(labels.flatten())
+                num_labels += labels.size
+                
+            except tf.errors.OutOfRangeError:
+                break
+            
+    return np.concatenate(label_batches)
+    
+    
 def save_results(classifier_name, train_stats, val_stats, settings):
     plot_precision_recall_curves(
         classifier_name, train_stats, val_stats, settings)
@@ -1020,11 +962,35 @@ def write_precision_recall_csv_file(classifier_name, train_stats, val_stats):
             csv_file.write(PR_CSV_FILE_ROW_FORMAT.format(*row))
 
 
-def show_training_dataset(settings):
-    settings = complete_settings(settings)
+def find_classification_threshold(stats, min_recall):
+    
+    # Find index of last recall that is at least `min_recall`.
+    # `stats.recall` is nonincreasing, so we flip it before using
+    # `bisect.bisect_left`, and then flip the resulting index.
+    recalls = np.flip(stats.recall)
+    i = bisect.bisect_left(recalls, min_recall)
+    i = len(recalls) - 1 - i
+    
+    # The float conversion in the following ensures that the assigned
+    # type is Python's `float` instead of a NumPy type. The latter
+    # doesn't play nicely with `yaml.dump`.
+    threshold = float(stats.threshold[i])
+    
+#     print('recalls', stats.recall)
+#     print('thresholds', stats.threshold)
+#     print(min_recall, i, threshold, threshold.__class__.__name__)
+    
+    return threshold
+
+
+def show_training_dataset(classifier_name):
+    
+    settings = get_settings(classifier_name)
+    
     dataset = create_on_disk_spectrogram_dataset(
         settings.dataset_name, DATASET_PART_TRAINING,
-        Preprocessor.MODE_TRAINING)
+        Preprocessor.MODE_TRAINING, settings)
+    
     show_dataset(dataset, 20)
         
     
@@ -1067,10 +1033,12 @@ def show_dataset(dataset, num_batches):
         print('Iteration took {} seconds.'.format(time.time() - start_time))
                     
 
-def show_spectrogram_dataset(settings):
+def show_spectrogram_dataset(classifier_name):
     
     total_num_examples = 2 ** 9
     batch_size = 2 ** 6
+    
+    settings = get_settings(classifier_name)
     
     # Show unclipped and unnormalized spectrograms.
     s = Settings(
@@ -1086,50 +1054,5 @@ def show_spectrogram_dataset(settings):
     show_dataset(dataset, num_batches)
 
 
-def test_random_time_shifting():
-    
-    """
-    Tests random time shifting for data augmentation.
-    
-    Random time shifting is used by the `WaveformPreprocessor` class to
-    distribute NFC onset times more evenly during classifier training.
-    """
-    
-    class ShiftingSlicer:
-        
-        def __init__(self):
-            self.max_shift = 2
-            self.length = 3
-            
-        def __call__(self, x):
-            n = self.max_shift
-            i = tf.random.uniform((), -n, n, dtype=tf.int32)
-            return x[n + i:n + self.length + i]
-    
-    # Create dataset as NumPy array.
-    m = 10
-    n = 6
-    x = 100 * np.arange(m).reshape((m, 1)) + np.arange(n).reshape((1, n))
-
-    # Create TensorFlow dataset.
-    slicer = ShiftingSlicer()
-    dataset = tf.data.Dataset.from_tensor_slices(x).repeat(2).map(slicer)
-    
-    # Show dataset.
-    iterator = dataset.make_one_shot_iterator()
-    x = iterator.get_next()
-     
-    with tf.Session() as session:
-        
-        while True:
-            
-            try:
-                x_ = session.run(x)
-                print(x_)
-                
-            except tf.errors.OutOfRangeError:
-                break    
-    
-    
 if __name__ == '__main__':
     main()
