@@ -1,4 +1,8 @@
+"""Constants and functions pertaining to classification datasets."""
+
+
 import functools
+import math
 
 import numpy as np
 import tensorflow as tf
@@ -7,66 +11,116 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-class Preprocessor:
-    
-    """
-    Coarse classifier preprocessor.
-    
-    A coarse classifier preprocessor prepares classifier input waveforms
-    for input to a classifier's neural network during training, evaluation,
-    and inference. It performs data augmentation, waveform slicing, and
-    spectrogram computation in a TensorFlow graph.
-    """
-    
-    
-    MODE_TRAINING = 'Training'
-    MODE_EVALUATION = 'Evaluation'
-    MODE_INFERENCE = 'Inference'
+# dataset parts
+DATASET_PART_TRAINING = 'Training'
+DATASET_PART_VALIDATION = 'Validation'
+DATASET_PART_TEST = 'Test'
+
+# dataset modes, determining the preprocessing performed by the dataset
+DATASET_MODE_TRAINING = 'Training'
+DATASET_MODE_EVALUATION = 'Evaluation'
+DATASET_MODE_INFERENCE = 'Inference'
+
+_WAVEFORM_DATASET_FEATURES = {
+    'waveform': tf.FixedLenFeature((), tf.string, default_value=''),
+    'label': tf.FixedLenFeature((), tf.int64, default_value=0)
+}
 
 
-    @staticmethod
-    def get_sliced_spectrogram_size(settings):
-        num_spectra, num_bins = \
-            Preprocessor.get_sliced_spectrogram_shape(settings)
-        return num_spectra * num_bins
+def create_spectrogram_dataset_from_waveform_files(
+        dir_path, mode, settings, num_repeats=1, shuffle=False, batch_size=1,
+        feature_name='spectrogram'):
+    
+    dataset = create_waveform_dataset_from_waveform_files(dir_path)
+    
+    return _create_spectrogram_dataset(
+        dataset, mode, settings, num_repeats, shuffle, batch_size,
+        feature_name)
+
+    
+def create_waveform_dataset_from_waveform_files(dir_path):
+    
+    file_path_pattern = str(dir_path / '*.tfrecords')
+    
+    # Get file paths matching pattern. Sort the paths for consistency.
+    file_paths = sorted(tf.gfile.Glob(file_path_pattern))
+    
+    return tf.data.TFRecordDataset(file_paths).map(_parse_example)
+
+
+def _parse_example(example_proto):
+    
+    example = tf.parse_single_example(
+        example_proto, _WAVEFORM_DATASET_FEATURES)
+    
+    bytes_ = example['waveform']
+    waveform = tf.decode_raw(bytes_, out_type=tf.int16, little_endian=True)
+    
+    label = example['label']
+    
+    return waveform, label
+
+
+def _create_spectrogram_dataset(
+        waveform_dataset, mode, settings, num_repeats=1, shuffle=False,
+        batch_size=1, feature_name='spectrogram'):
+    
+    preprocessor = _Preprocessor(mode, settings, feature_name)
+    
+    dataset = waveform_dataset
+    
+    if num_repeats is None:
+        dataset = dataset.repeat()
+    elif num_repeats != 1:
+        dataset = dataset.repeat(num_repeats)
+    
+    dataset = dataset.map(
+        preprocessor.preprocess_waveform,
+        num_parallel_calls=settings.num_dataset_parallel_calls)
+    
+    if shuffle:
+        dataset = dataset.shuffle(10 * batch_size)
+        
+    if batch_size != 1:
+        dataset = dataset.batch(batch_size)
+    
+    dataset = dataset.map(
+        preprocessor.compute_spectrograms,
+        num_parallel_calls=settings.num_dataset_parallel_calls)
+    
+    return dataset
+
+
+class _Preprocessor:
+    
+    """
+    Dataset example preprocessor.
+    
+    A dataset example preprocessor prepares dataset examples for input to
+    a classifier's neural network during training, evaluation, and inference.
+    It performs data augmentation, waveform slicing, and spectrogram
+    computation in a TensorFlow graph.
+    """
     
     
-    @staticmethod
-    def get_sliced_spectrogram_shape(settings):
+    def __init__(self, mode, settings, output_feature_name='spectrogram'):
         
-        (time_start_index, time_end_index, window_size, hop_size, _,
-         freq_start_index, freq_end_index) = \
-            _get_low_level_preprocessing_settings(
-                Preprocessor.MODE_TRAINING, settings)
-                    
-        num_samples = time_end_index - time_start_index
-        num_spectra = tfa_utils.get_num_analysis_records(
-            num_samples, window_size, hop_size)
-        
-        num_bins = freq_end_index - freq_start_index
-        
-        return (num_spectra, num_bins)
-    
-    
-    def __init__(
-            self, preproc_mode, settings, output_feature_name='spectrogram'):
-        
-        # `preproc_mode` can be `Preprocessor.MODE_TRAINING`,
-        # `Preprocessor.MODE_EVALUATION`, or `Preprocessor.MODE_INFERENCE`.
+        # `mode` can be `DATASET_MODE_TRAINING`, `DATASET_MODE_EVALUATION`,
+        # or `DATASET_MODE_INFERENCE`.
         #
-        # When `preproc_mode` is `MODE_TRAINING`, dataset examples are
+        # When `mode` is `DATASET_MODE_TRAINING`, dataset examples are
         # preprocessed according to certain settings that control waveform
         # slicing and data augmentation.
         #
-        # When `preproc_mode` is `MODE_EVALUATION`, dataset examples are
-        # processed as when it is `MODE_TRAINING`, except that data
-        # augmentation can be turned on or off via the
+        # When `mode` is `DATASET_MODE_EVALUATION`, dataset examples are
+        # processed as when it is `DATASET_MODE_TRAINING`, except that
+        # data augmentation can be turned on or off via the
         # `evaluation_data_augmentation_enabled` setting.
         #
-        # When `preproc_mode` is `MODE_INFERENCE`, dataset waveforms are
-        # not sliced as they are when it is `MODE_TRAINING` or
-        # `MODE_EVALUATION`. Instead, the slicing start index is always
-        # zero. Data augmentation is also disabled.
+        # When `mode` is `DATASET_MODE_INFERENCE`, dataset waveforms are
+        # not sliced as they are when it is `DATASET_MODE_TRAINING` or
+        # `DATASET_MODE_EVALUATION`. Instead, the slicing start index is
+        # always zero. Data augmentation is also disabled.
 
         self.settings = settings
         self.output_feature_name = output_feature_name
@@ -76,14 +130,14 @@ class Preprocessor:
         (self.time_start_index, self.time_end_index,
          self.window_size, self.hop_size, self.dft_size,
          self.freq_start_index, self.freq_end_index) = \
-            _get_low_level_preprocessing_settings(preproc_mode, s)
+            _get_low_level_preprocessing_settings(mode, s)
          
         self.waveform_length = self.time_end_index - self.time_start_index
                 
         self.window_fn = functools.partial(
             tf.contrib.signal.hann_window, periodic=True)
         
-        augmentation_enabled = _is_data_augmentation_enabled(preproc_mode, s)
+        augmentation_enabled = _is_data_augmentation_enabled(mode, s)
             
         self.random_waveform_time_shifting_enabled = \
             augmentation_enabled and s.random_waveform_time_shifting_enabled
@@ -206,18 +260,39 @@ class Preprocessor:
             # model is DNN
             
             # Flatten spectrograms for Keras `Dense` layer compatibility.
-            size = Preprocessor.get_sliced_spectrogram_size(s)
+            size = get_sliced_spectrogram_size(s)
             return tf.reshape(grams, (-1, size))
 
     
-def _get_low_level_preprocessing_settings(preproc_mode, settings):
+def get_sliced_spectrogram_size(settings):
+    num_spectra, num_bins = get_sliced_spectrogram_shape(settings)
+    return num_spectra * num_bins
+
+
+def get_sliced_spectrogram_shape(settings):
+    
+    (time_start_index, time_end_index, window_size, hop_size, _,
+     freq_start_index, freq_end_index) = \
+        _get_low_level_preprocessing_settings(
+            DATASET_MODE_TRAINING, settings)
+                
+    num_samples = time_end_index - time_start_index
+    num_spectra = tfa_utils.get_num_analysis_records(
+        num_samples, window_size, hop_size)
+    
+    num_bins = freq_end_index - freq_start_index
+    
+    return (num_spectra, num_bins)
+    
+    
+def _get_low_level_preprocessing_settings(mode, settings):
     
     s = settings
     fs = s.sample_rate
     s2f = signal_utils.seconds_to_frames
     
     # time slicing
-    if preproc_mode == Preprocessor.MODE_INFERENCE:
+    if mode == DATASET_MODE_INFERENCE:
         time_start_index = 0
     else:
         time_start_index = s2f(s.waveform_start_time, fs)
@@ -240,12 +315,47 @@ def _get_low_level_preprocessing_settings(preproc_mode, settings):
         freq_start_index, freq_end_index)
 
 
-def _is_data_augmentation_enabled(preproc_mode, settings):
+def _is_data_augmentation_enabled(mode, settings):
     return \
-        preproc_mode == Preprocessor.MODE_TRAINING or \
-        preproc_mode == Preprocessor.MODE_EVALUATION and \
+        mode == DATASET_MODE_TRAINING or \
+        mode == DATASET_MODE_EVALUATION and \
         settings.evaluation_data_augmentation_enabled
 
+
+def show_dataset(dataset, num_batches):
+
+    print('output types', dataset.output_types)
+    print('output_shapes', dataset.output_shapes)
+    
+    iterator = dataset.make_one_shot_iterator()
+    next_batch = iterator.get_next()
+     
+    with tf.Session() as session:
+        
+        num_values = 0
+        values_sum = 0
+        squares_sum = 0
+        
+        for i in range(num_batches):
+                
+            features, labels = session.run(next_batch)
+            feature_name, values = list(features.items())[0]
+                
+            values_class = values.__class__.__name__
+            labels_class = labels.__class__.__name__
+            
+            num_values += values.size
+            values_sum += values.sum()
+            squares_sum += (values ** 2).sum()
+            
+            mean = values_sum / num_values
+            std_dev = math.sqrt(squares_sum / num_values - mean ** 2)
+            
+            print(
+                'Batch {} of {}: {} {} {} {} {}, labels {} {}'.format(
+                    i + 1, num_batches, feature_name, values_class,
+                    values.shape, mean, std_dev, labels_class, labels.shape))
+                    
 
 def _main():
     _test_random_time_shifting()

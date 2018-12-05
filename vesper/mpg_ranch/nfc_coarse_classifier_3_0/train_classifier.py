@@ -20,12 +20,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
-from vesper.mpg_ranch.nfc_coarse_classifier_3_0.preprocessor import \
-    Preprocessor
+from vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils import (
+    DATASET_MODE_EVALUATION, DATASET_MODE_TRAINING, DATASET_PART_TRAINING,
+    DATASET_PART_VALIDATION)
 from vesper.util.binary_classification_stats import BinaryClassificationStats
 from vesper.util.settings import Settings
 import vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier_utils as \
     classifier_utils
+import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
+    dataset_utils
 
 
 # TODO: Include both augmented and unaugmented data curves in evaluation plots.
@@ -46,8 +49,6 @@ CLASSIFIER_NAME = 'Tseep Quick'
 
 ML_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML')
 DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Coarse Classification'
-DATA_FILE_NAME_FORMAT = '{}_{}_{}.tfrecords'
-
 MODELS_DIR_PATH = ML_DIR_PATH / 'Models' / 'Coarse Classification'
 
 RESULTS_DIR_PATH = Path('/Users/harold/Desktop/ML Results')
@@ -63,15 +64,6 @@ PR_CSV_FILE_HEADER = (
     'Validation Precision\n')
 
 PR_CSV_FILE_ROW_FORMAT = '{:.2f},{:.3f},{:.3f},{:.3f},{:.3f}\n'
-
-EXAMPLE_FEATURES = {
-    'waveform': tf.FixedLenFeature((), tf.string, default_value=''),
-    'label': tf.FixedLenFeature((), tf.int64, default_value=0)
-}
-
-DATASET_PART_TRAINING = 'Training'
-DATASET_PART_VALIDATION = 'Validation'
-DATASET_PART_TEST = 'Test'
 
 BASE_TSEEP_SETTINGS = Settings(
     
@@ -121,8 +113,8 @@ BASE_TSEEP_SETTINGS = Settings(
     spectrogram_start_freq=4000,
     spectrogram_end_freq=10000,
     
-    # number of parallel calls for input and spectrogram computation
-    num_preproc_parallel_calls=4,
+    # number of parallel calls for dataset example preprocessing.
+    num_dataset_parallel_calls=4,
     
     # spectrogram clipping settings
     spectrogram_clipping_enabled=True,
@@ -310,8 +302,8 @@ def compute_spectrogram_clipping_settings(settings):
     bin_size = (hist_max - hist_min) / num_bins
     log_epsilon = math.log(settings.spectrogram_log_epsilon)
     
-    dataset = create_on_disk_spectrogram_dataset(
-        s.dataset_name, DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING, s,
+    dataset = create_spectrogram_dataset(
+        s.dataset_name, DATASET_PART_TRAINING, DATASET_MODE_TRAINING, s,
         batch_size=batch_size)
     
     iterator = dataset.make_one_shot_iterator()
@@ -383,80 +375,16 @@ def compute_spectrogram_clipping_settings(settings):
     return min_value, max_value
     
     
-def create_on_disk_spectrogram_dataset(
-        dataset_name, dataset_part, preproc_mode, settings, num_repeats=1,
+def create_spectrogram_dataset(
+        dataset_name, dataset_part, dataset_mode, settings, num_repeats=1,
         shuffle=False, batch_size=1, feature_name='spectrogram'):
     
-    dataset = create_on_disk_waveform_dataset(dataset_name, dataset_part)
+    dir_path = DATASETS_DIR_PATH / dataset_name / dataset_part
     
-    return create_spectrogram_dataset(
-        dataset, preproc_mode, settings, num_repeats, shuffle, batch_size,
+    return dataset_utils.create_spectrogram_dataset_from_waveform_files(
+        dir_path, dataset_mode, settings, num_repeats, shuffle, batch_size,
         feature_name)
 
-
-def create_on_disk_waveform_dataset(dataset_name, dataset_part):
-    
-    file_path_pattern = create_data_file_path(dataset_name, dataset_part, '*')
-    
-    # Get file paths matching pattern. Sort the paths for consistency.
-    file_paths = sorted(tf.gfile.Glob(file_path_pattern))
-    
-    return tf.data.TFRecordDataset(file_paths).map(parse_example)
-            
-        
-def create_data_file_path(dataset_name, dataset_part, file_num):
-    dir_path = DATASETS_DIR_PATH / dataset_name / dataset_part
-    file_name = DATA_FILE_NAME_FORMAT.format(
-        dataset_name, dataset_part, file_num)
-    return str(dir_path / file_name)
-    
-
-def parse_example(example_proto):
-    
-    example = tf.parse_single_example(example_proto, EXAMPLE_FEATURES)
-    
-    bytes_ = example['waveform']
-    waveform = tf.decode_raw(bytes_, out_type=tf.int16, little_endian=True)
-    
-    label = example['label']
-    
-    return waveform, label
-
-
-def create_spectrogram_dataset(
-        waveform_dataset, preproc_mode, settings, num_repeats=1,
-        shuffle=False, batch_size=1, feature_name='spectrogram'):
-    
-    preprocessor = Preprocessor(preproc_mode, settings, feature_name)
-    
-    dataset = waveform_dataset
-    
-    if num_repeats is None:
-        dataset = dataset.repeat()
-    elif num_repeats != 1:
-        dataset = dataset.repeat(num_repeats)
-    
-    # waveform_preprocessor = WaveformPreprocessor(preproc_mode, settings)
-     
-    dataset = dataset.map(
-        preprocessor.preprocess_waveform,
-        num_parallel_calls=settings.num_preproc_parallel_calls)
-    
-    if shuffle:
-        dataset = dataset.shuffle(10 * batch_size)
-        
-    if batch_size != 1:
-        dataset = dataset.batch(batch_size)
-    
-    # spectrogram_computer = SpectrogramComputer(
-    #     preproc_mode, settings, feature_name)
-    
-    dataset = dataset.map(
-        preprocessor.compute_spectrograms,
-        num_parallel_calls=settings.num_preproc_parallel_calls)
-    
-    return dataset
-    
 
 def compute_spectrogram_normalization_settings(settings):
     
@@ -467,8 +395,8 @@ def compute_spectrogram_normalization_settings(settings):
     batch_size = s.pretraining_batch_size
     num_batches = int(round(num_examples / batch_size))
     
-    dataset = create_on_disk_spectrogram_dataset(
-        s.dataset_name, DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING, s,
+    dataset = create_spectrogram_dataset(
+        s.dataset_name, DATASET_PART_TRAINING, DATASET_MODE_TRAINING, s,
         batch_size=batch_size)
 
     iterator = dataset.make_one_shot_iterator()
@@ -650,17 +578,17 @@ class Classifier:
         
     def _create_training_dataset(self):
         return self._create_dataset(
-            DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING,
-            num_repeats=None, shuffle=True)
+            DATASET_PART_TRAINING, DATASET_MODE_TRAINING, num_repeats=None,
+            shuffle=True)
     
     
     def _create_dataset(
-            self, dataset_part, preproc_mode, num_repeats=1, shuffle=False):
+            self, dataset_part, dataset_mode, num_repeats=1, shuffle=False):
         
         s = self.settings
         
-        return create_on_disk_spectrogram_dataset(
-            s.dataset_name, dataset_part, preproc_mode, s,
+        return create_spectrogram_dataset(
+            s.dataset_name, dataset_part, dataset_mode, s,
             num_repeats=num_repeats, shuffle=shuffle,
             batch_size=s.training_batch_size,
             feature_name=self.model_input_name)
@@ -668,12 +596,12 @@ class Classifier:
         
     def _create_evaluation_training_dataset(self):
         return self._create_dataset(
-            DATASET_PART_TRAINING, Preprocessor.MODE_EVALUATION)
+            DATASET_PART_TRAINING, DATASET_MODE_EVALUATION)
 
 
     def _create_validation_dataset(self):
         return self._create_dataset(
-            DATASET_PART_VALIDATION, Preprocessor.MODE_EVALUATION)
+            DATASET_PART_VALIDATION, DATASET_MODE_EVALUATION)
         
         
     def save(self):
@@ -750,7 +678,7 @@ def add_convolutional_layers(model, settings, regularizer):
             
             # Specify input shape. The added dimension is for channel.
             spectrogram_shape = \
-                Preprocessor.get_sliced_spectrogram_shape(settings)
+                dataset_utils.get_sliced_spectrogram_shape(settings)
             kwargs['input_shape'] = spectrogram_shape + (1,)
             
         model.add(tf.keras.layers.Conv2D(**kwargs))
@@ -788,7 +716,7 @@ def add_hidden_dense_layers(model, settings, regularizer):
             # first network layer
             
             kwargs['input_dim'] = \
-                Preprocessor.get_sliced_spectrogram_size(settings)
+                dataset_utils.get_sliced_spectrogram_size(settings)
              
         model.add(tf.keras.layers.Dense(**kwargs))
         
@@ -813,7 +741,7 @@ def add_output_layer(model, settings, regularizer):
         # have a single neuron and perform logistic regression)
         
         kwargs['input_dim'] = \
-            Preprocessor.get_sliced_spectrogram_size(settings)
+            dataset_utils.get_sliced_spectrogram_size(settings)
 
     model.add(tf.keras.layers.Dense(**kwargs))
     
@@ -987,52 +915,13 @@ def show_training_dataset(classifier_name):
     
     settings = get_settings(classifier_name)
     
-    dataset = create_on_disk_spectrogram_dataset(
-        settings.dataset_name, DATASET_PART_TRAINING,
-        Preprocessor.MODE_TRAINING, settings)
+    dataset = create_spectrogram_dataset(
+        settings.dataset_name, DATASET_PART_TRAINING, DATASET_MODE_TRAINING,
+        settings)
     
-    show_dataset(dataset, 20)
+    dataset_utils.show_dataset(dataset, 20)
         
     
-def show_dataset(dataset, num_batches):
-
-    print('output types', dataset.output_types)
-    print('output_shapes', dataset.output_shapes)
-    
-    iterator = dataset.make_one_shot_iterator()
-    next_batch = iterator.get_next()
-     
-    with tf.Session() as session:
-        
-        start_time = time.time()
-        
-        num_values = 0
-        values_sum = 0
-        squares_sum = 0
-        
-        for i in range(num_batches):
-                
-            features, labels = session.run(next_batch)
-            feature_name, values = list(features.items())[0]
-                
-            values_class = values.__class__.__name__
-            labels_class = labels.__class__.__name__
-            
-            num_values += values.size
-            values_sum += values.sum()
-            squares_sum += (values ** 2).sum()
-            
-            mean = values_sum / num_values
-            std_dev = math.sqrt(squares_sum / num_values - mean ** 2)
-            
-            print(
-                'Batch {} of {}: {} {} {} {} {}, labels {} {}'.format(
-                    i + 1, num_batches, feature_name, values_class,
-                    values.shape, mean, std_dev, labels_class, labels.shape))
-            
-        print('Iteration took {} seconds.'.format(time.time() - start_time))
-                    
-
 def show_spectrogram_dataset(classifier_name):
     
     total_num_examples = 2 ** 9
@@ -1046,12 +935,12 @@ def show_spectrogram_dataset(classifier_name):
         spectrogram_clipping_enabled=False,
         spectrogram_normalization_enabled=False)
     
-    dataset = create_on_disk_spectrogram_dataset(
-        s.dataset_name, DATASET_PART_TRAINING, Preprocessor.MODE_TRAINING, s,
+    dataset = create_spectrogram_dataset(
+        s.dataset_name, DATASET_PART_TRAINING, DATASET_MODE_TRAINING, s,
         batch_size=batch_size)
     
     num_batches = int(round(total_num_examples / batch_size))
-    show_dataset(dataset, num_batches)
+    dataset_utils.show_dataset(dataset, num_batches)
 
 
 if __name__ == '__main__':
