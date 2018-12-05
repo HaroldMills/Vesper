@@ -144,7 +144,7 @@ class _Preprocessor:
         
         if self.random_waveform_time_shifting_enabled:
             self.max_waveform_time_shift = signal_utils.seconds_to_frames(
-                s.max_waveform_time_shift, s.sample_rate)
+                s.max_waveform_time_shift, s.waveform_sample_rate)
 
         
     def preprocess_waveform(self, waveform, label):
@@ -288,7 +288,7 @@ def get_sliced_spectrogram_shape(settings):
 def _get_low_level_preprocessing_settings(mode, settings):
     
     s = settings
-    fs = s.sample_rate
+    fs = s.waveform_sample_rate
     s2f = signal_utils.seconds_to_frames
     
     # time slicing

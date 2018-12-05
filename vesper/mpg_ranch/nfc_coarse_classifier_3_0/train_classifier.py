@@ -69,32 +69,31 @@ BASE_TSEEP_SETTINGS = Settings(
     
     dataset_name='Tseep 100K',
     
-    sample_rate=24000,
+    waveform_sample_rate=24000,
     
-    # The onsets of calls in clips created by Vesper's Old Bird Tseep
-    # Detector Redux 1.1 occur in a window that starts roughly 90 ms into
-    # the clips and is 50 ms wide. The onsets are not uniformly
-    # distributed within this window: the location of an onset in the
-    # window depends on the strength and bandwidth of the onset, and more
-    # onsets occur later in the window than earlier. In the future, I hope
-    # to narrow this window in our detector and classifier training datasets,
-    # and make the distribution of onsets within the window more uniform.
+    # The onsets of detected events (whether calls or non-calls) in clips
+    # created by Vesper's Old Bird Tseep Detector Redux 1.1 occur within
+    # a window that starts roughly 90 ms into the clips and is 50 ms wide.
+    # The onsets are not uniformly distributed within this window: the
+    # location of an onset in the window depends on the strength and
+    # bandwidth of the event, and more onsets occur later in the window
+    # than earlier. In the future, I hope to shrink this window in our
+    # detector and classifier training datasets, and make the distribution
+    # of onsets within the window more uniform.
     #
     # Random waveform time shifting is a data augmentation method that can
     # be applied to distribute training clip event onsets more evenly in
-    # time. (An event is whatever tripped a detector to create a training
-    # clip, whether or not the event was a call.) When random waveform time
-    # shifting is enabled, each dataset waveform is shifted in time by an
-    # amount drawn from the uniform distribution over
-    # [-max_waveform_time_shift, max_waveform_time_shift] before the
-    # waveform is sliced. The distribution of onsets after shifting is the
-    # distribution before shifting convolved with the (uniform) shift
+    # time. When random waveform time shifting is enabled, each dataset
+    # waveform is shifted in time by an amount drawn from the uniform
+    # distribution over [-max_waveform_time_shift, max_waveform_time_shift]
+    # before the waveform is sliced. The distribution of onsets after
+    # shifting is the distribution before shifting convolved with the shift
     # distribution. Note that this widens the window within which onsets
     # can occur by max_waveform_time_shift seconds on each end.
     
     # location of event onset window in training dataset waveforms
-    dataset_onset_window_start_time=.090,
-    dataset_onset_window_duration=.050,
+    event_onset_window_start_time=.090,
+    event_onset_window_duration=.050,
     
     # random waveform time shifting data augmentation settings
     random_waveform_time_shifting_enabled=True,
@@ -276,7 +275,7 @@ def get_waveform_start_time(settings):
     
     s = settings
     
-    start_time = s.dataset_onset_window_start_time - s.waveform_initial_padding
+    start_time = s.event_onset_window_start_time - s.waveform_initial_padding
     
     if s.random_waveform_time_shifting_enabled:
         start_time -= s.max_waveform_time_shift
