@@ -31,17 +31,15 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
     dataset_utils
 
 
-# TODO: Include both augmented and unaugmented data curves in evaluation plots.
-# TODO: Figure out how to save and restore estimator.
-# TODO: Build Vesper classifier from saved estimator.
 # TODO: Run tseep classifier on all 2017 clips.
 # TODO: Look at incorrectly classified clips and reclassify as needed.
 # TODO: Prepare Thrush HDF5 files.
 # TODO: Train thrush coarse classifier.
-# TODO: Try dropout and L2 regularization.
 # TODO: Tune hyperparameters.
 # TODO: Evaluate on only initial portion of training data.
-# TODO: Figure out how to get sequence of training run precision-recall curves.
+# TODO: Save sequence of training run precision-recall curves.
+# TODO: Include both augmented and unaugmented data curves in evaluation plots.
+# TODO: Consider using TensorFlow SavedModel rather than checkpoint.
 # TODO: Consider simplifying normalization.
 
 
@@ -208,7 +206,7 @@ SETTINGS = {
     'Tseep 1M': Settings(BASE_TSEEP_SETTINGS, Settings(
         dataset_name='Tseep 1M',
         batch_size=128,
-        num_training_steps=20000
+        num_training_steps=50000
     )),    
     
 }
@@ -549,30 +547,20 @@ class Classifier:
         
         start_time = time.time()
         
-        predictions = self.estimator.predict(input_fn=dataset_creator)
-        
-        # At this point `predictions` is an iterator that yields
-        # dictionaries, each of which contains a single item whose
-        # value is an array containing one element, a prediction.
-        # Extract the predictions into a NumPy array.
-        predictions = np.array(
-            [list(p.values())[0][0] for p in predictions])
+        scores = classifier_utils.score_dataset_examples(
+            self.estimator, dataset_creator)
         
         elapsed_time = time.time() - start_time
-        num_slices = len(predictions)
+        num_slices = len(scores)
         rate = num_slices / elapsed_time
         print((
             'Evaluated classifier on {} waveform slices in {:.1f} seconds, '
             'a rate of {:.1f} slices per second.').format(
                 num_slices, elapsed_time, rate))
             
-        # pairs = list(zip(labels, predictions))
-        # for i, pair in enumerate(pairs[:200]):
-        #     print(i, pair)
-            
         thresholds = np.arange(num_thresholds) / float(num_thresholds - 1)
     
-        return BinaryClassificationStats(labels, predictions, thresholds)
+        return BinaryClassificationStats(labels, scores, thresholds)
         
         
     def _create_training_dataset(self):

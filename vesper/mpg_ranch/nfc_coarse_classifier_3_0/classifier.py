@@ -28,8 +28,36 @@ import vesper.util.signal_utils as signal_utils
 from vesper.django.app.views import clip
 
 
-_TESTING = True
-"""`True` if classifier should run in test mode."""
+_EVALUATION_MODE_ENABLED = True
+
+
+'''
+This classifier can run in one of two modes, *normal mode* and
+*evaluation mode*. In normal mode, it annotates only unclassified clips,
+assigning to each a "Classification" annotation value or either "Call"
+or "Noise".
+
+In evaluation mode, the classifier classifies every clip whose clip type
+(e.g. "Tseep" or "Thrush") it recognizes and that already has a
+classification that is "Noise" or starts with "Call" or "XCall".
+The new classification is a function of both the existing classification
+and the *normal classification* that the classifier would assign to the
+clip in normal mode if it had no existing classification. The new
+classifications are as follows (where the classification pairs are
+(existing classification, normal classification)):
+
+    (Noise, Noise) -> Noise (i.e. no change)
+    (Noise, Call) -> FP
+    (Call*, Call) -> Call* (i.e. no change)
+    (Call*, Noise) -> FN* (i.e. only coarse part changes)
+    (XCall*, Call) -> XCallP* (i.e. only coarse part changes)
+    (XCall*, Noise) -> XCallN* (i.e. only coarse part changes)
+    
+This reclassifies clips for which the normal classification differs from
+the existing classification in such a way that important sets of clips
+(i.e. false positives, false negatives, excluded call positives, and
+excluded call negatives) can subsequently be viewed in clip albums.
+'''
 
 
 class Classifier(Annotator):
@@ -54,11 +82,11 @@ class Classifier(Annotator):
         """Annotates the specified clips with the appropriate classifiers."""
         
         
-        unclassified_clips = self._get_unclassified_clips(clips)
+        clip_lists = self._get_clip_lists(clips)
         
         num_clips_classified = 0
         
-        for clip_type, clips in unclassified_clips.items():
+        for clip_type, clips in clip_lists.items():
             
             classifier = self._classifiers.get(clip_type)
             
@@ -70,22 +98,23 @@ class Classifier(Annotator):
         return num_clips_classified
                 
                 
-    def _get_unclassified_clips(self, clips):
+    def _get_clip_lists(self, clips):
         
-        """Gets a mapping from clip types to lists of unclassified clips."""
+        """Gets a mapping from clip types to lists of clips to classify."""
         
         
-        unclassified_clips = defaultdict(list)
+        clip_lists = defaultdict(list)
         
         for clip in clips:
             
-            if _TESTING or self._get_annotation_value(clip) is None:
-                # clip is unclassified
+            if _EVALUATION_MODE_ENABLED or \
+                    self._get_annotation_value(clip) is None:
+                # clip should be classified
                 
                 clip_type = model_utils.get_clip_type(clip)
-                unclassified_clips[clip_type].append(clip)
+                clip_lists[clip_type].append(clip)
                 
-        return unclassified_clips
+        return clip_lists
  
 
     def _annotate_clips(self, clips, classifier):
@@ -97,17 +126,55 @@ class Classifier(Annotator):
             
         triples = classifier.classify_clips(clips)
         
-        if _TESTING and len(triples) > 0:
-            self._show_classification_errors(triples)
+        # if _EVALUATION_MODE_ENABLED and len(triples) > 0:
+        #     self._show_classification_errors(triples)
         
-        for clip, classification, _ in triples:
-            if classification is not None:
-                # self._annotate(clip, classification)
-                num_clips_classified += 1
-                                 
+        for clip, auto_classification, _ in triples:
+            
+            if auto_classification is not None:
+                
+                if _EVALUATION_MODE_ENABLED:
+                    
+                    old_classification = self._get_annotation_value(clip)
+                
+                    new_classification = self._get_new_classification(
+                        old_classification, auto_classification)
+                    
+                    if new_classification is not None:
+                        
+                        self._annotate(clip, new_classification)
+                        num_clips_classified += 1
+                        
+                else:
+                    # normal mode
+                    
+                    self._annotate(clip, auto_classification)
+                    num_clips_classified += 1
+                        
         return num_clips_classified
 
         
+    def _get_new_classification(self, old_classification, auto_classification):
+        
+        old = old_classification
+        auto = auto_classification
+        
+        if old.startswith('Call') and auto == 'Noise':
+            return 'FN' + old[len('Call'):]
+            
+        elif old == 'Noise' and auto == 'Call':
+            return 'FP'
+            
+        elif old.startswith('XCall') and auto == 'Noise':
+            return 'XCallN' + old_classification[len('XCall'):]
+        
+        elif old.startswith('XCall') and auto == 'Call':
+            return 'XCallP' + old_classification[len('XCall'):]
+        
+        else:
+            return None
+
+
     def _show_classification_errors(self, triples):
           
         num_positives = 0
@@ -172,7 +239,7 @@ class _Classifier:
     
     def __init__(self, clip_type):
         
-        self._clip_type = clip_type
+        self.clip_type = clip_type
         
         self._keras_model = self._create_keras_model()
         self._estimator = self._create_estimator()
@@ -195,13 +262,13 @@ class _Classifier:
     
     
     def _create_keras_model(self):
-        path = str(classifier_utils.get_model_file_path(self._clip_type))
+        path = str(classifier_utils.get_model_file_path(self.clip_type))
         logging.info('Loading classifier model from "{}"...'.format(path))
         return tf.keras.models.load_model(path)
     
     
     def _create_estimator(self):
-        path = str(classifier_utils.get_model_dir_path(self._clip_type))
+        path = str(classifier_utils.get_model_dir_path(self.clip_type))
         logging.info((
             'Creating TensorFlow estimator with model directory '
             '"{}"...').format(path))
@@ -211,7 +278,7 @@ class _Classifier:
 
     
     def _load_settings(self):
-        path = classifier_utils.get_settings_file_path(self._clip_type)
+        path = classifier_utils.get_settings_file_path(self.clip_type)
         logging.info('Loading classifier settings from "{}"...'.format(path))
         text = path.read_text()
         d = yaml.load(text)
@@ -220,7 +287,7 @@ class _Classifier:
         
     def classify_clips(self, clips):
         
-        logging.info('Collecting clip waveforms for scoring...')
+        # logging.info('Collecting clip waveforms for scoring...')
         
         waveforms, indices = self._slice_clip_waveforms(clips)
         
@@ -233,12 +300,12 @@ class _Classifier:
             # Stack waveform slices to make 2-D NumPy array.
             self._waveforms = np.stack(waveforms)
         
-            logging.info('Scoring clip waveforms...')
+            # logging.info('Scoring clip waveforms...')
             
             scores = classifier_utils.score_dataset_examples(
                 self._estimator, self._create_dataset)
             
-            logging.info('Classifying clips...')
+            # logging.info('Classifying clips...')
             
             triples = [
                 self._classify_clip(i, score, clips)
@@ -254,24 +321,34 @@ class _Classifier:
         
         for i, clip in enumerate(clips):
             
-            waveform = self._get_clip_samples(clip)
-            
-            if len(waveform) < self._end_index:
-                # clip too short to classify
+            try:
+                waveform = self._get_clip_samples(clip)
+                
+            except Exception as e:
                 
                 logging.warning((
-                    'Classification failed for clip "{}", since it is '
-                    'shorter than the required {:.3f} seconds.').format(
-                        str(clip), self._min_clip_duration))
+                    'Classification failed for clip "{}", since its '
+                    'samples could not be obtained. Error message was: '
+                    '{}').format(str(clip), str(e)))
                 
             else:
-                # clip not too short to classify
                 
-                # Slice waveform for classifier.
-                waveform = waveform[self._start_index:self._end_index]
-                
-                waveforms.append(waveform)
-                indices.append(i)
+                if len(waveform) < self._end_index:
+                    # clip too short to classify
+                    
+                    logging.warning((
+                        'Classification failed for clip "{}", since it is '
+                        'shorter than the required {:.3f} seconds.').format(
+                            str(clip), self._min_clip_duration))
+                    
+                else:
+                    # clip not too short to classify
+                    
+                    # Slice waveform for classifier.
+                    waveform = waveform[self._start_index:self._end_index]
+                    
+                    waveforms.append(waveform)
+                    indices.append(i)
                 
         return waveforms, indices
                 

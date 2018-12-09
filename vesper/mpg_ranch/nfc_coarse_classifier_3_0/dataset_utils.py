@@ -27,6 +27,17 @@ _WAVEFORM_DATASET_FEATURES = {
 }
 
 
+def create_spectrogram_dataset_from_waveforms_array(
+        waveforms, mode, settings, num_repeats=1, shuffle=False, batch_size=1,
+        feature_name='spectrogram'):
+    
+    dataset = tf.data.Dataset.from_tensor_slices(waveforms)
+    
+    return _create_spectrogram_dataset(
+        dataset, mode, settings, num_repeats, shuffle, batch_size,
+        feature_name)
+    
+    
 def create_spectrogram_dataset_from_waveform_files(
         dir_path, mode, settings, num_repeats=1, shuffle=False, batch_size=1,
         feature_name='spectrogram'):
@@ -147,7 +158,7 @@ class _Preprocessor:
                 s.max_waveform_time_shift, s.waveform_sample_rate)
 
         
-    def preprocess_waveform(self, waveform, label):
+    def preprocess_waveform(self, waveform, label=None):
         
         """
         Preprocesses one input waveform.
@@ -169,10 +180,13 @@ class _Preprocessor:
         end_index = self.time_end_index + offset
         waveform = waveform[start_index:end_index]
         
-        return waveform, label
+        if label is None:
+            return waveform
+        else:
+            return waveform, label
     
     
-    def compute_spectrograms(self, waveforms, labels):
+    def compute_spectrograms(self, waveforms, labels=None):
         
         """Computes spectrograms for a batch of waveforms."""
         
@@ -215,10 +229,17 @@ class _Preprocessor:
         # Create features dictionary.
         features = {self.output_feature_name: grams}
         
-        # Reshape labels into a single 2D column.
-        labels = tf.reshape(labels, (-1, 1))
+        if labels is None:
+            
+            return features
         
-        return features, labels
+        else:
+            # have labels
+        
+            # Reshape labels into a single 2D column.
+            labels = tf.reshape(labels, (-1, 1))
+            
+            return features, labels
     
     
     def _set_waveforms_shape(self, waveforms):
@@ -264,27 +285,6 @@ class _Preprocessor:
             return tf.reshape(grams, (-1, size))
 
     
-def get_sliced_spectrogram_size(settings):
-    num_spectra, num_bins = get_sliced_spectrogram_shape(settings)
-    return num_spectra * num_bins
-
-
-def get_sliced_spectrogram_shape(settings):
-    
-    (time_start_index, time_end_index, window_size, hop_size, _,
-     freq_start_index, freq_end_index) = \
-        _get_low_level_preprocessing_settings(
-            DATASET_MODE_TRAINING, settings)
-                
-    num_samples = time_end_index - time_start_index
-    num_spectra = tfa_utils.get_num_analysis_records(
-        num_samples, window_size, hop_size)
-    
-    num_bins = freq_end_index - freq_start_index
-    
-    return (num_spectra, num_bins)
-    
-    
 def _get_low_level_preprocessing_settings(mode, settings):
     
     s = settings
@@ -322,9 +322,30 @@ def _is_data_augmentation_enabled(mode, settings):
         settings.evaluation_data_augmentation_enabled
 
 
+def get_sliced_spectrogram_size(settings):
+    num_spectra, num_bins = get_sliced_spectrogram_shape(settings)
+    return num_spectra * num_bins
+
+
+def get_sliced_spectrogram_shape(settings):
+    
+    (time_start_index, time_end_index, window_size, hop_size, _,
+     freq_start_index, freq_end_index) = \
+        _get_low_level_preprocessing_settings(
+            DATASET_MODE_TRAINING, settings)
+                
+    num_samples = time_end_index - time_start_index
+    num_spectra = tfa_utils.get_num_analysis_records(
+        num_samples, window_size, hop_size)
+    
+    num_bins = freq_end_index - freq_start_index
+    
+    return (num_spectra, num_bins)
+    
+    
 def show_dataset(dataset, num_batches):
 
-    print('output types', dataset.output_types)
+    print('output_types', dataset.output_types)
     print('output_shapes', dataset.output_shapes)
     
     iterator = dataset.make_one_shot_iterator()

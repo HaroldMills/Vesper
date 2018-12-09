@@ -152,29 +152,46 @@ def _classify_clips(clips, classifier):
     
     start_time = time.time()
     
-    visited_count = 0
-    classified_count = 0
+    if hasattr(classifier, 'annotate_clips'):
+        classify = _classify_clip_batches
+    else:
+        classify = _classify_clips_individually
+        
+    num_clips_classified = classify(clips, classifier)
+
+    elapsed_time = time.time() - start_time
+    num_clips = len(clips)
+    timing_text = command_utils.get_timing_text(
+        elapsed_time, num_clips, 'clips')
+            
+    _logger.info((
+        'Classified {} of {} visited clips{}.').format(
+            num_clips_classified, num_clips, timing_text))
+
+
+def _classify_clip_batches(clips, classifier):
+    return classifier.annotate_clips(clips)
+
+
+def _classify_clips_individually(clips, classifier):
+    
+    num_visited_clips = 0
+    num_classified_clips = 0
     
     for clip in clips:
         
         try:
             if classifier.annotate(clip):
-                classified_count += 1
+                num_classified_clips += 1
                         
         except Exception as e:
             _logger.error((
                 'Classification failed for clip "{}". Error message '
                 'was: {}').format(str(clip), str(e)))
         
-        visited_count += 1
+        num_visited_clips += 1
         
-        if visited_count % _LOGGING_PERIOD == 0:
-            _logger.info('Visited {} clips...'.format(visited_count))
+        if num_visited_clips % _LOGGING_PERIOD == 0:
+            _logger.info('Visited {} clips...'.format(num_visited_clips))
             
-    elapsed_time = time.time() - start_time
-    timing_text = command_utils.get_timing_text(
-        elapsed_time, visited_count, 'clips')
-            
-    _logger.info((
-        'Classified {} of {} visited clips{}.').format(
-            classified_count, visited_count, timing_text))
+    return num_classified_clips
