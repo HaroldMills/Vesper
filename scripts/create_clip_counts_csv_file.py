@@ -31,9 +31,6 @@ import sys
 # TODO: Add bird counts. This will involve looking at clip times.
 
 
-ARCHIVE_DIR_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/MPG Ranch/2017 MPG Ranch Archive')
-
 DATABASE_FILE_NAME = 'Archive Database.sqlite'
 
 CLIP_COUNTS_FILE_NAME = 'Clip Counts.csv'
@@ -74,7 +71,7 @@ CLASSIFICATION_SUBSTITUTIONS = {
 
 CSV_FILE_HEADER = ('Detector', 'Station', 'Date', 'Classification', 'Clips')
 
-WILDCARD_COARSE_CLASSIFICATIONS = ('Call', 'XCall')
+WILDCARD_COARSE_CLASSIFICATIONS = ('Call', 'FN', 'XCall', 'XCallN', 'XCallP')
 
 Row = namedtuple(
     'Row', ('detector', 'station', 'date', 'classification', 'clip_count'))
