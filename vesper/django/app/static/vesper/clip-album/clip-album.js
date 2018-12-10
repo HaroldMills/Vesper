@@ -130,6 +130,9 @@ const _COMMAND_SPECS = [
     ['annotate_selected_clips', 'annotation_value'],
     ['annotate_page_clips', 'annotation_value'],
     ['annotate_all_clips', 'annotation_value'],
+    
+//    ['annotate_clips_part', 'part_num', 'part_value'],
+//    ['annotate_selected_clips_part', 'part_num', 'part_value'],
 
     ['unannotate_clips'],
     ['unannotate_selected_clips'],
@@ -1299,6 +1302,66 @@ export class ClipAlbum {
 	}
 
 
+//    _executeAnnotateClipsPartCommand(env) {
+//
+//        const scope = env.getRequired('annotation_scope');
+//
+//        switch (scope) {
+//
+//        case 'Selection':
+//            this._executeAnnotateSelectedClipsPartCommand(env);
+//            break;
+//
+//        case 'Page':
+//            this._executeAnnotatePageClipsPartCommand(env);
+//            break;
+//
+//        case 'All':
+//            this._executeAnnotateAllClipsPartCommand(env);
+//            break;
+//
+//        default:
+//            window.alert(`Unrecognized annotation scope "${scope}".`);
+//
+//        }
+//
+//    }
+//
+//
+//    _executeAnnotateSelectedClipsPartCommand(env) {
+//
+//        const name = env.getRequired('annotation_name');
+//        const part = env.getRequired('annotation_part');
+//        const value = env.getRequired('annotation_value');
+//        this._annotateSelectedClipsPart(name, value);
+//
+//        // TODO: Optionally play selected clip.
+//        this._selectNextClip();
+//
+//    }
+//
+//
+//    _executeAnnotatePageClipsPartCommand(env) {
+//
+//        const name = env.getRequired('annotation_name');
+//        const part = env.getRequired('annotation_part');
+//        const value = env.getRequired('annotation_value');
+//        this._annotatePageClipsPart(name, value);
+//
+//        // TODO: Optionally advance to next page, if there is one,
+//        // select the first clip, and optionally play it.
+//
+//    }
+//
+//
+//    _executeAnnotateAllClipsPartCommand(env) {
+//        const name = env.getRequired('annotation_name');
+//        const part = env.getRequired('annotation_part');
+//        const value = env.getRequired('annotation_value');
+//        this._annotateAllClipsPart(name, value);
+//    }
+    
+    
     _executeUnannotateClipsCommand(env) {
 
 		const scope = env.getRequired('annotation_scope');
