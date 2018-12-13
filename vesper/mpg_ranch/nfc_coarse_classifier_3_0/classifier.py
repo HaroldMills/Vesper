@@ -74,7 +74,7 @@ class Classifier(Annotator):
         tf.logging.set_verbosity(tf.logging.WARN)
         
         self._classifiers = dict(
-            (t, _Classifier(t)) for t in ('Tseep',))
+            (t, _Classifier(t)) for t in ('Tseep', 'Thrush'))
         
         
     def annotate_clips(self, clips):
