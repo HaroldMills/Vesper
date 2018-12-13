@@ -31,16 +31,13 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
     dataset_utils
 
 
-# TODO: Run tseep classifier on all 2017 clips.
-# TODO: Look at incorrectly classified clips and reclassify as needed.
-# TODO: Prepare Thrush HDF5 files.
-# TODO: Train thrush coarse classifier.
 # TODO: Tune hyperparameters.
 # TODO: Evaluate on only initial portion of training data.
 # TODO: Save sequence of training run precision-recall curves.
 # TODO: Include both augmented and unaugmented data curves in evaluation plots.
 # TODO: Consider using TensorFlow SavedModel rather than checkpoint.
 # TODO: Consider simplifying normalization.
+# TODO: Look at incorrectly classified clips and reclassify as needed.
 
 
 CLASSIFIER_NAME = 'Tseep Quick'
@@ -65,19 +62,19 @@ PR_CSV_FILE_ROW_FORMAT = '{:.2f},{:.3f},{:.3f},{:.3f},{:.3f}\n'
 
 BASE_TSEEP_SETTINGS = Settings(
     
-    dataset_name='Tseep 100K',
+    dataset_name='Tseep 1M',
     
     waveform_sample_rate=24000,
     
     # The onsets of detected events (whether calls or non-calls) in clips
     # created by Vesper's Old Bird Tseep Detector Redux 1.1 occur within
-    # a window that starts roughly 90 ms into the clips and is 50 ms wide.
-    # The onsets are not uniformly distributed within this window: the
-    # location of an onset in the window depends on the strength and
-    # bandwidth of the event, and more onsets occur later in the window
-    # than earlier. In the future, I hope to shrink this window in our
-    # detector and classifier training datasets, and make the distribution
-    # of onsets within the window more uniform.
+    # a window that starts roughly 90 ms into the clips of our datasets
+    # and is about 50 ms wide. The onsets are not uniformly distributed
+    # within this window: the location of an onset in the window depends
+    # on the strength and bandwidth of the event, and more onsets occur
+    # later in the window than earlier. In the future, I hope to shrink
+    # the window in our datasets, and make the distribution of onsets
+    # within the window more uniform.
     #
     # Random waveform time shifting is a data augmentation method that can
     # be applied to distribute training clip event onsets more evenly in
@@ -142,8 +139,9 @@ BASE_TSEEP_SETTINGS = Settings(
     l2_regularization_beta=.002,
     
     # neural network training settings
-    training_batch_size=64,
+    training_batch_size=128,
     num_training_steps=50000,
+    warm_start_enabled=False,
     
     # Whether or not data augmentation is enabled during evaluation.
     # A good rule of thumb is to disable data augmentation when evaluating
@@ -163,15 +161,121 @@ BASE_TSEEP_SETTINGS = Settings(
 )
 
 
+BASE_THRUSH_SETTINGS = Settings(
+    
+    dataset_name='Thrush 1M',
+    
+    waveform_sample_rate=24000,
+    
+    # The onsets of detected events (whether calls or non-calls) in clips
+    # created by Vesper's Old Bird Thrush Detector Redux 1.1 occur within
+    # a window that starts roughly 210 ms into the clips of our datasets
+    # and is about 80 ms wide. The onsets are not uniformly distributed
+    # within this window: the location of an onset in the window depends
+    # on the strength and bandwidth of the event, and more onsets occur
+    # later in the window than earlier. In the future, I hope to shrink
+    # the window in our datasets, and make the distribution of onsets
+    # within the window more uniform.
+    #
+    # Random waveform time shifting is a data augmentation method that can
+    # be applied to distribute training clip event onsets more evenly in
+    # time. When random waveform time shifting is enabled, each dataset
+    # waveform is shifted in time by an amount drawn from the uniform
+    # distribution over [-max_waveform_time_shift, max_waveform_time_shift]
+    # before the waveform is sliced. The distribution of onsets after
+    # shifting is the distribution before shifting convolved with the shift
+    # distribution. Note that this widens the window within which onsets
+    # can occur by max_waveform_time_shift seconds on each end.
+    
+    # location of event onset window in training dataset waveforms
+    event_onset_window_start_time=.210,
+    event_onset_window_duration=.080,
+    
+    # random waveform time shifting data augmentation settings
+    random_waveform_time_shifting_enabled=True,
+    max_waveform_time_shift=.025,
+    
+    # waveform settings
+    waveform_initial_padding=.030,
+    waveform_duration=.200,
+    
+    # spectrogram settings
+    spectrogram_window_size=.005,
+    spectrogram_hop_size=50,
+    spectrogram_log_epsilon=1e-10,
+    
+    # spectrogram frequency axis slicing settings
+    spectrogram_start_freq=2000,
+    spectrogram_end_freq=5000,
+    
+    # number of parallel calls for dataset example preprocessing.
+    num_dataset_parallel_calls=4,
+    
+    # spectrogram clipping settings
+    spectrogram_clipping_enabled=True,
+    spectrogram_clipping_min=None,
+    spectrogram_clipping_max=None,
+    
+    # spectrogram normalization settings
+    spectrogram_normalization_enabled=True,
+    spectrogram_normalization_scale_factor=None,
+    spectrogram_normalization_offset=None,
+    
+    # spectrogram clipping and normalization pretraining settings
+    spectrogram_clipping_pretraining_enabled=True,
+    spectrogram_normalization_pretraining_enabled=True,
+    pretraining_num_examples=20000,
+    pretraining_batch_size=100,
+    pretraining_histogram_min=-25,
+    pretraining_histogram_max=50,
+    pretraining_histogram_num_bins=750,
+    pretraining_clipped_values_fraction=.001,
+    pretraining_value_distribution_plotting_enabled=False,
+    
+    # neural network settings
+    convolutional_layer_sizes=[16, 32],
+    dense_layer_sizes=[16],
+    batch_normalization_enabled=True,
+    l2_regularization_enabled=False,
+    l2_regularization_beta=.002,
+    
+    # neural network training settings
+    training_batch_size=128,
+    num_training_steps=20000,
+    warm_start_enabled=False,
+    
+    # Whether or not data augmentation is enabled during evaluation.
+    # A good rule of thumb is to disable data augmentation when evaluating
+    # the trained classifier for coarse classification of Old Bird detector
+    # clips, and to enable it when evaluating the trained classifier for
+    # detection.
+    evaluation_data_augmentation_enabled=True,
+    
+    # evaluation plot settings
+    precision_recall_plot_lower_axis_limit=.80,
+    precision_recall_plot_major_tick_interval=.05,
+    precision_recall_plot_minor_tick_interval=.01,
+    
+    # classifier performance settings
+    min_classifier_recall=.97
+    
+)
+
+
 SETTINGS = {
     
-    'Tseep Logistic Regression': Settings(BASE_TSEEP_SETTINGS, Settings(
+    'Tseep Quick': Settings(BASE_TSEEP_SETTINGS, Settings(
+        dataset_name='Tseep 100K',
+        pretraining_num_examples=1000,
         convolutional_layer_sizes=[],
-        dense_layer_sizes=[],
-        l2_regularization_enabled=True,
-        precision_recall_plot_lower_axis_limit=0,
-        precision_recall_plot_major_tick_interval=.25,
-        precision_recall_plot_minor_tick_interval=.05
+        dense_layer_sizes=[16],
+        num_training_steps=1000
+    )),    
+    
+    'Tseep Logistic Regression': Settings(BASE_TSEEP_SETTINGS, Settings(
+        dataset_name='Tseep 100K',
+        convolutional_layer_sizes=[],
+        dense_layer_sizes=[]
     )),
     
     'Tseep Baseline': Settings(BASE_TSEEP_SETTINGS, Settings(
@@ -179,34 +283,51 @@ SETTINGS = {
         dense_layer_sizes=[16]
     )),
     
-    'Tseep Quick': Settings(BASE_TSEEP_SETTINGS, Settings(
-        pretraining_num_examples=1000,
-        convolutional_layer_sizes=[],
-        dense_layer_sizes=[16],
-        num_training_steps=1000,
-        precision_recall_plot_lower_axis_limit=0,
-        precision_recall_plot_major_tick_interval=.25,
-        precision_recall_plot_minor_tick_interval=.05
-    )),    
-    
-    'Tseep': Settings(BASE_TSEEP_SETTINGS, Settings(
-        num_training_steps=20000
-    )),    
-    
-    'Tseep No BN': Settings(BASE_TSEEP_SETTINGS, Settings(
-        batch_normalization_enabled=False,
-        num_training_steps=50000
-    )),    
-    
     'Tseep 340K': Settings(BASE_TSEEP_SETTINGS, Settings(
-        dataset_name='Tseep 340K',
-        num_training_steps=50000
+        dataset_name='Tseep 340K'
     )),    
     
     'Tseep 1M': Settings(BASE_TSEEP_SETTINGS, Settings(
-        dataset_name='Tseep 1M',
-        batch_size=128,
+    )),    
+    
+    'Thrush Quick': Settings(BASE_THRUSH_SETTINGS, Settings(
+        dataset_name='Thrush 100K',
+        pretraining_num_examples=1000,
+        convolutional_layer_sizes=[],
+        dense_layer_sizes=[16],
+        num_training_steps=1000
+    )),    
+    
+    'Thrush Baseline': Settings(BASE_THRUSH_SETTINGS, Settings(
+        convolutional_layer_sizes=[],
+        dense_layer_sizes=[16],
+    )),
+    
+    'Thrush 1M': Settings(BASE_THRUSH_SETTINGS, Settings(
+        
+        waveform_duration=.250,
+        
+        # .200
+        # spectrogram_clipping_min=1.7999999523162842,
+        # spectrogram_clipping_max=24.0,
+        # spectrogram_normalization_scale_factor=0.3427503724832454,
+        # spectrogram_normalization_offset=-4.184655848177843,
+        
+        # .250
+        spectrogram_clipping_min=1.7999999523162842,
+        spectrogram_clipping_max=23.899999618530273,
+        spectrogram_normalization_scale_factor=0.3456794224478771,
+        spectrogram_normalization_offset=-4.196949855990517,
+        
+        # .300
+        # spectrogram_clipping_min=1.7999999523162842,
+        # spectrogram_clipping_max=23.899999618530273,
+        # spectrogram_normalization_scale_factor=0.3480549048283441,
+        # spectrogram_normalization_offset=-4.208825819546874,
+        
+        warm_start_enabled=True,
         num_training_steps=50000
+        
     )),    
     
 }
@@ -235,31 +356,82 @@ def work_around_openmp_issue():
 
 
 def train_and_evaluate_classifier(name):
-    settings = get_settings(name)
+    
+    settings = SETTINGS[name]
+    
+    do_intro(name, settings)
+    
+    settings = complete_settings(settings)
+    show_preprocessing_settings(settings)
+    
     classifier = Classifier(name, settings)
     classifier.train()
     classifier.evaluate()
     classifier.save()
     
 
-def get_settings(name):
+def do_intro(name, settings):
+    
+    start_type = 'warm' if settings.warm_start_enabled else 'cold'
+    model_dir_path = get_model_dir_path(name)
+    
+    if start_type == 'cold' or not model_dir_path.exists():
+        
+        print(
+            'This script will train classifier "{}" with a cold start.'.format(
+                name))
+        
+        if model_dir_path.exists():
+            
+            print(
+                'It will delete the existing model directory "{}".'.format(
+                    model_dir_path))
+            
+        else:
+            # model directory does not exist
+            
+            print(
+                'It will create a new model directory "{}".'.format(
+                    model_dir_path))
+        
+    else:
+        # warm start
+        
+        print((
+            'This script will train classifier "{}" with a warm start from '
+            'model directory "{}".').format(name, model_dir_path))
+    
+    # Give user a chance to abort.
+    input('Press Enter to continue...')
+    
+    if start_type == 'cold' and model_dir_path.exists():
+        print('Deleting model directory "{}"...'.format(model_dir_path))
+        shutil.rmtree(model_dir_path)
+    
+
+def get_model_dir_path(name):
+    return MODELS_DIR_PATH / name
+
+
+def complete_settings(settings):
     
     # Copy settings so we don't modify the originals.
-    s = Settings(SETTINGS[name])
+    s = Settings(settings)
     
     s.waveform_start_time = get_waveform_start_time(s)
         
     if s.spectrogram_clipping_enabled and \
-            s.spectrogram_clipping_pretraining_enabled:
+            s.spectrogram_clipping_pretraining_enabled and \
+            not s.warm_start_enabled:
         
         min_value, max_value = compute_spectrogram_clipping_settings(s)
         
         s.spectrogram_clipping_min = min_value
         s.spectrogram_clipping_max = max_value
-
         
     if s.spectrogram_normalization_enabled and \
-            s.spectrogram_normalization_pretraining_enabled:
+            s.spectrogram_normalization_pretraining_enabled and \
+            not s.warm_start_enabled:
         
         scale_factor, offset = compute_spectrogram_normalization_settings(s)
         
@@ -283,9 +455,11 @@ def get_waveform_start_time(settings):
 
 def compute_spectrogram_clipping_settings(settings):
     
-    # Get new settings with spectrogram clipping and normalization disabled.
+    # Get new settings with waveform time shifting, spectrogram clipping,
+    # and spectrogram normalization disabled.
     s = Settings(
         settings,
+        random_waveform_time_shifting_enabled=False,
         spectrogram_clipping_enabled=False,
         spectrogram_normalization_enabled=False)
     
@@ -348,8 +522,6 @@ def compute_spectrogram_clipping_settings(settings):
         print(
             'Computed spectrogram clipping range in {:.1f} seconds.'.format(
                 elapsed_time))
-        print(
-            'Clipping range is ({:.1f}, {:.1f}).'.format(min_value, max_value))
 
     # Plot spectrogram value distribution and clipping limits.
     if s.pretraining_value_distribution_plotting_enabled:
@@ -385,8 +557,12 @@ def create_spectrogram_dataset(
 
 def compute_spectrogram_normalization_settings(settings):
     
-    # Get settings with spectrogram normalization disabled.
-    s = Settings(settings, spectrogram_normalization_enabled=False)
+    # Get settings with waveform time shifting and spectrogram
+    # normalization disabled.
+    s = Settings(
+        settings,
+        random_waveform_time_shifting_enabled=False,
+        spectrogram_normalization_enabled=False)
     
     num_examples = s.pretraining_num_examples
     batch_size = s.pretraining_batch_size
@@ -431,10 +607,6 @@ def compute_spectrogram_normalization_settings(settings):
         print((
             'Computed spectrogram normalization settings in {:.1f} '
             'seconds.').format(elapsed_time))
-        print((
-            'Normalization mean and standard deviation are '
-            '({:.1f}, {:.1f}).').format(
-                mean, std_dev))
         
     # The float conversions in the following ensure that the assigned
     # type is Python's `float` instead of a NumPy type. The latter
@@ -445,6 +617,31 @@ def compute_spectrogram_normalization_settings(settings):
     return scale_factor, offset
 
     
+def show_preprocessing_settings(settings):
+    
+    s = settings
+    
+    if s.spectrogram_clipping_enabled:
+        
+        print(
+            'Spectrogram clipping is enabled with range ({}, {}).'.format(
+                s.spectrogram_clipping_min, s.spectrogram_clipping_max))
+        
+    else:
+        print('Spectrogram clipping is disabled.')
+        
+    if s.spectrogram_normalization_enabled:
+        
+        print((
+            'Spectrogram normalization is enabled with scale factor {} '
+            'and offset {}.').format(
+                s.spectrogram_normalization_scale_factor,
+                s.spectrogram_normalization_offset))
+        
+    else:
+        print('Spectrgram normalization is disabled.')
+        
+        
 class Classifier:
     
     
@@ -454,16 +651,12 @@ class Classifier:
         self.settings = settings
         
         self.model = create_model(self.settings)
-        
-        # Remove old model dir path for a cold start.
-        shutil.rmtree(self.model_dir_path, ignore_errors=True)
-        
         self.estimator = self._create_estimator()
         
         
     @property
     def model_dir_path(self):
-        return MODELS_DIR_PATH / self.name
+        return get_model_dir_path(self.name)
     
     
     @property
@@ -497,8 +690,7 @@ class Classifier:
         s = self.settings
         
         print(
-            'Training classifier for {} steps...'.format(
-                s.num_training_steps))
+            'Training classifier to {} steps...'.format(s.num_training_steps))
         
         train_spec = tf.estimator.TrainSpec(
             input_fn=self._create_training_dataset,
@@ -515,11 +707,16 @@ class Classifier:
         tf.estimator.train_and_evaluate(self.estimator, train_spec, eval_spec)
         
         elapsed_time = time.time() - start_time
-        rate = s.num_training_steps / elapsed_time
+        
+        if not s.warm_start_enabled:
+            rate = s.num_training_steps / elapsed_time
+            rate_text = ', a rate of {:.1f} steps per second'.format(rate)
+        else:
+            rate_text = ''
+            
         print((
-            'Training took {:.1f} seconds for {} steps, a rate of {:.1f} '
-            'steps per second.').format(
-                elapsed_time, s.num_training_steps, rate))
+            'Training took {:.1f} seconds to {} steps{}.').format(
+                elapsed_time, s.num_training_steps, rate_text))
 
 
     def evaluate(self):
@@ -538,7 +735,7 @@ class Classifier:
         save_results(
             self.name, self.train_stats, self.val_stats, self.settings)
         
-        print('Done.')
+        print('Done saving results.')
             
         
     def _evaluate(self, dataset_creator, num_thresholds=101):
@@ -900,7 +1097,7 @@ def find_classification_threshold(stats, min_recall):
 
 def show_training_dataset(classifier_name):
     
-    settings = get_settings(classifier_name)
+    settings = get_completed_settings(classifier_name)
     
     dataset = create_spectrogram_dataset(
         settings.dataset_name, DATASET_PART_TRAINING, DATASET_MODE_TRAINING,
@@ -909,12 +1106,16 @@ def show_training_dataset(classifier_name):
     dataset_utils.show_dataset(dataset, 20)
         
     
+def get_completed_settings(classifier_name):
+    return complete_settings(SETTINGS[classifier_name])
+
+
 def show_spectrogram_dataset(classifier_name):
     
     total_num_examples = 2 ** 9
     batch_size = 2 ** 6
     
-    settings = get_settings(classifier_name)
+    settings = get_completed_settings(classifier_name)
     
     # Show unclipped and unnormalized spectrograms.
     s = Settings(
