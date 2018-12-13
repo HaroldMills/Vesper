@@ -149,10 +149,10 @@ def _create_stations_dict(stations, station_name_aliases):
             
             if isinstance(aliases, list):
                 for alias in aliases:
-                    result[alias] = station
+                    result[alias.lower()] = station
                         
             else:
-                result[alias] = station
+                result[alias.lower()] = station
             
     # Always map the lower case version of each station name to that station.
     for station in stations.values():
@@ -524,7 +524,8 @@ class RecordingFileParser:
         station, recorder_channel_nums, start_time = \
             self._parse_file_name(file_path)
         
-        num_channels, length, sample_rate = self._get_audio_file_info(file_path)
+        num_channels, length, sample_rate = \
+            self._get_audio_file_info(file_path)
         
         return Bunch(
             station=station,
