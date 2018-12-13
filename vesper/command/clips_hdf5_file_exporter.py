@@ -13,23 +13,24 @@ import vesper.command.command_utils as command_utils
 import vesper.django.app.annotation_utils as annotation_utils
 
 
-# TODO: Make detector name and output sample rate command arguments.
+# TODO: Make detector name command argument.
+# TODO: Make reading clip ids and classifications from output files faster.
 
 
 # Settings for exports from 2017 MPG Ranch archive for 2018 coarse
 # classifier training.
-_DETECTOR_NAME = 'Tseep'
+_DETECTOR_NAME = 'Thrush'
 _CLASSIFICATION_ANNOTATION_NAME = 'Classification'
 _CLASSIFICATIONS = ['Call*', 'Noise']
 _OTHER_ANNOTATION_NAMES = []
 _DEFAULT_ANNOTATION_VALUES = {}
 _EXTRACTION_START_OFFSETS = {
     'Tseep': -.1,
-    'Thrush': -.1
+    'Thrush': -.05
 }
 _EXTRACTION_DURATIONS = {
     'Tseep': .5,
-    'Thrush': .6
+    'Thrush': .65
 }
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 

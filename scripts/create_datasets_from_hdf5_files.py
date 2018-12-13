@@ -17,9 +17,31 @@ from vesper.util.bunch import Bunch
 import vesper.util.os_utils as os_utils
 
 
-DATASET_NAME_PREFIX = 'Tseep 1M'
+# TODO: Support creating multiple datasets in one run.
+# TODO: Replace `dataset_name_prefix` and `detector_name` with type and size.
+
+
+DATASET_NAME_PREFIX = 'Thrush 100K'
 
 DATASET_CONFIGS = yaml.load('''
+
+- dataset_name_prefix: Thrush 20K
+  detector_name: Thrush
+  train_dataset_size: [6000, 6000]
+  val_dataset_size: [2000, 2000]
+  test_dataset_size: [2000, 2000]
+  
+- dataset_name_prefix: Thrush 100K
+  detector_name: Tseep
+  train_dataset_size: [36000, 36000]
+  val_dataset_size: [2000, 2000]
+  test_dataset_size: [2000, 2000]
+  
+- dataset_name_prefix: Thrush 1M
+  detector_name: Thrush
+  train_dataset_size: [496000, 496000]
+  val_dataset_size: [2000, 2000]
+  test_dataset_size: [2000, 2000]
 
 - dataset_name_prefix: Tseep 3K
   detector_name: Tseep
@@ -53,9 +75,8 @@ DATASET_CONFIGS = yaml.load('''
   
 ''')
 
-DATASETS_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML/Datasets')
-
-INPUT_DIR_PATH = DATASETS_DIR_PATH / 'Clip HDF5 Files'
+INPUT_DIR_PATH = Path(
+    '/Volumes/NFC Data 2/NFC/Data/Vesper ML/Datasets/Clip HDF5 Files')
 
 # INPUT_FILE_NAMES = '''
 # Tseep_MPG_Angela_2017_1.h5
@@ -72,44 +93,80 @@ INPUT_DIR_PATH = DATASETS_DIR_PATH / 'Clip HDF5 Files'
 # Tseep_MPG_Floodplain_2017_1.h5
 # '''.split('\n')[1:-1]
 
+# INPUT_FILE_NAMES = '''
+# Tseep_MPG_Angela_2017_1.h5
+# Tseep_MPG_Bear_2017_1.h5
+# Tseep_MPG_Bell Crossing_2017_1.h5
+# Tseep_MPG_Darby_2017_1.h5
+# Tseep_MPG_Dashiell_2017_1.h5
+# Tseep_MPG_Davies_2017_1.h5
+# Tseep_MPG_Deer Mountain_2017_1.h5
+# Tseep_MPG_Floodplain_2017_1.h5
+# Tseep_MPG_Florence_2017_1.h5
+# Tseep_MPG_KBK_2017_1.h5
+# Tseep_MPG_Lilo_2017_1.h5
+# Tseep_MPG_Nelson_2017_1.h5
+# Tseep_MPG_North_2017_1.h5
+# Tseep_MPG_Oxbow_2017_1.h5
+# Tseep_MPG_Powell_2017_1.h5
+# Tseep_MPG_Reed_2017_1.h5
+# Tseep_MPG_Ridge_2017_1.h5
+# Tseep_MPG_Seeley_2017_1.h5
+# Tseep_MPG_Sheep Camp_2017_1.h5
+# Tseep_MPG_St Mary_2017_1.h5
+# Tseep_MPG_Sula Peak_2017_1.h5
+# Tseep_MPG_Teller_2017_1.h5
+# Tseep_MPG_Troy_2017_1.h5
+# Tseep_MPG_Walnut_2017_1.h5
+# Tseep_MPG_Weber_2017_1.h5
+# Tseep_MPG_Willow_2017_1.h5
+# '''.split('\n')[1:-1]
+
 INPUT_FILE_NAMES = '''
-Tseep_MPG_Angela_2017_1.h5
-Tseep_MPG_Bear_2017_1.h5
-Tseep_MPG_Bell Crossing_2017_1.h5
-Tseep_MPG_Darby_2017_1.h5
-Tseep_MPG_Dashiell_2017_1.h5
-Tseep_MPG_Davies_2017_1.h5
-Tseep_MPG_Deer Mountain_2017_1.h5
-Tseep_MPG_Floodplain_2017_1.h5
-Tseep_MPG_Florence_2017_1.h5
-Tseep_MPG_KBK_2017_1.h5
-Tseep_MPG_Lilo_2017_1.h5
-Tseep_MPG_Nelson_2017_1.h5
-Tseep_MPG_North_2017_1.h5
-Tseep_MPG_Oxbow_2017_1.h5
-Tseep_MPG_Powell_2017_1.h5
-Tseep_MPG_Reed_2017_1.h5
-Tseep_MPG_Ridge_2017_1.h5
-Tseep_MPG_Seeley_2017_1.h5
-Tseep_MPG_Sheep Camp_2017_1.h5
-Tseep_MPG_St Mary_2017_1.h5
-Tseep_MPG_Sula Peak_2017_1.h5
-Tseep_MPG_Teller_2017_1.h5
-Tseep_MPG_Troy_2017_1.h5
-Tseep_MPG_Walnut_2017_1.h5
-Tseep_MPG_Weber_2017_1.h5
-Tseep_MPG_Willow_2017_1.h5
+Thrush_MPG_Angela_2017_1.h5
+Thrush_MPG_Bear_2017_1.h5
+Thrush_MPG_Bell Crossing_2017_1.h5
+Thrush_MPG_Darby_2017_1.h5
+Thrush_MPG_Dashiell_2017_1.h5
+Thrush_MPG_Davies_2017_1.h5
+Thrush_MPG_Deer Mountain_2017_1.h5
+Thrush_MPG_Floodplain_2017_1.h5
+Thrush_MPG_Florence_2017_1.h5
+Thrush_MPG_KBK_2017_1.h5
+Thrush_MPG_Lilo_2017_1.h5
+Thrush_MPG_Nelson_2017_1.h5
+Thrush_MPG_North_2017_1.h5
+Thrush_MPG_Oxbow_2017_1.h5
+Thrush_MPG_Powell_2017_1.h5
+Thrush_MPG_Reed_2017_1.h5
+Thrush_MPG_Ridge_2017_1.h5
+Thrush_MPG_Seeley_2017_1.h5
+Thrush_MPG_Sheep Camp_2017_1.h5
+Thrush_MPG_St Mary_2017_1.h5
+Thrush_MPG_Sula Peak_2017_1.h5
+Thrush_MPG_Teller_2017_1.h5
+Thrush_MPG_Troy_2017_1.h5
+Thrush_MPG_Walnut_2017_1.h5
+Thrush_MPG_Weber_2017_1.h5
+Thrush_MPG_Willow_2017_1.h5
 '''.split('\n')[1:-1]
 
+# Thrush
 EXAMPLE_START_OFFSET = .1   # seconds
-EXAMPLE_DURATION = .4       # seconds
+EXAMPLE_DURATION = .55      # seconds
+
+# Tseep
+# EXAMPLE_START_OFFSET = .1   # seconds
+# EXAMPLE_DURATION = .4       # seconds
+
 EXAMPLE_SAMPLE_RATE = 24000
 
 CLIP_TYPE_NAMES = ('call', 'noise')
 CLIP_TYPE_CALL = 0
 CLIP_TYPE_NOISE = 1
 
-OUTPUT_DIR_PATH = DATASETS_DIR_PATH / 'Coarse Classification'
+OUTPUT_DIR_PATH = Path(
+    '/Users/harold/Desktop/NFC/Data/Vesper ML/Datasets/Coarse Classification')
 OUTPUT_FILE_NAME_FORMAT = '{}_{}_{:04d}.tfrecords'
 OUTPUT_FILE_SIZE = 10000  # examples
 
