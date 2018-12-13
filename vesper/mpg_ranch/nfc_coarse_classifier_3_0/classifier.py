@@ -28,7 +28,7 @@ import vesper.util.signal_utils as signal_utils
 from vesper.django.app.views import clip
 
 
-_EVALUATION_MODE_ENABLED = True
+_EVALUATION_MODE_ENABLED = False
 
 
 '''
@@ -141,7 +141,6 @@ class Classifier(Annotator):
                         old_classification, auto_classification)
                     
                     if new_classification is not None:
-                        
                         self._annotate(clip, new_classification)
                         num_clips_classified += 1
                         
@@ -159,7 +158,10 @@ class Classifier(Annotator):
         old = old_classification
         auto = auto_classification
         
-        if old.startswith('Call') and auto == 'Noise':
+        if old is None:
+            return None
+        
+        elif old.startswith('Call') and auto == 'Noise':
             return 'FN' + old[len('Call'):]
             
         elif old == 'Noise' and auto == 'Call':
@@ -241,7 +243,6 @@ class _Classifier:
         
         self.clip_type = clip_type
         
-        self._keras_model = self._create_keras_model()
         self._estimator = self._create_estimator()
         self._settings = self._load_settings()
         
@@ -261,20 +262,12 @@ class _Classifier:
         self._clip_manager = clip_manager.instance
     
     
-    def _create_keras_model(self):
-        path = str(classifier_utils.get_model_file_path(self.clip_type))
-        logging.info('Loading classifier model from "{}"...'.format(path))
-        return tf.keras.models.load_model(path)
-    
-    
     def _create_estimator(self):
-        path = str(classifier_utils.get_model_dir_path(self.clip_type))
+        path = classifier_utils.get_tensorflow_model_dir_path(self.clip_type)
         logging.info((
-            'Creating TensorFlow estimator with model directory '
+            'Creating TensorFlow estimator from saved model in directory '
             '"{}"...').format(path))
-        return tf.keras.estimator.model_to_estimator(
-            keras_model=self._keras_model,
-            model_dir=path)
+        return tf.contrib.estimator.SavedModelEstimator(str(path))
 
     
     def _load_settings(self):
@@ -371,11 +364,10 @@ class _Classifier:
         
     def _create_dataset(self):
         
-        model_input_name = self._keras_model.input_names[0]
-        
         return dataset_utils.create_spectrogram_dataset_from_waveforms_array(
             self._waveforms, dataset_utils.DATASET_MODE_INFERENCE,
-            self._settings, batch_size=64, feature_name=model_input_name)
+            self._settings, batch_size=64,
+            feature_name=self._settings.model_input_name)
     
     
     def _classify_clip(self, index, score, clips):

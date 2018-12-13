@@ -35,8 +35,6 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
 # TODO: Evaluate on only initial portion of training data.
 # TODO: Save sequence of training run precision-recall curves.
 # TODO: Include both augmented and unaugmented data curves in evaluation plots.
-# TODO: Consider using TensorFlow SavedModel rather than checkpoint.
-# TODO: Consider simplifying normalization.
 # TODO: Look at incorrectly classified clips and reclassify as needed.
 
 
@@ -45,6 +43,7 @@ CLASSIFIER_NAME = 'Tseep Quick'
 ML_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML')
 DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Coarse Classification'
 MODELS_DIR_PATH = ML_DIR_PATH / 'Models' / 'Coarse Classification'
+SAVED_MODELS_DIR_NAME = 'Saved Models'
 
 RESULTS_DIR_PATH = Path('/Users/harold/Desktop/ML Results')
 PR_PLOT_FILE_NAME_FORMAT = '{} PR.pdf'
@@ -197,7 +196,7 @@ BASE_THRUSH_SETTINGS = Settings(
     
     # waveform settings
     waveform_initial_padding=.030,
-    waveform_duration=.200,
+    waveform_duration=.250,
     
     # spectrogram settings
     spectrogram_window_size=.005,
@@ -305,28 +304,15 @@ SETTINGS = {
     
     'Thrush 1M': Settings(BASE_THRUSH_SETTINGS, Settings(
         
-        waveform_duration=.250,
-        
-        # .200
-        # spectrogram_clipping_min=1.7999999523162842,
-        # spectrogram_clipping_max=24.0,
-        # spectrogram_normalization_scale_factor=0.3427503724832454,
-        # spectrogram_normalization_offset=-4.184655848177843,
-        
-        # .250
+        # These are ignored when `warm_start_enabled` is `False`.
+        # They are for a `waveform_duration` of .250.
         spectrogram_clipping_min=1.7999999523162842,
         spectrogram_clipping_max=23.899999618530273,
         spectrogram_normalization_scale_factor=0.3456794224478771,
         spectrogram_normalization_offset=-4.196949855990517,
         
-        # .300
-        # spectrogram_clipping_min=1.7999999523162842,
-        # spectrogram_clipping_max=23.899999618530273,
-        # spectrogram_normalization_scale_factor=0.3480549048283441,
-        # spectrogram_normalization_offset=-4.208825819546874,
-        
-        warm_start_enabled=True,
-        num_training_steps=50000
+        warm_start_enabled=False,
+        num_training_steps=30000
         
     )),    
     
@@ -411,6 +397,10 @@ def do_intro(name, settings):
 
 def get_model_dir_path(name):
     return MODELS_DIR_PATH / name
+
+
+def get_saved_models_dir_path(name):
+    return get_model_dir_path(name) / SAVED_MODELS_DIR_NAME
 
 
 def complete_settings(settings):
@@ -790,21 +780,69 @@ class Classifier:
         
     def save(self):
         
-        clip_type = self.name.split()[0]
+        print('Saving model...')
         
-        path = classifier_utils.get_model_file_path(clip_type)
-        path.parent.mkdir(exist_ok=True)
-        self.model.save(str(path))
+        models_dir_path = get_saved_models_dir_path(self.name)
+        model_dir_path = self._save_tensorflow_model(models_dir_path)
+        self._save_keras_model(model_dir_path)
+        self._save_settings(model_dir_path)
+        
+        print('Saved model to directory "{}".'.format(model_dir_path))
 
+        
+    def _save_tensorflow_model(self, models_dir_path):
+        
+        input_name = self.model_input_name
+        input_shape = self.model.get_layer(index=0).input_shape
+        
+        serving_input_receiver_fn = \
+            tf.estimator.export.build_raw_serving_input_receiver_fn({
+                input_name:
+                    tf.placeholder(dtype=tf.float32, shape=input_shape)
+            })
+    
+        # We export a TensorFlow SavedModel that can be used only in
+        # predict mode, but not train or eval mode, since we expect
+        # to use the model only for prediction (i.e. inference).
+        # If that changes in the future, see the documentation for
+        # tf.contrib.estimator.SavedModelEstimator for how to save
+        # a model for all three modes.
+        model_dir_path = self.estimator.export_saved_model(
+            str(models_dir_path), serving_input_receiver_fn)
+        
+        # For some reason `export_saved_model` returns a `bytes` object
+        # instead of a `str` object. We need a `str` object for the `Path`
+        # initializer.
+        model_dir_path = model_dir_path.decode()
+        
+        return Path(model_dir_path)
+        
+
+    def _save_keras_model(self, model_dir_path):
+        
+        # We save a Keras model even though we don't use it ourselves,
+        # since somebody else might prefer it to a TensorFlow model.
+        
+        file_path = model_dir_path / classifier_utils.KERAS_MODEL_FILE_NAME
+        self.model.save(str(file_path))
+
+
+    def _save_settings(self, dir_path):
+        
+        # Find classification threshold and add it to settings.
         self.settings.classification_threshold = find_classification_threshold(
             self.val_stats, self.settings.min_classifier_recall)
         
+        # Add TensorFlow model input name to settings.
+        self.settings.model_input_name = self.model_input_name
+        
+        # Save settings.
         settings = self.settings.__dict__
         text = yaml.dump(settings, default_flow_style=False)
-        path = classifier_utils.get_settings_file_path(clip_type)
-        path.write_text(text)
+        file_path = dir_path / classifier_utils.SETTINGS_FILE_NAME
+        file_path.write_text(text)
+                    
 
-    
 def create_model(settings):
     
     print('Creating classifier model...')
@@ -851,6 +889,7 @@ def add_convolutional_layers(model, settings, regularizer):
         layer_size = settings.convolutional_layer_sizes[layer_num]
         
         kwargs = {
+            'name': 'Conv2D_' + str(layer_num),
             'filters': layer_size,
             'kernel_size': (3, 3),
             'activation': 'relu',
@@ -891,6 +930,7 @@ def add_hidden_dense_layers(model, settings, regularizer):
         layer_size = settings.dense_layer_sizes[layer_num]
         
         kwargs = {
+            'name': 'Dense_' + str(layer_num),
             'units': layer_size,
             'activation': 'relu',
             'kernel_regularizer': regularizer
@@ -914,6 +954,7 @@ def add_hidden_dense_layers(model, settings, regularizer):
 def add_output_layer(model, settings, regularizer):
     
     kwargs = {
+        'name': 'Output',
         'units': 1,
         'activation': 'sigmoid',
         'kernel_regularizer': regularizer

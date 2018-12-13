@@ -6,31 +6,31 @@ from pathlib import Path
 import numpy as np
 
 
-_DATA_DIR_NAME = '{} Classifier'
-_MODEL_FILE_NAME = 'Keras Model.h5'
-_MODEL_DIR_NAME = 'TensorFlow Model'
-_SETTINGS_FILE_NAME = 'Settings.yaml'
+_CLASSIFIER_DIR_NAME_FORMAT = '{} Classifier'
+_TENSORFLOW_MODEL_DIR_NAME = 'TensorFlow SavedModel'
+KERAS_MODEL_FILE_NAME = 'Keras Model.h5'
+SETTINGS_FILE_NAME = 'Settings.yaml'
 
 
-def get_data_dir_path(clip_type):
+def get_classifier_dir_path(clip_type):
     package_path = Path(__file__).parent
-    dir_name = _DATA_DIR_NAME.format(clip_type)
+    dir_name = _CLASSIFIER_DIR_NAME_FORMAT.format(clip_type)
     return package_path.joinpath(dir_name)
 
 
-def get_model_file_path(clip_type):
-    dir_path = get_data_dir_path(clip_type)
-    return dir_path.joinpath(_MODEL_FILE_NAME)
+def get_tensorflow_model_dir_path(clip_type):
+    data_dir_path = get_classifier_dir_path(clip_type)
+    return data_dir_path / _TENSORFLOW_MODEL_DIR_NAME
 
 
-def get_model_dir_path(clip_type):
-    data_dir_path = get_data_dir_path(clip_type)
-    return data_dir_path / _MODEL_DIR_NAME
-
-
+def get_keras_model_file_path(clip_type):
+    dir_path = get_classifier_dir_path(clip_type)
+    return dir_path.joinpath(KERAS_MODEL_FILE_NAME)
+ 
+ 
 def get_settings_file_path(clip_type):
-    dir_path = get_data_dir_path(clip_type)
-    return dir_path.joinpath(_SETTINGS_FILE_NAME)
+    dir_path = get_classifier_dir_path(clip_type)
+    return dir_path.joinpath(SETTINGS_FILE_NAME)
 
 
 def score_dataset_examples(estimator, dataset_creator):
