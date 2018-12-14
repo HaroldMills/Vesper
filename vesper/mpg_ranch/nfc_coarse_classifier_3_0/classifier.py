@@ -250,11 +250,17 @@ class _Classifier:
         s = self._settings
         fs = s.waveform_sample_rate
         s2f = signal_utils.seconds_to_frames
-        self._start_index = s2f(s.waveform_start_time, fs)
+        start_time = \
+            s.waveform_start_time + s.inference_waveform_start_time_offset
+        self._start_index = s2f(start_time, fs)
         length = s2f(s.waveform_duration, fs)
         self._end_index = self._start_index + length
         
-        self._min_clip_duration = s.waveform_start_time + s.waveform_duration
+        self._min_clip_duration = start_time + s.waveform_duration
+        
+        # print(
+        #     '_Classifier.__init__', start_time, s.waveform_duration,
+        #     self._min_clip_duration)
         
         self._classification_threshold = \
             self._settings.classification_threshold
@@ -320,7 +326,7 @@ class _Classifier:
             except Exception as e:
                 
                 logging.warning((
-                    'Classification failed for clip "{}", since its '
+                    'Could not classify clip "{}", since its '
                     'samples could not be obtained. Error message was: '
                     '{}').format(str(clip), str(e)))
                 
@@ -330,7 +336,7 @@ class _Classifier:
                     # clip too short to classify
                     
                     logging.warning((
-                        'Classification failed for clip "{}", since it is '
+                        'Could not classify clip "{}", since it is '
                         'shorter than the required {:.3f} seconds.').format(
                             str(clip), self._min_clip_duration))
                     

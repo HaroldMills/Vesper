@@ -38,7 +38,7 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
 # TODO: Look at incorrectly classified clips and reclassify as needed.
 
 
-CLASSIFIER_NAME = 'Tseep Quick'
+CLASSIFIER_NAME = 'Tseep 1M'
 
 ML_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML')
 DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Coarse Classification'
@@ -94,8 +94,14 @@ BASE_TSEEP_SETTINGS = Settings(
     max_waveform_time_shift=.025,
     
     # waveform settings
-    waveform_initial_padding=.030,
-    waveform_duration=.200,
+    waveform_initial_padding=.050,
+    waveform_duration=.190,
+    
+    # Difference between dataset waveform start time and start time of
+    # corresponding detected clip. We use this during inference to help
+    # figure out which portion of a clip should be input to the
+    # classifier.
+    inference_waveform_start_time_offset=0,
     
     # spectrogram settings
     spectrogram_window_size=.005,
@@ -106,7 +112,7 @@ BASE_TSEEP_SETTINGS = Settings(
     spectrogram_start_freq=4000,
     spectrogram_end_freq=10000,
     
-    # number of parallel calls for dataset example preprocessing.
+    # number of parallel calls for dataset example preprocessing
     num_dataset_parallel_calls=4,
     
     # spectrogram clipping settings
@@ -187,7 +193,7 @@ BASE_THRUSH_SETTINGS = Settings(
     # can occur by max_waveform_time_shift seconds on each end.
     
     # location of event onset window in training dataset waveforms
-    event_onset_window_start_time=.210,
+    event_onset_window_start_time=.110,
     event_onset_window_duration=.080,
     
     # random waveform time shifting data augmentation settings
@@ -198,6 +204,12 @@ BASE_THRUSH_SETTINGS = Settings(
     waveform_initial_padding=.030,
     waveform_duration=.250,
     
+    # Difference between dataset waveform start time and start time of
+    # corresponding detected clip. We use this during inference to help
+    # figure out which portion of a clip should be input to the
+    # classifier.
+    inference_waveform_start_time_offset=.050,
+    
     # spectrogram settings
     spectrogram_window_size=.005,
     spectrogram_hop_size=50,
@@ -207,7 +219,7 @@ BASE_THRUSH_SETTINGS = Settings(
     spectrogram_start_freq=2000,
     spectrogram_end_freq=5000,
     
-    # number of parallel calls for dataset example preprocessing.
+    # number of parallel calls for dataset example preprocessing
     num_dataset_parallel_calls=4,
     
     # spectrogram clipping settings
@@ -287,6 +299,17 @@ SETTINGS = {
     )),    
     
     'Tseep 1M': Settings(BASE_TSEEP_SETTINGS, Settings(
+        
+        # These are ignored when `warm_start_enabled` is `False`.
+        # They are for a `waveform_duration` of .190.
+        spectrogram_clipping_min=1.399999976158142,
+        spectrogram_clipping_max=23.799999237060547,
+        spectrogram_normalization_scale_factor=0.3810824865669079,
+        spectrogram_normalization_offset=-4.2332521979648385,
+        
+        warm_start_enabled=False,
+        num_training_steps=20000
+
     )),    
     
     'Thrush Quick': Settings(BASE_THRUSH_SETTINGS, Settings(
@@ -307,9 +330,9 @@ SETTINGS = {
         # These are ignored when `warm_start_enabled` is `False`.
         # They are for a `waveform_duration` of .250.
         spectrogram_clipping_min=1.7999999523162842,
-        spectrogram_clipping_max=23.899999618530273,
-        spectrogram_normalization_scale_factor=0.3456794224478771,
-        spectrogram_normalization_offset=-4.196949855990517,
+        spectrogram_clipping_max=23.799999237060547,
+        spectrogram_normalization_scale_factor=0.34758085052299253,
+        spectrogram_normalization_offset=-4.213968141482927,
         
         warm_start_enabled=False,
         num_training_steps=30000
@@ -408,7 +431,12 @@ def complete_settings(settings):
     # Copy settings so we don't modify the originals.
     s = Settings(settings)
     
-    s.waveform_start_time = get_waveform_start_time(s)
+    # Get the nominal start time of the portion of a dataset waveform
+    # that is used for training. When time shifting data augmentation
+    # is enabled, a random offset is added to the nominal start time
+    # for each training example to determine the actual start time.
+    s.waveform_start_time = \
+        s.event_onset_window_start_time - s.waveform_initial_padding
         
     if s.spectrogram_clipping_enabled and \
             s.spectrogram_clipping_pretraining_enabled and \
@@ -430,18 +458,6 @@ def complete_settings(settings):
         
     return s
             
-
-def get_waveform_start_time(settings):
-    
-    s = settings
-    
-    start_time = s.event_onset_window_start_time - s.waveform_initial_padding
-    
-    if s.random_waveform_time_shifting_enabled:
-        start_time -= s.max_waveform_time_shift
-        
-    return start_time
-
 
 def compute_spectrogram_clipping_settings(settings):
     
