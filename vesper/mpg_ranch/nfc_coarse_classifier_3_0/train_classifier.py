@@ -29,11 +29,12 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier_utils as \
     classifier_utils
 import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
     dataset_utils
+import vesper.util.script_utils as script_utils
 
 
 # TODO: Tune hyperparameters.
 # TODO: Evaluate on only initial portion of training data.
-# TODO: Save sequence of training run precision-recall curves.
+# TODO: Save SavedModels and performance models and stats periodically.
 # TODO: Include both augmented and unaugmented data curves in evaluation plots.
 # TODO: Look at incorrectly classified clips and reclassify as needed.
 
@@ -308,7 +309,7 @@ SETTINGS = {
         spectrogram_normalization_offset=-4.2332521979648385,
         
         warm_start_enabled=False,
-        num_training_steps=20000
+        num_training_steps=30000
 
     )),    
     
@@ -335,7 +336,7 @@ SETTINGS = {
         spectrogram_normalization_offset=-4.213968141482927,
         
         warm_start_enabled=False,
-        num_training_steps=30000
+        num_training_steps=20000
         
     )),    
     
@@ -378,6 +379,9 @@ def train_and_evaluate_classifier(name):
     classifier.evaluate()
     classifier.save()
     
+    print('Training script is complete.')
+    script_utils.announce('Harold, your training script has finished.')
+
 
 def do_intro(name, settings):
     
