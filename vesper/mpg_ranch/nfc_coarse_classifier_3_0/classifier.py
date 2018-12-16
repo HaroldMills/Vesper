@@ -17,6 +17,7 @@ import tensorflow as tf
 import yaml
 
 from vesper.command.annotator import Annotator
+from vesper.django.app.models import AnnotationInfo
 from vesper.singletons import clip_manager
 from vesper.util.settings import Settings
 import vesper.django.app.model_utils as model_utils
@@ -25,7 +26,6 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier_utils as \
 import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
     dataset_utils
 import vesper.util.signal_utils as signal_utils
-from vesper.django.app.views import clip
 
 
 _EVALUATION_MODE_ENABLED = False
@@ -75,6 +75,10 @@ class Classifier(Annotator):
         
         self._classifiers = dict(
             (t, _Classifier(t)) for t in ('Tseep', 'Thrush'))
+        
+        if _EVALUATION_MODE_ENABLED:
+            self._score_annotation_info = \
+                AnnotationInfo.objects.get(name='Score')
         
         
     def annotate_clips(self, clips):
@@ -129,7 +133,7 @@ class Classifier(Annotator):
         # if _EVALUATION_MODE_ENABLED and len(triples) > 0:
         #     self._show_classification_errors(triples)
         
-        for clip, auto_classification, _ in triples:
+        for clip, auto_classification, score in triples:
             
             if auto_classification is not None:
                 
@@ -143,6 +147,8 @@ class Classifier(Annotator):
                     if new_classification is not None:
                         self._annotate(clip, new_classification)
                         num_clips_classified += 1
+                        
+                    self._set_clip_score(clip, score)
                         
                 else:
                     # normal mode
@@ -176,6 +182,17 @@ class Classifier(Annotator):
         else:
             return None
 
+
+    def _set_clip_score(self, clip, score):
+        
+        value = '{:.3f}'.format(score)
+                    
+        model_utils.annotate_clip(
+            clip, self._score_annotation_info, value,
+            creating_user=self._creating_user,
+            creating_job=self._creating_job,
+            creating_processor=self._creating_processor)
+                    
 
     def _show_classification_errors(self, triples):
           
