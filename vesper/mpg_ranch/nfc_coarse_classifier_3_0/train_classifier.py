@@ -9,7 +9,6 @@ whether or not a clip contains a nocturnal flight call.
 from pathlib import Path
 import bisect
 import math
-import os
 import shutil
 import time
 import yaml
@@ -29,6 +28,7 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier_utils as \
     classifier_utils
 import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
     dataset_utils
+import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.script_utils as script_utils
 
 
@@ -345,7 +345,7 @@ SETTINGS = {
 
 def main():
     
-    work_around_openmp_issue()
+    open_mp_utils.work_around_multiple_copies_issue()
     
     train_and_evaluate_classifier(CLASSIFIER_NAME)
     
@@ -353,18 +353,6 @@ def main():
     # show_spectrogram_dataset(CLASSIFIER_NAME)
     
     
-def work_around_openmp_issue():
-
-    # Added this 2018-11-13 to work around a problem on macOS involving
-    # potential confusion among multiple copies of the OpenMP runtime.
-    # The problem only appears to arise when I install TensorFlow using
-    # Conda rather than pip. I'm not sure where the multiple copies are
-    # coming from. Perhaps Conda and Xcode? See
-    # https://github.com/openai/spinningup/issues/16 for an example of
-    # another person encountering this issue.
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
-
-
 def train_and_evaluate_classifier(name):
     
     settings = SETTINGS[name]

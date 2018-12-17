@@ -19,6 +19,7 @@ from vesper.util.settings import Settings
 import vesper.django.app.model_utils as model_utils
 import vesper.mpg_ranch.nfc_coarse_classifier_2_0.classifier_utils as \
     classifier_utils
+import vesper.util.open_mp_utils as open_mp_utils
 
 
 class Classifier(Annotator):
@@ -30,6 +31,8 @@ class Classifier(Annotator):
     def __init__(self, *args, **kwargs):
         
         super().__init__(*args, **kwargs)
+        
+        open_mp_utils.work_around_multiple_copies_issue()
         
         self._classifiers = dict(
             (t, _Classifier(t)) for t in ('Thrush', 'Tseep'))
@@ -78,7 +81,7 @@ class _Classifier:
         # Keras can be rather slow to import (we have seen load times of
         # about ten seconds), so we want to import it only when we know
         # we are about to use it.
-        import keras
+        from tensorflow import keras
         
         path = classifier_utils.get_model_file_path(self._clip_type)
         return keras.models.load_model(str(path))

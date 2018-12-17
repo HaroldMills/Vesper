@@ -13,15 +13,14 @@
 # tf.set_random_seed(1)
 
 from pathlib import Path
-import os
 import sys
 import time
 
-from keras.models import Sequential
-from keras.layers import Dense
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import MultipleLocator
-import keras
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
@@ -36,6 +35,7 @@ from vesper.util.settings import Settings
 import vesper.mpg_ranch.nfc_coarse_classifier_2_0.classifier_utils as \
     classifier_utils
 import vesper.util.numpy_utils as numpy_utils
+import vesper.util.open_mp_utils as open_mp_utils
 
 
 # TODO: Offer reproducible training option.
@@ -195,7 +195,7 @@ SETTINGS = {
 
 def main():
     
-    work_around_openmp_issue()
+    open_mp_utils.work_around_multiple_copies_issue()
 
     clip_type = sys.argv[1]
     
@@ -229,18 +229,6 @@ def main():
        
     print()
         
-
-def work_around_openmp_issue():
-
-    # Added this 2018-11-26 to work around a problem on macOS involving
-    # potential confusion among multiple copies of the OpenMP runtime.
-    # The problem only appears to arise when I install TensorFlow using
-    # Conda rather than pip. I'm not sure where the multiple copies are
-    # coming from. Perhaps Conda and Xcode? See
-    # https://github.com/openai/spinningup/issues/16 for an example of
-    # another person encountering this issue.
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
-
 
 def get_clips(clip_type, settings):
     
