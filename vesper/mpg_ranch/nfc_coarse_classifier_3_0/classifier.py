@@ -267,17 +267,10 @@ class _Classifier:
         s = self._settings
         fs = s.waveform_sample_rate
         s2f = signal_utils.seconds_to_frames
-        start_time = \
+        self._waveform_start_time = \
             s.waveform_start_time + s.inference_waveform_start_time_offset
-        self._start_index = s2f(start_time, fs)
-        length = s2f(s.waveform_duration, fs)
-        self._end_index = self._start_index + length
-        
-        self._min_clip_duration = start_time + s.waveform_duration
-        
-        # print(
-        #     '_Classifier.__init__', start_time, s.waveform_duration,
-        #     self._min_clip_duration)
+        self._waveform_duration = s.waveform_duration
+        self._waveform_length = s2f(self._waveform_duration, fs)
         
         self._classification_threshold = \
             self._settings.classification_threshold
@@ -348,39 +341,50 @@ class _Classifier:
                     '{}').format(str(clip), str(e)))
                 
             else:
+                # got clip samples
                 
-                if len(waveform) < self._end_index:
-                    # clip too short to classify
+                waveforms.append(waveform)
+                indices.append(i)
                     
-                    logging.warning((
-                        'Could not classify clip "{}", since it is '
-                        'shorter than the required {:.3f} seconds.').format(
-                            str(clip), self._min_clip_duration))
-                    
-                else:
-                    # clip not too short to classify
-                    
-                    # Slice waveform for classifier.
-                    waveform = waveform[self._start_index:self._end_index]
-                    
-                    waveforms.append(waveform)
-                    indices.append(i)
-                
         return waveforms, indices
                 
         
     def _get_clip_samples(self, clip):
          
-        samples = self._clip_manager.get_samples(clip)
-        sample_rate = clip.sample_rate
-         
+        clip_sample_rate = clip.sample_rate
         classifier_sample_rate = self._settings.waveform_sample_rate
-         
-        if sample_rate != classifier_sample_rate:
-            # samples are not at classifier sample rate
+
+        s2f = signal_utils.seconds_to_frames
+        start_offset = s2f(self._waveform_start_time, clip_sample_rate)
+        
+        if clip_sample_rate != classifier_sample_rate:
+            # need to resample
             
+            # Get clip samples, including a millisecond of padding at
+            # the end. I don't know what if any guarantees the
+            # `resampy.resample` function offers about the relationship
+            # between its input and output lengths, so we add the padding
+            # to try to ensure that we don't wind up with too few samples
+            # after resampling.
+            length = s2f(self._waveform_duration + .001, clip_sample_rate)
+            samples = self._clip_manager.get_samples(
+                clip, start_offset=start_offset, length=length)
+            
+            # Resample clip samples to classifier sample rate.
             samples = resampy.resample(
-                samples, sample_rate, classifier_sample_rate)
+                samples, clip_sample_rate, classifier_sample_rate)
+            
+            # Discard any extra trailing samples we wound up with.
+            samples = samples[:self._waveform_length]
+            
+            if len(samples) < self._waveform_length:
+                raise ValueError('Resampling produced too few samples.')
+            
+        else:
+            # don't need to resample
+            
+            samples = self._clip_manager.get_samples(
+                clip, start_offset=start_offset, length=self._waveform_length)
              
         return samples
 
