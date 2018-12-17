@@ -1295,13 +1295,14 @@ def clip_calendar(request):
         'detector', params, preferences)
     detector = archive_.get_processor(detector_name)
     
+    annotation_name = 'Classification'
     annotation_ui_value_specs = \
-        archive_.get_visible_string_annotation_ui_value_specs('Classification')
+        archive_.get_visible_string_annotation_ui_value_specs(annotation_name)
     annotation_ui_value_spec = _get_string_annotation_ui_value_spec(
         annotation_ui_value_specs, params, preferences)
 
     annotation_name, annotation_value = \
-        _get_string_annotation_info(annotation_ui_value_spec)
+        _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
     periods_json = _get_periods_json(
         sm_pair, detector, annotation_name, annotation_value)
 
@@ -1375,22 +1376,20 @@ def _get_string_annotation_ui_value_spec(
     return spec
 
 
-def _get_string_annotation_info(annotation_ui_value_spec):
+def _get_string_annotation_info(annotation_name, annotation_ui_value_spec):
 
     archive_ = archive.instance
     
     value_spec = archive_.get_string_annotation_archive_value(
-        'Classification', annotation_ui_value_spec)
+        annotation_name, annotation_ui_value_spec)
     
     if value_spec == archive_.STRING_ANNOTATION_VALUE_ANY_OR_NONE:
         
-        # We set `annotation_name` to `None` to denote all clips.
+        # We return an `annotation_name` of `None` to denote all clips.
         annotation_name = None
         annotation_value = None
 
     else:
-
-        annotation_name = 'Classification'
 
         if value_spec == archive_.STRING_ANNOTATION_VALUE_NONE:
             annotation_value = None
@@ -1449,7 +1448,7 @@ def night(request):
     recordings_json = _get_recordings_json(recordings, station)
 
     annotation_name, annotation_value = \
-        _get_string_annotation_info(annotation_value_spec)
+        _get_string_annotation_info('Classification', annotation_value_spec)
 
     clips = model_utils.get_clips(
         station, mic_output, detector, date, annotation_name, annotation_value)
@@ -1636,8 +1635,9 @@ def clip_album(request):
         'detector', params, preferences)
     detector = archive_.get_processor(detector_name)
     
+    annotation_name = 'Classification'
     annotation_ui_value_specs = \
-        archive_.get_visible_string_annotation_ui_value_specs('Classification')
+        archive_.get_visible_string_annotation_ui_value_specs(annotation_name)
     annotation_ui_value_spec = _get_string_annotation_ui_value_spec(
         annotation_ui_value_specs, params, preferences)
 
@@ -1649,7 +1649,7 @@ def clip_album(request):
     detector_ui_name = archive_.get_processor_ui_name(detector)
     
     annotation_name, annotation_value = \
-        _get_string_annotation_info(annotation_ui_value_spec)
+        _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
 
     clips = model_utils.get_clips(
         station, mic_output, detector, None, annotation_name, annotation_value)
