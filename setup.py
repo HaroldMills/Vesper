@@ -22,7 +22,8 @@ setup(
         'jsonschema',
         'keras',
         'pyephem',
-        'resampy'
+        'resampy',
+        'scikit-learn'
     ],
       
     entry_points={
