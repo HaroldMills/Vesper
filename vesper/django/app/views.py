@@ -10,7 +10,7 @@ from django.db.models import F, Max, Min
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import (
-    HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
+    Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
     HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseServerError)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -1330,7 +1330,7 @@ def _get_calendar_query_object(
         objects, type_name, params, preferences, name_getter=lambda o: o.name):
 
     if len(objects) == 0:
-        return None
+        raise Http404('Archive contains no {} objects.'.format(type_name))
 
     else:
 
