@@ -207,6 +207,12 @@ export class SpectrogramClipView extends ClipView {
 }
 
 
+/**
+ * Updates spectrogram clip view settings if needed.
+ * 
+ * This function provides a certain amount of backwards compatibility
+ * with older settings presets.
+ */
 function _updateSettingsIfNeeded(settings, sampleRate) {
     
     if (settings.spectrogram.computation === undefined) {
