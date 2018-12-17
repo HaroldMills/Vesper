@@ -37,7 +37,6 @@ requirements:
     - pyephem
     - python
     - resampy
-    - scikit-learn
     - setuptools
  
   run:
@@ -47,7 +46,6 @@ requirements:
     - pyephem
     - python
     - resampy
-    - scikit-learn
  
 test:
 
