@@ -3,6 +3,8 @@ export class ClipView {
 
 	constructor(parent, clip, settings) {
 
+	    settings = _updateSettingsIfNeeded(settings);
+	    
 		this._parent = parent;
 		this._clip = clip;
 		this._settings = settings;
@@ -33,6 +35,8 @@ export class ClipView {
 
 	set settings(settings) {
 
+        settings = _updateSettingsIfNeeded(settings);
+        
 		this._settings = settings;
 
 		if (this._div !== null) {
@@ -625,3 +629,23 @@ export class ClipView {
 	}
 
 }
+
+
+/**
+ * Updates clip view settings if needed.
+ * 
+ * This function provides a certain amount of backwards compatibility
+ * with old clip album settings presets.
+ */
+function _updateSettingsIfNeeded(settings) {
+    
+    // Note that this would not be needed if we had default settings.
+    if (settings.overlays === undefined)
+        settings.overlays = {'visible': true};
+    
+    return settings;
+    
+}
+
+
+
