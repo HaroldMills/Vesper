@@ -21,6 +21,7 @@ setup(
         'django',
         'jsonschema',
         'pyephem',
+        'pyyaml',
         'resampy',
         'scikit-learn',
         'tensorflow'
