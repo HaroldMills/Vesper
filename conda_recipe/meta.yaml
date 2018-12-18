@@ -33,7 +33,6 @@ requirements:
   build:
     - django
     - jsonschema
-    - keras
     - pyephem
     - python
     - resampy
@@ -43,7 +42,6 @@ requirements:
   run:
     - django
     - jsonschema
-    - keras
     - pyephem
     - python
     - resampy

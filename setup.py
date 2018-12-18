@@ -20,7 +20,6 @@ setup(
     install_requires=[
         'django',
         'jsonschema',
-        'keras',
         'pyephem',
         'resampy',
         'scikit-learn'
