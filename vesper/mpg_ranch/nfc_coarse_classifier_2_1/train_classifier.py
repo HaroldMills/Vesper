@@ -25,14 +25,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 
-from vesper.mpg_ranch.nfc_coarse_classifier_2_0.feature_computer import \
+from vesper.mpg_ranch.nfc_coarse_classifier_2_1.feature_computer import \
     FeatureComputer
 from vesper.util.binary_classification_stats import BinaryClassificationStats
 from vesper.util.bunch import Bunch
 from vesper.util.clips_hdf5_file import ClipsHdf5File
 from vesper.util.conditional_printer import ConditionalPrinter
 from vesper.util.settings import Settings
-import vesper.mpg_ranch.nfc_coarse_classifier_2_0.classifier_utils as \
+import vesper.mpg_ranch.nfc_coarse_classifier_2_1.classifier_utils as \
     classifier_utils
 import vesper.util.numpy_utils as numpy_utils
 import vesper.util.open_mp_utils as open_mp_utils

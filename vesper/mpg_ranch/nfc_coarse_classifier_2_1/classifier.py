@@ -1,10 +1,17 @@
 """
-Module containing MPG Ranch NFC coarse classifier, version 2.0.
+Module containing MPG Ranch NFC coarse classifier, version 2.1.
 
 An NFC coarse classifier classifies an unclassified clip as a `'Call'`
 if it appears to be a nocturnal flight call, or as a `'Noise'` otherwise.
 It does not classify a clip that has already been classified, whether
 manually or automatically.
+
+Version 2.1 of this classifier differs from version 2.0 only in that
+it uses the `tensorflow.keras` module instead of the `keras` module.
+The neural network model of version 2.1 is identical to the model of
+version 2.0 (i.e. it has the same architecture and the same weights
+and biases), and in principal should produce the same output for the
+same input.
 """
 
 
@@ -12,12 +19,12 @@ import resampy
 import yaml
 
 from vesper.command.annotator import Annotator
-from vesper.mpg_ranch.nfc_coarse_classifier_2_0.feature_computer import \
+from vesper.mpg_ranch.nfc_coarse_classifier_2_1.feature_computer import \
     FeatureComputer
 from vesper.singletons import clip_manager
 from vesper.util.settings import Settings
 import vesper.django.app.model_utils as model_utils
-import vesper.mpg_ranch.nfc_coarse_classifier_2_0.classifier_utils as \
+import vesper.mpg_ranch.nfc_coarse_classifier_2_1.classifier_utils as \
     classifier_utils
 import vesper.util.open_mp_utils as open_mp_utils
 
@@ -25,7 +32,7 @@ import vesper.util.open_mp_utils as open_mp_utils
 class Classifier(Annotator):
     
     
-    extension_name = 'MPG Ranch NFC Coarse Classifier 2.0'
+    extension_name = 'MPG Ranch NFC Coarse Classifier 2.1'
 
     
     def __init__(self, *args, **kwargs):
