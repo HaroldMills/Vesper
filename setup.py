@@ -22,7 +22,8 @@ setup(
         'jsonschema',
         'pyephem',
         'resampy',
-        'scikit-learn'
+        'scikit-learn',
+        'tensorflow'
     ],
       
     entry_points={

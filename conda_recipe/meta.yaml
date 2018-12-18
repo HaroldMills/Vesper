@@ -38,6 +38,7 @@ requirements:
     - resampy
     - scikit-learn
     - setuptools
+    - tensorflow
  
   run:
     - django
@@ -46,6 +47,7 @@ requirements:
     - python
     - resampy
     - scikit-learn
+    - tensorflow
  
 test:
 
