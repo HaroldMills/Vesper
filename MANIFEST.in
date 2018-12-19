@@ -6,3 +6,5 @@ recursive-include vesper/django/app/static/vesper *.js
 recursive-include vesper *.h5
 recursive-include vesper *.pkl
 recursive-include vesper *.yaml
+recursive-include vesper *.pb
+recursive-include vesper variables.*
