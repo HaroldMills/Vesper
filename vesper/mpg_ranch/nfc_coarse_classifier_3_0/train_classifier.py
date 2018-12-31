@@ -9,6 +9,7 @@ whether or not a clip contains a nocturnal flight call.
 from pathlib import Path
 import bisect
 import math
+import os
 import shutil
 import time
 import yaml
@@ -39,14 +40,19 @@ import vesper.util.script_utils as script_utils
 # TODO: Look at incorrectly classified clips and reclassify as needed.
 
 
-CLASSIFIER_NAME = 'Tseep 1M'
+CLASSIFIER_NAME = 'Tseep Quick'
 
-ML_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Vesper ML')
-DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Coarse Classification'
+DATASETS_DIR_PATH = \
+    '/Users/harold/Desktop/NFC/Data/Vesper ML/Datasets/Coarse Classification'
+# DATASETS_DIR_PATH = 's3://vesper-datasets/Coarse Classification'
+
+BASE_DIR_PATH = Path('/Users/harold/Desktop')
+
+ML_DIR_PATH = BASE_DIR_PATH / 'NFC' / 'Data' / 'Vesper ML'
 MODELS_DIR_PATH = ML_DIR_PATH / 'Models' / 'Coarse Classification'
 SAVED_MODELS_DIR_NAME = 'Saved Models'
 
-RESULTS_DIR_PATH = Path('/Users/harold/Desktop/ML Results')
+RESULTS_DIR_PATH = BASE_DIR_PATH / 'ML Results'
 PR_PLOT_FILE_NAME_FORMAT = '{} PR.pdf'
 ROC_PLOT_FILE_NAME_FORMAT = '{} ROC.pdf'
 PR_CSV_FILE_NAME_FORMAT = '{} PR.csv'
@@ -345,6 +351,9 @@ SETTINGS = {
 
 def main():
     
+    # Set AWS S3 region to access datasets stored on S3.
+    os.environ['S3_REGION'] = 'us-east-2'
+    
     open_mp_utils.work_around_multiple_copies_issue()
     
     train_and_evaluate_classifier(CLASSIFIER_NAME)
@@ -546,7 +555,7 @@ def create_spectrogram_dataset(
         dataset_name, dataset_part, dataset_mode, settings, num_repeats=1,
         shuffle=False, batch_size=1, feature_name='spectrogram'):
     
-    dir_path = DATASETS_DIR_PATH / dataset_name / dataset_part
+    dir_path = '/'.join([DATASETS_DIR_PATH, dataset_name, dataset_part])
     
     return dataset_utils.create_spectrogram_dataset_from_waveform_files(
         dir_path, dataset_mode, settings, num_repeats, shuffle, batch_size,

@@ -51,7 +51,7 @@ def create_spectrogram_dataset_from_waveform_files(
     
 def create_waveform_dataset_from_waveform_files(dir_path):
     
-    file_path_pattern = str(dir_path / '*.tfrecords')
+    file_path_pattern = '/'.join([dir_path, '*.tfrecords'])
     
     # Get file paths matching pattern. Sort the paths for consistency.
     file_paths = sorted(tf.gfile.Glob(file_path_pattern))
