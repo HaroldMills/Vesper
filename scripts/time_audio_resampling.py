@@ -5,24 +5,30 @@ import numpy as np
 
 DURATION = 100
 NUM_TRIALS = 5
-INPUT_SAMPLE_RATE = 32000
+INPUT_SAMPLE_RATE = 22050
 OUTPUT_SAMPLE_RATE = 24000
 
 SETUP = '''
+import math
+
 from scipy import signal
 import resampy
+
+gcd = math.gcd(INPUT_SAMPLE_RATE, OUTPUT_SAMPLE_RATE)
+up = OUTPUT_SAMPLE_RATE / gcd
+down = INPUT_SAMPLE_RATE / gcd
 
 n = int(round(DURATION * INPUT_SAMPLE_RATE))
 x = np.random.randn(n)
 '''
 
-STATEMENT = '''
-y = resampy.resample(x, INPUT_SAMPLE_RATE, OUTPUT_SAMPLE_RATE)
-'''
-
 # STATEMENT = '''
-# y = signal.resample_poly(x, 3, 4)
+# y = resampy.resample(x, INPUT_SAMPLE_RATE, OUTPUT_SAMPLE_RATE)
 # '''
+
+STATEMENT = '''
+y = signal.resample_poly(x, up, down)
+'''
 
 
 def main():
