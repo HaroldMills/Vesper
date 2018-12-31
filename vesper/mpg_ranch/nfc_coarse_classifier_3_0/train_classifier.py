@@ -40,15 +40,12 @@ import vesper.util.script_utils as script_utils
 # TODO: Look at incorrectly classified clips and reclassify as needed.
 
 
-CLASSIFIER_NAME = 'Tseep Quick'
-
-DATASETS_DIR_PATH = \
-    '/Users/harold/Desktop/NFC/Data/Vesper ML/Datasets/Coarse Classification'
-# DATASETS_DIR_PATH = 's3://vesper-datasets/Coarse Classification'
+CLASSIFIER_NAME = 'Tseep 1M'
 
 BASE_DIR_PATH = Path('/Users/harold/Desktop')
 
 ML_DIR_PATH = BASE_DIR_PATH / 'NFC' / 'Data' / 'Vesper ML'
+DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Coarse Classification'
 MODELS_DIR_PATH = ML_DIR_PATH / 'Models' / 'Coarse Classification'
 SAVED_MODELS_DIR_NAME = 'Saved Models'
 
@@ -555,7 +552,7 @@ def create_spectrogram_dataset(
         dataset_name, dataset_part, dataset_mode, settings, num_repeats=1,
         shuffle=False, batch_size=1, feature_name='spectrogram'):
     
-    dir_path = '/'.join([DATASETS_DIR_PATH, dataset_name, dataset_part])
+    dir_path = DATASETS_DIR_PATH / dataset_name / dataset_part
     
     return dataset_utils.create_spectrogram_dataset_from_waveform_files(
         dir_path, dataset_mode, settings, num_repeats, shuffle, batch_size,
