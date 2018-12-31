@@ -1134,7 +1134,7 @@ def find_classification_threshold(stats, min_recall):
     # Find index of last recall that is at least `min_recall`.
     # `stats.recall` is nonincreasing, so we flip it before using
     # `bisect.bisect_left`, and then flip the resulting index.
-    recalls = np.flip(stats.recall)
+    recalls = np.flipud(stats.recall)
     i = bisect.bisect_left(recalls, min_recall)
     i = len(recalls) - 1 - i
     
