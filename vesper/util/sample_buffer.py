@@ -116,15 +116,16 @@ class SampleBuffer:
                 self._stored_length += len(samples)
         
         
-    def read(self, num_samples, increment=None):
+    def read(self, num_samples=None, increment=None):
         
         """
         Reads samples from this buffer.
         
         Parameters
         ----------
-        num_samples : int
-            the number of samples to read
+        num_samples : int or None
+            the number of samples to read, or `None` to read all available
+            samples.
             
         increment : int or None
             the number by which to increment the read index of this buffer,
@@ -141,28 +142,29 @@ class SampleBuffer:
             exceeds the current buffer length.
         """
         
+        if num_samples is None:
+            num_samples = len(self)
+            
+        elif num_samples < 0:
+            raise ValueError('Sample buffer read size cannot be negative.')
+        
+        elif num_samples > len(self):
+            raise ValueError((
+                'Attempt to read {} samples from sample buffer with '
+                'only {}.').format(num_samples, len(self)))
+        
         if increment is None:
             increment = num_samples
             
         elif increment < 0:
             raise ValueError(
                 'Sample buffer read increment cannot be negative.')
-        
-        if num_samples < 0:
-            raise ValueError('Sample buffer read size cannot be negative.')
-        
-        elif num_samples == 0:
+
+        if num_samples == 0:
             result = np.array([], dtype=self._dtype)
         
-        elif num_samples > len(self):
-            # don't have requested samples
-            
-            raise ValueError((
-                'Attempt to read {} samples from sample buffer with '
-                'only {}.').format(num_samples, len(self)))
-        
         else:
-            # have requested samples
+            # num_samples is positive
             
             result_arrays = []
             array_num = 0
@@ -182,7 +184,7 @@ class SampleBuffer:
                     array_num += 1
                     start = 0
                     n -= available
-
+    
                 else:
                     # result will include only part of rest of `array`
                     
