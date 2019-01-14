@@ -1,6 +1,5 @@
 import numpy as np
 
-
 from vesper.tests.test_case import TestCase
 import vesper.util.numpy_utils as numpy_utils
 
@@ -8,6 +7,99 @@ import vesper.util.numpy_utils as numpy_utils
 class NumPyUtilsTests(TestCase):
     
     
+    def test_arrays_equal(self):
+        
+        cases = [
+            
+            # equal arrays
+            ([], [], True),
+            ([0], [0], True),
+            ([0], [0.], True),
+            ([1.2], [1.2], True),
+            ([[1, 2], [3, 4]], [[1, 2], [3, 4]], True),
+            
+            # unequal arrays
+            ([], [1], False),
+            ([[], []], [], False),
+            ([1, 2], [[1], [2]], False),
+            ([0], [1e-50], False)
+            
+        ]
+        
+        for x, y, expected in cases:
+            x = np.array(x)
+            y = np.array(y)
+            actual = numpy_utils.arrays_equal(x, y)
+            self.assertEqual(actual, expected)
+            
+            
+    def test_arrays_close(self):
+        
+        cases = [
+            
+            # close arrays
+            ([], [], True),
+            ([0], [0], True),
+            ([0], [0.], True),
+            ([1.2], [1.2], True),
+            ([[1, 2], [3, 4]], [[1, 2], [3, 4]], True),
+            ([0], [1e-8], True),
+            
+            # non-close arrays
+            ([], [1], False),
+            ([[], []], [], False),
+            ([1, 2], [[1], [2]], False),
+            ([0], [.999999e-7], False)
+            
+            
+        ]
+    def test_find_local_maxima_with_no_threshold(self):
+        
+        # cases without thresholds
+        cases = [
+            
+            # arrays without local maxima
+            ([], []),
+            ([0], []),
+            ([0, 1], []),
+            ([0, 0, 0], []),
+            ([1, 0, 1], []),
+            ([0, 1, 1, 0], []),
+              
+            # arrays with local maxima
+            ([0, 1, 0], [1]),
+            ([-10, -9, -10], [1]),
+            ([0, 1, 0, 1, 1, 0, 1, 0], [1, 6]),
+            ([0, 10, 0, 10, 20, 0, 10, 0], [1, 4, 6])
+            
+        ]
+        
+        for x, expected in cases:
+            x = np.array(x)
+            expected = np.array(expected)
+            actual = numpy_utils.find_local_maxima(x)
+            self._assert_arrays_equal(actual, expected)
+            
+            
+    def test_find_local_maxima_with_threshold(self):
+        
+        # cases with thresholds
+        cases = [
+            ([0, 2, 0], 1, [1]),
+            ([0, 2, 0], 2, [1]),
+            ([0, 2, 0], 3, []),
+            ([0, 1, 0, 1, 2, 0, 2, 0], 1, [1, 4, 6]),
+            ([0, 1, 0, 1, 2, 0, 2, 0], 2, [4, 6]),
+            ([0, 1, 0, 1, 2, 0, 2, 0], 3, [])
+        ]
+        
+        for x, threshold, expected in cases:
+            x = np.array(x)
+            expected = np.array(expected)
+            actual = numpy_utils.find_local_maxima(x, threshold)
+            self._assert_arrays_equal(actual, expected)
+            
+            
     def test_find(self):
         
         y = [2, 0, 1, 0, 1, 0, 2]

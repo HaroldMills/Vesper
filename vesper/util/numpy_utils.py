@@ -4,6 +4,113 @@
 import numpy as np
 
 
+def arrays_equal(x, y):
+    
+    """
+    Tests if two arrays have the same shape and values.
+    
+    Parameters
+    ----------
+    x : NumPy array
+        the first array
+    y : NumPy array
+        the second array
+        
+    Returns
+    -------
+    bool
+        `True` if and only if `x` and `y` have the same shape and values.
+        Note that two arrays of different dtypes can be equal as long as
+        their values are equal.
+    """
+    
+    # We check shapes before calling np.all since np.all broadcasts its
+    # arguments as needed but we don't want it to. We want, for example,
+    # for np.zeros(1) to *not* equal np.zeros(2).
+    
+    if x.shape != y.shape:
+        return False
+    else:
+        return np.all(x == y)
+    
+    
+def arrays_close(x, y):
+    
+    """
+    Tests if two arrays have the same shape and close values.
+    
+    Parameters
+    ----------
+    x : NumPy array
+        the first array
+    y : NumPy array
+        the second array
+        
+    Returns
+    -------
+    bool
+        `True` if and only if `x` and `y` have the same shape and close
+        values. The closeness of values is tested by calling `np.allclose`.
+        Note that two arrays of different dtypes can be close as long as
+        their values are close.
+    """
+    
+    # We check shapes before calling np.all since np.all broadcasts its
+    # arguments as needed but we don't want it to. We want, for example,
+    # for np.zeros(1) to *not* be close to np.zeros(2).
+    
+    if x.shape != y.shape:
+        return False
+    else:
+        return np.allclose(x, y)
+    
+    
+def find_local_maxima(x, threshold=None):
+    
+    """
+    Finds the local maxima of the specified array.
+    
+    A local maximum in an array is an element that is greater than its
+    neighbors to either side. Note that this means that the first and
+    last elements of an array cannot be local maxima, since neither has
+    neighbors on both sides. It also means that no element of a sequence
+    of equal elements is a local maximum.
+    
+    Parameters
+    ----------
+    x : one-dimensional NumPy array
+        the array in which to find local maxima.
+    threshold : int, float, or None
+        the smallest local maximum to find, or `None` to find all local maxima.
+        
+    Returns
+    -------
+    NumPy array
+        the indices in `x` of all local maxima.
+    """
+    
+    if len(x) < 3:
+        # not enough elements for there to be any local maxima
+        
+        return np.array([], dtype='int32')
+    
+    else:
+        # have enough elements for there to be local maxima
+        
+        x0 = x[:-2]
+        x1 = x[1:-1]
+        x2 = x[2:]
+        
+        indices = np.where((x0 < x1) & (x1 > x2))[0] + 1
+        
+        if threshold is not None:
+            maxima = x[indices]
+            keep_indices = np.where(maxima >= threshold)
+            indices = indices[keep_indices]
+            
+        return indices
+        
+        
 def find(x, y, tolerance=0):
     
     """
@@ -13,16 +120,17 @@ def find(x, y, tolerance=0):
     few occurrences of a small prefix of the first array in the second.
     It is inefficient in other cases.
     
-    Parameters:
-    
-        x : one-dimensional NumPy array
-            the array to be searched for.
+    Parameters
+    ----------
+    x : one-dimensional NumPy array
+        the array to be searched for.
+    y : one-dimensional NumPy array
+        the array to be searched in.
             
-        y: one-dimensional NumPy array
-            the array to be searched in.
-            
-    Returns:
-        NumPy array of starting indices of all occurrences of `x` in `y`.
+    Returns
+    -------
+    NumPy array
+        the starting indices of all occurrences of `x` in `y`.
     """
 
     m = len(x)
