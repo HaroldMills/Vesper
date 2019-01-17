@@ -53,53 +53,6 @@ class NumPyUtilsTests(TestCase):
             
             
         ]
-    def test_find_local_maxima_with_no_threshold(self):
-        
-        # cases without thresholds
-        cases = [
-            
-            # arrays without local maxima
-            ([], []),
-            ([0], []),
-            ([0, 1], []),
-            ([0, 0, 0], []),
-            ([1, 0, 1], []),
-            ([0, 1, 1, 0], []),
-              
-            # arrays with local maxima
-            ([0, 1, 0], [1]),
-            ([-10, -9, -10], [1]),
-            ([0, 1, 0, 1, 1, 0, 1, 0], [1, 6]),
-            ([0, 10, 0, 10, 20, 0, 10, 0], [1, 4, 6])
-            
-        ]
-        
-        for x, expected in cases:
-            x = np.array(x)
-            expected = np.array(expected)
-            actual = numpy_utils.find_local_maxima(x)
-            self._assert_arrays_equal(actual, expected)
-            
-            
-    def test_find_local_maxima_with_threshold(self):
-        
-        # cases with thresholds
-        cases = [
-            ([0, 2, 0], 1, [1]),
-            ([0, 2, 0], 2, [1]),
-            ([0, 2, 0], 3, []),
-            ([0, 1, 0, 1, 2, 0, 2, 0], 1, [1, 4, 6]),
-            ([0, 1, 0, 1, 2, 0, 2, 0], 2, [4, 6]),
-            ([0, 1, 0, 1, 2, 0, 2, 0], 3, [])
-        ]
-        
-        for x, threshold, expected in cases:
-            x = np.array(x)
-            expected = np.array(expected)
-            actual = numpy_utils.find_local_maxima(x, threshold)
-            self._assert_arrays_equal(actual, expected)
-            
-            
     def test_find(self):
         
         y = [2, 0, 1, 0, 1, 0, 2]

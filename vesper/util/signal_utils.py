@@ -3,6 +3,8 @@
 
 import datetime
 
+import numpy as np
+
 from vesper.util.bunch import Bunch
 
 
@@ -78,6 +80,51 @@ def get_end_time(start_time, num_samples, sample_rate):
     return start_time + datetime.timedelta(seconds=span)
 
 
+def find_peaks(x, min_value=None):
+    
+    """
+    Finds peaks of the specified array.
+    
+    A *peak* of an array is an element that is greater than its neighbors
+    on either side. Note that this means that the first and last elements
+    of an array are not peaks, since neither has neighbors on both sides.
+    It also means that no element of a sequence of equal elements is a peak.
+    
+    Parameters
+    ----------
+    x : one-dimensional NumPy array
+        the array in which to find peaks.
+    min_value : int, float, or None
+        the minimum value of a peak, or `None` to find all peaks.
+        
+    Returns
+    -------
+    NumPy array
+        indices in `x` of the specified peaks.
+    """
+    
+    if len(x) < 3:
+        # not enough elements for there to be any local maxima
+        
+        return np.array([], dtype='int32')
+    
+    else:
+        # have enough elements for there to be local maxima
+        
+        x0 = x[:-2]
+        x1 = x[1:-1]
+        x2 = x[2:]
+        
+        indices = np.where((x0 < x1) & (x1 > x2))[0] + 1
+        
+        if min_value is not None:
+            values = x[indices]
+            keep_indices = np.where(values >= min_value)
+            indices = indices[keep_indices]
+            
+        return indices
+        
+        
 def resample(audio, target_sample_rate):
     
     """

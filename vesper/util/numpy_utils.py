@@ -65,52 +65,6 @@ def arrays_close(x, y):
         return np.allclose(x, y)
     
     
-def find_local_maxima(x, threshold=None):
-    
-    """
-    Finds the local maxima of the specified array.
-    
-    A local maximum in an array is an element that is greater than its
-    neighbors to either side. Note that this means that the first and
-    last elements of an array cannot be local maxima, since neither has
-    neighbors on both sides. It also means that no element of a sequence
-    of equal elements is a local maximum.
-    
-    Parameters
-    ----------
-    x : one-dimensional NumPy array
-        the array in which to find local maxima.
-    threshold : int, float, or None
-        the smallest local maximum to find, or `None` to find all local maxima.
-        
-    Returns
-    -------
-    NumPy array
-        the indices in `x` of all local maxima.
-    """
-    
-    if len(x) < 3:
-        # not enough elements for there to be any local maxima
-        
-        return np.array([], dtype='int32')
-    
-    else:
-        # have enough elements for there to be local maxima
-        
-        x0 = x[:-2]
-        x1 = x[1:-1]
-        x2 = x[2:]
-        
-        indices = np.where((x0 < x1) & (x1 > x2))[0] + 1
-        
-        if threshold is not None:
-            maxima = x[indices]
-            keep_indices = np.where(maxima >= threshold)
-            indices = indices[keep_indices]
-            
-        return indices
-        
-        
 def find(x, y, tolerance=0):
     
     """
