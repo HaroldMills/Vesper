@@ -33,6 +33,14 @@ class SampleBufferTests(TestCase):
         self._assert_buffer(b, 0, 0, 0)
         
         
+    def test_read_all(self):
+        b = SampleBuffer(np.int64)
+        b.write(np.arange(0, 10))
+        b.write(np.arange(10, 20))
+        self._assert_arrays_equal(b.read(), np.arange(0, 20))
+        self.assertEqual(b.read_index, 20)
+                
+        
     def test_simple_write_read(self):
         b = SampleBuffer(np.int64)
         b.write(np.arange(0, 10))

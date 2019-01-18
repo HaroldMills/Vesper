@@ -3,7 +3,7 @@
 
 import unittest
 
-import numpy as np
+import vesper.util.numpy_utils as numpy_utils
 
 
 class TestCase(unittest.TestCase):
@@ -21,8 +21,8 @@ class TestCase(unittest.TestCase):
             
             
     def _assert_arrays_equal(self, x, y):
-        self.assertTrue(np.all(x == y))
+        self.assertTrue(numpy_utils.arrays_equal(x, y))
         
         
     def _assert_arrays_close(self, x, y):
-        self.assertTrue(np.allclose(x, y))
+        self.assertTrue(numpy_utils.arrays_close(x, y))

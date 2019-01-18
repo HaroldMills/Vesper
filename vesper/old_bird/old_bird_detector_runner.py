@@ -485,7 +485,7 @@ class _DetectorMonitor(Thread):
         # of some scaling that happens inside the detector) from the
         # recording samples. So we allow each clip sample to differ from
         # the corresponding recording sample by a magnitude of up to one.
-        indices = numpy_utils.find(
+        indices = signal_utils.find_samples(
             clip_samples, recording_samples, tolerance=1)
         
         if len(indices) == 0:

@@ -1,6 +1,5 @@
 import numpy as np
 
-
 from vesper.tests.test_case import TestCase
 import vesper.util.numpy_utils as numpy_utils
 
@@ -8,66 +7,60 @@ import vesper.util.numpy_utils as numpy_utils
 class NumPyUtilsTests(TestCase):
     
     
-    def test_find(self):
-        
-        y = [2, 0, 1, 0, 1, 0, 2]
+    def test_arrays_equal(self):
         
         cases = [
             
-            # x in y
-            ([0], y, [1, 3, 5]),
-            ([2], y, [0, 6]),
-            ([0, 1], y, [1, 3]),
-            ([1, 0], y, [2, 4]),
-            ([0, 1, 0], y, [1, 3]),
-            ([1, 0, 1], y, [2]),
-            ([1, 0, 1, 0], y, [2]),
+            # equal arrays
+            ([], [], True),
+            ([0], [0], True),
+            ([0], [0.], True),
+            ([1.2], [1.2], True),
+            ([[1, 2], [3, 4]], [[1, 2], [3, 4]], True),
             
-            # x not in y
-            ([3], y, []),
-            ([0, 3], y, []),
-            ([2, 3], y, []),
-            ([2, 3, 4], y, [])
+            # unequal arrays
+            ([], [1], False),
+            ([[], []], [], False),
+            ([1, 2], [[1], [2]], False),
+            ([0], [1e-50], False)
             
         ]
         
         for x, y, expected in cases:
             x = np.array(x)
             y = np.array(y)
-            expected = np.array(expected)
-            result = numpy_utils.find(x, y)
-            self._assert_arrays_equal(result, expected)
-
-
-    def test_tolerant_find(self):
-        
-        y = [4, 0, 2, 0, 2, 0, 4]
+            actual = numpy_utils.arrays_equal(x, y)
+            self.assertEqual(actual, expected)
+            
+            
+    def test_arrays_close(self):
         
         cases = [
             
-            # x in y
-            ([0], y, [1, 3, 5]),
-            ([0, 2], y, [1, 3]),
-            ([1], y, [1, 2, 3, 4, 5]),
-            ([0, 1], y, [1, 3]),
-            ([1, 1], y, [1, 2, 3, 4]),
-            ([5, 1], y, [0]),
-            ([1, 5], y, [5]),
+            # close arrays
+            ([], [], True),
+            ([0], [0], True),
+            ([0], [0.], True),
+            ([1.2], [1.2], True),
+            ([[1, 2], [3, 4]], [[1, 2], [3, 4]], True),
+            ([0], [1e-8], True),
             
-            # x not in y
-            ([6], y, []),
-            ([4, 2], y, [])
+            # non-close arrays
+            ([], [1], False),
+            ([[], []], [], False),
+            ([1, 2], [[1], [2]], False),
+            ([0], [.999999e-7], False)
+            
             
         ]
         
         for x, y, expected in cases:
             x = np.array(x)
             y = np.array(y)
-            expected = np.array(expected)
-            result = numpy_utils.find(x, y, tolerance=1)
-            self._assert_arrays_equal(result, expected)
+            actual = numpy_utils.arrays_close(x, y)
+            self.assertEqual(actual, expected)
             
-            
+        
     def test_reproducible_choice(self):
         
         choice = numpy_utils.reproducible_choice
