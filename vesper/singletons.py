@@ -34,6 +34,8 @@ Command:
     - vesper.command.update_recording_file_paths_command.UpdateRecordingFilePathsCommand
     
 Detector:
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector
     - vesper.old_bird.old_bird_detector_redux_1_0.ThrushDetector
     - vesper.old_bird.old_bird_detector_redux_1_0.TseepDetector
     - vesper.old_bird.old_bird_detector_redux_1_1.ThrushDetector
