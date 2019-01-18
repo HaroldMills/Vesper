@@ -80,7 +80,7 @@ def get_end_time(start_time, num_samples, sample_rate):
     return start_time + datetime.timedelta(seconds=span)
 
 
-def find_peaks(x, min_value=None):
+def find_peaks(x, min_value=None, min_separation=None):
     
     """
     Finds peaks of the specified array.
@@ -118,13 +118,82 @@ def find_peaks(x, min_value=None):
         indices = np.where((x0 < x1) & (x1 > x2))[0] + 1
         
         if min_value is not None:
-            values = x[indices]
-            keep_indices = np.where(values >= min_value)
-            indices = indices[keep_indices]
+            indices = _remove_low_peaks(x, indices, min_value)
+            
+        if min_separation is not None:
+            indices = \
+                _remove_close_peaks(indices, x, min_value, min_separation)
             
         return indices
         
         
+def _remove_low_peaks(x, indices, min_value):
+    values = x[indices]
+    keep_indices = np.where(values >= min_value)
+    return indices[keep_indices]
+
+
+def _remove_close_peaks(peak_indices, x, min_value, min_separation):
+    
+    # Removes peaks that follow the last retained peak by less than
+    # `min_separation`, unless `x` drops below `min_value` inbetween.
+    
+    retained_indices = []
+    
+    if len(peak_indices) > 0:
+        
+        retained_indices.append(peak_indices[0])
+        last_peak_index = peak_indices[0]
+        
+        for next_peak_index in peak_indices[1:]:
+            
+            if min_value is None:
+                # don't retain any peaks separated by less than
+                # `min_separation`
+                
+                i = next_peak_index
+                
+            else:
+                # retain two peaks separated by less than `min_separation`
+                # as long as the score drops below `min_value` inbetween
+                
+                # Find first score index after last peak index at which
+                # score drops below detection threshold or that is the
+                # next peak index, whichever comes first
+                i = last_peak_index + 1
+                while i != next_peak_index and x[i] >= min_value:
+                    i += 1
+                
+            if i < next_peak_index or i - last_peak_index >= min_separation:
+                # next peak should be retained
+                
+                retained_indices.append(next_peak_index)
+                last_peak_index = next_peak_index
+                
+    return np.array(retained_indices, dtype=np.int64)
+
+
+# Alternate version of `_remove_close_peaks` that doesn't care what `x`
+# does between peaks.
+# def _remove_close_peaks(peak_indices, min_separation):
+#     
+#     # Removes peaks that follow the last retained peak by less than
+#     # `min_separation`.
+# 
+#     new_indices = []
+#     
+#     if len(peak_indices) > 0:
+#         
+#         new_indices.append(peak_indices[0])
+#         
+#         for next_peak_index in peak_indices[1:]:
+#             
+#             if next_peak_index - new_indices[-1] >= min_separation:
+#                 new_indices.append(next_peak_index)
+#                 
+#     return np.array(new_indices, dtype=np.int64)
+    
+    
 def resample(audio, target_sample_rate):
     
     """
