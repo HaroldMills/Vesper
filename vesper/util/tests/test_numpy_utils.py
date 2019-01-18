@@ -54,6 +54,12 @@ class NumPyUtilsTests(TestCase):
             
         ]
         
+        for x, y, expected in cases:
+            x = np.array(x)
+            y = np.array(y)
+            actual = numpy_utils.arrays_close(x, y)
+            self.assertEqual(actual, expected)
+            
         
     def test_reproducible_choice(self):
         
