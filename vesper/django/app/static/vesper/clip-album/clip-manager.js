@@ -103,11 +103,11 @@ clips from whatever their native rate, though this should be tested.
 export class ClipManager {
 
 
-    constructor(settings, clips, pageStartClipNums, clipLoader = null) {
+    constructor(settings, clips, pagination, clipLoader = null) {
 
         this._settings = settings;
         this._clips = clips;
-        this._pageStartClipNums = pageStartClipNums;
+        this._pagination = pagination;
         this._pageNum = null;
         this._clipLoader =
             clipLoader === null ? new _ClipLoader() : clipLoader;
@@ -128,8 +128,8 @@ export class ClipManager {
     }
 
 
-    get pageStartClipNums() {
-        return this._pageStartClipNums;
+    get pagination() {
+        return this._pagination;
     }
 
 
@@ -144,7 +144,7 @@ export class ClipManager {
     // invoking it is a little nicer syntactically.
     set pageNum(pageNum) {
         if (pageNum != this.pageNum)
-            this.update(this.pageStartClipNums, pageNum);
+            this.update(this.pagination, pageNum);
     }
 
 
@@ -152,7 +152,7 @@ export class ClipManager {
     // await it.
     async setPageNum(pageNum) {
         if (pageNum != this.pageNum)
-            return this.update(this.pageStartClipNums, pageNum);
+            return this.update(this.pagination, pageNum);
     }
 
 
@@ -165,23 +165,23 @@ export class ClipManager {
      * Updates this clip manager for the specified pagination and
      * page number.
      *
-     * `pageStartClipNums` is a nonempty, increasing array of clip numbers.
-     * `pageNum` is a page number in [0, `pageStartClipNums.length`).
+     * `pagination` is a nonempty, increasing array of clip numbers.
+     * `pageNum` is a page number in [0, `pagination.length`).
      */
-    async update(pageStartClipNums, pageNum) {
+    async update(pagination, pageNum) {
 
-        // We assume that while `this._pageStartClipNums` and `this._pageNum`
+        // We assume that while `this._pagination` and `this._pageNum`
         // are both initialized to `null` in the constructor, this method
-        // is never invoked with a `null` argument: `pageStartClipNums`
+        // is never invoked with a `null` argument: `pagination`
         // is always a nonempty, increasing array of numbers and `pageNum`
         // is always a number.
 
-        if (this.pageStartClipNums === null ||
+        if (this.pagination === null ||
             !ArrayUtils.arraysEqual(
-                pageStartClipNums, this.pageStartClipNums)) {
+                pagination, this.pagination)) {
             // pagination will change
 
-            this._updatePagination(pageStartClipNums, pageNum);
+            this._updatePagination(pagination, pageNum);
             return this._updatePageNum(pageNum);
 
         } else if (pageNum !== this.pageNum) {
@@ -194,16 +194,16 @@ export class ClipManager {
     }
 
 
-    _updatePagination(pageStartClipNums, pageNum) {
+    _updatePagination(pagination, pageNum) {
 
-        const oldPageStartClipNums = this._pageStartClipNums;
+        const oldPagination = this._pagination;
 
-        this._pageStartClipNums = pageStartClipNums
+        this._pagination = pagination
 
-        if (oldPageStartClipNums !== null) {
+        if (oldPagination !== null) {
             // may have pages loaded according to the old pagination
 
-            const numAlbumPages = this.pageStartClipNums.length - 1;
+            const numAlbumPages = this.pagination.length - 1;
 
             const requiredPageNums =
                 new Set(this._getRequiredPageNums(pageNum));
@@ -250,8 +250,8 @@ export class ClipManager {
         let hasUnloadedClips = false;
         let hasLoadedClips = false;
 
-        const start = this.pageStartClipNums[pageNum];
-        const end = this.pageStartClipNums[pageNum + 1];
+        const start = this.pagination[pageNum];
+        const end = this.pagination[pageNum + 1];
 
         for (let i = start; i < end; i++) {
 
@@ -287,7 +287,7 @@ export class ClipManager {
 
 
     _getNumPageRangeClips(pageNum, numPages) {
-        const clipNums = this.pageStartClipNums;
+        const clipNums = this.pagination;
         return clipNums[pageNum + numPages] - clipNums[pageNum];
     }
 
@@ -297,8 +297,8 @@ export class ClipManager {
         // console.log(
         // 	`clip manager unloading partially loaded page ${pageNum}...`);
 
-        const start = this.pageStartClipNums[pageNum];
-        const end = this.pageStartClipNums[pageNum + 1];
+        const start = this.pagination[pageNum];
+        const end = this.pagination[pageNum + 1];
         this._clipLoader.unloadClips(this.clips, start, end);
 
     }
@@ -345,8 +345,8 @@ export class ClipManager {
 
             // console.log(`clip manager loading page ${pageNum}...`);
 
-            const start = this.pageStartClipNums[pageNum];
-            const end = this.pageStartClipNums[pageNum + 1];
+            const start = this.pagination[pageNum];
+            const end = this.pagination[pageNum + 1];
 
             await this._clipLoader.loadClips(this.clips, start, end);
 
@@ -375,8 +375,8 @@ export class ClipManager {
 
             // console.log(`clip manager unloading page ${pageNum}...`);
 
-            const start = this.pageStartClipNums[pageNum];
-            const end = this.pageStartClipNums[pageNum + 1];
+            const start = this.pagination[pageNum];
+            const end = this.pagination[pageNum + 1];
 
             this._clipLoader.unloadClips(this.clips, start, end);
 
@@ -426,7 +426,7 @@ export class PreloadingClipManager extends ClipManager {
 
         const pageNums = [pageNum];
 
-        const numAlbumPages = this.pageStartClipNums.length - 1;
+        const numAlbumPages = this.pagination.length - 1;
         for (let i = 0; i < this.settings.numFollowingPreloadedPages; i++) {
             const j = pageNum + i + 1;
             if (j >= numAlbumPages)
@@ -463,7 +463,7 @@ export class PreloadingClipManager extends ClipManager {
 
     _getUnloadPageNums(requiredPageNums, loadPageNums) {
 
-        const numAlbumPages = this.pageStartClipNums.length - 1;
+        const numAlbumPages = this.pagination.length - 1;
         const min = (a, b) => Math.min(a, b);
         const minPageNum = requiredPageNums.reduce(min, numAlbumPages);
         const max = (a, b) => Math.max(a, b);

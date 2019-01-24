@@ -68,15 +68,15 @@ describe('PreloadingClipManager', () => {
 		const nums = ArrayUtils.rangeArray(16);
 		const clips = nums.map(num => new _TestClip(num));
 
-		const pageStartClipNums = [0, 1, 3, 7, 9, 12, 14, 16];
+		const pagination = [0, 1, 3, 7, 9, 12, 14, 16];
 
 		const loader = new _TestClipLoader();
 
 		const manager = new PreloadingClipManager(
-			settings, clips, pageStartClipNums, loader);
+			settings, clips, pagination, loader);
 
 		expect(manager.clips).toEqual(clips);
-		expect(manager.pageStartClipNums).toEqual(pageStartClipNums);
+		expect(manager.pagination).toEqual(pagination);
 		expect(manager.settings).toEqual(settings);
 
 		// Should initially be at no page with no pages loaded.
@@ -152,12 +152,12 @@ describe('PreloadingClipManager', () => {
 		const nums = ArrayUtils.rangeArray(8);
 		const clips = nums.map(num => new _TestClip(num));
 
-		const pageStartClipNums = ArrayUtils.rangeArray(9);
+		const pagination = ArrayUtils.rangeArray(9);
 
 		const loader = new _TestClipLoader();
 
 		const manager = new PreloadingClipManager(
-			settings, clips, pageStartClipNums, loader);
+			settings, clips, pagination, loader);
 
         // Pause to (hopefully) let the asynchronous clip loads of the
         // clip manager construction complete. It would be nice if there
@@ -166,7 +166,7 @@ describe('PreloadingClipManager', () => {
         await pause(100);
         
 		expect(manager.clips).toEqual(clips);
-		expect(manager.pageStartClipNums).toEqual(pageStartClipNums);
+		expect(manager.pagination).toEqual(pagination);
 		expect(manager.settings).toEqual(settings);
 
 		// Go to page 0. Afterwards, pages 0-1 should be loaded.

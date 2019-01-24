@@ -28,7 +28,7 @@ class _Layout {
 
     set settings(settings) {
     	this._settings = settings;
-    	this._pageStartClipNums = this._paginate();
+    	this._pagination = this._paginate();
     }
 
 
@@ -38,19 +38,19 @@ class _Layout {
 
 
 	get numPages() {
-		let numPages = this._pageStartClipNums.length;
+		let numPages = this._pagination.length;
 		return numPages == 0 ? numPages : numPages - 1;
 	}
 
 
-    get pageStartClipNums() {
-    	return this._pageStartClipNums;
+    get pagination() {
+    	return this._pagination;
     }
 
 
 	getPageClipNumRange(pageNum) {
 		this._checkPageNum(pageNum);
-		const clipNums = this._pageStartClipNums;
+		const clipNums = this._pagination;
 		return [clipNums[pageNum], clipNums[pageNum + 1]];
 	}
 
@@ -72,7 +72,7 @@ class _Layout {
 
 	getClipPageNum(clipNum) {
 		this._checkClipNum(clipNum);
-		return ArrayUtils.findLastLE(this._pageStartClipNums, clipNum);
+		return ArrayUtils.findLastLE(this._pagination, clipNum);
 	}
 
 
@@ -206,16 +206,16 @@ export class NonuniformNonresizingLayout extends _Layout {
 
 			const pageSize = this.settings.page.size;
 			const numPages = Math.ceil(numClips / pageSize);
-			const pageStartClipNums = new Array(numPages + 1);
+			const pagination = new Array(numPages + 1);
 
 			let startClipNum = 0;
 			for (let i = 0; i < numPages; i++) {
-				pageStartClipNums[i] = startClipNum;
+				pagination[i] = startClipNum;
 				startClipNum += Math.min(pageSize, numClips - startClipNum);
 			}
-			pageStartClipNums[numPages] = startClipNum;
+			pagination[numPages] = startClipNum;
 
-			return pageStartClipNums;
+			return pagination;
 
 		}
 
@@ -391,10 +391,10 @@ export class NonuniformResizingLayout extends _Layout {
 			return [];
 
 		else {
-			const pageStartClipNums = pages.map(p => p[0]);
+			const pagination = pages.map(p => p[0]);
 			const lastPage = pages[pages.length - 1];
-			pageStartClipNums.push(lastPage[lastPage.length - 1]);
-			return pageStartClipNums;
+			pagination.push(lastPage[lastPage.length - 1]);
+			return pagination;
 		}
 
 	}

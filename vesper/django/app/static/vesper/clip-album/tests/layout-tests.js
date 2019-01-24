@@ -66,7 +66,7 @@ describe('NonuniformNonresizingLayout', () => {
 
 		];
 
-		for (const [durations, expectedPageStartClipNums] of cases) {
+		for (const [durations, expectedPagination] of cases) {
 
 			const clipViews = _createClipViews(durations)
 			const layout = new NonuniformNonresizingLayout(
@@ -77,18 +77,18 @@ describe('NonuniformNonresizingLayout', () => {
 			expect(layout.settings).toEqual(NONRESIZING_SETTINGS);
 
 			// num pages
-			const numStartClipNums = expectedPageStartClipNums.length;
+			const numStartClipNums = expectedPagination.length;
 			const numPages = numStartClipNums === 0 ? 0 : numStartClipNums - 1
 			expect(layout.numPages).toBe(numPages);
 
-			// page start clip nums
-			expect(layout.pageStartClipNums).toEqual(expectedPageStartClipNums);
+			// pagination
+			expect(layout.pagination).toEqual(expectedPagination);
 
 			// page clip num range
-			const clipNums = expectedPageStartClipNums;
+			const pagination = expectedPagination;
 			for (let i = 0; i < layout.numPages; i++) {
 				const range = layout.getPageClipNumRange(i);
-				const expectedRange = [clipNums[i], clipNums[i + 1]];
+				const expectedRange = [pagination[i], pagination[i + 1]];
 				expect(range).toEqual(expectedRange);
 			}
 

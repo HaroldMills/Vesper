@@ -206,7 +206,7 @@ export class ClipAlbum {
             'numFollowingPreloadedPages': 1
         };
         this._clipManager = new PreloadingClipManager(
-            clipManagerSettings, this.clips, this._layout.pageStartClipNums);
+            clipManagerSettings, this.clips, this._layout.pagination);
 
         this.pageNum = 0;
         
@@ -658,7 +658,7 @@ export class ClipAlbum {
 
 		if (paginationChanged) {
 
-		    this._clipManager.update(this._layout.pageStartClipNums, pageNum);
+		    this._clipManager.update(this._layout.pagination, pageNum);
 
 		    // It is important to do this *after* updating the clip manager
 		    // for both the new pagination and the (possibly) new page
@@ -705,7 +705,7 @@ export class ClipAlbum {
 	 */
 	_updateLayoutSettings(settings) {
 
-		const oldFirstClipNum = this._layout.pageStartClipNums[this.pageNum];
+		const oldFirstClipNum = this._layout.pagination[this.pageNum];
 		let paginationChanged;
 
 		if (settings.layoutType !== this.settings.layoutType) {
@@ -720,10 +720,10 @@ export class ClipAlbum {
 		} else {
 			// layout type will not change
 
-			const oldPageStartClipNums = this._layout.pageStartClipNums;
+			const oldPagination = this._layout.pagination;
 			this._layout.settings = settings.layout;
 			paginationChanged = !ArrayUtils.arraysEqual(
-				this._layout.pageStartClipNums, oldPageStartClipNums);
+				this._layout.pagination, oldPagination);
 
 		}
 
