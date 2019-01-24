@@ -103,6 +103,8 @@ clips from whatever their native rate, though this should be tested.
 export class ClipManager {
 
 
+    // We allow specification of a clip loader in the constructor for
+    // testing.
     constructor(settings, clips, pagination, clipLoader = null) {
 
         this._settings = settings;
