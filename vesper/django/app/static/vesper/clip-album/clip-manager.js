@@ -145,16 +145,15 @@ export class ClipManager {
     // does not return a value), but if you don't care about that,
     // invoking it is a little nicer syntactically.
     set pageNum(pageNum) {
-        if (pageNum != this.pageNum)
-            this.update(this.pagination, pageNum);
+        this.setPageNum(pageNum);
     }
 
 
     // This is very similar to the `pageNum` setter above, but you can
     // await it.
     async setPageNum(pageNum) {
-        if (pageNum != this.pageNum)
-            return this.update(this.pagination, pageNum);
+        if (pageNum !== this.pageNum)
+            return this._updatePageNum(pageNum);
     }
 
 
@@ -163,155 +162,12 @@ export class ClipManager {
     }
 
 
-    /**
-     * Updates this clip manager for the specified pagination and
-     * page number.
-     *
-     * `pagination` is a nonempty, increasing array of clip numbers.
-     * `pageNum` is a page number in [0, `pagination.length`).
-     */
-    async update(pagination, pageNum) {
-
-        // We assume that while `this._pagination` and `this._pageNum`
-        // are both initialized to `null` in the constructor, this method
-        // is never invoked with a `null` argument: `pagination`
-        // is always a nonempty, increasing array of numbers and `pageNum`
-        // is always a number.
-
-        if (this.pagination === null ||
-            !ArrayUtils.arraysEqual(
-                pagination, this.pagination)) {
-            // pagination will change
-
-            this._updatePagination(pagination, pageNum);
-            return this._updatePageNum(pageNum);
-
-        } else if (pageNum !== this.pageNum) {
-            // pagination will not change, but page number will
-
-            return this._updatePageNum(pageNum);
-
-        }
-
-    }
-
-
-    _updatePagination(pagination, pageNum) {
-
-        const oldPagination = this._pagination;
-
-        this._pagination = pagination
-
-        if (oldPagination !== null) {
-            // may have pages loaded according to the old pagination
-
-            const numAlbumPages = this.pagination.length - 1;
-
-            const requiredPageNums =
-                new Set(this._getRequiredPageNums(pageNum));
-
-            this._loadedPageNums = new Set();
-            this._numLoadedClips = 0;
-
-            for (let i = 0; i < numAlbumPages; i++) {
-
-                const status = this._getPageStatus(i);
-
-                if (status === PAGE_LOAD_STATUS.LOADED) {
-
-                    this._loadedPageNums.add(i);
-                    this._numLoadedClips += this._getNumPageClips(i);
-
-                } else if (status === PAGE_LOAD_STATUS.PARTIALLY_LOADED) {
-
-                    // Unload part of page that is loaded.
-                    this._unloadPartiallyLoadedPage(i);
-
-                }
-
-            }
-
-        }
-
-    }
-
-
-    /**
-     * Gets the numbers of the pages that this clip manager should
-     * definitely load for the current pagination and the specified
-     * page number. The page numbers are returned in an array in the
-     * order in which the pages should be loaded.
-     */
-    _getRequiredPageNums(pageNum) {
-        throw new Error('_ClipManager._getRequiredPageNums not implemented');
-    }
-
-
-    _getPageStatus(pageNum) {
-
-        let hasUnloadedClips = false;
-        let hasLoadedClips = false;
-
-        const start = this.pagination[pageNum];
-        const end = this.pagination[pageNum + 1];
-
-        for (let i = start; i < end; i++) {
-
-            if (this._clipLoader.isClipUnloaded(this.clips[i])) {
-
-                if (hasLoadedClips)
-                    return PAGE_LOAD_STATUS.PARTIALLY_LOADED;
-                else
-                    hasUnloadedClips = true;
-
-            } else {
-
-                if (hasUnloadedClips)
-                    return PAGE_LOAD_STATUS.PARTIALLY_LOADED;
-                else
-                    hasLoadedClips = true;
-
-            }
-
-        }
-
-        // If we get here, either all of the clips of the page were
-        // unloaded or all were not unloaded.
-        return hasLoadedClips ?
-            PAGE_LOAD_STATUS.LOADED : PAGE_LOAD_STATUS.UNLOADED;
-
-    }
-
-
-    _getNumPageClips(pageNum) {
-        return this._getNumPageRangeClips(pageNum, 1);
-    }
-
-
-    _getNumPageRangeClips(pageNum, numPages) {
-        const clipNums = this.pagination;
-        return clipNums[pageNum + numPages] - clipNums[pageNum];
-    }
-
-
-    _unloadPartiallyLoadedPage(pageNum) {
-
-        // console.log(
-        // 	`clip manager unloading partially loaded page ${pageNum}...`);
-
-        const start = this.pagination[pageNum];
-        const end = this.pagination[pageNum + 1];
-        this._clipLoader.unloadClips(this.clips, start, end);
-
-    }
-
-
     async _updatePageNum(pageNum) {
 
         // console.log(`clip manager updating for page ${pageNum}...`);
 
         const [unloadPageNums, loadPageNums] = this._getUpdatePlan(pageNum);
-
+        
         for (const pageNum of unloadPageNums)
             this._unloadPage(pageNum);
 
@@ -360,6 +216,17 @@ export class ClipManager {
     }
 
 
+    _getNumPageClips(pageNum) {
+        return this._getNumPageRangeClips(pageNum, 1);
+    }
+
+
+    _getNumPageRangeClips(pageNum, numPages) {
+        const clipNums = this.pagination;
+        return clipNums[pageNum + numPages] - clipNums[pageNum];
+    }
+
+
     /**
      * Returns an array `[unloadPageNums, loadPageNums]` containing two
      * arrays of page numbers. `unloadPageNums` contains the numbers of
@@ -396,11 +263,6 @@ export class ClipManager {
 export class SimpleClipManager extends ClipManager {
 
 
-    _getRequiredPageNums(pageNum) {
-        return [pageNum];
-    }
-
-
     _getUpdatePlan(pageNum) {
         return [
             [this.pageNum],
@@ -424,6 +286,15 @@ export class PreloadingClipManager extends ClipManager {
      */
 
 
+    _getUpdatePlan(pageNum) {
+        const requiredPageNums = this._getRequiredPageNums(pageNum);
+        const loadPageNums = this._getLoadPageNums(requiredPageNums);
+        const unloadPageNums =
+            this._getUnloadPageNums(requiredPageNums, loadPageNums);
+        return [unloadPageNums, loadPageNums];
+    }
+
+
     _getRequiredPageNums(pageNum) {
 
         const pageNums = [pageNum];
@@ -445,15 +316,6 @@ export class PreloadingClipManager extends ClipManager {
 
         return pageNums;
 
-    }
-
-
-    _getUpdatePlan(pageNum) {
-        const requiredPageNums = this._getRequiredPageNums(pageNum);
-        const loadPageNums = this._getLoadPageNums(requiredPageNums);
-        const unloadPageNums =
-            this._getUnloadPageNums(requiredPageNums, loadPageNums);
-        return [unloadPageNums, loadPageNums];
     }
 
 

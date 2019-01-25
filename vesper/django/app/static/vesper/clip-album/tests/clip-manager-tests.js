@@ -44,19 +44,55 @@ describe('PreloadingClipManager', () => {
     }
 
 
-	function expectLoadedClipNums(clips, nums) {
-	    const loadedClipNums = clips.filter(
-	        c => c.status === CLIP_LOAD_STATUS.LOADED).map(c => c.num);
-		expect(loadedClipNums).toEqual(nums);
-	}
+    function expectState(manager, pageNum, pageNumRanges) {
+        expect(manager.pageNum).toBe(pageNum);
+        expectLoadedPageNums(manager, pageNumRanges);
+    }
+    
+    
+	function expectLoadedPageNums(manager, pageNumRanges) {
+	    
+	    let clipNums = getClipNums(manager, pageNumRanges);
+	    
+        const loadedClipNums = manager.clips.filter(
+            c => c.status === CLIP_LOAD_STATUS.LOADED).map(c => c.num);
+	    
+        expect(loadedClipNums).toEqual(clipNums);
 
-
-	function expectState(manager, pageNum, clipNums) {
-		expect(manager.pageNum).toBe(pageNum);
-		expectLoadedClipNums(manager.clips, clipNums);
 	}
 	
 	
+	function getClipNums(manager, pageNumRanges) {
+	    
+	    if (pageNumRanges.length === 0)
+	        return [];
+	    
+	    else if (Array.isArray(pageNumRanges[0])) {
+	        // array of page num ranges
+	        
+	        const clipNumArrays = pageNumRanges.map(
+	            r => getClipNumsAux(manager, ...r));
+	        
+	        return [].concat(...clipNumArrays);
+	        
+	    } else {
+	        // one page num range
+	        
+	        return getClipNumsAux(manager, ...pageNumRanges);
+ 
+	    }
+
+	}
+	
+	
+	function getClipNumsAux(manager, startPageNum, endPageNum) {
+        const pagination = manager.pagination;
+        const startClipNum = pagination[startPageNum];
+        const endClipNum = pagination[endPageNum + 1];
+        return ArrayUtils.rangeArray(startClipNum, endClipNum);
+	}
+        
+   	
 	it('continuous loaded clip ranges', async () => {
 
 		const settings = {
@@ -84,7 +120,7 @@ describe('PreloadingClipManager', () => {
 		
 		// Set page number to 0. Afterwards, pages 0-2 should be loaded.
 		await manager.setPageNum(0);
-        expectState(manager, 0, ArrayUtils.rangeArray(7));
+        expectState(manager, 0, [0, 2]);
 		
 		// Advance to page 1. Afterwards, pages 0-3 should be loaded.
 		manager.pageNum += 1;
@@ -94,49 +130,43 @@ describe('PreloadingClipManager', () => {
         // but there is no such thing as an `async` setter.
         await pause(100);
         
-		expectState(manager, 1, ArrayUtils.rangeArray(0, 9));
+		expectState(manager, 1, [0, 3]);
 
 		// Advance to page 2. Afterwards, pages 0-4 should be loaded.
 		await manager.incrementPageNum(1);
-		expectState(manager, 2, ArrayUtils.rangeArray(0, 12));
+		expectState(manager, 2, [0, 4]);
 
 		// Advance to page 3. Afterwards, pages 2-5 should be loaded.
 		await manager.incrementPageNum(1);
-		expectState(manager, 3, ArrayUtils.rangeArray(3, 14));
+		expectState(manager, 3, [2, 5]);
 
 		// Advance to page 4. Afterwards, pages 3-6 should be loaded.
         await manager.incrementPageNum(1);
-		expectState(manager, 4, ArrayUtils.rangeArray(7, 16));
+		expectState(manager, 4, [3, 6]);
 
 		// Advance to page 5. This should not load or unload any clips.
         await manager.incrementPageNum(1);
-		expectState(manager, 5, ArrayUtils.rangeArray(7, 16));
+		expectState(manager, 5, [3, 6]);
 
 		// Advance to page 6. This should not load or unload any clips.
         await manager.incrementPageNum(1);
-		expectState(manager, 6, ArrayUtils.rangeArray(7, 16));
+		expectState(manager, 6, [3, 6]);
 
 		// Return to page 0. Afterwards, pages 0-4 should be loaded.
 		await manager.setPageNum(0);
-		expectState(manager, 0, ArrayUtils.rangeArray(12));
+		expectState(manager, 0, [0, 4]);
 
 		// Go to page 3. Afterwards, pages 2-5 should be loaded.
-		// Advance to page 3. Afterwards, pages 2-5 should be loaded.
 		await manager.setPageNum(3);
-		expectState(manager, 3, ArrayUtils.rangeArray(3, 14));
+		expectState(manager, 3, [2, 5]);
 
-		// Repaginate to two clips per page and nagivate to page 4.
-		// Afterwards, pages 2 through 6 should be loaded.
-		await manager.update([0, 2, 4, 6, 8, 10, 12, 14, 16], 4);
-		expectState(manager, 4, ArrayUtils.rangeArray(4, 14));
-
-		// Advance to page 5. Afterwards, pages 2 through 7 should be loaded.
+		// Go to page 5. Afterwards, pages 3-6 should be loaded.
 		await manager.setPageNum(5);
-		expectState(manager, 5, ArrayUtils.rangeArray(4, 16));
+		expectState(manager, 5, [3, 6]);
 
-		// Go to page 2. Afterwards, pages 1 through 6 should be loaded.
+		// Go to page 2. Afterwards, pages 1-4 should be loaded.
 		await manager.setPageNum(2);
-		expectState(manager, 2, ArrayUtils.rangeArray(2, 14));
+		expectState(manager, 2, [1, 4]);
 
 	});
 
@@ -171,15 +201,15 @@ describe('PreloadingClipManager', () => {
 
 		// Go to page 0. Afterwards, pages 0-1 should be loaded.
 		await manager.setPageNum(0);
-		expectState(manager, 0, ArrayUtils.rangeArray(2));
+		expectState(manager, 0, [0, 1]);
 
 		// Go to page 7. Afterwards, pages 0-1 and 6-7 should be loaded.
 		await manager.setPageNum(7);
-		expectState(manager, 7, [0, 1, 6, 7]);
+		expectState(manager, 7, [[0, 1], [6, 7]]);
 
 		// Go to page 4. Afterwards, pages 3-6 should be loaded.
 		await manager.setPageNum(4);
-		expectState(manager, 4, ArrayUtils.rangeArray(3, 7));
+		expectState(manager, 4, [3, 6]);
 
 	});
 

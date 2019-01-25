@@ -200,13 +200,7 @@ export class ClipAlbum {
         // We use a Web Audio `AudioContext` object to play clips.
         this._audioContext = new AudioContext();
 
-        const clipManagerSettings = {
-            'maxNumClips': 2000,
-            'numPrecedingPreloadedPages': 1,
-            'numFollowingPreloadedPages': 1
-        };
-        this._clipManager = new PreloadingClipManager(
-            clipManagerSettings, this.clips, this._layout.pagination);
+        this._clipManager = this._createClipManager();
 
         this.pageNum = 0;
         
@@ -454,6 +448,20 @@ export class ClipAlbum {
 	}
 
 
+	_createClipManager() {
+	    
+        const settings = {
+            'maxNumClips': 2000,
+            'numPrecedingPreloadedPages': 1,
+            'numFollowingPreloadedPages': 1
+        };
+        
+        return new PreloadingClipManager(
+            settings, this.clips, this._layout.pagination);
+
+	}
+	
+	
 	_createSelection() {
 
 		if (this.numPages > 0) {
@@ -658,14 +666,8 @@ export class ClipAlbum {
 
 		if (paginationChanged) {
 
-		    this._clipManager.update(this._layout.pagination, pageNum);
-
-		    // It is important to do this *after* updating the clip manager
-		    // for both the new pagination and the (possibly) new page
-		    // number. Otherwise the clip manager may update twice, once
-		    // because the page number changed (but not the pagination)
-		    // and a second time because the pagination changed.
-		    //
+		    this._clipManager = this._createClipManager();
+		    
 			// Note that this assignment triggers a call to this._update,
 		    // so we don't need to invoke this._update explicitly here.
 		    this.pageNum = pageNum;
