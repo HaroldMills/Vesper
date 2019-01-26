@@ -2,7 +2,6 @@ import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { CLIP_LOAD_STATUS } from '/static/vesper/clip-album/clip.js';
 
 
-
 // TODO: Make this a static ClipManager class property?
 export const PAGE_LOAD_STATUS = {
     UNLOADED: 0,
