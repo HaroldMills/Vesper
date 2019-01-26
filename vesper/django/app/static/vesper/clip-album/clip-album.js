@@ -668,6 +668,10 @@ export class ClipAlbum {
 
 		    this._clipManager = this._createClipManager();
 		    
+            // Set `this._pageNum` to `null` so assignment below triggers
+            // full page update.
+            this._pageNum = null;
+            
 			// Note that this assignment triggers a call to this._update,
 		    // so we don't need to invoke this._update explicitly here.
 		    this.pageNum = pageNum;
