@@ -114,6 +114,8 @@ export class ClipManager {
         this._clipLoader =
             clipLoader === null ? new _ClipLoader() : clipLoader;
 
+        this._pendingPageNum = null;
+        this._settingPageNum = false;
         this._loadedPageNums = new Set();
         this._numLoadedClips = 0;
 
@@ -152,34 +154,109 @@ export class ClipManager {
     // This is very similar to the `pageNum` setter above, but you can
     // await it.
     async setPageNum(pageNum) {
-        if (pageNum !== this.pageNum)
-            return this._updatePageNum(pageNum);
-    }
-
-
-    async incrementPageNum(increment) {
-        return this.setPageNum(this.pageNum + increment);
-    }
-
-
-    async _updatePageNum(pageNum) {
-
-        // console.log(`clip manager updating for page ${pageNum}...`);
-
-        const [unloadPageNums, loadPageNums] = this._getUpdatePlan(pageNum);
         
-        for (const pageNum of unloadPageNums)
-            this._unloadPage(pageNum);
+        this._pendingPageNum = pageNum;
+        
+        // TODO: Using the `_settingPageNum` flag seems awkward. Is there
+        // a better way to ensure that when this method is called, we
+        // load pages if and only if we are not doing so already?
+        
+        if (!this._settingPageNum) {
+            // not already setting page number
+        
+            this._settingPageNum = true;
+            
+            // TODO: Handle errors by clearing `_pendingPageNums` and
+            // `_settingPageNum`.
+            try {
+                await this._setPageNumAux();
+            } catch (error) {
+                this._pendingPageNum = null;
+            }
+            
+            this._settingPageNum = false;
+            
+        }
+        
+    }
+        
+        
+    async _setPageNumAux() {
+        
+        while (this._pendingPageNum !== null) {
+            
+            const pageNum = this._pendingPageNum;
+            this._pendingPageNum = null;
+            
+            if (pageNum !== this.pageNum) {
+                // pending page number differs from current page number
+                
+                // console.log(`clip manager updating for page ${pageNum}...`);
+    
+                const [unloadPageNums, loadPageNums] =
+                    this._getUpdatePlan(pageNum);
+                
+                // let pages = `[${unloadPageNums.join(', ')}]`;
+                // console.log(`clip manager unloading pages ${pages}...`);
+                
+                for (const pageNum of unloadPageNums)
+                    this._unloadPage(pageNum);
+    
+                // pages = `[${loadPageNums.join(', ')}]`;
+                // console.log(`clip manager loading pages ${pages}...`);
+                
+                // The following may suspend, and during the suspension
+                // `setPageNum` may be called one or more times, setting
+                // `_pendingPageNum` for the next iteration of this loop.
+                await this._loadPages(loadPageNums);
+                
+                // console.log('clip manager finished loading pages');
+                
+            }
+    
+        }
+            
+    }
 
-        await this._loadPages(loadPageNums);
 
-        this._pageNum = pageNum;
+    /**
+     * Returns an array `[unloadPageNums, loadPageNums]` containing two
+     * arrays of page numbers. `unloadPageNums` contains the numbers of
+     * loaded pages that should be unloaded, and `loadPageNums` contains
+     * the numbers of unloaded pages that should be loaded.
+     */
+    _getUpdatePlan(pageNum) {
+        throw new Error('_ClipManager._getUpdatePlan not implemented');
+    }
 
-        // const pageNums = Array.from(this._loadedPageNums)
-        // pageNums.sort((a, b) => a - b);
-        // console.log(`clip manager loaded pages: [${pageNums.join(', ')}]`);
-        // console.log(`clip manager num loaded clips ${this._numLoadedClips}`);
 
+    _unloadPage(pageNum) {
+
+        if (this._loadedPageNums.has(pageNum)) {
+
+            // console.log(`clip manager unloading page ${pageNum}...`);
+
+            const start = this.pagination[pageNum];
+            const end = this.pagination[pageNum + 1];
+
+            this._clipLoader.unloadClips(this.clips, start, end);
+
+            this._loadedPageNums.delete(pageNum);
+            this._numLoadedClips -= this._getNumPageClips(pageNum);
+
+        }
+
+    }
+
+
+    _getNumPageClips(pageNum) {
+        return this._getNumPageRangeClips(pageNum, 1);
+    }
+
+
+    _getNumPageRangeClips(pageNum, numPages) {
+        const clipNums = this.pagination;
+        return clipNums[pageNum + numPages] - clipNums[pageNum];
     }
 
 
@@ -216,44 +293,8 @@ export class ClipManager {
     }
 
 
-    _getNumPageClips(pageNum) {
-        return this._getNumPageRangeClips(pageNum, 1);
-    }
-
-
-    _getNumPageRangeClips(pageNum, numPages) {
-        const clipNums = this.pagination;
-        return clipNums[pageNum + numPages] - clipNums[pageNum];
-    }
-
-
-    /**
-     * Returns an array `[unloadPageNums, loadPageNums]` containing two
-     * arrays of page numbers. `unloadPageNums` contains the numbers of
-     * loaded pages that should be unloaded, and `loadPageNums` contains
-     * the numbers of unloaded pages that should be loaded.
-     */
-    _getUpdatePlan(pageNum) {
-        throw new Error('_ClipManager._getUpdatePlan not implemented');
-    }
-
-
-    _unloadPage(pageNum) {
-
-        if (this._loadedPageNums.has(pageNum)) {
-
-            // console.log(`clip manager unloading page ${pageNum}...`);
-
-            const start = this.pagination[pageNum];
-            const end = this.pagination[pageNum + 1];
-
-            this._clipLoader.unloadClips(this.clips, start, end);
-
-            this._loadedPageNums.delete(pageNum);
-            this._numLoadedClips -= this._getNumPageClips(pageNum);
-
-        }
-
+    async incrementPageNum(increment) {
+        return this.setPageNum(this.pageNum + increment);
     }
 
 
