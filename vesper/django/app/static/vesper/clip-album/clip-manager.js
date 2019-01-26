@@ -16,15 +16,39 @@ export const PAGE_LOAD_STATUS = {
 // and faster batch loading.
 const _BATCH_LOADS_ENABLED = true;
 
+// Note: On 2019-01-26 I experimented with various values of
+// `_MAX_CLIP_SAMPLES_BATCH_SIZE` and `_MAX_CLIP_ANNOTATIONS_BATCH_SIZE`
+// on macOS, meaasuring how long it took to page through a 13000-clip
+// clip album displaying about 120 clips per page, waiting for all of
+// the clips of the current page to load before proceeding to the next
+// page. The results were as follows:
+//
+//     samples batch size    annos batch size    time
+//     ------------------    ----------------    ----
+//              1                    1           3:23
+//              5                    5           1:52
+//             10                   10           1:46
+//             20                   20           1:44
+//             30                   30           1:54
+//             50                   50           1:54
+//            100                  100           1:46
+//            200                  200           1:48
+//
+// Except for the first row, the times are all quite similar. In the
+// interest of reducing the number of HTTP requests to the server,
+// which can increase server efficiency when there are multiple clients,
+// I decided to adopt maximum batch sizes of 200 clips, which will result
+// in one request per page for most uses.
+
 // Maximum clip samples batch size, in clips. When batch loads are enabled,
 // the clip loader loads the samples of the clips of a clip album page in
 // batches of this size, except possibly for the last batch.
-const _MAX_CLIP_SAMPLES_BATCH_SIZE = 50;
+const _MAX_CLIP_SAMPLES_BATCH_SIZE = 200;
 
 // Maximum clip annotations batch size, in clips. When batch loads are
 // enabled, the clip loader loads the annotations of the clips of a clip
 // album page in batches of this size, except possibly for the last batch.
-const _MAX_CLIP_ANNOTATIONS_BATCH_SIZE = 50;
+const _MAX_CLIP_ANNOTATIONS_BATCH_SIZE = 200;
 
 // Set this `true` to randomly simulate load errors for both clip batches
 // and individual clips.
