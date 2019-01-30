@@ -12,6 +12,9 @@ flight calls, respectively.
 
 # TODO: Modify detector interface to support any number of listeners.
 
+# TODO: Use newer `vesper.util.detection_score_file_writer` instead
+# of `vesper.pnf.ratio_file_writer` and delete the latter.
+
 
 import numpy as np
 import scipy.signal as signal
