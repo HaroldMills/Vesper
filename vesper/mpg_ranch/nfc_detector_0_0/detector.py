@@ -1,11 +1,25 @@
+"""
+Module containing MPG Ranch nocturnal flight call (NFC) detector.
+
+The detector looks for NFCs in a single audio input channel by scoring
+a sequence of input records, producing a clip when the score rises above
+a threshold. The input records typically overlap. For each input record,
+the detector computes a spectrogram and applies a convolutional neural
+network to the spectrogram to obtain a score.
+
+The `TseepDetector` and `ThrushDetector` classes of this module are
+configured to detect tseep and thrush NFCs, respectively.
+"""
+
+
 import logging
 # import time
-import wave
 
 import numpy as np
 import resampy
 import tensorflow as tf
 
+from vesper.util.detection_score_file_writer import DetectionScoreFileWriter
 from vesper.util.sample_buffer import SampleBuffer
 from vesper.util.settings import Settings
 import vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier_utils \
@@ -34,6 +48,17 @@ _THRUSH_SETTINGS = Settings(
     initial_clip_padding=.2,
     clip_duration=.6
 )
+
+
+# Constants controlling detection score output. The output is written to
+# a stereo audio file with detector audio input samples in one channel
+# and detection scores in the other. It is useful for detector debugging,
+# but should be disabled in production.
+_SCORE_OUTPUT_ENABLED = False
+_SCORE_FILE_PATH_FORMAT = '/Users/harold/Desktop/{} Detector Scores.wav'
+_SCORE_OUTPUT_START_OFFSET = 3600   # seconds
+_SCORE_OUTPUT_DURATION = 1000       # seconds
+_SCORE_SCALE_FACTOR = 10000
 
 
 class _Detector:
@@ -91,12 +116,12 @@ class _Detector:
         fraction = self._settings.hop_size / 100
         self._hop_size = s2f(fraction * s.waveform_duration, fs)
         
-#         print(
-#             '_Detector.__init__', self.input_sample_rate,
-#             self._classifier_sample_rate, self._classifier_waveform_length,
-#             self._hop_size, self._clip_start_offset, self._clip_length)
-        
-        self._open_output_audio_file()
+        if _SCORE_OUTPUT_ENABLED:
+            file_path = _SCORE_FILE_PATH_FORMAT.format(settings.clip_type)
+            self._score_file_writer = DetectionScoreFileWriter(
+                file_path, self._input_sample_rate, _SCORE_SCALE_FACTOR,
+                self._hop_size, _SCORE_OUTPUT_START_OFFSET,
+                _SCORE_OUTPUT_DURATION)
         
 #         settings = self._classifier_settings.__dict__
 #         names = sorted(settings.keys())
@@ -171,40 +196,21 @@ class _Detector:
         
         input_length = len(samples)
         
-#         print((
-#             'Processing input chunk of length {} starting at index '
-#             '{}...').format(input_length, self._input_chunk_start_index))
-        
-#         hop_size = signal_utils.get_duration(
-#             self._hop_size, self._classifier_sample_rate)
-#         print('Hop size is {} seconds.'.format(hop_size))
-        
         if self._classifier_sample_rate != self._input_sample_rate:
-             
-            # print(
-            #     'Resampling input chunk from {} Hz to {} Hz...'.format(
-            #         self.input_sample_rate, self._classifier_sample_rate))
              
             samples = resampy.resample(
                 samples, self._input_sample_rate, self._classifier_sample_rate,
                 filter='kaiser_fast')
             
-#         print('Resampled chunk has length {}.'.format(len(samples)))
-
         self._waveforms = _get_analysis_records(
             samples, self._classifier_waveform_length, self._hop_size)
         
-#         print('Reshaped chunk has shape {}.'.format(self._waveforms.shape))
-        
 #         print('Scoring chunk waveforms...')
-         
 #         start_time = time.time()
          
         scores = classifier_utils.score_dataset_examples(
             self._estimator, self._create_dataset)
         
-        self._append_to_output_audio_file(samples, scores)
-         
 #         elapsed_time = time.time() - start_time
 #         num_waveforms = self._waveforms.shape[0]
 #         rate = num_waveforms / elapsed_time
@@ -213,6 +219,9 @@ class _Detector:
 #             'waveforms per second.').format(
 #                 num_waveforms, elapsed_time, rate))
         
+        if _SCORE_OUTPUT_ENABLED:
+            self._score_file_writer.write(samples, scores)
+         
         peak_indices = self._find_peaks(scores)
         
         self._notify_listener_of_clips(peak_indices, input_length)
@@ -297,103 +306,8 @@ class _Detector:
             
         self._listener.complete_processing()
         
-        self._close_output_audio_file()
-
-
-    def _open_output_audio_file(self):
-        path = '/Users/harold/Desktop/FLOOD-21C_20170801_220710.wav'
-        writer = wave.open(path, 'wb')
-        _write_header(writer, 2, self._classifier_sample_rate)
-        self._output_audio_file_writer = writer
-        self._output_count = 0
-        
-        
-    def _append_to_output_audio_file(self, samples, scores):
-        
-        if self._output_count >= 0 and self._output_count <= 5:
-        
-            # Scale scores so their magnitudes are comparable to those
-            # of audio samples.
-            scores = scores * 10000
-            
-            # Repeat each score `self._hop_size` times so number of scores
-            # equals number of samples.
-            scores = scores.reshape((len(scores), 1))
-            ones = np.ones((1, self._hop_size))
-            scores = (scores * ones).flatten()
-            
-            # Truncate samples to number of scores.
-            samples = samples[:len(scores)]
-            
-            # Stack samples and scores to make two channels of samples.
-            samples = np.vstack((samples, scores))
-            
-            _write_samples(self._output_audio_file_writer, samples)
-        
-        self._output_count += 1
-        
-        
-    def _close_output_audio_file(self):
-        self._output_audio_file_writer.close()
-    
-        
-# TODO: The wave file code below was copied from
-# `vesper.util.audio_file_utils`. We could use a set of utility functions
-# for writing wave files in chunks instead of all at once.
-
-
-_WAVE_SAMPLE_DTYPE = np.dtype('<i2')
- 
- 
-# def write_wave_file(path, samples, sample_rate):
-#     num_channels = samples.shape[0]
-#     with wave.open(path, 'wb') as writer:
-#         _write_header(writer, num_channels, sample_rate)
-#         _write_samples(writer, samples)
-         
-         
-def _write_header(writer, num_channels, sample_rate):
-     
-    sample_size = 2
-    sample_rate = int(round(sample_rate))
-    length = 0
-    compression_type = 'NONE'
-    compression_name = 'not compressed'
-     
-    writer.setparams((
-        num_channels, sample_size, sample_rate, length,
-        compression_type, compression_name))
-     
-     
-def _write_samples(writer, samples):
-     
-    num_channels = samples.shape[0]
-     
-    # Get samples as one-dimensional array.
-    if num_channels == 1:
-        samples = samples[0]
-    else:
-        samples = samples.transpose().reshape(-1)
-         
-    # Ensure that samples are of the correct type.
-    if samples.dtype != _WAVE_SAMPLE_DTYPE:
-        samples = np.array(samples, dtype=_WAVE_SAMPLE_DTYPE)
-         
-    # Convert samples to string.
-    samples = samples.tostring()
-     
-    # Write to file.
-    # This appears to slow down by about an order of magnitude after
-    # we archive perhaps a gigabyte of data across hundreds of clips.
-    # Not sure why. The slowdown also happens if we open regular files
-    # instead of wave files and write samples to them with plain old
-    # file_.write(samples).
-    # TODO: Write simple test script that writes hundreds of files
-    # containing zeros (a million 16-bit integers apiece, say) and
-    # see if it is similarly slow. If so, is it slow on Mac OS X?
-    # Is it slow on a non-parallels version of Windows? Is it slow
-    # if we write the program in C instead of in Python?
-    writer.writeframes(samples)
+        if _SCORE_OUTPUT_ENABLED:
+            self._score_file_writer.close()
 
 
 # TODO: The following two functions were copied from
