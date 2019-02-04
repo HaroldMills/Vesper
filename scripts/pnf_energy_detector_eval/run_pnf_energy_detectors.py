@@ -12,14 +12,14 @@ The inputs required by this script are:
 dataset includes the recordings as FLAC files: you can use Sox
 (http://sox.sourceforge.net/) or some other software to convert the FLAC
 files to WAV files. The directory containing the WAV files is specified
-by scripts.detector_eval.utils.RECORDINGS_DIR_PATH.
+by scripts.pnf_energy_detector_eval.utils.RECORDINGS_DIR_PATH.
 
 The outputs produced by this script are:
 
 1. A CSV file, named either "Tseep.csv" or "Thrush.csv", depending on the
 value of the DETECTOR_TYPE module attribute. Each line of the file contains
 data describing one clip produced by a detector. The directory of the file
-is specified by scripts.detector_eval.utils.WORKING_DIR_PATH.
+is specified by scripts.pnf_energy_detector_eval.utils.WORKING_DIR_PATH.
 """
 
 
@@ -31,8 +31,8 @@ import time
 from vesper.pnf.pnf_2018_baseline_detector_1_0 import BaselineDetector
 from vesper.pnf.pnf_energy_detector_1_0 import Detector
 from vesper.util.bunch import Bunch
-from scripts.detector_eval.wave_file_reader import WaveFileReader
-import scripts.detector_eval.utils as utils
+from scripts.pnf_energy_detector_eval.wave_file_reader import WaveFileReader
+import scripts.pnf_energy_detector_eval.utils as utils
 
 
 DETECTOR_TYPE = 'Tseep'

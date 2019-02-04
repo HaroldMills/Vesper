@@ -5,18 +5,19 @@ recordings.
 The inputs required by this script are:
 
 1. CSV files produced by the run_detectors script. The directory containing
-the files is specified by scripts.detector_eval.utils.WORKING_DIR_PATH.
-All CSV files in the directory are processed.
+the files is specified by
+scripts.pnf_energy_detector_eval.utils.WORKING_DIR_PATH. All CSV files in
+the directory are processed.
 
 2. The BirdVox-full-night CSV annotation files, as distributed with the
 BirdVox-full-night dataset. The directory containing these files is
-specified by scripts.detector_eval.utils.ANNOTATIONS_DIR_PATH.
+specified by scripts.pnf_energy_detector_eval.utils.ANNOTATIONS_DIR_PATH.
 
 The outputs produced by this script are:
 
 1. A PDF file for each input CSV file, containing plots of detector
 precision-recall curves. The directory to which these files are written
-is specified by scripts.detector_eval.utils.WORKING_DIR_PATH.
+is specified by scripts.pnf_energy_detector_eval.utils.WORKING_DIR_PATH.
 """
 
 
@@ -29,7 +30,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import scripts.detector_eval.utils as utils
+import scripts.pnf_energy_detector_eval.utils as utils
 
 
 def window(offset, duration):
