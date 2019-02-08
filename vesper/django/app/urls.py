@@ -9,13 +9,24 @@ register_converter(NameConverter, 'name')
 
 
 urlpatterns = [
+    
     path('', views.index, name='index'),
     path('clip-calendar/', views.clip_calendar, name='clip-calendar'),
     path('clip-album/', views.clip_album, name='clip-album'),
     path('night/', views.night, name='night'),
+    
+    path('batch/read/clip-audios/',
+         views.batch_read_clip_audios,
+         name='batch-read-clip-audios'),
+        
+    path('batch/read/clip-annotations/',
+         views.batch_read_clip_annotations,
+         name='batch-read-clip-annotations'),
+        
     path('clips/<int:clip_id>/wav/', views.clip_wav, name='clip-wav'),
     path('clips/<int:clip_id>/annotations/json/', views.annotations_json,
          name='annotations')
+    
 ]
 
 
@@ -71,14 +82,6 @@ if not settings.ARCHIVE_READ_ONLY:
         path('clips/<int:clip_id>/', views.clip, name='clip'),
         path('clips/<int:clip_id>/annotations/<name:annotation_name>/',
              views.annotation, name='annotation'),
-        
-        path('batch/read/clip-audios/',
-             views.batch_read_clip_audios,
-             name='batch-read-clip-audios'),
-        
-        path('batch/read/clip-annotations/',
-             views.batch_read_clip_annotations,
-             name='batch-read-clip-annotations'),
         
         path('annotations/<name:annotation_name>/', views.annotations,
              name='annotations'),
