@@ -84,7 +84,9 @@ class _Detector:
     """
     
     
-    def __init__(self, settings, input_sample_rate, listener):
+    def __init__(
+            self, settings, input_sample_rate, listener,
+            extra_thresholds=None):
         
         # Suppress TensorFlow INFO and DEBUG log messages.
         tf.logging.set_verbosity(tf.logging.WARN)
@@ -99,7 +101,7 @@ class _Detector:
         fs = self._input_sample_rate
         self._input_buffer = None
         self._input_chunk_size = s2f(s.input_chunk_size, fs)
-        self._threshold = s.threshold
+        self._thresholds = self._get_thresholds(extra_thresholds)
         self._min_separation = s.min_separation
         self._clip_start_offset = -s2f(s.initial_clip_padding, fs)
         self._clip_length = s2f(s.clip_duration, fs)
@@ -142,6 +144,13 @@ class _Detector:
     @property
     def listener(self):
         return self._listener
+    
+    
+    def _get_thresholds(self, extra_thresholds):
+        thresholds = set([self._settings.threshold])
+        if extra_thresholds is not None:
+            thresholds |= set(extra_thresholds)
+        return sorted(thresholds)
     
     
     def _load_classifier_settings(self):
@@ -222,14 +231,15 @@ class _Detector:
         if _SCORE_OUTPUT_ENABLED:
             self._score_file_writer.write(samples, scores)
          
-        peak_indices = self._find_peaks(scores)
-        
-        self._notify_listener_of_clips(peak_indices, input_length)
+        for threshold in self._thresholds:
+            peak_indices = self._find_peaks(scores, threshold)
+            self._notify_listener_of_clips(
+                peak_indices, input_length, threshold)
         
         self._input_chunk_start_index += input_length
             
 
-    def _find_peaks(self, scores):
+    def _find_peaks(self, scores, threshold):
         
         if self._min_separation is None:
             min_separation = None
@@ -242,7 +252,7 @@ class _Detector:
             min_separation = self._settings.min_separation / hop_size
         
         peak_indices = signal_utils.find_peaks(
-            scores, self._threshold, min_separation)
+            scores, threshold, min_separation)
         
 #         print(
 #             'Found {} peaks in {} scores.'.format(
@@ -251,7 +261,7 @@ class _Detector:
         return peak_indices
         
             
-    def _notify_listener_of_clips(self, peak_indices, input_length):
+    def _notify_listener_of_clips(self, peak_indices, input_length, threshold):
         
         # print('Clips:')
         
@@ -292,7 +302,7 @@ class _Detector:
                 #     '    {} {}'.format(clip_start_index, self._clip_length))
                 
                 self._listener.process_clip(
-                    clip_start_index, self._clip_length)
+                    clip_start_index, self._clip_length, threshold)
         
 
     def complete_detection(self):
@@ -371,8 +381,9 @@ class TseepDetector(_Detector):
     extension_name = 'MPG Ranch Tseep Detector 0.0'
     
     
-    def __init__(self, sample_rate, listener):
-        super().__init__(_TSEEP_SETTINGS, sample_rate, listener)
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        super().__init__(
+            _TSEEP_SETTINGS, sample_rate, listener, extra_thresholds)
 
     
 class ThrushDetector(_Detector):
@@ -381,5 +392,6 @@ class ThrushDetector(_Detector):
     extension_name = 'MPG Ranch Thrush Detector 0.0'
      
      
-    def __init__(self, sample_rate, listener):
-        super().__init__(_THRUSH_SETTINGS, sample_rate, listener)
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        super().__init__(
+            _THRUSH_SETTINGS, sample_rate, listener, extra_thresholds)
