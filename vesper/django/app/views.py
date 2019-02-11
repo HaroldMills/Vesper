@@ -85,10 +85,11 @@ class HttpError(Exception):
 # all of the major browsers we should switch to that practice.
 
 
+# Default navbar data for read-write archives.
 # Note that as of 2016-07-19, nested navbar dropdowns do not work.
 # The generated HTML looks right to me so the problem may be a
 # Bootstrap limitation.
-_DEFAULT_NAVBAR_DATA = yaml.load('''
+_DEFAULT_NAVBAR_DATA_READ_WRITE = yaml.load('''
 
 - name: View
   dropdown:
@@ -156,12 +157,35 @@ _DEFAULT_NAVBAR_DATA = yaml.load('''
 ''')
 
 
+# Default navbar data for read-only archives.
+_DEFAULT_NAVBAR_DATA_READ_ONLY = yaml.load('''
+
+- name: View
+  dropdown:
+
+      - name: Clip Calendar
+        url_name: clip-calendar
+
+      - name: Clip Album
+        url_name: clip-album
+
+''')
+
+
 def _create_navbar_items():
     preferences = preference_manager.instance.preferences
-    data = preferences.get('navbar', _DEFAULT_NAVBAR_DATA)
+    default_data = _get_default_navbar_data()
+    data = preferences.get('navbar', default_data)
     return _create_navbar_items_aux(data)
 
 
+def _get_default_navbar_data():
+    if settings.ARCHIVE_READ_ONLY:
+        return _DEFAULT_NAVBAR_DATA_READ_ONLY
+    else:
+        return _DEFAULT_NAVBAR_DATA_READ_WRITE
+        
+    
 def _create_navbar_items_aux(data):
     return tuple(_create_navbar_item(d) for d in data)
 
