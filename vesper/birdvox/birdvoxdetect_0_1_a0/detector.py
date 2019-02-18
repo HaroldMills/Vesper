@@ -11,18 +11,19 @@ import os.path
 import tempfile
 import wave
 
+import numpy as np
+import tensorflow as tf
+
+import vesper.util.signal_utils as signal_utils
+
+
 # Uncomment this to use the BirdVoxDetect of the `birdvoxdetect` package
 # of the current Conda environment.
 # import birdvoxdetect
 
-import numpy as np
-import tensorflow as tf
-
-
 # Uncomment this to use the BirdVoxDetect that is included in the Vesper
 # Conda package.
 import vesper.birdvox.birdvoxdetect_0_1_a0.birdvoxdetect as birdvoxdetect
-import vesper.util.signal_utils as signal_utils
 
 
 _CLIP_DURATION = .6
