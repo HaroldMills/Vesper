@@ -12,7 +12,7 @@ import warnings
 
 
 
-from birdvoxdetect.birdvoxdetect_exceptions import BirdVoxDetectError
+from .birdvoxdetect_exceptions import BirdVoxDetectError
 
 
 def process_file(
