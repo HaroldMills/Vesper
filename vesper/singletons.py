@@ -34,6 +34,11 @@ Command:
     - vesper.command.update_recording_file_paths_command.UpdateRecordingFilePathsCommand
     
 Detector:
+    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.Detector30
+    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.Detector40
+    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.Detector50
+    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.Detector60
+    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.Detector70
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector
     - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector
     - vesper.old_bird.old_bird_detector_redux_1_0.ThrushDetector
