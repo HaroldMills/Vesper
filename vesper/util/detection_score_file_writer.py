@@ -63,11 +63,11 @@ class DetectionScoreFileWriter:
         if write_size != 0:
        
             # Convert samples to wave file data type.
-            samples = np.array(samples, dtype='<i2')
+            samples = np.array(np.round(samples), dtype='<i2')
            
             # Scale scores and convert to wave file data type.
             scores = scores * self._score_scale_factor
-            scores = np.array(scores, dtype='<i2')
+            scores = np.array(np.round(scores), dtype='<i2')
            
             # Repeat each score `self._score_repetition_factor` times.
             scores = scores.reshape((len(scores), 1))

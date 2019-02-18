@@ -29,9 +29,9 @@ class RatioFileWriter:
         
         if self._count != _COUNT_LIMIT:
             
-            samples = np.array(samples, dtype='<i2')
+            samples = np.array(np.round(samples), dtype='<i2')
             
-            ratios = np.array(1000 * ratios, dtype='<i2')
+            ratios = np.array(np.round(1000 * ratios), dtype='<i2')
             ratios = self._repeat_samples(ratios)
             
             if len(ratios) < len(samples):
