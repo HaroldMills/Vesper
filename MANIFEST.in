@@ -4,7 +4,10 @@ recursive-include vesper/django/app/static/vesper *.html
 recursive-include vesper/django/app/static/vesper *.css
 recursive-include vesper/django/app/static/vesper *.js
 recursive-include vesper *.h5
-recursive-include vesper *.pkl
-recursive-include vesper *.yaml
+recursive-include vesper *.ini
 recursive-include vesper *.pb
+recursive-include vesper *.pkl
+recursive-include vesper *.txt
+recursive-include vesper *.yaml
+recursive-include vesper LICENSE
 recursive-include vesper variables.*
