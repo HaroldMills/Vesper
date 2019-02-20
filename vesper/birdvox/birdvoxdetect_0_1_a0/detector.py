@@ -14,6 +14,7 @@ import wave
 import numpy as np
 import tensorflow as tf
 
+from vesper.util.settings import Settings
 import vesper.util.signal_utils as signal_utils
 
 
@@ -46,14 +47,12 @@ class _Detector:
     """
     
     
-    def __init__(
-            self, threshold, input_sample_rate, listener,
-            extra_thresholds=None):
+    def __init__(self, settings, input_sample_rate, listener):
         
         # Suppress TensorFlow INFO and DEBUG log messages.
         tf.logging.set_verbosity(tf.logging.WARN)
         
-        self._threshold = threshold
+        self._settings = settings
         self._input_sample_rate = input_sample_rate
         self._listener = listener
         
@@ -110,11 +109,18 @@ class _Detector:
             
             audio_file_path = self._audio_file.name
             
+            if self.settings.threshold_adaptation_enabled:
+                detector_name = \
+                    'birdvoxdetect_pcen_cnn_adaptive-threshold-T1800'
+            else:
+                detector_name = 'birdvoxdetect_pcen_cnn'
+            
             birdvoxdetect.process_file(
                 audio_file_path,
-                output_dir=output_dir_path,
-                threshold=self._threshold)
-            
+                detector_name=detector_name,
+                threshold=self.settings.threshold,
+                output_dir=output_dir_path)
+ 
             timestamp_file_path = self._get_timestamp_file_path(
                 output_dir_path, audio_file_path)
             
@@ -162,54 +168,63 @@ class _Detector:
                 self._listener.process_clip(start_index, self._clip_length)
 
 
-class Detector30(_Detector):
-    
-    """BirdVoxDetect with a threshold of 30."""
-    
-    extension_name = 'BirdVoxDetect 0.1.a0 30'
-    
-    def __init__(self, sample_rate, listener, extra_thresholds=None):
-        super().__init__(30, sample_rate, listener, extra_thresholds)
+def _create_at_settings(threshold):
+    return Settings(threshold_adaptation_enabled=True, threshold=threshold)
 
 
-class Detector40(_Detector):
+class DetectorAT30(_Detector):
     
-    """BirdVoxDetect with a threshold of 40."""
+    """BirdVoxDetect with an adaptive threshold whose nominal value is 30."""
     
-    extension_name = 'BirdVoxDetect 0.1.a0 40'
+    extension_name = 'BirdVoxDetect 0.1.a0 AT 30'
     
-    def __init__(self, sample_rate, listener, extra_thresholds=None):
-        super().__init__(40, sample_rate, listener, extra_thresholds)
+    def __init__(self, sample_rate, listener):
+        settings = _create_at_settings(30)
+        super().__init__(settings, sample_rate, listener)
 
 
-class Detector50(_Detector):
+class DetectorAT40(_Detector):
     
-    """BirdVoxDetect with a threshold of 50."""
+    """BirdVoxDetect with an adaptive threshold whose nominal value is 40."""
     
-    extension_name = 'BirdVoxDetect 0.1.a0 50'
+    extension_name = 'BirdVoxDetect 0.1.a0 AT 40'
     
-    def __init__(self, sample_rate, listener, extra_thresholds=None):
-        super().__init__(50, sample_rate, listener, extra_thresholds)
+    def __init__(self, sample_rate, listener):
+        settings = _create_at_settings(40)
+        super().__init__(settings, sample_rate, listener)
 
 
-class Detector60(_Detector):
+class DetectorAT50(_Detector):
     
-    """BirdVoxDetect with a threshold of 60."""
+    """BirdVoxDetect with an adaptive threshold whose nominal value is 50."""
     
-    extension_name = 'BirdVoxDetect 0.1.a0 60'
+    extension_name = 'BirdVoxDetect 0.1.a0 AT 50'
     
-    def __init__(self, sample_rate, listener, extra_thresholds=None):
-        super().__init__(60, sample_rate, listener, extra_thresholds)
+    def __init__(self, sample_rate, listener):
+        settings = _create_at_settings(50)
+        super().__init__(settings, sample_rate, listener)
 
 
-class Detector70(_Detector):
+class DetectorAT60(_Detector):
     
-    """BirdVoxDetect with a threshold of 70."""
+    """BirdVoxDetect with an adaptive threshold whose nominal value is 60."""
     
-    extension_name = 'BirdVoxDetect 0.1.a0 70'
+    extension_name = 'BirdVoxDetect 0.1.a0 AT 60'
     
-    def __init__(self, sample_rate, listener, extra_thresholds=None):
-        super().__init__(70, sample_rate, listener, extra_thresholds)
+    def __init__(self, sample_rate, listener):
+        settings = _create_at_settings(60)
+        super().__init__(settings, sample_rate, listener)
+
+
+class DetectorAT70(_Detector):
+    
+    """BirdVoxDetect with an adaptive threshold whose nominal value is 70."""
+    
+    extension_name = 'BirdVoxDetect 0.1.a0 AT 70'
+    
+    def __init__(self, sample_rate, listener):
+        settings = _create_at_settings(70)
+        super().__init__(settings, sample_rate, listener)
 
 
 class WaveFileWriter:
