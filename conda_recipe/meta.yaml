@@ -33,9 +33,12 @@ requirements:
   build:
     - django
     - jsonschema
+    - keras
+    - librosa
+    - pandas
     - pyephem
+    - pysoundfile
     - python
-    - pyyaml
     - resampy
     - scikit-learn
     - setuptools
@@ -44,9 +47,12 @@ requirements:
   run:
     - django
     - jsonschema
+    - keras
+    - librosa
+    - pandas
     - pyephem
+    - pysoundfile
     - python
-    - pyyaml
     - resampy
     - scikit-learn
     - tensorflow

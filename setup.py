@@ -20,8 +20,11 @@ setup(
     install_requires=[
         'django',
         'jsonschema',
+        'keras',
+        'librosa',
+        'pandas'
         'pyephem',
-        'pyyaml',
+        'pysoundfile',
         'resampy',
         'scikit-learn',
         'tensorflow'
