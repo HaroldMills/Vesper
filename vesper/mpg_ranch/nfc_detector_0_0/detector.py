@@ -26,6 +26,7 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier_utils \
     as classifier_utils
 import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils \
     as dataset_utils
+import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.signal_utils as signal_utils
 
 
@@ -87,6 +88,8 @@ class _Detector:
     def __init__(
             self, settings, input_sample_rate, listener,
             extra_thresholds=None):
+        
+        open_mp_utils.work_around_multiple_copies_issue()
         
         # Suppress TensorFlow INFO and DEBUG log messages.
         tf.logging.set_verbosity(tf.logging.WARN)

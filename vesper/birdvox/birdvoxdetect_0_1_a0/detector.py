@@ -15,6 +15,7 @@ import numpy as np
 import tensorflow as tf
 
 from vesper.util.settings import Settings
+import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.signal_utils as signal_utils
 
 
@@ -48,6 +49,8 @@ class _Detector:
     
     
     def __init__(self, settings, input_sample_rate, listener):
+        
+        open_mp_utils.work_around_multiple_copies_issue()
         
         # Suppress TensorFlow INFO and DEBUG log messages.
         tf.logging.set_verbosity(tf.logging.WARN)
