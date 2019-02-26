@@ -6,7 +6,7 @@ import numpy as np
 import os
 import pandas as pd
 import scipy.signal
-import soundfile as sf
+import vesper.birdvox.soundfile as sf
 import traceback
 import warnings
 
