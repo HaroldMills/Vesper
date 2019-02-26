@@ -17,12 +17,18 @@ setup(
     packages=find_packages(
         exclude=['tests', 'tests.*', '*.tests.*', '*.tests']),
     
+    classifiers=[
+        'Programming Language :: Python :: 3',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent',
+    ],
+    
     install_requires=[
         'django',
         'jsonschema',
         'keras',
         'librosa',
-        'pandas'
+        'pandas',
         'pyephem',
         'pysoundfile',
         'resampy',
@@ -33,9 +39,9 @@ setup(
     entry_points={
         'console_scripts': [
             'vesper_admin=vesper.django.manage:main',
-            'vesper_recorder=vesper.scripts.vesper_recorder',
-            'vesper_play_recorder_test_signal=vesper.scripts.play_recorder_test_signal',
-            'vesper_show_audio_input_devices=vesper.scripts.show_audio_input_devices'
+            'vesper_recorder=vesper.scripts.vesper_recorder:_main',
+            'vesper_play_recorder_test_signal=vesper.scripts.play_recorder_test_signal:_main',
+            'vesper_show_audio_input_devices=vesper.scripts.show_audio_input_devices:_main'
         ]
     },
       
