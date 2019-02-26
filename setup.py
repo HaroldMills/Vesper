@@ -30,7 +30,6 @@ setup(
         'librosa',
         'pandas',
         'pyephem',
-        'pysoundfile',
         'resampy',
         'scikit-learn',
         'tensorflow'

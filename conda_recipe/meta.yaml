@@ -37,7 +37,6 @@ requirements:
     - librosa
     - pandas
     - pyephem
-    - pysoundfile
     - python
     - resampy
     - scikit-learn
@@ -51,7 +50,6 @@ requirements:
     - librosa
     - pandas
     - pyephem
-    - pysoundfile
     - python
     - resampy
     - scikit-learn
