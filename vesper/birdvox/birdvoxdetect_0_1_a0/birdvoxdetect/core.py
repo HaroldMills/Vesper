@@ -15,6 +15,11 @@ import warnings
 from .birdvoxdetect_exceptions import BirdVoxDetectError
 
 
+# early termination for testing
+_LIMIT_NUM_CHUNKS = False
+_MAX_NUM_CHUNKS = 6
+
+
 def process_file(
         filepath,
         output_dir=None,
@@ -154,8 +159,17 @@ def process_file(
         pcen_settings["sr"] /\
         (pcen_settings["hop_length"] * pcen_settings["stride_length"])
 
+    # early termination for testing
+    done = False
+    
     # Compute confidence on queue chunks.
     for chunk_id in range(min(queue_length, n_chunks-1)):
+                
+        # early termination for testing
+        if _LIMIT_NUM_CHUNKS and chunk_id == _MAX_NUM_CHUNKS:
+            done = True
+            break
+
         # Print chunk ID and number of chunks.
         logging.info("Chunk ID: {}/{}".format(
             str(1+chunk_id).zfill(len(str(n_chunks))), n_chunks))
@@ -222,6 +236,12 @@ def process_file(
 
     # Loop over chunks.
     for chunk_id in range(queue_length, n_chunks-1):
+        
+        # early termination for testing
+        if done or _LIMIT_NUM_CHUNKS and chunk_id == _MAX_NUM_CHUNKS:
+            done = True
+            break
+ 
         # Print chunk ID and number of chunks.
         logging.info("Chunk ID: {}/{}".format(
             str(1+chunk_id).zfill(len(str(n_chunks))), n_chunks))
@@ -302,119 +322,122 @@ def process_file(
                     filepath, clip_name + ".wav", output_dir=clips_dir)
                 librosa.output.write_wav(clip_path, audio_clip, sr)
 
-    # Last chunk.
-    # Print chunk ID and number of chunks.
-    logging.info("Chunk ID: {}/{}".format(n_chunks, n_chunks))
-    chunk_start = (n_chunks-1) * chunk_length
-    sound_file.seek(chunk_start)
-    chunk_audio = sound_file.read(full_length - chunk_start)
-    chunk_pcen = compute_pcen(chunk_audio, sr)
-    if has_context:
-        # If the queue is empty, compute percentiles on the fly.
-        if n_chunks == 1:
-            deque_context = np.percentile(
-                chunk_pcen, percentiles, axis=1, overwrite_input=True)
-
-        # Predict.
-        chunk_confidence = predict_with_context(
-            chunk_pcen, deque_context, detector, logger_level,
-            padding=0)
-    else:
-        # Predict.
-        chunk_confidence = predict(
-            chunk_pcen, detector, logger_level,
-            padding=0)
-
-    # Remove trailing singleton dimension
-    chunk_confidence = np.squeeze(chunk_confidence)
-
-    # Map confidence to 0-100 range.
-    chunk_confidence = map_confidence(chunk_confidence, detector_name)
-
-    # Threshold last chunk if required.
-    if threshold is not None:
-
-        # Find peaks.
-        peak_locs, _ = scipy.signal.find_peaks(chunk_confidence)
-        peak_vals = chunk_confidence[peak_locs]
-
-        # Threshold peaks.
-        th_peak_locs = peak_locs[peak_vals > threshold]
-        th_peak_confidences = chunk_confidence[th_peak_locs]
-        chunk_offset = chunk_duration * (n_chunks-1)
-        th_peak_timestamps = chunk_offset + th_peak_locs/frame_rate
-        n_peaks = len(th_peak_timestamps)
-        logging.info("Number of timestamps: {}".format(n_peaks))
-
-        # Export timestamps.
-        event_times = event_times + list(th_peak_timestamps)
-        event_confidences = event_confidences + list(th_peak_confidences)
-        df = pd.DataFrame({
-            "Time (s)": event_times,
-            "Confidence (%)": event_confidences
-        })
-        df.to_csv(
-            timestamps_path,
-            columns=df_columns, float_format='%8.2f', index=True)
-
-        # Export clips.
-        if export_clips:
-            for t in th_peak_timestamps:
-                clip_start = max(0, int(np.round(sr*(t-0.5*clip_duration))))
-                clip_stop = min(
-                    len(sound_file), int(np.round(sr*(t+0.5*clip_duration))))
-                sound_file.seek(clip_start)
-                audio_clip = sound_file.read(clip_stop-clip_start)
-                clip_name = suffix + "{:08.2f}".format(t).replace(".", "-")
-                clip_path = get_output_path(
-                    filepath, clip_name + ".wav", output_dir=clips_dir)
-                librosa.output.write_wav(clip_path, audio_clip, sr)
-
-    # Export confidence curve.
-    if export_confidence:
-
-        # Define output path for confidence.
-        confidence_path = get_output_path(
-            filepath, suffix + "confidence.hdf5", output_dir=output_dir)
-
-        # Export confidence curve, chunk by chunk.
-        # NB: looping over chunks, rather than concatenating them into a single
-        # NumPy array, guarantees that this export has a O(1) memory footprint
-        # with respect to the duration of the input file. As a result,
-        # BirdVoxDetect is guaranteed to run with 3-4 gigabytes of RAM
-        # for a context duration of 30 minutes, whatever be the duration
-        # of the input.
-        chunk_confidences.append(chunk_confidence)
-        total_length = sum(map(len, chunk_confidences))
-        with h5py.File(confidence_path, "w") as f:
-            f.create_dataset('confidence', (total_length,), dtype="float32")
-            f.create_dataset('time', (total_length,), dtype="float32")
-            f["chunk_duration"] = chunk_duration
-            f["frame_rate"] = frame_rate
-
-        chunk_pointer = 0
-
-        # Loop over chunks.
-        for chunk_id, chunk_confidence in enumerate(chunk_confidences):
-
-            # Define offset.
-            chunk_length = len(chunk_confidence)
-            next_chunk_pointer = chunk_pointer + chunk_length
-            chunk_start = chunk_duration * chunk_id
-            chunk_stop = chunk_start + chunk_length/frame_rate
-            chunk_time = np.linspace(
-                chunk_start, chunk_stop,
-                num=chunk_length, endpoint=False, dtype=np.float32)
-
-            # Export chunk as HDF5
-            with h5py.File(confidence_path, "a") as f:
-                f["confidence"][chunk_pointer:next_chunk_pointer] =\
-                    chunk_confidence
-                f["time"][chunk_pointer:next_chunk_pointer] = chunk_time
-
-            # Increment pointer.
-            chunk_pointer = next_chunk_pointer
-
+    # early termination for testing
+    if not _LIMIT_NUM_CHUNKS or n_chunks < _MAX_NUM_CHUNKS:
+        
+        # Last chunk.
+        # Print chunk ID and number of chunks.
+        logging.info("Chunk ID: {}/{}".format(n_chunks, n_chunks))
+        chunk_start = (n_chunks-1) * chunk_length
+        sound_file.seek(chunk_start)
+        chunk_audio = sound_file.read(full_length - chunk_start)
+        chunk_pcen = compute_pcen(chunk_audio, sr)
+        if has_context:
+            # If the queue is empty, compute percentiles on the fly.
+            if n_chunks == 1:
+                deque_context = np.percentile(
+                    chunk_pcen, percentiles, axis=1, overwrite_input=True)
+    
+            # Predict.
+            chunk_confidence = predict_with_context(
+                chunk_pcen, deque_context, detector, logger_level,
+                padding=0)
+        else:
+            # Predict.
+            chunk_confidence = predict(
+                chunk_pcen, detector, logger_level,
+                padding=0)
+    
+        # Remove trailing singleton dimension
+        chunk_confidence = np.squeeze(chunk_confidence)
+    
+        # Map confidence to 0-100 range.
+        chunk_confidence = map_confidence(chunk_confidence, detector_name)
+    
+        # Threshold last chunk if required.
+        if threshold is not None:
+    
+            # Find peaks.
+            peak_locs, _ = scipy.signal.find_peaks(chunk_confidence)
+            peak_vals = chunk_confidence[peak_locs]
+    
+            # Threshold peaks.
+            th_peak_locs = peak_locs[peak_vals > threshold]
+            th_peak_confidences = chunk_confidence[th_peak_locs]
+            chunk_offset = chunk_duration * (n_chunks-1)
+            th_peak_timestamps = chunk_offset + th_peak_locs/frame_rate
+            n_peaks = len(th_peak_timestamps)
+            logging.info("Number of timestamps: {}".format(n_peaks))
+    
+            # Export timestamps.
+            event_times = event_times + list(th_peak_timestamps)
+            event_confidences = event_confidences + list(th_peak_confidences)
+            df = pd.DataFrame({
+                "Time (s)": event_times,
+                "Confidence (%)": event_confidences
+            })
+            df.to_csv(
+                timestamps_path,
+                columns=df_columns, float_format='%8.2f', index=True)
+    
+            # Export clips.
+            if export_clips:
+                for t in th_peak_timestamps:
+                    clip_start = max(0, int(np.round(sr*(t-0.5*clip_duration))))
+                    clip_stop = min(
+                        len(sound_file), int(np.round(sr*(t+0.5*clip_duration))))
+                    sound_file.seek(clip_start)
+                    audio_clip = sound_file.read(clip_stop-clip_start)
+                    clip_name = suffix + "{:08.2f}".format(t).replace(".", "-")
+                    clip_path = get_output_path(
+                        filepath, clip_name + ".wav", output_dir=clips_dir)
+                    librosa.output.write_wav(clip_path, audio_clip, sr)
+    
+        # Export confidence curve.
+        if export_confidence:
+    
+            # Define output path for confidence.
+            confidence_path = get_output_path(
+                filepath, suffix + "confidence.hdf5", output_dir=output_dir)
+    
+            # Export confidence curve, chunk by chunk.
+            # NB: looping over chunks, rather than concatenating them into a single
+            # NumPy array, guarantees that this export has a O(1) memory footprint
+            # with respect to the duration of the input file. As a result,
+            # BirdVoxDetect is guaranteed to run with 3-4 gigabytes of RAM
+            # for a context duration of 30 minutes, whatever be the duration
+            # of the input.
+            chunk_confidences.append(chunk_confidence)
+            total_length = sum(map(len, chunk_confidences))
+            with h5py.File(confidence_path, "w") as f:
+                f.create_dataset('confidence', (total_length,), dtype="float32")
+                f.create_dataset('time', (total_length,), dtype="float32")
+                f["chunk_duration"] = chunk_duration
+                f["frame_rate"] = frame_rate
+    
+            chunk_pointer = 0
+    
+            # Loop over chunks.
+            for chunk_id, chunk_confidence in enumerate(chunk_confidences):
+    
+                # Define offset.
+                chunk_length = len(chunk_confidence)
+                next_chunk_pointer = chunk_pointer + chunk_length
+                chunk_start = chunk_duration * chunk_id
+                chunk_stop = chunk_start + chunk_length/frame_rate
+                chunk_time = np.linspace(
+                    chunk_start, chunk_stop,
+                    num=chunk_length, endpoint=False, dtype=np.float32)
+    
+                # Export chunk as HDF5
+                with h5py.File(confidence_path, "a") as f:
+                    f["confidence"][chunk_pointer:next_chunk_pointer] =\
+                        chunk_confidence
+                    f["time"][chunk_pointer:next_chunk_pointer] = chunk_time
+    
+                # Increment pointer.
+                chunk_pointer = next_chunk_pointer
+    
     # Print final messages.
     logging.info("Done with file: {}.".format(filepath))
     if threshold is not None:
