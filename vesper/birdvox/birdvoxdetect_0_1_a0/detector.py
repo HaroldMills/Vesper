@@ -16,6 +16,7 @@ import tensorflow as tf
 
 from vesper.util.settings import Settings
 import vesper.util.open_mp_utils as open_mp_utils
+import vesper.util.os_utils as os_utils
 import vesper.util.signal_utils as signal_utils
 
 
@@ -62,9 +63,13 @@ class _Detector:
         self._clip_length = signal_utils.seconds_to_frames(
             _CLIP_DURATION, self._input_sample_rate)
         
-        # Create temporary wave file that will be automatically deleted
-        # when we close it.
-        self._audio_file = tempfile.NamedTemporaryFile(suffix='.wav')
+        # Create and open temporary wave file. Do not delete
+        # automatically on close. We will close the file after we
+        # finish writing it, and then BirdVoxDetect will open it
+        # again for reading. We delete the file ourselves after
+        # BirdVoxDetect finishes processing it.
+        self._audio_file = tempfile.NamedTemporaryFile(
+            suffix='.wav', delete=False)
         
         # Create wave file writer, through which we will write to the
         # wave file.
@@ -101,10 +106,9 @@ class _Detector:
         
         # print('_Detector.complete_detection')
         
-        # Close wave writer. This ensures that the wave file header and
-        # audio data are consistent (particularly the number of frames
-        # stored in the header), but does not delete the file.
+        # Close wave writer and wave file.
         self._audio_file_writer.close()
+        self._audio_file.close()
         
         with tempfile.TemporaryDirectory() as output_dir_path:
             
@@ -129,9 +133,7 @@ class _Detector:
             
             self._process_timestamps(timestamp_file_path)
                 
-        # Close wave file. Because it is a temporary file, this will also
-        # delete it.
-        self._audio_file.close()
+        os_utils.delete_file(audio_file_path)
         
         self._listener.complete_processing()
         
