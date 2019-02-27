@@ -9,6 +9,8 @@ source:
 
 build:
 
+  noarch: python
+
   entry_points:
     - vesper_admin=vesper.django.manage:main
     - vesper_recorder=vesper.scripts.vesper_recorder:_main
