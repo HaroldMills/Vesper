@@ -189,7 +189,17 @@ class DeleteClipsCommand(Command):
                 # Delete clips in chunks to limit the number of clip IDs
                 # we pass to `Clip.objects.filter`.
                 
-                max_chunk_size = 1000
+                # Setting this too large can result in a
+                # django.db.utils.OperationalError exception with the
+                # message "too many SQL variables". We have seen this
+                # happen with a maximum chunk size of 1000 on Windows,
+                # though not on macOS. The web page
+                # https://stackoverflow.com/questions/7106016/
+                # too-many-sql-variables-error-in-django-witih-sqlite3
+                # suggests that the maximum chunk size that will work
+                # on Windows is somewhere between 900 and 1000, and
+                # 900 seems to work.
+                max_chunk_size = 900
                 
                 for i in range(0, len(clips), max_chunk_size):
                     
