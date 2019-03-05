@@ -16,6 +16,12 @@ Vesper is not ready for widespread use just yet, but for the intrepid there are 
 
 Vesper includes a copy of the [BirdVoxDetect](https://github.com/BirdVox/birdvoxdetect) nocturnal flight call detector, a product of the [BirdVox](https://wp.nyu.edu/birdvox/) project. BirdVoxDetect is covered by [this license](https://github.com/BirdVox/birdvoxdetect/blob/master/LICENSE). All other Vesper code is provided under [this license](https://github.com/HaroldMills/Vesper/blob/master/LICENSE).
 
+BirdVoxDetect is described in:
+
+    Robust Sound Event Detection in Bioacoustic Sensor Networks
+    Vincent Lostanlen, Justin Salamon, Andrew Farnsworth, Steve Kelling, and Juan Pablo Bello
+    Under review, 2019.
+
 Many thanks to [MPG Ranch](http://mpgranch.com), Project Night Flight, [Old Bird](http://oldbird.org), and anonymous donors for financial support of the Vesper project.
 
 ![Image of Zenodo DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.1020572.svg)
