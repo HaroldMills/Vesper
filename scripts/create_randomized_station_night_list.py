@@ -47,7 +47,7 @@ Willow
 
 YEAR_MONTH_PAIRS = [(2017, 8), (2017, 9)]
 
-OUTPUT_FILE_PATH = '/Users/harold/Desktop/Recordings.csv'
+OUTPUT_FILE_PATH = '/Users/harold/Desktop/Station-Nights.csv'
 
 
 def main():
