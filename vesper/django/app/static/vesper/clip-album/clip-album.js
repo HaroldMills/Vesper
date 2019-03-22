@@ -150,6 +150,8 @@ export class ClipAlbum {
 
     constructor(state) {
         
+        // console.log(`'${state.clipFilter.date}':`);
+        
         this._readOnly = state.archiveReadOnly;
         this._clipFilter = state.clipFilter;
         this._clips = this._createClips(state.clips);

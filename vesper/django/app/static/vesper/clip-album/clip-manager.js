@@ -142,10 +142,34 @@ export class ClipManager {
         this._settingPageNum = false;
         this._loadedPageNums = new Set();
         this._numLoadedClips = 0;
+        
+        // this._showPageClipIds()
 
     }
 
 
+    _showPageClipIds() {
+        
+        console.log('[');
+        
+        const numPages = this.pagination.length - 1;
+        
+        for (let pageNum = 0; pageNum < numPages; ++pageNum) {
+            
+            const start = this.pagination[pageNum];
+            const end = this.pagination[pageNum + 1];
+            const clips = this.clips.slice(start, end);
+            const ids = clips.map(clip => clip.id);
+          
+            console.log(JSON.stringify(ids) + ',');
+
+        }
+        
+        console.log('],');
+        
+    }
+    
+    
     get clips() {
         return this._clips;
     }
