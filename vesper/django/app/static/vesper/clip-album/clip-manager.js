@@ -333,6 +333,8 @@ export class ClipManager {
 
             await this._clipLoader.loadClips(this.clips, start, end);
 
+            // this._showClips(start, end);
+            
             this._loadedPageNums.add(pageNum);
             this._numLoadedClips += this._getNumPageClips(pageNum);
 
@@ -341,6 +343,23 @@ export class ClipManager {
     }
 
 
+    _showClips(start, end) {
+        
+        for (let i = start; i < end; i++) {
+            
+            const clip = this.clips[i];
+            const startTime = clip.startTime;
+            const classification = clip.annotations['Classification'];
+            
+            console.log(
+                `- { start_time: ${startTime}, ` +
+                `classification: ${classification} }`);
+                        
+        }
+        
+    }
+    
+    
     async incrementPageNum(increment) {
         return this.setPageNum(this.pageNum + increment);
     }
