@@ -161,20 +161,67 @@ class _Detector:
             for row in reader:
                 
                 peak_time = float(row[1])
-                # score = float(row[2])
                 
                 # Get clip start index from peak time.
                 peak_index = signal_utils.seconds_to_frames(
                     peak_time, self._input_sample_rate)
                 start_index = peak_index - self._clip_length // 2
                 
+                score = float(row[2])
+                annotations = {'Detector Score': score}
+                
                 # print('processing clip', peak_time, start_index, score)
                 
-                self._listener.process_clip(start_index, self._clip_length)
+                self._listener.process_clip(
+                    start_index, self._clip_length, annotations=annotations)
 
 
 def _create_at_settings(threshold):
     return Settings(threshold_adaptation_enabled=True, threshold=threshold)
+
+
+class DetectorAT02(_Detector):
+    
+    """BirdVoxDetect with an adaptive threshold whose nominal value is 2."""
+    
+    extension_name = 'BirdVoxDetect 0.1.a0 AT 02'
+    
+    def __init__(self, sample_rate, listener):
+        settings = _create_at_settings(2)
+        super().__init__(settings, sample_rate, listener)
+
+
+class DetectorAT05(_Detector):
+    
+    """BirdVoxDetect with an adaptive threshold whose nominal value is 5."""
+    
+    extension_name = 'BirdVoxDetect 0.1.a0 AT 05'
+    
+    def __init__(self, sample_rate, listener):
+        settings = _create_at_settings(5)
+        super().__init__(settings, sample_rate, listener)
+
+
+class DetectorAT10(_Detector):
+    
+    """BirdVoxDetect with an adaptive threshold whose nominal value is 10."""
+    
+    extension_name = 'BirdVoxDetect 0.1.a0 AT 10'
+    
+    def __init__(self, sample_rate, listener):
+        settings = _create_at_settings(10)
+        super().__init__(settings, sample_rate, listener)
+
+
+class DetectorAT20(_Detector):
+    
+    """BirdVoxDetect with an adaptive threshold whose nominal value is 20."""
+    
+    extension_name = 'BirdVoxDetect 0.1.a0 AT 20'
+    
+    def __init__(self, sample_rate, listener):
+        settings = _create_at_settings(20)
+        super().__init__(settings, sample_rate, listener)
 
 
 class DetectorAT30(_Detector):

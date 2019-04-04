@@ -30,6 +30,11 @@ import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.signal_utils as signal_utils
 
 
+# TODO: Consider specifying threshold on a scale from 0 to 100 rather
+# than on a scale from 0 to 1, since that's how scores are presented
+# in the UI.
+
+
 _TSEEP_SETTINGS = Settings(
     clip_type='Tseep',
     input_chunk_size=3600,
@@ -236,8 +241,9 @@ class _Detector:
          
         for threshold in self._thresholds:
             peak_indices = self._find_peaks(scores, threshold)
+            peak_scores = scores[peak_indices]
             self._notify_listener_of_clips(
-                peak_indices, input_length, threshold)
+                peak_indices, peak_scores, input_length, threshold)
         
         self._input_chunk_start_index += input_length
             
@@ -264,14 +270,15 @@ class _Detector:
         return peak_indices
         
             
-    def _notify_listener_of_clips(self, peak_indices, input_length, threshold):
+    def _notify_listener_of_clips(
+            self, peak_indices, peak_scores, input_length, threshold):
         
         # print('Clips:')
         
         start_offset = self._input_chunk_start_index + self._clip_start_offset
         peak_indices *= self._hop_size
         
-        for i in peak_indices:
+        for i, score in zip(peak_indices, peak_scores):
             
             # Convert classification index to input index, accounting
             # for difference between classifier sample rate and input
@@ -304,8 +311,11 @@ class _Detector:
                 # print(
                 #     '    {} {}'.format(clip_start_index, self._clip_length))
                 
+                annotations = {'Detector Score': 100 * score}
+                
                 self._listener.process_clip(
-                    clip_start_index, self._clip_length, threshold)
+                    clip_start_index, self._clip_length, threshold,
+                    annotations)
         
 
     def complete_detection(self):
@@ -389,6 +399,80 @@ class TseepDetector(_Detector):
             _TSEEP_SETTINGS, sample_rate, listener, extra_thresholds)
 
     
+def _tseep_settings(threshold):
+    return Settings(_TSEEP_SETTINGS, threshold=threshold / 100)
+
+
+def _thrush_settings(threshold):
+    return Settings(_THRUSH_SETTINGS, threshold=threshold / 100)
+
+
+class TseepDetector90(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Tseep Detector 0.0 90'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _tseep_settings(90)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class TseepDetector80(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Tseep Detector 0.0 80'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _tseep_settings(80)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class TseepDetector70(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Tseep Detector 0.0 70'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _tseep_settings(70)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class TseepDetector60(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Tseep Detector 0.0 60'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _tseep_settings(60)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class TseepDetector50(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Tseep Detector 0.0 50'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _tseep_settings(50)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class TseepDetector40(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Tseep Detector 0.0 40'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _tseep_settings(40)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
 class ThrushDetector(_Detector):
      
      
@@ -398,3 +482,69 @@ class ThrushDetector(_Detector):
     def __init__(self, sample_rate, listener, extra_thresholds=None):
         super().__init__(
             _THRUSH_SETTINGS, sample_rate, listener, extra_thresholds)
+
+
+class ThrushDetector90(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Thrush Detector 0.0 90'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _thrush_settings(90)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class ThrushDetector80(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Thrush Detector 0.0 80'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _thrush_settings(80)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class ThrushDetector70(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Thrush Detector 0.0 70'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _thrush_settings(70)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class ThrushDetector60(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Thrush Detector 0.0 60'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _thrush_settings(60)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class ThrushDetector50(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Thrush Detector 0.0 50'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _thrush_settings(50)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+    
+class ThrushDetector40(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Thrush Detector 0.0 40'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _thrush_settings(40)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)

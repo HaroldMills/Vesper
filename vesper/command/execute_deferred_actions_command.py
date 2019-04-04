@@ -11,8 +11,10 @@ import pytz
 
 from vesper.archive_paths import archive_paths
 from vesper.command.command import Command, CommandExecutionError
-from vesper.django.app.models import Clip, Job, Processor, RecordingChannel
+from vesper.django.app.models import (
+    AnnotationInfo, Clip, Job, Processor, RecordingChannel)
 import vesper.command.command_utils as command_utils
+import vesper.django.app.model_utils as model_utils
 import vesper.util.signal_utils as signal_utils
 
 
@@ -32,6 +34,7 @@ class ExecuteDeferredActionsCommand(Command):
         self._recording_channel_cache = {}
         self._job_cache = {}
         self._processor_cache = {}
+        self._annotation_info_cache = {}
     
     
     def execute(self, job_info):
@@ -132,10 +135,10 @@ class ExecuteDeferredActionsCommand(Command):
             'Created {} clips{}.'.format(num_clips, timing_text))
 
 
-    def _create_clip(self, clip):
+    def _create_clip(self, clip_info):
         
         (recording_channel_id, start_index, length, creation_time,
-         creating_job_id, creating_processor_id) = clip
+         creating_job_id, creating_processor_id, annotations) = clip_info
          
         channel, station, mic_output, sample_rate, start_time = \
             self._get_recording_channel_info(recording_channel_id)
@@ -147,7 +150,7 @@ class ExecuteDeferredActionsCommand(Command):
         job = self._get_job(creating_job_id)
         processor = self._get_processor(creating_processor_id)
          
-        return Clip.objects.create(
+        clip = Clip.objects.create(
             station=station,
             mic_output=mic_output,
             recording_channel=channel,
@@ -163,6 +166,46 @@ class ExecuteDeferredActionsCommand(Command):
             creating_processor=processor
         )
         
+        if annotations is not None:
+            
+            for name, value in annotations.items():
+                
+                annotation_info = self._get_annotation_info(name)
+                
+                model_utils.annotate_clip(
+                    clip, annotation_info, str(value),
+                    creation_time=creation_time, creating_user=None,
+                    creating_job=self._job, creating_processor=processor)
+
+
+    # TODO: The `_get_annotation_info` method and the code above that
+    # calls it were copied from the `detect_command` module. Consider
+    # refactoring so there is just one public copy of the code that is
+    # invoked from both places.
+    def _get_annotation_info(self, name):
+        
+        try:
+            return self._annotation_info_cache[name]
+        
+        except KeyError:
+            # cache miss
+            
+            try:
+                info = AnnotationInfo.objects.get(name=name)
+            
+            except AnnotationInfo.DoesNotExist:
+                
+                # For now, at least, we require that there already be an
+                # `AnnotationInfo` in the archive database for any
+                # annotation that a detector wants to create.
+                raise ValueError((
+                    'Annotation "{}" not found in archive database: '
+                    'please add it and try again.').format(name))
+                
+            else:
+                self._annotation_info_cache[name] = info
+                return info
+
         
     def _get_recording_channel_info(self, recording_channel_id):
 

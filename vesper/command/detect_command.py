@@ -14,7 +14,7 @@ from django.db import transaction
 from vesper.archive_paths import archive_paths
 from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import (
-    Clip, Job, Recording, RecordingChannel, Station)
+    AnnotationInfo, Clip, Job, Recording, RecordingChannel, Station)
 from vesper.old_bird.old_bird_detector_runner import OldBirdDetectorRunner
 from vesper.signal.wave_audio_file import WaveAudioFileReader
 from vesper.singletons import (
@@ -36,11 +36,11 @@ normally does but not actually run detectors.
 """
 
 
-_ARCHIVE_CLIPS = True
+_CREATE_CLIPS = True
 """
-`True` for normal operation, or `False` for command to not add detected
-clips to archive. Note that if `_RUN_DETECTORS` is `False` the value of
-this attribute is irrelevant.
+`True` for normal operation, or `False` for command to not create clips
+in archive. Note that if `_RUN_DETECTORS` is `False` the value of this
+attribute is irrelevant.
 """
 
 
@@ -725,6 +725,13 @@ def _create_detector(detector_model, recording, listener):
     return cls(recording.sample_rate, listener)
 
 
+class _ClipCreationError(Exception):
+    
+    def __init__(self, clip_string, wrapped_exception):
+        self.clip_string = clip_string
+        self.wrapped_exception = wrapped_exception
+        
+        
 class _DetectorListener:
     
     
@@ -758,22 +765,30 @@ class _DetectorListener:
         self._num_database_failures = 0
         self._num_file_failures = 0
         
+        self._annotation_info_cache = {}
+ 
 #         self._num_transactions = 0
 #         self._total_transactions_duration = 0
         
         
-    def process_clip(self, start_index, length, threshold=None):
+    # TODO: Add `annotations` arguments to other detector listeners'
+    # `process_clip` methods.
+    # TODO: Swap order of `threshold` and `annotations` arguments.
+    def process_clip(
+            self, start_index, length, threshold=None, annotations=None):
         
-        self._clips.append((start_index, length))
+        self._clips.append((start_index, length, annotations))
         self._num_clips += 1
         
         if len(self._clips) == _CLIP_BATCH_SIZE:
-            self._archive_clips(threshold)
+            self._create_clips(threshold)
         
         
-    def _archive_clips(self, threshold):
+    # TODO: Consider dropping threshold argument. It seems that we don't
+    # actually do anything with it, so its presence is a little confusing.
+    def _create_clips(self, threshold):
         
-        if not _ARCHIVE_CLIPS:
+        if not _CREATE_CLIPS:
             return
         
         # TODO: Find out exactly what database queries are
@@ -790,11 +805,11 @@ class _DetectorListener:
         
         if self._defer_clip_creation:
             
-            for start_index, length in self._clips:
+            for start_index, length, annotations in self._clips:
                 start_index += start_offset
                 clip = [
                     recording_channel.id, start_index, length, creation_time,
-                    self._job.id, detector_model.id]
+                    self._job.id, detector_model.id, annotations]
                 self._deferred_clips.append(clip)
                 
         else:
@@ -812,69 +827,82 @@ class _DetectorListener:
             
 #             trans_start_time = time.time()
             
-            failure_info = None
-            
-            with archive_lock.atomic(), transaction.atomic():
+            try:
                 
-                for start_index, length in self._clips:
+                with archive_lock.atomic(), transaction.atomic():
                     
-                    try:
-                    
-                        # Get clip start time as a `datetime`.
-                        start_index += start_offset
-                        start_delta = datetime.timedelta(
-                            seconds=start_index / sample_rate)
-                        start_time = self._recording.start_time + start_delta
-                         
-                        end_time = signal_utils.get_end_time(
-                            start_time, length, sample_rate)
-                     
-                        # It would be nice to use Django's
-                        # `bulk_create` here, but unfortunately that
-                        # won't automatically set clip IDs for us
-                        # except (as of this writing) if we're using
-                        # PostgreSQL.
-                        clip = Clip.objects.create(
-                            station=station,
-                            mic_output=mic_output,
-                            recording_channel=recording_channel,
-                            start_index=start_index,
-                            length=length,
-                            sample_rate=sample_rate,
-                            start_time=start_time,
-                            end_time=end_time,
-                            date=station.get_night(start_time),
-                            creation_time=creation_time,
-                            creating_user=None,
-                            creating_job=self._job,
-                            creating_processor=detector_model
-                        )
+                    for start_index, length, annotations in self._clips:
                         
-                        if create_clip_files:
+                        try:
+                        
+                            # Get clip start time as a `datetime`.
+                            start_index += start_offset
+                            start_delta = datetime.timedelta(
+                                seconds=start_index / sample_rate)
+                            start_time = \
+                                self._recording.start_time + start_delta
+                             
+                            end_time = signal_utils.get_end_time(
+                                start_time, length, sample_rate)
+                         
+                            # It would be nice to use Django's
+                            # `bulk_create` here, but unfortunately that
+                            # won't automatically set clip IDs for us
+                            # except (as of this writing) if we're using
+                            # PostgreSQL.
+                            clip = Clip.objects.create(
+                                station=station,
+                                mic_output=mic_output,
+                                recording_channel=recording_channel,
+                                start_index=start_index,
+                                length=length,
+                                sample_rate=sample_rate,
+                                start_time=start_time,
+                                end_time=end_time,
+                                date=station.get_night(start_time),
+                                creation_time=creation_time,
+                                creating_user=None,
+                                creating_job=self._job,
+                                creating_processor=detector_model
+                            )
                             
-                            # Save clip so we can create clip file
-                            # outside of transaction.
-                            clips.append(clip)
-                    
-                    except Exception as e:
-                        failure_info = (start_time, length, str(e))
-                        break
+                            if create_clip_files:
+                                
+                                # Save clip so we can create clip file
+                                # outside of transaction.
+                                clips.append(clip)
+                                
+                            if annotations is not None:
+                                
+                                for name, value in annotations.items():
+                                    
+                                    annotation_info = \
+                                        self._get_annotation_info(name)
+                                    
+                                    model_utils.annotate_clip(
+                                        clip, annotation_info, str(value),
+                                        creation_time=creation_time,
+                                        creating_user=None,
+                                        creating_job=self._job,
+                                        creating_processor=detector_model)
+                        
+                        except Exception as e:
+                            
+                            duration = signal_utils.get_duration(
+                                length, sample_rate)
+                                
+                            clip_string = Clip.get_string(
+                                station.name, mic_output.name,
+                                detector_model.name, start_time, duration)
+                
+                            raise _ClipCreationError(clip_string, e)
 
-#             trans_end_time = time.time()
-#             self._num_transactions += 1
-#             self._total_transactions_duration += \
-#                 trans_end_time - trans_start_time
+#                     trans_end_time = time.time()
+#                     self._num_transactions += 1
+#                     self._total_transactions_duration += \
+#                         trans_end_time - trans_start_time
             
-            if failure_info is not None:
-                # clip creation succeeded
-                
-                start_time, length, message = failure_info
-                
-                duration = signal_utils.get_duration(length, sample_rate)
-                    
-                clip_string = Clip.get_string(
-                    station.name, mic_output.name, detector_model.name,
-                    start_time, duration)
+            except _ClipCreationError as e:
                 
                 batch_size = len(self._clips)
                 self._num_database_failures += batch_size
@@ -886,25 +914,27 @@ class _DetectorListener:
                         batch_size)
                     
                 self._logger.error((
-                    '            Attempt to create database record for '
-                    'clip {} failed with message: {}. {} will be '
-                    'ignored.').format(clip_string, message, prefix))
+                    '            Attempt to create clip {} failed with '
+                    'message: {} {} will be ignored.').format(
+                        clip_string, str(e.wrapped_exception), prefix))
 
-            elif create_clip_files:
+            else:
                 # clip creation succeeded
                 
-                for clip in clips:
-                    
-                    try:
-                        self._clip_manager.create_audio_file(clip)
+                if create_clip_files:
+                
+                    for clip in clips:
                         
-                    except Exception as e:
-                        self._num_file_failures += 1
-                        self._logger.error((
-                            '            Attempt to create audio file '
-                            'for clip {} failed with message: {}. Clip '
-                            'database record was still created.').format(
-                                str(clip), str(e)))
+                        try:
+                            self._clip_manager.create_audio_file(clip)
+                            
+                        except Exception as e:
+                            self._num_file_failures += 1
+                            self._logger.error((
+                                '            Attempt to create audio file '
+                                'for clip {} failed with message: {} Clip '
+                                'database record was still created.').format(
+                                    str(clip), str(e)))
                             
         self._clips = []
         
@@ -913,10 +943,35 @@ class _DetectorListener:
 #                 self._num_clips, self._detector_model.name))
 
 
+    def _get_annotation_info(self, name):
+        
+        try:
+            return self._annotation_info_cache[name]
+        
+        except KeyError:
+            # cache miss
+            
+            try:
+                info = AnnotationInfo.objects.get(name=name)
+            
+            except AnnotationInfo.DoesNotExist:
+                
+                # For now, at least, we require that there already be an
+                # `AnnotationInfo` in the archive database for any
+                # annotation that a detector wants to create.
+                raise ValueError((
+                    'Annotation "{}" not found in archive database: '
+                    'please add it and try again.').format(name))
+                
+            else:
+                self._annotation_info_cache[name] = info
+                return info
+
+        
     def complete_processing(self, threshold=None):
         
-        # Archive remaining clips.
-        self._archive_clips(threshold)
+        # Create remaining clips.
+        self._create_clips(threshold)
         
         clips_text = text_utils.create_count_text(self._num_clips, 'clip')
         
@@ -931,14 +986,13 @@ class _DetectorListener:
         elif self._num_database_failures == 0 and self._num_file_failures == 0:
             
             self._logger.info((
-                '        Archived {} from detector "{}".').format(
+                '        Created {} from detector "{}".').format(
                     clips_text, self._detector_model.name))
             
         else:
             
             db_failures_text = text_utils.create_count_text(
-                self._num_database_failures,
-                'database record creation failure')
+                self._num_database_failures, 'clip creation failure')
             
             if self._create_clip_files:
                 
