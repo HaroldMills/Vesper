@@ -45,7 +45,7 @@ def main():
     show_station_nights(retained_station_nights)
     
     # Be careful about uncommenting the following line!
-    delete_recordings(retained_station_nights)
+    # delete_recordings(retained_station_nights)
         
     
 def get_night_sets():
