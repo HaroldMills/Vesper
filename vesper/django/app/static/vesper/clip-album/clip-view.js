@@ -621,6 +621,18 @@ export class ClipView {
 
 			}
 
+            if (s.detectorScoreIncluded && clip.annotations !== null) {
+
+                const annotation = clip.annotations['Detector Score'];
+
+                if (annotation !== undefined) {
+                    const score =
+                        Math.round(parseFloat(annotation).toString());
+                    labelParts.push(score);
+                }
+
+            }
+
 			this.label.textContent =
 				(labelParts.length !== 0) ? labelParts.join(' ') : ''
 
