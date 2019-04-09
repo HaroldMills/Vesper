@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Export Clip Counts CSV File - Vesper</title>
+    <title>Export Old Bird Clip Counts CSV File - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -18,11 +18,12 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Export Clip Counts CSV File</h2>
+    <h2>Export Old Bird Clip Counts CSV File</h2>
 
     <p>
         Downloads a CSV file with clip counts for the specified detector,
-        station/mic, and range of dates.
+        station/mic, and range of dates. The counts are in a specific
+        format requested by Old Bird.
     </p>
 
     <!--
@@ -31,7 +32,7 @@
         http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
      -->
 
-    <form class="form" role="form" action="{% url 'export-clip-counts-csv-file' %}" method="post">
+    <form class="form" role="form" action="{% url 'old-bird-export-clip-counts-csv-file' %}" method="post">
 
         {{ form.detector|form_element }}
         {{ form.station_mic|form_element }}

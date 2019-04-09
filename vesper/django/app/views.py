@@ -44,7 +44,7 @@ from vesper.django.app.transfer_call_classifications_form import \
 from vesper.django.app.update_recording_file_paths_form import \
     UpdateRecordingFilePathsForm
 from vesper.old_bird.export_clip_counts_csv_file_form import \
-    ExportClipCountsCsvFileForm
+    ExportClipCountsCsvFileForm as OldBirdExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.singletons import (
     archive, clip_manager, job_manager, preference_manager, preset_manager)
@@ -52,7 +52,7 @@ from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.old_bird.export_clip_counts_csv_file_utils as \
-    export_clip_counts_csv_file_utils
+    old_bird_export_clip_counts_csv_file_utils
 import vesper.util.archive_lock as archive_lock
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
@@ -402,21 +402,21 @@ def _create_execute_deferred_actions_command_spec(form):
 
 @login_required
 @csrf_exempt
-def export_clip_counts_csv_file(request):
+def old_bird_export_clip_counts_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
-        form = ExportClipCountsCsvFileForm()
+        form = OldBirdExportClipCountsCsvFileForm()
 
     elif request.method == 'POST':
 
-        form = ExportClipCountsCsvFileForm(request.POST)
+        form = OldBirdExportClipCountsCsvFileForm(request.POST)
 
         if form.is_valid():
 
             # TODO: Create the CSV file with a command (i.e. in a separate
             # process) rather than in the view?
 
-            utils = export_clip_counts_csv_file_utils
+            utils = old_bird_export_clip_counts_csv_file_utils
 
             d = form.cleaned_data
 
@@ -439,7 +439,8 @@ def export_clip_counts_csv_file(request):
 
     context = _create_template_context(request, 'Export', form=form)
 
-    return render(request, 'vesper/export-clip-counts-csv-file.html', context)
+    return render(
+        request, 'vesper/old-bird-export-clip-counts-csv-file.html', context)
 
 
 @login_required

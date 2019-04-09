@@ -48,9 +48,9 @@ if not settings.ARCHIVE_READ_ONLY:
         path('execute-deferred-actions/', views.execute_deferred_actions,
              name='execute-deferred-actions'),
         
-        path('export-clip-counts-csv-file/',
-             views.export_clip_counts_csv_file,
-             name='export-clip-counts-csv-file'),
+        path('old-bird-export-clip-counts-csv-file/',
+             views.old_bird_export_clip_counts_csv_file,
+             name='old-bird-export-clip-counts-csv-file'),
         path('export-clips-csv-file/', views.export_clips_csv_file,
              name='export-clips-csv-file'),
         path('export-clip-audio-files/', views.export_clip_audio_files,
