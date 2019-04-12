@@ -40,7 +40,6 @@ _TSEEP_SETTINGS = Settings(
     input_chunk_size=3600,
     hop_size=50,
     threshold=.9,
-    min_separation=.2,
     initial_clip_padding=.1,
     clip_duration=.4
 )
@@ -50,7 +49,6 @@ _THRUSH_SETTINGS = Settings(
     input_chunk_size=3600,
     hop_size=50,
     threshold=.9,
-    min_separation=.3,
     initial_clip_padding=.2,
     clip_duration=.6
 )
@@ -110,7 +108,6 @@ class _Detector:
         self._input_buffer = None
         self._input_chunk_size = s2f(s.input_chunk_size, fs)
         self._thresholds = self._get_thresholds(extra_thresholds)
-        self._min_separation = s.min_separation
         self._clip_start_offset = -s2f(s.initial_clip_padding, fs)
         self._clip_length = s2f(s.clip_duration, fs)
         
@@ -240,7 +237,7 @@ class _Detector:
             self._score_file_writer.write(samples, scores)
          
         for threshold in self._thresholds:
-            peak_indices = self._find_peaks(scores, threshold)
+            peak_indices = signal_utils.find_peaks(scores, threshold)
             peak_scores = scores[peak_indices]
             self._notify_listener_of_clips(
                 peak_indices, peak_scores, input_length, threshold)
@@ -248,28 +245,6 @@ class _Detector:
         self._input_chunk_start_index += input_length
             
 
-    def _find_peaks(self, scores, threshold):
-        
-        if self._min_separation is None:
-            min_separation = None
-            
-        else:
-            
-            # Get min separation in hops.
-            hop_size = signal_utils.get_duration(
-                self._hop_size, self._classifier_sample_rate)
-            min_separation = self._settings.min_separation / hop_size
-        
-        peak_indices = signal_utils.find_peaks(
-            scores, threshold, min_separation)
-        
-#         print(
-#             'Found {} peaks in {} scores.'.format(
-#                 len(peak_indices), len(scores)))
-
-        return peak_indices
-        
-            
     def _notify_listener_of_clips(
             self, peak_indices, peak_scores, input_length, threshold):
         
