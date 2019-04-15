@@ -1,0 +1,5 @@
+This package contains scripts used to perform fully automatic
+evaluations of detectors on the recordings of the
+BirdVox-Full-Night dataset. Fully automatic evaluations are
+possible on this dataset since all NFCs in its recordings
+are marked by hand.

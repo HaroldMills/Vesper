@@ -1,0 +1,20 @@
+This package contains scripts used to perform partially automatic,
+partially manual evaluations of the MPG Ranch and BirdVoxDetect
+detectors in early 2019.
+
+For these evaluations, we:
+
+* Selected one random August night for each 2018 MPG Ranch station.
+* Ran BirdVoxDetect 0.1.a0 AT 05 on recordings.
+* Ran MPG Ranch Thrush Detector 0.0 40 and MPG Ranch Tseep Detector
+  0.0 40 on recordings.
+* Deleted detected clips with scores below a threshold that varies
+  with station-night. The threshold is at most 80, so that we retain
+  all clips with that threshold or more to ensure that we will be
+  able to plot precision vs. number of detected calls for threholds
+  80-100. We lower the threshold below 80 as needed to get at least
+  3000 clips for each station-night when possible. It is not always
+  possible, since for some station-nights there are fewer than 3000
+  detections.
+* Transferred call classifications from Old Bird Redux 1.1 clips to
+  new detector clips.
