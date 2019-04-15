@@ -47,6 +47,10 @@ _CALL_START_WINDOWS = {
     'Old Bird Tseep Detector Redux 1.1': (.100, .135),
     'PNF 2018 Baseline Tseep Detector 1.0': (.070, .105),
     'PNF Tseep Energy Detector 1.0': (.050, .115),
+    'BirdVoxDetect 0.1.a0 AT 02': (.280, .420),
+    'BirdVoxDetect 0.1.a0 AT 05': (.280, .420),
+    'MPG Ranch Thrush Detector 0.0 40': (.080, .440),
+    'MPG Ranch Tseep Detector 0.0 40': (.070, .280),
 }
 """
 Windows within clips where call starts occur.

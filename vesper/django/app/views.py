@@ -153,6 +153,9 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml.load('''
         
       - name: Delete Clip Audio Files
         url_name: delete-clip-audio-files
+        
+      # - name: Transfer Call Classifications
+      #   url_name: transfer-call-classifications
  
 ''')
 
