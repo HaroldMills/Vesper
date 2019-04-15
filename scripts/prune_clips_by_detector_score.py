@@ -3,8 +3,11 @@ Script that prunes clips from an archive according to detector scores.
 
 For each unique combination of detector, station, and date for which
 there are clips, the script deletes clips with scores that are less
-than the maximum score for which there are at least `DESIRED_CLIP_COUNT`
-clips with at least that score, or no clips if there is no such score.
+than a minimum score. The minimum score varies with the detector,
+station, and date. For a particular combination of those variables,
+the minimum score is the minimum of `MAX_MIN_SCORE` and the largest
+score for which there are at least `DESIRED_CLIP_COUNT` clips with
+at least that score, or zero if there is no such score.
 """
 
 from collections import defaultdict
@@ -50,7 +53,9 @@ START_SCORES = {
     'MPG Ranch Tseep Detector 0.0 40': 40,
 }
 
-DESIRED_CLIP_COUNT = 2000
+DESIRED_CLIP_COUNT = 3000
+
+MAX_MIN_SCORE = 80
 
 CLIP_IDS_QUERY = '''
 select
@@ -91,9 +96,10 @@ def main():
     clip_counts = get_cumulative_clip_counts(archive_dir_path)
     write_csv_file(archive_dir_path, clip_counts)
     
-#     print('Deleting clips...')
-#     min_scores = get_min_scores(clip_counts)
-#     prune_clips(archive_dir_path, min_scores)
+    print('Deleting clips...')
+    min_scores = get_min_scores(clip_counts)
+    # show_stats(clip_counts, min_scores)
+    prune_clips(archive_dir_path, min_scores)
         
 
 def get_cumulative_clip_counts(archive_dir_path):
@@ -152,9 +158,9 @@ def get_min_scores(clip_counts):
         for key, counts in clip_counts.items())
     
             
-def get_min_score(counts):
+def get_min_score(clip_counts):
     
-    if counts[0] <= DESIRED_CLIP_COUNT:
+    if clip_counts[0] <= DESIRED_CLIP_COUNT:
         # all counts are less than or equal to threshold
         
         return 0
@@ -169,11 +175,42 @@ def get_min_score(counts):
         # query parameter does not seem to work properly. No indication
         # that anything is amiss is given, but the query does not return
         # the desired results.
-        flipped_counts = np.flip(counts)
+        flipped_counts = np.flip(clip_counts)
         flipped_i = int(np.searchsorted(flipped_counts, DESIRED_CLIP_COUNT))
-        return len(counts) - 1 - flipped_i
+        min_score = len(clip_counts) - 1 - flipped_i
+        
+        # Always return a minimum score that is at most `MAX_MIN_SCORE`.
+        if min_score > MAX_MIN_SCORE:
+            print(
+                'changing min score from {} to {}...'.format(
+                    min_score, MAX_MIN_SCORE))
+            min_score = MAX_MIN_SCORE
             
+        return min_score
             
+        
+            
+def show_stats(clip_counts, min_scores):
+    
+    total_counts = defaultdict(int)
+    
+    keys = sorted(min_scores.keys())
+    
+    for key in keys:
+        
+        detector, station, date = key
+        score = min_scores[key]
+        count = clip_counts[key][score]
+        
+        print('{},{},{},{},{}'.format(detector, station, date, score, count))
+        
+        total_counts[key[0]] += count
+        
+    detectors = sorted(total_counts.keys())
+    for detector in detectors:
+        print('{},{}'.format(detector, total_counts[detector]))
+                
+                
 def prune_clips(archive_dir_path, min_scores):
                 
     # Set up Django.
