@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import scripts.detector_eval.utils as utils
+import scripts.detector_eval.auto.utils as utils
 
 
 def window(offset, duration):

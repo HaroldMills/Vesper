@@ -21,7 +21,7 @@ django.setup()
 from vesper.django.app.models import AnnotationInfo, Processor, User
 import vesper.django.app.model_utils as model_utils
 
-import scripts.detector_eval.utils as utils
+import scripts.detector_eval.auto.utils as utils
 
 
 # Set this `True` to skip actually annotating the detected calls.

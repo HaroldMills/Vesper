@@ -12,14 +12,14 @@ The inputs required by this script are:
 dataset includes the recordings as FLAC files: you can use Sox
 (http://sox.sourceforge.net/) or some other software to convert the FLAC
 files to WAV files. The directory containing the WAV files is specified
-by scripts.detector_eval.utils.RECORDINGS_DIR_PATH.
+by scripts.detector_eval.auto.utils.RECORDINGS_DIR_PATH.
 
 The outputs produced by this script are:
 
 1. A CSV file, named either "Tseep.csv" or "Thrush.csv", depending on the
 value of the DETECTOR_TYPE module attribute. Each line of the file contains
 data describing one clip produced by a detector. The directory of the file
-is specified by scripts.detector_eval.utils.WORKING_DIR_PATH.
+is specified by scripts.detector_eval.auto.utils.WORKING_DIR_PATH.
 """
 
 
@@ -28,8 +28,8 @@ import csv
 import math
 import time
 
-from scripts.detector_eval.wave_file_reader import WaveFileReader
-import scripts.detector_eval.utils as utils
+from scripts.detector_eval.auto.wave_file_reader import WaveFileReader
+import scripts.detector_eval.auto.utils as utils
 import vesper.old_bird.old_bird_detector_redux_1_1_mt as old_bird_redux
 import vesper.mpg_ranch.nfc_detector_0_0.detector as mpg_ranch
 
