@@ -69,7 +69,7 @@ export class TimePointOverlay extends AnnotatingOverlay {
     
     
     _executeClearTimePointCommand(env) {
-        this._setAnnotation(null);
+        this._setTimeAnnotation(null);
     }
 
 
