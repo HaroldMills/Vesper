@@ -6,6 +6,7 @@ wave file on which to run the detector.
 """
 
 
+import logging
 import sys
 
 from vesper.mpg_ranch.nfc_detector_0_0.detector import TseepDetector
@@ -16,6 +17,14 @@ READ_SIZE = 60
 
 
 def main():
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    
+    logging.info('starting test...')
     
     file_path = sys.argv[1]
     
@@ -43,6 +52,8 @@ def main():
         
     detector.complete_detection()
     
+    logging.info('test complete')
+    
     
 class Listener:
     
@@ -57,7 +68,7 @@ class Listener:
         minutes = int((start_time - hours * 3600) // 60)
         seconds = int(start_time % 60)
         duration = length / self._sample_rate
-        print(
+        logging.info(
             'detected clip: {}:{:02d}:{:02d} {} {}'.format(
                 hours, minutes, seconds, duration, annotations))
         
