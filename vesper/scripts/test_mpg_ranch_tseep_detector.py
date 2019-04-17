@@ -60,6 +60,10 @@ class Listener:
         print(
             'detected clip: {}:{:02d}:{:02d} {} {}'.format(
                 hours, minutes, seconds, duration, annotations))
+        
+        
+    def complete_processing(self):
+        pass
 
 
 if __name__ == '__main__':
