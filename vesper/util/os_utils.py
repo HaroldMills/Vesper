@@ -182,6 +182,8 @@ def copy_file(from_path, to_path):
     
 def read_file(path):
     
+    path = str(path)
+    
     try:
         with open(path, 'r') as file_:
             return file_.read()
