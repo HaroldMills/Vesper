@@ -63,8 +63,8 @@ def create_waveform():
 def compute_tensorflow_spectrogram(waveform, window_size, hop_size):
     
     waveform_ = tf.placeholder(tf.float32)
-    window_fn = functools.partial(tf.contrib.signal.hann_window, periodic=True)
-    stft = tf.contrib.signal.stft(
+    window_fn = functools.partial(tf.signal.hann_window, periodic=True)
+    stft = tf.signal.stft(
         waveform_, window_size, hop_size, window_fn=window_fn)
     gram = tf.real(stft * tf.conj(stft))
     

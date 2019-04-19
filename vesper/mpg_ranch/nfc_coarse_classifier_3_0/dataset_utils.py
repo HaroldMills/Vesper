@@ -146,7 +146,7 @@ class _Preprocessor:
         self.waveform_length = self.time_end_index - self.time_start_index
                 
         self.window_fn = functools.partial(
-            tf.contrib.signal.hann_window, periodic=True)
+            tf.signal.hann_window, periodic=True)
         
         augmentation_enabled = _is_data_augmentation_enabled(mode, s)
             
@@ -197,7 +197,7 @@ class _Preprocessor:
 
         # Compute STFTs.
         waveforms = tf.cast(waveforms, tf.float32)
-        stfts = tf.contrib.signal.stft(
+        stfts = tf.signal.stft(
             waveforms, self.window_size, self.hop_size,
             fft_length=self.dft_size, window_fn=self.window_fn)
         
