@@ -25,10 +25,13 @@ _INTERVALS = (
 _SCHEDULE = Schedule(_INTERVALS)
 
 _TRANSITIONS = tuple(itertools.chain(*(
-    (Transition(i.start, True), Transition(i.end, False)) for i in _INTERVALS)))
+    (Transition(i.start, True), Transition(i.end, False))
+    for i in _INTERVALS)))
+
 
 def _get_intervals(*args, **kwargs):
     return tuple(_SCHEDULE.get_intervals(*args, **kwargs))
+
 
 def _get_transitions(*args, **kwargs):
     return tuple(_SCHEDULE.get_transitions(*args, **kwargs))
@@ -372,19 +375,19 @@ def _dtize_interval(start, end):
 class _ScheduleListener:
     
     
-    def schedule_run_started(self, schedule, time, state):
+    def schedule_run_started(self, _, time, state):
         _show_event('schedule run started', time, state)
     
     
-    def schedule_state_changed(self, schedule, time, state):
+    def schedule_state_changed(self, _, time, state):
         _show_event('schedule state changed', time, state)
     
     
-    def schedule_run_stopped(self, schedule, time, state):
+    def schedule_run_stopped(self, _, time, state):
         _show_event('schedule run stopped', time, state)
     
     
-    def schedule_run_completed(self, schedule, time, state):
+    def schedule_run_completed(self, _, time, state):
         _show_event('schedule run completed', time, state)
     
     
@@ -563,11 +566,11 @@ class ScheduleCompilationTests(TestCase):
              
         )
          
-        compile = Schedule.compile_yaml
+        compile_ = Schedule.compile_yaml
         context = {'time_zone': 'US/Eastern'}
          
         for spec in cases:
-            self._assert_raises(ValueError, compile, spec, **context)
+            self._assert_raises(ValueError, compile_, spec, **context)
          
          
     def test_interval_schedule_compilation_context_errors(self):
@@ -578,7 +581,7 @@ class ScheduleCompilationTests(TestCase):
             {'lon': -76.5, 'time_zone': 'US/Eastern'}
         )
          
-        compile = Schedule.compile_yaml
+        compile_ = Schedule.compile_yaml
          
         spec = '''
             interval:
@@ -587,7 +590,7 @@ class ScheduleCompilationTests(TestCase):
         '''
  
         for context in cases:
-            self._assert_raises(ValueError, compile, spec, **context)
+            self._assert_raises(ValueError, compile_, spec, **context)
          
          
     def test_intervals_schedule_compilation(self):
@@ -1008,11 +1011,11 @@ class ScheduleCompilationTests(TestCase):
              
         )
          
-        compile = Schedule.compile_yaml
+        compile_ = Schedule.compile_yaml
         context = {'time_zone': 'US/Eastern'}
          
         for spec in cases:
-            self._assert_raises(ValueError, compile, spec, **context)
+            self._assert_raises(ValueError, compile_, spec, **context)
          
          
     def test_daily_schedule_compilation_context_errors(self):
@@ -1046,11 +1049,11 @@ class ScheduleCompilationTests(TestCase):
             {'lon': -76.5, 'time_zone': 'US/Eastern'}
         )
          
-        compile = Schedule.compile_yaml
+        compile_ = Schedule.compile_yaml
          
         for spec in specs:
             for context in contexts:
-                self._assert_raises(ValueError, compile, spec, **context)
+                self._assert_raises(ValueError, compile_, spec, **context)
          
          
     def test_compile_union_schedule(self):

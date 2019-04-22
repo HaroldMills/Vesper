@@ -540,8 +540,8 @@ _ONE_DAY = datetime.timedelta(days=1)
 
 def _compile_schedule(spec, context):
     
-    for compile in _SCHEDULE_COMPILER_FUNCTIONS:
-        schedule = compile(spec, context)
+    for compile_ in _SCHEDULE_COMPILER_FUNCTIONS:
+        schedule = compile_(spec, context)
         if schedule is not None:
             return schedule
             
@@ -628,7 +628,8 @@ def _compile_date_time(dt, context, dt_name):
             
         else:
             _check_context_attribute(context.lat, 'latitude', dt_name, dt_text)
-            _check_context_attribute(context.lon, 'longitude', dt_name, dt_text)
+            _check_context_attribute(
+                context.lon, 'longitude', dt_name, dt_text)
             return dt.resolve(context.lat, context.lon)
         
     else:
@@ -649,7 +650,7 @@ def _check_context_attribute(value, name, dt_name, dt_text=None):
         if dt_text is None:
             suffix = ''
         else:
-            suffix =  ' "{}"'.format(dt_text)
+            suffix = ' "{}"'.format(dt_text)
             
         raise ValueError(
             'No {} available to resolve interval {}{}.'.format(
@@ -659,7 +660,7 @@ def _check_context_attribute(value, name, dt_name, dt_text=None):
 def _compile_duration(duration):
     try:
         return _parse_duration(duration.split())
-    except:
+    except Exception:
         raise ValueError('Bad interval duration "{}".'.format(duration))
     
     
@@ -871,8 +872,6 @@ def _compile_daily_intervals(dates, time_intervals, context):
 
 def _compile_daily_intervals_aux(dates, time_intervals, context):
     
-    # TODO: Update this code after fixing issue #94.
-        
     combine = _combine_date_and_time
     
     for date in dates:
@@ -1011,14 +1010,14 @@ def _parse_time_24(s):
         _check_int_range(hour, 0, 23)
         _check_int_range(minute, 0, 59)
         _check_int_range(second, 0, 59)
-    except:
+    except Exception:
         return None
     
     return datetime.time(hour, minute, second)
     
     
-def _check_int_range(i, min, max):
-    if i < min or i > max:
+def _check_int_range(i, min_, max_):
+    if i < min_ or i > max_:
         raise ValueError()
 
 
@@ -1031,7 +1030,7 @@ def _parse_am_pm_time(s):
     
     try:
         hh, mm, ss = _parse_time_12(parts[0])
-    except:
+    except Exception:
         return None
     
     if hh == 12:
@@ -1116,7 +1115,7 @@ def _parse_offset_time(s):
         preposition, index = _parse_preposition(parts)
         event_name = _assemble_event_name(parts[index + 1:])
         offset = _parse_offset(parts[:index], preposition)
-    except:
+    except Exception:
         return None
     
     return _SolarEventTime(event_name, offset)
