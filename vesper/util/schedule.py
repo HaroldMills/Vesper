@@ -9,11 +9,11 @@ import re
 
 import jsonschema
 import pytz
-import yaml
 
 from vesper.util.notifier import Notifier
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.time_utils as time_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Consider creating a separate interval module, including intersection
@@ -50,7 +50,7 @@ class Schedule:
     def compile_yaml(spec, lat=None, lon=None, time_zone=None):
         
         try:
-            spec = yaml.load(spec)
+            spec = yaml_utils.load(spec)
         except Exception as e:
             raise ValueError(
                 'Could not load schedule YAML. Error message was: {}'.format(
@@ -451,7 +451,7 @@ about schedules.
 '''
 
 
-_INTERVAL_SCHEMA = yaml.load('''
+_INTERVAL_SCHEMA = yaml_utils.load('''
     type: object
     properties:
         interval:
@@ -466,7 +466,7 @@ _INTERVAL_SCHEMA = yaml.load('''
 ''')
 
 
-_INTERVALS_SCHEMA = yaml.load('''
+_INTERVALS_SCHEMA = yaml_utils.load('''
     type: object
     properties:
         intervals:
@@ -483,7 +483,7 @@ _INTERVALS_SCHEMA = yaml.load('''
 ''')
 
 
-_DAILY_SCHEMA = yaml.load('''
+_DAILY_SCHEMA = yaml_utils.load('''
     type: object
     properties:
         daily:
@@ -518,7 +518,7 @@ _DAILY_SCHEMA = yaml.load('''
 ''')
 
 
-_UNION_SCHEMA = yaml.load('''
+_UNION_SCHEMA = yaml_utils.load('''
     type: object
     properties:
         union:
