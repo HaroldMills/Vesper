@@ -5,7 +5,7 @@ import os
 import re
 import shutil
 
-import yaml
+import vesper.util.yaml_utils as yaml_utils
 
       
 def assert_directory(path):
@@ -211,7 +211,7 @@ def read_yaml_file(path):
     contents = read_file(path)
     
     try:
-        return yaml.load(contents)
+        return yaml_utils.load(contents)
     
     except Exception as e:
         raise OSError(

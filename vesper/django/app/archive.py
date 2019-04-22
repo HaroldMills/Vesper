@@ -3,10 +3,9 @@
 
 from collections import defaultdict
 
-import yaml
-
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Processor)
+import vesper.util.yaml_utils as yaml_utils
 
 
 _STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
@@ -477,7 +476,7 @@ def _get_string_annotation_constraint_dict_aux(
              'Cycle is: {}.').format(cycle))
         
     constraint = AnnotationConstraint.objects.get(name=constraint_name)
-    constraint = yaml.load(constraint.text)
+    constraint = yaml_utils.load(constraint.text)
     
     constraint['parents'] = _get_string_annotation_constraint_parents(
         constraint, visited_constraint_names)

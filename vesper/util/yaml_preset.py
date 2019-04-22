@@ -1,9 +1,8 @@
 """Module containing class `YamlPreset`."""
 
 
-import yaml
-
 from vesper.util.preset import Preset
+import vesper.util.yaml_utils as yaml_utils
 
 
 class YamlPreset(Preset):
@@ -16,9 +15,8 @@ class YamlPreset(Preset):
         
         # Parse YAML into a Python data structure.
         try:
-            data = yaml.load(data)
+            data = yaml_utils.load(data)
         except Exception as e:
             raise ValueError(str(e))
         
         super().__init__(name, data)
-        

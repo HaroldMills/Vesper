@@ -5,12 +5,12 @@ import unittest
 from django.db.models import Q
 from django.test import TestCase
 import pytz
-import yaml
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Device, DeviceModel, Recording, Station,
     StationDevice, StringAnnotation)
 import vesper.django.app.model_utils as model_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 def _dt(*args):
@@ -167,7 +167,7 @@ _CLIP_DURATION = 1
 
 def _populate_database_from_yaml(s):
     
-    d = yaml.load(s)
+    d = yaml_utils.load(s)
     
     num_stations = d.get('num_stations', 1)
     stations = []
@@ -177,7 +177,8 @@ def _populate_database_from_yaml(s):
         stations.append(station)
         
     model = DeviceModel.objects.create(
-        name='Recorder Model', type='Recorder', manufacturer='Nagra', model='X')
+        name='Recorder Model', type='Recorder', manufacturer='Nagra',
+        model='X')
     
     device = Device.objects.create(
         name='Recorder', model=model, serial_number='0')

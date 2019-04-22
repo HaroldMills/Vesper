@@ -5,7 +5,6 @@ import datetime
 import os.path
 
 import pytz
-import yaml
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo, StringAnnotation
@@ -15,6 +14,7 @@ import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.os_utils as os_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Write file in chunks to avoid accumulating an unreasonable
@@ -31,7 +31,7 @@ import vesper.util.os_utils as os_utils
 
 
 # TODO: Allow specification of table format YAML file via command line.
-_TABLE_FORMAT = yaml.load('''
+_TABLE_FORMAT = yaml_utils.load('''
 
 columns:
 
@@ -194,7 +194,7 @@ columns:
 ''')
 
      
-# _TABLE_FORMAT = yaml.load('''
+# _TABLE_FORMAT = yaml_utils.load('''
 #  
 # columns:
 #  

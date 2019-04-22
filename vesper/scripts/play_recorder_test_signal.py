@@ -29,10 +29,11 @@ import time
 
 import numpy as np
 import pyaudio
-import yaml
+
+import vesper.util.yaml_utils as yaml_utils
 
 
-_CONFIG = yaml.load('''
+_CONFIG = yaml_utils.load('''
     
     channel_signals:
     
@@ -81,8 +82,8 @@ def _create_audio_player():
         _create_signal_generator(channel_configs, sample_rate, _SAMPLE_DTYPE)
     
     return _AudioPlayer(
-        signal_generator, sample_rate, _SAMPLE_SIZE, _SAMPLE_DTYPE, buffer_size,
-        _TOTAL_BUFFER_SIZE)
+        signal_generator, sample_rate, _SAMPLE_SIZE, _SAMPLE_DTYPE,
+        buffer_size, _TOTAL_BUFFER_SIZE)
     
 
 def _create_signal_generator(channel_configs, sample_rate, sample_dtype):
@@ -328,4 +329,3 @@ class _Buffer:
         
 if __name__ == '__main__':
     _main()
-    

@@ -12,7 +12,6 @@ import math
 import os
 import shutil
 import time
-import yaml
 
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import MultipleLocator
@@ -31,6 +30,7 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
     dataset_utils
 import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.script_utils as script_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Tune hyperparameters.
@@ -541,7 +541,7 @@ def compute_spectrogram_clipping_settings(settings):
 
     # The float conversions in the following ensure that the assigned
     # type is Python's `float` instead of a NumPy type. The latter
-    # doesn't play nicely with `yaml.dump`.
+    # doesn't play nicely with `yaml_utils.dump`.
     min_value = float(min_value)
     max_value = float(max_value)
     
@@ -614,7 +614,7 @@ def compute_spectrogram_normalization_settings(settings):
         
     # The float conversions in the following ensure that the assigned
     # type is Python's `float` instead of a NumPy type. The latter
-    # doesn't play nicely with `yaml.dump`.
+    # doesn't play nicely with `yaml_utils.dump`.
     scale_factor = float(1 / std_dev)
     offset = float(-mean / std_dev)
     
@@ -852,7 +852,7 @@ class Classifier:
         
         # Save settings.
         settings = self.settings.__dict__
-        text = yaml.dump(settings, default_flow_style=False)
+        text = yaml_utils.dump(settings, default_flow_style=False)
         file_path = dir_path / classifier_utils.SETTINGS_FILE_NAME
         file_path.write_text(text)
                     
@@ -1140,7 +1140,7 @@ def find_classification_threshold(stats, min_recall):
     
     # The float conversion in the following ensures that the assigned
     # type is Python's `float` instead of a NumPy type. The latter
-    # doesn't play nicely with `yaml.dump`.
+    # doesn't play nicely with `yaml_utils.dump`.
     threshold = float(stats.threshold[i])
     
 #     print('recalls', stats.recall)

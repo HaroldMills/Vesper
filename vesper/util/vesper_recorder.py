@@ -12,11 +12,11 @@ import wave
 
 import pyaudio
 import pytz
-import yaml
 
 from vesper.util.audio_recorder import AudioRecorder, AudioRecorderListener
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
+import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Review threads involved in recording (schedule, recorder, and server),
@@ -186,7 +186,7 @@ def _add_file_logging(home_dir_path):
 def _parse_config_file(file_path, home_dir_path):
     
     with open(file_path) as f:
-        config = yaml.load(f)
+        config = yaml_utils.load(f)
         
     station_name = config.get('station', _DEFAULT_STATION_NAME)
     
@@ -380,7 +380,8 @@ class _Logger(AudioRecorderListener):
                 _logger.error((
                     'Recorder input overflow: {:.3f} seconds of zero samples '
                     'were substituted for lost input samples.').format(
-                        self._num_recorder_overflow_frames / self._sample_rate))
+                        self._num_recorder_overflow_frames / self._sample_rate)
+                )
                     
                 self._num_recorder_overflow_frames = 0
                     
@@ -762,4 +763,3 @@ def _create_table_row(items, tag_letter='d'):
     
 def _create_table_item(item, tag_letter):
     return '    <t{}>{}</t{}>\n'.format(tag_letter, item, tag_letter)
-    

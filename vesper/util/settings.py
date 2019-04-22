@@ -1,10 +1,9 @@
 """Module containing class `Settings`."""
 
 
-import yaml
-
 from vesper.util.bunch import Bunch
 import vesper.util.os_utils as os_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 class Settings(Bunch):
@@ -51,7 +50,7 @@ class Settings(Bunch):
         """Creates a settings object from a YAML string."""
         
         try:
-            d = yaml.load(s)
+            d = yaml_utils.load(s)
             
         except Exception as e:
             raise ValueError(

@@ -1,11 +1,10 @@
 from pathlib import Path
 
-import yaml
-
 from vesper.tests.test_case import TestCase
 from vesper.util.settings import Settings
 import vesper.tests.test_utils as test_utils
 import vesper.util.os_utils as os_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 _DATA_DIR_PATH = Path(test_utils.get_test_data_dir_path(__file__))
@@ -37,7 +36,7 @@ class SettingsTests(TestCase):
         
     def test_create_from_dict(self):
         contents = os_utils.read_file(_SETTINGS_FILE_PATH)
-        d = yaml.load(contents)
+        d = yaml_utils.load(contents)
         settings = Settings.create_from_dict(d)
         self._check_settings(settings)
         

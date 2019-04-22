@@ -6,7 +6,6 @@ import datetime
 import logging
 
 from django.db import transaction
-import yaml
 
 from vesper.command.command import CommandSyntaxError
 from vesper.django.app.models import (
@@ -15,6 +14,7 @@ from vesper.django.app.models import (
     DeviceOutput, Job, Processor, Station, StationDevice)
 import vesper.command.command_utils as command_utils
 import vesper.util.time_utils as time_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Allow omission of device name, in which case it is automatically
@@ -392,7 +392,7 @@ class ArchiveDataImporter:
                     'Adding annotation constraint "{}"...'.format(name))
                 
                 description = data.get('description', '')
-                text = yaml.dump(data)
+                text = yaml_utils.dump(data)
                 creation_time = time_utils.get_utc_now()
                 creating_user = None
                 creating_job = Job.objects.get(id=job_info.job_id)

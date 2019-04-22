@@ -28,10 +28,10 @@ def dump(obj, dest=None, **kwargs):
 
 # The following uses the `YAML` class, which is new in version 0.15 and
 # may ultimately be what we want to use in this module. Note that we
-# currently use the `default_flow_style` keyword argument to the
-# `yaml.dump` function in a couple of places, which is not supported by
-# the `yaml.dump` function below. We should either support the argument
-# or not use it.
+# currently pass a `default_flow_style` keyword argument to the
+# `yaml_utils.dump` function in a couple of places, which is not supported
+# by the `dump` function below. We should either support the argument or
+# not use it.
 #
 # from ruamel_yaml import YAML
 # 

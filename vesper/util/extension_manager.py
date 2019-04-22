@@ -3,7 +3,7 @@
 
 import importlib
 
-import yaml
+import vesper.util.yaml_utils as yaml_utils
 
 
 # Note that even though the `ExtensionManager` class is typically used as a
@@ -59,7 +59,7 @@ class ExtensionManager:
             
     def _load_extensions_if_needed(self):
         if self._extensions is None:
-            spec = yaml.load(self._extensions_spec)
+            spec = yaml_utils.load(self._extensions_spec)
             self._extensions = dict(
                 (type_name, _load_extension_classes(module_class_names))
                 for type_name, module_class_names in spec.items())

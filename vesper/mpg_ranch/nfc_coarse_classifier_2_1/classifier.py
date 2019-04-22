@@ -16,7 +16,6 @@ same input.
 
 
 import resampy
-import yaml
 
 from vesper.command.annotator import Annotator
 from vesper.mpg_ranch.nfc_coarse_classifier_2_1.feature_computer import \
@@ -27,6 +26,7 @@ import vesper.django.app.model_utils as model_utils
 import vesper.mpg_ranch.nfc_coarse_classifier_2_1.classifier_utils as \
     classifier_utils
 import vesper.util.open_mp_utils as open_mp_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 class Classifier(Annotator):
@@ -97,7 +97,7 @@ class _Classifier:
     def _load_settings(self):
         path = classifier_utils.get_settings_file_path(self._clip_type)
         text = path.read_text()
-        d = yaml.load(text)
+        d = yaml_utils.load(text)
         return Settings.create_from_dict(d)
         
         

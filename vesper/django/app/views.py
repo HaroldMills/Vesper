@@ -16,7 +16,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 import numpy as np
-import yaml
 
 from vesper.django.app.adjust_clips_form import AdjustClipsForm
 from vesper.django.app.classify_form import ClassifyForm
@@ -56,6 +55,7 @@ import vesper.old_bird.export_clip_counts_csv_file_utils as \
 import vesper.util.archive_lock as archive_lock
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 class HttpError(Exception):
@@ -89,7 +89,7 @@ class HttpError(Exception):
 # Note that as of 2016-07-19, nested navbar dropdowns do not work.
 # The generated HTML looks right to me so the problem may be a
 # Bootstrap limitation.
-_DEFAULT_NAVBAR_DATA_READ_WRITE = yaml.load('''
+_DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
 
 - name: View
   dropdown:
@@ -161,7 +161,7 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml.load('''
 
 
 # Default navbar data for read-only archives.
-_DEFAULT_NAVBAR_DATA_READ_ONLY = yaml.load('''
+_DEFAULT_NAVBAR_DATA_READ_ONLY = yaml_utils.load('''
 
 - name: View
   dropdown:

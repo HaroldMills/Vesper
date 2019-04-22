@@ -2,7 +2,7 @@ from pathlib import Path
 import logging
 import os.path
 
-import yaml
+import vesper.util.yaml_utils as yaml_utils
 
 
 _PREFERENCE_FILE_NAME = 'Preferences.yaml'
@@ -126,7 +126,7 @@ def _load_preferences(dir_path):
         return {}
     
     try:
-        preferences = yaml.load(contents)
+        preferences = yaml_utils.load(contents)
     except Exception as e:
         logging.error((
             'YAML load failed for preferences file "{}". {} YAML load error '

@@ -23,7 +23,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import MultipleLocator
 import matplotlib.pyplot as plt
 import numpy as np
-import yaml
 
 from vesper.mpg_ranch.nfc_coarse_classifier_2_1.feature_computer import \
     FeatureComputer
@@ -36,6 +35,7 @@ import vesper.mpg_ranch.nfc_coarse_classifier_2_1.classifier_utils as \
     classifier_utils
 import vesper.util.numpy_utils as numpy_utils
 import vesper.util.open_mp_utils as open_mp_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Offer reproducible training option.
@@ -663,7 +663,7 @@ def save_classifier(model, settings, stats):
     model.save(str(path))
     
     settings = create_classifier_settings(settings, stats)
-    text = yaml.dump(settings, default_flow_style=False)
+    text = yaml_utils.dump(settings, default_flow_style=False)
     path = classifier_utils.get_settings_file_path(clip_type)
     path.write_text(text)
     

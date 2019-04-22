@@ -14,7 +14,6 @@ import logging
 import numpy as np
 import resampy
 import tensorflow as tf
-import yaml
 
 from vesper.command.annotator import Annotator
 from vesper.django.app.models import AnnotationInfo
@@ -27,6 +26,7 @@ import vesper.mpg_ranch.nfc_coarse_classifier_3_0.dataset_utils as \
     dataset_utils
 import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.signal_utils as signal_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 _EVALUATION_MODE_ENABLED = False
@@ -293,7 +293,7 @@ class _Classifier:
         path = classifier_utils.get_settings_file_path(self.clip_type)
         logging.info('Loading classifier settings from "{}"...'.format(path))
         text = path.read_text()
-        d = yaml.load(text)
+        d = yaml_utils.load(text)
         return Settings.create_from_dict(d)
         
         

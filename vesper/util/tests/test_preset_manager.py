@@ -1,9 +1,8 @@
-import yaml
-
 from vesper.tests.test_case import TestCase
 from vesper.util.preset import Preset
 from vesper.util.preset_manager import PresetManager
 import vesper.tests.test_utils as test_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 class _Preset(Preset):
@@ -28,7 +27,7 @@ class B(_Preset):
     extension_name = 'B'
     
     def __init__(self, name, data):
-        data = yaml.load(data)
+        data = yaml_utils.load(data)
         super().__init__(name, data)
         
         
@@ -120,4 +119,3 @@ class PresetManagerTests(TestCase):
         for type_name, path, expected in cases:
             preset = self.manager.get_preset(type_name, path)
             self.assertEqual(preset, expected)
-            

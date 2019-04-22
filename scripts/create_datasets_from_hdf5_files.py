@@ -11,10 +11,10 @@ import time
 import h5py
 import resampy
 import tensorflow as tf
-import yaml
 
 from vesper.util.bunch import Bunch
 import vesper.util.os_utils as os_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Support creating multiple datasets in one run.
@@ -23,7 +23,7 @@ import vesper.util.os_utils as os_utils
 
 DATASET_NAME_PREFIX = 'Thrush 100K'
 
-DATASET_CONFIGS = yaml.load('''
+DATASET_CONFIGS = yaml_utils.load('''
 
 - dataset_name_prefix: Thrush 20K
   detector_name: Thrush
@@ -541,7 +541,7 @@ def create_int64_feature(value):
 
 
 CREATE_DATASETS_TEST_CASES = [
-    Bunch(**case) for case in yaml.load('''
+    Bunch(**case) for case in yaml_utils.load('''
 
 - description: balanced inputs and datasets
   num_calls: 10
