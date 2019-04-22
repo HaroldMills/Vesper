@@ -173,4 +173,4 @@ def _create_file_path(file_name):
 
 def _create_samples(num_channels, length):
     samples = np.arange(length)
-    return np.vstack(samples + i * 1000 for i in range(num_channels))
+    return np.vstack([samples + i * 1000 for i in range(num_channels)])
