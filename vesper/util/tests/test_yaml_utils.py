@@ -32,3 +32,18 @@ class YamlUtilsTests(TestCase):
         
         x = yaml_utils.load('12:34:56')
         self.assertEqual(x, '12:34:56')
+        
+        
+#     def test_numpy_scalar_dump(self):
+#         
+#         """
+#         This test shows that you can't dump a NumPy scalar, since the
+#         dumper doesn't know how to represent its type. Perhaps we could
+#         tell it how to, or perhaps that would be more trouble than it's
+#         worth.
+#         """
+#         
+#         import numpy as np
+#         x = np.arange(3)
+#         s = yaml_utils.dump(x[1])
+#         self.assertEqual(s, '1')
