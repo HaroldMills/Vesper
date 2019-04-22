@@ -1,55 +1,55 @@
 """
-Deprecated YAML utility functions.
+YAML utility functions.
 
-Use of this module is deprecated since it modifies the behavior of the
-`yaml` module (in particular the `yaml.load` function) in a way that,
-while desirable for the purposes of some modules, may not be desirable
-for the purposes of others.
+According to the ruamel_yaml documentation (particularly
+https://yaml.readthedocs.io/en/stable/basicuse.html), the ruamel_yaml API
+is "still in the process of being fleshed out" in versions 0.15+. The code
+below was tested with version 0.15.46, so Vesper should pin ruamel_yaml
+to that version until the API stabilizes.
 """
 
 
-# TODO: Perhaps there is some way to modify YAML parsing for just one
-# invocation of `yaml.load`?
+import ruamel_yaml as yaml
+ 
+ 
+def load(source, **kwargs):
+    return yaml.safe_load(source, **kwargs)
+ 
+ 
+def dump(obj, dest=None, **kwargs):
+     
+    if dest is None:
+        return yaml.safe_dump(obj, **kwargs)
+     
+    else:
+        yaml.safe_dump(obj, dest, **kwargs)
+        return None
 
 
-# import dateutil.parser
-# import pytz
-# import yaml
+# The following uses the `YAML` class, which is new in version 0.15 and
+# may ultimately be what we want to use in this module. Note that we
+# currently use the `default_flow_style` keyword argument to the
+# `yaml.dump` function in a couple of places, which is not supported by
+# the `yaml.dump` function below. We should either support the argument
+# or not use it.
+#
+# from ruamel_yaml import YAML
 # 
 # 
-# def timestamp_constructor(loader, node):
-#     
-#     """
-#     Constructor for timestamps that uses `dateutil.parser.parse`.
-#     
-#     There are two problems with the default PyYAML timestamp constructor:
-#     
-#     1. It yields either a `datetime.date` object or a `datetime.datetime`
-#        object, depending on the parsed text. I would like for the constructor
-#        to always yield a `datetime.datetime` object.
-#        
-#     2. When it yields a `datetime.datetime` object, the object is always
-#        naive: any time zone information provided in the parsed string is
-#        ignored.
-#        
-#     These problems are resolved with this timestamp constructor. The
-#     constructor always returns a `datetime.datetime` object, and it
-#     returns a UTC time when the parsed text includes time zone information.
-#     The time zone of the UTC time is `pytz.utc`.
-#     """
-#     
-#     dt = dateutil.parser.parse(node.value)
-#     if dt.tzinfo is not None:
-#         dt = dt.astimezone(pytz.utc)
-#     return dt
-# 
-# 
-# yaml.add_constructor('tag:yaml.org,2002:timestamp', timestamp_constructor)
-# 
-# 
-# # We use this function rather than invoking `yaml.load` directly from
-# # other modules so that our timestamp constructor is used rather than
-# # the default.
-# def load(*args):
-#     return yaml.load(*args)
-    
+# def load(source):
+#     yaml = YAML()
+#     return yaml.load(source)
+#  
+#  
+# def dump(obj, dest=None):
+#      
+#     yaml = YAML()
+#      
+#     if dest is None:
+#         s = io.StringIO()
+#         yaml.dump(obj, s)
+#         return s.getvalue()
+#      
+#     else:
+#         yaml.dump(obj, dest)
+#         return None
