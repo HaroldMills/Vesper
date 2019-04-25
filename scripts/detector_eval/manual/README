@@ -18,3 +18,6 @@ For these evaluations, we:
   detections.
 * Transferred call classifications from Old Bird Redux 1.1 clips to
   new detector clips.
+* Coarse classified all detected clips manually.
+* Plotted precision vs. number of calls curves for the detectors
+  with the `plot_precision_vs_calls` script.
