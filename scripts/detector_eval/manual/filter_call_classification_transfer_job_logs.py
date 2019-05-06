@@ -11,10 +11,15 @@ as well as detected clips for them to be transferred to.
 from pathlib import Path
 
 
-ARCHIVE_DIR_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/MPG Ranch/2018/Part 1 Reduced Test')
+# ARCHIVE_DIR_PATH = Path(
+#     '/Users/harold/Desktop/NFC/Data/MPG Ranch/2018/Part 1 Reduced')
+# 
+# JOB_NUMS = [383, 384, 385, 386, 387, 388]
 
-JOB_NUMS = [383, 384, 385, 386, 387, 388]
+ARCHIVE_DIR_PATH = Path(
+    '/Users/harold/Desktop/NFC/Data/MPG Ranch/2018/Part 2 Reduced')
+
+JOB_NUMS = [318, 319, 320, 321]
 
 
 def main():
