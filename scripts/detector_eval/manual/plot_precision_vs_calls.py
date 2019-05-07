@@ -19,11 +19,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-# TODO: Classify noise clips as "Noise" rather than leaving them
-# unclassified so we can query for noise clips explicitly instead of
-# for total clip numbers.
-
-
 CREATE_MATPLOTLIB_PLOTS = True
 
 CREATE_BOKEH_PLOTS = False
@@ -34,35 +29,46 @@ DATABASE_FILE_NAME = 'Archive Database.sqlite'
 
 PLOTS_DIR_PATH = Path('/Users/harold/Desktop/Plots')
 
-PDF_PLOT_FILE_NAME = 'Detector Precision vs. Calls.pdf'
+MATPLOTLIB_PLOT_FILE_NAME = 'Detector Precision vs. Calls.pdf'
 
-STATION_NIGHT_PLOT_FILE_NAME_FORMAT = '{}_{}.html'
+BOKEH_PLOT_FILE_NAME_FORMAT = '{}_{}.html'
 
-OVERALL_PLOT_FILE_NAME = 'Overall.html'
+ALL_STATION_NIGHTS_PLOT_FILE_NAME = 'All Station-Nights.html'
 
-ARCHIVE_DETECTOR_NAMES = [
+DETECTOR_NAMES = [
     'MPG Ranch Tseep Detector 0.0 40',
     'MPG Ranch Thrush Detector 0.0 40',
     'BirdVoxDetect 0.1.a0 AT 02',
     'BirdVoxDetect 0.1.a0 AT 05'
 ]
 
-PLOT_DETECTOR_NAMES = {
-    'MPG Ranch Tseep Detector 0.0 40': 'MPG Ranch Tseep 0.0',
-    'MPG Ranch Thrush Detector 0.0 40': 'MPG Ranch Thrush 0.0',
-    'BirdVoxDetect 0.1.a0 AT 02': 'BirdVoxDetect 0.1.a0 AT',
-    'BirdVoxDetect 0.1.a0 AT 05': 'BirdVoxDetect 0.1.a0 AT'
-}
-
-DETECTOR_COMBINATIONS = {
-    'MPG Ranch Combined 0.0': ('MPG Ranch Tseep 0.0', 'MPG Ranch Thrush 0.0')
-}
-
-PLOT_LINE_COLORS = {
-    'MPG Ranch Tseep 0.0': 'blue',
-    'MPG Ranch Thrush 0.0': 'green',
-    'MPG Ranch Combined 0.0': 'red',
-    'BirdVoxDetect 0.1.a0 AT': 'black',
+PLOT_LINE_DATA = {
+    
+    'MPG Ranch Tseep 0.0': ('MPG Ranch Tseep Detector 0.0 40', 'blue'),
+    'MPG Ranch Thrush 0.0': ('MPG Ranch Thrush Detector 0.0 40', 'green'),
+    
+    # Combination of MPG Ranch Tseep and Thrush detectors. It is a little
+    # unfair to the detectors to sum their counts, since it effectively
+    # forces them to share a threshold that would otherwise be chosen
+    # independently for the different detectors to optimize their
+    # performance, but the summation yields a precision-calls curve that
+    # is more directly comparable to that of BirdVoxDetect.
+    'MPG Ranch Combined 0.0': (
+        ('MPG Ranch Tseep Detector 0.0 40',
+         'MPG Ranch Thrush Detector 0.0 40'), 'red'),
+    
+    # This accommodates the fact that we used two different thresholds
+    # when we ran BirdVoxDetect on a set of August, 2019 MPG Ranch
+    # recordings. We ran the detector with a threshold of 2 on some
+    # of the recordings, and with a threshold of 5 on the others. In
+    # a case like this, in which exactly one of two detectors was run
+    # on a given recording, summing counts from the two detectors for
+    # a recording yields the counts of whichever detector was run on
+    # that recording, since the counts for the detector that wasn't
+    # run are all zero and contribute nothing to the sum.
+    'BirdVoxDetect 0.1.a0 AT': (
+        ('BirdVoxDetect 0.1.a0 AT 02',
+         'BirdVoxDetect 0.1.a0 AT 05'), 'black'),
 }
 
 STATION_NIGHTS = '''
@@ -126,18 +132,9 @@ Zuri / 2018-08-03
 # Bear / 2018-08-20
 # '''
 
-
-CLASSIFICATION_ANNOTATION_NAME = 'Classification'
-
-SCORE_ANNOTATION_NAME = 'Detector Score'
-
-CALL_ANNOTATION_VALUE = 'Call%'
-
-NOISE_ANNOTATION_VALUE = 'Noise'
-
 NUM_SCORE_DECIMAL_PLACES = 4
 
-CALL_CLIPS_QUERY = '''
+QUERY_FORMAT = '''
 select
     cast({} * round(score.value, {}) as integer) as Score,
     count(*) as Clips
@@ -159,44 +156,17 @@ where
     processor.name = ? and
     station.name = ? and
     clip.date = ? and
-    score_info.name = ? and
-    classification_info.name = ? and
-    classification.value like 'Call%'
+    score_info.name = 'Detector Score' and
+    classification_info.name = 'Classification' and
+    classification.value {}
 group by Score;
-'''.format(10 ** NUM_SCORE_DECIMAL_PLACES, NUM_SCORE_DECIMAL_PLACES)
+'''
 
-ALL_CLIPS_QUERY = '''
-select
-    cast({} * round(score.value, {}) as integer) as Score,
-    count(*) as Clips
-from
-    vesper_clip as clip
-    inner join vesper_processor as processor
-        on clip.creating_processor_id = processor.id
-    inner join vesper_station as station
-        on clip.station_id = station.id
-    inner join vesper_string_annotation as score
-        on clip.id = score.clip_id
-    inner join vesper_annotation_info as score_info
-        on score.info_id = score_info.id
-where
-    processor.name = ? and
-    station.name = ? and
-    clip.date = ? and
-    score_info.name = ?
-group by Score;
-'''.format(10 ** NUM_SCORE_DECIMAL_PLACES, NUM_SCORE_DECIMAL_PLACES)
-"""
-Query that counts all clips by score.
+CALL_CLIPS_QUERY = QUERY_FORMAT.format(
+    10 ** NUM_SCORE_DECIMAL_PLACES, NUM_SCORE_DECIMAL_PLACES, "like 'Call%'")
 
-I originally set out to write a query that counted unclassified clips
-by score, but this proved difficult. The only query I was able to
-come up with was nested and very slow. I think this sort of experience
-is an argument for putting annotations in the clip table. This would
-make queries for clips that satisfy multiple annotation constraints
-straightforward, including queries for clips that are missing certain
-annotations.
-"""
+NOISE_CLIPS_QUERY = QUERY_FORMAT.format(
+    10 ** NUM_SCORE_DECIMAL_PLACES, NUM_SCORE_DECIMAL_PLACES, "= 'Noise'")
 
 
 def main():
@@ -221,7 +191,7 @@ def get_clip_counts():
     
     for station_name, date in get_station_nights():
         counts[(station_name, date)] = get_station_night_clip_counts(
-            station_name, date, ARCHIVE_DETECTOR_NAMES)
+            station_name, date, DETECTOR_NAMES)
         
     return counts
         
@@ -232,39 +202,20 @@ def get_station_nights():
 
 def get_station_night_clip_counts(station_name, date, detector_names):
     
-    result = {}
+    clip_counts = {}
     
     for detector_name in detector_names:
         
-        counts = get_station_night_clip_counts_aux(
-            station_name, date, detector_name)
+        values = (detector_name, station_name, date)
         
-        if counts is not None:
-            detector_name = PLOT_DETECTOR_NAMES[detector_name]
-            result[detector_name] = counts
+        call_counts = get_cumulative_clip_counts(CALL_CLIPS_QUERY, values)
+        noise_counts = get_cumulative_clip_counts(NOISE_CLIPS_QUERY, values)
+ 
+        clip_counts[detector_name] = (call_counts, noise_counts)
             
-    return result
+    return clip_counts
     
     
-def get_station_night_clip_counts_aux(station_name, date, detector_name):
-    
-    values = (detector_name, station_name, date, SCORE_ANNOTATION_NAME)
-    
-    total_counts = get_cumulative_clip_counts(ALL_CLIPS_QUERY, values)
-    
-    if total_counts[0] == 0:
-        # no clips for this detector, station, and date
-        
-        return None
-    
-    else:
-        
-        call_counts = get_cumulative_clip_counts(
-            CALL_CLIPS_QUERY, values + (CLASSIFICATION_ANNOTATION_NAME,))
-        
-        return call_counts, total_counts
-
-
 def get_cumulative_clip_counts(query, values):
     
     db_file_path = Path.cwd() / DATABASE_FILE_NAME
@@ -296,12 +247,12 @@ def create_matplotlib_plots(clip_counts):
     
     summed_clip_counts = sum_clip_counts(clip_counts)
     
-    file_path = PLOTS_DIR_PATH / PDF_PLOT_FILE_NAME
+    file_path = PLOTS_DIR_PATH / MATPLOTLIB_PLOT_FILE_NAME
     
     with PdfPages(file_path) as pdf:
         
         create_matplotlib_plot(
-            pdf, 'All Station / Nights', PLOT_LINE_COLORS, summed_clip_counts)
+            pdf, 'All Station-Nights', PLOT_LINE_DATA, summed_clip_counts)
         
         if CREATE_SEPARATE_STATION_NIGHT_PLOTS:
         
@@ -309,50 +260,48 @@ def create_matplotlib_plots(clip_counts):
                 
                 title = '{} / {}'.format(station_name, date)
                 counts = clip_counts[(station_name, date)]
-                create_matplotlib_plot(pdf, title, PLOT_LINE_COLORS, counts)
+                create_matplotlib_plot(pdf, title, PLOT_LINE_DATA, counts)
                 
  
 def sum_clip_counts(clip_counts):
     
-    detector_names = frozenset(PLOT_DETECTOR_NAMES.values())
-
     summed_clip_counts = {}
     
     for station_night_clip_counts in clip_counts.values():
         
-        for detector_name in detector_names:
+        for detector_name in DETECTOR_NAMES:
             
             try:
-                call_counts, total_counts = \
+                call_counts, noise_counts = \
                     station_night_clip_counts[detector_name]
             except KeyError:
                 continue
             
             try:
-                summed_call_counts, summed_total_counts = \
+                summed_call_counts, summed_noise_counts = \
                     summed_clip_counts[detector_name]
             except KeyError:
-                summed_call_counts, summed_total_counts = \
+                summed_call_counts, summed_noise_counts = \
                     (create_clip_counts_array(), create_clip_counts_array())
                 
             summed_clip_counts[detector_name] = (
                 summed_call_counts + call_counts,
-                summed_total_counts + total_counts)
+                summed_noise_counts + noise_counts)
         
     return summed_clip_counts
         
 
-def create_matplotlib_plot(pdf, title, line_colors, clip_counts):
+def create_matplotlib_plot(pdf, title, line_data, clip_counts):
     
     plt.figure(figsize=(6, 6))
     
     axes = plt.gca()
     
-    # Plot separate detector curves.
-    for detector_name, line_color in line_colors.items():
+    # Create plot lines.
+    for line_name, (detector_names, line_color) in line_data.items():
         create_matplotlib_plot_line(
-            axes, detector_name, line_color, clip_counts)
-           
+            axes, line_name, detector_names, line_color, clip_counts)
+
     # Set title and axis labels.
     plt.title(title)
     plt.xlabel('Calls')
@@ -377,26 +326,28 @@ def create_matplotlib_plot(pdf, title, line_colors, clip_counts):
     plt.close()
            
 
-def create_matplotlib_plot_line(axes, detector_name, line_color, clip_counts):
+def create_matplotlib_plot_line(
+        axes, line_name, detector_names, line_color, clip_counts):
     
-    data = get_plot_data(detector_name, clip_counts)
+    data = get_plot_data(detector_names, clip_counts)
     
     if data is not None:
         
         call_counts, precisions = data
         
         axes.plot(
-            call_counts, precisions, color=line_color, label=detector_name)
+            call_counts, precisions, color=line_color, label=line_name)
         
         
-def get_plot_data(detector_name, clip_counts):
+def get_plot_data(detector_names, clip_counts):
         
     try:
-        counts = get_plot_data_aux(detector_name, clip_counts)
+        call_counts, noise_counts = \
+            get_plot_line_clip_counts(detector_names, clip_counts)
     except ValueError:
         return None
             
-    call_counts, total_counts = counts
+    total_counts = call_counts + noise_counts
         
     if total_counts[0] == 0:
         # no clips for this detector
@@ -421,28 +372,46 @@ def get_plot_data(detector_name, clip_counts):
     return call_counts, precisions
        
 
-def get_plot_data_aux(detector_name, clip_counts):
+def get_plot_line_clip_counts(detector_names, clip_counts):
+    
+    if isinstance(detector_names, tuple):
+        # `detector_names` is a tuple of string detector names
+        
+        # Get list of (call_counts, noise_counts) count array pairs.
+        count_array_pairs = [
+            get_plot_line_clip_counts_aux(n, clip_counts)
+            for n in detector_names]
+        
+        # Separate call count and noise count arrays into separate tuples.
+        call_count_arrays, noise_count_arrays = zip(*count_array_pairs)
+        
+        # Sum call count arrays and noise count arrays.
+        call_counts = sum_arrays(call_count_arrays)
+        noise_counts = sum_arrays(noise_count_arrays)
+        
+        return (call_counts, noise_counts)
+    
+    else:
+        # `detector_names` is a single string detector name
+        
+        return get_plot_line_clip_counts_aux(detector_names, clip_counts)
+    
+    
+def get_plot_line_clip_counts_aux(detector_name, clip_counts):
     
     try:
         return clip_counts[detector_name]
     
     except KeyError:
-        
-        try:
-            detector_names = DETECTOR_COMBINATIONS[detector_name]
-            
-        except KeyError:
-            raise ValueError(
-                'Could not get plot data for detector "{}".'.format(
-                    detector_name))
-            
-        else:
-            counts = [
-                get_plot_data_aux(name, clip_counts)
-                for name in detector_names]
-            return np.stack(counts).sum(axis=0)
+        raise ValueError(
+            'Could not get clip counts for detector "{}".'.format(
+                detector_name))
         
         
+def sum_arrays(arrays):
+    return np.stack(arrays).sum(axis=0)
+
+
 def reduce_size(x):
     percent_size = 10 ** NUM_SCORE_DECIMAL_PLACES
     n = 99 * percent_size
@@ -456,22 +425,21 @@ def create_bokeh_plots(clip_counts):
     summed_clip_counts = sum_clip_counts(clip_counts)
     
     # Create plot for all station/nights.
-    file_path = PLOTS_DIR_PATH / OVERALL_PLOT_FILE_NAME
+    file_path = PLOTS_DIR_PATH / ALL_STATION_NIGHTS_PLOT_FILE_NAME
     create_bokeh_plot(
-        file_path, 'All Station / Nights', PLOT_LINE_COLORS,
-        summed_clip_counts)
+        file_path, 'All Station-Nights', PLOT_LINE_DATA, summed_clip_counts)
     
     if CREATE_SEPARATE_STATION_NIGHT_PLOTS:
         
         for station_name, date in get_station_nights():
             
-            file_path = create_station_night_plot_file_path(station_name, date)
+            file_path = create_bokeh_plot_file_path(station_name, date)
             title = '{} / {}'.format(station_name, date)
             counts = clip_counts[(station_name, date)]
-            create_bokeh_plot(file_path, title, PLOT_LINE_COLORS, counts)
+            create_bokeh_plot(file_path, title, PLOT_LINE_DATA, counts)
         
 
-def create_bokeh_plot(file_path, title, line_colors, clip_counts):
+def create_bokeh_plot(file_path, title, line_data, clip_counts):
 
     output_file(file_path)
     
@@ -480,8 +448,10 @@ def create_bokeh_plot(file_path, title, line_colors, clip_counts):
     
     p = figure(plot_width=700, plot_height=700, tools=tools)
     
-    for detector_name, line_color in line_colors.items():
-        create_bokeh_plot_line(p, detector_name, line_color, clip_counts)
+    # Create plot lines.
+    for line_name, (detector_names, line_color) in line_data.items():
+        create_bokeh_plot_line(
+            p, line_name, detector_names, line_color, clip_counts)
          
     p.title.text = title
     p.title.text_font_size = '12pt'
@@ -515,21 +485,22 @@ def create_bokeh_plot(file_path, title, line_colors, clip_counts):
     show(p)
         
 
-def create_bokeh_plot_line(p, detector_name, line_color, clip_counts):
+def create_bokeh_plot_line(
+        p, line_name, detector_names, line_color, clip_counts):
     
-    data = get_plot_data(detector_name, clip_counts)
+    data = get_plot_data(detector_names, clip_counts)
     
     if data is not None:
         
         call_counts, precisions = data
         
         p.line(
-            call_counts, precisions, legend=detector_name,
+            call_counts, precisions, legend=line_name,
             line_color=line_color, line_width=2)
           
               
-def create_station_night_plot_file_path(station_name, date):
-    file_name = STATION_NIGHT_PLOT_FILE_NAME_FORMAT.format(station_name, date)
+def create_bokeh_plot_file_path(station_name, date):
+    file_name = BOKEH_PLOT_FILE_NAME_FORMAT.format(station_name, date)
     return PLOTS_DIR_PATH / file_name
 
 
