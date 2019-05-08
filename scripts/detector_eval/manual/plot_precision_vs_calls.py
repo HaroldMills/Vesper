@@ -71,6 +71,17 @@ PLOT_LINE_DATA = {
          'BirdVoxDetect 0.1.a0 AT 05'), 'black'),
 }
 
+OLD_BIRD_DETECTOR_NAMES = [
+    'Old Bird Tseep Detector Redux 1.1',
+    'Old Bird Thrush Detector Redux 1.1'
+]
+
+OLD_BIRD_PLOT_DATA = {
+    'Old Bird Tseep Redux 1.1': ('Old Bird Tseep Detector Redux 1.1', 'blue'),
+    'Old Bird Thrush Redux 1.1':
+        ('Old Bird Thrush Detector Redux 1.1', 'green')
+}
+
 # Station-nights for 2018 MPG Ranch August archive, from output of
 # `scripts.detector_eval.manual.prune_recordings` script.
 STATION_NIGHTS = '''
@@ -125,7 +136,6 @@ Sula Ranger Station / 2018-08-10
 Teller / 2018-08-02
 Walnut / 2018-08-24
 Willow Mountain Lookout / 2018-08-16
-YVAS / 2018-08-14
 Zuri / 2018-08-03
 '''
 
@@ -226,54 +236,73 @@ CALL_CLIPS_QUERY = QUERY_FORMAT.format(
 NOISE_CLIPS_QUERY = QUERY_FORMAT.format(
     10 ** NUM_SCORE_DECIMAL_PLACES, NUM_SCORE_DECIMAL_PLACES, "= 'Noise'")
 
+OLD_BIRD_QUERY_FORMAT = '''
+select
+    count(*) as Clips
+from
+    vesper_clip as clip
+    inner join vesper_processor as processor
+        on clip.creating_processor_id = processor.id
+    inner join vesper_station as station
+        on clip.station_id = station.id
+    inner join vesper_string_annotation as classification
+        on clip.id = classification.clip_id
+    inner join vesper_annotation_info as classification_info
+        on classification.info_id = classification_info.id
+where
+    processor.name = ? and
+    station.name = ? and
+    clip.date = ? and
+    classification_info.name = 'Classification' and
+    classification.value {};
+'''
+
+OLD_BIRD_CALL_CLIPS_QUERY = OLD_BIRD_QUERY_FORMAT.format("like 'Call%'")
+
+OLD_BIRD_NOISE_CLIPS_QUERY = OLD_BIRD_QUERY_FORMAT.format("= 'Noise'")
+
 
 def main():
     
     print('Getting clip counts...')
     clip_counts = get_clip_counts()
+    old_bird_clip_counts = get_old_bird_clip_counts()
     
     if CREATE_MATPLOTLIB_PLOTS:
         print('Creating Matplotlib plots...')
-        create_matplotlib_plots(clip_counts)
+        create_matplotlib_plots(clip_counts, old_bird_clip_counts)
         
     if CREATE_BOKEH_PLOTS:
         print('Creating Bokeh plots...')
-        create_bokeh_plots(clip_counts)
+        create_bokeh_plots(clip_counts, old_bird_clip_counts)
         
     print('Done.')
         
         
 def get_clip_counts():
-    
-    counts = {}
-    
-    for station_name, date in get_station_nights():
-        counts[(station_name, date)] = get_station_night_clip_counts(
-            station_name, date, DETECTOR_NAMES)
-        
-    return counts
+    return dict(
+        (station_night, get_station_night_clip_counts(*station_night))
+        for station_night in get_station_nights())
         
         
 def get_station_nights():
-    return [s.split(' / ') for s in STATION_NIGHTS.strip().split('\n')]
+    return [tuple(s.split(' / ')) for s in STATION_NIGHTS.strip().split('\n')]
 
 
-def get_station_night_clip_counts(station_name, date, detector_names):
-    
-    clip_counts = {}
-    
-    for detector_name in detector_names:
-        
-        values = (detector_name, station_name, date)
-        
-        call_counts = get_cumulative_clip_counts(CALL_CLIPS_QUERY, values)
-        noise_counts = get_cumulative_clip_counts(NOISE_CLIPS_QUERY, values)
- 
-        clip_counts[detector_name] = (call_counts, noise_counts)
-            
-    return clip_counts
+def get_station_night_clip_counts(station_name, date):
+    get_counts = get_station_night_clip_counts_aux
+    return dict(
+        (detector_name, get_counts(detector_name, station_name, date))
+        for detector_name in DETECTOR_NAMES)
     
     
+def get_station_night_clip_counts_aux(detector_name, station_name, date):
+    values = (detector_name, station_name, date)
+    call_counts = get_cumulative_clip_counts(CALL_CLIPS_QUERY, values)
+    noise_counts = get_cumulative_clip_counts(NOISE_CLIPS_QUERY, values)
+    return call_counts, noise_counts
+
+
 def get_cumulative_clip_counts(query, values):
     
     db_file_path = Path.cwd() / DATABASE_FILE_NAME
@@ -301,24 +330,69 @@ def create_clip_counts_array():
     return np.zeros(length, dtype='int32')    
     
     
-def create_matplotlib_plots(clip_counts):
+def get_old_bird_clip_counts():
+    return dict(
+        (station_night, get_old_bird_station_night_clip_counts(*station_night))
+        for station_night in get_station_nights())
+
+
+def get_old_bird_station_night_clip_counts(station_name, date):
+    get_counts = get_old_bird_station_night_clip_counts_aux
+    return dict(
+        (detector_name, get_counts(detector_name, station_name, date))
+        for detector_name in OLD_BIRD_DETECTOR_NAMES)
+    
+    
+def get_old_bird_station_night_clip_counts_aux(
+        detector_name, station_name, date):
+    
+    get_count = get_old_bird_clip_count
+    
+    values = (detector_name, station_name, date)
+
+    call_count = get_count(OLD_BIRD_CALL_CLIPS_QUERY, values)
+    noise_count = get_count(OLD_BIRD_NOISE_CLIPS_QUERY, values)
+        
+    return call_count, noise_count
+
+
+def get_old_bird_clip_count(query, values):
+
+    db_file_path = Path.cwd() / DATABASE_FILE_NAME
+    connection = sqlite3.connect(str(db_file_path))
+    
+    with connection:
+        rows = connection.execute(query, values)
+        
+    count = list(rows)[0][0]
+        
+    connection.close()
+              
+    return count
+
+
+def create_matplotlib_plots(clip_counts, old_bird_clip_counts):
     
     summed_clip_counts = sum_clip_counts(clip_counts)
+    summed_old_bird_clip_counts = \
+        sum_old_bird_clip_counts(old_bird_clip_counts)
     
     file_path = PLOTS_DIR_PATH / MATPLOTLIB_PLOT_FILE_NAME
     
     with PdfPages(file_path) as pdf:
         
         create_matplotlib_plot(
-            pdf, 'All Station-Nights', PLOT_LINE_DATA, summed_clip_counts)
+            pdf, 'All Station-Nights', summed_clip_counts,
+            summed_old_bird_clip_counts)
         
         if CREATE_SEPARATE_STATION_NIGHT_PLOTS:
         
-            for station_name, date in get_station_nights():
+            for station_night in get_station_nights():
                 
-                title = '{} / {}'.format(station_name, date)
-                counts = clip_counts[(station_name, date)]
-                create_matplotlib_plot(pdf, title, PLOT_LINE_DATA, counts)
+                title = '{} / {}'.format(*station_night)
+                counts = clip_counts[station_night]
+                old_bird_counts = old_bird_clip_counts[station_night]
+                create_matplotlib_plot(pdf, title, counts, old_bird_counts)
                 
  
 def sum_clip_counts(clip_counts):
@@ -349,16 +423,43 @@ def sum_clip_counts(clip_counts):
     return summed_clip_counts
         
 
-def create_matplotlib_plot(pdf, title, line_data, clip_counts):
+def sum_old_bird_clip_counts(clip_counts):
+    
+    sum_clip_counts = sum_old_bird_clip_counts_aux
+    
+    return dict(
+        (detector_name, sum_clip_counts(detector_name, clip_counts))
+        for detector_name in OLD_BIRD_DETECTOR_NAMES)
+    
+    
+def sum_old_bird_clip_counts_aux(detector_name, clip_counts):
+    count_pairs = [v[detector_name] for v in clip_counts.values()]
+    call_counts, noise_counts = tuple(zip(*count_pairs))
+    return sum_counts(call_counts), sum_counts(noise_counts)
+
+
+def sum_counts(counts):
+    return np.array(counts).sum()
+
+
+def create_matplotlib_plot(pdf, title, clip_counts, old_bird_clip_counts):
     
     plt.figure(figsize=(6, 6))
     
     axes = plt.gca()
     
     # Create plot lines.
-    for line_name, (detector_names, line_color) in line_data.items():
+    for line_name, (detector_names, line_color) in PLOT_LINE_DATA.items():
         create_matplotlib_plot_line(
             axes, line_name, detector_names, line_color, clip_counts)
+        
+    # Create Old Bird markers.
+    for marker_name, (detector_name, marker_color) in \
+            OLD_BIRD_PLOT_DATA.items():
+        
+        create_matplotlib_plot_marker(
+            axes, marker_name, detector_name, marker_color,
+            old_bird_clip_counts)
 
     # Set title and axis labels.
     plt.title(title)
@@ -378,7 +479,8 @@ def create_matplotlib_plot(pdf, title, line_data, clip_counts):
     
     # Show legend.
     axes.legend(prop={'size': 8})
-    
+    # axes.legend(prop={'size': 8}, loc=(.04, .13))
+
     pdf.savefig()
     
     plt.close()
@@ -390,11 +492,8 @@ def create_matplotlib_plot_line(
     data = get_plot_data(detector_names, clip_counts)
     
     if data is not None:
-        
         call_counts, precisions = data
-        
-        axes.plot(
-            call_counts, precisions, color=line_color, label=line_name)
+        axes.plot(call_counts, precisions, color=line_color, label=line_name)
         
         
 def get_plot_data(detector_names, clip_counts):
@@ -478,26 +577,38 @@ def reduce_size(x):
     return np.concatenate((start, end))
     
 
-def create_bokeh_plots(clip_counts):
+def create_matplotlib_plot_marker(
+        axes, marker_name, detector_name, marker_color, old_bird_clip_counts):
+
+    call_count, noise_count = old_bird_clip_counts[detector_name]
+    precision = 100 * call_count / (call_count + noise_count)
+    axes.scatter(call_count, precision, c=marker_color, label=marker_name)
+    
+    
+def create_bokeh_plots(clip_counts, old_bird_clip_counts):
         
     summed_clip_counts = sum_clip_counts(clip_counts)
+    summed_old_bird_clip_counts = \
+        sum_old_bird_clip_counts(old_bird_clip_counts)
     
     # Create plot for all station/nights.
     file_path = PLOTS_DIR_PATH / ALL_STATION_NIGHTS_PLOT_FILE_NAME
     create_bokeh_plot(
-        file_path, 'All Station-Nights', PLOT_LINE_DATA, summed_clip_counts)
+        file_path, 'All Station-Nights', summed_clip_counts,
+        summed_old_bird_clip_counts)
     
     if CREATE_SEPARATE_STATION_NIGHT_PLOTS:
         
-        for station_name, date in get_station_nights():
+        for station_night in get_station_nights():
             
-            file_path = create_bokeh_plot_file_path(station_name, date)
-            title = '{} / {}'.format(station_name, date)
-            counts = clip_counts[(station_name, date)]
-            create_bokeh_plot(file_path, title, PLOT_LINE_DATA, counts)
+            file_path = create_bokeh_plot_file_path(*station_night)
+            title = '{} / {}'.format(*station_night)
+            counts = clip_counts[station_night]
+            old_bird_counts = old_bird_clip_counts[station_night]
+            create_bokeh_plot(file_path, title, counts, old_bird_counts)
         
 
-def create_bokeh_plot(file_path, title, line_data, clip_counts):
+def create_bokeh_plot(file_path, title, clip_counts, old_bird_clip_counts):
 
     output_file(file_path)
     
@@ -507,9 +618,16 @@ def create_bokeh_plot(file_path, title, line_data, clip_counts):
     p = figure(plot_width=700, plot_height=700, tools=tools)
     
     # Create plot lines.
-    for line_name, (detector_names, line_color) in line_data.items():
+    for line_name, (detector_names, line_color) in PLOT_LINE_DATA.items():
         create_bokeh_plot_line(
             p, line_name, detector_names, line_color, clip_counts)
+        
+    # Create Old Bird markers.
+    for marker_name, (detector_name, marker_color) in \
+            OLD_BIRD_PLOT_DATA.items():
+        
+        create_bokeh_plot_marker(
+            p, marker_name, detector_name, marker_color, old_bird_clip_counts)
          
     p.title.text = title
     p.title.text_font_size = '12pt'
@@ -557,6 +675,15 @@ def create_bokeh_plot_line(
             line_color=line_color, line_width=2)
           
               
+def create_bokeh_plot_marker(
+        p, marker_name, detector_name, marker_color, old_bird_clip_counts):
+    
+    call_count, noise_count = old_bird_clip_counts[detector_name]
+    precision = 100 * call_count / (call_count + noise_count)
+    p.circle(
+        call_count, precision, size=10, color=marker_color, legend=marker_name)
+
+    
 def create_bokeh_plot_file_path(station_name, date):
     file_name = BOKEH_PLOT_FILE_NAME_FORMAT.format(station_name, date)
     return PLOTS_DIR_PATH / file_name
