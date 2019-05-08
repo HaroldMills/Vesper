@@ -71,6 +71,8 @@ PLOT_LINE_DATA = {
          'BirdVoxDetect 0.1.a0 AT 05'), 'black'),
 }
 
+# Station-nights for 2018 MPG Ranch August archive, from output of
+# `scripts.detector_eval.manual.prune_recordings` script.
 STATION_NIGHTS = '''
 Angel / 2018-08-28
 Bear / 2018-08-20
@@ -130,6 +132,62 @@ Zuri / 2018-08-03
 # STATION_NIGHTS = '''
 # Angel / 2018-08-28
 # Bear / 2018-08-20
+# '''
+
+# Station-nights for 2018 MPG Ranch September archive, from output of
+# `scripts.detector_eval.manual.prune_recordings` script.
+# STATION_NIGHTS = '''
+# Angel / 2018-09-28
+# Bear / 2018-09-13
+# Bell Crossing / 2018-09-25
+# Bivory / 2018-09-14
+# CB Ranch / 2018-09-02
+# Coki / 2018-09-09
+# Cricket / 2018-09-17
+# Darby High School PC / 2018-09-29
+# Dashiell / 2018-09-22
+# Deer Mountain Lookout / 2018-09-11
+# DonnaRae / 2018-09-16
+# Dreamcatcher / 2018-09-13
+# Esmerelda / 2018-09-10
+# Evander / 2018-09-16
+# Florence High School / 2018-09-19
+# Grandpa's Pond / 2018-09-12
+# Heron Crossing / 2018-09-30
+# IBO Lucky Peak / 2018-09-28
+# IBO River / 2018-09-29
+# JJ / 2018-09-02
+# KBK / 2018-09-17
+# Kate / 2018-09-05
+# Lee Metcalf NWR / 2018-09-10
+# Lilo / 2018-09-05
+# Lost Trail / 2018-09-28
+# MPG North / 2018-09-25
+# MPG Ranch Floodplain / 2018-09-11
+# MPG Ranch Ridge / 2018-09-20
+# MPG Ranch Sheep Camp / 2018-09-21
+# MPG Ranch Subdivision / 2018-09-07
+# Max / 2018-09-04
+# Meadowlark / 2018-09-30
+# Mickey / 2018-09-26
+# Mitzi / 2018-09-09
+# Molly / 2018-09-30
+# Oxbow / 2018-09-18
+# Panda / 2018-09-23
+# Petey / 2018-09-13
+# Pocket Gopher / 2018-09-28
+# Sasquatch / 2018-09-04
+# Seeley High School / 2018-09-10
+# Sleeman / 2018-09-29
+# Slocum / 2018-09-05
+# St Mary Lookout / 2018-09-08
+# Sula Peak Lookout / 2018-09-10
+# Sula Ranger Station / 2018-09-04
+# Teller / 2018-09-16
+# Walnut / 2018-09-30
+# Willow Mountain Lookout / 2018-09-08
+# YVAS / 2018-09-23
+# Zuri / 2018-09-03
 # '''
 
 NUM_SCORE_DECIMAL_PLACES = 4
