@@ -254,6 +254,41 @@ CALL_CLIPS_QUERY = QUERY_FORMAT.format(
 NOISE_CLIPS_QUERY = QUERY_FORMAT.format(
     10 ** NUM_SCORE_DECIMAL_PLACES, NUM_SCORE_DECIMAL_PLACES, "= 'Noise'")
 
+# TODO: For each plot line, automatically plot to the lowest score for
+# which relevant clips were not pruned from the archive database. Note
+# that that score may vary with the plot line (detector(s) and
+# station-night). I believe it is safe to use for each combination of
+# detector, station, and night the lowest score that a clip for that
+# combination has in the archive database, and that that score can be
+# determined from the clip counts that we retrieve from the database.
+
+MIN_PLOT_LINE_SCORES = {
+    
+    # 46 for Part 1, 30 for Part 2, 46 for both
+    'BirdVoxDetect 0.1.a0 AT': 46
+    
+}
+
+DEFAULT_MIN_PLOT_LINE_SCORE = 80
+
+# This is a vestige of an effort to plot an upper bound line for
+# BirdVoxDetect that was longer than the exact line by lowering the
+# minimum plot line score and excluding stations for which we had
+# pruned clips with scores greater than or equal to the minimum.
+# I decided to stick to a shorter, exact line since I think it is
+# more informative, in spite of the fact that it's shorter. I'm
+# committing a version of this script with this code in place in
+# case I want to return to it in the future.
+EXCLUDED_STATION_NIGHTS = {}
+#     'BirdVoxDetect 0.1.a0 AT 05': frozenset([
+#         # ('DonnaRae', '2018-08-16'),           # 39
+#         # ('Heron Crossing', '2018-08-12'),     # 23
+#         # ('Meadowlark', '2018-08-20'),         # 28
+#         # ('Mickey', '2018-08-26'),             # 36
+#         # ('Petey', '2018-08-26'),              # 46
+#     ])
+# }
+
 OLD_BIRD_QUERY_FORMAT = '''
 select
     count(*) as Clips
@@ -451,26 +486,35 @@ def sum_clip_counts(clip_counts):
     
     summed_clip_counts = {}
     
-    for station_night_clip_counts in clip_counts.values():
+    for station_night, station_night_clip_counts in clip_counts.items():
         
         for detector_name in DETECTOR_NAMES:
             
-            try:
-                call_counts, noise_counts = \
-                    station_night_clip_counts[detector_name]
-            except KeyError:
-                continue
+            excluded_station_nights = \
+                EXCLUDED_STATION_NIGHTS.get(detector_name, [])
             
-            try:
-                summed_call_counts, summed_noise_counts = \
-                    summed_clip_counts[detector_name]
-            except KeyError:
-                summed_call_counts, summed_noise_counts = \
-                    (create_clip_counts_array(), create_clip_counts_array())
+            if station_night not in excluded_station_nights:
+            
+                try:
+                    call_counts, noise_counts = \
+                        station_night_clip_counts[detector_name]
+                except KeyError:
+                    continue
                 
-            summed_clip_counts[detector_name] = (
-                summed_call_counts + call_counts,
-                summed_noise_counts + noise_counts)
+                try:
+                    summed_call_counts, summed_noise_counts = \
+                        summed_clip_counts[detector_name]
+                except KeyError:
+                    summed_call_counts, summed_noise_counts = (
+                        create_clip_counts_array(), create_clip_counts_array())
+                    
+                summed_clip_counts[detector_name] = (
+                    summed_call_counts + call_counts,
+                    summed_noise_counts + noise_counts)
+                
+            else:
+                print(
+                    'excluding counts for ', (detector_name,) + station_night)
         
     return summed_clip_counts
         
@@ -541,14 +585,14 @@ def create_matplotlib_plot(pdf, title, clip_counts, old_bird_clip_counts):
 def create_matplotlib_plot_line(
         axes, line_name, detector_names, line_color, clip_counts):
     
-    data = get_plot_data(detector_names, clip_counts)
+    data = get_plot_line_data(line_name, detector_names, clip_counts)
     
     if data is not None:
         call_counts, precisions = data
         axes.plot(call_counts, precisions, color=line_color, label=line_name)
         
         
-def get_plot_data(detector_names, clip_counts):
+def get_plot_line_data(line_name, detector_names, clip_counts):
         
     try:
         call_counts, noise_counts = \
@@ -563,8 +607,8 @@ def get_plot_data(detector_names, clip_counts):
         
         return None
     
-    call_counts = reduce_size(call_counts)
-    total_counts = reduce_size(total_counts)
+    call_counts = reduce_size(line_name, call_counts)
+    total_counts = reduce_size(line_name, total_counts)
     
     # Trim counts as needed to avoid divides by zero in precision
     # computations.
@@ -621,12 +665,14 @@ def sum_arrays(arrays):
     return np.stack(arrays).sum(axis=0)
 
 
-def reduce_size(x):
+def reduce_size(line_name, clip_counts):
+    min_score = \
+        MIN_PLOT_LINE_SCORES.get(line_name, DEFAULT_MIN_PLOT_LINE_SCORE)
     percent_size = 10 ** NUM_SCORE_DECIMAL_PLACES
-    m = 80 * percent_size
+    m = min_score * percent_size
     n = 99 * percent_size
-    start = x[m:n:percent_size]
-    end = x[n:]
+    start = clip_counts[m:n:percent_size]
+    end = clip_counts[n:]
     return np.concatenate((start, end))
     
 
@@ -719,7 +765,7 @@ def create_bokeh_plot(file_path, title, clip_counts, old_bird_clip_counts):
 def create_bokeh_plot_line(
         p, line_name, detector_names, line_color, clip_counts):
     
-    data = get_plot_data(detector_names, clip_counts)
+    data = get_plot_line_data(line_name, detector_names, clip_counts)
     
     if data is not None:
         
