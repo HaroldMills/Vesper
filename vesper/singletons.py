@@ -36,6 +36,7 @@ Command:
 Detector:
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT02
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT05
+    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT05a
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT10
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT20
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT30
