@@ -49,6 +49,7 @@ CLIP_COUNTS_FILE_HEADER = ('Detector', 'Station', 'Date', 'Score', 'Clips')
 START_SCORES = {
     'BirdVoxDetect 0.1.a0 AT 02': 2,
     'BirdVoxDetect 0.1.a0 AT 05': 5,
+    'BirdVoxDetect 0.1.a0 AT 05a': 5,
     'MPG Ranch Thrush Detector 0.0 40': 40,
     'MPG Ranch Tseep Detector 0.0 40': 40,
 }
@@ -154,11 +155,11 @@ def write_csv_file(archive_dir_path, clip_counts):
         
 def get_min_scores(clip_counts):
     return dict(
-        (key, get_min_score(counts))
+        (key, get_min_score(counts, key))
         for key, counts in clip_counts.items())
     
             
-def get_min_score(clip_counts):
+def get_min_score(clip_counts, key):
     
     if clip_counts[0] <= DESIRED_CLIP_COUNT:
         # all counts are less than or equal to threshold
@@ -182,8 +183,8 @@ def get_min_score(clip_counts):
         # Always return a minimum score that is at most `MAX_MIN_SCORE`.
         if min_score > MAX_MIN_SCORE:
             print(
-                'changing min score from {} to {}...'.format(
-                    min_score, MAX_MIN_SCORE))
+                'changing min score from {} to {} for {}...'.format(
+                    min_score, MAX_MIN_SCORE, key))
             min_score = MAX_MIN_SCORE
             
         return min_score
@@ -240,10 +241,11 @@ def prune_clips(archive_dir_path, min_scores):
         print(
             'Deleting {} clips for {} / {} / {}...'.format(
                 len(clip_ids), *key))
-        with transaction.atomic():
-            for i in range(0, len(clip_ids), MAX_DELETE_CHUNK_SIZE):
-                ids = clip_ids[i:i + MAX_DELETE_CHUNK_SIZE]
-                Clip.objects.filter(id__in=ids).delete()
+        # Be careful about uncommenting the following!
+#         with transaction.atomic():
+#             for i in range(0, len(clip_ids), MAX_DELETE_CHUNK_SIZE):
+#                 ids = clip_ids[i:i + MAX_DELETE_CHUNK_SIZE]
+#                 Clip.objects.filter(id__in=ids).delete()
             
             
 if __name__ == '__main__':
