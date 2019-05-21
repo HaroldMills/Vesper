@@ -271,24 +271,6 @@ MIN_PLOT_LINE_SCORES = {
 
 DEFAULT_MIN_PLOT_LINE_SCORE = 80
 
-# This is a vestige of an effort to plot an upper bound line for
-# BirdVoxDetect that was longer than the exact line by lowering the
-# minimum plot line score and excluding stations for which we had
-# pruned clips with scores greater than or equal to the minimum.
-# I decided to stick to a shorter, exact line since I think it is
-# more informative, in spite of the fact that it's shorter. I'm
-# committing a version of this script with this code in place in
-# case I want to return to it in the future.
-EXCLUDED_STATION_NIGHTS = {}
-#     'BirdVoxDetect 0.1.a0 AT 05': frozenset([
-#         # ('DonnaRae', '2018-08-16'),           # 39
-#         # ('Heron Crossing', '2018-08-12'),     # 23
-#         # ('Meadowlark', '2018-08-20'),         # 28
-#         # ('Mickey', '2018-08-26'),             # 36
-#         # ('Petey', '2018-08-26'),              # 46
-#     ])
-# }
-
 OLD_BIRD_QUERY_FORMAT = '''
 select
     count(*) as Clips
@@ -486,36 +468,27 @@ def sum_clip_counts(clip_counts):
     
     summed_clip_counts = {}
     
-    for station_night, station_night_clip_counts in clip_counts.items():
+    for station_night_clip_counts in clip_counts.values():
         
         for detector_name in DETECTOR_NAMES:
             
-            excluded_station_nights = \
-                EXCLUDED_STATION_NIGHTS.get(detector_name, [])
+            try:
+                call_counts, noise_counts = \
+                    station_night_clip_counts[detector_name]
+            except KeyError:
+                continue
             
-            if station_night not in excluded_station_nights:
-            
-                try:
-                    call_counts, noise_counts = \
-                        station_night_clip_counts[detector_name]
-                except KeyError:
-                    continue
+            try:
+                summed_call_counts, summed_noise_counts = \
+                    summed_clip_counts[detector_name]
+            except KeyError:
+                summed_call_counts, summed_noise_counts = (
+                    create_clip_counts_array(), create_clip_counts_array())
                 
-                try:
-                    summed_call_counts, summed_noise_counts = \
-                        summed_clip_counts[detector_name]
-                except KeyError:
-                    summed_call_counts, summed_noise_counts = (
-                        create_clip_counts_array(), create_clip_counts_array())
-                    
-                summed_clip_counts[detector_name] = (
-                    summed_call_counts + call_counts,
-                    summed_noise_counts + noise_counts)
+            summed_clip_counts[detector_name] = (
+                summed_call_counts + call_counts,
+                summed_noise_counts + noise_counts)
                 
-            else:
-                print(
-                    'excluding counts for ', (detector_name,) + station_night)
-        
     return summed_clip_counts
         
 
