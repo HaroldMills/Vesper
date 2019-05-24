@@ -34,6 +34,25 @@ import ephem
 import pytz
 
 
+# TODO: Use the newer Skyfield package instead of the deprecated PyEphem
+# package for astronomical calculations.
+
+# TODO: Improve solar and lunar rise and set time calculations, which are
+# currently unreliable at higher latitudes. The USNO
+# (https://aa.usno.navy.mil/faq/docs/RST_defs.php) defines the rise and
+# set times of a body in terms of the altitude of its center. This
+# altitude is very well-behaved: at any location on earth it is a smooth,
+# quasi-periodic function with extrema roughly every 12 hours. So with
+# the right approach (i.e. computing in terms of the altitude function,
+# values of which can be obtained from Skyfield) I believe it should be
+# relatively straightforward to accurately compute rise and set times.
+
+# TODO: As part of overhauling this module, validate it by comparing
+# the rise and set times it provides with those of many USNO tables.
+# They should match exactly in the vast majority of cases, and never
+# differ by much.
+
+
 # We use the following since for some reason PyDev marks `ephem.Sun`
 # (but not `ephem.Moon`!) as undefined.
 _EPHEM_SUN = getattr(ephem, 'Sun')
@@ -46,6 +65,12 @@ _BODY_FACTORIES = {
     'Moon': ephem.Moon
 }
 
+# `ephem.Observer` horizons. These were chosen to make sunrise, sunset,
+# and the various dusk and dawn times computed with the
+# `ephem.Observer.next_rising` and `ephem.Observer.next_setting` methods
+# agree (as well as possible, at least, which turns out to be very well)
+# with those computed by the U.S. Naval Observatory at
+# https://aa.usno.navy.mil/data/docs/RS_OneYear.php.
 _RISE_SET_HORIZON = '-0:34'
 _CIVIL_HORIZON = '-6'
 _NAUTICAL_HORIZON = '-12'
@@ -189,3 +214,66 @@ def get_azimuth(body, lat, lon, time):
 def get_illumination(body, lat, lon, time):
     body = _create_body(body, lat, lon, time)
     return body.phase
+
+
+# The following was part of an interrupted effort to add new twilight
+# period measurements to the `vesper.mpg_ranch.clips_csv_file_exporter`
+# module. It is not complete, and should be replaced by new code when
+# this module is overhauled to use Skyfield instead of PyEphem.
+# Altitudes of the center of the sun at sunrise/sunset and civil, nautical,
+# and astronomical dawn/dusk, in degrees. The numbers are from
+# https://aa.usno.navy.mil/faq/docs/RST_defs.php.
+# _RISE_SET_ALTITUDE = -5 / 6    # -50 arcminutes
+# _CIVIL_ALTITUDE = -6
+# _NAUTICAL_ALTITUDE = -12
+# _ASTRONOMICAL_ALTITUDE = -18
+# 
+# _ONE_SECOND = datetime.timedelta(seconds=1)
+# 
+# 
+# def get_daylight_period(lat, lon, time):
+#     
+#     sun = _create_body('Sun', lat, lon, time)
+#     altitude = math.degrees(float(sun.alt))
+#     
+#     if altitude < _ASTRONOMICAL_ALTITUDE:
+#         return 'Night'
+#     
+#     elif altitude >= _RISE_SET_ALTITUDE:
+#         return 'Day'
+#     
+#     else:
+#         # twilight
+#         
+#         # We distinguish between morning and evening twilight periods
+#         # according to whether the sun's altitude is increasing or
+#         # decreasing, rather than by the time of day, since the latter
+#         # is unreliable at higher latitudes. Note, however, that at
+#         # some higher-latitude locations at some times of year there
+#         # may not be distinct morning and evening twilight periods on
+#         # a given day, but rather a single twilight period. For example,
+#         # during the northern winter the sun might rise above the
+#         # astronomical twilight altitude on a particular day but not
+#         # above the sunrise/sunset altitude, so that there is only a
+#         # single twilight period on that day rather than two, and no
+#         # day period. In such cases we continue to label part of the
+#         # (single) twilight period "Morning" and part "Evening", even
+#         # though this doesn't accord with our usual notions of those
+#         # terms. We anticipate that this software will be used almost
+#         # exclusively at latitudes and times of year when there are
+#         # two distinct twilight periods each day, alternating with
+#         # day and night periods, so we don't consider this to be much
+#         # of an issue.
+# #         future_sun = _create_body('Sun', lat, lon, time + _ONE_SECOND)
+# #         future_altitude = math.degrees(float(future_sun.alt))
+# #         altitude_change = future_altitude - altitude
+# #         prefix = 'Morning' if altitude_change > 0 else 'Evening'
+#         
+#         if altitude >= _CIVIL_ALTITUDE:
+#             return 'Civil Twilight'
+#         
+#         elif altitude >= _NAUTICAL_ALTITUDE:
+#             return 'Nautical Twilight'
+#         
+#         else:
+#             return 'Astronomical Twilight'
