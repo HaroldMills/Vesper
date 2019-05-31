@@ -1,4 +1,4 @@
-"""Plots spectrograms of a chirp resampled in various ways."""
+"""Plots spectrograms of a chirp resampled by various methods."""
 
 
 from pathlib import Path
@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import resampy
 
+import vesper.signal.resampling_utils as resampling_utils
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
@@ -17,8 +18,10 @@ PDF_DIR_PATH = Path('/Users/harold/Desktop/Audio Resampling Tests')
 
 
 def main():
-    test_resampling(22050, 24000)
+    test_resampling(22000, 24000)
     test_resampling(32000, 24000)
+    test_resampling(44000, 24000)
+    test_resampling(48000, 24000)
     
     
 def test_resampling(input_rate, output_rate):
@@ -32,6 +35,8 @@ def test_resampling(input_rate, output_rate):
         samples = create_test_signal(input_rate)
         
         plot_spectrogram(samples, input_rate, 'Test Input', pdf_file)
+        
+        test_resampling_utils(samples, input_rate, output_rate, pdf_file)
         
         for N in (10, 100, 1000):
             test_resample_poly(samples, input_rate, output_rate, N, pdf_file)
@@ -117,6 +122,7 @@ def plot_spectrogram(samples, sample_rate, title, pdf_file):
     plt.title(title)
     plt.xlabel('Time (s)')
     plt.ylabel('Frequency (Hz)')
+    # plt.ylim(0, 11000)
 
     pdf_file.savefig()
     
@@ -143,12 +149,26 @@ def plot_histogram(x):
     plt.show()
 
 
+def test_resampling_utils(samples, input_rate, output_rate, pdf_file):
+    
+    if output_rate != 24000:
+        raise ValueError(
+            'Sorry, but resampling_utils.resample only supports '
+            'resampling to 24000 Hz.')
+        
+    # Resample chirp.
+    samples = resampling_utils.resample_to_24000_hz(samples, input_rate)
+    
+    # Plot spectrogram of result.
+    plot_spectrogram(samples, output_rate, 'resampling_utils', pdf_file)
+    
+    
 def test_resample_poly(samples, input_rate, output_rate, N, pdf_file):
     
-    # Resample.
+    # Resample chirp.
     samples = resample_poly(samples, input_rate, output_rate, N)
     
-    # Plot spectrogram.
+    # Plot spectrogram of result.
     title = 'resample_poly N = {}'.format(N)
     plot_spectrogram(samples, output_rate, title, pdf_file)
 
@@ -177,9 +197,11 @@ def resample_poly(samples, input_rate, output_rate, N):
     
 def test_resampy(samples, input_rate, output_rate, filter_name, pdf_file):
     
+    # Resample chirp.
     samples = resampy.resample(
         samples, input_rate, output_rate, filter=filter_name)
     
+    # Plot spectrogram of result.
     title = 'Resampy {}'.format(filter_name)
     plot_spectrogram(samples, output_rate, title, pdf_file)
 
