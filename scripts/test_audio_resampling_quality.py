@@ -34,29 +34,76 @@ def test_resampling(input_rate, output_rate):
         
         samples = create_test_signal(input_rate)
         
+        show_stats('original', samples)
+        
         plot_spectrogram(samples, input_rate, 'Test Input', pdf_file)
         
         test_resampling_utils(samples, input_rate, output_rate, pdf_file)
         
         for N in (10, 100, 1000):
             test_resample_poly(samples, input_rate, output_rate, N, pdf_file)
-            
+             
         for filter_name in ('kaiser_best', 'kaiser_fast'):
             test_resampy(
                 samples, input_rate, output_rate, filter_name, pdf_file)
     
     
 def create_test_signal(sample_rate):
-    amplitude = 30000
-    start_freq = 0
-    end_freq = 11000
+    
+    amplitude = 15000
     duration = 5
     taper_duration = .05
-    return create_chirp(
+    
+    # Create sine.
+    freq = 8000
+    sine = create_sine(
+        sample_rate, np.float64, amplitude, freq, duration, taper_duration)
+    
+    # Create chirp.
+    start_freq = 0
+    end_freq = sample_rate / 2
+    chirp = create_chirp(
         sample_rate, np.float64, amplitude, start_freq, end_freq, duration,
         taper_duration)
     
+    # Sum.
+    samples = sine + chirp
     
+    # Scale to desired overall amplitude.
+    overall_amplitude = 30000
+    samples *= overall_amplitude / np.max(np.abs(samples))
+    
+    # Quantize to 16 bits.
+    samples = np.round(samples).astype('int16')
+    
+    return samples
+    
+    
+    
+def create_sine(
+        sample_rate, sample_dtype, amplitude, freq, duration, taper_duration):
+    
+    length = round(duration * sample_rate)
+    times = np.arange(length) / sample_rate
+    phases = 2 * np.pi * freq * times
+    sine = amplitude * np.sin(phases)
+    
+    taper_ends(sine, sample_rate, taper_duration)
+    
+    return sine.astype(sample_dtype)
+    
+    
+def taper_ends(samples, sample_rate, taper_duration):
+    
+    # Taper ends.
+    taper_length = int(round(taper_duration * sample_rate))
+    taper = np.arange(taper_length) / float(taper_length)
+    samples[:taper_length] *= taper
+    samples[-taper_length:] *= 1 - taper
+    
+    return samples
+
+
 def create_chirp(
         sample_rate, sample_dtype, amplitude, start_freq, end_freq, duration,
         taper_duration):
@@ -69,15 +116,24 @@ def create_chirp(
     phases = 2. * np.pi * freqs * times
     chirp = amplitude * np.sin(phases)
     
-    # Taper ends.
-    taper_length = int(round(taper_duration * sample_rate))
-    taper = np.arange(taper_length) / float(taper_length)
-    chirp[:taper_length] *= taper
-    chirp[-taper_length:] *= 1 - taper
+    taper_ends(chirp, sample_rate, taper_duration)
     
     return chirp.astype(sample_dtype)
-
-
+    
+    
+def show_stats(name, samples):
+    
+    n = len(samples)
+    
+    # Use double precision to compute mean squared sample to avoid overflow.
+    x = samples.astype('float64')
+    mean_squared = np.sqrt(np.sum(x * x) / n)
+    
+    print('{}: {} {} {} {} {}'.format(
+        name, n, samples.dtype, np.max(samples), np.min(samples),
+        mean_squared))
+    
+    
 def plot_spectrogram(samples, sample_rate, title, pdf_file):
     
     window_size_sec = .005
@@ -159,6 +215,8 @@ def test_resampling_utils(samples, input_rate, output_rate, pdf_file):
     # Resample chirp.
     samples = resampling_utils.resample_to_24000_hz(samples, input_rate)
     
+    show_stats('resampling_utils', samples)
+    
     # Plot spectrogram of result.
     plot_spectrogram(samples, output_rate, 'resampling_utils', pdf_file)
     
@@ -170,6 +228,7 @@ def test_resample_poly(samples, input_rate, output_rate, N, pdf_file):
     
     # Plot spectrogram of result.
     title = 'resample_poly N = {}'.format(N)
+    show_stats(title, samples)
     plot_spectrogram(samples, output_rate, title, pdf_file)
 
 
@@ -203,6 +262,7 @@ def test_resampy(samples, input_rate, output_rate, filter_name, pdf_file):
     
     # Plot spectrogram of result.
     title = 'Resampy {}'.format(filter_name)
+    show_stats(title, samples)
     plot_spectrogram(samples, output_rate, title, pdf_file)
 
 
