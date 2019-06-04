@@ -212,10 +212,20 @@ class _Detector:
         
         if self._classifier_sample_rate != self._input_sample_rate:
              
+            # start_time = time.time()
+            
             samples = resampy.resample(
                 samples, self._input_sample_rate, self._classifier_sample_rate,
                 filter='kaiser_fast')
             
+            # processing_time = time.time() - start_time
+            # input_duration = input_length / self._input_sample_rate
+            # rate = input_duration / processing_time
+            # print((
+            #     'Resampled {:.1f} seconds of input in {:.1f} seconds, '
+            #     'or {:.1f} times faster than real time.').format(
+            #         input_duration, processing_time, rate))
+
         self._waveforms = _get_analysis_records(
             samples, self._classifier_waveform_length, self._hop_size)
         
