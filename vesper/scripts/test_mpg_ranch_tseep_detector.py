@@ -8,8 +8,9 @@ wave file on which to run the detector.
 
 import datetime
 import sys
+import time
 
-from vesper.mpg_ranch.nfc_detector_0_0.detector import TseepDetector
+from vesper.mpg_ranch.nfc_detector_0_1.detector import TseepDetector
 from vesper.signal.wave_audio_file import WaveAudioFileReader
 
 
@@ -18,13 +19,20 @@ READ_SIZE = 60
 
 def main():
     
-    show_message('starting test...')
+    show_message('Starting test...')
+    
+    start_time = time.time()
     
     file_path = sys.argv[1]
-    
     reader = WaveAudioFileReader(file_path)
-    sample_rate = reader.sample_rate
+    
     length = reader.length
+    
+    sample_rate = reader.sample_rate
+    show_message('Input sample rate is {} hertz.'.format(sample_rate))
+
+    duration = length / sample_rate
+    show_message('Input duration is {:.1f} seconds.'.format(duration))
     
     listener = Listener(sample_rate)
     detector = TseepDetector(sample_rate, listener)
@@ -46,7 +54,14 @@ def main():
         
     detector.complete_detection()
     
-    show_message('test complete')
+    processing_time = time.time() - start_time
+    rate = duration / processing_time
+    show_message((
+        'Processed {:.1f} seconds of input in {:.1f} seconds, or {:.1f} '
+        'times faster than real time.').format(
+            duration, processing_time, rate))
+    
+    show_message('Test complete.')
     
     
 def show_message(message):
@@ -68,8 +83,8 @@ class Listener:
         minutes = int((start_time - hours * 3600) // 60)
         seconds = int(start_time % 60)
         duration = length / self._sample_rate
-        print(
-            'detected clip: {}:{:02d}:{:02d} {} {}'.format(
+        show_message(
+            'Detected clip: {}:{:02d}:{:02d} {} {}'.format(
                 hours, minutes, seconds, duration, annotations))
         
         
