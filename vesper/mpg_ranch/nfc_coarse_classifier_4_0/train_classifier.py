@@ -330,6 +330,8 @@ SETTINGS = {
     
     'Tseep 980K': Settings(BASE_TSEEP_SETTINGS, Settings(
         
+        dataset_name='Tseep 980K',
+        
         # These are ignored when `warm_start_enabled` is `False`.
         # They are for a `waveform_duration` of .190.
         spectrogram_clipping_min=1.5,
