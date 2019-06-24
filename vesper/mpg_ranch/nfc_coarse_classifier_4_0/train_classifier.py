@@ -19,13 +19,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
-from vesper.mpg_ranch.nfc_detector_0_2.dataset_utils import (
+from vesper.mpg_ranch.nfc_coarse_classifier_4_0.dataset_utils import (
     DATASET_MODE_EVALUATION, DATASET_MODE_TRAINING, DATASET_PART_TRAINING,
     DATASET_PART_VALIDATION)
 from vesper.util.binary_classification_stats import BinaryClassificationStats
 from vesper.util.settings import Settings
-import vesper.mpg_ranch.nfc_detector_0_2.classifier_utils as classifier_utils
-import vesper.mpg_ranch.nfc_detector_0_2.dataset_utils as dataset_utils
+import vesper.mpg_ranch.nfc_coarse_classifier_4_0.classifier_utils as \
+    classifier_utils
+import vesper.mpg_ranch.nfc_coarse_classifier_4_0.dataset_utils as \
+    dataset_utils
 import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.script_utils as script_utils
 import vesper.util.yaml_utils as yaml_utils
@@ -43,7 +45,8 @@ CLASSIFIER_NAME = 'Tseep 980K'
 BASE_DIR_PATH = Path('/Users/harold/Desktop')
 
 ML_DIR_PATH = \
-    BASE_DIR_PATH / 'NFC' / 'Data' / 'Vesper ML' / 'MPG Ranch Detector 0.2'
+    BASE_DIR_PATH / 'NFC' / 'Data' / 'Vesper ML' / \
+    'MPG Ranch Coarse Classifier 4.0'
 DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Tseep'
 MODELS_DIR_PATH = ML_DIR_PATH / 'Models' / 'Tseep'
 SAVED_MODELS_DIR_NAME = 'Saved Models'
