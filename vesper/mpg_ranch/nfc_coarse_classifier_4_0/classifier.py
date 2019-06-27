@@ -29,7 +29,8 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-_EVALUATION_MODE_ENABLED = False
+_EVALUATION_MODE_ENABLED = True
+_FN_THRESHOLD = .15
 
 
 '''
@@ -82,7 +83,7 @@ class Classifier(Annotator):
         
         if _EVALUATION_MODE_ENABLED:
             self._score_annotation_info = \
-                AnnotationInfo.objects.get(name='Score')
+                AnnotationInfo.objects.get(name='Detector Score')
         
         
     def annotate_clips(self, clips):
@@ -146,7 +147,7 @@ class Classifier(Annotator):
                     old_classification = self._get_annotation_value(clip)
                 
                     new_classification = self._get_new_classification(
-                        old_classification, auto_classification)
+                        old_classification, auto_classification, score)
                     
                     if new_classification is not None:
                         self._annotate(clip, new_classification)
@@ -163,7 +164,8 @@ class Classifier(Annotator):
         return num_clips_classified
 
         
-    def _get_new_classification(self, old_classification, auto_classification):
+    def _get_new_classification(
+            self, old_classification, auto_classification, score):
         
         old = old_classification
         auto = auto_classification
@@ -171,25 +173,20 @@ class Classifier(Annotator):
         if old is None:
             return None
         
-        elif old.startswith('Call') and auto == 'Noise':
+        elif old.startswith('Call') and auto == 'Noise' and \
+                score <= _FN_THRESHOLD:
             return 'FN' + old[len('Call'):]
             
-        elif old == 'Noise' and auto == 'Call':
-            return 'FP'
-            
-        elif old.startswith('XCall') and auto == 'Noise':
-            return 'XCallN' + old_classification[len('XCall'):]
-        
-        elif old.startswith('XCall') and auto == 'Call':
-            return 'XCallP' + old_classification[len('XCall'):]
-        
+#         elif old == 'Noise' and auto == 'Call':
+#             return 'FP'
+
         else:
             return None
 
 
     def _set_clip_score(self, clip, score):
         
-        value = '{:.3f}'.format(score)
+        value = '{:.3f}'.format(100 * score)
                     
         model_utils.annotate_clip(
             clip, self._score_annotation_info, value,
