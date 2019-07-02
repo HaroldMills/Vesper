@@ -40,7 +40,7 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Look at incorrectly classified clips and reclassify as needed.
 
 
-CLASSIFIER_NAME = 'Tseep 980K'
+CLASSIFIER_NAME = 'Tseep 900K'
 
 BASE_DIR_PATH = Path('/Users/harold/Desktop')
 
@@ -328,9 +328,25 @@ SETTINGS = {
 
     )),    
     
-    'Tseep 980K': Settings(BASE_TSEEP_SETTINGS, Settings(
+    'Tseep 900K': Settings(BASE_TSEEP_SETTINGS, Settings(
         
-        dataset_name='Tseep 980K',
+        dataset_name='Tseep 900K',
+        
+        # These are ignored when `warm_start_enabled` is `False`.
+        # They are for a `waveform_duration` of .190.
+        spectrogram_clipping_min=1.5,
+        spectrogram_clipping_max=23.799999237060547,
+        spectrogram_normalization_scale_factor=0.38021351017658594,
+        spectrogram_normalization_offset=-4.231800955405726,
+        
+        warm_start_enabled=False,
+        num_training_steps=20000
+
+    )),    
+    
+    'Tseep 940K': Settings(BASE_TSEEP_SETTINGS, Settings(
+        
+        dataset_name='Tseep 940K',
         
         # These are ignored when `warm_start_enabled` is `False`.
         # They are for a `waveform_duration` of .190.
