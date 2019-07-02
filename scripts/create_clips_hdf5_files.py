@@ -27,14 +27,14 @@ import vesper.django.app.model_utils as model_utils
 ARCHIVE_NAME = '2018 MPG Ranch Part 2'
 
 OUTPUT_DIR_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/Vesper ML/MPG Ranch Detector 0.2/'
-    'HDF5 Files/Tseep')
+    '/Users/harold/Desktop/NFC/Data/Vesper ML/'
+    'MPG Ranch Coarse Classifier 4.0/HDF5 Files/Tseep')
 
 DETECTOR_NAME = 'Old Bird Tseep Detector Redux 1.1'
 
 ANNOTATION_NAME = 'Classification'
 
-ANNOTATION_VALUES = ['Call*', 'Noise']
+ANNOTATION_VALUES = ['Call*', 'Noise', 'CHSP_DEJU', 'Tone']
 
 ANNOTATION_VALUE_WILDCARD = '*'
 
@@ -204,6 +204,10 @@ def create_file_name(detector_name, station_name, annotation_value):
     
     if annotation_value.endswith(ANNOTATION_VALUE_WILDCARD):
         annotation_value = annotation_value[:-len(ANNOTATION_VALUE_WILDCARD)]
+        
+    # Replace '_' with '-' in annotation value since we use '_' to
+    # separate file name components.
+    annotation_value = annotation_value.replace('_', '-')
         
     return '{}_{}_{}_{}_{}.h5'.format(
         detector_type, ARCHIVE_NAME, detector_name, station_name,
