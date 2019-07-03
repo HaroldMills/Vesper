@@ -30,7 +30,26 @@ import vesper.util.yaml_utils as yaml_utils
 
 
 _EVALUATION_MODE_ENABLED = True
-_FN_THRESHOLD = .15
+
+_FN_THRESHOLD = .20
+"""
+Evaluation mode false negative score threshold.
+
+The value of this attribute should be either a score value in [0, 1] or
+`None`. If a score value, only false negatives whose scores are at most
+the threshold will be reclassified as "FN". If `None`, no clips will be
+reclassified as "FN".
+"""
+
+_FP_THRESHOLD = None
+"""
+Evaluation mode false positive score threshold.
+
+The value of this attribute should be either a score value in [0, 1] or
+`None`. If a score value, only false positives whose scores are at least
+the threshold will be reclassified as "FP". If `None`, no clips will be
+reclassified as "FP".
+"""
 
 
 '''
@@ -173,13 +192,24 @@ class Classifier(Annotator):
         if old is None:
             return None
         
-        elif old.startswith('Call') and auto == 'Noise' and \
-                score <= _FN_THRESHOLD:
-            return 'FN' + old[len('Call'):]
+        elif old.startswith('Call') and auto == 'Noise':
+            # false negative
             
-#         elif old == 'Noise' and auto == 'Call':
-#             return 'FP'
-
+            if _FN_THRESHOLD is not None and score <= _FN_THRESHOLD:
+                return 'FN' + old[len('Call'):]
+            
+            else:
+                return None
+            
+        elif old == 'Noise' and auto == 'Call':
+            # false positive
+            
+            if _FP_THRESHOLD is not None and score >= _FP_THRESHOLD:
+                return 'FP'
+            
+            else:
+                return None
+           
         else:
             return None
 
