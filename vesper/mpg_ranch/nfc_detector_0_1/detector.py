@@ -13,7 +13,7 @@ configured to detect tseep and thrush NFCs, respectively.
 
 
 import logging
-import time
+# import time
 
 import numpy as np
 import tensorflow as tf
@@ -249,23 +249,18 @@ class _Detector:
             else:
                 self._purported_input_sample_rate = self._input_sample_rate
              
-            start_time = time.time()
+            # start_time = time.time()
             
             samples = resampling_utils.resample_to_24000_hz(
                 samples, self._purported_input_sample_rate)
             
-            processing_time = time.time() - start_time
-            input_duration = input_length / self._input_sample_rate
-            rate = input_duration / processing_time
-            print((
-                'Resampled {:.1f} seconds of input in {:.1f} seconds, '
-                'or {:.1f} times faster than real time.').format(
-                    input_duration, processing_time, rate))
-            
-            # This is very important for the speed of subsequent processing.
-            # Without it, `samples` has the 'float64' dtype, and detection
-            # is several times slower.
-            # samples = np.round(samples).astype('int16')
+            # processing_time = time.time() - start_time
+            # input_duration = input_length / self._input_sample_rate
+            # rate = input_duration / processing_time
+            # print((
+            #     'Resampled {:.1f} seconds of input in {:.1f} seconds, '
+            #     'or {:.1f} times faster than real time.').format(
+            #         input_duration, processing_time, rate))
             
         else:
             # don't need to resample input
