@@ -1357,7 +1357,116 @@ Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Zuri_CHSP-DEJU.h5
 Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Zuri_Call.h5
 Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Zuri_Noise.h5
 Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Zuri_Tone.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Angel_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Bear_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Bell Crossing_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Bivory_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_CB Ranch_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Coki_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Cricket_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Darby High School PC_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Darby High School Swift_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Dashiell_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Deer Mountain Lookout_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_DonnaRae_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Dreamcatcher_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Esmerelda_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Evander_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Florence High School_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Grandpa's Pond_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Heron Crossing_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_IBO Lucky Peak_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_IBO River_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_JJ_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_KBK_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Kate_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Lee Metcalf NWR_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Lilo_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Lost Trail_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_MPG North_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Floodplain SM2_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Floodplain Swift_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Ridge_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Sheep Camp_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Subdivision_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Zumwalt Ridge_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Max_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Meadowlark_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Mickey_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Mitzi_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Molly_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Oxbow_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Panda_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Petey_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Pocket Gopher_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Sadie-Kate_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Sasquatch_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Seeley High School_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Sleeman_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Slocum_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_St Mary Lookout_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Sula Peak Lookout_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Sula Ranger Station_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Teller_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Walnut_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Willow Mountain Lookout_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_YVAS_Noise.h5
+Tseep_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Zuri_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Angel_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Bear_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Bell Crossing_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Bivory_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_CB Ranch_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Coki_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Cricket_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Darby High School PC_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Dashiell_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Deer Mountain Lookout_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_DonnaRae_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Dreamcatcher_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Esmerelda_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Evander_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Florence High School_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Grandpa's Pond_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Heron Crossing_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_IBO Lucky Peak_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_IBO River_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_JJ_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_KBK_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Kate_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Lee Metcalf NWR_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Lilo_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Lost Trail_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_MPG North_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Floodplain_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Ridge_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Sheep Camp_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Subdivision_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_MPG Ranch Zumwalt Ridge_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Max_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Meadowlark_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Mickey_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Mitzi_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Molly_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Oxbow_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Panda_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Petey_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Pocket Gopher_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Sadie-Kate_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Sasquatch_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Seeley High School_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Sleeman_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Slocum_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_St Mary Lookout_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Sula Peak Lookout_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Sula Ranger Station_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Teller_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Walnut_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Willow Mountain Lookout_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_YVAS_Noise.h5
+Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Zuri_Noise.h5
 '''.strip().split('\n')
+
 
 # Thrush
 # EXAMPLE_START_OFFSET = .1   # seconds
@@ -1372,7 +1481,7 @@ EXAMPLE_SAMPLE_RATE = 24000
 DATASET_CLASSIFICATIONS = (
     ('Call', 'Call'),
     ('Noise', 'Noise'),
-    ('CHSP_DEJU', 'Call'),
+    ('CHSP_DEJU', 'Noise'),
     ('Tone', 'Noise'),
 )
 """
@@ -1457,7 +1566,7 @@ dataset to speed of training with spectrogram dataset.
 
 def main():
     
-    show_number_of_open_files_limits()
+    # show_number_of_open_files_limits()
     
     create_datasets(DATASET_NAME_PREFIX)
       
