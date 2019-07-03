@@ -157,6 +157,17 @@ class _Preprocessor:
             self.max_waveform_time_shift = signal_utils.seconds_to_frames(
                 s.max_waveform_time_shift, s.waveform_sample_rate)
 
+        self.random_waveform_amplitude_scaling_enabled = \
+            augmentation_enabled and \
+            s.random_waveform_amplitude_scaling_enabled
+            
+        if self.random_waveform_amplitude_scaling_enabled:
+            self.max_waveform_amplitude_scale_factor = \
+                tf.constant(s.max_waveform_amplitude_scale_factor, tf.float32)
+            self.waveform_amplitude_scale_factor_range = \
+                tf.constant(
+                    s.waveform_amplitude_scale_factor_range, tf.float32)
+
         
     def preprocess_waveform(self, waveform, label=None):
         
@@ -180,12 +191,37 @@ class _Preprocessor:
         end_index = self.time_end_index + offset
         waveform = waveform[start_index:end_index]
         
+        # Cast waveform to float32 for subsequent processing.
+        waveform = tf.cast(waveform, tf.float32)
+        
+        if self.random_waveform_amplitude_scaling_enabled:
+            waveform = self._scale_waveform_amplitude(waveform)
+            
         if label is None:
             return waveform
         else:
             return waveform, label
     
     
+    def _scale_waveform_amplitude(self, waveform):
+        
+        max_abs = tf.math.reduce_max(tf.math.abs(waveform))
+        
+        max_factor = tf.math.minimum(
+            self.max_waveform_amplitude_scale_factor, 32767 / max_abs)
+        
+        max_log = tf.math.log(max_factor)
+        
+        min_log = \
+            max_log - tf.math.log(self.waveform_amplitude_scale_factor_range)
+            
+        log_factor = tf.random.uniform((), min_log, max_log, dtype=tf.float32)
+        
+        factor = tf.math.exp(log_factor)
+        
+        return factor * waveform
+    
+
     def compute_spectrograms(self, waveforms, labels=None):
         
         """Computes spectrograms for a batch of waveforms."""
@@ -196,7 +232,6 @@ class _Preprocessor:
         self._set_waveforms_shape(waveforms)
 
         # Compute STFTs.
-        waveforms = tf.cast(waveforms, tf.float32)
         stfts = tf.contrib.signal.stft(
             waveforms, self.window_size, self.hop_size,
             fft_length=self.dft_size, window_fn=self.window_fn)

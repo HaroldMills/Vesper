@@ -95,6 +95,11 @@ BASE_TSEEP_SETTINGS = Settings(
     event_onset_window_start_time=.090,
     event_onset_window_duration=.050,
     
+    # random waveform amplitude scaling data augmentation settings
+    random_waveform_amplitude_scaling_enabled=True,
+    max_waveform_amplitude_scale_factor=2,
+    waveform_amplitude_scale_factor_range=4,
+    
     # random waveform time shifting data augmentation settings
     random_waveform_time_shifting_enabled=True,
     max_waveform_time_shift=.025,
@@ -201,6 +206,11 @@ BASE_THRUSH_SETTINGS = Settings(
     # location of event onset window in training dataset waveforms
     event_onset_window_start_time=.110,
     event_onset_window_duration=.080,
+    
+    # random waveform amplitude scaling data augmentation settings
+    random_waveform_amplitude_scaling_enabled=True,
+    max_waveform_amplitude_scale_factor=2,
+    waveform_amplitude_scale_factor_range=4,
     
     # random waveform time shifting data augmentation settings
     random_waveform_time_shifting_enabled=True,
