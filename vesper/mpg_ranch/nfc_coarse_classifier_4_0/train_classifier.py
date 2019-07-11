@@ -36,11 +36,9 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Tune hyperparameters.
 # TODO: Evaluate on only initial portion of training data.
 # TODO: Save SavedModels and performance models and stats periodically.
-# TODO: Include both augmented and unaugmented data curves in evaluation plots.
-# TODO: Look at incorrectly classified clips and reclassify as needed.
 
 
-CLASSIFIER_NAME = 'Tseep 900K'
+CLASSIFIER_NAME = 'Tseep 850K'
 
 BASE_DIR_PATH = Path('/Users/harold/Desktop')
 
@@ -67,7 +65,9 @@ PR_CSV_FILE_ROW_FORMAT = '{:.2f},{:.3f},{:.3f},{:.3f},{:.3f}\n'
 
 BASE_TSEEP_SETTINGS = Settings(
     
-    dataset_name='Tseep 1M',
+    target_use=dataset_utils.TARGET_USE_DETECTOR,
+    
+    dataset_name='Tseep 850K',
     
     waveform_sample_rate=24000,
     
@@ -81,28 +81,30 @@ BASE_TSEEP_SETTINGS = Settings(
     # the window in our datasets, and make the distribution of onsets
     # within the window more uniform.
     #
-    # Random waveform time shifting is a data augmentation method that can
-    # be applied to distribute training clip event onsets more evenly in
-    # time. When random waveform time shifting is enabled, each dataset
-    # waveform is shifted in time by an amount drawn from the uniform
-    # distribution over [-max_waveform_time_shift, max_waveform_time_shift]
-    # before the waveform is sliced. The distribution of onsets after
-    # shifting is the distribution before shifting convolved with the shift
-    # distribution. Note that this widens the window within which onsets
-    # can occur by max_waveform_time_shift seconds on each end.
+    # Random waveform time shifting is a waveform modification method
+    # that distributes training clip event onset times more evenly. When
+    # random waveform time shifting is enabled, each dataset waveform is
+    # shifted in time by an amount drawn from the uniform distribution
+    # over [-max_waveform_time_shift, max_waveform_time_shift] before the
+    # waveform is sliced. The distribution of onsets after shifting is the
+    # distribution before shifting convolved with the shift distribution.
+    # Note that this widens the window within which onsets can occur by
+    # max_waveform_time_shift seconds on each end.
     
     # location of event onset window in training dataset waveforms
     event_onset_window_start_time=.090,
     event_onset_window_duration=.050,
     
-    # random waveform amplitude scaling data augmentation settings
-    random_waveform_amplitude_scaling_enabled=True,
-    max_waveform_amplitude_scale_factor=2,
-    waveform_amplitude_scale_factor_range=4,
-    
-    # random waveform time shifting data augmentation settings
+    # random waveform time shifting waveform modification settings
     random_waveform_time_shifting_enabled=True,
     max_waveform_time_shift=.025,
+    
+    # Random waveform amplitude scaling is a waveform modification method
+    # that distributes waveform amplitudes more evenly. When random
+    # waveform amplitude scaling is enabled, the RMS amplitude of a
+    # waveform is modified to a value whose logarithm is drawn from the
+    # uniform distribution over a certain range.
+    random_waveform_amplitude_scaling_enabled=True,
     
     # waveform settings
     waveform_initial_padding=.050,
@@ -159,13 +161,6 @@ BASE_TSEEP_SETTINGS = Settings(
     num_training_steps=50000,
     warm_start_enabled=False,
     
-    # Whether or not data augmentation is enabled during evaluation.
-    # A good rule of thumb is to disable data augmentation when evaluating
-    # the trained classifier for coarse classification of Old Bird detector
-    # clips, and to enable it when evaluating the trained classifier for
-    # detection.
-    evaluation_data_augmentation_enabled=True,
-    
     # evaluation plot settings
     precision_recall_plot_lower_axis_limit=.80,
     precision_recall_plot_major_tick_interval=.05,
@@ -193,28 +188,30 @@ BASE_THRUSH_SETTINGS = Settings(
     # the window in our datasets, and make the distribution of onsets
     # within the window more uniform.
     #
-    # Random waveform time shifting is a data augmentation method that can
-    # be applied to distribute training clip event onsets more evenly in
-    # time. When random waveform time shifting is enabled, each dataset
-    # waveform is shifted in time by an amount drawn from the uniform
-    # distribution over [-max_waveform_time_shift, max_waveform_time_shift]
-    # before the waveform is sliced. The distribution of onsets after
-    # shifting is the distribution before shifting convolved with the shift
-    # distribution. Note that this widens the window within which onsets
-    # can occur by max_waveform_time_shift seconds on each end.
+    # Random waveform time shifting is a waveform modification method
+    # that distributes training clip event onset times more evenly. When
+    # random waveform time shifting is enabled, each dataset waveform is
+    # shifted in time by an amount drawn from the uniform distribution
+    # over [-max_waveform_time_shift, max_waveform_time_shift] before the
+    # waveform is sliced. The distribution of onsets after shifting is the
+    # distribution before shifting convolved with the shift distribution.
+    # Note that this widens the window within which onsets can occur by
+    # max_waveform_time_shift seconds on each end.
     
     # location of event onset window in training dataset waveforms
     event_onset_window_start_time=.110,
     event_onset_window_duration=.080,
     
-    # random waveform amplitude scaling data augmentation settings
-    random_waveform_amplitude_scaling_enabled=True,
-    max_waveform_amplitude_scale_factor=2,
-    waveform_amplitude_scale_factor_range=4,
-    
-    # random waveform time shifting data augmentation settings
+    # random waveform time shifting waveform modification settings
     random_waveform_time_shifting_enabled=True,
     max_waveform_time_shift=.025,
+    
+    # Random waveform amplitude scaling is a waveform modification method
+    # that distributes waveform amplitudes more evenly. When random
+    # waveform amplitude scaling is enabled, the RMS amplitude of a
+    # waveform is modified to a value whose logarithm is drawn from the
+    # uniform distribution over a certain range.
+    random_waveform_amplitude_scaling_enabled=True,
     
     # waveform settings
     waveform_initial_padding=.030,
@@ -271,13 +268,6 @@ BASE_THRUSH_SETTINGS = Settings(
     num_training_steps=20000,
     warm_start_enabled=False,
     
-    # Whether or not data augmentation is enabled during evaluation.
-    # A good rule of thumb is to disable data augmentation when evaluating
-    # the trained classifier for coarse classification of Old Bird detector
-    # clips, and to enable it when evaluating the trained classifier for
-    # detection.
-    evaluation_data_augmentation_enabled=True,
-    
     # evaluation plot settings
     precision_recall_plot_lower_axis_limit=.80,
     precision_recall_plot_major_tick_interval=.05,
@@ -311,10 +301,6 @@ SETTINGS = {
         dense_layer_sizes=[16]
     )),
     
-    'Tseep 340K': Settings(BASE_TSEEP_SETTINGS, Settings(
-        dataset_name='Tseep 340K'
-    )),    
-    
     'Tseep 100K': Settings(BASE_TSEEP_SETTINGS, Settings(
         
         dataset_name='Tseep 100K',
@@ -324,51 +310,37 @@ SETTINGS = {
         
     )),
     
-    'Tseep 1M': Settings(BASE_TSEEP_SETTINGS, Settings(
+    'Tseep 850K': Settings(BASE_TSEEP_SETTINGS, Settings(
+        
+        dataset_name='Tseep 850K',
         
         # These are ignored when `warm_start_enabled` is `False`.
         # They are for a `waveform_duration` of .190.
-        spectrogram_clipping_min=1.5,
-        spectrogram_clipping_max=23.799999237060547,
-        spectrogram_normalization_scale_factor=0.38021351017658594,
-        spectrogram_normalization_offset=-4.231800955405726,
+        spectrogram_clipping_min=-1.399999976158142,
+        spectrogram_clipping_max=24.100000381469727,
+        spectrogram_normalization_scale_factor=0.31557229310571566,
+        spectrogram_normalization_offset=-4.288398418386261,
         
         warm_start_enabled=False,
         num_training_steps=20000
 
-    )),    
+    )),
     
-    'Tseep 900K': Settings(BASE_TSEEP_SETTINGS, Settings(
+    'Tseep 2.5M': Settings(BASE_TSEEP_SETTINGS, Settings(
         
-        dataset_name='Tseep 900K',
+        dataset_name='Tseep 2.5M',
         
         # These are ignored when `warm_start_enabled` is `False`.
         # They are for a `waveform_duration` of .190.
-        spectrogram_clipping_min=1.5,
-        spectrogram_clipping_max=23.799999237060547,
-        spectrogram_normalization_scale_factor=0.38021351017658594,
-        spectrogram_normalization_offset=-4.231800955405726,
+        spectrogram_clipping_min=-1.399999976158142,
+        spectrogram_clipping_max=24.0,
+        spectrogram_normalization_scale_factor=0.31422293126916384,
+        spectrogram_normalization_offset=-4.274807996653199,
         
         warm_start_enabled=False,
         num_training_steps=20000
 
-    )),    
-    
-    'Tseep 940K': Settings(BASE_TSEEP_SETTINGS, Settings(
-        
-        dataset_name='Tseep 940K',
-        
-        # These are ignored when `warm_start_enabled` is `False`.
-        # They are for a `waveform_duration` of .190.
-        spectrogram_clipping_min=1.5,
-        spectrogram_clipping_max=23.799999237060547,
-        spectrogram_normalization_scale_factor=0.38021351017658594,
-        spectrogram_normalization_offset=-4.231800955405726,
-        
-        warm_start_enabled=False,
-        num_training_steps=20000
-
-    )),    
+    )),
     
     'Thrush Quick': Settings(BASE_THRUSH_SETTINGS, Settings(
         dataset_name='Thrush 100K',
@@ -484,7 +456,7 @@ def complete_settings(settings):
     s = Settings(settings)
     
     # Get the nominal start time of the portion of a dataset waveform
-    # that is used for training. When time shifting data augmentation
+    # that is used for training. When time shifting waveform modification
     # is enabled, a random offset is added to the nominal start time
     # for each training example to determine the actual start time.
     s.waveform_start_time = \
@@ -513,11 +485,9 @@ def complete_settings(settings):
 
 def compute_spectrogram_clipping_settings(settings):
     
-    # Get new settings with waveform time shifting, spectrogram clipping,
-    # and spectrogram normalization disabled.
+    # Get new settings with spectrogram clipping and normalization disabled.
     s = Settings(
         settings,
-        random_waveform_time_shifting_enabled=False,
         spectrogram_clipping_enabled=False,
         spectrogram_normalization_enabled=False)
     
@@ -615,12 +585,8 @@ def create_spectrogram_dataset(
 
 def compute_spectrogram_normalization_settings(settings):
     
-    # Get settings with waveform time shifting and spectrogram
-    # normalization disabled.
-    s = Settings(
-        settings,
-        random_waveform_time_shifting_enabled=False,
-        spectrogram_normalization_enabled=False)
+    # Get new settings with spectrogram normalization disabled.
+    s = Settings(settings, spectrogram_normalization_enabled=False)
     
     num_examples = s.pretraining_num_examples
     batch_size = s.pretraining_batch_size

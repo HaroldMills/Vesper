@@ -16,10 +16,15 @@ DATASET_PART_TRAINING = 'Training'
 DATASET_PART_VALIDATION = 'Validation'
 DATASET_PART_TEST = 'Test'
 
-# dataset modes, determining the preprocessing performed by the dataset
+# dataset modes, which influence the preprocessing performed by the dataset
 DATASET_MODE_TRAINING = 'Training'
 DATASET_MODE_EVALUATION = 'Evaluation'
 DATASET_MODE_INFERENCE = 'Inference'
+
+# Target uses, indicating how the trained classifier will be used
+# in deployment.
+TARGET_USE_OLD_BIRD_COARSE_CLASSIFIER = 'Old Bird Coarse Classifier'
+TARGET_USE_DETECTOR = 'Detector'
 
 _WAVEFORM_DATASET_FEATURES = {
     'waveform': tf.FixedLenFeature((), tf.string, default_value=''),
@@ -109,7 +114,7 @@ class _Preprocessor:
     
     A dataset example preprocessor prepares dataset examples for input to
     a classifier's neural network during training, evaluation, and inference.
-    It performs data augmentation, waveform slicing, and spectrogram
+    It performs waveform shifting, scaling, and slicing, and spectrogram
     computation in a TensorFlow graph.
     """
     
@@ -119,19 +124,13 @@ class _Preprocessor:
         # `mode` can be `DATASET_MODE_TRAINING`, `DATASET_MODE_EVALUATION`,
         # or `DATASET_MODE_INFERENCE`.
         #
-        # When `mode` is `DATASET_MODE_TRAINING`, dataset examples are
-        # preprocessed according to certain settings that control waveform
-        # slicing and data augmentation.
+        # When `mode` is `DATASET_MODE_TRAINING` or
+        # `DATASET_MODE_EVALUATION, dataset examples are preprocessed
+        # according to certain settings that control waveform modification
+        # and slicing.
         #
-        # When `mode` is `DATASET_MODE_EVALUATION`, dataset examples are
-        # processed as when it is `DATASET_MODE_TRAINING`, except that
-        # data augmentation can be turned on or off via the
-        # `evaluation_data_augmentation_enabled` setting.
-        #
-        # When `mode` is `DATASET_MODE_INFERENCE`, dataset waveforms are
-        # not sliced as they are when it is `DATASET_MODE_TRAINING` or
-        # `DATASET_MODE_EVALUATION`. Instead, the slicing start index is
-        # always zero. Data augmentation is also disabled.
+        # When `mode` is `DATASET_MODE_INFERENCE`, waveform modification
+        # is disabled and the slicing start index is always zero.
 
         self.settings = settings
         self.output_feature_name = output_feature_name
@@ -148,35 +147,49 @@ class _Preprocessor:
         self.window_fn = functools.partial(
             tf.contrib.signal.hann_window, periodic=True)
         
-        augmentation_enabled = _is_data_augmentation_enabled(mode, s)
-            
+        # Note that we perform random waveform time shifting in the
+        # evaluation dataset mode for a classifier that will be deployed
+        # in a detector. The distribution of event onset times within
+        # clips created by the Old Bird detectors (the current source of
+        # our training data) is less uniform than the more or less flat
+        # distribution that a classifier sees in the recording segments
+        # presented to it when it is deployed in a detector. Random waveform
+        # time shifting flattens and widens the onset time distribution in
+        # the dataset, making it more like what it will see in deployment.
         self.random_waveform_time_shifting_enabled = \
-            augmentation_enabled and s.random_waveform_time_shifting_enabled
-        
+            s.random_waveform_time_shifting_enabled and (
+                mode == DATASET_MODE_TRAINING or (
+                    mode == DATASET_MODE_EVALUATION and
+                    s.target_use == TARGET_USE_DETECTOR))
+                
         if self.random_waveform_time_shifting_enabled:
             self.max_waveform_time_shift = signal_utils.seconds_to_frames(
                 s.max_waveform_time_shift, s.waveform_sample_rate)
 
+        # We perform random waveform amplitude scaling during training
+        # in order to make the distribution of input amplitudes wider
+        # and more uniform, with the intent of making the classifier
+        # less sensitive to variation in input amplitude. We perform
+        # the same scaling during evaluation in order to gauge the
+        # classifier's performance on a similar input amplitude
+        # distribution. If in the future we perform some sort of
+        # amplitude normalization (e.g. PCEN or normalization based
+        # on order statistical background noise power estimates), the
+        # random scaling may no longer be needed.
         self.random_waveform_amplitude_scaling_enabled = \
-            augmentation_enabled and \
-            s.random_waveform_amplitude_scaling_enabled
-            
-        if self.random_waveform_amplitude_scaling_enabled:
-            self.max_waveform_amplitude_scale_factor = \
-                tf.constant(s.max_waveform_amplitude_scale_factor, tf.float32)
-            self.waveform_amplitude_scale_factor_range = \
-                tf.constant(
-                    s.waveform_amplitude_scale_factor_range, tf.float32)
+            s.random_waveform_amplitude_scaling_enabled and (
+                mode == DATASET_MODE_TRAINING or
+                mode == DATASET_MODE_EVALUATION)
+                
 
-        
     def preprocess_waveform(self, waveform, label=None):
         
         """
         Preprocesses one input waveform.
         
-        Applies any data augmentation indicated by this preprocessor's
-        settings, and extracts the appropriate slice from the resulting
-        waveform.
+        Applies any waveform modifications indicated by this
+        preprocessor's settings, and extracts the appropriate slice
+        from the resulting waveform.
         """
         
         # Get time shifting offset.
@@ -204,22 +217,39 @@ class _Preprocessor:
     
     
     def _scale_waveform_amplitude(self, waveform):
-        
+          
         max_abs = tf.math.reduce_max(tf.math.abs(waveform))
+
+        def do_not_scale():
+            return waveform
         
-        max_factor = tf.math.minimum(
-            self.max_waveform_amplitude_scale_factor, 32767 / max_abs)
-        
-        max_log = tf.math.log(max_factor)
-        
-        min_log = \
-            max_log - tf.math.log(self.waveform_amplitude_scale_factor_range)
+        def scale():
             
-        log_factor = tf.random.uniform((), min_log, max_log, dtype=tf.float32)
-        
-        factor = tf.math.exp(log_factor)
-        
-        return factor * waveform
+            # Find scale factor that would make maximum absolute waveform
+            # value 32767.
+            max_factor = _f32(32767) / max_abs
+              
+            # Find scale factor that would reduce RMS waveform value to
+            # 256, or 1 if RMS value is already less than 256.
+            sum_squared = tf.math.reduce_sum(waveform * waveform)
+            size = tf.cast(tf.size(waveform), tf.float32)
+            rms = tf.math.sqrt(sum_squared / size)
+            min_factor = tf.math.minimum(_f32(1), _f32(256) / rms)
+              
+            # Choose random factor between `min_factor` and `max_factor`,
+            # with distribution uniform on log scale.
+            max_log = tf.math.log(max_factor)
+            min_log = tf.math.log(min_factor)
+            log_factor = tf.random.uniform(
+                (), min_log, max_log, dtype=tf.float32)
+            factor = tf.math.exp(log_factor)
+              
+            # Scale waveform by chosen factor.
+            return factor * waveform
+            
+        # Scale waveform if and only if it isn't zero (attempting to
+        # scale when the waveform is zero results in divisions by zero).
+        return tf.cond(tf.equal(max_abs, 0), do_not_scale, scale)
     
 
     def compute_spectrograms(self, waveforms, labels=None):
@@ -350,13 +380,6 @@ def _get_low_level_preprocessing_settings(mode, settings):
         freq_start_index, freq_end_index)
 
 
-def _is_data_augmentation_enabled(mode, settings):
-    return \
-        mode == DATASET_MODE_TRAINING or \
-        mode == DATASET_MODE_EVALUATION and \
-        settings.evaluation_data_augmentation_enabled
-
-
 def get_sliced_spectrogram_size(settings):
     num_spectra, num_bins = get_sliced_spectrogram_shape(settings)
     return num_spectra * num_bins
@@ -378,6 +401,10 @@ def get_sliced_spectrogram_shape(settings):
     return (num_spectra, num_bins)
     
     
+def _f32(x):
+    return tf.cast(x, tf.float32)
+
+
 def show_dataset(dataset, num_batches):
 
     print('output_types', dataset.output_types)
@@ -420,10 +447,10 @@ def _main():
 def _test_random_time_shifting():
     
     """
-    Tests random time shifting for data augmentation.
+    Tests random time shifting waveform modification.
     
     Random time shifting is used by the `WaveformPreprocessor` class to
-    distribute NFC onset times more evenly during classifier training.
+    distribute event onset times more evenly during classifier training.
     """
     
     class ShiftingSlicer:
