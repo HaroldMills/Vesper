@@ -53,6 +53,7 @@ _CALL_START_WINDOWS = {
     'MPG Ranch Tseep Detector 0.0 40': (.070, .280),
     'MPG Ranch Thrush Detector 0.0 50': (.080, .440),
     'MPG Ranch Tseep Detector 0.0 50': (.070, .280),
+    'MPG Ranch Tseep Detector 1.0 20': (.070, .280),
 }
 """
 Windows within clips where call starts occur.
