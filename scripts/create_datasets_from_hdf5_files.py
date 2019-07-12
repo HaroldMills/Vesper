@@ -1,6 +1,7 @@
 """Creates coarse classifier training datasets from clip HDF5 files."""
 
 
+from collections import defaultdict
 from pathlib import Path
 import itertools
 import math
@@ -23,7 +24,7 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Replace `dataset_name_prefix` and `detector_name` with type and size.
 
 
-DATASET_NAME_PREFIX = 'Tseep 900K'
+DATASET_NAME_PREFIX = 'Tseep 2.5M'
 
 DATASET_CONFIGS = yaml_utils.load('''
 
@@ -75,750 +76,25 @@ DATASET_CONFIGS = yaml_utils.load('''
   val_dataset_size: [10000, 10000]
   test_dataset_size: [10000, 10000]
   
-- dataset_name_prefix: Tseep 940K
+- dataset_name_prefix: Tseep 850K
   detector_name: Tseep
-  train_dataset_size: [470000, 470000]
+  train_dataset_size: [425000, 425000]
   val_dataset_size: [10000, 10000]
   test_dataset_size: [10000, 10000]
   
-- dataset_name_prefix: Tseep 900K
+- dataset_name_prefix: Tseep 2.5M
   detector_name: Tseep
-  train_dataset_size: [450000, 450000]
+  train_dataset_size: [1275000, 1275000]
   val_dataset_size: [10000, 10000]
   test_dataset_size: [10000, 10000]
   
 ''')
 
-# For Tseep 1M training dataset, built with 2017 MPG Ranch clips:
-# 136443 unique call clips
-# 499984 unique noise clips
-
-# For Tseep 1M-a training dataset, built with 2017 and 2018 MPG Ranch clips:
-# 490195 unique call clips
-# 500000 unique noise clips (from a total of 1543606)
-
-
-# MPG Ranch Coarse Classifier 3.0 datasets from Fall 2018.
-# DATASET_CONFIGS = yaml_utils.load('''
-# 
-# - dataset_name_prefix: Thrush 20K
-#   detector_name: Thrush
-#   train_dataset_size: [6000, 6000]
-#   val_dataset_size: [2000, 2000]
-#   test_dataset_size: [2000, 2000]
-#   
-# - dataset_name_prefix: Thrush 100K
-#   detector_name: Tseep
-#   train_dataset_size: [36000, 36000]
-#   val_dataset_size: [2000, 2000]
-#   test_dataset_size: [2000, 2000]
-#   
-# - dataset_name_prefix: Thrush 1M
-#   detector_name: Thrush
-#   train_dataset_size: [496000, 496000]
-#   val_dataset_size: [2000, 2000]
-#   test_dataset_size: [2000, 2000]
-# 
-# - dataset_name_prefix: Tseep 3K
-#   detector_name: Tseep
-#   train_dataset_size: [2000, 2000]
-#   val_dataset_size: [500, 500]
-#   test_dataset_size: [500, 500]
-#     
-# - dataset_name_prefix: Tseep 20K
-#   detector_name: Tseep
-#   train_dataset_size: [6000, 6000]
-#   val_dataset_size: [2000, 2000]
-#   test_dataset_size: [2000, 2000]
-#     
-# - dataset_name_prefix: Tseep 100K
-#   detector_name: Tseep
-#   train_dataset_size: [40000, 40000]
-#   val_dataset_size: [5000, 5000]
-#   test_dataset_size: [5000, 5000]
-#   
-# - dataset_name_prefix: Tseep 340K
-#   detector_name: Tseep
-#   train_dataset_size: [158579, 158579]
-#   val_dataset_size: [5000, 5000]
-#   test_dataset_size: [5000, 5000]
-#   
-# - dataset_name_prefix: Tseep 1M
-#   detector_name: Tseep
-#   train_dataset_size: [480000, 480000]
-#   val_dataset_size: [10000, 10000]
-#   test_dataset_size: [10000, 10000]
-#   
-# ''')
 
 DATA_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Vesper ML/MPG Ranch Coarse Classifier 4.0')
 
 INPUT_DIR_PATH = DATA_DIR_PATH / 'HDF5 Files' / 'Tseep'
-
-# INPUT_FILE_NAMES = '''
-# Tseep_MPG_Angela_2017_1.h5
-# '''.strip().split('\n')
-
-# INPUT_FILE_NAMES = '''
-# Tseep_MPG_Angela_2017_1.h5
-# Tseep_MPG_Bear_2017_1.h5
-# Tseep_MPG_Bell Crossing_2017_1.h5
-# Tseep_MPG_Darby_2017_1.h5
-# Tseep_MPG_Dashiell_2017_1.h5
-# Tseep_MPG_Davies_2017_1.h5
-# Tseep_MPG_Deer Mountain_2017_1.h5
-# Tseep_MPG_Floodplain_2017_1.h5
-# '''.strip().split('\n')
-
-# INPUT_FILE_NAMES = '''
-# Tseep_MPG_Angela_2017_1.h5
-# Tseep_MPG_Bear_2017_1.h5
-# Tseep_MPG_Bell Crossing_2017_1.h5
-# Tseep_MPG_Darby_2017_1.h5
-# Tseep_MPG_Dashiell_2017_1.h5
-# Tseep_MPG_Davies_2017_1.h5
-# Tseep_MPG_Deer Mountain_2017_1.h5
-# Tseep_MPG_Floodplain_2017_1.h5
-# Tseep_MPG_Florence_2017_1.h5
-# Tseep_MPG_KBK_2017_1.h5
-# Tseep_MPG_Lilo_2017_1.h5
-# Tseep_MPG_Nelson_2017_1.h5
-# Tseep_MPG_North_2017_1.h5
-# Tseep_MPG_Oxbow_2017_1.h5
-# Tseep_MPG_Powell_2017_1.h5
-# Tseep_MPG_Reed_2017_1.h5
-# Tseep_MPG_Ridge_2017_1.h5
-# Tseep_MPG_Seeley_2017_1.h5
-# Tseep_MPG_Sheep Camp_2017_1.h5
-# Tseep_MPG_St Mary_2017_1.h5
-# Tseep_MPG_Sula Peak_2017_1.h5
-# Tseep_MPG_Teller_2017_1.h5
-# Tseep_MPG_Troy_2017_1.h5
-# Tseep_MPG_Walnut_2017_1.h5
-# Tseep_MPG_Weber_2017_1.h5
-# Tseep_MPG_Willow_2017_1.h5
-# '''.strip().split('\n')
-
-# INPUT_FILE_NAMES = '''
-# Thrush_MPG_Angela_2017_1.h5
-# Thrush_MPG_Bear_2017_1.h5
-# Thrush_MPG_Bell Crossing_2017_1.h5
-# Thrush_MPG_Darby_2017_1.h5
-# Thrush_MPG_Dashiell_2017_1.h5
-# Thrush_MPG_Davies_2017_1.h5
-# Thrush_MPG_Deer Mountain_2017_1.h5
-# Thrush_MPG_Floodplain_2017_1.h5
-# Thrush_MPG_Florence_2017_1.h5
-# Thrush_MPG_KBK_2017_1.h5
-# Thrush_MPG_Lilo_2017_1.h5
-# Thrush_MPG_Nelson_2017_1.h5
-# Thrush_MPG_North_2017_1.h5
-# Thrush_MPG_Oxbow_2017_1.h5
-# Thrush_MPG_Powell_2017_1.h5
-# Thrush_MPG_Reed_2017_1.h5
-# Thrush_MPG_Ridge_2017_1.h5
-# Thrush_MPG_Seeley_2017_1.h5
-# Thrush_MPG_Sheep Camp_2017_1.h5
-# Thrush_MPG_St Mary_2017_1.h5
-# Thrush_MPG_Sula Peak_2017_1.h5
-# Thrush_MPG_Teller_2017_1.h5
-# Thrush_MPG_Troy_2017_1.h5
-# Thrush_MPG_Walnut_2017_1.h5
-# Thrush_MPG_Weber_2017_1.h5
-# Thrush_MPG_Willow_2017_1.h5
-# '''.strip().split('\n')
-
-# 2017 MPG Ranch data
-# INPUT_FILE_NAMES = '''
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Angela_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Angela_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bear_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bear_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bell Crossing_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bell Crossing_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Darby_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Darby_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Dashiell_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Dashiell_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Davies_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Davies_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Deer Mountain_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Deer Mountain_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Floodplain_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Floodplain_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Florence_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Florence_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_KBK_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_KBK_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Lilo_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Lilo_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_MPG North_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_MPG North_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Nelson_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Nelson_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Oxbow_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Oxbow_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Powell_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Powell_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Reed_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Reed_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Ridge_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Ridge_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Seeley_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Seeley_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sheep Camp_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sheep Camp_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_St Mary_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_St Mary_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sula Peak_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sula Peak_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Teller_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Teller_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Troy_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Troy_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Walnut_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Walnut_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Weber_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Weber_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Willow_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Willow_Noise.h5
-# '''.strip().split('\n')
-
-# 2017 and 2018 MPG Ranch data
-# INPUT_FILE_NAMES = '''
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Angela_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Angela_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bear_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bear_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bell Crossing_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bell Crossing_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Darby_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Darby_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Dashiell_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Dashiell_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Davies_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Davies_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Deer Mountain_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Deer Mountain_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Floodplain_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Floodplain_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Florence_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Florence_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_KBK_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_KBK_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Lilo_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Lilo_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_MPG North_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_MPG North_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Nelson_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Nelson_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Oxbow_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Oxbow_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Powell_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Powell_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Reed_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Reed_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Ridge_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Ridge_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Seeley_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Seeley_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sheep Camp_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sheep Camp_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_St Mary_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_St Mary_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sula Peak_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sula Peak_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Teller_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Teller_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Troy_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Troy_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Walnut_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Walnut_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Weber_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Weber_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Willow_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Willow_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Angel_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Angel_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bear_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bear_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bell Crossing_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bell Crossing_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bivory_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bivory_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_CB Ranch_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_CB Ranch_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Coki_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Coki_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Cricket_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Cricket_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Darby High School PC_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Darby High School PC_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Dashiell_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Dashiell_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Deer Mountain Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Deer Mountain Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_DonnaRae_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_DonnaRae_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Dreamcatcher_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Dreamcatcher_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Esmerelda_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Esmerelda_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Evander_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Evander_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Florence High School_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Florence High School_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Grandpa's Pond_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Grandpa's Pond_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Heron Crossing_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Heron Crossing_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO Lucky Peak_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO Lucky Peak_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO River_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO River_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_JJ_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_JJ_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_KBK_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_KBK_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Kate_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Kate_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lee Metcalf NWR_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lee Metcalf NWR_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lilo_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lilo_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lost Trail_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lost Trail_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG North_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG North_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Floodplain SM2_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Floodplain SM2_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Ridge_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Ridge_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Sheep Camp_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Sheep Camp_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Subdivision_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Subdivision_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Zumwalt Ridge_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Zumwalt Ridge_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Max_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Max_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Meadowlark_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Meadowlark_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Mickey_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Mickey_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Mitzi_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Mitzi_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Molly_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Molly_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Oxbow_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Oxbow_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Panda_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Panda_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Petey_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Petey_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Pocket Gopher_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Pocket Gopher_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sadie-Kate_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sadie-Kate_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sasquatch_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sasquatch_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Seeley High School_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Seeley High School_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sleeman_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sleeman_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Slocum_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Slocum_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_St Mary Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_St Mary Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sula Peak Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sula Peak Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sula Ranger Station_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sula Ranger Station_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Teller_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Teller_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Walnut_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Walnut_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Willow Mountain Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Willow Mountain Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_YVAS_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_YVAS_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Zuri_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Zuri_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Angel_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Angel_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bear_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bear_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bell Crossing_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bell Crossing_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bivory_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bivory_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_CB Ranch_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_CB Ranch_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Coki_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Coki_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Cricket_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Cricket_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Darby High School PC_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Darby High School PC_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Dashiell_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Dashiell_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Deer Mountain Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Deer Mountain Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_DonnaRae_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_DonnaRae_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Dreamcatcher_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Dreamcatcher_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Esmerelda_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Esmerelda_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Evander_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Evander_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Florence High School_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Florence High School_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Grandpa's Pond_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Grandpa's Pond_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Heron Crossing_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Heron Crossing_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO Lucky Peak_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO Lucky Peak_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO River_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO River_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_JJ_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_JJ_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_KBK_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_KBK_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Kate_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Kate_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lee Metcalf NWR_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lee Metcalf NWR_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lilo_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lilo_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lost Trail_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lost Trail_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG North_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG North_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Floodplain_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Floodplain_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Ridge_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Ridge_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Sheep Camp_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Sheep Camp_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Subdivision_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Subdivision_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Max_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Max_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Meadowlark_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Meadowlark_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Mickey_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Mickey_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Mitzi_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Mitzi_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Molly_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Molly_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Oxbow_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Oxbow_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Panda_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Panda_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Petey_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Petey_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Pocket Gopher_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Pocket Gopher_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sasquatch_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sasquatch_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Seeley High School_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Seeley High School_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sleeman_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sleeman_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Slocum_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Slocum_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_St Mary Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_St Mary Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sula Peak Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sula Peak Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sula Ranger Station_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sula Ranger Station_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Teller_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Teller_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Walnut_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Walnut_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Willow Mountain Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Willow Mountain Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_YVAS_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_YVAS_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Zuri_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Zuri_Noise.h5
-# '''.strip().split('\n')
-
-# INPUT_FILE_NAMES = '''
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Angela_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Angela_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bear_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bear_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bell Crossing_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Bell Crossing_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Darby_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Darby_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Dashiell_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Dashiell_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Davies_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Davies_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Deer Mountain_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Deer Mountain_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Floodplain_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Floodplain_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Florence_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Florence_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_KBK_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_KBK_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Lilo_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Lilo_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_MPG North_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_MPG North_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Nelson_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Nelson_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Oxbow_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Oxbow_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Powell_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Powell_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Reed_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Reed_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Ridge_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Ridge_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Seeley_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Seeley_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sheep Camp_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sheep Camp_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_St Mary_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_St Mary_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sula Peak_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Sula Peak_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Teller_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Teller_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Troy_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Troy_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Walnut_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Walnut_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Weber_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Weber_Noise.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Willow_Call.h5
-# Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Willow_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Angel_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Angel_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bear_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bear_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bell Crossing_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bell Crossing_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bivory_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Bivory_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_CB Ranch_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_CB Ranch_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Coki_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Coki_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Cricket_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Cricket_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Darby High School PC_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Darby High School PC_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Darby High School Swift_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Darby High School Swift_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Dashiell_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Dashiell_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Deer Mountain Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Deer Mountain Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_DonnaRae_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_DonnaRae_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Dreamcatcher_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Dreamcatcher_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Esmerelda_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Esmerelda_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Evander_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Evander_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Florence High School_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Florence High School_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Grandpa's Pond_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Grandpa's Pond_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Heron Crossing_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Heron Crossing_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO Lucky Peak_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO Lucky Peak_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO River_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO River_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_JJ_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_JJ_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_KBK_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_KBK_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Kate_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Kate_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lee Metcalf NWR_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lee Metcalf NWR_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lilo_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lilo_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lost Trail_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Lost Trail_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG North_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG North_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Floodplain SM2_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Floodplain SM2_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Floodplain Swift_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Floodplain Swift_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Ridge_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Ridge_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Sheep Camp_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Sheep Camp_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Subdivision_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Subdivision_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Zumwalt Ridge_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_MPG Ranch Zumwalt Ridge_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Max_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Max_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Meadowlark_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Meadowlark_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Mickey_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Mickey_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Mitzi_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Mitzi_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Molly_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Molly_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Oxbow_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Oxbow_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Panda_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Panda_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Petey_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Petey_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Pocket Gopher_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Pocket Gopher_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sadie-Kate_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sadie-Kate_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sasquatch_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sasquatch_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Seeley High School_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Seeley High School_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sleeman_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sleeman_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Slocum_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Slocum_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_St Mary Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_St Mary Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sula Peak Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sula Peak Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sula Ranger Station_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Sula Ranger Station_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Teller_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Teller_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Walnut_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Walnut_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Willow Mountain Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Willow Mountain Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_YVAS_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_YVAS_Noise.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Zuri_Call.h5
-# Tseep_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Zuri_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Angel_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Angel_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bear_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bear_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bell Crossing_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bell Crossing_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bivory_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Bivory_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_CB Ranch_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_CB Ranch_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Coki_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Coki_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Cricket_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Cricket_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Darby High School PC_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Darby High School PC_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Dashiell_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Dashiell_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Deer Mountain Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Deer Mountain Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_DonnaRae_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_DonnaRae_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Dreamcatcher_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Dreamcatcher_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Esmerelda_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Esmerelda_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Evander_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Evander_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Florence High School_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Florence High School_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Grandpa's Pond_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Grandpa's Pond_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Heron Crossing_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Heron Crossing_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO Lucky Peak_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO Lucky Peak_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO River_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO River_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_JJ_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_JJ_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_KBK_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_KBK_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Kate_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Kate_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lee Metcalf NWR_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lee Metcalf NWR_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lilo_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lilo_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lost Trail_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Lost Trail_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG North_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG North_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Floodplain_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Floodplain_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Ridge_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Ridge_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Sheep Camp_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Sheep Camp_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Subdivision_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Subdivision_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Zumwalt Ridge_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_MPG Ranch Zumwalt Ridge_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Max_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Max_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Meadowlark_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Meadowlark_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Mickey_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Mickey_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Mitzi_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Mitzi_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Molly_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Molly_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Oxbow_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Oxbow_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Panda_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Panda_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Petey_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Petey_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Pocket Gopher_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Pocket Gopher_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sadie-Kate_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sadie-Kate_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sasquatch_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sasquatch_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Seeley High School_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Seeley High School_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sleeman_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sleeman_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Slocum_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Slocum_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_St Mary Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_St Mary Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sula Peak Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sula Peak Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sula Ranger Station_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Sula Ranger Station_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Teller_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Teller_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Walnut_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Walnut_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Willow Mountain Lookout_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Willow Mountain Lookout_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_YVAS_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_YVAS_Noise.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Zuri_Call.h5
-# Tseep_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Zuri_Noise.h5
-# '''.strip().split('\n')
 
 INPUT_FILE_NAMES = '''
 Tseep_2017 MPG Ranch_Old Bird Redux 1.1_Angela_CHSP-DEJU.h5
@@ -1467,7 +743,6 @@ Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_YVAS_Noise.h5
 Tseep_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Zuri_Noise.h5
 '''.strip().split('\n')
 
-
 # Thrush
 # EXAMPLE_START_OFFSET = .1   # seconds
 # EXAMPLE_DURATION = .55      # seconds
@@ -1507,6 +782,19 @@ OUTPUT_FILE_SIZE = 10000  # examples
 
 
 '''
+Following are some notes written in the fall of 2018, toward the beginning
+of the development of the MPG Ranch version 3.0 coarse classifiers. I've
+retained them because I think they are still somewhat relevant. Some tests
+conducted after the notes were written showed that while TensorFlow
+computes spectrograms slower than Vesper, the slowdown was acceptable,
+and that training with on-the-fly spectrogram computation was acceptably
+fast. As of this writing (in the summer of 2019), however, I'm less
+excited about computing spectrograms with TensorFlow, since that appears
+to limit the flexibility of other types of preprocessing (like
+spectrogram normalization) that we might want to experiment with, and
+since it appears that there might actually be an overall speed
+disadvantage to preprocessing on a GPU rather than on the CPU.
+
 Can compute spectrograms with TensorFlow if we wish. Would it be faster
 or not? This should be fairly easy to test, I think. Write a test program
 to:
@@ -1564,6 +852,36 @@ dataset to speed of training with spectrogram dataset.
 '''
 
 
+class StationNightClipFilter:
+    
+    
+    def __init__(self, filtered_station_nights):
+        
+        self._filtered_station_nights = filtered_station_nights
+        self._filtered_clip_counts = defaultdict(int)
+        
+    
+    def filter(self, clip_attrs):
+        
+        clip_station_night = (clip_attrs['station'], clip_attrs['date'])
+        
+        result = clip_station_night not in self._filtered_station_nights
+        
+        if result is False:
+            self._filtered_clip_counts[clip_station_night] += 1
+ 
+        return result
+    
+    def show_filtered_clip_counts(self):
+        
+        station_nights = sorted(self._filtered_clip_counts.keys())
+        
+        print('Filtered clip counts:')
+        for station_night in station_nights:
+            count = self._filtered_clip_counts[station_night]
+            print('    {} {}'.format(station_night, count))
+                         
+    
 def main():
     
     # show_number_of_open_files_limits()
@@ -1624,7 +942,12 @@ def get_input(input_num, file_name):
 
 def get_clip_metadata(inputs):
     
+    from scripts.detector_eval.manual.station_night_sets import \
+        NON_TRAINING_STATION_NIGHTS
+            
     start_time = time.time()
+    
+    filter_ = StationNightClipFilter(NON_TRAINING_STATION_NIGHTS)
     
     num_inputs = len(inputs)
     pairs = []
@@ -1632,10 +955,11 @@ def get_clip_metadata(inputs):
         print((
             '    Reading clip metadata from file "{}" (file {} of '
             '{})...').format(input_.file_path, input_.num + 1, num_inputs))
-        pair = get_file_clip_metadata(input_)
+        pair = get_file_clip_metadata(input_, filter_)
         pairs.append(pair)
     
     # show_input_stats(inputs, pairs)
+    filter_.show_filtered_clip_counts()
         
     call_lists, noise_lists = zip(*pairs)
     
@@ -1644,17 +968,20 @@ def get_clip_metadata(inputs):
     
     end_time = time.time()
     delta = end_time - start_time
-    num_clips = len(calls) + len(noises)
+    num_calls = len(calls)
+    num_noises = len(noises)
+    num_clips = num_calls + num_noises
     rate = num_clips / delta
     print((
-        '    Read metadata for {} clips from {} input files in {:.1f} '
-        'seconds, a rate of {:.1f} clips per second.').format(
-            num_clips, len(inputs), delta, rate))
+        '    Read metadata for {} clips ({} calls and {} noises) from {} '
+        'input files in {:.1f} seconds, a rate of {:.1f} clips per '
+        'second.').format(
+            num_clips, num_calls, num_noises, len(inputs), delta, rate))
     
     return calls, noises
         
     
-def get_file_clip_metadata(input_):
+def get_file_clip_metadata(input_, filter_):
     
     input_num = input_.num
     
@@ -1663,18 +990,20 @@ def get_file_clip_metadata(input_):
     
     for clip_id, hdf5_dataset in input_.clips_group.items():
         
-        clip = (input_num, clip_id)
-        
-        hdf5_classification = hdf5_dataset.attrs['classification']
-        
-        dataset_classification = \
-            get_dataset_classification(hdf5_classification)
-
-        if dataset_classification == 'Call':
-            calls.append(clip)
-        
-        elif dataset_classification == 'Noise':
-            noises.append(clip)
+        if filter_.filter(hdf5_dataset.attrs):
+            
+            clip = (input_num, clip_id)
+            
+            hdf5_classification = hdf5_dataset.attrs['classification']
+            
+            dataset_classification = \
+                get_dataset_classification(hdf5_classification)
+    
+            if dataset_classification == 'Call':
+                calls.append(clip)
+            
+            elif dataset_classification == 'Noise':
+                noises.append(clip)
             
     return calls, noises
     
