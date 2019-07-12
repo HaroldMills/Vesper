@@ -28,9 +28,10 @@ CREATE_SEPARATE_STATION_NIGHT_PLOTS = False
 
 DATABASE_FILE_NAME = 'Archive Database.sqlite'
 
-PLOTS_DIR_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/MPG Ranch/2018/Detector Comparison/'
-    '0.0/Plots')
+# PLOTS_DIR_PATH = Path(
+#     '/Users/harold/Desktop/NFC/Data/MPG Ranch/2018/Detector Comparison/'
+#     '0.0/Plots')
+PLOTS_DIR_PATH = Path('/Users/harold/Desktop/Plots')
 
 MATPLOTLIB_PLOT_FILE_NAME = 'Detector Precision vs. Calls.pdf'
 
@@ -38,17 +39,21 @@ BOKEH_PLOT_FILE_NAME_FORMAT = '{}_{}.html'
 
 ALL_STATION_NIGHTS_PLOT_FILE_NAME = 'All Station-Nights.html'
 
+# DETECTOR_NAMES = [
+#     'MPG Ranch Tseep Detector 0.0 40',
+#     'MPG Ranch Thrush Detector 0.0 40',
+#     'BirdVoxDetect 0.1.a0 AT 02',
+#     'BirdVoxDetect 0.1.a0 AT 05'
+# ]
 DETECTOR_NAMES = [
-    'MPG Ranch Tseep Detector 0.0 40',
-    'MPG Ranch Thrush Detector 0.0 40',
-    'BirdVoxDetect 0.1.a0 AT 02',
-    'BirdVoxDetect 0.1.a0 AT 05'
+    'MPG Ranch Tseep Detector 1.0 20',
 ]
 
 PLOT_LINE_DATA = {
     
     # 'MPG Ranch Tseep 0.0': ('MPG Ranch Tseep Detector 0.0 40', 'blue'),
     # 'MPG Ranch Thrush 0.0': ('MPG Ranch Thrush Detector 0.0 40', 'green'),
+    'MPG Ranch Tseep 1.0': ('MPG Ranch Tseep Detector 1.0 20', 'blue'),
     
     # Combination of MPG Ranch Tseep and Thrush detectors. It is a little
     # unfair to the detectors to sum their counts, since it effectively
@@ -56,9 +61,9 @@ PLOT_LINE_DATA = {
     # independently for the different detectors to optimize their
     # performance, but the summation yields a precision-calls curve that
     # is more directly comparable to that of BirdVoxDetect.
-    'MPG Ranch Combined 0.0': (
-        ('MPG Ranch Tseep Detector 0.0 40',
-         'MPG Ranch Thrush Detector 0.0 40'), 'red'),
+#     'MPG Ranch Combined 0.0': (
+#         ('MPG Ranch Tseep Detector 0.0 40',
+#          'MPG Ranch Thrush Detector 0.0 40'), 'red'),
     
     # This accommodates the fact that we used two different thresholds
     # when we ran BirdVoxDetect on a set of August, 2019 MPG Ranch
@@ -69,23 +74,24 @@ PLOT_LINE_DATA = {
     # a recording yields the counts of whichever detector was run on
     # that recording, since the counts for the detector that wasn't
     # run are all zero and contribute nothing to the sum.
-    'BirdVoxDetect 0.1.a0 AT': (
-        ('BirdVoxDetect 0.1.a0 AT 02',
-         'BirdVoxDetect 0.1.a0 AT 05'), 'black'),
+#     'BirdVoxDetect 0.1.a0 AT': (
+#         ('BirdVoxDetect 0.1.a0 AT 02',
+#          'BirdVoxDetect 0.1.a0 AT 05'), 'black'),
+
 }
 
 OLD_BIRD_DETECTOR_NAMES = [
     'Old Bird Tseep Detector Redux 1.1',
-    'Old Bird Thrush Detector Redux 1.1'
+#     'Old Bird Thrush Detector Redux 1.1'
 ]
 
 OLD_BIRD_PLOT_DATA = {
     'Old Bird Tseep Redux 1.1': ('Old Bird Tseep Detector Redux 1.1', 'blue'),
-    'Old Bird Thrush Redux 1.1':
-        ('Old Bird Thrush Detector Redux 1.1', 'green')
+#     'Old Bird Thrush Redux 1.1':
+#         ('Old Bird Thrush Detector Redux 1.1', 'green')
 }
 
-ARCHIVE_NAMES = ['Part 1', 'Part 2']
+ARCHIVE_NAMES = ['Part 1']
 
 ARCHIVE_INFOS = {
     
@@ -263,6 +269,8 @@ NOISE_CLIPS_QUERY = QUERY_FORMAT.format(
 # determined from the clip counts that we retrieve from the database.
 
 MIN_PLOT_LINE_SCORES = {
+    
+    'MPG Ranch Tseep 1.0': 20,
     
     # 46 for Part 1, 30 for Part 2, 46 for both
     'BirdVoxDetect 0.1.a0 AT': 46
@@ -580,8 +588,8 @@ def get_plot_line_data(line_name, detector_names, clip_counts):
         
         return None
     
-    call_counts = reduce_size(line_name, call_counts)
-    total_counts = reduce_size(line_name, total_counts)
+    scores, call_counts = reduce_size(line_name, call_counts)
+    _, total_counts = reduce_size(line_name, total_counts)
     
     # Trim counts as needed to avoid divides by zero in precision
     # computations.
@@ -593,6 +601,9 @@ def get_plot_line_data(line_name, detector_names, clip_counts):
         
     precisions = 100 * call_counts / total_counts.astype('float')
 
+    triples = zip(scores, call_counts, precisions)
+    for t in triples:
+        print(t)
     # print('Precisions:', precisions)
     
     return call_counts, precisions
@@ -639,14 +650,22 @@ def sum_arrays(arrays):
 
 
 def reduce_size(line_name, clip_counts):
+    
     min_score = \
         MIN_PLOT_LINE_SCORES.get(line_name, DEFAULT_MIN_PLOT_LINE_SCORE)
     percent_size = 10 ** NUM_SCORE_DECIMAL_PLACES
+    
+    start = np.arange(min_score, 100, dtype='float64')
+    end = 99 + np.arange(percent_size + 1) / float(percent_size)
+    scores = np.concatenate((start, end))
+
     m = min_score * percent_size
     n = 99 * percent_size
     start = clip_counts[m:n:percent_size]
     end = clip_counts[n:]
-    return np.concatenate((start, end))
+    counts = np.concatenate((start, end))
+    
+    return scores, counts
     
 
 def create_matplotlib_plot_marker(
