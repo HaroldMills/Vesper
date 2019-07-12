@@ -52,11 +52,16 @@ START_SCORES = {
     'BirdVoxDetect 0.1.a0 AT 05a': 5,
     'MPG Ranch Thrush Detector 0.0 40': 40,
     'MPG Ranch Tseep Detector 0.0 40': 40,
+    'MPG Ranch Tseep Detector 1.0 20': 20,
 }
 
-DESIRED_CLIP_COUNT = 3000
+PRUNING_DETECTOR_NAMES = frozenset([
+    'MPG Ranch Tseep Detector 1.0 20'
+])
 
-MAX_MIN_SCORE = 80
+DESIRED_CLIP_COUNT = 0
+
+MAX_MIN_SCORE = 30
 
 CLIP_IDS_QUERY = '''
 select
@@ -238,14 +243,15 @@ def prune_clips(archive_dir_path, min_scores):
         connection.close()
         
         # Delete clips.
-        print(
-            'Deleting {} clips for {} / {} / {}...'.format(
-                len(clip_ids), *key))
-        # Be careful about uncommenting the following!
-#         with transaction.atomic():
-#             for i in range(0, len(clip_ids), MAX_DELETE_CHUNK_SIZE):
-#                 ids = clip_ids[i:i + MAX_DELETE_CHUNK_SIZE]
-#                 Clip.objects.filter(id__in=ids).delete()
+        if key[0] in PRUNING_DETECTOR_NAMES:
+            print(
+                'Deleting {} clips for {} / {} / {}...'.format(
+                    len(clip_ids), *key))
+            # Be careful about uncommenting the following!
+#             with transaction.atomic():
+#                 for i in range(0, len(clip_ids), MAX_DELETE_CHUNK_SIZE):
+#                     ids = clip_ids[i:i + MAX_DELETE_CHUNK_SIZE]
+#                     Clip.objects.filter(id__in=ids).delete()
             
             
 if __name__ == '__main__':
