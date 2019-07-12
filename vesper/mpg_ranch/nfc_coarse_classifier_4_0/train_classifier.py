@@ -342,6 +342,22 @@ SETTINGS = {
 
     )),
     
+    'Tseep 2.5M 1.5x': Settings(BASE_TSEEP_SETTINGS, Settings(
+        
+        dataset_name='Tseep 2.5M',
+        
+        # These are ignored when `warm_start_enabled` is `False`.
+        # They are for a `waveform_duration` of .190.
+        spectrogram_clipping_min=-1.399999976158142,
+        spectrogram_clipping_max=24.100000381469727,
+        spectrogram_normalization_scale_factor=0.31394569403171235,
+        spectrogram_normalization_offset=-4.2632720810753115,
+        
+        warm_start_enabled=False,
+        num_training_steps=20000
+
+    )),
+    
     'Thrush Quick': Settings(BASE_THRUSH_SETTINGS, Settings(
         dataset_name='Thrush 100K',
         pretraining_num_examples=1000,
