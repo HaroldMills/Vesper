@@ -316,10 +316,10 @@ SETTINGS = {
         
         # These are ignored when `warm_start_enabled` is `False`.
         # They are for a `waveform_duration` of .190.
-        spectrogram_clipping_min=-1.399999976158142,
+        spectrogram_clipping_min=-1.600000023841858,
         spectrogram_clipping_max=24.100000381469727,
-        spectrogram_normalization_scale_factor=0.31557229310571566,
-        spectrogram_normalization_offset=-4.288398418386261,
+        spectrogram_normalization_scale_factor=0.31346933450652303,
+        spectrogram_normalization_offset=-4.265454903782186,
         
         warm_start_enabled=False,
         num_training_steps=20000

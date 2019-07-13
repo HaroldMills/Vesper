@@ -1,9 +1,9 @@
 batch_normalization_enabled: true
-classification_threshold: 0.47
+classification_threshold: 0.86
 convolutional_layer_sizes:
 - 16
 - 32
-dataset_name: Tseep 980K
+dataset_name: Tseep 850K
 dense_layer_sizes:
 - 16
 evaluation_data_augmentation_enabled: true
@@ -26,19 +26,20 @@ pretraining_histogram_max: 50
 pretraining_histogram_min: -25
 pretraining_histogram_num_bins: 750
 pretraining_num_examples: 20000
-pretraining_value_distribution_plotting_enabled: false
+pretraining_value_distribution_plotting_enabled: true
+random_waveform_amplitude_scaling_enabled: true
 random_waveform_time_shifting_enabled: true
 spectrogram_clipping_enabled: true
-spectrogram_clipping_max: 23.700000762939453
-spectrogram_clipping_min: 1.100000023841858
+spectrogram_clipping_max: 24.100000381469727
+spectrogram_clipping_min: -1.399999976158142
 spectrogram_clipping_pretraining_enabled: true
 spectrogram_end_freq: 10000
 spectrogram_hop_size: 50
 spectrogram_log_epsilon: 1e-10
 spectrogram_normalization_enabled: true
-spectrogram_normalization_offset: -4.32701403957752
+spectrogram_normalization_offset: -4.288398418386261
 spectrogram_normalization_pretraining_enabled: true
-spectrogram_normalization_scale_factor: 0.3856747188725747
+spectrogram_normalization_scale_factor: 0.31557229310571566
 spectrogram_start_freq: 4000
 spectrogram_window_size: 0.005
 training_batch_size: 128
