@@ -30,51 +30,33 @@ DATASET_CONFIGS = yaml_utils.load('''
 
 - dataset_name_prefix: Thrush 20K
   detector_name: Thrush
-  train_dataset_size: [6000, 6000]
-  val_dataset_size: [2000, 2000]
-  test_dataset_size: [2000, 2000]
+  train_dataset_size: [10000, 10000]
+  val_dataset_size: [2500, 2500]
+  test_dataset_size: [2500, 2500]
   
 - dataset_name_prefix: Thrush 100K
   detector_name: Tseep
-  train_dataset_size: [36000, 36000]
-  val_dataset_size: [2000, 2000]
-  test_dataset_size: [2000, 2000]
+  train_dataset_size: [50000, 50000]
+  val_dataset_size: [2500, 2500]
+  test_dataset_size: [2500, 2500]
   
-- dataset_name_prefix: Thrush 1M
+- dataset_name_prefix: Thrush 660K
   detector_name: Thrush
-  train_dataset_size: [496000, 496000]
-  val_dataset_size: [2000, 2000]
-  test_dataset_size: [2000, 2000]
+  train_dataset_size: [330000, 330000]
+  val_dataset_size: [2500, 2500]
+  test_dataset_size: [2500, 2500]
 
-- dataset_name_prefix: Tseep 3K
-  detector_name: Tseep
-  train_dataset_size: [2000, 2000]
-  val_dataset_size: [500, 500]
-  test_dataset_size: [500, 500]
-    
 - dataset_name_prefix: Tseep 20K
   detector_name: Tseep
-  train_dataset_size: [6000, 6000]
-  val_dataset_size: [2000, 2000]
-  test_dataset_size: [2000, 2000]
+  train_dataset_size: [10000, 10000]
+  val_dataset_size: [2500, 2500]
+  test_dataset_size: [2500, 2500]
     
 - dataset_name_prefix: Tseep 100K
   detector_name: Tseep
-  train_dataset_size: [40000, 40000]
-  val_dataset_size: [5000, 5000]
-  test_dataset_size: [5000, 5000]
-  
-- dataset_name_prefix: Tseep 340K
-  detector_name: Tseep
-  train_dataset_size: [158579, 158579]
-  val_dataset_size: [5000, 5000]
-  test_dataset_size: [5000, 5000]
-  
-- dataset_name_prefix: Tseep 1M
-  detector_name: Tseep
-  train_dataset_size: [500000, 500000]
-  val_dataset_size: [10000, 10000]
-  test_dataset_size: [10000, 10000]
+  train_dataset_size: [50000, 50000]
+  val_dataset_size: [2500, 2500]
+  test_dataset_size: [2500, 2500]
   
 - dataset_name_prefix: Tseep 850K
   detector_name: Tseep
