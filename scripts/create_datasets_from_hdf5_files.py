@@ -21,7 +21,6 @@ import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Support creating multiple datasets in one run.
-# TODO: Replace `dataset_name_prefix` and `detector_name` with type and size.
 
 
 DATASET_NAME_PREFIX = 'Tseep 2.5M'
@@ -29,43 +28,36 @@ DATASET_NAME_PREFIX = 'Tseep 2.5M'
 DATASET_CONFIGS = yaml_utils.load('''
 
 - dataset_name_prefix: Thrush 20K
-  detector_name: Thrush
   train_dataset_size: [10000, 10000]
   val_dataset_size: [2500, 2500]
   test_dataset_size: [2500, 2500]
   
 - dataset_name_prefix: Thrush 100K
-  detector_name: Tseep
   train_dataset_size: [50000, 50000]
   val_dataset_size: [2500, 2500]
   test_dataset_size: [2500, 2500]
   
 - dataset_name_prefix: Thrush 660K
-  detector_name: Thrush
   train_dataset_size: [330000, 330000]
   val_dataset_size: [2500, 2500]
   test_dataset_size: [2500, 2500]
 
 - dataset_name_prefix: Tseep 20K
-  detector_name: Tseep
   train_dataset_size: [10000, 10000]
   val_dataset_size: [2500, 2500]
   test_dataset_size: [2500, 2500]
     
 - dataset_name_prefix: Tseep 100K
-  detector_name: Tseep
   train_dataset_size: [50000, 50000]
   val_dataset_size: [2500, 2500]
   test_dataset_size: [2500, 2500]
   
 - dataset_name_prefix: Tseep 850K
-  detector_name: Tseep
   train_dataset_size: [425000, 425000]
   val_dataset_size: [10000, 10000]
   test_dataset_size: [10000, 10000]
   
 - dataset_name_prefix: Tseep 2.5M
-  detector_name: Tseep
   train_dataset_size: [1275000, 1275000]
   val_dataset_size: [10000, 10000]
   test_dataset_size: [10000, 10000]
