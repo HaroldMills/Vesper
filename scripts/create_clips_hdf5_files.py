@@ -22,22 +22,32 @@ import vesper.django.app.model_utils as model_utils
 # /Users/harold/Desktop/NFC/Data/MPG Ranch/2017 MPG Ranch Archive
 # /Users/harold/Desktop/NFC/Data/MPG Ranch/2018/Part 1
 # /Users/harold/Desktop/NFC/Data/MPG Ranch/2018/Part 2
+# /Users/harold/Desktop/NFC/Data/MPG Ranch/2019-07 Detector Development/Dataset Archives/Thrush/2017
+# /Users/harold/Desktop/NFC/Data/MPG Ranch/2019-07 Detector Development/Dataset Archives/Thrush/2018 Part 1
+# /Users/harold/Desktop/NFC/Data/MPG Ranch/2019-07 Detector Development/Dataset Archives/Thrush/2018 Part 2
 # /Users/harold/Desktop/NFC/Data/MPG Ranch/2018/Detector Comparison/0.0/Part 1 Reduced
 # /Users/harold/Desktop/NFC/Data/MPG Ranch/2018/Detector Comparison/0.0/Part 2 Reduced
 
 
+# ARCHIVE_NAME = '2017 MPG Ranch'
+# ARCHIVE_NAME = '2018 MPG Ranch Part 1'
+# ARCHIVE_NAME = '2018 MPG Ranch Part 2'
+# ARCHIVE_NAME = '2018-08 MPG Ranch Noises'
 ARCHIVE_NAME = '2018-09 MPG Ranch Noises'
 
 OUTPUT_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Vesper ML/'
-    'MPG Ranch Coarse Classifier 4.0/HDF5 Files/Tseep')
+    'MPG Ranch Coarse Classifier 4.0/HDF5 Files/Thrush')
 
 # DETECTOR_NAME = 'Old Bird Tseep Detector Redux 1.1'
-DETECTOR_NAME = 'MPG Ranch Tseep Detector 0.0 40'
+# DETECTOR_NAME = 'MPG Ranch Tseep Detector 0.0 40'
+# DETECTOR_NAME = 'Old Bird Thrush Detector Redux 1.1'
+DETECTOR_NAME = 'MPG Ranch Thrush Detector 0.0 40'
 
 ANNOTATION_NAME = 'Classification'
 
 # ANNOTATION_VALUES = ['Call*', 'Noise', 'CHSP_DEJU', 'Tone']
+# ANNOTATION_VALUES = ['Call*', 'Noise']
 ANNOTATION_VALUES = ['Noise']
 
 ANNOTATION_VALUE_WILDCARD = '*'
@@ -49,18 +59,21 @@ FILE_NAME_DETECTOR_INFO = {
     'Old Bird Tseep Detector Redux 1.1': ('Tseep', 'Old Bird Redux 1.1'),
     'Old Bird Thrush Detector Redux 1.1': ('Thrush', 'Old Bird Redux 1.1'),
     'MPG Ranch Tseep Detector 0.0 40': ('Tseep', 'MPG Ranch 0.0'),
+    'MPG Ranch Thrush Detector 0.0 40': ('Thrush', 'MPG Ranch 0.0'),
 }
 
 EXTRACTION_START_OFFSETS = {
     'Old Bird Tseep Detector Redux 1.1': -.1,
     'Old Bird Thrush Detector Redux 1.1': -.05,
     'MPG Ranch Tseep Detector 0.0 40': -.05,
+    'MPG Ranch Thrush Detector 0.0 40': -.05
 }
 
 EXTRACTION_DURATIONS = {
     'Old Bird Tseep Detector Redux 1.1': .5,
     'Old Bird Thrush Detector Redux 1.1': .65,
     'MPG Ranch Tseep Detector 0.0 40': .5,
+    'MPG Ranch Thrush Detector 0.0 40': .65,
 }
 
 OTHER_ANNOTATION_NAMES = []
