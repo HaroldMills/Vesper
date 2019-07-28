@@ -36,9 +36,9 @@ _FN_THRESHOLD = .20
 Evaluation mode false negative score threshold.
 
 The value of this attribute should be either a score value in [0, 1] or
-`None`. If a score value, only false negatives whose scores are at most
-the threshold will be reclassified as "FN". If `None`, no clips will be
-reclassified as "FN".
+`None`. If a score value, "Call*" clips whose scores do not exceed the
+threshold will be reclassified as "FN*". If `None`, no clips will be
+reclassified as "FN*".
 """
 
 _FP_THRESHOLD = None
@@ -46,8 +46,8 @@ _FP_THRESHOLD = None
 Evaluation mode false positive score threshold.
 
 The value of this attribute should be either a score value in [0, 1] or
-`None`. If a score value, only false positives whose scores are at least
-the threshold will be reclassified as "FP". If `None`, no clips will be
+`None`. If a score value, "Noise" clips whose scores are at least the
+threshold will be reclassified as "FP". If `None`, no clips will be
 reclassified as "FP".
 """
 
@@ -97,8 +97,7 @@ class Classifier(Annotator):
         tf.logging.set_verbosity(tf.logging.WARN)
         
         self._classifiers = dict(
-            (t, _Classifier(t)) for t in ('Tseep',))
-        # (t, _Classifier(t)) for t in ('Tseep', 'Thrush'))
+            (t, _Classifier(t)) for t in ('Tseep', 'Thrush'))
         
         if _EVALUATION_MODE_ENABLED:
             self._score_annotation_info = \
