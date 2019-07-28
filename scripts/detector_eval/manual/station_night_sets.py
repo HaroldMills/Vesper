@@ -20,14 +20,30 @@ The sets of station-nights in this module were created by the
 """
 
 
-def parse_station_nights(station_nights):
+import vesper.util.time_utils as time_utils
+
+
+def _parse_station_nights(station_nights):
     return frozenset([
-        tuple(line.strip().split(' / '))
+        _parse_station_night(line)
         for line in station_nights.strip().split('\n')
         if line.strip() != ''])
     
     
-INITIAL_STATION_NIGHTS = parse_station_nights('''
+def _parse_station_night(line):
+    
+    # Split line into station name and night date.
+    station, night = line.strip().split(' / ')
+    
+    # TODO: Use `datetime.date.fromisoformat` here when we no
+    # longer need to support Python 3.6.
+    yyyy, mm, dd = night.split('-')
+    night = time_utils.parse_date(yyyy, mm, dd)
+    
+    return station, night
+
+
+INITIAL_STATION_NIGHTS = _parse_station_nights('''
 
     Angel / 2018-08-28
     Bear / 2018-08-20
@@ -138,7 +154,7 @@ INITIAL_STATION_NIGHTS = parse_station_nights('''
 ''')
 
 
-VALIDATION_STATION_NIGHTS = parse_station_nights('''
+VALIDATION_STATION_NIGHTS = _parse_station_nights('''
 
     Angel / 2018-08-17
     Bear / 2018-08-09
@@ -249,7 +265,7 @@ VALIDATION_STATION_NIGHTS = parse_station_nights('''
 ''')
 
 
-TEST_STATION_NIGHTS = parse_station_nights('''
+TEST_STATION_NIGHTS = _parse_station_nights('''
 
     Angel / 2018-08-25
     Bear / 2018-08-14
@@ -363,11 +379,11 @@ TEST_STATION_NIGHTS = parse_station_nights('''
 NON_TRAINING_STATION_NIGHTS = VALIDATION_STATION_NIGHTS | TEST_STATION_NIGHTS
     
     
-def main():
+def _main():
     
-    check_disjointness(INITIAL_STATION_NIGHTS, VALIDATION_STATION_NIGHTS)
-    check_disjointness(VALIDATION_STATION_NIGHTS, TEST_STATION_NIGHTS)
-    check_disjointness(TEST_STATION_NIGHTS, INITIAL_STATION_NIGHTS)
+    _check_disjointness(INITIAL_STATION_NIGHTS, VALIDATION_STATION_NIGHTS)
+    _check_disjointness(VALIDATION_STATION_NIGHTS, TEST_STATION_NIGHTS)
+    _check_disjointness(TEST_STATION_NIGHTS, INITIAL_STATION_NIGHTS)
     print('Initial, validation, and test sets are mutually disjoint.')
     
     non_training_station_nights = sorted(NON_TRAINING_STATION_NIGHTS)
@@ -375,7 +391,7 @@ def main():
         print(station_night)
     
     
-def check_disjointness(a, b):
+def _check_disjointness(a, b):
     intersection = a & b
     if len(intersection) != 0:
         raise ValueError(
@@ -383,4 +399,4 @@ def check_disjointness(a, b):
         
         
 if __name__ == '__main__':
-    main()
+    _main()
