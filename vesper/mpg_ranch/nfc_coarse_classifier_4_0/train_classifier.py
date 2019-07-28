@@ -38,15 +38,17 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Save SavedModels and performance models and stats periodically.
 
 
-CLASSIFIER_NAME = 'Tseep 850K'
+CLASSIFIER_NAME = 'Thrush 600K'
+
+CALL_TYPE = CLASSIFIER_NAME.split()[0]
 
 BASE_DIR_PATH = Path('/Users/harold/Desktop')
 
 ML_DIR_PATH = \
     BASE_DIR_PATH / 'NFC' / 'Data' / 'Vesper ML' / \
     'MPG Ranch Coarse Classifier 4.0'
-DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / 'Tseep'
-MODELS_DIR_PATH = ML_DIR_PATH / 'Models' / 'Tseep'
+DATASETS_DIR_PATH = ML_DIR_PATH / 'Datasets' / CALL_TYPE
+MODELS_DIR_PATH = ML_DIR_PATH / 'Models' / CALL_TYPE
 SAVED_MODELS_DIR_NAME = 'Saved Models'
 
 RESULTS_DIR_PATH = BASE_DIR_PATH / 'ML Results'
@@ -174,7 +176,9 @@ BASE_TSEEP_SETTINGS = Settings(
 
 BASE_THRUSH_SETTINGS = Settings(
     
-    dataset_name='Thrush 1M',
+    target_use=dataset_utils.TARGET_USE_DETECTOR,
+    
+    dataset_name='Thrush 600K',
     
     waveform_sample_rate=24000,
     
@@ -371,17 +375,18 @@ SETTINGS = {
         dense_layer_sizes=[16],
     )),
     
-    'Thrush 1M': Settings(BASE_THRUSH_SETTINGS, Settings(
+    'Thrush 600K': Settings(BASE_THRUSH_SETTINGS, Settings(
         
         # These are ignored when `warm_start_enabled` is `False`.
         # They are for a `waveform_duration` of .250.
-        spectrogram_clipping_min=1.7999999523162842,
-        spectrogram_clipping_max=23.799999237060547,
-        spectrogram_normalization_scale_factor=0.34758085052299253,
-        spectrogram_normalization_offset=-4.213968141482927,
+        spectrogram_clipping_min=-0.699999988079071,
+        spectrogram_clipping_max=25.0,
+        spectrogram_normalization_scale_factor=0.3072209816231628,
+        spectrogram_normalization_offset=-4.58638721925296,
         
         warm_start_enabled=False,
-        num_training_steps=20000
+        training_batch_size=200,
+        num_training_steps=10000
         
     )),    
     
