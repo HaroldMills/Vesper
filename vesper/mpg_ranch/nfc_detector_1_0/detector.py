@@ -598,3 +598,25 @@ class ThrushDetector40(_Detector):
     def __init__(self, sample_rate, listener, extra_thresholds=None):
         settings = _thrush_settings(40)
         super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+
+class ThrushDetector30(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Thrush Detector 1.0 30'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _thrush_settings(30)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
+
+
+class ThrushDetector20(_Detector):
+    
+    
+    extension_name = 'MPG Ranch Thrush Detector 1.0 20'
+    
+    
+    def __init__(self, sample_rate, listener, extra_thresholds=None):
+        settings = _thrush_settings(20)
+        super().__init__(settings, sample_rate, listener, extra_thresholds)
