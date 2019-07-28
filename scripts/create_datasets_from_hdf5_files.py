@@ -16,6 +16,7 @@ import tensorflow as tf
 
 from vesper.util.bunch import Bunch
 import vesper.util.os_utils as os_utils
+import vesper.util.time_utils as time_utils
 import vesper.signal.resampling_utils as resampling_utils
 import vesper.util.yaml_utils as yaml_utils
 
@@ -41,8 +42,8 @@ DATASET_CONFIGS = yaml_utils.load('''
   
 - dataset_name_prefix: Thrush 600K
   train_dataset_size: [300000, 300000]
-  val_dataset_size: [4500, 4500]
-  test_dataset_size: [4500, 4500]
+  val_dataset_size: [3000, 3000]
+  test_dataset_size: [3000, 3000]
 
 - dataset_name_prefix: Tseep 20K
   train_dataset_size: [10000, 10000]
@@ -159,8 +160,6 @@ Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Florence High School_Call.h5
 Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Florence High School_Noise.h5
 Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Grandpa's Pond_Call.h5
 Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Grandpa's Pond_Noise.h5
-Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Heron Crossing_Call.h5
-Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Heron Crossing_Noise.h5
 Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO Lucky Peak_Call.h5
 Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO Lucky Peak_Noise.h5
 Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_IBO River_Call.h5
@@ -267,8 +266,6 @@ Thrush_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Florence High School_Call.h5
 Thrush_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Florence High School_Noise.h5
 Thrush_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Grandpa's Pond_Call.h5
 Thrush_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Grandpa's Pond_Noise.h5
-Thrush_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Heron Crossing_Call.h5
-Thrush_2018 MPG Ranch Part 2_Old Bird Redux 1.1_Heron Crossing_Noise.h5
 Thrush_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO Lucky Peak_Call.h5
 Thrush_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO Lucky Peak_Noise.h5
 Thrush_2018 MPG Ranch Part 2_Old Bird Redux 1.1_IBO River_Call.h5
@@ -358,7 +355,6 @@ Thrush_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Esmerelda_Noise.h5
 Thrush_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Evander_Noise.h5
 Thrush_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Florence High School_Noise.h5
 Thrush_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Grandpa's Pond_Noise.h5
-Thrush_2018-08 MPG Ranch Noises_MPG Ranch 0.0_Heron Crossing_Noise.h5
 Thrush_2018-08 MPG Ranch Noises_MPG Ranch 0.0_IBO Lucky Peak_Noise.h5
 Thrush_2018-08 MPG Ranch Noises_MPG Ranch 0.0_IBO River_Noise.h5
 Thrush_2018-08 MPG Ranch Noises_MPG Ranch 0.0_JJ_Noise.h5
@@ -412,7 +408,6 @@ Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Esmerelda_Noise.h5
 Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Evander_Noise.h5
 Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Florence High School_Noise.h5
 Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Grandpa's Pond_Noise.h5
-Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Heron Crossing_Noise.h5
 Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_IBO Lucky Peak_Noise.h5
 Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_IBO River_Noise.h5
 Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_JJ_Noise.h5
@@ -450,6 +445,14 @@ Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Willow Mountain Lookout_Noise.h5
 Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_YVAS_Noise.h5
 Thrush_2018-09 MPG Ranch Noises_MPG Ranch 0.0_Zuri_Noise.h5
 '''.strip().split('\n')
+"""
+Thrush dataset input HDF5 file names.
+
+The input HDF5 files for the Heron Crossing station (which operated in
+2018 but not 2017) are omitted from this list since its recordings are
+contaminated with audio from a commercial radio station, which we do not
+wish to attempt to train for.
+"""
 
 # THRUSH_INPUT_FILE_NAMES = '''
 # Thrush_2018 MPG Ranch Part 1_Old Bird Redux 1.1_Angel_Call.h5
@@ -1244,7 +1247,15 @@ class StationNightClipFilter:
     
     def filter(self, clip_attrs):
         
-        clip_station_night = (clip_attrs['station'], clip_attrs['date'])
+        station = clip_attrs['station']
+        
+        # TODO: Use `datetime.date.fromisoformat` here when we no
+        # longer need to support Python 3.6.
+        night = clip_attrs['date']
+        yyyy, mm, dd = night.split('-')
+        night = time_utils.parse_date(yyyy, mm, dd)
+
+        clip_station_night = (station, night)
         
         result = clip_station_night not in self._filtered_station_nights
         
