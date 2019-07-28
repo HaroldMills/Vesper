@@ -24,7 +24,7 @@ CREATE_MATPLOTLIB_PLOTS = True
 
 CREATE_BOKEH_PLOTS = False
 
-CREATE_SEPARATE_STATION_NIGHT_PLOTS = False
+CREATE_SEPARATE_STATION_NIGHT_PLOTS = True
 
 DATABASE_FILE_NAME = 'Archive Database.sqlite'
 
@@ -46,6 +46,7 @@ ALL_STATION_NIGHTS_PLOT_FILE_NAME = 'All Station-Nights.html'
 #     'BirdVoxDetect 0.1.a0 AT 05'
 # ]
 DETECTOR_NAMES = [
+    'MPG Ranch Thrush Detector 1.0 40',
     'MPG Ranch Tseep Detector 1.0 20',
 ]
 
@@ -53,6 +54,7 @@ PLOT_LINE_DATA = {
     
     # 'MPG Ranch Tseep 0.0': ('MPG Ranch Tseep Detector 0.0 40', 'blue'),
     # 'MPG Ranch Thrush 0.0': ('MPG Ranch Thrush Detector 0.0 40', 'green'),
+    'MPG Ranch Thrush 1.0': ('MPG Ranch Thrush Detector 1.0 40', 'green'),
     'MPG Ranch Tseep 1.0': ('MPG Ranch Tseep Detector 1.0 20', 'blue'),
     
     # Combination of MPG Ranch Tseep and Thrush detectors. It is a little
@@ -81,144 +83,146 @@ PLOT_LINE_DATA = {
 }
 
 OLD_BIRD_DETECTOR_NAMES = [
+    'Old Bird Thrush Detector Redux 1.1',
     'Old Bird Tseep Detector Redux 1.1',
-#     'Old Bird Thrush Detector Redux 1.1'
 ]
 
 OLD_BIRD_PLOT_DATA = {
-    'Old Bird Tseep Redux 1.1': ('Old Bird Tseep Detector Redux 1.1', 'blue'),
-#     'Old Bird Thrush Redux 1.1':
-#         ('Old Bird Thrush Detector Redux 1.1', 'green')
+    'Old Bird Thrush Redux 1.1':
+        ('Old Bird Thrush Detector Redux 1.1', 'green'),
+    'Old Bird Tseep Redux 1.1':
+       ('Old Bird Tseep Detector Redux 1.1', 'blue'),
 }
 
-ARCHIVE_NAMES = ['Part 1']
+ARCHIVE_NAMES = ['Part 1', 'Part 2']
 
 ARCHIVE_INFOS = {
     
     'Part 1': (
         
         Path(
-            '/Users/harold/Desktop/NFC/Data/MPG Ranch/2018/'
-            'Detector Comparison/0.0/Part 1 Reduced'),
+            '/Users/harold/Desktop/NFC/Data/MPG Ranch/'
+            '2019-07 Detector Development/Evaluation Archives/2018 Part 1'),
         
         # Station-nights for 2018 MPG Ranch August archive, from output of
         # `scripts.detector_eval.manual.prune_recordings` script.
         '''
-        Angel / 2018-08-28
-        Bear / 2018-08-20
-        Bell Crossing / 2018-08-25
-        Bivory / 2018-08-20
-        CB Ranch / 2018-08-02
-        Coki / 2018-08-10
-        Cricket / 2018-08-31
-        Darby High School PC / 2018-08-09
-        Dashiell / 2018-08-17
-        Deer Mountain Lookout / 2018-08-30
-        DonnaRae / 2018-08-16
-        Dreamcatcher / 2018-08-19
-        Esmerelda / 2018-08-14
-        Evander / 2018-08-22
-        Florence High School / 2018-08-02
-        Grandpa's Pond / 2018-08-16
-        Heron Crossing / 2018-08-12
-        IBO Lucky Peak / 2018-08-17
-        IBO River / 2018-08-31
-        JJ / 2018-08-14
-        KBK / 2018-08-20
-        Kate / 2018-08-28
-        Lee Metcalf NWR / 2018-08-24
-        Lilo / 2018-08-30
-        Lost Trail / 2018-08-30
-        MPG North / 2018-08-07
-        MPG Ranch Floodplain SM2 / 2018-08-17
-        MPG Ranch Ridge / 2018-08-05
-        MPG Ranch Sheep Camp / 2018-08-10
-        MPG Ranch Subdivision / 2018-08-05
-        MPG Ranch Zumwalt Ridge / 2018-08-25
-        Max / 2018-08-17
-        Meadowlark / 2018-08-20
-        Mickey / 2018-08-26
-        Mitzi / 2018-08-09
-        Molly / 2018-08-30
-        Oxbow / 2018-08-18
-        Panda / 2018-08-30
-        Petey / 2018-08-26
-        Pocket Gopher / 2018-08-12
-        Sadie-Kate / 2018-08-20
-        Sasquatch / 2018-08-29
-        Seeley High School / 2018-08-05
-        Sleeman / 2018-08-23
-        Slocum / 2018-08-06
-        St Mary Lookout / 2018-08-18
-        Sula Peak Lookout / 2018-08-12
-        Sula Ranger Station / 2018-08-10
-        Teller / 2018-08-02
-        Walnut / 2018-08-24
-        Willow Mountain Lookout / 2018-08-16
-        Zuri / 2018-08-03
+        Angel / 2018-08-17
+        Bear / 2018-08-09
+        Bell Crossing / 2018-08-01
+        Bivory / 2018-08-31
+        CB Ranch / 2018-08-18
+        Coki / 2018-08-12
+        Cricket / 2018-08-14
+        Darby High School PC / 2018-08-28
+        Dashiell / 2018-08-23
+        Deer Mountain Lookout / 2018-08-10
+        DonnaRae / 2018-08-04
+        Dreamcatcher / 2018-08-29
+        Esmerelda / 2018-08-28
+        Evander / 2018-08-25
+        Florence High School / 2018-08-17
+        Grandpa's Pond / 2018-08-30
+        Heron Crossing / 2018-08-15
+        IBO Lucky Peak / 2018-08-27
+        IBO River / 2018-08-23
+        JJ / 2018-08-11
+        KBK / 2018-08-10
+        Kate / 2018-08-18
+        Lee Metcalf NWR / 2018-08-19
+        Lilo / 2018-08-13
+        Lost Trail / 2018-08-05
+        MPG North / 2018-08-11
+        MPG Ranch Floodplain SM2 / 2018-08-20
+        MPG Ranch Ridge / 2018-08-23
+        MPG Ranch Sheep Camp / 2018-08-29
+        MPG Ranch Subdivision / 2018-08-18
+        MPG Ranch Zumwalt Ridge / 2018-08-20
+        Max / 2018-08-26
+        Meadowlark / 2018-08-08
+        Mickey / 2018-08-09
+        Mitzi / 2018-08-02
+        Molly / 2018-08-22
+        Oxbow / 2018-08-07
+        Panda / 2018-08-24
+        Petey / 2018-08-20
+        Pocket Gopher / 2018-08-16
+        Sadie-Kate / 2018-08-11
+        Sasquatch / 2018-08-19
+        Seeley High School / 2018-08-20
+        Sleeman / 2018-08-08
+        Slocum / 2018-08-24
+        St Mary Lookout / 2018-08-15
+        Sula Peak Lookout / 2018-08-31
+        Sula Ranger Station / 2018-08-31
+        Teller / 2018-08-13
+        Walnut / 2018-08-07
+        Willow Mountain Lookout / 2018-08-17
+        YVAS / 2018-08-02
+        Zuri / 2018-08-13
         '''
     ),
     
     'Part 2': (
         
         Path(
-            '/Users/harold/Desktop/NFC/Data/MPG Ranch/2018/'
-            'Detector Comparison/0.0/Part 2 Reduced'),
+            '/Users/harold/Desktop/NFC/Data/MPG Ranch/'
+            '2019-07 Detector Development/Evaluation Archives/2018 Part 2'),
         
         # Station-nights for 2018 MPG Ranch September archive, from output of
         # `scripts.detector_eval.manual.prune_recordings` script.
         '''
-        Angel / 2018-09-28
-        Bear / 2018-09-13
-        Bell Crossing / 2018-09-25
-        Bivory / 2018-09-14
-        CB Ranch / 2018-09-02
-        Coki / 2018-09-09
-        Cricket / 2018-09-17
-        Darby High School PC / 2018-09-29
-        Dashiell / 2018-09-22
-        Deer Mountain Lookout / 2018-09-11
-        DonnaRae / 2018-09-16
-        Dreamcatcher / 2018-09-13
-        Esmerelda / 2018-09-10
-        Evander / 2018-09-16
-        Florence High School / 2018-09-19
-        Grandpa's Pond / 2018-09-12
-        Heron Crossing / 2018-09-30
-        IBO Lucky Peak / 2018-09-28
-        IBO River / 2018-09-29
-        JJ / 2018-09-02
-        KBK / 2018-09-17
-        Kate / 2018-09-05
-        Lee Metcalf NWR / 2018-09-10
-        Lilo / 2018-09-05
-        Lost Trail / 2018-09-28
-        MPG North / 2018-09-25
-        MPG Ranch Floodplain / 2018-09-11
-        MPG Ranch Ridge / 2018-09-20
-        MPG Ranch Sheep Camp / 2018-09-21
-        MPG Ranch Subdivision / 2018-09-07
-        Max / 2018-09-04
-        Meadowlark / 2018-09-30
-        Mickey / 2018-09-26
-        Mitzi / 2018-09-09
-        Molly / 2018-09-30
-        Oxbow / 2018-09-18
-        Panda / 2018-09-23
-        Petey / 2018-09-13
-        Pocket Gopher / 2018-09-28
-        Sasquatch / 2018-09-04
-        Seeley High School / 2018-09-10
-        Sleeman / 2018-09-29
-        Slocum / 2018-09-05
-        St Mary Lookout / 2018-09-08
-        Sula Peak Lookout / 2018-09-10
-        Sula Ranger Station / 2018-09-04
-        Teller / 2018-09-16
-        Walnut / 2018-09-30
-        Willow Mountain Lookout / 2018-09-08
-        YVAS / 2018-09-23
-        Zuri / 2018-09-03
+        Angel / 2018-09-30
+        Bear / 2018-09-09
+        Bell Crossing / 2018-09-20
+        Bivory / 2018-09-05
+        CB Ranch / 2018-09-23
+        Coki / 2018-09-19
+        Cricket / 2018-09-12
+        Darby High School PC / 2018-09-11
+        Dashiell / 2018-09-11
+        Deer Mountain Lookout / 2018-09-16
+        DonnaRae / 2018-09-23
+        Dreamcatcher / 2018-09-25
+        Esmerelda / 2018-09-08
+        Evander / 2018-09-07
+        Florence High School / 2018-09-20
+        Grandpa's Pond / 2018-09-08
+        Heron Crossing / 2018-09-04
+        IBO Lucky Peak / 2018-09-13
+        IBO River / 2018-09-09
+        JJ / 2018-09-04
+        KBK / 2018-09-11
+        Kate / 2018-09-25
+        Lee Metcalf NWR / 2018-09-02
+        Lilo / 2018-09-12
+        Lost Trail / 2018-09-03
+        MPG North / 2018-09-12
+        MPG Ranch Floodplain / 2018-09-30
+        MPG Ranch Ridge / 2018-09-10
+        MPG Ranch Sheep Camp / 2018-09-14
+        MPG Ranch Subdivision / 2018-09-02
+        Max / 2018-09-20
+        Meadowlark / 2018-09-26
+        Mickey / 2018-09-14
+        Mitzi / 2018-09-06
+        Molly / 2018-09-24
+        Oxbow / 2018-09-09
+        Panda / 2018-09-08
+        Petey / 2018-09-12
+        Pocket Gopher / 2018-09-20
+        Sasquatch / 2018-09-30
+        Seeley High School / 2018-09-14
+        Sleeman / 2018-09-13
+        Slocum / 2018-09-10
+        St Mary Lookout / 2018-09-05
+        Sula Peak Lookout / 2018-09-03
+        Sula Ranger Station / 2018-09-14
+        Teller / 2018-09-07
+        Walnut / 2018-09-01
+        Willow Mountain Lookout / 2018-09-01
+        YVAS / 2018-09-18
+        Zuri / 2018-09-20
         '''
 
     )
@@ -270,6 +274,7 @@ NOISE_CLIPS_QUERY = QUERY_FORMAT.format(
 
 MIN_PLOT_LINE_SCORES = {
     
+    'MPG Ranch Thrush 1.0': 40,
     'MPG Ranch Tseep 1.0': 20,
     
     # 46 for Part 1, 30 for Part 2, 46 for both
@@ -601,9 +606,9 @@ def get_plot_line_data(line_name, detector_names, clip_counts):
         
     precisions = 100 * call_counts / total_counts.astype('float')
 
-    triples = zip(scores, call_counts, precisions)
-    for t in triples:
-        print(t)
+    # triples = zip(scores, call_counts, precisions)
+    # for t in triples:
+    #     print(t)
     # print('Precisions:', precisions)
     
     return call_counts, precisions
