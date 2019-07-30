@@ -606,12 +606,28 @@ def get_plot_line_data(line_name, detector_names, clip_counts):
         
     precisions = 100 * call_counts / total_counts.astype('float')
 
-    # triples = zip(scores, call_counts, precisions)
-    # for t in triples:
-    #     print(t)
-    # print('Precisions:', precisions)
+    show_precision_table(line_name, scores, precisions)
     
     return call_counts, precisions
+       
+
+def show_precision_table(line_name, scores, precisions):
+    
+    print(line_name, 'precision vs. threshold:')
+    
+    min_score = \
+        MIN_PLOT_LINE_SCORES.get(line_name, DEFAULT_MIN_PLOT_LINE_SCORE)
+        
+    num_scores = 100 - min_score
+    
+    f = '{:.0f},{:.1f}'
+    
+    # Show precision for scores from `min_score` through 99.
+    for i in range(num_scores):
+        print(f.format(scores[i], precisions[i]))
+        
+    # Show precision for score of 100.
+    print(f.format(scores[-1], precisions[-1]))
        
 
 def get_plot_line_clip_counts(detector_names, clip_counts):
