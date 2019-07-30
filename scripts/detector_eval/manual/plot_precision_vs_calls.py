@@ -24,7 +24,7 @@ CREATE_MATPLOTLIB_PLOTS = True
 
 CREATE_BOKEH_PLOTS = False
 
-CREATE_SEPARATE_STATION_NIGHT_PLOTS = True
+CREATE_SEPARATE_STATION_NIGHT_PLOTS = False
 
 DATABASE_FILE_NAME = 'Archive Database.sqlite'
 
@@ -228,7 +228,7 @@ ARCHIVE_INFOS = {
     )
 }
 
-NUM_SCORE_DECIMAL_PLACES = 4
+NUM_SCORE_DECIMAL_PLACES = 2
 
 QUERY_FORMAT = '''
 select
@@ -656,11 +656,22 @@ def sum_arrays(arrays):
 
 def reduce_size(line_name, clip_counts):
     
+    """
+    Reduce the size of the specified clip counts by removing counts
+    at non-integer scores below 99.
+    
+    For scores from the minimum to 99 a score resolution of 1 has
+    been fine for (mostly) keeping our curves from looking like the
+    piecewise linear approximations that they are. We need higher
+    resolution between 99 and 100, however, to accomplish the same
+    goal there.
+    """
+    
     min_score = \
         MIN_PLOT_LINE_SCORES.get(line_name, DEFAULT_MIN_PLOT_LINE_SCORE)
     percent_size = 10 ** NUM_SCORE_DECIMAL_PLACES
     
-    start = np.arange(min_score, 100, dtype='float64')
+    start = np.arange(min_score, 99, dtype='float64')
     end = 99 + np.arange(percent_size + 1) / float(percent_size)
     scores = np.concatenate((start, end))
 
