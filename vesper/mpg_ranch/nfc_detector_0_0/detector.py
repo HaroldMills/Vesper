@@ -9,6 +9,11 @@ network to the spectrogram to obtain a score.
 
 The `TseepDetector` and `ThrushDetector` classes of this module are
 configured to detect tseep and thrush NFCs, respectively.
+
+The detectors of this module use the classifiers of the
+`vesper.mpg_ranch.nfc_coarse_classifier_3_0` package for
+distinguishing audio segments that contain NFCs from segments that
+do not.
 """
 
 

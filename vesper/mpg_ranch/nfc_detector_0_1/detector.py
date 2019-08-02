@@ -9,6 +9,19 @@ network to the spectrogram to obtain a score.
 
 The `TseepDetector` and `ThrushDetector` classes of this module are
 configured to detect tseep and thrush NFCs, respectively.
+
+The detectors of this module use the classifiers of the
+`vesper.mpg_ranch.nfc_coarse_classifier_3_0` package for
+distinguishing audio segments that contain NFCs from segments that
+do not.
+
+The detectors of this module differ from those of the sibling
+`nfc_detector_0_0` package mainly in that they use the
+`vesper.signal.resampling_utils` module for input resampling instead
+of the `resampy` module. The `resampling_utils` module resamples
+input from 22050, 32000, 44100, and 48000 Hz to 24000 Hz better and
+faster than `resampy`, and falls back onto `resampy` for other sample
+rates.
 """
 
 
