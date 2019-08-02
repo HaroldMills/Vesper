@@ -8,7 +8,7 @@ manually or automatically.
 
 This classifier was trained on clips created by the Old Bird Tseep
 and Thrush Redux 1.1 detectors from MPG Ranch recordings collected in
-the fall of 2017.
+the fall of 2017 and the fall of 2018.
 """
 
 
