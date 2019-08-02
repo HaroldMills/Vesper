@@ -17,6 +17,7 @@ Classifier:
     - vesper.mpg_ranch.nfc_coarse_classifier_2_1.classifier.Classifier
     - vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier.Classifier
     - vesper.mpg_ranch.nfc_coarse_classifier_4_0.classifier.Classifier
+    - vesper.mpg_ranch.nfc_detector_low_score_classifier_1_0.classifier.Classifier
     - vesper.mpg_ranch.outside_classifier.OutsideClassifier
     
 Command:
