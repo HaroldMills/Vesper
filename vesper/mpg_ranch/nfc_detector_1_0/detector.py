@@ -44,7 +44,7 @@ _TSEEP_SETTINGS = Settings(
     clip_type='Tseep',
     input_chunk_size=3600,
     hop_size=50,
-    threshold=.9,
+    threshold=.41,
     initial_clip_padding=.1,
     clip_duration=.4
 )
@@ -53,7 +53,7 @@ _THRUSH_SETTINGS = Settings(
     clip_type='Thrush',
     input_chunk_size=3600,
     hop_size=50,
-    threshold=.9,
+    threshold=.70,
     initial_clip_padding=.2,
     clip_duration=.6
 )
