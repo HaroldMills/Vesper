@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 setup(
       
     name='vesper',
-    version='0.4.7',
+    version='0.4.8a2',
     description=(
         'Software for acoustical monitoring of nocturnal bird migration.'),
     url='https://github.com/HaroldMills/Vesper',
@@ -26,13 +26,14 @@ setup(
     install_requires=[
         'django',
         'jsonschema',
-        'keras',
-        'librosa',
+        'keras==2.2.4',
+        'librosa==0.6.3',
         'pandas',
         'pyephem',
-        'resampy',
+        'ruamel_yaml',
         'scikit-learn',
-        'tensorflow'
+        'sqlparse',
+        'tensorflow==1.12'
     ],
       
     entry_points={
