@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 setup(
       
     name='vesper',
-    version='0.4.8a2',
+    version='0.4.8a3',
     description=(
         'Software for acoustical monitoring of nocturnal bird migration.'),
     url='https://github.com/HaroldMills/Vesper',
@@ -33,7 +33,7 @@ setup(
         'ruamel_yaml',
         'scikit-learn',
         'sqlparse',
-        'tensorflow==1.12'
+        'tensorflow~=1.12.2'
     ],
       
     entry_points={
