@@ -11,7 +11,6 @@
 
     {% load staticfiles %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/export-clip-audio-files-form.css' %}">
 
 </head>
 
@@ -23,12 +22,11 @@
 
     <p>
         Exports clips to wave files. The clips are specified as a set of one
-        or more detectors, one or more station/mic combinations, and a range
-        of dates. The wave files are written to the specified output directory
-        on the server. The export runs as a Vesper job. [In the future, you
-        will be able to choose the classes of clips to be exported. The clips
-        will also be delivered via your browser rather than via the server
-        file system.]
+        or more detectors, one or more station/mic combinations, a
+        classification, and a range of dates. The wave files are written to
+        the specified output directory on the server. The export runs as a
+        Vesper job. [In the future, the clips will be delivered to the
+        client in a zip file rather than written to the server file system.]
     </p>
 
     <!--
@@ -41,6 +39,7 @@
 
         {{ form.detectors|block_form_element }}
         {{ form.station_mics|block_form_element }}
+        {{ form.classification|form_element }}
         {{ form.start_date|form_element }}
         {{ form.end_date|form_element }}
         {{ form.output_dir_path|block_form_element }}

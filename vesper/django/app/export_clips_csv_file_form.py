@@ -18,6 +18,8 @@ class ExportClipsCsvFileForm(forms.Form):
             a help text formatting function that can pre-process the text
             to make it look better.''')
     
+    classification = forms.ChoiceField(label='Classification')
+    
     start_date = forms.DateField(label='Start date')
     
     end_date = forms.DateField(label='End date')
@@ -39,3 +41,7 @@ class ExportClipsCsvFileForm(forms.Form):
         names = model_utils.get_station_mic_output_pair_ui_names()
         choices = [(name, name) for name in names]
         self.fields['station_mics'].choices = choices
+
+        # Populate classification field.
+        self.fields['classification'].choices = \
+            form_utils.get_string_annotation_value_choices('Classification')

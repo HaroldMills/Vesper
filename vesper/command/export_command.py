@@ -27,6 +27,7 @@ class ExportCommand(Command):
         self._exporter_spec = get('exporter', args)
         self._detector_names = get('detectors', args)
         self._sm_pair_ui_names = get('station_mics', args)
+        self._classification = get('classification', args)
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
         
@@ -48,11 +49,17 @@ class ExportCommand(Command):
         
         self._exporter.begin_exports()
     
+        annotation_name, annotation_value = \
+            model_utils.get_clip_query_annotation_data(
+                'Classification', self._classification)
+            
         value_tuples = self._create_clip_query_values_iterator()
         
         for detector, station, mic_output, date in value_tuples:
             
-            clips = _get_clips(station, mic_output, detector, date)
+            clips = _get_clips(
+                station, mic_output, detector, date, annotation_name,
+                annotation_value)
             
             count = clips.count()
             count_text = text_utils.create_count_text(count, 'clip')

@@ -133,8 +133,8 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
       - name: Clip Audio Files
         url_name: export-clip-audio-files
         
-      # - name: Clips HDF5 File
-      #   url_name: export-clips-hdf5-file
+      - name: Clips HDF5 File
+        url_name: export-clips-hdf5-file
  
 - name: Other
   dropdown:
@@ -484,6 +484,7 @@ def _create_export_clips_csv_file_command_spec(form):
             },
             'detectors': data['detectors'],
             'station_mics': data['station_mics'],
+            'classification': data['classification'],
             'start_date': data['start_date'],
             'end_date': data['end_date']
         }
@@ -532,6 +533,7 @@ def _create_export_clip_audio_files_command_spec(form):
             },
             'detectors': data['detectors'],
             'station_mics': data['station_mics'],
+            'classification': data['classification'],
             'start_date': data['start_date'],
             'end_date': data['end_date']
         }
@@ -576,6 +578,7 @@ def _create_export_clips_hdf5_file_command_spec(form):
             },
             'detectors': data['detectors'],
             'station_mics': data['station_mics'],
+            'classification': data['classification'],
             'start_date': data['start_date'],
             'end_date': data['end_date']
         }

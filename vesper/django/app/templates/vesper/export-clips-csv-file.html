@@ -11,7 +11,6 @@
 
     {% load staticfiles %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/export-clips-csv-file-form.css' %}">
 
 </head>
 
@@ -24,11 +23,11 @@
     <p>
         Exports clip metadata to a CSV file. The file contains one row for
         each exported clip. The clips are specified as a set of one or more
-        detectors, one or more station/mic combinations, and a range of dates.
-        The CSV file is written at the specified path on the server. The export
-        runs as a Vesper job. [In the future, you will be able to choose the
-        classes of clips for the export. The CSV file will also be delivered
-        via your browser rather than via the server file system.]
+        detectors, one or more station/mic combinations, a classification,
+        and a range of dates. The CSV file is written at the specified path
+        on the server. The export runs as a Vesper job. [In the future, the
+        CSV file will be delivered to the client rather than written to the
+        server file system.]
     </p>
 
     <!--
@@ -41,6 +40,7 @@
 
         {{ form.detectors|block_form_element }}
         {{ form.station_mics|block_form_element }}
+        {{ form.classification|form_element }}
         {{ form.start_date|form_element }}
         {{ form.end_date|form_element }}
         {{ form.output_file_path|block_form_element }}
