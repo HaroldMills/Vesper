@@ -155,10 +155,7 @@ def create_hdf5_file(detector, station, annotation_value, clips):
         extraction_start_offset = EXTRACTION_START_OFFSETS[detector_name]
         extraction_duration = EXTRACTION_DURATIONS[detector_name]
             
-        group = file_.create_group('/clips')
-        attrs = group.attrs
-        attrs['extraction_start_offset'] = extraction_start_offset
-        attrs['extraction_duration'] = extraction_duration
+        _ = file_.create_group('/clips')
                 
         clip_manager_ = clip_manager.instance
         
