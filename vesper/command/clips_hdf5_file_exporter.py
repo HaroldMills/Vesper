@@ -1,4 +1,4 @@
-"""Module containing class `ClassifierTrainingClipsExporter`."""
+"""Module containing class `ClipsHdf5FileExporter`."""
 
 
 import logging
@@ -12,15 +12,11 @@ from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
 
 
-# TODO: Make detector name command argument.
-# TODO: Make reading clip ids and classifications from output files faster.
+# TODO: Make reading clip ids and classifications from output files faster?
 
 
-# Settings for exports from 2017 MPG Ranch archive for 2018 coarse
+# Settings for exports from 2017 and 2018 MPG Ranch archives for coarse
 # classifier training.
-_DETECTOR_NAME = 'Thrush'
-_ANNOTATION_NAMES = ['Classification']
-_DEFAULT_ANNOTATION_VALUES = {}
 _EXTRACTION_START_OFFSETS = {
     'Tseep': -.1,
     'Thrush': -.05
@@ -29,6 +25,8 @@ _EXTRACTION_DURATIONS = {
     'Tseep': .5,
     'Thrush': .65
 }
+_ANNOTATION_NAMES = ['Classification']
+_DEFAULT_ANNOTATION_VALUES = {}
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
@@ -60,11 +58,6 @@ class ClipsHdf5FileExporter:
         except OSError as e:
             raise CommandExecutionError(str(e))
         
-        self._extraction_start_offset = \
-            _EXTRACTION_START_OFFSETS[_DETECTOR_NAME]
-            
-        self._extraction_duration = _EXTRACTION_DURATIONS[_DETECTOR_NAME]
-            
         self._clip_manager = clip_manager.instance
         
     
@@ -93,7 +86,7 @@ class ClipsHdf5FileExporter:
             attrs['clip_length'] = clip.length
             attrs['extraction_start_index'] = start_index
             
-            annotations = self._get_annotations(clip)
+            annotations = _get_annotations(clip)
             for name, value in annotations.items():
                 name = name.lower().replace(' ', '_')
                 attrs[name] = value
@@ -103,60 +96,96 @@ class ClipsHdf5FileExporter:
         else:
             return False
         
-
+ 
     def _extract_samples(self, clip):
         
-        sample_rate = clip.sample_rate
+        extent = _get_extraction_extent(clip)
         
-        start_offset = _seconds_to_samples(
-            self._extraction_start_offset, sample_rate)
-        
-        length = _seconds_to_samples(self._extraction_duration, sample_rate)
-        
-        try:
-            samples = \
-                self._clip_manager.get_samples(clip, start_offset, length)
-        
-        except Exception as e:
-            _logger.warning((
-                'Could not get samples for clip {}, so it will not appear '
-                'in output. Error message was: {}').format(str(clip), str(e)))
+        if extent is None:
             return None
         
-        start_index = clip.start_index + start_offset
-        
-        return samples, start_index
+        else:
+            
+            start_offset, length = extent
+            
+            try:
+                samples = \
+                    self._clip_manager.get_samples(clip, start_offset, length)
+            
+            except Exception as e:
+                _logger.warning((
+                    'Could not get samples for clip {}, so it will not '
+                    'appear in output. Error message was: {}').format(
+                        str(clip), str(e)))
+                return None
+            
+            start_index = clip.start_index + start_offset
+            
+            return samples, start_index
     
 
-    def _get_annotations(self, clip):
-        return dict([
-            (name, self._get_annotation_value(clip, name))
-            for name in _ANNOTATION_NAMES])
-            
-            
-    def _get_annotation_value(self, clip, annotation_name):
-        
-        try:
-            annotation = clip.string_annotations.get(
-                info__name=annotation_name)
-            
-        except StringAnnotation.DoesNotExist:
-            return _DEFAULT_ANNOTATION_VALUES.get(annotation_name)
-        
-        else:
-            return annotation.value
-
-            
     def end_exports(self):
-        attrs = self._file['/clips'].attrs
-        attrs['extraction_start_offset'] = self._extraction_start_offset
-        attrs['extraction_duration'] = self._extraction_duration
+        pass
 
 
+def _get_extraction_extent(clip):
+    
+    detector_name = _get_detector_name(clip)
+    
+    if detector_name is None:
+        return None
+    
+    else:
+        
+        # Get start offset and duration in seconds.
+        start_offset = _EXTRACTION_START_OFFSETS[detector_name]
+        duration = _EXTRACTION_DURATIONS[detector_name]
+        
+        # Convert to samples.
+        sample_rate = clip.sample_rate
+        start_offset = _seconds_to_samples(start_offset, sample_rate)
+        length = _seconds_to_samples(duration, sample_rate)
+        
+        return start_offset, length
+        
+
+def _get_detector_name(clip):
+    
+    detector_name = clip.creating_processor.name
+    
+    if detector_name.find('Thrush') != -1:
+        return 'Thrush'
+    
+    elif detector_name.find('Tseep') != -1:
+        return 'Tseep'
+    
+    else:
+        return None
+    
+    
 def _seconds_to_samples(duration, sample_rate):
     sign = -1 if duration < 0 else 1
     return sign * int(math.ceil(abs(duration) * sample_rate))
-    
 
+            
 def _format_datetime(dt):
     return dt.strftime(_START_TIME_FORMAT)
+    
+
+def _get_annotations(clip):
+    return dict([
+        (name, _get_annotation_value(clip, name))
+        for name in _ANNOTATION_NAMES])
+        
+        
+def _get_annotation_value(clip, annotation_name):
+    
+    try:
+        annotation = clip.string_annotations.get(
+            info__name=annotation_name)
+        
+    except StringAnnotation.DoesNotExist:
+        return _DEFAULT_ANNOTATION_VALUES.get(annotation_name)
+    
+    else:
+        return annotation.value
