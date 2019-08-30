@@ -33,7 +33,7 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-_EVALUATION_MODE_ENABLED = True
+_EVALUATION_MODE_ENABLED = False
 
 _FN_THRESHOLD = .20
 """
@@ -432,6 +432,8 @@ class _Classifier:
     
     
     def _classify_clip(self, index, score, clips):
+        
+        print(score, self._classification_threshold)
         
         if score >= self._classification_threshold:
             classification = 'Call'
