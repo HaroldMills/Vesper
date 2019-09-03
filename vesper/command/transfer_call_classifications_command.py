@@ -41,21 +41,24 @@ matching.
 
 
 _CALL_START_WINDOWS = {
+    
+    # Thrush call detectors.
     'Old Bird Thrush Detector Redux 1.1': (.130, .220),
     'PNF 2018 Baseline Thrush Detector 1.0': (.100, .150),
     'PNF Thrush Energy Detector 1.0': (.050, .125),
+    'MPG Ranch Thrush Detector 0.0': (.080, .440),
+    'MPG Ranch Thrush Detector 1.0': (.080, .440),
+    
+    # Tseep call detectors.
     'Old Bird Tseep Detector Redux 1.1': (.100, .135),
     'PNF 2018 Baseline Tseep Detector 1.0': (.070, .105),
     'PNF Tseep Energy Detector 1.0': (.050, .115),
-    'BirdVoxDetect 0.1.a0 AT 02': (.280, .420),
-    'BirdVoxDetect 0.1.a0 AT 05': (.280, .420),
-    'MPG Ranch Thrush Detector 0.0 40': (.080, .440),
-    'MPG Ranch Tseep Detector 0.0 40': (.070, .280),
-    'MPG Ranch Thrush Detector 0.0 50': (.080, .440),
-    'MPG Ranch Tseep Detector 0.0 50': (.070, .280),
-    'MPG Ranch Tseep Detector 1.0 20': (.070, .280),
-    'MPG Ranch Tseep Detector 1.0 40': (.070, .280),
-    'MPG Ranch Thrush Detector 1.0 40': (0.080, .440),
+    'MPG Ranch Tseep Detector 0.0': (.070, .280),
+    'MPG Ranch Tseep Detector 1.0': (.070, .280),
+    
+    # Other detectors.
+    'BirdVoxDetect 0.1.a0 AT': (.280, .420),
+    
 }
 """
 Windows within clips where call starts occur.
@@ -265,13 +268,26 @@ def _get_detector(name):
 
 
 def _get_call_start_window(detector_name):
-    try:
-        return _CALL_START_WINDOWS[detector_name]
-    except KeyError as e:
-        command_utils.log_and_reraise_fatal_exception(
-            e, 'Detector call start window lookup',
-            'The archive was not modified.')
-
+    
+    result = _CALL_START_WINDOWS.get(detector_name)
+    
+    if result is None:
+        # no `_CALL_START_WINDOWS` key is exactly `detector_name`
+        
+        # Look for key that is a prefix of `detector_name`.
+        for name, window in _CALL_START_WINDOWS.items():
+            if detector_name.startswith(name):
+                result = window
+                
+        if result is None:
+            # no `_CALL_START_WINDOWS` key is a prefix of `detector_name`
+            
+            raise ValueError(
+                ('Could not find call start window for detector "{}". '
+                 'The archive was not modified.').format(detector_name))
+        
+    return result
+        
 
 def _get_call_start_window_centers(clips, reference_time, window):
     
