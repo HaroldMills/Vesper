@@ -30,7 +30,7 @@ import vesper.util.signal_utils as signal_utils
 ROOT_DIR_PATH = Path('/Volumes/CLOBRP Data')
 OUTPUT_DIR_PATH = ROOT_DIR_PATH / 'Vesper' / 'Recordings'
 
-MONTH_DIR_NAMES = frozenset(('201809',))
+MONTH_DIR_NAMES = frozenset(('201808',))
 
 INPUT_FILE_NAME_EXTENSION = '.flac'
 INPUT_FILE_NAME_LENGTH = len('S1047KF_048K_S01_MIC_20180915_000000.flac')
@@ -62,10 +62,10 @@ OUTPUT_FILE_NAME_EXTENSION = '.wav'
 
 def main():
     
-    test_parse_timestamp()
+    # test_parse_timestamp()
     # test_daily_intervals_schedule()
     # show_recording_stats('Kingfisher_2018-10-14_00.19.00_Z.wav')
-    # create_recording_files()
+    reformat_recordings()
     
     
 def test_parse_timestamp():
@@ -119,7 +119,7 @@ def show_recording_stats(file_name):
     print(min_sample, max_sample, std_sample)
     
     
-def create_recording_files():
+def reformat_recordings():
     
     schedule = Schedule.compile_yaml(
         RECORDING_SCHEDULE, LATITUDE, LONGITUDE, TIME_ZONE)
@@ -255,14 +255,20 @@ def augment_file_info(file_info):
     
     file_path = file_info[0]
     
-    with soundfile.SoundFile(str(file_path)) as sf:
-        
-        assert(sf.samplerate == INPUT_SAMPLE_RATE)
-        assert(sf.channels == INPUT_NUM_CHANNELS)
-        assert(sf.subtype == INPUT_SUBTYPE)
-        
-        length = len(sf)
-        
+    try:
+        with soundfile.SoundFile(str(file_path)) as sf:
+            assert(sf.samplerate == INPUT_SAMPLE_RATE)
+            assert(sf.channels == INPUT_NUM_CHANNELS)
+            assert(sf.subtype == INPUT_SUBTYPE)
+            length = len(sf)
+            
+    except RuntimeError as e:
+        print((
+            'SoundFile open failed for input file "{}". '
+            'Error message was: {} '
+            'File will be ignored.').format(file_path.name, str(e)))
+        return None
+ 
     if input_file_length_valid(length):
         return file_info + (length,)
     
@@ -434,7 +440,7 @@ def create_output_files(night_file_infos):
             
 def create_output_file_name(start_time):
     time = start_time.strftime('%Y-%m-%d_%H.%M.%S')
-    return '{}_{}{}'.format(STATION_NAME, time, OUTPUT_FILE_NAME_EXTENSION)
+    return '{}_{}_Z{}'.format(STATION_NAME, time, OUTPUT_FILE_NAME_EXTENSION)
 
 
 def get_partition_read_interval(night_interval, first_input_file_start):
