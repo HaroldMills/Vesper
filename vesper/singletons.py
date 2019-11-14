@@ -46,6 +46,14 @@ Detector:
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT50
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT60
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT70
+    - vesper.birdvox.birdvoxdetect_0_2_0_dev0.detector.DetectorAT05
+    - vesper.birdvox.birdvoxdetect_0_2_0_dev0.detector.DetectorAT10
+    - vesper.birdvox.birdvoxdetect_0_2_0_dev0.detector.DetectorAT20
+    - vesper.birdvox.birdvoxdetect_0_2_0_dev0.detector.DetectorAT30
+    - vesper.birdvox.birdvoxdetect_0_2_0_dev0.detector.DetectorAT40
+    - vesper.birdvox.birdvoxdetect_0_2_0_dev0.detector.DetectorAT50
+    - vesper.birdvox.birdvoxdetect_0_2_0_dev0.detector.DetectorAT60
+    - vesper.birdvox.birdvoxdetect_0_2_0_dev0.detector.DetectorAT70
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector90
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector80
