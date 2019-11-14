@@ -349,7 +349,7 @@ def _create_file_parser(spec):
     stations = [s for s in Station.objects.all()]
     
     # Get station name aliases.
-    station_name_aliases = _get_station_name_aliases(spec, stations)
+    station_name_aliases = _get_station_name_aliases(spec)
     
     # Create parser.
     parser = cls(stations, station_name_aliases)
@@ -357,7 +357,7 @@ def _create_file_parser(spec):
     return parser
     
     
-def _get_station_name_aliases(spec, stations):
+def _get_station_name_aliases(spec):
     
     args = spec.get('arguments')
     
@@ -373,10 +373,12 @@ def _get_station_name_aliases(spec, stations):
         'Station Name Aliases', preset_name)
     
     if preset is None:
-        raise CommandExecutionError(
-            'Could not find Station Name Aliases preset "{}".'.format(
-                preset_name))
-        
+        logging.getLogger().warning((
+            'Could not find Station Name Aliases preset "{}". '
+            'No station name aliases will be recognized in recording '
+            'file names during the import.').format(preset_name))
+        return {}
+    
     return preset.data
 
 
