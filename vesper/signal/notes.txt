@@ -1,3 +1,89 @@
+AudioFileInfo:
+
+    format_description
+    path
+    length
+    num_channels
+    sample_rate
+    sample_size
+    
+    
+AudioFileReader(AudioFileInfo):
+
+    static methods
+    --------------
+    is_recognized_file(path)
+    create_reader(path)
+    
+    instance methods
+    ----------------
+    read(length=None, start_index=None, out=None)
+    close()
+
+
+2019-11-12 Comments:
+
+* I think it might be best to rename `Signal` to `Channel` and
+`MultichannelSignal` to `Signal`, to reflect that multichannel signals
+are the norm. I expect that processor inputs and outputs will be
+strictly multichannel signals, for example, and that an audio file
+signal will be a multichannel signal.
+
+* I think it would be best to talk about the *value* of a signal
+rather than its *amplitude*. So, for example, a signal's *amplitude
+axis* would become its *value axis*. (Or perhaps we should use only
+the term *sample*, and not *value*, i.e. *sample axis*,
+*sample range*, *minSample*, *maxSample*.)
+
+* A signal has an optional value range (minValue, maxValue) that
+indicates the range in which its sample values may be expected to
+fall. The range may not be tight, and in some cases sample values
+may even lie outside of it: the range provides a guide to, but not
+necessarily a guarantee of, the range of sample values of the signal.
+
+* The value range for an audio file signal is determined by the file's
+sample type.
+
+* A signal with a value range can be wrapped using the `ScaledSignal`
+class to create a scaled version of that signal. The scaled signal has
+all of the same properties as the wrapped signal except for its value
+range and perhaps dtype. The `ScaledSignal` scales sample values on
+the fly as they are read. For example, in:
+
+    signal = AudioFileSignal('test.wav')
+    scaled_signal = SignalScaler(
+        signal, value_range=(-1, 1), dtype='float32'))
+        
+`signal` has a value range determined by the format of the audio file
+*test.wav*, while `scaled`signal` is a scaled version of `signal` with
+a value range of [-1, 1] and a float32 dtype.
+
+* Since it will be very common to want to normalize the values of audio
+file signals, it might be a good idea to build value scaling into
+`AudioFileSignal` and `AudioFileWriter`. For example, instead of the
+above we might write just:
+
+    scaled_signal = AudioFileSignal(
+        'test.wav', value_range=(-1, 1), dtype='float32')
+        
+Scaling might happen by default when writing a signal to an audio file
+(or an audio file sequence), according to the value ranges of the signal
+and the audio file format. If so it should also be possible to disable
+the scaling, say via a `value_scaling_enabled` keyword argument that is
+`True` by default.
+
+Something similar would presumably also be desirable for real-time
+audio I/O.
+
+* Signal sample types we will support and the corresponding value ranges
+are:
+    8-bit unsigned integer: (0, 255)
+    8-bit integer: (-128, 127)
+    16-bit integer: (-32768, 32767)
+    24-bit integer: (-(2**23), 2**23 - 1)
+    32-bit float: (-1, 1) when read from an audio file with normalization
+    64-bit float: (-1, 1) when read from an audio file with normalization
+    
 General points about signals:
 
 * Indexing a `Signal` or a `MultichannelSignal` yields a scalar sample
@@ -12,6 +98,26 @@ signal processing, but in Python and NumPy negative indices are used
 to index a sequence relative to its end. The `Signal` and
 `MultichannelSignal` classes support the Pythonic use of negative
 indices for all signal axes.
+
+* I'm a little uncomfortable with the idea that the length of a
+multichannel signal is the number of its channels, while the length
+of a channel is the number of its sample frames. I think of
+multichannel signals both as sequences of sample frames and as
+sets of channels. But the proposed length semantics *are* consistent
+with the idea of making signals and channels behave as much like NumPy
+arrays as possible. Perhaps `Signal` and `Channel` should both have
+`num_frames` properties, and `Signal` should have a `num_channels`
+property, and their use should be encouraged for clarity. We could
+also *force* their use if we wanted by *not* implementing `__len__`
+for them.
+
+* How might we support multichannel signals where the channels are
+recorded by different instruments, perhaps with slightly different
+sample rates?
+
+* Can we support signals whose sample rates differ a little from their
+nominal sample rates, and whose sample rates vary a little, say with
+temperature?
 
 
 Signal
