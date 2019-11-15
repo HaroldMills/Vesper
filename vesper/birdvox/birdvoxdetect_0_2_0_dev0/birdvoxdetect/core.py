@@ -652,19 +652,19 @@ def process_file(
             chunk_pointer = next_chunk_pointer
 
     # Print final messages.
-    if threshold is not None:
-    #     df = pd.read_csv(checklist_path)
-    #     logger.info("\n".join([(k + " " + str(v).rjust(6)) for (k, v) in
-    #         collections.Counter(df["Species (4-letter code)"]).most_common()]))
-    #     logger.info("TOTAL: {}.".format(str(len(df)).rjust(4)))
-        timestamp_str = "Checklist is available at: {}"
-        logger.info(timestamp_str.format(checklist_path))
-    if export_clips:
-        logger.info("Clips are available at: {}".format(clips_dir))
-    if export_confidence:
-        event_str = "Event detection curve is available at: {}"
-        logger.info(event_str.format(confidence_path))
-    logger.info("Done with file: {}.".format(filepath))
+#     if threshold is not None:
+#         df = pd.read_csv(checklist_path)
+#         logger.info("\n".join([(k + " " + str(v).rjust(6)) for (k, v) in
+#             collections.Counter(df["Species (4-letter code)"]).most_common()]))
+#         logger.info("TOTAL: {}.".format(str(len(df)).rjust(4)))
+#         timestamp_str = "Checklist is available at: {}"
+#         logger.info(timestamp_str.format(checklist_path))
+#     if export_clips:
+#         logger.info("Clips are available at: {}".format(clips_dir))
+#     if export_confidence:
+#         event_str = "Event detection curve is available at: {}"
+#         logger.info(event_str.format(confidence_path))
+#     logger.info("Done with file: {}.".format(filepath))
 
     return df
 
