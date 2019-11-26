@@ -5,23 +5,21 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    {% if stations %}
-        <title>Clip Calendar</title>
-    {% else %}
-        <title>Clip Calendar - Vesper</title>
-    {% endif %}
-
+    <title>Clip Calendar</title>
+    
     {% load vesper_extras %}
 
-    <script type="module">
-        import { init } from '/static/vesper/view/clip-calendar.js';
-        init({
-            'stationMicName': '{{station_mic_name|default_if_none:''|escapejs}}',
-            'detectorName': '{{detector_name|default_if_none:''|escapejs}}',
-            'classification': '{{classification|escapejs}}',
-            'periods': {{periods_json|safe}}
-        });
-    </script>
+    {% if not error_message %}
+        <script type="module">
+            import { init } from '/static/vesper/view/clip-calendar.js';
+            init({
+                'stationMicName': '{{station_mic_name|default_if_none:''|escapejs}}',
+                'detectorName': '{{detector_name|default_if_none:''|escapejs}}',
+                'classification': '{{classification|escapejs}}',
+                'periods': {{periods_json|safe}}
+            });
+        </script>
+    {% endif %}
 
     {% load staticfiles %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-calendar.css' %}">
@@ -31,31 +29,40 @@
 <body>
 
     {% include "vesper/navbar.html" %}
-    {% include "vesper/filter-clips-modal.html" %}
-
-    <div id="main-div" class="container">
-
-        <div id="calendar">
-
-            <div id="title-div">
-            
-                <h3 id="title"></h3>
-
-		        <div id="title-buttons">
-		        
-                    <button id="filter-clips-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Filter Clips">
-                        <span class="glyphicon glyphicon-filter"></span>
-                    </button>
-                    
-		        </div>
-		        
-		    </div>
-		    
-            <div id="periods"></div>
-
+    
+    {% if error_message %}
+    
+        {{error_message|safe}}
+        
+    {% else %}
+    
+        {% include "vesper/filter-clips-modal.html" %}
+    
+        <div id="main-div" class="container">
+    
+            <div id="calendar">
+    
+                <div id="title-div">
+                
+                    <h3 id="title"></h3>
+    
+    		        <div id="title-buttons">
+    		        
+                        <button id="filter-clips-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Filter Clips">
+                            <span class="glyphicon glyphicon-filter"></span>
+                        </button>
+                        
+    		        </div>
+    		        
+    		    </div>
+    		    
+                <div id="periods"></div>
+    
+            </div>
+    
         </div>
-
-    </div>
+        
+    {% endif %}
 
 </body>
 
