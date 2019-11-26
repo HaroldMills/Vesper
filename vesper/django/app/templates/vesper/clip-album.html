@@ -5,33 +5,31 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    {% if stations %}
-        <title>Clip Album</title>
-    {% else %}
-        <title>Clip Album - Vesper</title>
-    {% endif %}
+    <title>Clip Album</title>
 
     {% load vesper_extras %}
 
-    <script type="module">
-        import { init } from '/static/vesper/view/clip-album.js';
-        init({
-            'clipFilter': {
-        	        'stationMicName': '{{station_mic_name|escapejs}}',
-        	        'detectorName': '{{detector_name|escapejs}}',
-        	        'classification': '{{classification|escapejs}}',
-        	        'date': null
-            },
-            'solarEventTimes': {{solar_event_times_json|safe}},
-            'recordings': {{recordings_json|safe}},
-            'clips': {{clips_json|safe}},
-            'settingsPresets': {{settings_presets_json|safe}},
-            'settingsPresetPath': "{{settings_preset_path|default:''}}",
-            'keyBindingsPresets': {{commands_presets_json|safe}},
-            'keyBindingsPresetPath': "{{commands_preset_path|default:''}}",
-            'archiveReadOnly': {{archive_read_only|yesno:"true,false"}}
-        });
-    </script>
+    {% if not error_message %}
+        <script type="module">
+            import { init } from '/static/vesper/view/clip-album.js';
+            init({
+                'clipFilter': {
+            	        'stationMicName': '{{station_mic_name|escapejs}}',
+            	        'detectorName': '{{detector_name|escapejs}}',
+            	        'classification': '{{classification|escapejs}}',
+            	        'date': null
+                },
+                'solarEventTimes': {{solar_event_times_json|safe}},
+                'recordings': {{recordings_json|safe}},
+                'clips': {{clips_json|safe}},
+                'settingsPresets': {{settings_presets_json|safe}},
+                'settingsPresetPath': "{{settings_preset_path|default:''}}",
+                'keyBindingsPresets': {{commands_presets_json|safe}},
+                'keyBindingsPresetPath': "{{commands_preset_path|default:''}}",
+                'archiveReadOnly': {{archive_read_only|yesno:"true,false"}}
+            });
+        </script>
+    {% endif %}
 
     {% load staticfiles %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-album.css' %}">
@@ -41,45 +39,56 @@
 <body>
 
     {% include "vesper/navbar.html" %}
-    {% include "vesper/go-to-page-modal.html" %}
-    {% include "vesper/filter-clips-modal.html" %}
-    {% include "vesper/clip-album-settings-modal.html" %}
 
-    <div id="title-div">
-
-        <h3 id="title"></h3>
+    {% if error_message %}
     
-        <div id="title-buttons">
-        
-            <button id="previous-page-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Previous Page">
-                <span class="glyphicon glyphicon-chevron-left"></span>
-            </button>
-            
-            <button id="next-page-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Next Page">
-                <span class="glyphicon glyphicon-chevron-right"></span>
-            </button>
+        <div id="error-div">
+            {{error_message|safe}}
+        </div>
 
-            <div class="dropdown title-dropdown">
+    {% else %}
+    
+        {% include "vesper/go-to-page-modal.html" %}
+        {% include "vesper/filter-clips-modal.html" %}
+        {% include "vesper/clip-album-settings-modal.html" %}
+        
+        <div id="title-div">
+    
+            <h3 id="title"></h3>
+        
+            <div id="title-buttons">
             
-                <button type="button" class="btn-xs btn-default dropdown-toggle title-button" data-toggle="dropdown">
-                    <span class="caret"></span>
+                <button id="previous-page-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Previous Page">
+                    <span class="glyphicon glyphicon-chevron-left"></span>
                 </button>
                 
-                <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                    <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go To Page...</a></li>
-                    <li><a id="settings-anchor" class="dropdown-item title-dropdown-anchor" href="#settings" data-toggle="modal" data-target="#settings-modal">Edit Settings...</a></li>
-                    <li><a id="filter-clips-anchor" class="dropdown-item title-dropdown-anchor" href="#filter-clips" data-toggle="modal" data-target="#filter-clips-modal">Filter Clips...</a></li>
-                </ul>
-                                
+                <button id="next-page-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Next Page">
+                    <span class="glyphicon glyphicon-chevron-right"></span>
+                </button>
+    
+                <div class="dropdown title-dropdown">
+                
+                    <button type="button" class="btn-xs btn-default dropdown-toggle title-button" data-toggle="dropdown">
+                        <span class="caret"></span>
+                    </button>
+                    
+                    <ul class="dropdown-menu dropdown-menu-right" role="menu">
+                        <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go To Page...</a></li>
+                        <li><a id="settings-anchor" class="dropdown-item title-dropdown-anchor" href="#settings" data-toggle="modal" data-target="#settings-modal">Edit Settings...</a></li>
+                        <li><a id="filter-clips-anchor" class="dropdown-item title-dropdown-anchor" href="#filter-clips" data-toggle="modal" data-target="#filter-clips-modal">Filter Clips...</a></li>
+                    </ul>
+                                    
+                </div>
+                
             </div>
             
         </div>
+            
+        <div id="clips"></div>
         
-    </div>
-        
-    <div id="clips"></div>
-    
-    <!-- div id='footer'></div> -->
+        <!-- div id='footer'></div> -->
+
+    {% endif %}
 
 </body>
 

@@ -37,6 +37,12 @@ body {
   
 }
 
+#error-div {
+  margin-top: 70px;
+  margin-left: 20px;
+  display: inline-block;
+  text-align: left;
+}
 ::selection {
   background-color: transparent;
 }

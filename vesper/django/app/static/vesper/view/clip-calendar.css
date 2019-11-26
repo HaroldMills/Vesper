@@ -2,6 +2,11 @@
   text-align: center;
 }
 
+#error-div {
+  display: inline-block;
+  text-align: left;
+}
+
 #title-div {
   display: inline-block;
 }

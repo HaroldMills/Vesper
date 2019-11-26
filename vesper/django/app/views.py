@@ -1369,7 +1369,8 @@ def clip_calendar(request):
     preference_manager.instance.reload_preferences()
     preferences = preference_manager.instance.preferences
 
-    message = _check_for_stations_detectors_and_classification_annotation()
+    message = _check_for_stations_detectors_and_classification_annotation(
+        'clip calendar')
     
     if message is not None:
         
@@ -1419,7 +1420,7 @@ def clip_calendar(request):
     return _render_clip_calendar(request, context)
 
 
-def _check_for_stations_detectors_and_classification_annotation():
+def _check_for_stations_detectors_and_classification_annotation(page_name):
     
     sm_pairs = model_utils.get_station_mic_output_pairs_list()
     
@@ -1427,10 +1428,11 @@ def _check_for_stations_detectors_and_classification_annotation():
         # archive contains no station/mics
         
         return (
-            '<p>No clip calendar can be displayed since this archive does '
+            '<p>No {} can be displayed since this archive does '
             'not contain any stations.</p>'
             '<p>Instructions for building a Vesper archive, as well as '
-            'other user documentation, are coming soon.</p>')
+            'other user documentation, are coming soon.</p>').format(
+                page_name)
         
     detectors = archive.instance.get_processors_of_type('Detector')
     
@@ -1438,77 +1440,28 @@ def _check_for_stations_detectors_and_classification_annotation():
         # archive contains no detectors
         
         return (
-            '<p>No clip calendar can be displayed since this archive does '
+            '<p>No {} can be displayed since this archive does '
             'not contain any detectors.</p>'
             '<p>Instructions for building a Vesper archive, as well as '
-            'other user documentation, are coming soon.</p>')
+            'other user documentation, are coming soon.</p>').format(
+                page_name)
         
-    annotation_name = 'Classification'
-    
     try:
         AnnotationInfo.objects.get(name='Classification')
         
     except AnnotationInfo.DoesNotExist:
         
         return (
-            '<p>No clip calendar can be displayed since this archive does '
+            '<p>No {} can be displayed since this archive does '
             'not contain a "Classification" annotation.</p>'
             '<p>Instructions for building a Vesper archive, as well as '
-            'other user documentation, are coming soon.</p>')
+            'other user documentation, are coming soon.</p>').format(
+                page_name)
         
     return None
         
 
 def _render_clip_calendar(request, context):
-    return render(request, 'vesper/clip-calendar.html', context)
-
-
-def clip_calendar_old(request):
-
-    params = request.GET
-    
-    archive_ = archive.instance
-
-    preference_manager.instance.reload_preferences()
-    preferences = preference_manager.instance.preferences
-
-    sm_pairs = model_utils.get_station_mic_output_pairs_list()
-    get_ui_name = model_utils.get_station_mic_output_pair_ui_name
-    sm_pair = _get_calendar_query_object(
-        sm_pairs, 'station_mic', params, preferences, name_getter=get_ui_name)
-
-    detector_name = _get_calendar_query_field_value(
-        'detector', params, preferences)
-    detector = archive_.get_processor(detector_name)
-    
-    annotation_name = 'Classification'
-    annotation_ui_value_specs = \
-        archive_.get_visible_string_annotation_ui_value_specs(annotation_name)
-    annotation_ui_value_spec = _get_string_annotation_ui_value_spec(
-        annotation_ui_value_specs, params, preferences)
-
-    annotation_name, annotation_value = \
-        _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
-    periods_json = _get_periods_json(
-        sm_pair, detector, annotation_name, annotation_value)
-
-    sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
-    sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
-
-    detectors = archive_.get_visible_processors_of_type('Detector')
-    detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
-    detector_ui_name = archive_.get_processor_ui_name(detector)
-    
-    context = _create_template_context(
-        request, 'View',
-        station_mic_names=sm_pair_ui_names,
-        station_mic_name=sm_pair_ui_name,
-        detector_names=detector_ui_names,
-        detector_name=detector_ui_name,
-        classifications=annotation_ui_value_specs,
-        classification=annotation_ui_value_spec,
-        periods_json=periods_json)
-
     return render(request, 'vesper/clip-calendar.html', context)
 
 
@@ -1811,6 +1764,16 @@ def clip_album(request):
     preference_manager.instance.reload_preferences()
     preferences = preference_manager.instance.preferences
 
+    message = _check_for_stations_detectors_and_classification_annotation(
+        'clip album')
+    
+    if message is not None:
+        
+        context = _create_template_context(
+            request, 'View', error_message=message)
+        
+        return _render_clip_album(request, context)
+
     sm_pairs = model_utils.get_station_mic_output_pairs_list()
     get_ui_name = model_utils.get_station_mic_output_pair_ui_name
     sm_pair = _get_calendar_query_object(
@@ -1867,6 +1830,10 @@ def clip_album(request):
         commands_preset_path=commands_preset_path,
         archive_read_only=settings.ARCHIVE_READ_ONLY)
 
+    return _render_clip_album(request, context)
+
+
+def _render_clip_album(request, context):
     return render(request, 'vesper/clip-album.html', context)
 
 

@@ -32,8 +32,10 @@
     
     {% if error_message %}
     
-        {{error_message|safe}}
-        
+        <div id="error-div">
+            {{error_message|safe}}
+        </div>
+
     {% else %}
     
         {% include "vesper/filter-clips-modal.html" %}
