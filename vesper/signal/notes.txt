@@ -24,58 +24,71 @@ AudioFileReader(AudioFileInfo):
 2019-11-12 Comments:
 
 * I think it might be best to rename `Signal` to `Channel` and
-`MultichannelSignal` to `Signal`, to reflect that multichannel signals
-are the norm. I expect that processor inputs and outputs will be
-strictly multichannel signals, for example, and that an audio file
-signal will be a multichannel signal.
+`MultichannelSignal` to `Signal`, so that a signal always has one
+or more channels. This is inconsistent with how the term "signal" is
+usually used in the field of signal processing (what is usually
+called a "signal" there I propose calling a "channel", while
+what I propose calling a "signal" is usually called a "signal array"
+or something like that), but I believe it better represents the
+reality of actual computational signal processing, which frequently
+involves signals with multiple channels, e.g. stereo audio signals.
 
-* I think it would be best to talk about the *value* of a signal
-rather than its *amplitude*. So, for example, a signal's *amplitude
-axis* would become its *value axis*. (Or perhaps we should use only
-the term *sample*, and not *value*, i.e. *sample axis*,
-*sample range*, *minSample*, *maxSample*.)
+* I think it would be best to prefer the term "sample" to "sample value"
+or "value". So, for example, we should prefer to talk about the
+"sample range" of a signal rather than its "value range". I think I
+would like to retain the term "amplitude axis", however, rather than
+using "sample axis", since it is primarily for what is better called
+"amplitude calibrarion" than "sample calibration".
 
-* A signal has an optional value range (minValue, maxValue) that
-indicates the range in which its sample values may be expected to
-fall. The range may not be tight, and in some cases sample values
-may even lie outside of it: the range provides a guide to, but not
-necessarily a guarantee of, the range of sample values of the signal.
+* I think it would be best not to use the terms "array signal" and
+"array channel", since "array" in those terms would refer to something
+different (a NumPy array containing all of the samples of a signal)
+than "array" in terms like "sample array" and "array axis" (an array
+of samples at a particular time). Maybe "RAM signal" and
+"RAM channel" instead?
 
-* The value range for an audio file signal is determined by the file's
-sample type.
+* A signal has an optional sample range (minSample, maxSample) that
+indicates the range in which its samples may be expected to fall.
+The range may not be tight, and in some cases samples may even lie
+outside of it: the range provides a guide to, but not necessarily a
+guarantee of, the range of samples of the signal.
 
-* A signal with a value range can be wrapped using the `ScaledSignal`
+* The sample range for an audio file signal is determined by the
+file's sample type. For example, the sample range for an audio file
+with 16-bit, two's complement samples is (-32768, 32767).
+
+* A signal with a sample range can be wrapped using the `ScaledSignal`
 class to create a scaled version of that signal. The scaled signal has
-all of the same properties as the wrapped signal except for its value
-range and perhaps dtype. The `ScaledSignal` scales sample values on
-the fly as they are read. For example, in:
+all of the same properties as the wrapped signal except for its sample
+range and perhaps dtype. The `ScaledSignal` scales samples on the fly
+as they are read. For example, in:
 
     signal = AudioFileSignal('test.wav')
     scaled_signal = SignalScaler(
-        signal, value_range=(-1, 1), dtype='float32'))
+        signal, sample_range=(-1, 1), dtype='float32'))
         
-`signal` has a value range determined by the format of the audio file
-*test.wav*, while `scaled`signal` is a scaled version of `signal` with
-a value range of [-1, 1] and a float32 dtype.
+`signal` has a sample range determined by the format of the audio file
+*test.wav*, while `scaled_signal` is a scaled version of `signal` with
+a sample range of [-1, 1] and a float32 dtype.
 
-* Since it will be very common to want to normalize the values of audio
-file signals, it might be a good idea to build value scaling into
-`AudioFileSignal` and `AudioFileWriter`. For example, instead of the
-above we might write just:
+* Since it will be very common to want to normalize the samples of
+audio file signals, it might be a good idea to build sample scaling
+into `AudioFileSignal` and `AudioFileWriter`. For example, instead
+of the above we might write just:
 
     scaled_signal = AudioFileSignal(
-        'test.wav', value_range=(-1, 1), dtype='float32')
+        'test.wav', sample_range=(-1, 1), dtype='float32')
         
 Scaling might happen by default when writing a signal to an audio file
-(or an audio file sequence), according to the value ranges of the signal
+(or an audio file sequence), according to the sample ranges of the signal
 and the audio file format. If so it should also be possible to disable
-the scaling, say via a `value_scaling_enabled` keyword argument that is
+the scaling, say via a `sample_scaling_enabled` keyword argument that is
 `True` by default.
 
 Something similar would presumably also be desirable for real-time
 audio I/O.
 
-* Signal sample types we will support and the corresponding value ranges
+* Signal sample types we will support and the corresponding sample ranges
 are:
     8-bit unsigned integer: (0, 255)
     8-bit integer: (-128, 127)
@@ -86,79 +99,43 @@ are:
     
 General points about signals:
 
-* Indexing a `Signal` or a `MultichannelSignal` yields a scalar sample
-or a NumPy array of samples. To the extent possible, indexing a
-`Signal` or a `MultichannelSignal` should behave just like indexing
-a NumPy array with the same shape.
+* One important design goal is for `Signal` and `Channel` instances to
+behave as much as possible like NumPy arrays. This will allow users
+already familiar with NumPy arrays to use `Signal` and `Channel` more
+easily. So, for example, `Signal` and `Channel` instances will have
+shapes and lengths just like NumPy arrays, and indexing them will
+behave just like indexing a NumPy array of the same shape.
 
-* With the preceding point in mind, I have chosen not to allow the use
-of negative signal indices to index signal samples to the left of the
-origin. The use of negative signal indices is common in the field of
-signal processing, but in Python and NumPy negative indices are used
-to index a sequence relative to its end. The `Signal` and
-`MultichannelSignal` classes support the Pythonic use of negative
-indices for all signal axes.
+* With the preceding point in mind, `Signal` and `Channel` instances
+will support negative array indices, with such an index indexing an
+instance relative to its end. We will *not* allow the use of negative
+indices to index a `Signal` or `Channel` left of the origin. Such
+indexing is common in the field of signal processing, but Vesper
+signal index ranges will all start at zero.
 
 * I'm a little uncomfortable with the idea that the length of a
-multichannel signal is the number of its channels, while the length
-of a channel is the number of its sample frames. I think of
-multichannel signals both as sequences of sample frames and as
-sets of channels. But the proposed length semantics *are* consistent
-with the idea of making signals and channels behave as much like NumPy
-arrays as possible. Perhaps `Signal` and `Channel` should both have
-`num_frames` properties, and `Signal` should have a `num_channels`
-property, and their use should be encouraged for clarity. We could
-also *force* their use if we wanted by *not* implementing `__len__`
-for them.
+signal is the number of its channels, while the length of a channel
+is the number of its sample arrays. I think of signals both as
+sequences of sample frames and as sets of channels. But the proposed
+length semantics *are* consistent with the idea of making signals and
+channels behave as much like NumPy arrays as possible. Perhaps `Signal`
+and `Channel` should both have `num_frames` properties, and `Signal`
+should have a `num_channels` property, and their use should be
+encouraged for clarity.
 
 * How might we support multichannel signals where the channels are
-recorded by different instruments, perhaps with slightly different
-sample rates?
+recorded by different instruments, perhaps with different start times
+and sample rates?
 
 * Can we support signals whose sample rates differ a little from their
-nominal sample rates, and whose sample rates vary a little, say with
-temperature?
+nominal sample rates, and whose sample rates vary a little, for example
+with temperature?
 
 
 Signal
 
-* Sequence of n-dimensional sample arrays.
-* All sample arrays of a signal have the same dimensions.
-* Indexing yields NumPy array of samples.
-* First index is for time axis.
-* Other indices are for sample array axes.
-* Time axis has a nonnegative start index and a nonnegative length.
-* Reading outside of extent returns zeros.
-* Three levels of mutability: immutable, extendible, and editable.
-* Need thread synchronization for mutable signals.
-
-s.name                   # `str` or `None`
-
-s.parent                 # `MultichannelSignal` or `None`
-
-s.time_axis              # `TimeAxis`
-s.array_axes             # `NamedSequence` of `ArrayAxis` objects
-s.amplitude_axis         # `AmplitudeAxis`
-s.axes                   # mapping from axis name to axis object
-
-s.dtype                  # NumPy `dtype`
-
-s.shape                  # signal shape, an integer tuple
-len(s)                   # time axis length
-
-s[:]                     # all signal samples
-s[0]                     # sample array 0
-s[1]                     # sample array 1
-s[-1]                    # final sample array
-s[0:10]                  # sample arrays 0 through 9
-s[0, 10:20]              # part of sample array 0
-s[0, 10:-20]             # part of sample array 0
-
-
-MultichannelSignal
-
-* Sequence of channels, each a `Signal`.
-* All channels share start index, length, and sample array dimensions.
+* Sequence of `Channel` objects.
+* All channels have the same shape.
 * Sequence of sample arrays at a given signal index is a *sample frame*.
 * Indexing yields NumPy array of samples.
 * First index is channel number.
@@ -168,102 +145,120 @@ MultichannelSignal
 
 s.name
 
-s.channels               # `NamedSequence` of `Signal` objects
+s.channels                 # `NamedSequence` of `Channel` objects
 
-s.time_axis              # `TimeAxis`
-s.array_axes             # `NamedSequence` of `ArrayAxis` objects
-s.amplitude_axis         # `Axis` (no calibration
-s.axes                   # mapping from axis name to axis object
+s.time_axis                # `TimeAxis`
+s.array_axes               # `NamedSequence` of `ArrayAxis` objects
+s.sample_axis              # `SampleAxis`
+s.axes                     # mapping from axis name to axis object
 
-s.dtype                  # NumPy `dtype`
+s.dtype                    # NumPy sample `dtype`
 
-s.shape                  # tuple of number of channels and axis lengths
-len(s)                   # number of channels
+s.shape                    # tuple of number of channels and axis lengths
+len(s)                     # number of channels
 
-s[:]                     # all samples of all channels
-s[0]                     # all samples of channel 0
-s[0, 10]                 # sample array 10 of channel 0
-s[0, 10:20]              # sample arrays 10 through 19 of channel 0
-s[:, 10]                 # sample frame 10
-s[:, 10:20]              # sample frames 10 through 19
+s[:]                       # all samples of all channels
+s[0]                       # all samples of channel 0
+s[0, 10]                   # sample array 10 of channel 0
+s[0, 10:20]                # sample arrays 10 through 19 of channel 0
+s[:, 10]                   # sample frame 10
+s[:, 10:20]                # sample frames 10 through 19
+
+
+Channel
+
+* Sequence of n-dimensional sample arrays.
+* All sample arrays of a channel have the same dimensions.
+* Indexing yields NumPy array of samples.
+* First index is for time axis.
+* Other indices are for sample array axes.
+* Time axis has a nonnegative start index and a nonnegative length.
+* Reading outside of extent raises an exception (might optionally zero fill)
+* Implement only immutable channels initially, then perhaps extendible
+  and editable signals. Those will probably require some sort of thread
+  synchronization.
+
+s.name                     # `str` or `None`
+
+s.signal                   # `Signal` or `None`
+
+s.time_axis                # `TimeAxis`
+s.array_axes               # `NamedSequence` of `ArrayAxis` objects
+s.sample_axis              # `SampleAxis`
+s.axes                     # mapping from axis name to axis object
+
+s.dtype                    # NumPy sample `dtype`
+
+s.shape                    # signal shape, an integer tuple
+len(s)                     # time axis length
+
+s[:]                       # all signal samples
+s[0]                       # sample array 0
+s[1]                       # sample array 1
+s[-1]                      # final sample array
+s[0:10]                    # sample arrays 0 through 9
+s[0, 10:20]                # part of sample array 0
+s[0, 10:-20]               # part of sample array 0
 
 
 Axis
 
-a.name                   # e.g. 'Time', 'Frequency'
-a.units                  # `Bunch` with `plural`, `singular`, and
-                         # `abbreviation` attributes
+a.name                     # e.g. 'Time', 'Frequency'
+a.units                    # `Bunch` with `plural`, `singular`, and
+                           # `abbreviation` attributes
 
 
 IndexedAxis(Axis)
 
-Note the asymmetry between the start index and end index: the start index
-is always a nonnegative integer, while the end index is either a
-nonnegative integer or `None`. This is intentional, and reflects the
-fact that the start index and the length of an axis determine the
-extent of the axis, while the end index is simply a derived
-quantity provided for convenience. For mutable signals that grow from
-nothing, we want to be able to specify an integer start index (typically
-zero) and a zero length for the time axis at initialization, and then
-increase the length while leaving the start index alone as the signal
-grows. It would be undesirable to set the start index to an integer in
-the initializer, only to have it read `None` because the
-length was zero, and then magically attain the value passed to the
-initializer when the signal length became nonzero. It would also be
-undesirable to not be able to initialize the start index to a
-non-`None` value when the length is zero, and to have to set it to
-the desired non-`None` value later when the length became nonzero.
+The range of valid indices for an `IndexedAxis` is [0, length - 1].
 
-a.start_index            # start of index range
-a.end_index              # end of index range, `None` if length zero
-a.length                 # axis length in indices
+a.length                   # axis length in indices
 
 
 TimeAxis(IndexedAxis)
 
 Axis values have units of seconds. A `TimeAxis` may be *date/time calibrated*,
-in which case the date and time of each sample are known.
+in which case the date and time of each sample is known. Note that we must
+be careful when computing spans that we do not assume that the index to
+seconds mapping is linear!
 
-Note the asymmetries between the start time and the end time and the
-start datetime and end datetime. These follow from the asymmetry
-between the start index and the end index.
+a.sample_rate              # hertz
+a.sample_period            # seconds
 
-a.sample_rate            # hertz
-a.sample_period          # seconds (same as `index_step_size`)
+a.index_to_seconds_mapping
+a.index_to_seconds(i)      # `i` in [0, length], scalar or array, int or float
+a.seconds_to_index(t)      # `t` can be scalar or array. Result is float
+                           # Maybe offer rounded int result as an option?
+a.get_span(i, j)           # `index_to_seconds[j] - index_to_seconds[i]`
+a.span                     # `get_span(0, length - 1)`, or zero if length zero
+a.duration                 # `get_span(0, length)`
 
-a.index_to_time_mapping
-a.index_to_time(i)       # indices may be float
-a.time_to_index(t)       # indices are float
+a.index_to_datetime_mapping
+a.index_to_datetime(i)     # `i` can be scalar or array, int or float.
+a.datetime_to_index(dt)    # `dt` can be scalar or array. Result is float.
 
-a.start_time             # time at start index
-a.end_time               # time at end index, `None` if length zero
-a.span                   # end time less start time, `None` if length zero
-a.duration               # span plus sample period, zero if length zero
-
-a.reference_datetime     # `Bunch` with `index` and `datetime` attributes
-a.index_to_datetime(i)   # indices may be float
-a.datetime_to_index(dt)  # indices are float
-
-a.start_datetime         # `datetime` at start index, `None` if unknown
-a.end_datetime           # `datetime` at start index, `None` if unknown
+a.start_datetime           # `datetime` at start index, `None` if unknown
+a.end_datetime             # `datetime` at end index, `None` if unknown
 
 
 ArrayAxis(IndexedAxis)
 
 a.index_to_value_mapping
-a.index_to_value(i)      # indices may be float
-a.value_to_index(v)      # indices are float
+a.index_to_value(i)        # `i` can be scalar or array, int or float
+a.value_to_index(v)        # `v` can b scalar or array. Result is float.
 
-a.start_value            # value at start index
-a.end_value              # value at end index, `None` if length zero
-a.span                   # end value less start value, `None` if length zero
+a.start_value              # value at index zero
+a.end_value                # value at index length - 1, `None` if length zero
+a.span                     # end value less start value, `None` if length zero
 
 
 AmplitudeAxis(Axis)
 
 For now, `AmplitudeAxis` is just a subclass of `Axis` with a specialized
 initializer and no other methods. It will (probably) eventually provide
-amplitude calibration functionality.
+amplitude calibration functionality. Note that we may want to allow
+different sample axes for different signal channels, since different
+channels may require different amplitude calibrations.
 
 
 * How do we support mutable signals? The two types of mutable signals
@@ -315,8 +310,6 @@ amplitude calibration functionality.
 Audio File Utils
   
 u.get_audio_file_type(file_path)
-u.create_multichannel_array_signal(file_)
-u.create_array_signal(file_)
-u.create_multichannel_audio_file_signal(file_)
+u.create_audio_file_ram_signal(file_)
 u.create_audio_file_signal(file_)
   
