@@ -23,7 +23,7 @@ A Vesper archive is a collection of audio data, related metadata, and applicatio
 
 Vesper supports four basic operations on archive data...
 
-{% include test.html %}
+{% include figure.html %}
 
 <figure>
     <img src="images/vesper-data-operations.svg" alt="Vesper data operations"/>
