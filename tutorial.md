@@ -21,26 +21,15 @@ Vesper supports four basic operations on archive data...
 
 {% include figure.html url="images/vesper-data-operations.svg" caption="Figure 1: The four basic operations on Vesper data." %}
 
-<figure>
-    <img src="images/vesper-data-operations.svg" alt="Vesper data operations"/>
-    <figcaption>Figure 1: The four basic operations on Vesper data.</figcaption>
-</figure>
-
 ## Getting started
 
 In this section of the tutorial, you will create a new Vesper archive, add a user to it, serve the archive with the Vesper server, and view the archive from a web browser.
 
-But what is a Vesper archive?
-
-A Vesper *archive* is a collection of audio data, related metadata, and application configuration settings.
-
-* Create a new Vesper archive by creating a copy of the Vesper Starter Archive.
-* Import an audio recording into the new archive.
-* Process
 ### Create a new Vesper archive
 
-The Vesper project provides a Vesper Starter Archive that you can copy 
-### Add a superuser to the archive
+The Vesper project provides a starter archive that you can copy...
+
+### Add a user to the archive
 ### Start the Vesper server
 ### View the archive
 
