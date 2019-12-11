@@ -1326,13 +1326,9 @@ def clip_calendar(request):
     
     Example error messages:
     
-    This archive contains no station/mics, so no clip calendar can be
-    displayed. Please add one or more station/mics to the archive and
-    then visit this page again.
-    
-    This archive contains no station/mics or detectors, so no clip
-    calendar can be displayed. Please add one or more station/mics
-    and detectors to the archive and then visit this page again.
+    This page can't display a clip calendar since this archive contains
+    no station/microphone pairs. Please add one or more station/microphone
+    pairs to the archive and then visit this page again.
     
     Warning: the URL for this page specifies a station/mic "Bobo / 21c"
     that does not exist in this archive. The page displays data for
@@ -1394,11 +1390,6 @@ def clip_calendar(request):
     annotation_ui_value_spec = _get_string_annotation_ui_value_spec(
         annotation_ui_value_specs, params, preferences)
 
-    annotation_name, annotation_value = \
-        _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
-    periods_json = _get_periods_json(
-        sm_pair, detector, annotation_name, annotation_value)
-
     sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
     sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
 
@@ -1406,6 +1397,11 @@ def clip_calendar(request):
     detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
     detector_ui_name = archive_.get_processor_ui_name(detector)
     
+    annotation_name, annotation_value = \
+        _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
+    periods_json = _get_periods_json(
+        sm_pair, detector, annotation_name, annotation_value)
+
     context = _create_template_context(
         request, 'View',
         station_mic_names=sm_pair_ui_names,
@@ -1414,52 +1410,50 @@ def clip_calendar(request):
         detector_name=detector_ui_name,
         classifications=annotation_ui_value_specs,
         classification=annotation_ui_value_spec,
-        periods_json=periods_json,
-        error_message=None)
+        periods_json=periods_json)
 
     return _render_clip_calendar(request, context)
 
 
-def _check_for_stations_detectors_and_classification_annotation(page_name):
+def _check_for_stations_detectors_and_classification_annotation(view_name):
     
     sm_pairs = model_utils.get_station_mic_output_pairs_list()
     
     if len(sm_pairs) == 0:
         # archive contains no station/mics
         
-        return (
-            '<p>No {} can be displayed since this archive does '
-            'not contain any stations.</p>'
-            '<p>Instructions for building a Vesper archive, as well as '
-            'other user documentation, are coming soon.</p>').format(
-                page_name)
+        return _create_missing_entities_text(
+            view_name, 'station/microphone pairs')
         
     detectors = archive.instance.get_processors_of_type('Detector')
     
     if len(detectors) == 0:
         # archive contains no detectors
         
-        return (
-            '<p>No {} can be displayed since this archive does '
-            'not contain any detectors.</p>'
-            '<p>Instructions for building a Vesper archive, as well as '
-            'other user documentation, are coming soon.</p>').format(
-                page_name)
+        return _create_missing_entities_text(view_name, 'detectors')
         
     try:
         AnnotationInfo.objects.get(name='Classification')
         
     except AnnotationInfo.DoesNotExist:
+        # archive contains no "Classification" annotation
         
-        return (
-            '<p>No {} can be displayed since this archive does '
-            'not contain a "Classification" annotation.</p>'
-            '<p>Instructions for building a Vesper archive, as well as '
-            'other user documentation, are coming soon.</p>').format(
-                page_name)
-        
+        return _create_missing_entities_text(
+            view_name, '"Classification" annotation')
+                   
     return None
         
+
+def _create_missing_entities_text(view_name, entities_text):
+    
+    return (
+        f'<p>This page can&#39t display a {view_name} since this archive '
+        f'contains no {entities_text}.</p>'
+        '<p>See the '
+        '<a href="https:/haroldmills.github.io/Vesper/tutorial.html">'
+        'Vesper tutorial</a> for an example of how to populate an '
+        'archive.</p>')
+
 
 def _render_clip_calendar(request, context):
     return render(request, 'vesper/clip-calendar.html', context)
@@ -1778,7 +1772,6 @@ def clip_album(request):
     get_ui_name = model_utils.get_station_mic_output_pair_ui_name
     sm_pair = _get_calendar_query_object(
         sm_pairs, 'station_mic', params, preferences, name_getter=get_ui_name)
-    station, mic_output = sm_pair
 
     detector_name = _get_calendar_query_field_value(
         'detector', params, preferences)
@@ -1797,6 +1790,7 @@ def clip_album(request):
     detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
     detector_ui_name = archive_.get_processor_ui_name(detector)
     
+    station, mic_output = sm_pair
     annotation_name, annotation_value = \
         _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
 
