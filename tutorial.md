@@ -17,10 +17,12 @@ Vesper is a web application, and as such comprises two main components, the *ser
 
 A Vesper archive is a collection of audio data, related metadata, and application configuration settings. Each archive has its own directory on disk, called the *archive directory*. While in some cases parts of an archive, such as its audio files, may be stored in one or more other directories or even on other disks, there is a single archive directory for each archive.
 
-Vesper supports four basic operations on archives...
+Vesper supports four basic operations on archive data...
 
-![Vesper Data Processing Figure](images/vesper-data-processing.svg)
-Figure 1: The four basic Vesper data processing operations.
+<figure>
+    <img src="images/vesper-data-operations.svg" alt="Vesper data operations"/>
+    <figcaption>Figure 1: The four basic operations on Vesper data.</figcaption>
+</figure>
 
 ## Getting started
 
