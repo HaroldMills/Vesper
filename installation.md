@@ -1,6 +1,10 @@
 # Installation
 
+## Important!
+
 We strongly recommend installing each new version of Vesper into its own Conda environment (see the [Background](#background) section below if you're new to Conda environments). This has several advantages, including allowing you to easily revert to a previously installed Vesper version if you encounter problems with a new one.
+
+## Installing Vesper
 
 To install the most recent version of Vesper in a new Conda environment:
 
