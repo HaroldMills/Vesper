@@ -91,15 +91,6 @@ class HttpError(Exception):
 # Bootstrap limitation.
 _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
 
-- name: View
-  dropdown:
-
-      - name: Clip Calendar
-        url_name: clip-calendar
-
-      - name: Clip Album
-        url_name: clip-album
-
 - name: Import
   dropdown:
  
@@ -108,6 +99,15 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
  
       - name: Recordings
         url_name: import-recordings
+
+- name: View
+  dropdown:
+
+      - name: Clip Calendar
+        url_name: clip-calendar
+
+      - name: Clip Album
+        url_name: clip-album
 
 - name: Process
   dropdown:
@@ -118,25 +118,13 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
     - name: Classify
       url_name: classify
       
+    - name: Transfer Call Classifications
+      url_name: transfer-call-classifications
+ 
     - name: Execute Deferred Actions
       url_name: execute-deferred-actions
- 
-- name: Export
-  dropdown:
- 
-      # - name: Clip Counts CSV File
-      #   url_name: export-clip-counts-csv-file
- 
-      - name: Clips CSV File
-        url_name: export-clips-csv-file
         
-      - name: Clip Audio Files
-        url_name: export-clip-audio-files
-        
-      - name: Clips HDF5 File
-        url_name: export-clips-hdf5-file
- 
-- name: Other
+- name: Maintain
   dropdown:
  
       - name: Update Recording File Paths
@@ -153,9 +141,21 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
         
       - name: Delete Clip Audio Files
         url_name: delete-clip-audio-files
+ 
+- name: Export
+  dropdown:
+ 
+      # - name: Clip Counts CSV File
+      #   url_name: export-clip-counts-csv-file
+ 
+      - name: Clips CSV File
+        url_name: export-clips-csv-file
         
-      - name: Transfer Call Classifications
-        url_name: transfer-call-classifications
+      - name: Clip Audio Files
+        url_name: export-clip-audio-files
+        
+      # - name: Clips HDF5 File
+      #   url_name: export-clips-hdf5-file
  
 ''')
 
