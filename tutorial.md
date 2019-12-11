@@ -1,7 +1,3 @@
----
-title: Tutorial
----
-
 # Tutorial
 
 Welcome to the Vesper tutorial! In this tutorial, you will create a new Vesper archive, import an audio recording into it, and process the recording to find and classify some nocturnal flight calls (NFCs) that are in it. The tutorial will introduce several Vesper concepts (for example, what a Vesper archive is) as it goes along, with just enough explanation for the tutorial to make sense. For a more thorough explanation of Vesper concepts, see the [design](#design.md) section of the Vesper documentation.
