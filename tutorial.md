@@ -22,7 +22,13 @@ Vesper supports four basic kinds of operations on archive data, as illustrated b
 
 {% include figure.html url="images/vesper-data-operations.svg" caption="Figure 1: The four basic operations on Vesper data." %}
 
-An *import* operation imports audio data and/or related metadata into an archive. For example, in this tutorial you'll exercise two different kinds of import operations, one for audio recordings and another for metadata pertaining to them. A *view* operation allows a user to visualize data in some form, for example as a spectrogram or a chart. A *process* operation processes data, for example by running an automatic detector or classifier, or by classifying audio clips as indicated manually by a user. Finally, an *export* operation exports data from an archive for use in other software. For example, in this tutorial you'll export detected bird calls from your archive as audio files.
+An *import* operation imports audio data and/or related metadata into an archive. For example, in this tutorial you'll exercise two different kinds of import operations, one for audio recordings and another for metadata pertaining to them.
+
+A *view* operation creates some sort of graphical representation of data for you to view and in some cases interact with, for example a spectrogram or a chart.
+
+A *process* operation processes data, for example by running an automatic detector or classifier, or by classifying a set of audio clips according to a key that you type on your keyboard.
+
+Finally, an *export* operation exports data from an archive for use in other software. For example, in this tutorial you'll export detected bird calls from your archive as audio files.
 
 ## Getting started
 
