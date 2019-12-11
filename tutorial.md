@@ -19,6 +19,8 @@ A Vesper archive is a collection of audio data, related metadata, and applicatio
 
 Vesper supports four basic operations on archives...
 
+![Vesper Data Processing Figure](#images/Vesper Data Processing.png)
+
 ## Getting started
 
 In this section of the tutorial, you will create a new Vesper archive, add a user to it, serve the archive with the Vesper server, and view the archive from a web browser.
