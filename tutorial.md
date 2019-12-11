@@ -1,6 +1,6 @@
 # Tutorial
 
-Welcome to the Vesper tutorial! In this tutorial, you will create a new Vesper archive (don't worry, we'll explain what that is in a moment), import an audio recording into it, and process the recording to find and classify some nocturnal flight calls (NFCs) that are in it. The tutorial will introduce several Vesper concepts (like what an archive is) as needed, with just enough explanation for the tutorial to make sense. For a more thorough explanation of Vesper concepts, see the [design](#design.md) section of the Vesper documentation.
+Welcome to the Vesper tutorial! In this tutorial, you will create a new Vesper archive (don't worry, we'll explain what that is in a moment), import an audio recording into it, and process the recording to find and classify some bird calls that are in it. The tutorial will introduce several Vesper concepts (like what an archive is) as needed, with just enough explanation for the tutorial to make sense. For a more thorough explanation of Vesper concepts, see the [design](#design.md) section of the Vesper documentation.
 
 ## Contents
 
@@ -18,9 +18,11 @@ Vesper is a [web application](https://en.wikipedia.org/wiki/Web_application), an
 
 A Vesper archive is a collection of audio data, related metadata, and application configuration settings. Each archive has its own directory on disk, called the *archive directory*. The archive directory always contains certain essential parts of an archive, and in many cases the entirety of the archive.
 
-Vesper supports four basic operations on archive data...
+Vesper supports four basic kinds of operations on archive data, as illustrated by the following figure:
 
 {% include figure.html url="images/vesper-data-operations.svg" caption="Figure 1: The four basic operations on Vesper data." %}
+
+An *import* operation imports audio data and/or related metadata into an archive. For example, in this tutorial you'll exercise two different kinds of import operations, one for audio recordings and another for metadata pertaining to them. A *view* operation allows a user to visualize data in some form, for example as a spectrogram or a chart. A *process* operation processes data, for example by running an automatic detector or classifier, or by classifying audio clips as indicated manually by a user. Finally, an *export* operation exports data from an archive for use in other software. For example, in this tutorial you'll export detected bird calls from your archive as audio files.
 
 ## Getting started
 
