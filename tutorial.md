@@ -36,9 +36,8 @@ In this section of the tutorial, you will create a new Vesper archive, add a use
 
 ### Create a new Vesper archive
 
-The Vesper project provides a starter archive that you can copy...
+The Vesper project provides an archive template that you can copy to serve as a starting point for any new archive that you create. 
 
-### Add a user to the archive
 ### Start the Vesper server
 ### View the archive
 
