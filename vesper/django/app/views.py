@@ -91,15 +91,29 @@ class HttpError(Exception):
 # Bootstrap limitation.
 _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
 
-- name: Import
+- name: File
   dropdown:
  
-      - name: Archive Data
+      - name: Import Metadata YAML
         url_name: import-archive-data
  
-      - name: Recordings
+      - name: Import Recording Audio Files
         url_name: import-recordings
 
+      - separator
+      
+      # - name: Export Clip Counts CSV File
+      #   url_name: export-clip-counts-csv-file
+ 
+      - name: Export Clips CSV File
+        url_name: export-clips-csv-file
+        
+      - name: Export Clip Audio Files
+        url_name: export-clip-audio-files
+        
+      # - name: Export Clips HDF5 File
+      #   url_name: export-clips-hdf5-file
+      
 - name: View
   dropdown:
 
@@ -112,51 +126,38 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
 - name: Process
   dropdown:
   
-    - name: Detect
-      url_name: detect
+      - name: Detect
+        url_name: detect
      
-    - name: Classify
-      url_name: classify
+      - name: Classify
+        url_name: classify
       
-    - name: Transfer Call Classifications
-      url_name: transfer-call-classifications
+      - name: Transfer Call Classifications
+        url_name: transfer-call-classifications
  
-    - name: Execute Deferred Actions
-      url_name: execute-deferred-actions
+      - name: Execute Deferred Actions
+        url_name: execute-deferred-actions
         
 - name: Maintain
   dropdown:
  
-      - name: Update Recording File Paths
-        url_name: update-recording-file-paths
-        
       - name: Delete Recordings
         url_name: delete-recordings
  
       - name: Delete Clips
         url_name: delete-clips
         
+      - separator
+        
+      - name: Update Recording Audio File Paths
+        url_name: update-recording-file-paths
+        
       - name: Create Clip Audio Files
         url_name: create-clip-audio-files
         
       - name: Delete Clip Audio Files
         url_name: delete-clip-audio-files
- 
-- name: Export
-  dropdown:
- 
-      # - name: Clip Counts CSV File
-      #   url_name: export-clip-counts-csv-file
- 
-      - name: Clips CSV File
-        url_name: export-clips-csv-file
-        
-      - name: Clip Audio Files
-        url_name: export-clip-audio-files
-        
-      # - name: Clips HDF5 File
-      #   url_name: export-clips-hdf5-file
- 
+   
 ''')
 
 
@@ -194,12 +195,27 @@ def _create_navbar_items_aux(data):
 
 
 def _create_navbar_item(data):
-    if 'url_name' in data or 'url' in data:
+    if isinstance(data, str):
+        if data == 'separator':
+            return _create_navbar_separator_item()
+        else:
+            return _create_navbar_unrecognized_item()
+    elif 'url_name' in data or 'url' in data:
         return _create_navbar_link_item(data)
-    else:
+    elif 'dropdown' in data:
         return _create_navbar_dropdown_item(data)
+    else:
+        return _create_navbar_unrecognized_item(data)
 
 
+def _create_navbar_separator_item():
+    return Bunch(type='separator')
+
+
+def _create_navbar_unrecognized_item():
+    return Bunch(type='unrecognized')
+
+    
 def _create_navbar_link_item(data):
     name = data['name']
     url = _get_navbar_link_url(data)
