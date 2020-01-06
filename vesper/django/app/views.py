@@ -40,8 +40,8 @@ from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, Station, StringAnnotation)
 from vesper.django.app.transfer_call_classifications_form import \
     TransferCallClassificationsForm
-from vesper.django.app.update_recording_file_paths_form import \
-    UpdateRecordingFilePathsForm
+from vesper.django.app.refresh_recording_audio_file_paths_form import \
+    RefreshRecordingAudioFilePathsForm
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm as OldBirdExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
@@ -93,34 +93,43 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
 
 - name: File
   dropdown:
- 
-      - name: Import Metadata YAML
-        url_name: import-archive-data
- 
-      - name: Import Recording Audio Files
-        url_name: import-recordings
 
+      - name: Import metadata
+        url_name: import-archive-data
+        
+      - name: Import recordings
+        url_name: import-recordings
+        
       - separator
       
-      # - name: Export Clip Counts CSV File
+      # - name: Export clip counts to CSV file
       #   url_name: export-clip-counts-csv-file
  
-      - name: Export Clips CSV File
+      - name: Export clip metadata to CSV file
         url_name: export-clips-csv-file
         
-      - name: Export Clip Audio Files
+      - name: Export clips to audio files
         url_name: export-clip-audio-files
         
-      # - name: Export Clips HDF5 File
-      #   url_name: export-clips-hdf5-file
+      - name: Export clips to HDF5 file
+        url_name: export-clips-hdf5-file
       
+- name: Edit
+  dropdown:
+ 
+      - name: Delete recordings
+        url_name: delete-recordings
+ 
+      - name: Delete clips
+        url_name: delete-clips
+        
 - name: View
   dropdown:
 
-      - name: Clip Calendar
+      - name: View clip calendar
         url_name: clip-calendar
 
-      - name: Clip Album
+      - name: View clip album
         url_name: clip-album
 
 - name: Process
@@ -132,30 +141,22 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
       - name: Classify
         url_name: classify
       
-      - name: Transfer Call Classifications
+      - name: Transfer call classifications
         url_name: transfer-call-classifications
  
-      - name: Execute Deferred Actions
+      - name: Execute deferred actions
         url_name: execute-deferred-actions
         
-- name: Maintain
+- name: Admin
   dropdown:
  
-      - name: Delete Recordings
-        url_name: delete-recordings
- 
-      - name: Delete Clips
-        url_name: delete-clips
+      - name: Refresh recording audio file paths
+        url_name: refresh-recording-audio-file-paths
         
-      - separator
-        
-      - name: Update Recording Audio File Paths
-        url_name: update-recording-file-paths
-        
-      - name: Create Clip Audio Files
+      - name: Create clip audio files
         url_name: create-clip-audio-files
         
-      - name: Delete Clip Audio Files
+      - name: Delete clip audio files
         url_name: delete-clip-audio-files
    
 ''')
@@ -603,18 +604,18 @@ def _create_export_clips_hdf5_file_command_spec(form):
 
 @login_required
 @csrf_exempt
-def update_recording_file_paths(request):
+def refresh_recording_audio_file_paths(request):
 
     if request.method in _GET_AND_HEAD:
-        form = UpdateRecordingFilePathsForm()
+        form = RefreshRecordingAudioFilePathsForm()
 
     elif request.method == 'POST':
 
-        form = UpdateRecordingFilePathsForm(request.POST)
+        form = RefreshRecordingAudioFilePathsForm(request.POST)
 
         if form.is_valid():
             command_spec = \
-                _create_update_recording_file_paths_command_spec(form)
+                _create_refresh_recording_audio_file_paths_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -622,13 +623,14 @@ def update_recording_file_paths(request):
 
     context = _create_template_context(request, 'Other', form=form)
 
-    return render(request, 'vesper/update-recording-file-paths.html', context)
+    return render(
+        request, 'vesper/refresh-recording-audio-file-paths.html', context)
 
 
-def _create_update_recording_file_paths_command_spec(form):
+def _create_refresh_recording_audio_file_paths_command_spec(form):
 
     return {
-        'name': 'update_recording_file_paths',
+        'name': 'refresh_recording_audio_file_paths',
         'arguments': {}
     }
 

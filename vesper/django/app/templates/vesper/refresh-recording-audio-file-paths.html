@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Update Recording File Paths - Vesper</title>
+    <title>Refresh recording audio file paths - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -18,15 +18,21 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Update Recording File Paths</h2>
+    <h2>Refresh recording audio file paths</h2>
 
     <p>
-        Updates all of the recording file paths of this archive. For each
-        recording file of the archive database, this command attempts to
-        locate the file by name in the archive's recording directories.
-        If the file is found, its path is updated in the archive database.
-        If the file is not found, an error message is logged and the path
-        stored for it in the archive database is not modified.
+        Refreshes the recording audio file paths stored in this archive, 
+        updating any that have changed.
+    </p>
+    
+    <p>
+        For each recording audio file of the archive, this command
+        attempts to locate the file by name in the archive's recording
+        directories and their subdirectories. If the file is found and
+        its path differs from that stored in the archive, the path
+        stored in the archive is updated. If the file is not found, an
+        error message is logged and the path stored for it in the archive
+        is not modified.
     </p>
     
     <p>
@@ -34,7 +40,7 @@
         <code>recording_directories</code> setting of the
         <code>Archive Settings.yaml</code> file, located in the archive
         directory. If that file is absent, or if it does not contain a
-        <code>recording_directories</code> settings, Vesper assumes that
+        <code>recording_directories</code> setting, Vesper assumes that
         recordings are located in the <code>Recordings</code> subdirectory
         of the archive directory.
     </p>
@@ -45,8 +51,8 @@
         http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
      -->
 
-    <form class="form" role="form" action="{% url 'update-recording-file-paths' %}" method="post">
-        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Update Paths</button>
+    <form class="form" role="form" action="{% url 'refresh-recording-audio-file-paths' %}" method="post">
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Refresh Paths</button>
     </form>
 
 </body>

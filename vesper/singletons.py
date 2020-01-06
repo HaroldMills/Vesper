@@ -33,7 +33,7 @@ Command:
     - vesper.command.import_command.ImportCommand
     - vesper.command.test_command.TestCommand
     - vesper.command.transfer_call_classifications_command.TransferCallClassificationsCommand
-    - vesper.command.update_recording_file_paths_command.UpdateRecordingFilePathsCommand
+    - vesper.command.refresh_recording_audio_file_paths_command.RefreshRecordingAudioFilePathsCommand
     
 Detector:
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT02

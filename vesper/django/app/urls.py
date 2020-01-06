@@ -58,9 +58,9 @@ if not settings.ARCHIVE_READ_ONLY:
         path('export-clips-hdf5-file/', views.export_clips_hdf5_file,
              name='export-clips-hdf5-file'),
         
-        path('update-recording-file-paths/',
-             views.update_recording_file_paths,
-             name='update-recording-file-paths'),
+        path('refresh-recording-audio-file-paths/',
+             views.refresh_recording_audio_file_paths,
+             name='refresh-recording-audio-file-paths'),
         path('delete-recordings/', views.delete_recordings,
              name='delete-recordings'),
         path('adjust-clips/', views.adjust_clips, name='adjust-clips'),

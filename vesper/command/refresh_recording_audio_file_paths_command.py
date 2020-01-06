@@ -1,4 +1,4 @@
-"""Module containing class `UpdateRecordingFilePathsCommand`."""
+"""Module containing class `RefreshRecordingAudioFilePathsCommand`."""
 
 
 from pathlib import Path, PureWindowsPath
@@ -16,10 +16,10 @@ import vesper.util.text_utils as text_utils
 _LOGGING_PERIOD = 1000
 
 
-class UpdateRecordingFilePathsCommand(Command):
+class RefreshRecordingAudioFilePathsCommand(Command):
     
     
-    extension_name = 'update_recording_file_paths'
+    extension_name = 'refresh_recording_audio_file_paths'
     
     
     def execute(self, job_info):
@@ -29,7 +29,7 @@ class UpdateRecordingFilePathsCommand(Command):
 
         recording_file_paths = self._get_recording_file_paths()
         
-        self._update_recording_file_paths(recording_file_paths)
+        self._refresh_recording_file_paths(recording_file_paths)
         
         return True
     
@@ -100,7 +100,7 @@ class UpdateRecordingFilePathsCommand(Command):
                 
     
     
-    def _update_recording_file_paths(self, recording_file_paths):
+    def _refresh_recording_file_paths(self, recording_file_paths):
         
         start_time = time.time()
         
