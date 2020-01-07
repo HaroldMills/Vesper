@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Adjust Clips - Vesper</title>
+    <title>Adjust clips - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -18,20 +18,24 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Adjust Clips</h2>
+    <h2>Adjust clips</h2>
 
     <p>
-        Adjusts the durations and/or start indices of clips of this
-        archive. The clips to be adjusted are specified as a set of
-        detectors, a set of station/mic pairs, a classification, and
-        a range of dates. The durations of the clips are set to the
-        specified duration (you can omit the duration to leave clip
-        durations as they are). The center indices of the clips with
-        the specified annotation are adjusted to match the annotation
-        value (you can omit the annotation name to leave clip centers
-        as they are). The operation runs as a Vesper job. It cannot be
-        undone, so be careful!
+        Adjusts the durations and/or start indices of the specified
+        clips of this archive.
     </p>
+    
+    {% include "vesper/clips-specification-message.html" %}
+
+    <p>
+        The durations of the clips are set to the specified duration,
+        or are left as is if no duration is specified. The center indices
+        of the clips that have a value for the specified center index
+        annotation are adjusted to match the annotation value, or are
+        left as is for unannotated clips.
+    </p>
+    
+    {% include "vesper/command-executes-as-job-message.html" %}
 
     <!--
         TODO: Get django-widget-tweaks Django app  and use it to set CSS classes

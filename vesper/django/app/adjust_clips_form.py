@@ -14,7 +14,7 @@ class AdjustClipsForm(forms.Form):
     end_date = forms.DateField(label='End date')
     duration = forms.FloatField(label='Duration', min_value=0, required=False)
     annotation_name = forms.CharField(
-        label='Center Index Annotation Name', required=False)
+        label='Center index annotation name', required=False)
     
     
     def __init__(self, *args, **kwargs):

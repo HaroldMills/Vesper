@@ -147,6 +147,9 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
       - name: Execute deferred actions
         url_name: execute-deferred-actions
         
+      # - name: Adjust clips
+      #   url_name: adjust-clips
+        
 - name: Admin
   dropdown:
  
