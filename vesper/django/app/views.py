@@ -28,13 +28,13 @@ from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.execute_deferred_actions_form import \
     ExecuteDeferredActionsForm
-from vesper.django.app.export_clip_audio_files_form import \
-    ExportClipAudioFilesForm
-from vesper.django.app.export_clips_csv_file_form import \
-    ExportClipsCsvFileForm
-from vesper.django.app.export_clips_hdf5_file_form import \
-    ExportClipsHdf5FileForm
-from vesper.django.app.import_archive_data_form import ImportArchiveDataForm
+from vesper.django.app.export_clip_metadata_to_csv_file_form import \
+    ExportClipMetadataToCsvFileForm
+from vesper.django.app.export_clips_to_audio_files_form import \
+    ExportClipsToAudioFilesForm
+from vesper.django.app.export_clips_to_hdf5_file_form import \
+    ExportClipsToHdf5FileForm
+from vesper.django.app.import_metadata_form import ImportMetadataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, Station, StringAnnotation)
@@ -95,7 +95,7 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
   dropdown:
 
       - name: Import metadata
-        url_name: import-archive-data
+        url_name: import-metadata
         
       - name: Import recordings
         url_name: import-recordings
@@ -106,13 +106,13 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
       #   url_name: export-clip-counts-csv-file
  
       - name: Export clip metadata to CSV file
-        url_name: export-clips-csv-file
+        url_name: export-clip-metadata-to-csv-file
         
       - name: Export clips to audio files
-        url_name: export-clip-audio-files
+        url_name: export-clips-to-audio-files
         
       - name: Export clips to HDF5 file
-        url_name: export-clips-hdf5-file
+        url_name: export-clips-to-hdf5-file
       
 - name: Edit
   dropdown:
@@ -465,17 +465,18 @@ def old_bird_export_clip_counts_csv_file(request):
 
 @login_required
 @csrf_exempt
-def export_clips_csv_file(request):
+def export_clip_metadata_to_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
-        form = ExportClipsCsvFileForm()
+        form = ExportClipMetadataToCsvFileForm()
 
     elif request.method == 'POST':
 
-        form = ExportClipsCsvFileForm(request.POST)
+        form = ExportClipMetadataToCsvFileForm(request.POST)
 
         if form.is_valid():
-            command_spec = _create_export_clips_csv_file_command_spec(form)
+            command_spec = \
+                _create_export_clip_metadata_to_csv_file_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -483,10 +484,11 @@ def export_clips_csv_file(request):
 
     context = _create_template_context(request, 'Export', form=form)
 
-    return render(request, 'vesper/export-clips-csv-file.html', context)
+    return render(
+        request, 'vesper/export-clip-metadata-to-csv-file.html', context)
 
 
-def _create_export_clips_csv_file_command_spec(form):
+def _create_export_clip_metadata_to_csv_file_command_spec(form):
 
     data = form.cleaned_data
 
@@ -494,7 +496,7 @@ def _create_export_clips_csv_file_command_spec(form):
         'name': 'export',
         'arguments': {
             'exporter': {
-                'name': 'MPG Ranch Clips CSV File',
+                'name': 'Clip Metadata CSV File',
                 'arguments': {
                     'output_file_path': data['output_file_path'],
                 }
@@ -510,17 +512,18 @@ def _create_export_clips_csv_file_command_spec(form):
 
 @login_required
 @csrf_exempt
-def export_clip_audio_files(request):
+def export_clips_to_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
-        form = ExportClipAudioFilesForm()
+        form = ExportClipsToAudioFilesForm()
 
     elif request.method == 'POST':
 
-        form = ExportClipAudioFilesForm(request.POST)
+        form = ExportClipsToAudioFilesForm(request.POST)
 
         if form.is_valid():
-            command_spec = _create_export_clip_audio_files_command_spec(form)
+            command_spec = \
+                _create_export_clips_to_audio_files_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -528,10 +531,10 @@ def export_clip_audio_files(request):
 
     context = _create_template_context(request, 'Export', form=form)
 
-    return render(request, 'vesper/export-clip-audio-files.html', context)
+    return render(request, 'vesper/export-clips-to-audio-files.html', context)
 
 
-def _create_export_clip_audio_files_command_spec(form):
+def _create_export_clips_to_audio_files_command_spec(form):
 
     data = form.cleaned_data
 
@@ -559,17 +562,17 @@ def _create_export_clip_audio_files_command_spec(form):
 
 @login_required
 @csrf_exempt
-def export_clips_hdf5_file(request):
+def export_clips_to_hdf5_file(request):
 
     if request.method in _GET_AND_HEAD:
-        form = ExportClipsHdf5FileForm()
+        form = ExportClipsToHdf5FileForm()
 
     elif request.method == 'POST':
 
-        form = ExportClipsHdf5FileForm(request.POST)
+        form = ExportClipsToHdf5FileForm(request.POST)
 
         if form.is_valid():
-            command_spec = _create_export_clips_hdf5_file_command_spec(form)
+            command_spec = _create_export_clips_to_hdf5_file_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -577,10 +580,10 @@ def export_clips_hdf5_file(request):
 
     context = _create_template_context(request, 'Export', form=form)
 
-    return render(request, 'vesper/export-clips-hdf5-file.html', context)
+    return render(request, 'vesper/export-clips-to-hdf5-file.html', context)
 
 
-def _create_export_clips_hdf5_file_command_spec(form):
+def _create_export_clips_to_hdf5_file_command_spec(form):
 
     data = form.cleaned_data
 
@@ -1876,17 +1879,17 @@ def test_command(request):
 
 @login_required
 @csrf_exempt
-def import_archive_data(request):
+def import_metadata(request):
 
     if request.method in _GET_AND_HEAD:
-        form = ImportArchiveDataForm()
+        form = ImportMetadataForm()
 
     elif request.method == 'POST':
 
-        form = ImportArchiveDataForm(request.POST)
+        form = ImportMetadataForm(request.POST)
 
         if form.is_valid():
-            command_spec = _create_import_archive_data_command_spec(form)
+            command_spec = _create_import_metadata_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -1894,10 +1897,10 @@ def import_archive_data(request):
 
     context = _create_template_context(request, 'Import', form=form)
 
-    return render(request, 'vesper/import-archive-data.html', context)
+    return render(request, 'vesper/import-metadata.html', context)
 
 
-def _create_import_archive_data_command_spec(form):
+def _create_import_metadata_command_spec(form):
 
     data = form.cleaned_data
 
@@ -1905,9 +1908,9 @@ def _create_import_archive_data_command_spec(form):
         'name': 'import',
         'arguments': {
             'importer': {
-                'name': 'Archive Data Importer',
+                'name': 'Metadata Importer',
                 'arguments': {
-                    'archive_data': data['archive_data']
+                    'metadata': data['metadata']
                 }
             }
         }

@@ -4,11 +4,11 @@ from django.forms import ValidationError
 import vesper.util.yaml_utils as yaml_utils
 
 
-class ImportArchiveDataForm(forms.Form):
+class ImportMetadataForm(forms.Form):
     
 
-    archive_data = forms.CharField(
-        label='Archive data YAML',
+    metadata = forms.CharField(
+        label='Metadata YAML',
         widget=forms.Textarea(
             attrs={
                 'id': 'yaml-text-area',
@@ -21,8 +21,8 @@ class ImportArchiveDataForm(forms.Form):
     )
 
 
-    def clean_archive_data(self):
+    def clean_metadata(self):
         try:
-            return yaml_utils.load(self.cleaned_data['archive_data'])
+            return yaml_utils.load(self.cleaned_data['metadata'])
         except Exception:
-            raise ValidationError('Could not parse specified YAML.')
+            raise ValidationError('Could not parse metadata YAML.')

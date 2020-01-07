@@ -69,7 +69,7 @@ class EphemUtilsTests(TestCase):
         
         
 # The following was part of an interrupted effort to add new twilight
-# period measurements to the `vesper.mpg_ranch.clips_csv_file_exporter`
+# period measurements to the `vesper.mpg_ranch.clip_metadata_csv_file_exporter`
 # module. It is not complete, and should be replaced by new code when
 # the `ephem_utils` module is overhauled to use Skyfield instead of
 # PyEphem.

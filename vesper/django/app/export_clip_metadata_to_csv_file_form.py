@@ -4,13 +4,24 @@ import vesper.django.app.form_utils as form_utils
 import vesper.django.app.model_utils as model_utils
 
 
-class ExportClipsHdf5FileForm(forms.Form):
+class ExportClipMetadataToCsvFileForm(forms.Form):
     
 
     detectors = forms.MultipleChoiceField(label='Detectors')
-    station_mics = forms.MultipleChoiceField(label='Station/mics')
+
+    station_mics = forms.MultipleChoiceField(
+        label='Station/mics',
+        help_text='''
+            This is the station/mic help text. I'm going to make it
+            rather long so we can see how such text is displayed. I hope
+            the display is reasonable. If it isn't perhaps we can develop
+            a help text formatting function that can pre-process the text
+            to make it look better.''')
+    
     classification = forms.ChoiceField(label='Classification')
+    
     start_date = forms.DateField(label='Start date')
+    
     end_date = forms.DateField(label='End date')
     
     output_file_path = forms.CharField(

@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Delete Recordings - Vesper</title>
+    <title>Delete recordings - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -19,17 +19,28 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Delete Recordings</h2>
+    <h2>Delete recordings</h2>
 
     <p>
-        Deletes recordings from this archive. The recordings are specified as a
-        set of stations and a range of dates. All data associated with the
-        recordings, except for the recording audio files if present, are deleted
-        from the archive, including recording metadata, clips (including clip
-        audio files), and annotations. The deletion runs as a Vesper job. This
-        operation cannot be undone, so be careful!
+        Deletes the specified recordings from this Vesper archive.
     </p>
+    
+    {% include "vesper/recordings-specification-message.html" %}
+    
+    <p>
+        All data associated with the recordings except for their audio
+        files (if present) are deleted from the archive, including their
+        metadata and all of their clips, including the clips' audio files
+        (if present) and annotations.
+    </p>
+    
+    {% include "vesper/command-executes-as-job-message.html" %}
 
+    <p class="warning">
+        This command can delete a lot of recording metadata, clips, and
+        annotations, and cannot be undone, so use it with caution!
+    </p>
+    
     <!--
         TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
         of form elements. Or perhaps use django-bootstrap3 app? See

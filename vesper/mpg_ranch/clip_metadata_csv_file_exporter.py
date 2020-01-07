@@ -1,4 +1,4 @@
-"""Module containing class `ClipsCsvFileExporter`."""
+"""Module containing class `ClipMetadataCsvFileExporter`."""
 
 
 import datetime
@@ -243,10 +243,10 @@ columns:
 # ''')
 
      
-class ClipsCsvFileExporter(object):
+class ClipMetadataCsvFileExporter(object):
     
     
-    extension_name = 'MPG Ranch Clips CSV File'
+    extension_name = 'MPG Ranch Clip Metadata CSV File'
     
     
     def __init__(self, args):

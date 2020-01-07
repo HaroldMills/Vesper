@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Export Clips HDF5 File - Vesper</title>
+    <title>Export clip metadata to CSV file - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -18,24 +18,31 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Export Clips HDF5 File</h2>
+    <h2>Export clip metadata to CSV file</h2>
 
     <p>
-        Exports clips to an HDF5 file. The clips are specified as a set of
-        one or more detectors, one or more station/mic combinations, a
-        classification, and a range of dates. The HDF5 file is written to
-        the specified path on the server. The export runs as a Vesper job.
-        [In the future, the HDF5 file will be delivered to the client
-        rather than written to the server file system.]
+        Exports metadata for the specified clips to a CSV file.
     </p>
+    
+    {% include "vesper/clips-specification-message.html" %}
+    
+    <p>
+        The CSV file is written at the specified path on the server,
+        and contains one row for each clip.
+        [In the future, the CSV file will be delivered to the client rather
+        than written to the server file system.]
+    </p>
+    
+    {% include "vesper/command-executes-as-job-message.html" %}
+
 
     <!--
         TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
         of form elements. Or perhaps use django-bootstrap3 app? See
         http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
-    -->
+     -->
 
-    <form class="form" role="form" action="{% url 'export-clips-hdf5-file' %}" method="post">
+    <form class="form" role="form" action="{% url 'export-clip-metadata-to-csv-file' %}" method="post">
 
         {{ form.detectors|block_form_element }}
         {{ form.station_mics|block_form_element }}

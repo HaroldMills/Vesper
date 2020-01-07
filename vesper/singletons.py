@@ -107,11 +107,11 @@ Detector:
     
 Exporter:
     - vesper.command.clip_audio_files_exporter.ClipAudioFilesExporter
-    - vesper.mpg_ranch.clips_csv_file_exporter.ClipsCsvFileExporter
     - vesper.command.clips_hdf5_file_exporter.ClipsHdf5FileExporter
+    - vesper.mpg_ranch.clip_metadata_csv_file_exporter.ClipMetadataCsvFileExporter
     
 Importer:
-    - vesper.command.archive_data_importer.ArchiveDataImporter
+    - vesper.command.metadata_importer.MetadataImporter
     - vesper.command.recording_importer.RecordingImporter
     - vesper.old_bird.clip_importer.ClipImporter
 

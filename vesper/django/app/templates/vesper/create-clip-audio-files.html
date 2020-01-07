@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Create Clip Audio Files - Vesper</title>
+    <title>Create clip audio files - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -18,15 +18,23 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Create Clip Audio Files</h2>
+    <h2>Create clip audio files</h2>
 
     <p>
-        Creates audio files for clips of this archive. The clips are
-        specified as a set of detectors, a set of station/mic pairs, a
-        classification, and a range of dates. The audio files for the
-        recordings of which the clips are parts must be available to
-        supply the clips' samples. The operation runs as a Vesper job.
+        Creates audio files for the specified clips of this Vesper archive.
     </p>
+    
+    {% include "vesper/clips-specification-message.html" %}
+    
+    <p>
+        The audio files for the recordings of which the clips are parts
+        must be available to supply the clips' audio data. After the clip
+        audio files are created, whenever Vesper needs the clips' audio
+        data it will read them from those files instead of from the
+        recordings.
+    </p>
+
+    {% include "vesper/command-executes-as-job-message.html" %}
 
     <!--
         TODO: Get django-widget-tweaks Django app  and use it to set CSS classes

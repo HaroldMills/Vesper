@@ -4,7 +4,7 @@ import vesper.django.app.form_utils as form_utils
 import vesper.django.app.model_utils as model_utils
 
 
-class ExportClipsCsvFileForm(forms.Form):
+class ExportClipsToAudioFilesForm(forms.Form):
     
 
     detectors = forms.MultipleChoiceField(label='Detectors')
@@ -24,8 +24,8 @@ class ExportClipsCsvFileForm(forms.Form):
     
     end_date = forms.DateField(label='End date')
     
-    output_file_path = forms.CharField(
-        label='Output file', max_length=255,
+    output_dir_path = forms.CharField(
+        label='Output directory', max_length=255,
         widget=forms.TextInput(attrs={'class': 'command-form-wide-input'}))
     
     

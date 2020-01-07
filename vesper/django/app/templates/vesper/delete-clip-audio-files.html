@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Delete Clip Audio Files - Vesper</title>
+    <title>Delete clip audio files - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -18,18 +18,23 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Delete Clip Audio Files</h2>
+    <h2>Delete clip audio files</h2>
 
     <p>
-        Deletes audio files for clips of this archive. The clips are
-        specified as a set of detectors, a set of station/mic pairs, a
-        classification, and a range of dates. After the files are deleted,
-        when needed Vesper will extract audio data for the clips on the fly
-        from the recordings of which they are parts, assuming that the
-        recordings are available. If the recordings are not available, you
-        probably don't want to delete the clip audio files. Be careful: this
-        operation cannot be undone! The operation runs as a Vesper job.
+        Deletes the audio files of the specified clips of this archive.
     </p>
+    
+    {% include "vesper/clips-specification-message.html" %}
+    
+    <p>
+        After the audio files are deleted, whenever Vesper needs the
+        clips' audio data it will read them from the recordings of which
+        the clips are parts, assuming that the recordings are available.
+        Note that if the recordings are not available, you probably don't
+        want to run this command!
+    </p>
+    
+    {% include "vesper/command-executes-as-job-message.html" %}
 
     <!--
         TODO: Get django-widget-tweaks Django app  and use it to set CSS classes

@@ -1,4 +1,4 @@
-"""Module containing class `ArchiveDataImporter`."""
+"""Module containing class `MetadataImporter`."""
 
 
 from collections import defaultdict
@@ -28,24 +28,23 @@ import vesper.util.yaml_utils as yaml_utils
 # station.
 
 
-class ArchiveDataImporter:
+class MetadataImporter:
     
     """
-    Importer for archive data including stations, devices, etc.
+    Importer for metadata including stations, devices, etc.
     
-    The data to be archived are in the `archive_data` command argument.
+    The data to be archived are in the `metadata` command argument.
     The value of the argument is a mapping from string keys like `'stations'`
     and `'devices'` to collections of mappings, with each mapping in the
     collection describing the fields of one archive object.
     """
     
     
-    extension_name = 'Archive Data Importer'
+    extension_name = 'Metadata Importer'
     
     
     def __init__(self, args):
-        self.archive_data = \
-            command_utils.get_required_arg('archive_data', args)
+        self.metadata = command_utils.get_required_arg('metadata', args)
     
     
     def execute(self, job_info):
@@ -65,7 +64,7 @@ class ArchiveDataImporter:
                 
         except Exception:
             self._logger.error(
-                'Archive data import failed with an exception. Database '
+                'Metadata import failed with an exception. Database '
                 'has been restored to its state before the import. See '
                 'below for exception traceback.')
             raise
@@ -75,7 +74,7 @@ class ArchiveDataImporter:
             
     def _add_stations(self):
         
-        stations_data = self.archive_data.get('stations')
+        stations_data = self.metadata.get('stations')
         
         if stations_data is not None:
             
@@ -102,7 +101,7 @@ class ArchiveDataImporter:
 
     def _add_device_models(self):
         
-        device_models_data = self.archive_data.get('device_models')
+        device_models_data = self.metadata.get('device_models')
         
         if device_models_data is not None:
             
@@ -174,7 +173,7 @@ class ArchiveDataImporter:
                 
     def _add_devices(self):
         
-        devices_data = self.archive_data.get('devices')
+        devices_data = self.metadata.get('devices')
         
         if devices_data is not None:
             
@@ -242,7 +241,7 @@ class ArchiveDataImporter:
 
     def _add_station_devices(self):
         
-        station_devices_data = self.archive_data.get('station_devices')
+        station_devices_data = self.metadata.get('station_devices')
         
         if station_devices_data is not None:
             
@@ -355,7 +354,7 @@ class ArchiveDataImporter:
         
     def _add_processors(self, data_key, log_type_name, db_type_name):
         
-        processors_data = self.archive_data.get(data_key)
+        processors_data = self.metadata.get(data_key)
         
         if processors_data is not None:
             
@@ -380,7 +379,7 @@ class ArchiveDataImporter:
         
     def _add_annotation_constraints(self, job_info):
         
-        constraints_data = self.archive_data.get('annotation_constraints')
+        constraints_data = self.metadata.get('annotation_constraints')
         
         if constraints_data is not None:
             
@@ -408,7 +407,7 @@ class ArchiveDataImporter:
                 
     def _add_annotations(self, job_info):
         
-        annotations_data = self.archive_data.get('annotations')
+        annotations_data = self.metadata.get('annotations')
         
         if annotations_data is not None:
             

@@ -5,7 +5,7 @@
 
     {% include "vesper/header-prefix.html" %}
 
-    <title>Execute Deferred Actions - Vesper</title>
+    <title>Execute deferred actions - Vesper</title>
 
     {% load vesper_extras %}
 
@@ -18,18 +18,19 @@
 
     {% include "vesper/navbar.html" %}
 
-    <h2>Execute Deferred Actions</h2>
+    <h2>Execute deferred actions</h2>
 
     <p>
         Executes archive actions that were deferred by one or more previous
         Vesper jobs.
     </p>
-    
     <p>
         Examples of actions that may have been deferred include clip creation
-        and annotation. The actions are executed as a Vesper job.
+        and annotation.
     </p>
     
+    {% include "vesper/command-executes-as-job-message.html" %}
+
     <p>
         WARNING: Do not start any jobs
         that defer archive actions, and do not attempt to classify clips

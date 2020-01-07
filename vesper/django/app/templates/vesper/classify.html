@@ -22,10 +22,14 @@
     <h2>Classify</h2>
 
     <p>
-        Runs an automatic classifier on some clips. The clips are specified as
-        a set of one or more detectors, one or more station/mic combinations,
-        and a range of dates. Classification runs as a Vesper job.
+        Runs one classifier on the specified clips.
     </p>
+    <p>
+        The clips are specified as a set of detectors, a set of
+        station/mic pairs, and a range of dates.
+    </p>
+
+    {% include "vesper/command-executes-as-job-message.html" %}
 
     <form class="form" role="form" action="{% url 'classify' %}" method="post">
 

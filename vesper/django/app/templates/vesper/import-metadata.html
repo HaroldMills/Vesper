@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Import metadata - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load staticfiles %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+    <script src="{% static 'vesper/view/import-metadata.js' %}"></script>
+
+</head>
+
+<body class="command-form-body">
+
+    {% include "vesper/navbar.html" %}
+
+    <h2>Import metadata</h2>
+
+    <p>
+        Imports the specified metadata into this Vesper archive.
+    </p>
+    <p>
+        The metadata must be YAML text. The text can describe stations,
+        devices (such as microphones and recorders), which devices were
+        used at which stations during which time periods, and how the
+        devices were connected (for example, which microphones were
+        connected to which recorder channels). It can also processors
+        and annotations.
+        [Need to describe metadata YAML format in more detail, perhaps
+        on another page that we link to here.]
+    </p>
+    <p>
+        Note that you can drag and drop a YAML file to the text area below
+        to set the contents of the text area to the contents of the file.
+    </p>
+
+    {% include "vesper/command-executes-as-job-message.html" %}
+
+    <form class="form" role="form" action="{% url 'import-metadata' %}" method="post">
+
+        {{ form.metadata|block_form_element }}
+
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Import</button>
+
+    </form>
+
+</body>
+
+</html>

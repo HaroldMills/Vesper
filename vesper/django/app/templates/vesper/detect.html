@@ -22,10 +22,10 @@
     <h2>Detect</h2>
 
     <p>
-        Runs one or more detectors on all channels of one or more recordings.
-        The recordings are specified as a set of one or more stations and a
-        range of dates.
+        Runs one or more detectors on all channels of the specified recordings.
     </p>
+    
+    {% include "vesper/recordings-specification-message.html" %}
     
     <p>
         The time intervals on which the detectors are run can optionally be
@@ -34,7 +34,6 @@
         are run only on time intervals in the intersection of the recording
         intervals and the schedule intervals.
     </p>
-    
 <!--    
     <p>
         Check the <code>Create clip audio files</code> check box to create
@@ -43,7 +42,6 @@
         audio files to access clip samples.
     </p>
 -->
-    
     <p>
         Check the <code>Defer clip creation</code> check box to defer
         clip creation to the next invocation of the
@@ -95,9 +93,7 @@
     </p>
 -->
     
-    <p>
-        Detection runs as a Vesper job.
-    </p>
+    {% include "vesper/command-executes-as-job-message.html" %}
 
     <!--
         TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
