@@ -499,7 +499,7 @@ def _create_export_clip_metadata_to_csv_file_command_spec(form):
         'name': 'export',
         'arguments': {
             'exporter': {
-                'name': 'Clip Metadata CSV File',
+                'name': 'Clip Metadata CSV File Exporter',
                 'arguments': {
                     'output_file_path': data['output_file_path'],
                 }
@@ -545,7 +545,7 @@ def _create_export_clips_to_audio_files_command_spec(form):
         'name': 'export',
         'arguments': {
             'exporter': {
-                'name': 'Clip Audio Files',
+                'name': 'Clip Audio Files Exporter',
                 'arguments': {
                     'output_dir_path': data['output_dir_path'],
                     'clip_file_name_formatter': {
@@ -594,7 +594,7 @@ def _create_export_clips_to_hdf5_file_command_spec(form):
         'name': 'export',
         'arguments': {
             'exporter': {
-                'name': 'Clips HDF5 File',
+                'name': 'Clips HDF5 File Exporter',
                 'arguments': {
                     'output_file_path': data['output_file_path'],
                 }

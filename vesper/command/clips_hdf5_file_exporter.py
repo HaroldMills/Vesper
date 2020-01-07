@@ -43,7 +43,7 @@ class ClipsHdf5FileExporter:
     """
         
     
-    extension_name = 'Clips HDF5 File'
+    extension_name = 'Clips HDF5 File Exporter'
     
     
     def __init__(self, args):

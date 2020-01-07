@@ -25,7 +25,7 @@ class ClipAudioFilesExporter:
     """
         
     
-    extension_name = 'Clip Audio Files'
+    extension_name = 'Clip Audio Files Exporter'
     
     
     def __init__(self, args):

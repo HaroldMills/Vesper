@@ -246,7 +246,7 @@ columns:
 class ClipMetadataCsvFileExporter(object):
     
     
-    extension_name = 'MPG Ranch Clip Metadata CSV File'
+    extension_name = 'Clip Metadata CSV File Exporter'
     
     
     def __init__(self, args):
