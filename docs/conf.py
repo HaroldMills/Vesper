@@ -43,6 +43,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 highlight_language = 'none'
 
+master_doc = 'index'
+
 
 # -- Options for HTML output -------------------------------------------------
 
