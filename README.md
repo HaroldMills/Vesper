@@ -3,7 +3,7 @@ Vesper
 
 ## Overview
 
-Vesper is open source software for acoustical monitoring of nocturnal bird migration.
+Vesper is open source software for acoustic monitoring of nocturnal bird migration.
 
 The goal of the Vesper project is to create software that will enable researchers and enthusiasts to collaboratively collect, view, and analyze nocturnal flight calls (NFCs) of migratory birds at spatial scales ranging from local to continental.
 
