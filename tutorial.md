@@ -39,14 +39,17 @@ In this section of the tutorial, you will create a new Vesper archive, add a use
 The Vesper project provides an archive template that you can copy to serve as a starting point for any new archive that you create. 
 
 ### Start the Vesper server
+
 ### View the archive
 
 ## Importing data
     * Import archive data
     * Import a recording
+    
 ## Processing data
     * Run automatic detectors
     * Run an automatic classifier
     * Classify clips manually
+    
 ## Exporting data
     * Export clip audio files
