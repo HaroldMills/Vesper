@@ -2,19 +2,47 @@
 Installation
 ************
 
-Important!
-==========
+Installing Miniconda or Anaconda
+================================
 
-We strongly recommend installing each new version of Vesper into its
-own Conda environment (see the `Background`_ section below if you're
-new to Conda environments). This has several advantages, including
-allowing you to easily revert to a previously installed Vesper version
-if you encounter problems with a new one.
+The Vesper installation instructions assume that you will use
+Vesper in conjunction with either the
+`Miniconda <http://conda.pydata.org/miniconda.html>`_ or the
+`Anaconda <https://www.anaconda.com/distribution/>`_ Python
+distribution. We recommend Miniconda and Anaconda due to their
+excellent package and environment management functionality,
+which makes it relatively easy to install and
+maintain any number of Vesper versions and their dependencies.
+You can read more about that functionality in the
+`Conda Environments`_ section below.
+
+Miniconda and Anaconda are both free and open source, and are
+offered by `Anaconda, Inc. <https://www.anaconda.com>`_, a
+software company that specializes in scientific applications of
+the Python programming language. Anaconda includes many packages,
+some of which Vesper uses but most of which it doesn't. Miniconda
+is much smaller than Anaconda, including only a minimal set of
+packages. Either Miniconda or Anaconda is fine for use with
+Vesper.
+
+To install Miniconda, visit the `Miniconda home page
+<http://conda.pydata.org/miniconda.html>`_ and follow
+the instructions there for your platform. To install Anaconda,
+visit the `Anaconda home page <https://www.anaconda.com/distribution/>`_
+and follow the instructions there.
 
 Installing Vesper
 =================
 
-To install the most recent version of Vesper in a new Conda environment:
+.. Important::
+   We strongly recommend installing each version of Vesper that you
+   use into its own conda environment (see the `Conda Environments`_
+   section below for an introduction to conda environments). This has
+   several advantages, including allowing you to easily revert to a
+   previously installed Vesper version if you encounter problems with
+   a new one.
+
+To install the most recent version of Vesper in a new conda environment:
 
 1. If you don't have one of them already, download and install either
    the `Miniconda <http://conda.pydata.org/miniconda.html>`_ or the
@@ -23,7 +51,7 @@ To install the most recent version of Vesper in a new Conda environment:
 
 2. Open a Windows Anaconda Prompt or Unix terminal.
 
-3. Create a new Conda environment for Vesper and install various Vesper
+3. Create a new conda environment for Vesper and install various Vesper
    dependencies in it by issuing the command::
 
         conda create -n vesper-0.4.7 -c defaults -c conda-forge django=2.1 h5py jsonschema librosa pandas pyephem python=3.6 "pyyaml<5.1" resampy scikit-learn sqlite=3.25
@@ -52,38 +80,15 @@ To install the most recent version of Vesper in a new Conda environment:
    the previous step.
 
 
-Background
-==========
-
-The instructions on this page assume that you will use Vesper in
-conjunction with either the
-`Miniconda <http://conda.pydata.org/miniconda.html>`_ or the
-`Anaconda <https://www.anaconda.com/distribution/>`_ Python
-distribution. We recommend Miniconda and Anaconda mainly due to
-their combination of excellent package and environment management
-functionality, which makes it relatively easy to install and
-maintain any number of Vesper versions and their dependencies.
-You can read more about that in the `Conda Environments`_ section
-below.
-
-Miniconda and Anaconda are both free and open source, and are
-offered by `Anaconda, Inc. <https://www.anaconda.com>`_, a
-software company that specializes in scientific applications of
-the Python programming language. Anaconda includes many packages,
-some of which Vesper uses but most of which it doesn't. Miniconda
-is much smaller than Anaconda, including only a minimal set of
-packages. Either Miniconda or Anaconda is fine for use with
-Vesper.
-
 Conda Environments
-------------------
+==================
 
 Miniconda and Anaconda both include a command line program called
-`Conda <https://conda.io/en/latest/index.html>`_. You can use Conda
+`conda <https://conda.io/en/latest/index.html>`_. You can use conda
 to manage multiple Python *environments* within your Miniconda or
 Anaconda installation, where each environment contains a set of
 software *packages*. For example, we strongly recommend installing
-each version of Vesper that you use in its own Conda environment.
+each version of Vesper that you use in its own conda environment.
 Such an environment will include a Vesper package and several tens
 of other packages on which Vesper depends, including, for example,
 packages for TensorFlow, NumPy, and Python itself. Installing each
@@ -92,16 +97,16 @@ those different versions from interfering with each other, and
 with other packages that you might want to install in other,
 non-Vesper environments.
 
-Every Miniconda or Anaconda installation includes a default base
+Every Miniconda or Anaconda installation includes a default *base*
 environment that is created automatically on installation. We do
 *not* recommend installing Vesper in the base environment, but
 rather in its own environment, as discussed above.
 
 Conda environments are fully documented in the
 `Managing environments <https://conda.io/projects/conda/user-guide/tasks/manage-environments.html>`_
-section of the `Conda documentation <https://conda.io/en/latest/index.html>`_.
+section of the `conda documentation <https://conda.io/en/latest/index.html>`_.
 We will describe only a few of the more common commands for managing
-Conda environments here.
+conda environments here.
 
 Conda environments are managed mainly using the conda command line
 program, which you can run from either the Windows Anaconda Prompt
@@ -113,7 +118,7 @@ Anaconda. The conda commands you type are the same on all platforms.
 is required for the ``conda activate`` and ``conda deactivate`` commands
 to work. Issue the ``conda init --help`` command for more about this.)
 
-To create a new Conda environment, issue the command::
+To create a new conda environment, issue the command::
 
     conda create -n <env> <package list>
 
