@@ -1475,8 +1475,8 @@ def _create_missing_entities_text(view_name, entities_text):
         f'contains no {entities_text}.</p>'
         '<p>See the '
         '<a href="https:/haroldmills.github.io/Vesper/tutorial.html">'
-        'Vesper tutorial</a> for an example of how to populate an '
-        'archive.</p>')
+        'Vesper tutorial</a> for an example of how to import metadata '
+        'and recordings into an archive.</p>')
 
 
 def _render_clip_calendar(request, context):
