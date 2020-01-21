@@ -9,7 +9,7 @@ to that version until the API stabilizes.
 """
 
 
-import ruamel_yaml as yaml
+import ruamel.yaml as yaml
  
  
 def load(source, **kwargs):
