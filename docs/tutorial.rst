@@ -39,11 +39,11 @@ Each client runs in a web browser, either on the same computer as
 the server or on a different one. In this tutorial, we will run
 the server and a single client on the same computer.
 
-A Vesper archive is a collection of audio data, related metadata,
-and application configuration settings. Each archive has its own
-directory on disk, called the *archive directory*. The archive
-directory always contains certain essential parts of an archive,
-and in many cases the entirety of the archive.
+A Vesper archive is a collection of audio recordings and related
+metadata. Each archive has its own directory on disk, called the
+*archive directory*. The archive directory always contains
+certain essential parts of an archive, and in many cases the
+entirety of the archive.
 
 Vesper supports various operations on archive data. The
 operations that you will perform in this tutorial fall into four
@@ -56,21 +56,22 @@ the following figure:
    
    Four common types of operations on Vesper archive data.
 
-An *import* operation imports audio data and/or related metadata
-into an archive. For example, in this tutorial you’ll exercise two
-different kinds of import operations, one for audio recordings and
-another for metadata pertaining to them.
+An *import* operation imports audio recordings and/or related
+metadata into an archive from an external source. For example,
+in this tutorial you’ll exercise two different kinds of import
+operations, one for audio recordings and another for metadata
+pertaining to them.
 
 A *view* operation creates some sort of graphical representation of
 data for you to view and in some cases interact with, for example
 a spectrogram or a chart.
 
 A *process* operation processes data, for example by running an
-automatic detector or classifier, or by classifying a set of audio
-clips according to a key that you type on your keyboard.
+automatic detector or classifier, or by classifying a set of short
+audio clips according to a key that you type on your keyboard.
 
-Finally, an *export* operation exports data from an archive for use
-in other software. For example, in this tutorial you’ll export
+Finally, an *export* operation exports data from an archive to an
+external destination. For example, in this tutorial you’ll export
 detected bird calls from your archive as audio files.
 
 Getting started
@@ -165,8 +166,8 @@ View the archive
 
 To run a Vesper client to view the archive:
 
-#. Start a web browser. We recommend Chrome, since Vesper is tested and
-   used most extensively with it.
+#. Start a web browser. At this point we strongly recommend using Chrome,
+   since Vesper is tested and used most extensively with it.
    
 #. Go to the URL:
 
@@ -182,13 +183,191 @@ To run a Vesper client to view the archive:
    
 Congratulations: you've created, served, and viewed your very own
 Vesper archive! It doesn't contain any data yet, but you'll remedy
-that in the next section.
+that soon.
+
+Archive data
+============
+
+As mentioned above, A Vesper archive is a collection of audio
+recordings and related metadata. In this section we will explain
+in a little more detail what that means, describing the main types
+of data in an archive and how they relate to each other.
+
+Recordings, clips, and annotations
+----------------------------------
+
+First and most importantly, a *recording* is a continuous
+audio recording. A recording has one or more *channels*, each
+of which comprises a sequence of numbers called *samples*. Each
+sample represents an (almost) instantaneous air pressure
+measurement made with the aid of a microphone. In multichannel
+recordings (that is, recordings with more than one channel), the
+samples of different channels are most often recorded using
+different microphones.
+
+The following figure illustrates the relationship between a
+recording, its channels, and their samples:
+
+.. figure:: _static/images/recording-and-channels.svg
+   :alt: a stereo recording with its two channels and their samples
+   :align: center
+   
+   A stereo recording, with two channels and their samples.
+   The horizontal axis represents time, and each small blue box
+   represents one sample. Note that the figure is only schematic,
+   and that real recordings typically contain orders of magnitude
+   more samples than shown.
+   
+The samples of a recording are collected at a fixed rate called
+the *sample rate*. The most common sample rates used for audio
+recording are in the tens of kilohertz. That is, samples are
+collected tens of thousands of times per second.
+
+All of the channels of a recording have the same number of
+samples, and the corresponding samples of different channels
+(that is, corresponding in the sense that each sample has the
+same position in its channel's sample sequence) are collected
+at the same instant.
+
+In addition to samples, a recording includes *metadata* that
+provide information *about* the recording (hence the "meta"
+prefix). For example, the metadata include a recording's start
+time and sample rate.
+
+Aside from recordings, all of the other data in an archive help
+to describe the contents of the recordings, and hence are also
+metadata. In the remainder of this section, we will list and
+describe several types of such metadata.
+
+A *clip* is a continuous portion of one recording channel. A
+clip is typically much shorter than the recording that contains
+it, and it typically contains a single acoustic event of
+interest, such as a bird call. The following figure illustrates
+the relationship between a recording and some clips within it:
+  
+.. figure:: _static/images/recording-and-clips.svg
+   :alt: recording and clips
+   :align: center
+   
+   A stereo recording and some clips within it. The
+   horizontal dimension represents time, and each small blue
+   box represents one sample. Note that the figure is only
+   schematic, and that real recordings and clips typically
+   contain orders of magnitude more samples than shown.
+     
+Note that, as shown in the figure, different clips may
+have different durations, and each clip is confined to a
+single recording channel.
+   
+An *annotation* provides one piece of information about a
+particular clip, and has a name and a value. A
+*classification* is an annotation that classifies the contents
+of a clip. For example, classification annotation might have
+the name "Classification" and a value like "Call" or "Noise".
+  
+Stations and devices
+--------------------
+
+A monitoring *station* is a location where recordings are
+made, with a name and a fixed latitude, longitude, and
+elevation. A station also has recording devices associated
+with it, as described below.
+
+A recording *device* is a piece of recording hardware, either
+an audio *recorder* (for example, an autonomous recording unit,
+a manually-operated field recorder, or a general-purpose
+computer with audio recording capabilities) or a *microphone*.
+When you build an archive, you tell Vesper what devices you
+used to create the recordings of the archive, including which
+devices were used at which stations during which time periods,
+and which microphones were connected to which recorder inputs
+during
+which time periods. From this information Vesper infers which
+microphone was used to record each channel of each recording.
+This allows Vesper to support various useful archive queries,
+for example to retrieve for display all of the clips with a
+particular classification that were made with a particular
+microphone at a particular station on a particular night.
+
+Processors
+----------
+
+A *processor* is software that processes existing data to create
+new data. Vesper currently offers two types of processors:
+detectors and annotators. A *detector* processes each of the
+channels of one or more recordings to create clips, for example
+to mark portions of recordings that contain bird calls. An
+*annotator* processes clips to create annotations. For example,
+a *classifier* is a common type of annotator that creates
+annotations that classify the contents of clips.
+  
+Summary
+-------
+
+There are many kinds of archive data, including some not
+mentioned here. For quick reference, here's a table
+summarizing those described in this section:
+
++----------------+-----------------------------------------------------------------+
+| Data           | Description                                                     |
++================+=================================================================+
+| Recording      | Continuous audio recording with one or more channels.           |
++----------------+-----------------------------------------------------------------+
+| Channel        | One channel of a recording, a sequence of samples.              |
++----------------+-----------------------------------------------------------------+
+| Sample         | Number representing an instantaneous air pressure measurement.  |
++----------------+-----------------------------------------------------------------+
+| Clip           | Continuous portion of one recording channel.                    |
++----------------+-----------------------------------------------------------------+
+| Annotation     | One piece of information about a clip, with a name and a value. |
++----------------+-----------------------------------------------------------------+
+| Classification | Annotation that classifies a clip.                              |
++----------------+-----------------------------------------------------------------+
+|                                                                                  |
++----------------+-----------------------------------------------------------------+
+| Station        | Monitoring station, with a name and location.                   |
++----------------+-----------------------------------------------------------------+
+| Device         | Hardware recording device, either a recorder or a microphone.   |
++----------------+-----------------------------------------------------------------+
+| Recorder       | Device that records audio, creating recordings.                 |
++----------------+-----------------------------------------------------------------+
+| Microphone     | Device that provides audio input to a recorder.                 |
++----------------+-----------------------------------------------------------------+
+|                                                                                  |
++----------------+-----------------------------------------------------------------+
+| Processor      | Software data processor, either a detector or an annotator.     |
++----------------+-----------------------------------------------------------------+
+| Detector       | Processor that creates clips from recordings.                   |
++----------------+-----------------------------------------------------------------+
+| Annotator      | Processor that creates annotations for clips.                   |
++----------------+-----------------------------------------------------------------+
+| Classifier     | Annotator that creates classifications.                         |
++----------------+-----------------------------------------------------------------+
+
 
 Importing data
 ==============
 
+In this section of the tutorial, you will import a recording into
+your Vesper archive. Before you can do that, however, you must
+import some metadata that Vesper needs to be able to infer certain
+information about the recording, including the station at which it
+was made and the microphone that was used to make it. The
+availability of such metadata simplifies recording imports, and also
+allows Vesper to support powerful queries and data displays. Along
+with the metadata used during recording imports, you will also
+import metadata describing processors and annotations that Vesper
+will use when you process your recording in the next section of
+the tutorial.
+
+
 Import metadata
 ---------------
+
+Vesper imports most metadata from text files that are in the
+`YAML <https://en.wikipedia.org/wiki/YAML>`_ format. You can
+import metadata of various types from YAML files, including
+descriptions of stations, devices, processors, and annotations.
 
 Import a recording
 ------------------
@@ -210,5 +389,3 @@ Exporting data
 
 Export clip audio files
 -----------------------
-
-
