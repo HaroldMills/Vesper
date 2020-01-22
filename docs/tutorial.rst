@@ -305,7 +305,7 @@ Summary
 -------
 
 There are many kinds of archive data, including some not
-mentioned here. For quick reference, here's a table
+mentioned above. For quick reference, here's a table
 summarizing those described in this section:
 
 +----------------+-----------------------------------------------------------------+
