@@ -8,7 +8,7 @@ import sys
 # after the "Importing a source file directly" section of
 # https://docs.python.org/3/library/importlib.html#module-importlib.
 module_name = 'vesper.version'
-module_path = Path('../vesper/version.py')
+module_path = Path('vesper/version.py')
 spec = importlib.util.spec_from_file_location(module_name, module_path)
 version_module = importlib.util.module_from_spec(spec)
 sys.modules[module_name] = version_module
