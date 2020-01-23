@@ -86,6 +86,9 @@ class HttpError(Exception):
 # all of the major browsers we should switch to that practice.
 
 
+_DOCUMENTATION_URL = 'https://vesper.readthedocs.io/'
+
+
 # Default navbar data for read-write archives.
 # Note that as of 2016-07-19, nested navbar dropdowns do not work.
 # The generated HTML looks right to me so the problem may be a
@@ -169,7 +172,10 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
       - name: About Vesper
         url_name: about-vesper
         
-''')
+      - name: View documentation
+        url: {}
+        
+'''.format(_DOCUMENTATION_URL))
 
 
 # Default navbar data for read-only archives.
@@ -178,10 +184,10 @@ _DEFAULT_NAVBAR_DATA_READ_ONLY = yaml_utils.load('''
 - name: View
   dropdown:
 
-      - name: Clip Calendar
+      - name: View clip calendar
         url_name: clip-calendar
 
-      - name: Clip Album
+      - name: View clip album
         url_name: clip-album
 
 - name: Help
@@ -190,7 +196,10 @@ _DEFAULT_NAVBAR_DATA_READ_ONLY = yaml_utils.load('''
       - name: About Vesper
         url_name: about-vesper
         
-''')
+      - name: View documentation
+        url: {}
+        
+'''.format(_DOCUMENTATION_URL))
 
 
 def _create_navbar_items():
