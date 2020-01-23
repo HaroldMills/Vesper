@@ -184,6 +184,12 @@ _DEFAULT_NAVBAR_DATA_READ_ONLY = yaml_utils.load('''
       - name: Clip Album
         url_name: clip-album
 
+- name: Help
+  dropdown:
+  
+      - name: About Vesper
+        url_name: about-vesper
+        
 ''')
 
 
