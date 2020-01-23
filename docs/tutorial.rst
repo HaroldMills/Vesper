@@ -171,7 +171,7 @@ To run a Vesper client to view the archive:
    
 #. Go to the URL:
 
-      127.0.0.1:8000
+      localhost:8000
       
    This should produce a page that looks something like this:
    
@@ -367,6 +367,8 @@ Vesper imports most metadata from text files that are in the
 `YAML <https://en.wikipedia.org/wiki/YAML>`_ format. You can
 import metadata of various types from YAML files, including
 descriptions of stations, devices, processors, and annotations.
+
+
 
 Import a recording
 ------------------
