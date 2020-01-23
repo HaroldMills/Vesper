@@ -1495,9 +1495,9 @@ def _create_missing_entities_text(view_name, entities_text):
     return (
         f'<p>This page can&#39t display a {view_name} since this archive '
         f'contains no {entities_text}.</p>'
-        '<p>See the '
-        '<a href="https:/haroldmills.github.io/Vesper/tutorial.html">'
-        'Vesper tutorial</a> for an example of how to import metadata '
+        '<p>See the tutorial portion of the '
+        f'<a href="{_DOCUMENTATION_URL}">'
+        'Vesper documentation</a> for an example of how to import metadata '
         'and recordings into an archive.</p>')
 
 
