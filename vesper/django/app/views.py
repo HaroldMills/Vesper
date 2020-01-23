@@ -56,6 +56,7 @@ import vesper.util.archive_lock as archive_lock
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
+import vesper.version as version
 
 
 class HttpError(Exception):
@@ -162,6 +163,12 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
       - name: Delete clip audio files
         url_name: delete-clip-audio-files
    
+- name: Help
+  dropdown:
+  
+      - name: About Vesper
+        url_name: about-vesper
+        
 ''')
 
 
@@ -2019,3 +2026,15 @@ def job(request, job_id):
     context = _create_template_context(
         request, job=job, command_name=command_spec['name'])
     return render(request, 'vesper/job.html', context)
+
+
+@csrf_exempt
+def about_vesper(request):
+
+    if request.method not in _GET_AND_HEAD:
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
+
+    context = _create_template_context(
+        request, 'Help', version=version.full_version)
+
+    return render(request, 'vesper/about-vesper.html', context)

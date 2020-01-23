@@ -25,7 +25,9 @@ urlpatterns = [
         
     path('clips/<int:clip_id>/wav/', views.clip_wav, name='clip-wav'),
     path('clips/<int:clip_id>/annotations/json/', views.annotations_json,
-         name='annotations')
+         name='annotations'),
+    
+    path('about-vesper/', views.about_vesper, name='about-vesper')
     
 ]
 
