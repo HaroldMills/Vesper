@@ -13,17 +13,36 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
+from pathlib import Path
+import importlib
+import sys
+
 import sphinx_rtd_theme
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'Vesper'
-copyright = '2020, Harold Mills'
 author = 'Harold Mills'
+copyright = '2020, Harold Mills'
 
-# The full version, including alpha/beta/rc tags
-release = '0.4.8'
+# Load `vesper.version` module as `version_module`. This code is modeled
+# after the "Importing a source file directly" section of
+# https://docs.python.org/3/library/importlib.html#module-importlib.
+module_name = 'vesper.version'
+module_path = Path('../vesper/version.py')
+spec = importlib.util.spec_from_file_location(module_name, module_path)
+version_module = importlib.util.module_from_spec(spec)
+sys.modules[module_name] = version_module
+spec.loader.exec_module(version_module)
+
+# Major project version, used as the replacement for |version|.
+# This can be (but does not have to be) shorter than `release`,
+# e.g. "1.2" instead of "1.2.3" or "1.2.3rc1".
+version = version_module.full_version
+
+# Full project version, used as the replacement for |release|.
+release = version_module.full_version
 
 
 # -- General configuration ---------------------------------------------------

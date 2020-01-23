@@ -1,10 +1,24 @@
+from pathlib import Path
 from setuptools import find_packages, setup
+import importlib
+import sys
+
+
+# Load `vesper.version` module as `version_module`. This code is modeled
+# after the "Importing a source file directly" section of
+# https://docs.python.org/3/library/importlib.html#module-importlib.
+module_name = 'vesper.version'
+module_path = Path('../vesper/version.py')
+spec = importlib.util.spec_from_file_location(module_name, module_path)
+version_module = importlib.util.module_from_spec(spec)
+sys.modules[module_name] = version_module
+spec.loader.exec_module(version_module)
 
 
 setup(
       
     name='vesper',
-    version='0.4.8rc1',
+    version=version_module.full_version,
     description=(
         'Software for acoustical monitoring of nocturnal bird migration.'),
     url='https://github.com/HaroldMills/Vesper',
