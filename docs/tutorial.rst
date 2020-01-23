@@ -304,9 +304,8 @@ annotations that classify the contents of clips.
 Summary
 -------
 
-There are many kinds of archive data, including some not
-mentioned above. For quick reference, here's a table
-summarizing those described in this section:
+There are many kinds of archive data. For quick reference, here's a table
+summarizing those described above:
 
 +----------------+-----------------------------------------------------------------+
 | Data           | Description                                                     |
@@ -325,7 +324,7 @@ summarizing those described in this section:
 +----------------+-----------------------------------------------------------------+
 |                                                                                  |
 +----------------+-----------------------------------------------------------------+
-| Station        | Monitoring station, with a name and location.                   |
+| Station        | A named monitoring location.                                    |
 +----------------+-----------------------------------------------------------------+
 | Device         | Hardware recording device, either a recorder or a microphone.   |
 +----------------+-----------------------------------------------------------------+
