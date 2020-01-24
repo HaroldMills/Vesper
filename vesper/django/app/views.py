@@ -50,6 +50,7 @@ from vesper.singletons import (
 from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
+import vesper.external_urls as external_urls
 import vesper.old_bird.export_clip_counts_csv_file_utils as \
     old_bird_export_clip_counts_csv_file_utils
 import vesper.util.archive_lock as archive_lock
@@ -86,14 +87,11 @@ class HttpError(Exception):
 # all of the major browsers we should switch to that practice.
 
 
-_DOCUMENTATION_URL = 'https://vesper.readthedocs.io/'
-
-
 # Default navbar data for read-write archives.
 # Note that as of 2016-07-19, nested navbar dropdowns do not work.
 # The generated HTML looks right to me so the problem may be a
 # Bootstrap limitation.
-_DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
+_DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
 
 - name: File
   dropdown:
@@ -173,13 +171,13 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load('''
         url_name: about-vesper
         
       - name: View documentation
-        url: {}
+        url: {external_urls.documentation_url}
         
-'''.format(_DOCUMENTATION_URL))
+''')
 
 
 # Default navbar data for read-only archives.
-_DEFAULT_NAVBAR_DATA_READ_ONLY = yaml_utils.load('''
+_DEFAULT_NAVBAR_DATA_READ_ONLY = yaml_utils.load(f'''
 
 - name: View
   dropdown:
@@ -197,9 +195,9 @@ _DEFAULT_NAVBAR_DATA_READ_ONLY = yaml_utils.load('''
         url_name: about-vesper
         
       - name: View documentation
-        url: {}
+        url: {external_urls.documentation_url}
         
-'''.format(_DOCUMENTATION_URL))
+''')
 
 
 def _create_navbar_items():
@@ -1495,10 +1493,10 @@ def _create_missing_entities_text(view_name, entities_text):
     return (
         f'<p>This page can&#39t display a {view_name} since this archive '
         f'contains no {entities_text}.</p>'
-        '<p>See the tutorial portion of the '
-        f'<a href="{_DOCUMENTATION_URL}">'
-        'Vesper documentation</a> for an example of how to import metadata '
-        'and recordings into an archive.</p>')
+        '<p>See the '
+        f'<a href="{external_urls.tutorial_url}">Vesper tutorial</a> '
+        'for an example of how to import metadata  and recordings into an '
+        'archive.</p>')
 
 
 def _render_clip_calendar(request, context):
@@ -2050,6 +2048,9 @@ def about_vesper(request):
         return HttpResponseNotAllowed(_GET_AND_HEAD)
 
     context = _create_template_context(
-        request, 'Help', version=version.full_version)
+        request, 'Help',
+        version=version.full_version,
+        source_code_url=external_urls.source_code_url,
+        documentation_url=external_urls.documentation_url)
 
     return render(request, 'vesper/about-vesper.html', context)
