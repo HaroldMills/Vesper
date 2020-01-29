@@ -10,9 +10,22 @@
 
 
 function onLoad() {
-	const textArea = document.getElementById('textarea');
-	textArea.scrollTop = textArea.scrollHeight;
-	// intervalId = window.setInterval(onJobInterval, 1000);
+    prettifyCommand();
+    scrollJobTextArea();
+    // intervalId = window.setInterval(onJobInterval, 1000);
+}
+
+
+function prettifyCommand() {
+    const textArea = document.getElementById('command-textarea');
+    const object = JSON.parse(textArea.value);
+    textArea.value = JSON.stringify(object, null, 4);
+}
+
+
+function scrollJobTextArea() {
+    const textArea = document.getElementById('job-textarea');
+    textArea.scrollTop = textArea.scrollHeight;
 }
 
 

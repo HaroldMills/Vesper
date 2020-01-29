@@ -19,19 +19,19 @@
 
     <h2>Job {{job.id}} - {{command_name}}</h2>
 
-    <h3>Full command:</h3>
-    <p>{{job.command}}</p>
+    <h3>Command:</h3>
+    <textarea class="text-area" id="command-textarea" rows="8" cols="100" readonly>{{job.command}}</textarea>
 
     <h3>Start time:</h3>
-    <p>{{job.start_time}}</p>
+    {{job.start_time}}
 
     <h3>End time:</h3>
-    <p>{{job.end_time}}</p>
+    {{job.end_time}}
 
     <h3>Status:</h3>
-    <p>{{job.status}}</p>
+    {{job.status}}
 
     <h3>Log:</h3>
-    <textarea class="log-text" id="textarea" rows="20" cols="100" readonly>{{job.log}}</textarea>
+    <textarea class="text-area" id="job-textarea" rows="20" cols="100" readonly>{{job.log}}</textarea>
 
 </body>
