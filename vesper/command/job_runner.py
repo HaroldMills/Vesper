@@ -24,11 +24,11 @@ import vesper.util.time_utils as time_utils
 '''
 Job status values:
 
-Not Started
+Unstarted
 Running
-Complete
+Completed
 Interrupted
-Raised Exception
+Failed
 '''
 
 
@@ -149,19 +149,19 @@ def run_job(job_info):
         # Update job status and log error message
         
         job.end_time = time_utils.get_utc_now()
-        job.status = 'Raised Exception'
+        job.status = 'Failed'
         with archive_lock.atomic():
             job.save()
         
         logger.error(
-            'Job raised exception. See traceback below.\n' +
+            'Job failed with an exception. See traceback below.\n' +
             traceback.format_exc())
         
     else:
         
         # Update job status and log final message.
         
-        status = 'Complete' if complete else 'Interrupted'
+        status = 'Completed' if complete else 'Interrupted'
 
         job.end_time = time_utils.get_utc_now()
         job.status = status

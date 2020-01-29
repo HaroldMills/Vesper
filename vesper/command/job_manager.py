@@ -101,7 +101,7 @@ def _create_job(command_spec, user):
             command=json.dumps(command_spec, default=_json_date_serializer),
             creation_time=time_utils.get_utc_now(),
             creating_user=user,
-            status='Not Started')
+            status='Unstarted')
     
     return job.id
     
