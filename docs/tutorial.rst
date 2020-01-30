@@ -113,21 +113,22 @@ Create a new Vesper archive
    of this documentation for more about installation and conda
    environments.
       
-#. In your Anaconda Prompt or terminal, cd to your new archive directory.
-   For example, if you're on Windows and the archive
+#. In your Anaconda Prompt or terminal, change the current working
+   directory to your new archive directory by issuing an appropriate
+   cd command. For example, if you're on Windows and the archive
    directory path is ``C:\Users\Bailey\Desktop\Tutorial Archive``, the
    command is::
    
       cd "C:\Users\Bailey\Desktop\Tutorial Archive"
       
-   An analogous command on macOS or Linux would look like::
+   The analogous command for macOS or Linux is::
    
       cd "/Users/Bailey/Desktop/Tutorial Archive"
    
 #. Vesper stores the metadata of an archive in a relational database
-   in the archive directory. The archive template doew not include
-   such a database, however, so you have to create it. To create the
-   database, issue the command::
+   in the archive directory. The archive template does not include
+   such a database, however, so you have to create it. To do this,
+   issue the command::
    
       vesper_admin migrate
       
@@ -153,8 +154,10 @@ Create a new Vesper archive
 Start the Vesper server
 -----------------------
 
-In the Windows Anaconda prompt or Unix terminal of the last section,
-issue the command::
+In a Windows Anaconda prompt or Unix terminal in which you've set
+the current working directory to the archive directory (for example,
+the Anaconda prompt or terminal of the last section) issue the
+command::
 
    vesper_admin runserver
    
@@ -166,8 +169,8 @@ View the archive
 
 To run a Vesper client to view the archive:
 
-#. Start a web browser. At this point we strongly recommend using Chrome,
-   since Vesper is tested and used most extensively with it.
+#. Start a web browser. We strongly recommend using Chrome, since Vesper
+   is tested and used most extensively with it.
    
 #. Go to the URL:
 
@@ -349,14 +352,14 @@ Importing data
 
 In this section of the tutorial, you will import a recording into
 your Vesper archive. Before you can do that, however, you must
-import some metadata that Vesper needs to be able to infer certain
-information about the recording, including the station at which it
-was made and the microphone that was used to make it. The
+import some metadata that Vesper requires so it can infer certain
+information about the recording, such as the station at which it
+was made and the microphone(s) that were used to make it. The
 availability of such metadata simplifies recording imports, and also
 allows Vesper to support powerful queries and data displays. Along
-with the metadata used during recording imports, you will also
+with the metadata required for recording imports, you will also
 import metadata describing processors and annotations that Vesper
-will use when you process your recording in the next section of
+will use when you work with your recording in the next section of
 the tutorial.
 
 
@@ -368,8 +371,178 @@ Vesper imports most metadata from text files that are in the
 import metadata of various types from YAML files, including
 descriptions of stations, devices, processors, and annotations.
 
+The tutorial archive comes with several example YAML files in
+the ``Metadata YAML`` subdirectory of the archive directory.
+One of the files is named ``One Station.yaml`` and contains
+metadata for a monitoring setup with only one station. Another
+file is named ``Two Stations.yaml`` and describes a small
+monitoring network with two stations. We will not use the
+two-station file in this tutorial, but it's provided as an
+example of how to specify metadata for more than one station.
 
+To import metadata into your archive:
 
+#. Make sure you have a Vesper server running in your archive
+   directory, and point your browser to the archive. As at the
+   end of the `Getting started`_ section, you should see a
+   display much like this:
+
+   .. figure:: _static/images/empty-archive.png
+      :alt: An empty Vesper archive.
+      :align: center
+   
+      An empty Vesper archive.
+   
+   The black bar near the top of the window is called the
+   Vesper *navbar* (short for *navigation bar*), and the user
+   interface elements (named ``File``, ``Edit``, etc.) with the
+   little triangles at their right ends are called *dropdowns*.
+
+#. Click on ``File->Import metadata`` (that is, the
+   ``Import metadata`` item within the ``File`` dropdown). This
+   should take you to a login page, as shown in the following
+   figure:
+   
+   .. figure:: _static/images/login.png
+      :alt: The login page.
+      :align: center
+   
+      The login page.
+
+   Vesper requires that you be
+   logged in as a specific user whenever you modify an archive,
+   so it can keep track of who made the modifications. Enter the
+   user name and password for the superuser you created in the
+   `Create a new Vesper archive`_ section above, and press the
+   ``Log In`` button. This should take you to a page that looks
+   like this:
+   
+   .. figure:: _static/images/import-metadata-empty.png
+      :alt: The import metadata page.
+      :align: center
+   
+      The ``Import metadata`` page.
+
+   From a Windows Explorer or macOS Finder window, drag the
+   ``One Station.yaml`` file and drop it onto the
+   ``Metadata YAML`` text area on the ``Import metadata`` page.
+   The contents of the file should appear in the text area, as
+   shown in the following figure:
+   
+   .. figure:: _static/images/import-metadata-filled.png
+      :alt: The import metadata page, including metadata.
+      :align: center
+   
+      The ``Import metadata`` page, including metadata.
+
+   Look through the contents if you wish to see how they describe
+   the station, devices, detectors, classifiers, annotations,
+   etc. that you will add to your archive. Finally, press the
+   ``Import`` button to import the data.
+   
+   When you press the ``Import`` button, the Vesper client creates
+   a textual *command* that describes the import operation you want
+   to perform, including a copy of the text that you dropped onto
+   the text area, and sends the command to the Vesper server for it
+   to run. The server queues the command to run as a Vesper *job*
+   (a job is simply the execution of a command), and directs the
+   client to a *job page* that provides information about the status
+   of the job. That page will look something like the following
+   initially:
+   
+   .. figure:: _static/images/unstarted-job.png
+      :alt: A job page for an unstarted job.
+      :align: center
+   
+      A job page for an unstarted job.
+   
+   Note that the status of the job is "Unstarted", indicating that
+   when the page was sent from the server to the client the job had
+   not yet started running.
+   
+   You can refresh a job page in your browser to monitor the progress
+   of the job. In Chrome, for example, you can do this by clicking on
+   the small circular arrow button just to the left of the address bar.
+   (Yes, it's a little clunky for you to have to refresh the page
+   yourself. A future version of Vesper will update job pages
+   automatically to display progress.) While a job is running, its
+   status is displayed as "Running", and when a job completes, its
+   status changes to "Completed". For example, after the job pictured
+   above completed its job page looked like this:
+   
+   .. figure:: _static/images/completed-job.png
+      :alt: A job page for a completed job.
+      :align: center
+   
+      A job page for a completed job.
+   
+   Every job has a *log* to which it writes messages as it runs to
+   document its progress. The log of a job is displayed at the bottom
+   of the job page. In the log pictured above, note the messages that
+   indicate the various objects that the job added to the archive.
+   
+   Jobs sometimes fail to complete, for example if information
+   required for the job is unavailable or because of a software bug.
+   In such cases, the status of the job changes to "Failed",
+   indicating that the job failed due to an error. For example, if you
+   run the import command you ran above a second time it fails, as
+   shown in the resulting job page:
+   
+   .. figure:: _static/images/failed-job.png
+      :alt: A job page for an failed job.
+      :align: center
+   
+      A job page for a failed job.
+   
+   The job fails because it attempts to create a new station whose
+   name is the same as that of an existing station, but Vesper
+   requires that the names of stations be unique. When a job fails,
+   it usually raises an *exception* that includes information about
+   the failure. The log for the failed job includes this information
+   in the form of one or more error messages and a *stack trace*
+   indicating exactly what parts of Vesper were running when the
+   failure occurred. The portion of the log visible in the above
+   figure shows the tail end of the stack trace, and the final line
+   of the log indicates that the job failed because it violated a
+   database uniqueness constraint concerning the station name. Both
+   the error messages and the stack trace are useful for diagnosing
+   why a job failed, so that you can, say, fix the problem with your
+   command or archive that caused the failure or report a problem
+   with Vesper.
+   
+   An earlier message in the log that is not visible in the figure
+   (you can scroll up in the log to see it) indicates that because
+   the command failed, the archive database was restored to its
+   state before the import. This is an important property of Vesper
+   jobs that import metadata or recordings: when such a job fails,
+   it leaves the archive database exactly as it was before the job
+   started, preserving the integrity of the database and allowing
+   you to resume work from the point just before you ran the failed
+   job.
+
+#. Go to the URL:
+
+      localhost:8000
+      
+   Previously, when you visited this URL, you saw a page that indicated
+   that your archive was empty. Now, however, you see something slightly
+   different, because of your metadata import:
+   
+   .. figure:: _static/images/empty-clip-calendar.png
+      :alt: An empty clip calendar.
+      :align: center
+   
+      An empty clip calendar.
+      
+   This page displays a *clip calendar* for the station and microphone
+   whose metadata you imported in the last step. That's progress over
+   a message about a totally empty archive, but it's still not very
+   interesting since, as the message in the calendar reflects, the
+   archive does not yet contain any clips. Next, though, you'll import
+   a recording and run some automatic detectors on it to create some
+   clips to look at. You'll learn more about the contents and use of
+   the clip calendar then.
+      
 Import a recording
 ------------------
 
