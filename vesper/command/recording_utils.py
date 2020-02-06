@@ -2,9 +2,66 @@
 
 
 import datetime
+import logging
 
+from vesper.command.command import CommandExecutionError
+from vesper.django.app.models import Station
+from vesper.singletons import extension_manager, preset_manager
 from vesper.util.bunch import Bunch
 import vesper.util.signal_utils as signal_utils
+
+
+def create_recording_file_parser(spec):
+    
+    # Get parser name.
+    classes = extension_manager.instance.get_extensions(
+        'Recording File Parser')
+    name = spec.get('name')
+    if name is None:
+        raise CommandExecutionError(
+            'Recording file parser spec does not include parser name.')
+        
+    # Get parser class.
+    cls = classes.get(name)
+    if cls is None:
+        raise CommandExecutionError(
+            'Unrecognized recording file parser extension "{}".'.format(name))
+
+    # Get stations.
+    stations = [s for s in Station.objects.all()]
+    
+    # Get station name aliases.
+    station_name_aliases = _get_station_name_aliases(spec)
+    
+    # Create parser.
+    parser = cls(stations, station_name_aliases)
+    
+    return parser
+    
+    
+def _get_station_name_aliases(spec):
+    
+    args = spec.get('arguments')
+    
+    if args is None:
+        return {}
+    
+    preset_name = args.get('station_name_aliases_preset')
+    
+    if preset_name is None:
+        return {}
+    
+    preset = preset_manager.instance.get_preset(
+        'Station Name Aliases', preset_name)
+    
+    if preset is None:
+        logging.getLogger().warning((
+            'Could not find Station Name Aliases preset "{}". '
+            'No station name aliases will be recognized in recording '
+            'file names during the import.').format(preset_name))
+        return {}
+    
+    return preset.data
 
 
 def group_recording_files(files, tolerance=1):

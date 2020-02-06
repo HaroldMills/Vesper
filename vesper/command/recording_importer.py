@@ -10,9 +10,8 @@ from django.db import transaction
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import (
-    DeviceConnection, Job, Recording, RecordingChannel, RecordingFile, Station)
-from vesper.singletons import (
-    extension_manager, preset_manager, recording_manager)
+    DeviceConnection, Job, Recording, RecordingChannel, RecordingFile)
+from vesper.singletons import recording_manager
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
 import vesper.util.audio_file_utils as audio_file_utils
@@ -45,7 +44,7 @@ class RecordingImporter:
         self.recursive = command_utils.get_optional_arg(
             'recursive', args, True)
         spec = command_utils.get_optional_arg('recording_file_parser', args)
-        self.file_parser = _create_file_parser(spec)
+        self.file_parser = recording_utils.create_recording_file_parser(spec)
     
     
     def execute(self, job_info):
@@ -328,59 +327,6 @@ class RecordingImporter:
             for f in r.files:
                 log('    {}'.format(f.path.as_posix()))
             
-
-def _create_file_parser(spec):
-    
-    # Get parser name.
-    classes = extension_manager.instance.get_extensions(
-        'Recording File Parser')
-    name = spec.get('name')
-    if name is None:
-        raise CommandExecutionError(
-            'Recording file parser spec does not include parser name.')
-        
-    # Get parser class.
-    cls = classes.get(name)
-    if cls is None:
-        raise CommandExecutionError(
-            'Unrecognized recording file parser extension "{}".'.format(name))
-
-    # Get stations.
-    stations = [s for s in Station.objects.all()]
-    
-    # Get station name aliases.
-    station_name_aliases = _get_station_name_aliases(spec)
-    
-    # Create parser.
-    parser = cls(stations, station_name_aliases)
-    
-    return parser
-    
-    
-def _get_station_name_aliases(spec):
-    
-    args = spec.get('arguments')
-    
-    if args is None:
-        return {}
-    
-    preset_name = args.get('station_name_aliases_preset')
-    
-    if preset_name is None:
-        return {}
-    
-    preset = preset_manager.instance.get_preset(
-        'Station Name Aliases', preset_name)
-    
-    if preset is None:
-        logging.getLogger().warning((
-            'Could not find Station Name Aliases preset "{}". '
-            'No station name aliases will be recognized in recording '
-            'file names during the import.').format(preset_name))
-        return {}
-    
-    return preset.data
-
 
 def _get_recorder(file):
     
