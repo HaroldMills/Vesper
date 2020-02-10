@@ -10,7 +10,7 @@
     {% load static %}
     <script type="module" src="{% static 'vesper/view/job.js' %}"></script>
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/job.css' %}">
-
+    
 </head>
 
 <body>
@@ -21,16 +21,30 @@
 
     <h3>Command:</h3>
     <textarea class="text-area" id="command-textarea" rows="5" cols="100" readonly>{{job.command}}</textarea>
-
-    <h3>Start time:</h3>
-    {{job.start_time}}
-
-    <h3>End time:</h3>
-    {{job.end_time}}
-
-    <h3>Status:</h3>
-    {{job.status}}
-
+    
+    <table class="job-table">
+    
+        <tbody>
+        
+            <tr>
+                <th scope="row" class="job-th">Status:</th>
+                <td class="job-td">{{job.status}}</td>
+            </tr>
+            
+            <tr>
+                <th scope="row" class="job-th">Start time:</th>
+                <td class="job-td">{{job.start_time}}</td>
+            </tr>
+            
+            <tr>
+                <th scope="row" class="job-th">End time:</th>
+                <td class="job-td">{{job.end_time}}</td>
+            </tr>
+            
+        </tbody>
+        
+    </table>
+            
     <h3>Log:</h3>
     <textarea class="text-area" id="job-textarea" rows="15" cols="100" readonly>{{job.log}}</textarea>
 

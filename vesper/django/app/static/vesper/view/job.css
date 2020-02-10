@@ -1,3 +1,19 @@
 .text-area {
   min-width: 100%;
 }
+
+.job-table, .job-th, .job-td {
+    table-layout: fixed;
+}
+
+.job-th, .job-td {
+    height: 30px;
+}
+
+.job-th {
+    width: 100px;
+}
+
+.job-td {
+    width: 200px;
+}
