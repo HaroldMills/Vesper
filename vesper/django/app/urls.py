@@ -64,6 +64,8 @@ if not settings.ARCHIVE_READ_ONLY:
         path('refresh-recording-audio-file-paths/',
              views.refresh_recording_audio_file_paths,
              name='refresh-recording-audio-file-paths'),
+        path('add-recording-audio-files/', views.add_recording_audio_files,
+             name='add-recording-audio-files'),
         path('delete-recordings/', views.delete_recordings,
              name='delete-recordings'),
         path('adjust-clips/', views.adjust_clips, name='adjust-clips'),

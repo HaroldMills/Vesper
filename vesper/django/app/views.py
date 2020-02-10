@@ -17,6 +17,8 @@ from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 import numpy as np
 
+from vesper.django.app.add_recording_audio_files_form import \
+    AddRecordingAudioFilesForm
 from vesper.django.app.adjust_clips_form import AdjustClipsForm
 from vesper.django.app.classify_form import ClassifyForm
 from vesper.django.app.create_clip_audio_files_form import \
@@ -157,6 +159,9 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
  
       - name: Refresh recording audio file paths
         url_name: refresh-recording-audio-file-paths
+        
+      - name: Add recording audio files
+        url_name: add-recording-audio-files
         
       - name: Create clip audio files
         url_name: create-clip-audio-files
@@ -2029,6 +2034,41 @@ def _create_import_recordings_command_spec(form):
                     }
                 }
             }
+        }
+    }
+
+
+@login_required
+@csrf_exempt
+def add_recording_audio_files(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = AddRecordingAudioFilesForm()
+
+    elif request.method == 'POST':
+
+        form = AddRecordingAudioFilesForm(request.POST)
+
+        if form.is_valid():
+            command_spec = _create_add_recording_audio_files_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Admin', form=form)
+
+    return render(request, 'vesper/add-recording-audio-files.html', context)
+
+
+def _create_add_recording_audio_files_command_spec(form):
+
+    data = form.cleaned_data
+
+    return {
+        'name': 'add_recording_audio_files',
+        'arguments': {
+            'dry_run': data['dry_run']
         }
     }
 

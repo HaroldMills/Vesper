@@ -21,6 +21,7 @@ Classifier:
     - vesper.mpg_ranch.outside_classifier.OutsideClassifier
     
 Command:
+    - vesper.command.add_recording_audio_files_command.AddRecordingAudioFilesCommand
     - vesper.command.adjust_clips_command.AdjustClipsCommand
     - vesper.command.classify_command.ClassifyCommand
     - vesper.command.create_clip_audio_files_command.CreateClipAudioFilesCommand

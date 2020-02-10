@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Add recording audio files - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+
+</head>
+
+<body>
+
+    {% include "vesper/navbar.html" %}
+
+    <h2>Add recording audio files</h2>
+
+    <p>
+        Adds audio files for recordings already in this Vesper archive.
+    </p>
+    
+    <p>
+        This command is intended for use with Vesper web archives
+        that were populated from old Vesper desktop archives by
+        running the `populate_archive` script. Desktop archives
+        included recording metadata but not recording audio files,
+        and the `populate_archive` script did not change this in
+        the web archives populated. This command remedies that by
+        matching the recording files present in the web archive's
+        recording directories to recordings in the archive database,
+        and adding the recordings to the database.
+    </p>
+    
+    <p>
+        If you check the <code>Dry run</code> check box, the command
+        will do everything it normally does, including writing all of
+        its normal log messages, but it will not actually modify the
+        database.
+    </p>
+    
+    <!--
+    <p>
+        If you check the
+        <code>Increase number of recording channels as needed</code>
+        check box below, the command will increase the number of channels
+        in a recording if its files contain more channels than the
+        recording metadata in the archive database indicate. If you
+        don't check the check box, the command will reject recording
+        files whose numbers of channels do not match those of the
+        recording.
+    </p>
+    -->
+    
+    {% include "vesper/command-executes-as-job-message.html" %}
+
+    <p class="warning">
+        We strongly recommend saving a backup copy of your
+        <code>Archive Database.sqlite</code> file
+        before running this command. If you do that, then if after
+        running the command you decide you don't like the results,
+        you can restore your database to its state before you ran
+        the command.
+    </p>
+    
+    <p>
+        This command is idempotent for any particular recording and
+        its files. That is, you can run the command any number of
+        times and if it adds the files for a recording on any
+        particular run, it will not attempt to add them again on
+        subsequent runs. Thus you can feel free to work with the
+        command iteratively, running it, fixing problems it notes
+        in its log, re-running it, etc. until no more problems
+        remain.
+    </p>
+    
+    <!--
+        TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
+        of form elements. Or perhaps use django-bootstrap3 app? See
+        http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
+     -->
+
+    <form class="form" role="form" action="{% url 'add-recording-audio-files' %}" method="post">
+
+        {{ form.dry_run|form_checkbox }}
+
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Add Files</button>
+
+    </form>
+
+</body>
+
+</html>
