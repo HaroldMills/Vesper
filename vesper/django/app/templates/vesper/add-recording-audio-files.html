@@ -37,6 +37,17 @@
     </p>
     
     <p>
+        This command is idempotent for any particular
+        recording and its files. That is, you can run the command
+        repeatedly and if it adds the files for a recording on any
+        particular run, it will simply pass over them on subsequent
+        runs, and not attempt to do any thing further with them.
+        Thus you can feel free to work with the command iteratively,
+        running it, fixing problems it notes in its log, re-running
+        it, etc. until you are satisfied with the results.
+    </p>
+    
+    <p>
         If you check the <code>Dry run</code> check box, the command
         will do everything it normally does, including writing all of
         its normal log messages, but it will not actually modify the
@@ -65,17 +76,6 @@
         running the command you decide you don't like the results,
         you can restore your database to its state before you ran
         the command.
-    </p>
-    
-    <p>
-        This command is idempotent for any particular recording and
-        its files. That is, you can run the command any number of
-        times and if it adds the files for a recording on any
-        particular run, it will not attempt to add them again on
-        subsequent runs. Thus you can feel free to work with the
-        command iteratively, running it, fixing problems it notes
-        in its log, re-running it, etc. until no more problems
-        remain.
     </p>
     
     <!--
