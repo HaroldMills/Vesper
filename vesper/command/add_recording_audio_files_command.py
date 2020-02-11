@@ -46,7 +46,6 @@ class AddRecordingAudioFilesCommand(Command):
         super().__init__(args)
         get = command_utils.get_required_arg
         self._dry_run = get('dry_run', args)
-        # self._dry_run = True
  
         
     def execute(self, job_info):
@@ -377,43 +376,6 @@ class AddRecordingAudioFilesCommand(Command):
             
             
     def _add_recording_files_aux(self, recording, files):
-        
-        '''
-        if recording has files in database:
-        
-            if files in database do not match disk files:
-            
-                WARNING: Files in database don't match disk files.
-                
-            else:
-            
-                INFO: Files are already in database.
-                
-                Shorten recording length if it's two seconds too long.
-                
-        else:
-            # recording has no files in database
-            
-            if any file sample rate does not match recording:
-            
-                ERROR: Files have different sample rate than recording.
-                
-            elif any file number of channels does not match recording:
-                
-                ERROR: File number of channels does not match recording.
-                        
-            elif files interval differs from recording interval:
-            
-                ERROR: Files interval differs from recording interval.
-                
-            else:
-            
-                INFO: Adding files to database...
-                
-                Add files. Shorten recording length if it's two seconds
-                too long.
-            
-        '''
         
         log_info = self._logger.info
         
