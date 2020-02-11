@@ -5,10 +5,11 @@ This module is the authority regarding the Vesper version. Any other
 module that needs the Vesper version should obtain it from this module.
 """
 
+
 major_number = 0
 minor_number = 4
 patch_number = 8
-suffix = 'rc1'
+suffix = 'rc2'
 
 major_version = f'{major_number}'
 minor_version = f'{major_version}.{minor_number}'
