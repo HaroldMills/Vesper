@@ -10,8 +10,8 @@ To build the package:
     
 To create a conda environment with which to test the new package:
 
-    conda create -n vesper-<version> python=3.6
-    conda activate vesper-<version>
+    conda create -n test python=3.6
+    conda activate test
     pip install dist/vesper-<version>.tar.gz
     
 To upload the package to the test Python package index:
@@ -21,7 +21,6 @@ To upload the package to the test Python package index:
 To upload the package to the  real Python package index:
 
     python -m twine upload dist/*
-    
 """
 
 
