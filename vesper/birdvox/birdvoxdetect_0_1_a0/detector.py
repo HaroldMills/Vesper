@@ -202,17 +202,6 @@ class DetectorAT05(_Detector):
         super().__init__(settings, sample_rate, listener)
 
 
-class DetectorAT05a(_Detector):
-    
-    """BirdVoxDetect with an adaptive threshold whose nominal value is 5."""
-    
-    extension_name = 'BirdVoxDetect 0.1.a0 AT 05a'
-    
-    def __init__(self, sample_rate, listener):
-        settings = _create_at_settings(5)
-        super().__init__(settings, sample_rate, listener)
-
-
 class DetectorAT10(_Detector):
     
     """BirdVoxDetect with an adaptive threshold whose nominal value is 10."""
