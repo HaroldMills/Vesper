@@ -38,19 +38,13 @@ setup(
     ],
     
     install_requires=[
+        'birdvoxdetect'
         'django',
-        'h5py==2.9.0',
         'jsonschema',
-        # 'keras==2.2.4',
-        'librosa==0.7.0',
-        'numpy==1.16.4',
-        'pandas==0.25.1',
         'pyephem',
         'resampy',
         'ruamel_yaml',
-        'scikit-learn==0.21.2',
         'scipy'
-        # 'tensorflow~=1.12.2'
     ],
       
     entry_points={

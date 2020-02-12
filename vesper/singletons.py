@@ -37,9 +37,10 @@ Command:
     - vesper.command.refresh_recording_audio_file_paths_command.RefreshRecordingAudioFilePathsCommand
     
 Detector:
+
+    # BirdVoxDetect 0.1.a0 with adaptive thresholds
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT02
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT05
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT05a
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT10
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT20
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT30
@@ -47,63 +48,92 @@ Detector:
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT50
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT60
     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT70
-    - vesper.birdvox.birdvoxdetect_0_2_0_a2.detector.DetectorFT10
-    - vesper.birdvox.birdvoxdetect_0_2_0_a2.detector.DetectorFT20
-    - vesper.birdvox.birdvoxdetect_0_2_0_a2.detector.DetectorFT30
-    - vesper.birdvox.birdvoxdetect_0_2_0_a2.detector.DetectorFT40
-    - vesper.birdvox.birdvoxdetect_0_2_0_a2.detector.DetectorFT50
-    - vesper.birdvox.birdvoxdetect_0_2_0_a2.detector.DetectorFT60
-    - vesper.birdvox.birdvoxdetect_0_2_0_a2.detector.DetectorFT70
-    - vesper.birdvox.birdvoxdetect_0_2_0_a2.detector.DetectorFT80
-    - vesper.birdvox.birdvoxdetect_0_2_0_a2.detector.DetectorFT90
+    
+    # BirdVoxDetect 0.2.x with adaptive thresholds
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT10
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT20
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT30
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT40
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT50
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT60
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT70
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT80
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT90
+    
+    # BirdVoxDetect 0.2.x with fixed thresholds
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT10
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT20
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT30
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT40
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT50
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT60
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT70
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT80
+    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT90
+    
+    # MPG Ranch Thrush Detector 0.0
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector90
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector80
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector70
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector60
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector50
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector40
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector50
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector60
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector70
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector80
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector90
+    
+    # MPG Ranch Tseep Detector 0.0
     - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector90
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector80
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector70
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector60
-    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector50
     - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector40
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector50
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector60
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector70
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector80
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector90
+    
+    # MPG Ranch Thrush Detector 0.1
     - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector90
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector80
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector70
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector60
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector50
     - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector40
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector50
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector60
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector70
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector80
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector90
+    
+    # MPG Ranch Tseep Detector 0.1
     - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector90
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector80
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector70
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector60
-    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector50
     - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector40
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector90
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector80
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector70
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector60
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector50
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector40
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector30
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector20
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector50
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector60
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector70
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector80
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector90
+    
+    # MPG Ranch Thrush Detector 1.0
     - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector90
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector80
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector70
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector60
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector50
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector40
-    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector30
     - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector20
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector30
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector40
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector50
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector60
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector70
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector80
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector90
+    
+    # MPG Ranch Tseep Detector 1.0
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector20
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector30
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector40
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector50
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector60
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector70
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector80
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector90
+    
+    # Old Bird redux detectors 1.0
     - vesper.old_bird.old_bird_detector_redux_1_0.ThrushDetector
     - vesper.old_bird.old_bird_detector_redux_1_0.TseepDetector
+    
+    # Old Bird redux detectors 1.1
     - vesper.old_bird.old_bird_detector_redux_1_1.ThrushDetector
     - vesper.old_bird.old_bird_detector_redux_1_1.TseepDetector
     

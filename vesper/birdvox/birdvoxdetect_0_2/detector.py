@@ -1,10 +1,9 @@
 """
-Module containing Vesper wrapper for BirdVoxDetect NFC detector.
+Module containing Vesper wrapper for BirdVoxDetect 0.2.x NFC detector.
 
 BirdVoxDetect (https://github.com/BirdVox/birdvoxdetect) is an NFC detector
 created by the BirdVox project (https://wp.nyu.edu/birdvox/).
 """
-
 
 import csv
 import logging
@@ -12,6 +11,7 @@ import os.path
 import tempfile
 import wave
 
+import birdvoxdetect
 import numpy as np
 import tensorflow as tf
 
@@ -19,15 +19,6 @@ from vesper.util.settings import Settings
 import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.signal_utils as signal_utils
-
-
-# Uncomment this to use the BirdVoxDetect of the `birdvoxdetect` package
-# of the current Python environment.
-import birdvoxdetect
-
-# Uncomment this to use the BirdVoxDetect 0.2.0a2 that is included in the
-# `vesper` package of the current Python environment.
-# import vesper.birdvox.birdvoxdetect_0_2_0_a2.birdvoxdetect as birdvoxdetect
 
 
 _CLIP_DURATION = .6
@@ -51,6 +42,8 @@ class _Detector:
     
     
     def __init__(self, input_sample_rate, listener):
+        
+        self._check_bvd_version()
         
         open_mp_utils.work_around_multiple_copies_issue()
         
@@ -92,6 +85,30 @@ class _Detector:
         return self._listener
     
     
+    def _check_bvd_version(self):
+        
+        version = birdvoxdetect.__version__
+        
+        # Get major and minor version numbers.
+        parts = version.split('.')
+        try:
+            major = int(parts[0])
+            minor = int(parts[1])
+        except Exception:
+            self._handle_incompatible_bvd_version(version)
+            
+        if not (major == 0 and minor == 2):
+            self._handle_incompatible_bvd_version(version)
+            
+            
+    def _handle_incompatible_bvd_version(self, version):
+        raise ValueError(
+            f'Installed BirdVoxDetect version {version} is not '
+            'compatible with this detector wrapper. The wrapper '
+            'only works with BirdVoxDetect versions in the 0.2.x '
+            'family.')
+        
+        
     def detect(self, samples):
         # print('_Detector.detect {} {}'.format(samples.shape, samples.dtype))
         self._audio_file_writer.write(samples)
@@ -119,6 +136,7 @@ class _Detector:
             birdvoxdetect.process_file(
                 audio_file_path,
                 bva_threshold=1,
+                detector_name=self.settings.detector_name,
                 threshold=self.settings.threshold,
                 logger_level=logging.WARN,
                 output_dir=output_dir_path)
@@ -138,8 +156,7 @@ class _Detector:
         audio_file_name_base = \
             os.path.splitext(os.path.basename(audio_file_path))[0]
             
-        output_file_name = '{}_{}.csv'.format(
-            audio_file_name_base, 'checklist')
+        output_file_name = f'{audio_file_name_base}_checklist.csv'
         
         return os.path.join(output_dir_path, output_file_name)
     
@@ -187,126 +204,53 @@ class _Detector:
         return hours * 3600 + minutes * 60 + seconds
     
 
-# The following is untested code to create BirdVoxDetect `_Detector`
-# subclasses programmatically when this module is loaded.
-#
-# 
-# def _create_detector_class(threshold_type, threshold):
-#     
-#     threshold_string = '{:02d}'.format(threshold)
-#     
-#     class_name = 'Detector{}{}'.format(threshold_type, threshold_string)
-#     
-#     extension_name = \
-#         'BirdVoxDetect 0.1.0 {} {}'.format(threshold_type, threshold_string)
-#         
-#     threshold_adaptation_enabled = threshold_type == 'AT'
-#     
-#     settings = Settings(
-#         threshold_adaptation_enabled=threshold_adaptation_enabled,
-#         threshold=threshold)
-#     
-#     class_dict = {
-#         'extension_name': extension_name,
-#         '_settings': settings
-#     }
-#     
-#     cls = type(class_name, (_Detector,), class_dict)
-#     
-#     globals()[class_name] = cls
-#     
-#     
-# def _create_detector_classes():
-#     for threshold_type in ('FT', 'AT'):
-#         for threshold in [5, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
-#             _create_detector_class(threshold_type, threshold)
-#         
-#         
-# _create_detector_classes()
-
-
-def _create_ft_settings(threshold):
-    return Settings(threshold_adaptation_enabled=False, threshold=threshold)
-
-
-class DetectorFT05(_Detector):
+def _create_detector_class(threshold_type, threshold):
+     
+    threshold_string = f'{threshold:02d}'
+     
+    class_name = f'Detector{threshold_type}{threshold_string}'
     
-    """BirdVoxDetect with a fixed threshold of 5."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 05'
-    _settings = _create_ft_settings(5)
+    extension_name = (
+        f'BirdVoxDetect {birdvoxdetect.__version__} {threshold_type} '
+        f'{threshold_string}')
+         
+    if threshold_type == 'AT':
+        detector_name = 'birdvoxdetect-v03_T-1800_trial-37_network_epoch-023'
+    else:
+        detector_name = 'birdvoxdetect-v03_trial-12_network_epoch-068'
+     
+    settings = Settings(detector_name=detector_name, threshold=threshold)
+     
+    class_dict = {
+        'extension_name': extension_name,
+        '_settings': settings
+    }
+     
+    cls = type(class_name, (_Detector,), class_dict)
+     
+    globals()[class_name] = cls
+     
+     
+def _create_detector_classes():
+    for threshold_type in ('FT', 'AT'):
+        for threshold in [10, 20, 30, 40, 50, 60, 70, 80, 90]:
+            _create_detector_class(threshold_type, threshold)
+         
+         
+_create_detector_classes()
 
 
-class DetectorFT10(_Detector):
-    
-    """BirdVoxDetect with a fixed threshold of 10."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 10'
-    _settings = _create_ft_settings(10)
-
-
-class DetectorFT20(_Detector):
-    
-    """BirdVoxDetect with a fixed threshold of 20."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 20'
-    _settings = _create_ft_settings(20)
-
-
-class DetectorFT30(_Detector):
-    
-    """BirdVoxDetect with a fixed threshold of 30."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 30'
-    _settings = _create_ft_settings(30)
-
-
-class DetectorFT40(_Detector):
-    
-    """BirdVoxDetect with a fixed threshold of 40."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 40'
-    _settings = _create_ft_settings(40)
-
-
-class DetectorFT50(_Detector):
-    
-    """BirdVoxDetect with a fixed threshold of 50."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 50'
-    _settings = _create_ft_settings(50)
-
-
-class DetectorFT60(_Detector):
-    
-    """BirdVoxDetect with a fixed threshold of 60."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 60'
-    _settings = _create_ft_settings(60)
-
-
-class DetectorFT70(_Detector):
-    
-    """BirdVoxDetect with a fixed threshold of 70."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 70'
-    _settings = _create_ft_settings(70)
-
-
-class DetectorFT80(_Detector):
-    
-    """BirdVoxDetect with a fixed threshold of 80."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 80'
-    _settings = _create_ft_settings(80)
-
-
-class DetectorFT90(_Detector):
-    
-    """BirdVoxDetect with a fixed threshold of 90."""
-    
-    extension_name = 'BirdVoxDetect 0.2.0a2 FT 90'
-    _settings = _create_ft_settings(90)
+def _show_detector_classes():
+    print('BirdVoxDetect detector classes:')
+    items = sorted(globals().items(), key=lambda i: i[0])
+    for key, value in items:
+        if key.startswith('Detector'):
+            extension_name = value.extension_name
+            settings = value._settings.__dict__
+            print(f"    {key} '{extension_name}' {settings}")
+            
+            
+# _show_detector_classes()
 
 
 class WaveFileWriter:
