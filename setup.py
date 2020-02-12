@@ -1,3 +1,30 @@
+"""
+Setup.py for Vesper pip package.
+
+All of the commands below should be issued from the directory containing
+this file.
+
+To build the package:
+
+    python setup.py sdist bdist_wheel
+    
+To create a conda environment with which to test the new package:
+
+    conda create -n vesper-<version> python=3.6
+    conda activate vesper-<version>
+    pip install dist/vesper-<version>.tar.gz
+    
+To upload the package to the test Python package index:
+
+    python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+    
+To upload the package to the  real Python package index:
+
+    python -m twine upload dist/*
+    
+"""
+
+
 from pathlib import Path
 from setuptools import find_packages, setup
 import importlib
@@ -38,7 +65,7 @@ setup(
     ],
     
     install_requires=[
-        'birdvoxdetect'
+        'birdvoxdetect',
         'django',
         'jsonschema',
         'pyephem',
