@@ -8,12 +8,6 @@ To build the package:
 
     python setup.py sdist bdist_wheel
     
-To create a conda environment with which to test the new package:
-
-    conda create -n test python=3.6
-    conda activate test
-    pip install dist/vesper-<version>.tar.gz
-    
 To upload the package to the test Python package index:
 
     python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
@@ -21,6 +15,29 @@ To upload the package to the test Python package index:
 To upload the package to the  real Python package index:
 
     python -m twine upload dist/*
+    
+To create a conda environment using a local Vesper package:
+
+    conda create -n test python=3.6
+    conda activate test
+    pip install dist/vesper-<version>.tar.gz
+    
+To create a conda environment using a Vesper package from the test PyPI:
+
+    conda create -n test python=3.6
+    conda activate test
+    pip install birdvoxdetect django jsonschema pyephem resampy ruamel_yaml scipy
+    pip install --extra-index-url https://test.pypi.org/simple/ vesper==<version>
+    
+The first pip command in the above is to ensure that Vesper's dependencies
+are installed from the real PyPI rather than the test one, which can
+contain incompatible pre-release versions.
+    
+To create a conda environment using a Vesper package from the real PyPI:
+
+    conda create -n test python=3.6
+    conda activate test
+    pip install vesper==<version>
 """
 
 
