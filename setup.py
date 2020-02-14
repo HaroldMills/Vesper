@@ -4,15 +4,15 @@ Setup.py for Vesper pip package.
 All of the commands below should be issued from the directory containing
 this file.
 
-To build the package:
+To build the Vesper package:
 
     python setup.py sdist bdist_wheel
     
-To upload the package to the test Python package index:
+To upload the Vesper package to the test Python package index:
 
     python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
     
-To upload the package to the  real Python package index:
+To upload the Vesper package to the  real Python package index:
 
     python -m twine upload dist/*
     
@@ -38,6 +38,12 @@ To create a conda environment using a Vesper package from the real PyPI:
     conda create -n test python=3.6
     conda activate test
     pip install vesper==<version>
+    
+To create a conda environment for Vesper development:
+
+    conda create -n vesper-dev python=3.6
+    conda activate vesper-dev
+    pip install birdvoxdetect bokeh django jsonschema matplotlib pyephem ruamel_yaml sphinx sphinx_rtd_theme
 """
 
 
