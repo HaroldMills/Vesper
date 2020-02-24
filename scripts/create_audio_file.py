@@ -6,17 +6,19 @@ import numpy as np
 import vesper.util.audio_file_utils as audio_file_utils
 
 
-_LENGTH = 10
-_NUM_CHANNELS = 2
-_SAMPLE_RATE = 24000
+START = 0
+LENGTH = 10
+NUM_CHANNELS = 2
+SAMPLE_RATE = 24000
+FILE_NAME = 'test.wav'
 
 
-def _main():
-    samples = np.arange(_LENGTH)
-    samples = np.vstack(samples + i * 1000 for i in range(_NUM_CHANNELS))
-    audio_file_utils.write_wave_file('test.wav', samples, _SAMPLE_RATE)
+def main():
+    samples = np.arange(START, START + LENGTH)
+    channels = list(samples + i * 1000 for i in range(NUM_CHANNELS))
+    samples = np.vstack(channels)
+    audio_file_utils.write_wave_file(FILE_NAME, samples, SAMPLE_RATE)
     
     
 if __name__ == '__main__':
-    _main()
-    
+    main()
