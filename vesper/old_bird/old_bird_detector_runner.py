@@ -18,7 +18,6 @@ from vesper.util.logging_utils import append_stack_trace
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
 import vesper.util.audio_file_utils as audio_file_utils
-import vesper.util.numpy_utils as numpy_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.signal_utils as signal_utils
