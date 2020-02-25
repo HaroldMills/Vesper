@@ -24,6 +24,7 @@
     <p>
         Imports the specified metadata into this Vesper archive.
     </p>
+    
     <p>
         The metadata must be YAML text. The text can describe stations,
         devices (such as microphones and recorders), which devices were
@@ -34,9 +35,18 @@
         [Need to describe metadata YAML format in more detail, perhaps
         on another page that we link to here.]
     </p>
+    
     <p>
         Note that you can drag and drop a YAML file to the text area below
         to set the contents of the text area to the contents of the file.
+    </p>
+    
+    <p>
+        Currently, some metadata imports (for example, ones that add
+        detectors and/or classifiers) must be followed by a server
+        restart to take full effect. We recommend restarting your
+        server after every metadata import to avoid potential
+        confusion.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
