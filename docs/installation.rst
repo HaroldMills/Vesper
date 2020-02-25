@@ -51,34 +51,27 @@ To install the most recent version of Vesper in a new conda environment:
 
 2. Open a Windows Anaconda Prompt or Unix terminal.
 
-3. Create a new conda environment for Vesper and install various Vesper
-   dependencies in it by issuing the command::
+3. Create a new conda environment for Vesper and install a Python
+   interpreter in it by issuing the command::
 
-        conda create -n vesper-0.4.7 -c defaults -c conda-forge django=2.1 h5py jsonschema librosa pandas pyephem python=3.6 "pyyaml<5.1" resampy scikit-learn sqlite=3.25
+        conda create -n vesper-0.4.8 python=3.6
 
    Conda will display a list of packages that it proposes to install,
-   including those listed in the command and others on which they
-   depend. Press the `Return` key to accept.
+   including Python and some others. Press the ``Return`` key to accept.
 
 4. Activate the environment you just created with::
 
-        conda activate vesper-0.4.7
+        conda activate vesper-0.4.8
 
-5. Install TensorFlow and Keras packages into the new environment with::
+5. Install Vesper and various dependencies into the new environment with::
 
-        pip install tensorflow==1.12 keras
-
-   Here we recommend using pip rather than conda for the
-   installation since the installed TensorFlow package performs better
-   on many computers than the one you get with conda.
-
-6. Finally, install the Vesper package into the environment with::
-
-        pip install vesper
-
-   You must use pip here rather than conda since pip was used in
-   the previous step.
-
+       pip install vesper==0.4.8
+       
+   Here you must use pip rather than conda since Vesper is distributed
+   as a pip package. In addition to the Vesper package, pip will install
+   several other packages on which Vesper depends, including ones for
+   Django and NumPy.
+   
 
 Conda Environments
 ==================
@@ -91,7 +84,7 @@ software *packages*. For example, we strongly recommend installing
 each version of Vesper that you use in its own conda environment.
 Such an environment will include a Vesper package and several tens
 of other packages on which Vesper depends, including, for example,
-packages for TensorFlow, NumPy, and Python itself. Installing each
+packages for Django, NumPy, and Python itself. Installing each
 version of Vesper in its own environment keeps the packages for
 those different versions from interfering with each other, and
 with other packages that you might want to install in other,
