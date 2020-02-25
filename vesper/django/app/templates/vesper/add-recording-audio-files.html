@@ -11,6 +11,7 @@
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/add-recording-audio-files.css' %}">
 
 </head>
 
@@ -25,15 +26,20 @@
     </p>
     
     <p>
+        The recordings to add audio files for are specified as a set
+        of stations and a range of dates.
+    </p>
+
+    <p>
         This command is intended for use with Vesper web archives
         that were populated from old Vesper desktop archives by
         running the <code>populate_archive</code> script. Desktop
         archives included recording metadata but not recording audio
         files, and the <code>populate_archive</code> script did not
         change this in the web archives it populated. This command
-        remedies that by matching the recording files present in
+        remedies that by matching recording audio files present in
         the web archive's recording directories to recordings in
-        the archive database, and adding the recordings to the
+        the archive database, and adding the audio files to the
         database.
     </p>
     
@@ -45,26 +51,17 @@
         command repeatedly, fixing selected problems noted in the
         logs between runs, until you are satisfied with the results
         of the final run. Files added by one execution of the
-        command will simply be passed over on subsequent runs.
+        command are simply passed over on subsequent runs.
     </p>
     
     <p>
         If you check the <code>Dry run</code> check box, the command
         will do everything it normally does, including writing all of
         its normal log messages, but it will not actually modify the
-        database.
+        archive database.
     </p>
     
     {% include "vesper/command-executes-as-job-message.html" %}
-
-    <p class="warning">
-        It is strongly recommended that you save a backup copy of
-        your <code>Archive Database.sqlite</code> file
-        before running this command. If you do that, then if after
-        running the command you decide you don't like the results,
-        you can restore your database to its state before you ran
-        the command.
-    </p>
     
     <!--
         TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
@@ -74,9 +71,12 @@
 
     <form class="form" role="form" action="{% url 'add-recording-audio-files' %}" method="post">
 
+        {{ form.stations|block_form_element }}
+        {{ form.start_date|form_element }}
+        {{ form.end_date|form_element }}
         {{ form.dry_run|form_checkbox }}
 
-        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Add files</button>
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Add audio files</button>
 
     </form>
 

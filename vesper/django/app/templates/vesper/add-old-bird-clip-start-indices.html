@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Add Old Bird clip start indices - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/add-old-bird-clip-start-indices.css' %}">
+
+</head>
+
+<body>
+
+    {% include "vesper/navbar.html" %}
+
+    <h2>Add Old Bird clip start indices</h2>
+
+    <p>
+        Adds start indices to clips in this archive that were created by
+        the original Old Bird Tseep and Thrush detectors.
+    </p>
+    
+    <p>
+        The clips to add start indices for are specified as a set of
+        stations and a range of dates.
+    </p>
+        This command inspects all clips created by the original Old Bird
+        detectors for recordings from the specified stations and dates.
+        For each clip that does not have a
+        start index, the command finds the start index by searching
+        for the clip's samples (obtained from the appropriate clip
+        audio file) in the clip's recording, and adds the start index
+        to the clip.
+    </p>
+
+    <p>
+        The command logs warning messages for any problems it finds,
+        for example if the recording file that should contain a clip
+        is missing, or if the recording file does not contain the
+        clip's samples.
+    </p>
+    
+    <p>
+        If you check the <code>Dry run</code> check box, the command
+        will do everything it normally does, including writing all of
+        its normal log messages, but it will not actually modify the
+        archive database.
+    </p>
+    
+    {% include "vesper/command-executes-as-job-message.html" %}
+
+    <!--
+        TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
+        of form elements. Or perhaps use django-bootstrap3 app? See
+        http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
+     -->
+
+    <form class="form" role="form" action="{% url 'add-old-bird-clip-start-indices' %}" method="post">
+
+        {{ form.stations|block_form_element }}
+        {{ form.start_date|form_element }}
+        {{ form.end_date|form_element }}
+        {{ form.dry_run|form_checkbox }}
+
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Add start indices</button>
+
+    </form>
+
+</body>
+
+</html>

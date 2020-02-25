@@ -3,7 +3,7 @@ from django import forms
 from vesper.django.app.models import Station
 
 
-class AddRecordingAudioFilesForm(forms.Form):
+class AddOldBirdClipStartIndicesForm(forms.Form):
     
     
     stations = forms.MultipleChoiceField(label='Stations')

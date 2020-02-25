@@ -11,8 +11,9 @@ import random
 from django.db import transaction
 
 from vesper.archive_paths import archive_paths
-from vesper.command.command import Command
+from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import Recording, RecordingFile
+from vesper.singletons import recording_manager
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
 
@@ -45,6 +46,9 @@ class AddRecordingAudioFilesCommand(Command):
     def __init__(self, args):
         super().__init__(args)
         get = command_utils.get_required_arg
+        self._station_names = frozenset(get('stations', args))
+        self._start_date = get('start_date', args)
+        self._end_date = get('end_date', args)
         self._dry_run = get('dry_run', args)
  
         
@@ -68,7 +72,7 @@ class AddRecordingAudioFilesCommand(Command):
             # recordings sorted by start time.
             recordings = self._get_recordings()
         
-            recording_files = self._match_files_to_recordings(
+            recording_files = self._assign_files_to_recordings(
                 files, recordings)
         
             with transaction.atomic():
@@ -157,8 +161,18 @@ class AddRecordingAudioFilesCommand(Command):
                         f'{str(e)} File will be ignored.')
                     
                 else:
-                    night = f.station.get_night(f.start_time)
-                    files[f.station.name][night].append(f)
+                    # file parse succeeded
+                    
+                    station_name = f.station.name
+                    
+                    if station_name in self._station_names:
+                        
+                        night = f.station.get_night(f.start_time)
+                        
+                        if night >= self._start_date and \
+                                night <= self._end_date:
+        
+                            files[station_name][night].append(f)
                     
         # Sort file lists by start time.
         for station_files in files.values():
@@ -171,7 +185,7 @@ class AddRecordingAudioFilesCommand(Command):
     def _parse_file(self, file_path, file_parser):
         
         if random.random() < _SIMULATED_ERROR_PROBABILITY:
-            raise ValueError('Could not read wav file.')
+            raise Exception('A simulated error occurred.')
         
         else:
             return file_parser.parse_file(str(file_path))
@@ -186,8 +200,8 @@ class AddRecordingAudioFilesCommand(Command):
                 night_files = station_files[night]
                 for f in night_files:
                     print(
-                        f'        "{f.path}",{f.num_channels},{f.sample_rate},'
-                        f'{f.length}')
+                        f'        "{f.path}",{f.num_channels},'
+                        f'{f.sample_rate},{f.length}')
                     
                     
     def _compare_local_and_mpg_recording_files(self, local_files):
@@ -265,8 +279,16 @@ class AddRecordingAudioFilesCommand(Command):
         # Build mapping from station names to nights to lists of recordings.
         for r in Recording.objects.all().order_by(
                 'station__name', 'start_time'):
-            night = r.station.get_night(r.start_time)
-            recordings[r.station.name][night].append(r)
+            
+            station_name = r.station.name
+            
+            if station_name in self._station_names:
+                
+                night = r.station.get_night(r.start_time)
+                
+                if night >= self._start_date and night <= self._end_date:
+                    
+                    recordings[r.station.name][night].append(r)
             
         # Sort recording lists by start time.
         for station_recordings in recordings.values():
@@ -276,7 +298,7 @@ class AddRecordingAudioFilesCommand(Command):
         return recordings
     
         
-    def _match_files_to_recordings(self, files, recordings):
+    def _assign_files_to_recordings(self, files, recordings):
         
         """Builds a mapping from recordings to lists of recording files."""
         
@@ -642,7 +664,7 @@ class AddRecordingAudioFilesCommand(Command):
             # paths, even on Windows, for portability, since Python's
             # `pathlib` module recognizes the slash as a path separator
             # on all platforms, but not the backslash.
-            path = Path(f.path).as_posix()
+            path = self._get_relative_path(f.path).as_posix()
             
             file_ = RecordingFile(
                 recording=recording,
@@ -655,3 +677,26 @@ class AddRecordingAudioFilesCommand(Command):
                 file_.save()
             
             start_index += f.length
+            
+            
+    def _get_relative_path(self, abs_path):
+        
+        manager = recording_manager.instance
+        
+        try:
+            _, rel_path = manager.get_relative_recording_file_path(abs_path)
+            
+        except ValueError:
+            
+            dir_paths = manager.recording_dir_paths
+            
+            if len(dir_paths) == 1:
+                s = f'the recording directory "{dir_paths[0]}"'
+            else:
+                path_list = str(list(dir_paths))
+                s = f'any of the recording directories {path_list}'
+                
+            raise CommandExecutionError(
+                f'Recording file "{abs_path}" is not in {s}.')
+                        
+        return rel_path

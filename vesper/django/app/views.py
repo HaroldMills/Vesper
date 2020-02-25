@@ -53,6 +53,8 @@ from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.external_urls as external_urls
+from vesper.old_bird.add_old_bird_clip_start_indices_form import \
+    AddOldBirdClipStartIndicesForm
 import vesper.old_bird.export_clip_counts_csv_file_utils as \
     old_bird_export_clip_counts_csv_file_utils
 import vesper.util.archive_lock as archive_lock
@@ -162,6 +164,9 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
         
       - name: Add recording audio files
         url_name: add-recording-audio-files
+        
+      - name: Add Old Bird clip start indices
+        url_name: add-old-bird-clip-start-indices
         
       - name: Create clip audio files
         url_name: create-clip-audio-files
@@ -2068,6 +2073,49 @@ def _create_add_recording_audio_files_command_spec(form):
     return {
         'name': 'add_recording_audio_files',
         'arguments': {
+            'stations': data['stations'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
+            'dry_run': data['dry_run']
+        }
+    }
+
+
+@login_required
+@csrf_exempt
+def add_old_bird_clip_start_indices(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = AddOldBirdClipStartIndicesForm()
+
+    elif request.method == 'POST':
+
+        form = AddOldBirdClipStartIndicesForm(request.POST)
+
+        if form.is_valid():
+            command_spec = \
+                _create_add_old_bird_clip_start_indices_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Admin', form=form)
+
+    return render(
+        request, 'vesper/add-old-bird-clip-start-indices.html', context)
+
+
+def _create_add_old_bird_clip_start_indices_command_spec(form):
+
+    data = form.cleaned_data
+
+    return {
+        'name': 'add_old_bird_clip_start_indices',
+        'arguments': {
+            'stations': data['stations'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
             'dry_run': data['dry_run']
         }
     }
