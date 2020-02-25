@@ -26,7 +26,7 @@ projects, including single-station ones.
 
 Vesper is still very much a work in progress, and as such is not yet
 as full-featured and easy to use as it will be eventually.
-Nevertheless, experience has proven its utility for a range of users,
+Nevertheless, experience has proved its utility for a range of users,
 and so we provide this documentation to help additional users adopt
 Vesper for their own monitoring efforts. We hope that Vesper will
 prove valuable to you, and welcome feedback that will help us improve
