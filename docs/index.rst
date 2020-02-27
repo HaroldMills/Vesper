@@ -14,12 +14,13 @@ collaboratively collect, view, and analyze nocturnal flight calls
 
 Vesper has been used for several years by individuals and teams to
 operate acoustic monitoring networks ranging in size from a single
-recording station to more than 50 stations. In the latter case, a team
-of researchers used Vesper to collect and analyze several tens of
+recording station to more than 50 stations. In the latter case, a
+team of researchers at `MPG Ranch <https://www.mpgranch.com/>`_
+used Vesper to collect and analyze several tens of
 thousands of hours of audio during each of two consecutive fall
 migration seasons. We intend that Vesper will eventually be able to
 support much larger projects, involving networks comprising hundreds
-or even thousands of monitoring stations operated by similar numbers
+or even thousands of monitoring stations operated by large teams
 of people. Even as the size of projects that Vesper can support
 grows, however, we will continue to improve its utility for smaller
 projects, including single-station ones.
