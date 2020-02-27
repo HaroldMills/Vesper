@@ -356,7 +356,7 @@ import some metadata that Vesper requires so it can infer certain
 information about the recording, such as the station at which it
 was made and the microphone(s) that were used to make it. The
 availability of such metadata simplifies recording imports, and also
-allows Vesper to support powerful queries and data displays. Along
+helps Vesper to support powerful queries and data displays. Along
 with the metadata required for recording imports, you will also
 import metadata describing processors and annotations that Vesper
 will use when you work with your recording in the next section of
@@ -377,7 +377,7 @@ One of the files is named ``One Station.yaml`` and contains
 metadata for a monitoring setup with only one station. Another
 file is named ``Two Stations.yaml`` and describes a small
 monitoring network with two stations. We will not use the
-two-station file in this tutorial, but it's provided as an
+two-station file in this tutorial, but we provide it as an
 example of how to specify metadata for more than one station.
 
 To import metadata into your archive:
@@ -395,8 +395,8 @@ To import metadata into your archive:
    
    The black bar near the top of the window is called the
    Vesper *navbar* (short for *navigation bar*), and the user
-   interface elements (named ``File``, ``Edit``, etc.) with the
-   little triangles at their right ends are called *dropdowns*.
+   interface elements with the little triangles at their right
+   ends (named ``File``, ``Edit``, etc.) are called *dropdowns*.
 
 #. Click on ``File->Import metadata`` (that is, the
    ``Import metadata`` item within the ``File`` dropdown). This
@@ -495,7 +495,8 @@ To import metadata into your archive:
       A job page for a failed job.
    
    The job fails because it attempts to create a new station whose
-   name is the same as that of an existing station, but Vesper
+   name is the same as that of an existing station. That's not
+   allowed, however: Vesper
    requires that the names of stations be unique. When a job fails,
    it usually raises an *exception* that includes information about
    the failure. The log for the failed job includes this information
@@ -506,9 +507,9 @@ To import metadata into your archive:
    of the log indicates that the job failed because it violated a
    database uniqueness constraint concerning the station name. Both
    the error messages and the stack trace are useful for diagnosing
-   why a job failed, so that you can, say, fix the problem with your
-   command or archive that caused the failure or report a problem
-   with Vesper.
+   why a job failed, so that you can, say, fix a problem with your
+   command or archive if that caused the failure, or report a
+   problem with Vesper.
    
    An earlier message in the log that is not visible in the figure
    (you can scroll up in the log to see it) indicates that because
@@ -545,6 +546,78 @@ To import metadata into your archive:
       
 Import a recording
 ------------------
+
+Now you're ready to import some actual audio data into your Vesper
+archive! To do this, first click on ``File->Import recordings``. This
+should take you to a page that looks like this:
+
+.. figure:: _static/images/import-recordings.png
+   :alt: The import recordings page.
+   :align: center
+   
+   The ``Import recordings`` page.
+
+In a Vesper archive, each recording comprises one or more .wav
+audio files located in one of the archive's *recording directories*.
+By default, an archive has a single recording directory, the
+``Recordings`` subdirectory of the archive directory. However,
+you can override this default by listing one or more recording
+directories in the ``Archive Settings.yaml`` file in your archive
+directory.
+
+The archive template includes an example ``Archive Settings.yaml``
+file that shows how to specify non-default recording directories,
+though the relevant portion of the file is commented out since
+for the archive of this tutorial, as for many archives, we just
+want to use the default recording directory.
+
+Note that, unlike other portions of an archive, the recording
+directories do not have to be inside the archive directory.
+This allows you to, say, put your archive directory on an
+internal disk for fast access, but put your recording directory
+or directories on one or more external disks. The recordings
+of an archive often take up a lot of disk space, so it's
+helpful to be able to put them one or more large external disks.
+
+In order to keep the archive template small, we have included
+only one short (ten minutes in duration) recording in the
+template's recording directory. For this tutorial, you don't
+need to change anything on the ``Import recordings`` form to
+import this recording: just press the ``Import`` button. This
+should take you to a job page that (after the import command
+completes) looks like this:
+
+.. figure:: _static/images/import-recordings-job.png
+   :alt: Import recordings job page.
+   :align: center
+   
+   ``Import recordings`` job page.
+
+The log indicates that one recording file was imported into your
+archive from the archive directory.
+
+When Vesper imports a recording into an archive, it adds metadata
+to the archive database for the recording, including the locations
+on disk of the recording's audio files. Note that Vesper does not
+move or copy the audio files: it leaves them where they are, and
+simply notes their locations in the database.
+
+If you now click on ``View->View clip calendar``, you should see
+a page like the following:
+
+.. figure:: _static/images/nonempty-clip-calendar.png
+   :alt: A nonempty clip calendar.
+   :align: center
+   
+   A nonempty clip calendar.
+
+Now that there's a recording in your archive, the clip calendar
+looks more like an actual calendar! The gray bubble on the
+October 2 date indicates that the archive contains a recording
+for that date (the one you just imported), but the gray color
+indicates that there are no clips for that recording. In the next
+section of the tutorial you will create some clips by running a
+detector.
 
 Processing data
 ===============
