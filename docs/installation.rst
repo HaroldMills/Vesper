@@ -14,7 +14,7 @@ excellent package and environment management functionality,
 which makes it relatively easy to install and
 maintain any number of Vesper versions and their dependencies.
 You can read more about that functionality in the
-`Conda Environments`_ section below.
+`Conda environments`_ section below.
 
 Miniconda and Anaconda are both free and open source, and are
 offered by `Anaconda, Inc. <https://www.anaconda.com>`_, a
@@ -36,7 +36,7 @@ Installing Vesper
 
 .. Important::
    We strongly recommend installing each version of Vesper that you
-   use into its own conda environment (see the `Conda Environments`_
+   use into its own conda environment (see the `Conda environments`_
    section below for an introduction to conda environments). This has
    several advantages, including allowing you to easily revert to a
    previously installed Vesper version if you encounter problems with
@@ -73,7 +73,7 @@ To install the most recent version of Vesper in a new conda environment:
    Django and NumPy.
    
 
-Conda Environments
+Conda environments
 ==================
 
 Miniconda and Anaconda both include a command line program called
