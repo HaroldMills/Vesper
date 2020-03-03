@@ -116,14 +116,14 @@ Create a new Vesper archive
 #. In your Anaconda Prompt or terminal, change the current working
    directory to your new archive directory by issuing an appropriate
    cd command. For example, if you're on Windows and the archive
-   directory path is ``C:\Users\Bailey\Desktop\Tutorial Archive``, the
-   command is::
+   directory path is ``C:\Users\Nora\Desktop\Tutorial Archive``,
+   the command is::
    
-      cd "C:\Users\Bailey\Desktop\Tutorial Archive"
+      cd "C:\Users\Nora\Desktop\Tutorial Archive"
       
    The analogous command for macOS or Linux is::
    
-      cd "/Users/Bailey/Desktop/Tutorial Archive"
+      cd "/Users/Nora/Desktop/Tutorial Archive"
    
 #. Vesper stores the metadata of an archive in a relational database
    in the archive directory. The archive template does not include
@@ -352,7 +352,7 @@ Importing data
 
 In this section of the tutorial, you will import a recording into
 your Vesper archive. Before you can do that, however, you must
-import some metadata that Vesper requires so it can infer certain
+import some metadata that will allow Vesper to infer certain
 information about the recording, such as the station at which it
 was made and the microphone(s) that were used to make it. The
 availability of such metadata simplifies recording imports, and also
@@ -371,21 +371,26 @@ Vesper imports most metadata from text files that are in the
 import metadata of various types from YAML files, including
 descriptions of stations, devices, processors, and annotations.
 
-The tutorial archive comes with several example YAML files in
+The archive template comes with several example YAML files in
 the ``Metadata YAML`` subdirectory of the archive directory.
 One of the files is named ``One Station.yaml`` and contains
-metadata for a monitoring setup with only one station. Another
-file is named ``Two Stations.yaml`` and describes a small
-monitoring network with two stations. We will not use the
-two-station file in this tutorial, but we provide it as an
-example of how to specify metadata for more than one station.
+metadata for a monitoring setup with only one station. The
+metadata in this file will serve as the basis for your
+archive.
+
+.. Note::
+   Another of the files in the ``Metadata YAML`` directory is
+   named ``Two Stations.yaml`` and describes a small monitoring
+   network with two stations. We will not use that file in this
+   tutorial, but it is provided as an example of how to specify
+   metadata for more than one station.
 
 To import metadata into your archive:
 
 #. Make sure you have a Vesper server running in your archive
    directory, and point your browser to the archive. As at the
    end of the `Getting started`_ section, you should see a
-   display much like this:
+   page much like this:
 
    .. figure:: _static/images/empty-archive.png
       :alt: An empty Vesper archive.
@@ -398,7 +403,7 @@ To import metadata into your archive:
    interface elements with the little triangles at their right
    ends (named ``File``, ``Edit``, etc.) are called *dropdowns*.
 
-#. Click on ``File->Import metadata`` (that is, the
+#. Select ``File->Import metadata`` (that is, the
    ``Import metadata`` item within the ``File`` dropdown). This
    should take you to a login page, as shown in the following
    figure:
@@ -414,7 +419,7 @@ To import metadata into your archive:
    so it can keep track of who made the modifications. Enter the
    user name and password for the superuser you created in the
    `Create a new Vesper archive`_ section above, and press the
-   ``Log In`` button. This should take you to a page that looks
+   ``Log in`` button. This should take you to a page that looks
    like this:
    
    .. figure:: _static/images/import-metadata-empty.png
@@ -444,11 +449,23 @@ To import metadata into your archive:
    a textual *command* that describes the import operation you want
    to perform, including a copy of the text that you dropped onto
    the text area, and sends the command to the Vesper server for it
-   to run. The server queues the command to run as a Vesper *job*
-   (a job is simply the execution of a command), and directs the
-   client to a *job page* that provides information about the status
-   of the job. That page will look something like the following
-   initially:
+   to run. The server runs the command as a Vesper *job* and directs
+   the client to a *job page* that provides information about the
+   status of the job.
+   
+   .. Note::
+      While strictly speaking there is a difference between a
+      *command*, which is a textual description of an operation,
+      and the *execution* of that command in a job, the
+      distinction is sometimes not important. In such situations
+      we may ignore the distinction and speak of the command as
+      an active entity, saying things like "the command imports
+      data into the archive database", even though the active
+      entity is really a job and not a command. We will be
+      careful to make the distinction when it is important.
+      
+   The job page for your ``Import metadata`` command will initially
+   look something like the following:
    
    .. figure:: _static/images/unstarted-job.png
       :alt: A job page for an unstarted job.
@@ -461,7 +478,7 @@ To import metadata into your archive:
    not yet started running.
    
    You can refresh a job page in your browser to monitor the progress
-   of the job. In Chrome, for example, you can do this by clicking on
+   of the job. In Chrome, for example, you can do this by pressing
    the small circular arrow button just to the left of the address bar.
    (Yes, it's a little clunky for you to have to refresh the page
    yourself. A future version of Vesper will update job pages
@@ -484,9 +501,9 @@ To import metadata into your archive:
    Jobs sometimes fail to complete, for example if information
    required for the job is unavailable or because of a software bug.
    In such cases, the status of the job changes to "Failed",
-   indicating that the job failed due to an error. For example, if you
-   run the import command you ran above a second time it fails, as
-   shown in the resulting job page:
+   indicating that the job failed due to an error. For example,
+   if you run the import command you ran above a second time it
+   fails, as shown in the resulting job page:
    
    .. figure:: _static/images/failed-job.png
       :alt: A job page for an failed job.
@@ -512,8 +529,9 @@ To import metadata into your archive:
    problem with Vesper.
    
    An earlier message in the log that is not visible in the figure
-   (you can scroll up in the log to see it) indicates that because
-   the command failed, the archive database was restored to its
+   (if you run the command yourself, you can scroll up in the log
+   to see it) indicates that because the command failed, the archive
+   database was restored to its
    state before the import. This is an important property of Vesper
    jobs that import metadata or recordings: when such a job fails,
    it leaves the archive database exactly as it was before the job
@@ -548,76 +566,104 @@ Import a recording
 ------------------
 
 Now you're ready to import some actual audio data into your Vesper
-archive! To do this, first click on ``File->Import recordings``. This
-should take you to a page that looks like this:
+archive! For the purpose of this tutorial, the Vesper project provides
+a short recording for you to import, but of course when you create
+your own archive you can import your own recordings into it.
 
-.. figure:: _static/images/import-recordings.png
-   :alt: The import recordings page.
-   :align: center
+To import a recording into your archive:
+
+#. Download the `recording file <https://www.dropbox.com/s/sak1libl7unwkdu/Ithaca_2019-10-03_06.00.00_Z.wav?dl=1>`_
+   for this tutorial and put it in the ``Recordings`` subdirectory of
+   your archive.
+
+#. Select ``File->Import recordings``. This should take you to a page
+   that looks like this:
+
+   .. figure:: _static/images/import-recordings.png
+      :alt: The import recordings page.
+      :align: center
    
-   The ``Import recordings`` page.
+      The ``Import recordings`` page.
 
-In a Vesper archive, each recording comprises one or more .wav
-audio files located in one of the archive's *recording directories*.
-By default, an archive has a single recording directory, the
-``Recordings`` subdirectory of the archive directory. However,
-you can override this default by listing one or more recording
-directories in the ``Archive Settings.yaml`` file in your archive
-directory.
+   A Vesper archive stores metadata for each recording in the archive
+   database, and audio data in one or more .wav audio files. All of the
+   audio files are located in file system directories designated as the
+   archive's *recording directories*. By default, an archive has a single
+   recording directory, the ``Recordings`` subdirectory of the archive
+   directory. The path of this directory for your archive should appear
+   in the ``File and/or directory paths`` text area on the
+   ``Import recordings`` page. We will use this default recording
+   directory for the archive of this tutorial.
 
-The archive template includes an example ``Archive Settings.yaml``
-file that shows how to specify non-default recording directories,
-though the relevant portion of the file is commented out since
-for the archive of this tutorial, as for many archives, we just
-want to use the default recording directory.
+   .. Note::
+      If you want to store the audio data of an archive's recordings
+      in one or more directories other than the default recording
+      directory, you can explicitly list the recording directories
+      in the ``recording_directories`` setting of the
+      ``Archive Settings.yaml`` file of the archive directory. This
+      feature provides a lot of flexibility regarding where you can
+      store your recordings' audio files. For example, you can store
+      them outside of the archive directory, and even across multiple
+      disks. You can read more about such possibilities in the example
+      ``Archive Settings.yaml`` file provided with the archive template.
 
-Note that, unlike other portions of an archive, the recording
-directories do not have to be inside the archive directory.
-This allows you to, say, put your archive directory on an
-internal disk for fast access, but put your recording directory
-or directories on one or more external disks. The recordings
-of an archive often take up a lot of disk space, so it's
-helpful to be able to put them one or more large external disks.
+#. Press the ``Import`` button at the bottom of the ``Import recordings``
+   page to import your recording into the archive. This should take you
+   to a job page that (after the job completes) looks like this:
 
-In order to keep the archive template small, we have included
-only one short (ten minutes in duration) recording in the
-template's recording directory. For this tutorial, you don't
-need to change anything on the ``Import recordings`` form to
-import this recording: just press the ``Import`` button. This
-should take you to a job page that (after the import command
-completes) looks like this:
-
-.. figure:: _static/images/import-recordings-job.png
-   :alt: Import recordings job page.
-   :align: center
+   .. figure:: _static/images/import-recordings-job.png
+      :alt: Import recordings job page.
+      :align: center
    
-   ``Import recordings`` job page.
+      ``Import recordings`` job page.
 
-The log indicates that one recording file was imported into your
-archive from the archive directory.
+   The log indicates that one recording file was imported into your
+   archive from the archive directory.
 
-When Vesper imports a recording into an archive, it adds metadata
-to the archive database for the recording, including the locations
-on disk of the recording's audio files. Note that Vesper does not
-move or copy the audio files: it leaves them where they are, and
-simply notes their locations in the database.
-
-If you now click on ``View->View clip calendar``, you should see
-a page like the following:
-
-.. figure:: _static/images/nonempty-clip-calendar.png
-   :alt: A nonempty clip calendar.
-   :align: center
+   When an ``Import recordings`` command imports a recording, it
+   adds metadata for the recording to the archive database. The
+   metadata include the station at which the recording was made, the
+   number of channels of the recording, the microphone used to record
+   each channel, and
+   the locations on disk of the recording's audio files. The metadata
+   are derived from the names and contents of the audio files as well
+   as from other metadata already in the database, such as the
+   metadata you imported with the ``Import metadata`` command.
    
-   A nonempty clip calendar.
+   .. Note::
+      When you run an ``Import recordings`` command, it analyzes the
+      audio files in your archive's recording directories to determine
+      which have already been imported and which are new, and imports
+      only the new ones. Thus you can run the command any number of
+      times for an archive to import new recordings as they become
+      available. For example, during a migration season you might
+      run the command once each morning to import the previous
+      night's recording.
+   
+   .. Important::
+      The ``Import recordings`` command does not move or copy the
+      audio files of the recordings it imports: it leaves the files
+      where they are, and simply notes their locations in the archive
+      database. So *do not delete the files after import*: if you do
+      and you don't have copies of the files elsewhere you will have
+      lost them!
 
-Now that there's a recording in your archive, the clip calendar
-looks more like an actual calendar! The gray bubble on the
-October 2 date indicates that the archive contains a recording
-for that date (the one you just imported), but the gray color
-indicates that there are no clips for that recording. In the next
-section of the tutorial you will create some clips by running a
-detector.
+#. Select ``View->View clip calendar``, which should take you to
+   a page like the following:
+
+   .. figure:: _static/images/nonempty-clip-calendar.png
+      :alt: A nonempty clip calendar.
+      :align: center
+   
+      A nonempty clip calendar.
+
+   Now that there's a recording in your archive, the clip calendar
+   looks more like an actual calendar! The gray bubble on the
+   October 2 date indicates that the archive contains a recording
+   for that date (the one you just imported), but the gray color
+   indicates that there are no clips for that recording. In the next
+   section of the tutorial you will create some clips by running a
+   detector on your recording.
 
 Processing data
 ===============
