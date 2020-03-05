@@ -575,6 +575,8 @@ To import a recording into your archive:
 #. Download the `recording file <https://www.dropbox.com/s/sak1libl7unwkdu/Ithaca_2019-10-03_06.00.00_Z.wav?dl=1>`_
    for this tutorial and put it in the ``Recordings`` subdirectory of
    your archive.
+   
+   
 
 #. Select ``File->Import recordings``. This should take you to a page
    that looks like this:
@@ -630,23 +632,58 @@ To import a recording into your archive:
    as from other metadata already in the database, such as the
    metadata you imported with the ``Import metadata`` command.
    
-   .. Note::
-      When you run an ``Import recordings`` command, it analyzes the
-      audio files in your archive's recording directories to determine
-      which have already been imported and which are new, and imports
-      only the new ones. Thus you can run the command any number of
-      times for an archive to import new recordings as they become
-      available. For example, during a migration season you might
-      run the command once each morning to import the previous
-      night's recording.
+   When you run an ``Import recordings`` command, it analyzes the
+   audio files in your archive's recording directories to determine
+   which have already been imported and which are new, and imports
+   only the new ones. Thus you can run the command any number of
+   times for an archive to import new recordings as they become
+   available. For example, during a migration season you might
+   run the command once each morning to import the previous
+   night's recording.
    
-   .. Important::
-      The ``Import recordings`` command does not move or copy the
-      audio files of the recordings it imports: it leaves the files
-      where they are, and simply notes their locations in the archive
-      database. So *do not delete the files after import*: if you do
-      and you don't have copies of the files elsewhere you will have
-      lost them!
+   Note that the ``Import recordings`` command does not move or copy
+   the audio files of the recordings it imports: it leaves the files
+   where they are, and simply notes their locations in the archive
+   database. So *do not delete the files after import*: if you do
+   and you don't have copies of the files elsewhere you will have
+   lost them!
+      
+   .. Note::
+      The name of a recording file must be in one of several formats
+      for Vesper to be able to parse certain information from it.
+      This information includes the name of the station at which the
+      file was recorded and the file's start time. For example, the
+      name of the recording file you imported in this section was:
+      
+          Ithaca_2019-10-03_06.00.00_Z.wav
+          
+      which specifies that the file was recorded at the Ithaca station
+      beginning at 6:00 am UTC time on October 3, 2019 (the "Z" towards
+      the end of the file name indicates that the time is UTC).
+      
+      An example of another common file name format is:
+      
+          Ithaca_20191003_020000.wav
+          
+      which specifies the same station and start time as those of the
+      first example, but with the time local rather than UTC (Ithaca,
+      New York is in the US/Eastern time zone, which on the night of
+      the recording was four hours behind UTC).
+      
+      If needed, you can specify station name aliases for use
+      in recording file names. For example, if your recording
+      files use "ITH" as an abbreviation for the Ithaca station,
+      an appropriate station name alias would enable you to import
+      files with names like:
+      
+          ITH_20191003_020000.wav
+          
+      Station name aliases are specified via the
+      ``Station Name Aliases`` preset, in the file
+      ``Presets/Station Name Aliases/Station Name Aliases.yaml``
+      in your archive directory. See the example preset in the
+      archive template for more documentation regarding this
+      feature.
 
 #. Select ``View->View clip calendar``, which should take you to
    a page like the following:
