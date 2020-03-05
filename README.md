@@ -6,10 +6,10 @@ Vesper
 Vesper is open source software for acoustic monitoring of nocturnal bird
 migration.
 
-The goal of the Vesper project is to create software that will enable
-researchers and enthusiasts to collaboratively collect, view, and
-analyze nocturnal flight calls (NFCs) of migratory birds at spatial
-scales ranging from local to continental.
+Vesper aims to enable a wide range of users, including both bird enthusiasts
+and professional ornithologists, to collaboratively collect, view, and
+analyze nocturnal flight calls (NFCs) of migratory birds at a wide range of
+project scales.
 
 Vesper is a web application. As such, it comprises two parts, a
 *server* and a *client*. The server stores and processes audio data
