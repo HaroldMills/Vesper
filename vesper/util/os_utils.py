@@ -18,7 +18,21 @@ def assert_directory(path):
         message = 'Path "{:s}" exists but is not a directory.'.format(path)
         raise AssertionError(message)
     
+
+def copy_directory(from_path, to_path):
     
+    assert_directory(from_path)
+    
+    try:
+        shutil.copytree(from_path, to_path)
+        
+    except Exception as e:
+        message = (
+            f'Could not copy directory "{from_path}" to "{to_path}". '
+            f'Error message was: {str(e)}')
+        raise OSError(message)
+        
+        
 def create_directory(path):
     
     if os.path.exists(path):
