@@ -29,8 +29,8 @@ Vesper is provided under the
 [MIT License](https://github.com/HaroldMills/Vesper/blob/master/LICENSE).
 
 [BirdVoxDetect](https://github.com/BirdVox/birdvoxdetect) is provided by the
-[BirdVox](https://wp.nyu.edu/birdvox/) project under the [MIT License]
-(https://github.com/BirdVox/birdvoxdetect/blob/master/LICENSE).
+[BirdVox](https://wp.nyu.edu/birdvox/) project under the
+[MIT License](https://github.com/BirdVox/birdvoxdetect/blob/master/LICENSE).
 
 BirdVoxDetect is described in:
 
