@@ -705,17 +705,23 @@ To import a recording into your archive:
 Processing data
 ===============
 
-Run automatic detectors
------------------------
+Introduction
+------------
 
-Run an automatic classifier
----------------------------
+Run an automatic detector and classifier
+----------------------------------------
 
 Classify clips manually
 -----------------------
 
 Exporting data
 ==============
+
+Export clip counts
+------------------
+
+Export clips CSV file
+---------------------
 
 Export clip audio files
 -----------------------
