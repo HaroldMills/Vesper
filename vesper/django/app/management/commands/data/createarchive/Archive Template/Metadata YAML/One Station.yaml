@@ -1,0 +1,162 @@
+stations:
+
+    - name: Ithaca
+      description: >
+          Imaginary recording station in Ithaca, NY, USA.
+          The location given for the station is within Cayuga Lake
+          to emphasize that the station is not real!
+      time_zone: US/Eastern
+      latitude: 42.473168
+      longitude: -76.516825
+      elevation: 116
+
+device_models:
+
+    - name: PC Recorder
+      type: Audio Recorder
+      manufacturer: Various
+      model: PC
+      description: Personal computer as an audio recorder.
+      num_inputs: 2
+
+    - name: 21c Microphone
+      type: Microphone
+      manufacturer: Old Bird
+      model: 21c
+      description: ""
+      num_outputs: 1
+
+devices:
+
+    - name: PC
+      model: PC Recorder
+      serial_number: 0
+      description: Recorder used at the station of this archive.
+
+    - name: 21c
+      model: 21c Microphone
+      serial_number: 0
+      description: Microphone used at the station of this archive.
+
+station_devices:
+
+    - station: Ithaca
+      start_time: 2019-01-01
+      end_time: 2020-01-01
+      devices:
+          - PC
+          - 21c
+      connections:
+          - output: 21c Output
+            input: PC Input 0
+
+detectors:
+
+    - name: BirdVoxDetect 0.2.3 AT 50
+      description: >
+          BirdVoxDetect NFC detector with an adaptive threshold
+          whose nominal value is 50.
+
+    - name: BirdVoxDetect 0.2.3 FT 50
+      description: >
+          BirdVoxDetect NFC detector with a fixed threshold of 50.
+
+    - name: MPG Ranch Thrush Detector 1.0 70
+      description: >
+          MPG Ranch Thrush NFC detector with a threshold of 70.
+
+    - name: MPG Ranch Tseep Detector 1.0 60
+      description: >
+          MPG Ranch Tseep NFC detector with a threshold of 60.
+
+    - name: Old Bird Thrush Detector Redux 1.1
+      description: Vesper reimplementation of Old Bird Thrush detector.
+
+    - name: Old Bird Tseep Detector Redux 1.1
+      description: Vesper reimplementation of Old Bird Tseep detector.
+
+classifiers:
+
+    - name: MPG Ranch NFC Coarse Classifier 3.0
+      description: >
+          Classifies an unclassified clip as a "Call" if it appears to be
+          a nocturnal flight call, or as a "Noise" otherwise. Does not
+          classify a clip that has already been classified, whether
+          manually or automatically. For use in conjunction with the Old
+          Bird Thrush and Tseep detectors.
+
+annotation_constraints:
+
+    - name: Coarse Classification
+      description: Coarse classifications only.
+      type: Values
+      values:
+          - Call
+          - Noise
+          - Tone
+          - Other
+          - Unknown
+
+    - name: Classification
+      description: All classifications, including call subclassifications.
+      type: Hierarchical Values
+      extends: Coarse Classification
+      values:
+          - Call:
+              - AMCO
+              - AMPI
+              - AMRE
+              - AMRO
+              - ATSP
+              - BAIS
+              - BHGR
+              - CAWA
+              - CCSP_BRSP
+              - CHSP
+              - COYE
+              - DBUP
+              - DEJU
+              - GCKI
+              - GRSP
+              - GRYE
+              - HETH
+              - High
+              - HOLA
+              - LALO
+              - LAZB
+              - LBCU
+              - LISP
+              - Low
+              - MGWA
+              - NOWA
+              - OVEN
+              - Other
+              - PYNU_LBDO
+              - Peep
+              - SAVS
+              - SORA
+              - SOSP
+              - SPSA_SOSA
+              - SWTH
+              - UPSA
+              - Unknown
+              - VEER
+              - VESP
+              - VIRA
+              - WCSP
+              - WEME
+              - WETA
+              - WIWA
+              - WTSP
+              - Weak
+              - YRWA
+              - Zeep
+
+annotations:
+
+    - name: Detector Score
+      type: String
+
+    - name: Classification
+      type: String
+      constraint: Classification

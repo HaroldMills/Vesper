@@ -1,0 +1,49 @@
+layout_type: Nonuniform Resizing Clip Views
+
+layout:
+
+    page:
+        width: 1.5              # seconds
+        height: 4               # rows
+
+    clip_view:
+        x_spacing: 1            # percent of display width
+        y_spacing: 2            # percent of display width
+
+clip_view_type: Spectrogram
+
+clip_view:
+
+    selection_outline:
+        color: orange
+        width: 5
+
+    label:
+        visible: true
+        location: Below
+        color: black
+        font_size: 1
+        classification_included: true
+        start_time_included: true
+        detector_score_included: true
+        hidden_classification_prefixes: [Call.]
+
+    overlays:
+        visible: false
+
+    spectrogram:
+
+        computation:
+            window:
+                type: Hann
+                size: .005
+            hop_size: 20
+            spectral_interpolation_factor: 2
+            reference_power: 1e-9
+
+        display:
+            frequency_range: [0, 11025]
+            power_range: [0, 90]
+            colormap: Gray
+            reverse_colormap: true
+            smooth_image: true

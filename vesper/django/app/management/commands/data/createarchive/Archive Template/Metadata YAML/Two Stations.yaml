@@ -1,0 +1,291 @@
+# This is an example Vesper archive data YAML file. You can use such
+# files to specify data to be imported into your Vesper archive, either
+# to initialize the archive just after you create it, or to add
+# additional data to it later. The file uses the YAML data format,
+# which you can read about at https://en.wikipedia.org/wiki/YAML.
+#
+# It is helpful to think of an archive data file as comprising one or
+# more *sections* with the titles:
+#
+#     stations
+#     device_models
+#     devices
+#     station_devices
+#     detectors
+#     classifiers
+#     annotation_constraints
+#     annotations
+#
+# Which sections are present in a particular archive data YAML file
+# depends on the sort(s) of information that the file specifies.
+# For example, a file like this one that initializes an archive
+# might include all of the sections, while another file that is used
+# later to add some new detectors to an archive might include only
+# a "detectors" section. Each section can occur at most once in a
+# file.
+
+
+# The "stations" section specifies the recording stations of your archive,
+# where each station includes a name and a location. The latitude and
+# longitude of a station should be specified in degrees, and the elevation
+# in meters. If you don't know the elevations of your stations, don't
+# worry about it: just specify zero. Vesper currently makes no use of
+# the elevation, though a future version might use it.
+#
+# A station also includes an associated set of recording devices,
+# specifically recorders and microphones. These are specified in the
+# "device_models", "devices", and "station_devices" sections, below.
+# Vesper relies on this information to keep track of which recorder
+# and microphone was used to record each channel of each recording
+# of your archive.
+stations:
+
+    - name: Ithaca
+      description: >
+          Imaginary recording station in Ithaca, NY, USA.
+          The location given for the station is within Cayuga Lake
+          to emphasize that the station is not real!
+      time_zone: US/Eastern
+      latitude: 42.473168
+      longitude: -76.516825
+      elevation: 120
+
+    - name: Watkins Glen
+      description: >
+          Imaginary recording station in Watkins Glen, NY, USA.
+          The location given for the station is within Seneca Lake
+          to emphasize that the station is not real!
+      time_zone: US/Eastern
+      latitude: 42.393001
+      longitude: -76.868901
+      elevation: 135
+
+
+# The "device_models" section specifies the *models* of recorders and
+# microphones used to make the recordings of your archive, but not the
+# actual physical devices themselves. The actual physical devices
+# are specified in the "devices" section, below.
+device_models:
+
+    - name: Swift Recorder
+      type: Audio Recorder
+      manufacturer: Center for Conservation Biology, Cornell Lab of Ornithology
+      model: Swift
+      description: Swift autonomous audio recorder.
+      num_inputs: 1
+
+    - name: PC Recorder
+      type: Audio Recorder
+      manufacturer: Various
+      model: PC
+      description: Personal computer as an audio recorder.
+      num_inputs: 2
+
+    - name: 21c Microphone
+      type: Microphone
+      manufacturer: Old Bird
+      model: 21c
+      description: ""
+      num_outputs: 1
+
+
+# The "devices" section specifies the actual physical devices used to make
+# the recordings of an archive. Each device must be uniquely identified by
+# the combination of its name and serial number. Feel free to make up
+# serial numbers if you do not know them (you can correct your made-up
+# serial numbers later if you wish) or if you just don't care to track
+# them. Note also that serial numbers can include non-numeric characters.
+# For example, "ABC" and "001X2" are valid serial numbers.
+#
+# Through the types of information provided in the "devices" and
+# "station_devices" sections (the "station_devices" section follows the
+# "devices" section), Vesper allows you to keep track of changes in the
+# set of devices that you used at a given station to make its recordings.
+# Note that you do not have to track such changes if you don't want to.
+# For example, you might specify a single recorder and microphone for
+# each of your stations in both the "devices" and "station_devices"
+# sections, giving the devices made-up serial numbers, even if you
+# sometimes replace defective devices with others of the same model
+# during your recording season.
+devices:
+
+    - name: Swift
+      model: Swift Recorder
+      serial_number: 0
+      description: Recorder used at the Ithaca station.
+
+    - name: 21c
+      model: 21c Microphone
+      serial_number: 0
+      description: Microphone used at the Ithaca station.
+
+    - name: PC
+      model: PC Recorder
+      serial_number: 0
+      description: Recorder used at the Watkins Glen station.
+
+    - name: 21c
+      model: 21c Microphone
+      serial_number: 1
+      description: Microphone used at the Watkins Glen station.
+
+
+# The "station_devices" section specifies the recording devices used at
+# your stations, including the names and serial numbers of the devices,
+# the dates at which they were used, and how the devices are connected.
+#
+# A connection is specified as the device output and device input that
+# are connected. A device output or input is specified as the combination
+# of a device name, a serial number, and an output or input name,
+# respectively. An output or input name comprises the word "Output" or
+# "Input" followed by an output or input number, beginning with 0.
+# So, for example, the first input of a recorder named "Recorder" with
+# serial number "10" is specified as "Recorder 10 Input 0". If a device
+# has only one input or output (which is usually the case for a microphone,
+# and often for a recorder), the input or output number can be omitted.
+# So, for example, if a microphone with name "21c" and serial number
+# "10" has just one output, that output can be specified as
+# "21c 10 Output".
+station_devices:
+
+    - station: Ithaca
+      start_time: 2019-01-01
+      end_time: 2020-01-01
+      devices:
+          - Swift 0
+          - 21c 0
+      connections:
+          - output: 21c 0 Output
+            input: Swift 0 Input 0
+
+    - station: Watkins Glen
+      start_time: 2019-01-01
+      end_time: 2020-01-01
+      devices:
+          - PC 0
+          - 21c 1
+      connections:
+          - output: 21c 1 Output
+            input: PC 0 Input 0
+
+
+# The "detectors" section specifies the detectors of your archive.
+# Vesper currently offers a limited set of built-in detectors, and this
+# section chooses which of those are included in your archive, and thus
+# can be run on your recordings. A future version of Vesper will support
+# detector plug-ins, allowing users and third parties to add their own
+# detectors without modifying Vesper's source code.
+detectors:
+
+    - name: Old Bird Thrush Detector Redux 1.1
+      description: Vesper reimplementation of Old Bird Thrush detector.
+
+    - name: Old Bird Tseep Detector Redux 1.1
+      description: Vesper reimplementation of Old Bird Tseep detector.
+
+
+# The "classifiers" section specifies the classifiers of your archive.
+# Vesper currently offers a limited set of built-in classifiers, and this
+# section chooses which of those are included in your archive, and thus
+# can be run on your clips. A future version of Vesper will support
+# classifier plug-ins, allowing users and third parties to add their own
+# classifiers without modifying Vesper's source code.
+classifiers:
+
+    - name: MPG Ranch NFC Coarse Classifier 3.0
+      description: >
+          Classifies an unclassified clip as a "Call" if it appears to be
+          a nocturnal flight call, or as a "Noise" otherwise. Does not
+          classify a clip that has already been classified, whether
+          manually or automatically.
+
+
+# The "annotation_constraints" section specifies sets of values for
+# clip annotations, for example clip classifications. This file
+# specifies two sets of annotation values, called "Coarse Classification"
+# and "Classification". The "Coarse Classification" values are coarse
+# clip classifications like "Call" and "Noise". The "Classification"
+# values are subclassifications of the "Call" class, like "Call.AMRE"
+# and "Call.CAWA". These sets of values are used to populate
+# classification menus in the Vesper user interface.
+annotation_constraints:
+
+    - name: Coarse Classification
+      description: Coarse classifications only.
+      type: Values
+      values:
+          - Call
+          - Noise
+          - Tone
+          - Other
+          - Unknown
+
+    - name: Classification
+      description: All classifications, including call subclassifications.
+      type: Hierarchical Values
+      extends: Coarse Classification
+      values:
+          - Call:
+              - AMCO
+              - AMPI
+              - AMRE
+              - AMRO
+              - ATSP
+              - BAIS
+              - BHGR
+              - CAWA
+              - CCSP_BRSP
+              - CHSP
+              - COYE
+              - DBUP
+              - DEJU
+              - GCKI
+              - GRSP
+              - GRYE
+              - HETH
+              - High
+              - HOLA
+              - LALO
+              - LAZB
+              - LBCU
+              - LISP
+              - Low
+              - MGWA
+              - NOWA
+              - OVEN
+              - Other
+              - PYNU_LBDO
+              - Peep
+              - SAVS
+              - SORA
+              - SOSP
+              - SPSA_SOSA
+              - SWTH
+              - UPSA
+              - Unknown
+              - VEER
+              - VESP
+              - VIRA
+              - WCSP
+              - WEME
+              - WETA
+              - WIWA
+              - WTSP
+              - Weak
+              - YRWA
+              - Zeep
+
+
+# The "annotations" section specifies the annotations that can be
+# applied to clips. Each annotation has a name, a type, and an
+# optional value constraint. Currently, the only supported annotation
+# type is "String", and the two annotations below are required for
+# all Vesper archives.
+annotations:
+
+    - name: Detector Score
+      type: String
+
+    - name: Classification
+      type: String
+      constraint: Classification
