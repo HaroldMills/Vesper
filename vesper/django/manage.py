@@ -49,17 +49,54 @@ def _check_archive_dir():
     Vesper archive.
     """
     
+    _check_database()
+    _check_preferences()
+    _check_presets()
+    
+    
+def _check_database():
+    
     if archive_settings.database.engine == 'SQLite':
         
-        database_file_path = archive_paths.sqlite_database_file_path
-        
-        if not database_file_path.exists():
+        if not archive_paths.sqlite_database_file_path.exists():
             
-            print((
-                'The directory "{}" does not appear to be a Vesper archive '
-                'directory. Please run your command again in an archive '
-                'directory.').format(archive_paths.archive_dir_path))
+            print(
+                f'The directory "{archive_paths.archive_dir_path}" does '
+                f'not appear to be a Vesper archive directory, since it '
+                f'does not include an archive database SQLite file. '
+                f'Please run your command again in an archive directory.')
+            
             sys.exit(1)
+                        
+            
+def _check_preferences():
+    
+    file_path = archive_paths.preferences_file_path
+    
+    if not file_path.exists():
+        
+        archive_dir_path = archive_paths.archive_dir_path
+        relative_file_path = file_path.relative_to(archive_dir_path)
+        
+        print(
+            f'WARNING: The Vesper archive at "{archive_dir_path}" does '
+            f'not contain a preferences file "{relative_file_path.name}". '
+            f'The server will use default preferences for this archive.')
+
+
+def _check_presets():
+    
+    dir_path = archive_paths.presets_dir_path
+    
+    if not dir_path.exists():
+        
+        archive_dir_path = archive_paths.archive_dir_path
+        relative_dir_path = dir_path.relative_to(archive_dir_path)
+        
+        print(
+            f'WARNING: The Vesper archive at "{archive_dir_path}" does '
+            f'not contain a presets directory "{relative_dir_path}". '
+            f'No presets will be available for use with this archive.')
 
 
 if __name__ == '__main__':

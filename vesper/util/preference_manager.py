@@ -2,6 +2,7 @@ from pathlib import Path
 import logging
 import os.path
 
+from vesper.archive_paths import archive_paths
 import vesper.util.yaml_utils as yaml_utils
 
 
@@ -107,13 +108,10 @@ def _get_item(preferences, name):
             
 def _load_preferences(dir_path):
     
-    path = os.path.join(dir_path, _PREFERENCE_FILE_NAME)
+    path = archive_paths.preferences_file_path
     defaults_message = 'Will use default preference values.'
     
     if not os.path.exists(path):
-        logging.warning((
-            'Could not find preferences file "{}". {}').format(
-                path, defaults_message))
         return {}
         
     try:
