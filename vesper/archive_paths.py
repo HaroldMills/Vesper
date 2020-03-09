@@ -23,11 +23,11 @@ def initialize(archive_dir_path, archive_settings):
     
     archive_paths = Bunch(
         archive_dir_path=archive_dir_path,
-        clips_dir_path=archive_dir_path / 'Clips',
-        deferred_actions_dir_path=archive_dir_path / 'Deferred Actions',
-        job_logs_dir_path=archive_dir_path / 'Logs' / 'Jobs',
-        preferences_file_path=archive_dir_path / 'Preferences.yaml',
-        presets_dir_path=archive_dir_path / 'Presets',
+        clip_dir_path=archive_dir_path / 'Clips',
+        deferred_action_dir_path=archive_dir_path / 'Deferred Actions',
+        job_log_dir_path=archive_dir_path / 'Logs' / 'Jobs',
+        preference_file_path=archive_dir_path / 'Preferences.yaml',
+        preset_dir_path=archive_dir_path / 'Presets',
         recording_dir_paths=_create_recording_dir_paths(
             archive_settings, archive_dir_path),
         sqlite_database_file_path=archive_dir_path / 'Archive Database.sqlite')

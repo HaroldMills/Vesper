@@ -498,7 +498,7 @@ class Job(Model):
     @property
     def log_file_path(self):
         file_name = 'Job {}.log'.format(self.id)
-        return str(archive_paths.job_logs_dir_path / file_name)
+        return str(archive_paths.job_log_dir_path / file_name)
         
     @property
     def log(self):

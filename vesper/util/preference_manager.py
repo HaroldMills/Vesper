@@ -108,7 +108,7 @@ def _get_item(preferences, name):
             
 def _load_preferences(dir_path):
     
-    path = archive_paths.preferences_file_path
+    path = archive_paths.preference_file_path
     defaults_message = 'Will use default preference values.'
     
     if not os.path.exists(path):
@@ -119,7 +119,7 @@ def _load_preferences(dir_path):
             contents = file_.read()
     except Exception as e:
         logging.error(
-            'Read failed for preferences file "{}". {}'.format(
+            'Read failed for preference file "{}". {}'.format(
                 path, defaults_message))
         return {}
     
@@ -127,18 +127,18 @@ def _load_preferences(dir_path):
         preferences = yaml_utils.load(contents)
     except Exception as e:
         logging.error((
-            'YAML load failed for preferences file "{}". {} YAML load error '
+            'YAML load failed for preference file "{}". {} YAML load error '
             'message was:\n{}').format(path, defaults_message, str(e)))
         return {}
     
     if preferences is None:
-        # preferences file contains no data
+        # preference file contains no data
         
         return {}
     
     elif not isinstance(preferences, dict):
         logging.error(
-            'Preferences file "{}" does not contain a YAML map. {}'.format(
+            'Preference file "{}" does not contain a YAML map. {}'.format(
                 path, defaults_message))
         return {}
     

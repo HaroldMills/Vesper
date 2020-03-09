@@ -96,7 +96,7 @@ End index of shuffled station-nights for which to run detectors, when
 """
 
 
-_DEFERRED_DATABASE_WRITES_FILE_NAME_FORMAT = 'Job {} Part {:03d}.pkl'
+_DEFERRED_DATABASE_WRITE_FILE_NAME_FORMAT = 'Job {} Part {:03d}.pkl'
 
 
 # TODO: Remove command argument and code for creating clip files if we
@@ -1030,10 +1030,10 @@ class _DetectorListener:
             ]
         }
         
-        dir_path = archive_paths.deferred_actions_dir_path
+        dir_path = archive_paths.deferred_action_dir_path
         os_utils.create_directory(dir_path)
         
-        file_name = _DEFERRED_DATABASE_WRITES_FILE_NAME_FORMAT.format(
+        file_name = _DEFERRED_DATABASE_WRITE_FILE_NAME_FORMAT.format(
             self._job.id, self._serial_number)
         file_path = dir_path / file_name
         

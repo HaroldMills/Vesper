@@ -71,7 +71,7 @@ def _check_database():
             
 def _check_preferences():
     
-    file_path = archive_paths.preferences_file_path
+    file_path = archive_paths.preference_file_path
     
     if not file_path.exists():
         
@@ -80,13 +80,13 @@ def _check_preferences():
         
         print(
             f'WARNING: The Vesper archive at "{archive_dir_path}" does '
-            f'not contain a preferences file "{relative_file_path.name}". '
+            f'not contain a preference file "{relative_file_path.name}". '
             f'The server will use default preferences for this archive.')
 
 
 def _check_presets():
     
-    dir_path = archive_paths.presets_dir_path
+    dir_path = archive_paths.preset_dir_path
     
     if not dir_path.exists():
         
@@ -95,7 +95,7 @@ def _check_presets():
         
         print(
             f'WARNING: The Vesper archive at "{archive_dir_path}" does '
-            f'not contain a presets directory "{relative_dir_path}". '
+            f'not contain a preset directory "{relative_dir_path}". '
             f'No presets will be available for use with this archive.')
 
 

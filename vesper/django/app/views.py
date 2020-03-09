@@ -1372,7 +1372,7 @@ def clip_calendar(request):
     Otherwise, we should display a clip calendar. The clip calendar's
     station/mic and detector, and classification value spec should be set
     to those specified in the URL, to those specified in the
-    preferences file, or to the first ones in a list of all of the
+    preference file, or to the first ones in a list of all of the
     valid options, in that order. If a station/mic, detector, or
     classification value spec is specified in the URL or preferences
     file that does not exist, we should display an error message in

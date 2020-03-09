@@ -363,7 +363,7 @@ def _get_audio_file_path(clip_id):
     id_ = ' '.join(id_parts)
     file_name = 'Clip {}.wav'.format(id_)
     path_parts.append(file_name)
-    return os.path.join(str(archive_paths.clips_dir_path), *path_parts)
+    return os.path.join(str(archive_paths.clip_dir_path), *path_parts)
 
 
 def _get_clip_id_parts(num, format_):

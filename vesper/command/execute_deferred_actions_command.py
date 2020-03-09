@@ -42,7 +42,7 @@ class ExecuteDeferredActionsCommand(Command):
         self._job = Job.objects.get(id=job_info.job_id)
         self._logger = logging.getLogger()
         
-        dir_path = archive_paths.deferred_actions_dir_path
+        dir_path = archive_paths.deferred_action_dir_path
         
         if not dir_path.exists():
             self._logger.info((
