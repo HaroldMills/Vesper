@@ -117,8 +117,8 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       - name: Export clips to audio files
         url_name: export-clips-to-audio-files
         
-      - name: Export clips to HDF5 file
-        url_name: export-clips-to-hdf5-file
+      # - name: Export clips to HDF5 file
+      #   url_name: export-clips-to-hdf5-file
       
 - name: Edit
   dropdown:
@@ -162,11 +162,11 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       - name: Refresh recording audio file paths
         url_name: refresh-recording-audio-file-paths
         
-      - name: Add recording audio files
-        url_name: add-recording-audio-files
+      # - name: Add recording audio files
+      #   url_name: add-recording-audio-files
         
-      - name: Add Old Bird clip start indices
-        url_name: add-old-bird-clip-start-indices
+      # - name: Add Old Bird clip start indices
+      #   url_name: add-old-bird-clip-start-indices
         
       - name: Create clip audio files
         url_name: create-clip-audio-files
