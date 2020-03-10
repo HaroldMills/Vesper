@@ -43,7 +43,9 @@ A Vesper archive is a collection of audio recordings and related
 metadata. Each archive has its own directory on disk, called the
 *archive directory*. The archive directory always contains
 certain essential parts of an archive, and in many cases the
-entirety of the archive.
+entirety of the archive. One such part of the archive is a
+relational database called the *archive database*, which holds
+most of the metadata of the archive.
 
 Vesper supports various operations on archive data. The
 operations that you will perform in this tutorial fall into four
@@ -84,25 +86,9 @@ archive, add a user to it, start a Vesper server to serve the
 archive, and run the Vesper client in a web browser to view the
 archive.
 
-Download the Vesper archive template
-------------------------------------
-
-#. The Vesper project provides an archive template that you can copy
-   to serve as a starting point for a new archive. Download the archive
-   template to your computer by clicking `here
-   <https://www.dropbox.com/s/4gdgqj10ksh5w3f/Vesper%20Archive%20Template.zip?dl=1>`_
-   .
-
-#. The template is packaged as a zip file: unzip it. This should yield a
-   directory called ``Vesper Archive Template``.
-
 Create a new Vesper archive
 ---------------------------
 
-#. Copy the ``Vesper Archive Template`` directory to serve as your new
-   archive directory. You can name the new archive directory whatever
-   you want, for example ``Tutorial Archive``.
-   
 #. Open a Windows Anaconda Prompt or Unix terminal and activate your
    Vesper conda environment with a command like::
 
@@ -114,33 +100,41 @@ Create a new Vesper archive
    environments.
       
 #. In your Anaconda Prompt or terminal, change the current working
-   directory to your new archive directory by issuing an appropriate
-   cd command. For example, if you're on Windows and the archive
-   directory path is ``C:\Users\Nora\Desktop\Tutorial Archive``,
+   directory to the directory that you want to be the parent of your
+   new archive directory by issuing an appropriate ``cd`` command.
+   For example, if you're on Windows and you want your archive
+   directory to be ``C:\Users\Nora\Desktop\Tutorial Archive``,
    the command is::
    
-      cd "C:\Users\Nora\Desktop\Tutorial Archive"
+      cd C:\Users\Nora\Desktop
       
    The analogous command for macOS or Linux is::
    
-      cd "/Users/Nora/Desktop/Tutorial Archive"
+      cd /Users/Nora/Desktop
    
-#. Vesper stores the metadata of an archive in a relational database
-   in the archive directory. The archive template does not include
-   such a database, however, so you have to create it. To do this,
-   issue the command::
+#. Create your new archive by issuing a command like::
+
+       vesper_admin createarchive "Tutorial Archive"
+       
+   But with ``"Tutorial Archive"`` replaced with whatever you
+   would like to name the archive directory. You can specify any
+   valid directory name, but note that if the name contains
+   spaces it should be enclosed in double quotes, as above.
    
-      vesper_admin migrate
-      
-   This should create the SQLite database file
-   ``Archive Database.sqlite`` in the archive directory.
-      
+#. After you have created your archive, ``cd`` into its directory
+   with a command like::
+   
+       cd "Tutorial Archive"
+       
+   Again, note that if the directory name contains spaces, it must
+   be enclosed in double quotes in the command.
+   
 #. Vesper keeps track of who makes what changes in an archive via the
    notion of a *user*. You can add any number of users to an archive,
    and you must log in as one of those users to be able to modify the
    archive. Every archive should have at least one *superuser*, a user
    with certain administrative privileges. Add a superuser to your
-   archive database with the command::
+   archive  with the command::
 
       vesper_admin createsuperuser
       
@@ -169,8 +163,9 @@ View the archive
 
 To run a Vesper client to view the archive:
 
-#. Start a web browser. We strongly recommend using Chrome, since Vesper
-   is tested and used most extensively with it.
+#. Start the Chrome web browser. We strongly recommend using Chrome
+   over any other web browser since Vesper is tested and used most
+   extensively with it.
    
 #. Go to the URL:
 
@@ -456,7 +451,7 @@ To import metadata into your archive:
    .. Note::
       While strictly speaking there is a difference between a
       *command*, which is a textual description of an operation,
-      and the *execution* of that command in a job, the
+      and the *execution* of that command as a job, the
       distinction is sometimes not important. In such situations
       we may ignore the distinction and speak of the command as
       an active entity, saying things like "the command imports
@@ -650,25 +645,42 @@ To import a recording into your archive:
       
    .. Note::
       The name of a recording file must be in one of several formats
-      for Vesper to be able to parse certain information from it.
-      This information includes the name of the station at which the
+      for Vesper to be able to parse certain metadata from it.
+      These metadata include the name of the station at which the
       file was recorded and the file's start time. For example, the
       name of the recording file you imported in this section was:
       
           Ithaca_2019-10-03_06.00.00_Z.wav
           
       which specifies that the file was recorded at the Ithaca station
-      beginning at 6:00 am UTC time on October 3, 2019 (the "Z" towards
-      the end of the file name indicates that the time is UTC).
+      beginning at 6:00 am on October 3, 2019
+      `UTC time <https://en.wikipedia.org/wiki/Coordinated_Universal_Time>`_.
+      The "Z" towards the end of the file name indicates that the time
+      is UTC.
       
-      An example of another common file name format is:
+      We recommend using UTC times in your recording file names,
+      explicitly marked as such as in the example above. UTC times
+      take some getting used to, but since they conform to an
+      international standard they will be clearly interpretable all
+      over the world for many years to come. If you use them you will
+      necessarily avoid various possible pitfalls of local times,
+      giving your recordings greater value, especially in the long
+      term.
+      
+      That said, Vesper can parse some files names that specify local
+      start times. For example, it can parse a name like:
       
           Ithaca_20191003_020000.wav
           
-      which specifies the same station and start time as those of the
-      first example, but with the time local rather than UTC (Ithaca,
-      New York is in the US/Eastern time zone, which on the night of
-      the recording was four hours behind UTC).
+      Since the time in this file name is not explicitly specified as
+      a UTC time, Vesper assumes that it is a local time. It uses the
+      time zone of the recording's station to convert that local time
+      to the equivalent UTC time, since Vesper uses only UTC time
+      internally. In this case, the Ithaca station is in the US/Eastern
+      time zone, which was four hours behind UTC on the night of the
+      recording. Thus the UTC start time for this file is 6:00 am on
+      October 3, 2019 UTC time, the same as that specified by the
+      first file name above.
       
       If needed, you can specify station name aliases for use
       in recording file names. For example, if your recording
@@ -676,8 +688,8 @@ To import a recording into your archive:
       an appropriate station name alias would enable you to import
       files with names like:
       
-          ITH_20191003_020000.wav
-          
+          ITH_2019-10-03_06.00.00_Z.wav
+ 
       Station name aliases are specified via the
       ``Station Name Aliases`` preset, in the file
       ``Presets/Station Name Aliases/Station Name Aliases.yaml``
@@ -695,7 +707,7 @@ To import a recording into your archive:
       A nonempty clip calendar.
 
    Now that there's a recording in your archive, the clip calendar
-   looks more like an actual calendar! The gray bubble on the
+   looks more like an actual calendar. The gray bubble on the
    October 2 date indicates that the archive contains a recording
    for that date (the one you just imported), but the gray color
    indicates that there are no clips for that recording. In the next
@@ -704,6 +716,10 @@ To import a recording into your archive:
 
 Processing data
 ===============
+
+.. Note::
+
+   This section of the tutorial is coming soon!
 
 Introduction
 ------------
@@ -717,11 +733,12 @@ Classify clips manually
 Exporting data
 ==============
 
-Export clip counts
-------------------
+.. Note::
 
-Export clips CSV file
----------------------
+   This section of the tutorial is coming soon!
+   
+Export clip metadata to a CSV file
+----------------------------------
 
 Export clip audio files
 -----------------------
