@@ -58,13 +58,18 @@ def _check_database():
     
     if archive_settings.database.engine == 'SQLite':
         
-        if not archive_paths.sqlite_database_file_path.exists():
+        file_path = archive_paths.sqlite_database_file_path
+        
+        if not file_path.exists():
             
+            archive_dir_path = archive_paths.archive_dir_path
+            relative_file_path = file_path.relative_to(archive_dir_path)
+        
             print(
-                f'The directory "{archive_paths.archive_dir_path}" does '
-                f'not appear to be a Vesper archive directory, since it '
-                f'does not include an archive database SQLite file. '
-                f'Please run your command again in an archive directory.')
+                f'The directory "{archive_dir_path}" does not appear to '
+                f'be a Vesper archive directory, since it does not contain '
+                f'an archive database file "{relative_file_path}". Please '
+                f'run your command again in an archive directory.')
             
             sys.exit(1)
                         
