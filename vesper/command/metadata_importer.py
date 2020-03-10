@@ -27,6 +27,64 @@ import vesper.util.yaml_utils as yaml_utils
 # connections is the period of association of the devices with the
 # station.
 
+# TODO: Allow specification of station devices with stations, e.g.:
+#
+#     stations:
+#     
+#         - name: Ithaca
+#           description: >
+#               Imaginary recording station in Ithaca, NY, USA.
+#               The location given for the station is within Cayuga Lake
+#               to emphasize that the station is not real!
+#           time_zone: US/Eastern
+#           latitude: 42.473168
+#           longitude: -76.516825
+#           elevation: 120
+#           devices:
+#               - name: Swift
+#                 start_time: 2018-01-01
+#                 end_time: 2019-01-01
+#
+# If we support infinite connection intervals, perhaps you could even
+# say:
+#
+#           devices: [Swift, 21c]
+
+# TODO: Allow compact specification of multiple devices in metadata YAML,
+# e.g.:
+#
+#     - name_prefix: Swift
+#       model: Swift
+#       serial_numbers: [0, 1, 2, 3]
+#
+# to specify devices "Swift 0", "Swift 1", "Swift 2", and "Swift 3".
+# 
+# Associated possible syntactic sugar for sets of numeric serial numbers
+# might include items like:
+#
+#     name_format: "Swift {n:02d}"
+#
+# where `n` is a numeric serial number (perhaps we should check the
+# format specification, constraining it to ensure safety against
+# injection attacks), and:
+#
+#     serial_number_range: [0, 3]
+#
+# to specify a range of numeric serial numbers.
+
+# TODO: Allow specification of input or output number for devices
+# that have just one input or output, e.g. "Swift Input 0", instead
+# of requiring that input or output number be omitted, e.g.
+# "Swift Input".
+
+# TODO: Allow omission of device connection start and/or end times
+# to indicate infinite time intervals.
+
+# TODO: If it isn't specified, infer time zone from location using
+# `timezonefinder` (or some such) Python module. See
+# https://stackoverflow.com/questions/16086962/
+# how-to-get-a-time-zone-from-a-location-using-latitude-and-longitude-coordinates
+
 
 class MetadataImporter:
     
@@ -319,6 +377,10 @@ class MetadataImporter:
     def _get_port(self, connection, port_type, shorthand_ports, ports):
         
         name = _get_required(connection, port_type, 'device connection')
+        
+        print(f'Getting port "{name}".')
+        print(sorted(shorthand_ports.keys()))
+        print(sorted(ports.keys()))
         
         port = shorthand_ports.get(name)
         
