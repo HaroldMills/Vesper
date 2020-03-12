@@ -18,10 +18,6 @@ from vesper.util.settings_type import SettingsType
 import vesper.archive_paths as archive_paths
 
 
-# TODO: Provide an upgrade path from SQLite for PostgreSQL, then deprecate
-# SQLite, and then eliminate the `database.engine` setting.
-
-
 _DEFAULT_SETTINGS = Settings.create_from_yaml('''
 database:
     engine: SQLite
