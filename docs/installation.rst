@@ -63,14 +63,23 @@ To install the most recent version of Vesper in a new conda environment:
 
         conda activate vesper-0.4.8
 
-5. Install Vesper and various dependencies into the new environment with::
+5. Install NumPy into the environment with::
+
+       pip install numpy==1.16.4
+       
+   (This should not be necessary, since the Vesper package that
+   you will install in the next step has NumPy 1.16.4 as a dependency
+   via BirdVoxDetect, but for some reason if you don't install NumPy
+   explicitly you wind up with the wrong version of it.)
+   
+6. Install Vesper and various dependencies into the environment with::
 
        pip install vesper==0.4.8
        
    Here you must use pip rather than conda since Vesper is distributed
    as a pip package. In addition to the Vesper package, pip will install
    several other packages on which Vesper depends, including ones for
-   Django and NumPy.
+   Django and SciPy.
    
 
 Conda environments
