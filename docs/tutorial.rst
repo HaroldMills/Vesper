@@ -567,7 +567,7 @@ your own archive you can import your own recordings into it.
 
 To import a recording into your archive:
 
-#. Download the `recording file <https://www.dropbox.com/s/sak1libl7unwkdu/Ithaca_2019-10-03_06.00.00_Z.wav?dl=1>`_
+#. Download the `recording file <https://www.dropbox.com/s/pi4n8dl85n9ksev/Ithaca_2019-10-03_06.00.00_Z.wav?dl=1>`_
    for this tutorial and put it in the ``Recordings`` subdirectory of
    your archive.
    
