@@ -48,3 +48,11 @@ class Command(BaseCommand):
             os_utils.copy_directory(from_path, to_path)
         except Exception as e:
             raise CommandError(str(e))
+        
+        # Create default recording directory. For some reason it doesn't
+        # appear to be possible to include an empty directory in a pip
+        # package!
+        try:
+            os_utils.create_directory(to_path / 'Recordings')
+        except Exception as e:
+            raise CommandError(str(e))
