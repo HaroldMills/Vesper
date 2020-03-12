@@ -1,15 +1,15 @@
-# A station name aliases preset is a mapping from the "official"
+# A station name aliases preset is a map from the "official"
 # station names stored in the archive database to lists of aliases
-# for them that appear in recording file names. The archive station
-# names should be capitalized exactly they are in the archive. The
-# capitalization of aliases is irrelevant since they and the
-# station names that appear in file names are converted to lower
-# case before comparison.
+# for them that can appear in recording file names. The archive
+# station names should be capitalized exactly they are in the
+# archive. The capitalization of aliases is irrelevant since they
+# and the station names that appear in file names are converted to
+# lower case before comparison.
 #
-# The example mapping below is commented out to disable it. You
-# would remove the first two characters (the pound sign and the
-# first space) of each line to enable the mapping.
-
+# The example preset below has been commented out to disable
+# it. To enable the preset, remove the two-character sequence
+# "# " (i.e. a pound sign followed by a space) from the beginning
+# of each line of the preset.
 # Ithaca:
 #     - ith
 #     - ith000
