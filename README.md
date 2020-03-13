@@ -19,9 +19,9 @@ for personal or small group use, or the server can run on a separate
 computer and serve multiple clients for larger deployments.
 
 ## Installation
-Vesper is not ready for widespread use just yet, but for the intrepid
+Vesper is not yet ready for widespread use, but for the intrepid
 there are preliminary
-[installation instructions](https://github.com/HaroldMills/Vesper/wiki/Installing-Vesper).
+[installation instructions](https://vesper.readthedocs.io/en/latest/installation.html).
 
 ## Licensing and Acknowledgments
 
