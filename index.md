@@ -1,7 +1,1 @@
-The goal of the Vesper project is to create open source software that enables both bird enthusiasts and professional ornithologists to collect, view, and analyze nocturnal flight calls (NFCs) of migratory birds at a wide range of project scales.
-
-Vesper has been used for several years by individuals and teams to operate monitoring networks ranging in size from a single station to more than 50 stations. In the latter case, a team of researchers used Vesper to collect and analyze several tens of thousands of hours of audio during each of two consecutive fall migration seasons. We intend that Vesper will eventually support much larger projects, involving networks comprising hundreds or even thousands of monitoring stations operated by similar numbers of people. Even as the size of projects that Vesper can support grows, however, we will continue to improve its utility for smaller projects, including single-station ones.
-
-Vesper software development is ongoing, and Vesper is currently not as full-featured and easy to use as it will be eventually. Nevertheless, experience has proven its utility for a range of users, and so we provide this documentation to help additional users adopt Vesper for their own monitoring efforts. We hope that Vesper will prove valuable to you, and welcome feedback that will help us improve it.
-
-There are three main parts to this documentaion: [installation](installation.md) instructions, a [tutorial](tutorial.md) for new users, and a more systematic and thorough description of Vesper's [design](design.md).
+The [Vesper documentation](https://vesper.readthedocs.io) is now hosted by [Read the Docs](https://www.readthedocs.io).
