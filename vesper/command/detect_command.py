@@ -727,8 +727,7 @@ def _create_detector(detector_model, recording, listener):
 
 class _ClipCreationError(Exception):
     
-    def __init__(self, clip_string, wrapped_exception):
-        self.clip_string = clip_string
+    def __init__(self, wrapped_exception):
         self.wrapped_exception = wrapped_exception
         
         
@@ -833,18 +832,18 @@ class _DetectorListener:
                     
                     for start_index, length, annotations in self._clips:
                         
+                        # Get clip start time as a `datetime`.
+                        start_index += start_offset
+                        start_delta = datetime.timedelta(
+                            seconds=start_index / sample_rate)
+                        start_time = \
+                            self._recording.start_time + start_delta
+                         
+                        end_time = signal_utils.get_end_time(
+                            start_time, length, sample_rate)
+                         
                         try:
                         
-                            # Get clip start time as a `datetime`.
-                            start_index += start_offset
-                            start_delta = datetime.timedelta(
-                                seconds=start_index / sample_rate)
-                            start_time = \
-                                self._recording.start_time + start_delta
-                             
-                            end_time = signal_utils.get_end_time(
-                                start_time, length, sample_rate)
-                         
                             # It would be nice to use Django's
                             # `bulk_create` here, but unfortunately that
                             # won't automatically set clip IDs for us
@@ -888,14 +887,12 @@ class _DetectorListener:
                         
                         except Exception as e:
                             
-                            duration = signal_utils.get_duration(
-                                length, sample_rate)
-                                
-                            clip_string = Clip.get_string(
-                                station.name, mic_output.name,
-                                detector_model.name, start_time, duration)
-                
-                            raise _ClipCreationError(clip_string, e)
+                            # Note that it's important not to perform any
+                            # database queries here. If the database raised
+                            # the exception, we have to wait until we're
+                            # outside of the transaction to query the
+                            # database again.
+                            raise _ClipCreationError(e)
 
 #                     trans_end_time = time.time()
 #                     self._num_transactions += 1
@@ -904,19 +901,24 @@ class _DetectorListener:
             
             except _ClipCreationError as e:
                 
+                duration = signal_utils.get_duration(length, sample_rate)
+                    
+                clip_string = Clip.get_string(
+                    station.name, mic_output.name, detector_model.name,
+                    start_time, duration)
+                
                 batch_size = len(self._clips)
                 self._num_database_failures += batch_size
                 
                 if batch_size == 1:
                     prefix = 'Clip'
                 else:
-                    prefix = 'All {} clips in this batch'.format(
-                        batch_size)
+                    prefix = f'All {batch_size} clips in this batch'
                     
-                self._logger.error((
-                    '            Attempt to create clip {} failed with '
-                    'message: {} {} will be ignored.').format(
-                        clip_string, str(e.wrapped_exception), prefix))
+                self._logger.error(
+                    f'            Attempt to create clip {clip_string} '
+                    f'failed with message: {str(e.wrapped_exception)}. '
+                    f'{prefix} will be ignored.')
 
             else:
                 # clip creation succeeded
