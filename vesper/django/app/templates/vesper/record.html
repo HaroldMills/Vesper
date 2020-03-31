@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Record - Vesper</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="/static/vesper/view/record.js"></script>
+</head>
+
+<body>
+
+    <h1>Record</h1>
+    
+    <p>
+        Records audio at 48 kHz from the selected audio input device.
+    </p>
+    
+    <p>
+        The devices listed below are those that your browser indicates
+        it can record from at 48 kHz. If no devices are listed, it is
+        because your browser indicates that it cannot record from any
+        available device at 48 kHz.
+    </p>
+    
+    <label for="devices-select">Audio input device:</label>
+    
+    <select id="devices-select">
+        <!-- This select is populated by JavaScript. -->
+    </select>
+    
+    <p></p>
+    
+    <button type="button" id="record-button">Record</button>
+    
+</body>
+</html>

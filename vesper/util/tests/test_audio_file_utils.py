@@ -167,6 +167,72 @@ class AudioFileUtilsTests(TestCase):
             os_utils.delete_file(output_file_path)
             
             
+    def test_write_empty_wave_file_in_parts(self):
+        
+        sample_size = 16
+        frame_count = 0
+        
+        cases = [
+            (1, 24000),
+            (2, 24000),
+            (1, 48000)
+        ]
+        
+        for channel_count, sample_rate in cases:
+            
+            path = _create_file_path(_TEST_FILE_NAME)
+        
+            audio_file_utils.write_empty_wave_file(
+                path, channel_count, sample_rate, sample_size)
+
+            try:
+                self._assert_wave_file(
+                    _TEST_FILE_NAME, channel_count, frame_count, sample_rate)
+            finally:
+                os_utils.delete_file(path)
+                
+                
+    def test_write_wave_file_samples(self):
+        
+        channel_counts = (1, 2)
+        sample_rate = 24000
+        sample_size = 16
+        file_size = 20
+        
+        cases = [
+            
+            # in-order writes
+            [(0, 10), (10, 5), (15, 5)],
+            
+            # out-of-order writes
+            [(0, 5), (20, 10), (5, 10), (15, 5)]
+
+        ]
+
+        path = _create_file_path(_TEST_FILE_NAME)
+        
+        for writes in cases:
+            
+            for channel_count in channel_counts:
+            
+                audio_file_utils.write_empty_wave_file(
+                    path, channel_count, sample_rate, sample_size)
+                
+                for start_index, frame_count in writes:
+                    
+                    samples = _create_samples(channel_count, frame_count)
+                    samples += start_index
+                    
+                    audio_file_utils.write_wave_file_samples(
+                        path, start_index, samples)
+                    
+                try:
+                    self._assert_wave_file(
+                        _TEST_FILE_NAME, channel_count, file_size, sample_rate)
+                finally:
+                    os_utils.delete_file(path)
+                    
+                
 def _create_file_path(file_name):
     return os.path.join(_DATA_DIR_PATH, file_name)
 

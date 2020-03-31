@@ -38,6 +38,12 @@ if not settings.ARCHIVE_READ_ONLY:
     
         # path('test-command/', views.test_command, name='test-command'),
     
+        path('record/', views.record, name='record'),
+        path('recordings/', views.recordings, name='recordings'),
+        path(
+            'show-recording-capabilities/', views.show_recording_capabilities,
+            name='show-recording-capabilities'),
+
         path('import-metadata/', views.import_metadata,
              name='import-metadata'),
         path('import-recordings/', views.import_recordings,

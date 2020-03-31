@@ -1,3 +1,4 @@
+from pathlib import Path
 from urllib.parse import quote
 import datetime
 import itertools
@@ -50,6 +51,7 @@ from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.singletons import (
     archive, clip_manager, job_manager, preference_manager, preset_manager)
 from vesper.util.bunch import Bunch
+from vesper.util.byte_buffer import ByteBuffer
 import vesper.django.app.model_utils as model_utils
 import vesper.ephem.ephem_utils as ephem_utils
 import vesper.external_urls as external_urls
@@ -58,6 +60,7 @@ from vesper.old_bird.add_old_bird_clip_start_indices_form import \
 import vesper.old_bird.export_clip_counts_csv_file_utils as \
     old_bird_export_clip_counts_csv_file_utils
 import vesper.util.archive_lock as archive_lock
+import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.calendar_utils as calendar_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
@@ -2142,3 +2145,141 @@ def about_vesper(request):
         documentation_url=external_urls.documentation_url)
 
     return render(request, 'vesper/about-vesper.html', context)
+
+
+# TODO: Handle authentication in `record` and `recordings` views.
+
+# TODO: Record to the archive's first recording directory.
+_RECORDING_DIR_PATH = Path('/Users/harold/Desktop/Vesper Recordings')
+_SAMPLE_RATE = 48000
+_CHANNEL_COUNT = 1
+_SAMPLE_SIZE = 16
+
+# TODO: Create new recording in database and use its ID.
+_recording_id = 0
+
+
+def record(request):
+
+    if request.method in _GET_AND_HEAD:
+        context = {}
+        return render(request, 'vesper/record.html', context)
+
+    elif request.method == 'POST':
+
+        global _recording_id
+        
+        recording_id = _recording_id
+        
+        file_path = _get_recording_file_path(recording_id)
+        
+        audio_file_utils.write_empty_wave_file(
+            file_path, _CHANNEL_COUNT, _SAMPLE_RATE, _SAMPLE_SIZE)
+    
+        content = json.dumps(dict(recordingId=recording_id))
+        
+        _recording_id += 1
+        
+        return HttpResponse(content, content_type='application/json')
+ 
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+
+def _get_recording_file_path(recording_id):
+    file_name = f'{recording_id}.wav'
+    return _RECORDING_DIR_PATH / file_name
+
+
+def recordings(request):
+    
+    if request.method == 'POST':
+        
+        try:
+            data = _parse_recordings_post_data(request.body)
+        except Exception:
+            return HttpResponseBadRequest(
+                'Could not parse received recording data.')
+             
+        if data.action == 'append':
+            
+            recording_id = data.recording_id
+            start_index = data.start_index
+            samples = data.samples
+
+            _write_recording_samples(recording_id, start_index, samples)
+            
+        else:
+            print('stop')
+        
+        return HttpResponse()
+    
+    else:
+        return HttpResponseNotAllowed(('POST',))
+
+
+def _write_recording_samples(recording_id, start_index, samples):
+    # _show_append_info(recording_id, start_index, samples)
+    file_path = _get_recording_file_path(recording_id)
+    audio_file_utils.write_wave_file_samples(file_path, start_index, samples)
+                
+            
+def _show_append_info(recording_id, start_index, samples):
+    
+    sample_count = len(samples)
+    min_sample = np.min(samples)
+    max_sample = np.max(samples)
+                 
+    print(
+        f'append {recording_id} {start_index} {sample_count} '
+        f'{min_sample} {max_sample}')
+    
+
+def _parse_recordings_post_data(data):
+
+    b = ByteBuffer(data)
+    
+    # Get action.
+    action_code = b.read_value('<I')
+    if action_code == 0:
+        action = 'append'
+    elif action_code == 1:
+        action = 'stop'
+    else:
+        raise ValueError(f'Unrecognized action code {action_code}.')
+
+    # TODO: Send 64-bit integers rather than doubles for recording ID
+    # and start index.
+    
+    # Get recording ID.
+    recording_id = int(b.read_value('<d'))
+    
+    result = Bunch(
+        action=action,
+        recording_id=recording_id
+    )
+    
+    if action == 'append':
+        
+        # Get start index.
+        start_index = int(b.read_value('<d'))
+        
+        # Get endianness.
+        little_endian = b.read_value('<I')
+        
+        # Get samples.
+        dtype = '<i2' if little_endian else '>i2'
+        samples = np.frombuffer(b.bytes, dtype, -1, b.offset)
+        
+        # Make sample array two-dimensional.
+        samples = samples.reshape((_CHANNEL_COUNT, -1))
+    
+        result.start_index = start_index
+        result.samples = samples
+ 
+    return result
+
+
+def show_recording_capabilities(request):
+    context = {}
+    return render(request, 'vesper/show-recording-capabilities.html', context)

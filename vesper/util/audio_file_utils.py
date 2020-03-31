@@ -6,13 +6,22 @@ For the time being, only .wav files are supported.
 
 
 from pathlib import Path
+import io
 import numpy as np
 import wave
 
 from vesper.util.bunch import Bunch
+from vesper.util.byte_buffer import ByteBuffer
 
 
 WAVE_FILE_NAME_EXTENSION = '.wav'
+_WAVE_HEADER_SIZE = 44
+_WAVE_FMT_CHUNK_SIZE = 24
+_WAVE_RIFF_CHUNK_SIZE_OFFSET = 4
+_WAVE_CHANNEL_COUNT_OFFSET = 22
+_WAVE_BYTES_PER_SAMPLE_FRAME_OFFSET = 32
+_WAVE_DATA_CHUNK_SIZE_OFFSET = 40
+_WAVE_FORMAT_PCM = 0x0001
 _WAVE_SAMPLE_DTYPE = np.dtype('<i2')
 
 
@@ -175,3 +184,184 @@ def copy_wave_file_channel(
                 _write_samples(writer, channel_samples)
                 
                 remaining -= n
+
+
+def write_empty_wave_file(file_path, channel_count, sample_rate, sample_size):
+    
+    """
+    Writes a WAVE file containing zero samples.
+    
+    We currently support only mono and stereo WAVE files with 16-bit
+    samples. Note that supporting larger numbers of channels and other
+    sample sizes is not trivial. See the Microsoft documents that
+    define the RIFF file format for details. These documents include:
+    
+        Multimedia Programming Interface and Data Specifications
+        Version 1.0, 1991
+        
+        New Multimedia Data Types and Data Techniques
+        Revision 3.0, 1994
+        
+        Multiple Channel Audio Data and WAVE Files
+        2002
+        
+    As of this writing (2020-03-26), all of the above documents are
+    available via the web site
+    http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html.
+    """
+    
+    if channel_count != 1 and channel_count != 2:
+        raise ValueError(
+            'Sorry, but currently only mono and stereo WAVE files '
+            'are supported.')
+    
+    if sample_size != 16:
+        raise ValueError(
+            'Sorry, but currently only 16-bit WAVE files are supported.')
+    
+    contents = _create_wave_file_header(
+        channel_count, sample_rate, sample_size, 0)
+    
+    with open(file_path, 'wb') as file_:
+        file_.write(contents)
+    
+    
+def _create_wave_file_header(
+        channel_count, sample_rate, sample_size, frame_count):
+    
+    bytes_per_sample_frame = channel_count * sample_size // 8
+    byte_rate = sample_rate * bytes_per_sample_frame
+    data_size = frame_count * bytes_per_sample_frame
+    file_size = _WAVE_HEADER_SIZE + data_size
+    
+    b = ByteBuffer(_WAVE_HEADER_SIZE)
+    
+    b.write_bytes(b'RIFF')
+    b.write_value(file_size - 8, '<I')
+    b.write_bytes(b'WAVE')
+    
+    b.write_bytes(b'fmt ')
+    b.write_value(_WAVE_FMT_CHUNK_SIZE - 8, '<I')
+    b.write_value(_WAVE_FORMAT_PCM, '<H')
+    b.write_value(channel_count, '<H')
+    b.write_value(sample_rate, '<I')
+    b.write_value(byte_rate, '<I')
+    b.write_value(bytes_per_sample_frame, '<H')
+    b.write_value(sample_size, '<H')
+    
+    b.write_bytes(b'data')
+    b.write_value(data_size, '<I')
+    
+    return b.bytes
+    
+    
+def write_wave_file_samples(file_path, start_index, samples):
+    
+    with open(str(file_path), 'r+b') as file_:
+        
+        # Read WAVE file header into `ByteBuffer`.
+        header = ByteBuffer(bytearray(file_.read(_WAVE_HEADER_SIZE)))
+        
+        channel_count = header.read_value('<H', _WAVE_CHANNEL_COUNT_OFFSET)
+        
+        _check_wave_file_sample_array(samples, channel_count)
+        
+        # Get file size in sample frames.
+        data_size = header.read_value('<I', _WAVE_DATA_CHUNK_SIZE_OFFSET)
+        bytes_per_sample_frame = \
+            header.read_value('<H', _WAVE_BYTES_PER_SAMPLE_FRAME_OFFSET)
+        file_size = data_size // bytes_per_sample_frame
+        
+        if file_size < start_index:
+            # file contains fewer than `start_index` sample frames
+            
+            # Seek to end of file.
+            file_.seek(0, io.SEEK_END)
+            
+            # Append zeros so file has `start_index` sample frames.
+            padding_size = (start_index - file_size) * bytes_per_sample_frame
+            _write_zeros(file_, padding_size)
+            
+        else:
+            # file contains at least `start_index` sample frames
+            
+            padding_size = 0
+            
+            # Seek to start of sample frame number `start_index`.
+            offset = _WAVE_HEADER_SIZE + start_index * bytes_per_sample_frame
+            file_.seek(offset, io.SEEK_SET)
+            
+            # Write samples.
+            _write_samples_to_file(file_, samples)
+                
+        _update_chunk_sizes(file_, header)
+
+
+def _check_wave_file_sample_array(samples, channel_count):
+    
+    shape = samples.shape
+    
+    if len(shape) != 2:
+        raise ValueError(
+            'Sample array for WAVE file write must have two dimensions.')
+        
+    if shape[0] != channel_count:
+        raise ValueError(
+            f'Sample array for WAVE file write has data for {shape[0]} '
+            f'channels but file has {channel_count} channels.')
+        
+        
+_MAX_ZERO_BUFFER_SIZE = 2 ** 20
+
+
+def _write_zeros(file_, size):
+    
+    remaining = size
+    zeros = None
+    
+    while remaining != 0:
+        
+        write_size = min(remaining, _MAX_ZERO_BUFFER_SIZE)
+        
+        if zeros is None or len(zeros) != write_size:
+            zeros = bytes(write_size)
+            
+        remaining -= file_.write(zeros)
+        
+        
+def _write_samples_to_file(file_, samples):
+    
+    # Ensure that samples are of the correct type.
+    if samples.dtype != _WAVE_SAMPLE_DTYPE:
+        samples = np.array(samples, dtype=_WAVE_SAMPLE_DTYPE)
+        
+    # Convert samples to byte array, interleaving samples of multiple channels.
+    samples = samples.tobytes('F')
+    
+    # Write samples to file.
+    write_size = file_.write(samples)
+    
+    if write_size != len(samples):
+        _handle_file_write_error(len(samples), write_size)
+        
+        
+def _handle_file_write_error(requested_size, actual_size):
+    raise IOError(
+        f'WAVE file write failed: only {actual_size} of '
+        f'{requested_size} bytes were written.')
+    
+
+def _update_chunk_sizes(file_, header):
+    
+    file_.seek(0, io.SEEK_END)
+    file_size = file_.tell()
+    header.write_value(file_size - 8, '<I', _WAVE_RIFF_CHUNK_SIZE_OFFSET)
+    
+    data_size = file_size - _WAVE_HEADER_SIZE
+    header.write_value(data_size, '<I', _WAVE_DATA_CHUNK_SIZE_OFFSET)
+    
+    file_.seek(0, io.SEEK_SET)
+    write_size = file_.write(header.bytes)
+    
+    if write_size != len(header.bytes):
+        _handle_file_write_error(len(header.bytes), write_size)
