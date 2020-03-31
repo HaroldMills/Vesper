@@ -2151,7 +2151,7 @@ def about_vesper(request):
 
 # TODO: Record to the archive's first recording directory.
 _RECORDING_DIR_PATH = Path('/Users/harold/Desktop/Vesper Recordings')
-_SAMPLE_RATE = 48000
+_SAMPLE_RATE = 24000
 _CHANNEL_COUNT = 1
 _SAMPLE_SIZE = 16
 
