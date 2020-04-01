@@ -42,7 +42,7 @@ class RatioFileWriter:
             data[0] = samples
             data[1] = ratios
             
-            data = data.transpose().tostring()
+            data = data.transpose().tobytes()
             self._writer.writeframes(data)
             
             self._count += 1

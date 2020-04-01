@@ -64,7 +64,7 @@ def create_examples(start_index, num_examples):
  
 def create_tf_example(samples, label):
     
-    samples_feature = create_bytes_feature(samples.tostring())
+    samples_feature = create_bytes_feature(samples.tobytes())
     label_feature = create_int64_feature(label)
     
     features = tf.train.Features(

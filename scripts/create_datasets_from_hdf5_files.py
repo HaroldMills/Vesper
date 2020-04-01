@@ -1610,7 +1610,7 @@ def create_tf_example(clip_ds):
         #    waveform, sample_rate, EXAMPLE_SAMPLE_RATE)
         waveform = resampling_utils.resample_to_24000_hz(waveform, sample_rate)
     
-    waveform_feature = create_bytes_feature(waveform.tostring())
+    waveform_feature = create_bytes_feature(waveform.tobytes())
     
     classification = attrs['classification']
     label = 1 if classification.startswith('Call') else 0

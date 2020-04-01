@@ -269,8 +269,8 @@ class WaveFileWriter:
         if samples.dtype != np.dtype('<i2'):
             samples = np.array(np.round(samples), dtype='<i2')
             
-        # Convert samples to raw bytes.
-        data = samples.transpose().tostring()
+        # Convert samples to bytes.
+        data = samples.transpose().tobytes()
         
         self._writer.writeframes(data)
                 

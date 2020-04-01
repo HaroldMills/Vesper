@@ -89,8 +89,8 @@ class DetectionScoreFileWriter:
             # Stack samples and scores to make two "audio" channels.
             samples = np.vstack((samples, scores))
            
-            # Interleave channel samples and convert to string.
-            data = samples.transpose().tostring()
+            # Interleave channel samples and convert to bytes.
+            data = samples.transpose().tobytes()
            
             self._writer.writeframes(data)
            
