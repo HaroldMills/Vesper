@@ -15,7 +15,6 @@ _TEST_FILE_NAME = 'test.wav'
 _TEST_CASES = [
     ('One Channel.wav', 1, 100, 22050),
     ('Two Channels.wav', 2, 10, 24000),
-    ('Four Channels.wav', 4, 100, 22050)
 ]
 
 _EXPECTED_SAMPLE_SIZE = 16
