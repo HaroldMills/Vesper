@@ -151,20 +151,12 @@ def _write_header(writer, num_channels, sample_rate):
     
 def _write_samples(writer, samples):
     
-    num_channels = samples.shape[0]
-    
-    # Get samples as one-dimensional array.
-    if num_channels == 1:
-        samples = samples[0]
-    else:
-        samples = samples.transpose().reshape(-1)
-        
     # Ensure that samples are of the correct type.
     if samples.dtype != _WAVE_SAMPLE_DTYPE:
-        samples = np.array(samples, dtype=_WAVE_SAMPLE_DTYPE)
+        samples = np.array(np.round(samples), dtype=_WAVE_SAMPLE_DTYPE)
         
-    # Convert samples to string.
-    samples = samples.tostring()
+    # Convert samples to bytes, interleaving samples of multiple channels.
+    samples = samples.tobytes('F')
     
     # Write to file.
     # This appears to slow down by about an order of magnitude after
@@ -358,9 +350,9 @@ def _write_samples_to_file(file_, samples):
     
     # Ensure that samples are of the correct type.
     if samples.dtype != _WAVE_SAMPLE_DTYPE:
-        samples = np.array(samples, dtype=_WAVE_SAMPLE_DTYPE)
+        samples = np.array(np.round(samples), dtype=_WAVE_SAMPLE_DTYPE)
         
-    # Convert samples to byte array, interleaving samples of multiple channels.
+    # Convert samples to bytes, interleaving samples of multiple channels.
     samples = samples.tobytes('F')
     
     # Write samples to file.
