@@ -1,7 +1,16 @@
 """
 Functions pertaining to audio files.
 
-For the time being, only .wav files are supported.
+For the time being, this module supports only one-channel and two-channel
+16-bit WAVE files. It includes support for incremental writes that open a
+file, append samples to it, and close it. Python's `wave` module does not
+seem to support incremental writes, which is desirable for recording.
+
+It would be good to add support for reading and writing a wide variety of
+audio files via a library like PySoundFile, even if we don't support
+incremental writes for all formats. It would also be good to be able to
+write 24-bit and 32-bit WAVE files, multichannel WAVE files, AIFF files,
+and perhaps FLAC files incrementally.
 """
 
 
