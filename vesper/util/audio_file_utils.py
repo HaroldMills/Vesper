@@ -105,7 +105,23 @@ def _read_samples(reader, length, num_channels):
 
 
 def write_wave_file(path, samples, sample_rate):
+    
+    dim_count = len(samples.shape)
+    
+    if dim_count != 1 and dim_count != 2:
+        raise ValueError('Sample array must have one or two dimensions.')
+    
+    if dim_count == 1:
+        # `samples` is one-dimensional
+        
+        # Assume file should have one channel.
+        samples = samples.reshape((1, -1))
+        
+    # At this point `samples` is two-dimensional, with the first dimension
+    # one or two, the channel count.
+        
     num_channels = samples.shape[0]
+    
     with wave.open(path, 'wb') as writer:
         _write_header(writer, num_channels, sample_rate)
         _write_samples(writer, samples)

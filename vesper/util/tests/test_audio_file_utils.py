@@ -118,6 +118,28 @@ class AudioFileUtilsTests(TestCase):
                 os_utils.delete_file(path)
                 
                 
+    def test_write_single_channel_wave_file(self):
+        
+        path = _create_file_path(_TEST_FILE_NAME)
+        
+        for _, num_channels, length, sample_rate in _TEST_CASES:
+            
+            if num_channels == 1:
+                
+                samples = _create_samples(num_channels, length)
+                
+                # Flatten two-dimensional sample array to a single dimension.
+                samples = samples.flatten()
+                
+                audio_file_utils.write_wave_file(path, samples, sample_rate)
+                
+                try:
+                    self._assert_wave_file(
+                        _TEST_FILE_NAME, num_channels, length, sample_rate)
+                finally:
+                    os_utils.delete_file(path)
+                    
+ 
     def test_copy_wave_file_channel(self):
         
         cases = [
