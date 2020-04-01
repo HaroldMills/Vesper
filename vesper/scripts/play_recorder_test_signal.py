@@ -41,7 +41,7 @@ _CONFIG = yaml_utils.load('''
           signal_config:
               amplitude: 10000
               start_freq: 0
-              end_freq: 10000
+              end_freq: 12000
               duration: 5.1
               
         - signal_type: Chirp
@@ -51,7 +51,7 @@ _CONFIG = yaml_utils.load('''
               end_freq: 1000
               duration: 3.1
           
-    sample_rate: 22050
+    sample_rate: 24000
     buffer_size: .1
     
 ''')
