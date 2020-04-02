@@ -15,8 +15,13 @@ class RingBufferProcessor extends AudioWorkletProcessor {
             this._buffers.push(new Float32Array(_INPUT_BUFFER_SIZE));
 
         this._nextBufferNum = 0;
+        
+        this._bufferCount = 0;
+        this._bufferStartIndex = 0;
+        this._zeroRunLength = 0;
 
     }
+
 
     process(inputs, outputs, parameters) {
 
@@ -36,6 +41,13 @@ class RingBufferProcessor extends AudioWorkletProcessor {
                 // console.log(
                 //     `ring buffer input buffer length ${inputSamples.length}`);
 
+                if (inputSamples.length !== _INPUT_BUFFER_SIZE) {
+                    console.error(
+                        `WARNING: Input buffer ${this._bufferCount} ` +
+                        `contained ${inputSamples.length} samples ` +
+                        `rather than the expected ${_INPUT_BUFFER_SIZE}.`);
+                }
+                
                 for (let i = 0; i < inputSamples.length; ++i) {
                     
                     // TODO: Support optional playthrough.
@@ -43,12 +55,24 @@ class RingBufferProcessor extends AudioWorkletProcessor {
                     
                     samples[i] = inputSamples[i];
                     
+                    if (inputSamples[i] === 0) {
+                        this._zeroRunLength += 1;
+                    } else {
+                        if (this._zeroRunLength >= 100) {
+                            this.handleRunOfZeros(i);
+                        }
+                        this._zeroRunLength = 0;
+                    }
+                    
                 }
-
+                
                 this.port.postMessage({ samples: samples });
 
                 this._nextBufferNum =
-                    (this._nextBufferNum + 1) % _RING_BUFFER_SIZE
+                    (this._nextBufferNum + 1) % _RING_BUFFER_SIZE;
+                    
+                this._bufferCount += 1;
+                this._bufferStartIndex += inputSamples.length;
 
                 // if (this._nextBufferNum == 0)
                 //     console.log('Ring buffer wrapped around.');
@@ -60,6 +84,18 @@ class RingBufferProcessor extends AudioWorkletProcessor {
         return true;
 
     }
+    
+
+    handleRunOfZeros(i) {
+        
+        const startIndex = this._bufferStartIndex + i - this._zeroRunLength;
+        
+        console.error(
+            `WARNING: Encountered ${this._zeroRunLength} zero samples ` +
+            `starting at sample number ${startIndex}.`);
+ 
+    }
+
 
 }
 
