@@ -10,10 +10,8 @@ from vesper.util.data_windows import HannWindow
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-DIR_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/BirdVox/BirdVox-full-night/Other/'
-    'Recording Wave Files')
-FILE_PATH = DIR_PATH / 'BirdVox-full-night_wav-audio_unit01.wav'
+DIR_PATH = Path('/Volumes/Recordings2/Nocturnal Bird Migration/Harold/2020')
+FILE_PATH = DIR_PATH / 'Harold_2020-04-02_00.32.33_Z.wav'
 
 APPROXIMATE_READ_SIZE = 100000
 
@@ -50,8 +48,8 @@ def main():
         samples = reader.read(index, read_size)
         gram = tfa_utils.compute_spectrogram(
             samples, window, hop_size, dft_size)
-        inband_powers = compute_inband_powers(gram)
-        num_spectra = len(inband_powers)
+        # inband_powers = compute_inband_powers(gram)
+        num_spectra = len(gram)
         index += num_spectra * hop_size
         
     end_time = time.time()
