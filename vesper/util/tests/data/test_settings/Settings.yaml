@@ -5,3 +5,4 @@ float_setting: 1.5
 string_setting: 'Hello, world!'
 list_setting: [1, 2, 3]
 object_setting: { one: 1, two: 2 }
+nested_object_setting: [ 0, { one: 1, two: [3, { four: 4 }]}]

@@ -19,7 +19,7 @@ _MALFORMED_SETTINGS_FILE_PATH = _DATA_DIR_PATH / 'Malformed Settings.yaml'
 class SettingsTests(TestCase):
     
     
-    def test_init(self):
+    def test_initializer(self):
         
         s = Settings()
         self.assertEqual(len(s.__dict__), 0)
@@ -42,6 +42,7 @@ class SettingsTests(TestCase):
         
         
     def _check_settings(self, s):
+        
         self.assertEqual(s.null_setting, None)
         self.assertEqual(s.boolean_setting, True)
         self.assertEqual(s.integer_setting, 10)
@@ -50,6 +51,12 @@ class SettingsTests(TestCase):
         self.assertEqual(s.list_setting, [1, 2, 3])
         self.assertEqual(s.object_setting.one, 1)
         self.assertEqual(s.object_setting.two, 2)
+        
+        n = s.nested_object_setting
+        self.assertEqual(n[0], 0)
+        self.assertEqual(n[1].one, 1)
+        self.assertEqual(n[1].two[0], 3)
+        self.assertEqual(n[1].two[1].four, 4)
 
     
     def test_create_from_empty_yaml(self):

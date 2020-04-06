@@ -40,6 +40,8 @@ class Settings(Bunch):
     def _create_from_dict_aux(v):
         if isinstance(v, dict):
             return Settings.create_from_dict(v)
+        elif isinstance(v, list):
+            return [Settings._create_from_dict_aux(i) for i in v]
         else:
             return v
     
