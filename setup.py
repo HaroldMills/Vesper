@@ -44,6 +44,14 @@ To create a conda environment for Vesper development:
     conda create -n vesper-dev python=3.6
     conda activate vesper-dev
     pip install birdvoxdetect bokeh django jsonschema matplotlib pyephem ruamel_yaml sphinx sphinx_rtd_theme
+    
+Whenever you modify plugin entry points, you must run:
+
+    python setup.py develop
+    
+for the plugin manager to be able to see the changes. If you don't do this,
+you will see ImportError exceptions when the plugin manager tries to load
+entry points that no longer exist.
 """
 
 
