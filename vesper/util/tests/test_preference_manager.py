@@ -6,13 +6,14 @@ import vesper.tests.test_utils as test_utils
 
 
 _DATA_DIR_PATH = Path(test_utils.get_test_data_dir_path(__file__))
+_PREFERENCE_FILE_PATH = _DATA_DIR_PATH / 'Preferences.yaml'
 
 
 class PreferenceManagerTests(TestCase):
     
     
     def setUp(self):
-        self.manager = PreferenceManager(_DATA_DIR_PATH)
+        self.manager = PreferenceManager(_PREFERENCE_FILE_PATH)
 
         
     def test_get(self):

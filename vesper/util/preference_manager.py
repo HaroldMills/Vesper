@@ -2,7 +2,6 @@ from pathlib import Path
 import logging
 import os.path
 
-from vesper.archive_paths import archive_paths
 import vesper.util.yaml_utils as yaml_utils
 
 
@@ -106,21 +105,20 @@ def _get_item(preferences, name):
         return _get_item(preferences[parts[0]], parts[1])
             
             
-def _load_preferences(dir_path):
+def _load_preferences(file_path):
     
-    path = archive_paths.preference_file_path
     defaults_message = 'Will use default preference values.'
     
-    if not os.path.exists(path):
+    if not os.path.exists(file_path):
         return {}
         
     try:
-        with open(path, 'r') as file_:
+        with open(file_path, 'r') as file_:
             contents = file_.read()
     except Exception as e:
         logging.error(
             'Read failed for preference file "{}". {}'.format(
-                path, defaults_message))
+                file_path, defaults_message))
         return {}
     
     try:
@@ -128,7 +126,7 @@ def _load_preferences(dir_path):
     except Exception as e:
         logging.error((
             'YAML load failed for preference file "{}". {} YAML load error '
-            'message was:\n{}').format(path, defaults_message, str(e)))
+            'message was:\n{}').format(file_path, defaults_message, str(e)))
         return {}
     
     if preferences is None:
@@ -139,7 +137,7 @@ def _load_preferences(dir_path):
     elif not isinstance(preferences, dict):
         logging.error(
             'Preference file "{}" does not contain a YAML map. {}'.format(
-                path, defaults_message))
+                file_path, defaults_message))
         return {}
     
     return _Preferences(preferences)

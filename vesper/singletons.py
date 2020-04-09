@@ -181,8 +181,7 @@ preset_manager = Singleton(_create_preset_manager)
 
 
 def _create_preference_manager():
-    preferences_dir_path = str(archive_paths.archive_dir_path)
-    return PreferenceManager(preferences_dir_path)
+    return PreferenceManager(archive_paths.preference_file_path)
 
 
 preference_manager = Singleton(_create_preference_manager)
