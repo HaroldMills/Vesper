@@ -63,10 +63,16 @@ class PreferenceManager:
 class _Preferences:
     
     
-    def __init__(self, preferences):
+    def __init__(self, preferences=None):
+        if preferences is None:
+            preferences = dict()
         self._preferences = preferences
         
         
+    def __len__(self):
+        return len(self._preferences)
+    
+    
     def __getitem__(self, name):
         try:
             return _get_item(self._preferences, name)
@@ -113,7 +119,7 @@ def _load_preferences(file_path):
         logging.warning(
             f'Preference file "{file_path}" does not exist. '
             f'{defaults_message}')
-        return {}
+        return _Preferences()
         
     try:
         with open(file_path, 'r') as file_:
@@ -122,7 +128,7 @@ def _load_preferences(file_path):
         logging.warning(
             f'Read failed for preference file "{file_path}". '
             f'{defaults_message}')
-        return {}
+        return _Preferences()
     
     try:
         preferences = yaml_utils.load(contents)
@@ -130,17 +136,17 @@ def _load_preferences(file_path):
         logging.warning(
             f'YAML load failed for preference file "{file_path}". '
             f'{defaults_message} YAML load error message was:\n{str(e)}')
-        return {}
+        return _Preferences()
     
     if preferences is None:
         # preference file contains no data
         
-        return {}
+        return _Preferences()
     
     elif not isinstance(preferences, dict):
         logging.warning(
             f'Preference file "{file_path}" does not contain a YAML mapping. '
             f'{defaults_message}')
-        return {}
+        return _Preferences()
     
     return _Preferences(preferences)
