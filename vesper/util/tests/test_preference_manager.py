@@ -7,6 +7,10 @@ import vesper.tests.test_utils as test_utils
 
 _DATA_DIR_PATH = Path(test_utils.get_test_data_dir_path(__file__))
 _PREFERENCE_FILE_PATH = _DATA_DIR_PATH / 'Preferences.yaml'
+_EMPTY_PREFERENCE_FILE_PATH = _DATA_DIR_PATH / 'Empty Preferences.yaml'
+_NON_MAPPING_PREFERENCE_FILE_PATH = \
+    _DATA_DIR_PATH / 'Non Mapping Preferences.yaml'
+_MALFORMED_PREFERENCE_FILE_PATH = _DATA_DIR_PATH / 'Malformed Preferences.yaml'
 
 
 class PreferenceManagerTests(TestCase):
@@ -51,6 +55,21 @@ class PreferenceManagerTests(TestCase):
             self.assertEqual(p.get(name, 10), 10)
             
             
-#     def test_nonexistent_preference_file(self):
-#         p = PreferenceManager('nonexistent').preferences
-#         self.assertEqual(len(p), 0)
+    def test_empty_preference_file(self):
+        p = PreferenceManager(_EMPTY_PREFERENCE_FILE_PATH).preferences
+        self.assertEqual(len(p), 0)
+        
+        
+    def test_malformed_preference_file(self):
+        p = PreferenceManager(_MALFORMED_PREFERENCE_FILE_PATH).preferences
+        self.assertEqual(len(p), 0)
+        
+        
+    def test_nonexistent_preference_file(self):
+        p = PreferenceManager('nonexistent').preferences
+        self.assertEqual(len(p), 0)
+        
+        
+    def test_non_mapping_preference_file(self):
+        p = PreferenceManager(_NON_MAPPING_PREFERENCE_FILE_PATH).preferences
+        self.assertEqual(len(p), 0)

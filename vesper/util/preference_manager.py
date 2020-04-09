@@ -110,23 +110,26 @@ def _load_preferences(file_path):
     defaults_message = 'Will use default preference values.'
     
     if not os.path.exists(file_path):
+        logging.warning(
+            f'Preference file "{file_path}" does not exist. '
+            f'{defaults_message}')
         return {}
         
     try:
         with open(file_path, 'r') as file_:
             contents = file_.read()
     except Exception as e:
-        logging.error(
-            'Read failed for preference file "{}". {}'.format(
-                file_path, defaults_message))
+        logging.warning(
+            f'Read failed for preference file "{file_path}". '
+            f'{defaults_message}')
         return {}
     
     try:
         preferences = yaml_utils.load(contents)
     except Exception as e:
-        logging.error((
-            'YAML load failed for preference file "{}". {} YAML load error '
-            'message was:\n{}').format(file_path, defaults_message, str(e)))
+        logging.warning(
+            f'YAML load failed for preference file "{file_path}". '
+            f'{defaults_message} YAML load error message was:\n{str(e)}')
         return {}
     
     if preferences is None:
@@ -135,9 +138,9 @@ def _load_preferences(file_path):
         return {}
     
     elif not isinstance(preferences, dict):
-        logging.error(
-            'Preference file "{}" does not contain a YAML map. {}'.format(
-                file_path, defaults_message))
+        logging.warning(
+            f'Preference file "{file_path}" does not contain a YAML mapping. '
+            f'{defaults_message}')
         return {}
     
     return _Preferences(preferences)
