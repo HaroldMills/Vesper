@@ -62,7 +62,7 @@ class Settings(Bunch):
             d = dict()
             
         elif not isinstance(d, dict):
-            raise ValueError('Settings must be a YAML associative array.')
+            raise ValueError('Settings must be a YAML mapping.')
         
         return Settings.create_from_dict(d)
     
