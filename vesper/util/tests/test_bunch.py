@@ -51,3 +51,8 @@ class BunchTests(TestCase):
         self.assertEqual(self.a.get('one'), 1)
         self.assertEqual(self.a.get('two'), 2)
         self.assertIsNone(self.a.get('three'))
+        
+        
+    def test_get_defaults(self):
+        self.assertEqual(self.a.get('seventeen'), None)
+        self.assertEqual(self.a.get('seventeen', 17), 17)

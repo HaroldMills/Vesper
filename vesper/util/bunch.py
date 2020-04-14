@@ -36,5 +36,5 @@ class Bunch:
         return self.__dict__.__iter__()
     
     
-    def get(self, key):
-        return self.__dict__.get(key)
+    def get(self, key, default=None):
+        return self.__dict__.get(key, default)
