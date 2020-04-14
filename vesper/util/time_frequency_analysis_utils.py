@@ -214,7 +214,7 @@ def linear_to_log(spectra, reference_power=1., out=None):
 
     out = _get_output_array(spectra, out)
 
-    if reference_power != 1:
+    if reference_power is not None and reference_power != 1:
         out /= reference_power
 
     # We substitute `SMALL_POWER` for small values in the spectra
