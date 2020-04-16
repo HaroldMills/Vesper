@@ -1,3 +1,104 @@
+2020-04-16 Notes:
+
+Signal
+------
+
+[Add intro that motivates the signal abstraction. Why not just use
+NumPy arrays?]
+
+[Define *sample frame time*, *sample array time*, and *sample time*.]
+
+[Discuss use of the terms *sample*, *sample time*, and *sample value*.]
+
+[Describe time calibration.]
+
+[Describe amplitude calibration.]
+
+A Vesper *signal* is an D-dimensional array of numeric *samples*, along
+with some associated metadata. D is always at least two, with one of the
+first two dimensions time (since Vesper is designed primarily for use
+with audio and video data) and the other the signal *channel*.
+
+The above definition leaves room for two distinct but useful
+interpretations. The two interpretations differ according to whether the
+time dimension or the channel dimension of a signal is thought of as
+coming first.
+
+In one interpretation, called the *frame interpretation*, the time
+dimension of a signal precedes the channel dimension, and the signal is
+thought of as a temporal sequence of *sample frames*. Each sample frame
+comprises M *sample arrays* of dimension D - 2, where M is the number
+of signal channels.
+
+In the other interpretation, called the *channel interpretation*, the
+channel dimension of a signal precedes the time dimension, and a
+signal is thought of as a sequence of channels. Each channel is a
+temporal sequence of N sample arrays of dimension D - 2, where N is the
+number of signal sample frames.
+
+In the two interpretations of a signal, the sample arrays of the signal
+are the same, but they are grouped differently. In the frame
+interpretation, they are grouped first by channel into frames and
+then by time. In the channel interpretation, they are grouped first
+by time into channels and then by channel.
+
+Discussions of signals naturally make use of terms corresponding to
+both signal interpretations, and we have tried to choose terms that
+will help clarify which interpretation is in use at any given point
+in a discussion. More generally, we have tried to choose terms that
+respect those used in the signal processing literature, but also
+the differences in the terminological needs of that literature and
+signal processing software.
+
+Many signals, such as monaural audio signals, have just one channel,
+while others, such as stereo audio signals, have two or more channels.
+Every Vesper signal has channels, however, even if the number of
+channels is only one.
+
+All of the samples of a Vesper signal are of the same numeric
+*sample type*. A signal's sample type can be any of various sizes of
+integer, floating point, or complex number types.
+
+The temporal spacing between two consecutive sample frames of a signal
+is constant (ideally, at least), and is called the *sample period* or
+the *frame period* of the signal, whichever makes more sense in a
+particular context. The inverse of this spacing is called the
+*sample rate* or the *frame rate*.
+
+The number of dimensions in the sample arrays of a signal determine
+different categories of signals, some of which are common enough to
+merit their own names. A signal with scalar (i.e. zero-dimensional)
+sample arrays is called a *waveform*. The most common type of waveform
+is an audio waveform, which is also called just an *audio* (we use
+the word "audio" as both a countable noun and an uncountable one, by
+analogy with the accepted use of the word "video"). In an audio, each
+sample indicates the degree of disturbance to an acoustic medium.
+There are non-audio waveforms as well, such as ones whose samples are
+time-averaged powers or event detector scores.
+
+A signal with vector (i.e. one-dimensional) sample arrays is called
+a *gram*. The most common type of gram is a *spectrogram*, in which
+each sample vector is a spectrum computed from a vector of waveform
+samples. Other types of grams can be computed using other
+time-frequency representations. Still another type of gram is called
+a *beamogram*. A beamogram is computed from a multichannel audio
+recorded from a microphone array. In the beamogram, the sequence of
+samples at a particular sample vector index indicate the acoustic
+power arriving from a particular direction at the microphone array.
+Different sample vector indices correspond to different directions
+of arrival.
+
+A signal with two-dimensional sample arrays is called a *video*. The
+most common type of video is just a sequence of images recorded by a
+video camera. Another type of video might be computed by a locator
+algorithm that processes a multichannel audio recorded from a
+microphone array. Each sample array in such a video might attribute
+acoustic power arriving at the microphone array to locations on a
+two-dimensional spatial grid.
+
+
+2019-11-12 Notes:
+
 AudioFileInfo:
 
     format_description
@@ -20,9 +121,6 @@ AudioFileReader(AudioFileInfo):
     read(length=None, start_index=None, out=None)
     close()
 
-
-2019-11-12 Comments:
-
 * I think it might be best to rename `Signal` to `Channel` and
 `MultichannelSignal` to `Signal`, so that a signal always has one
 or more channels. This is inconsistent with how the term "signal" is
@@ -38,7 +136,7 @@ or "value". So, for example, we should prefer to talk about the
 "sample range" of a signal rather than its "value range". I think I
 would like to retain the term "amplitude axis", however, rather than
 using "sample axis", since it is primarily for what is better called
-"amplitude calibrarion" than "sample calibration".
+"amplitude calibration" than "sample calibration".
 
 * I think it would be best not to use the terms "array signal" and
 "array channel", since "array" in those terms would refer to something
@@ -64,7 +162,7 @@ range and perhaps dtype. The `ScaledSignal` scales samples on the fly
 as they are read. For example, in:
 
     signal = AudioFileSignal('test.wav')
-    scaled_signal = SignalScaler(
+    scaled_signal = ScaledSignal(
         signal, sample_range=(-1, 1), dtype='float32'))
         
 `signal` has a sample range determined by the format of the audio file
@@ -142,6 +240,9 @@ Signal
 * Second index is for time axis.
 * Other indices are for sample array axes.
 * Each channel has its own amplitude axis.
+* Implement only immutable signals initially, then perhaps extensible
+  and editable signals. Those will probably require some sort of thread
+  synchronization.
 
 s.name
 
@@ -149,7 +250,7 @@ s.channels                 # `NamedSequence` of `Channel` objects
 
 s.time_axis                # `TimeAxis`
 s.array_axes               # `NamedSequence` of `ArrayAxis` objects
-s.sample_axis              # `SampleAxis`
+s.amplitude_axis           # `SampleAxis`
 s.axes                     # mapping from axis name to axis object
 
 s.dtype                    # NumPy sample `dtype`
@@ -172,11 +273,6 @@ Channel
 * Indexing yields NumPy array of samples.
 * First index is for time axis.
 * Other indices are for sample array axes.
-* Time axis has a nonnegative start index and a nonnegative length.
-* Reading outside of extent raises an exception (might optionally zero fill)
-* Implement only immutable channels initially, then perhaps extendible
-  and editable signals. Those will probably require some sort of thread
-  synchronization.
 
 s.name                     # `str` or `None`
 
@@ -184,7 +280,7 @@ s.signal                   # `Signal` or `None`
 
 s.time_axis                # `TimeAxis`
 s.array_axes               # `NamedSequence` of `ArrayAxis` objects
-s.sample_axis              # `SampleAxis`
+s.amplitude_axis              # `SampleAxis`
 s.axes                     # mapping from axis name to axis object
 
 s.dtype                    # NumPy sample `dtype`
@@ -222,8 +318,11 @@ in which case the date and time of each sample is known. Note that we must
 be careful when computing spans that we do not assume that the index to
 seconds mapping is linear!
 
-a.sample_rate              # hertz
-a.sample_period            # seconds
+a.frame_rate               # sample frame rate, in hertz
+a.frame_period             # sample frame period, in seconds
+
+a.sample_rate              # same as `frame_rate`
+a.sample_period            # same as `frame_period`
 
 a.index_to_seconds_mapping
 a.index_to_seconds(i)      # `i` in [0, length], scalar or array, int or float
@@ -257,7 +356,7 @@ AmplitudeAxis(Axis)
 For now, `AmplitudeAxis` is just a subclass of `Axis` with a specialized
 initializer and no other methods. It will (probably) eventually provide
 amplitude calibration functionality. Note that we may want to allow
-different sample axes for different signal channels, since different
+different amplitude axes for different signal channels, since different
 channels may require different amplitude calibrations.
 
 
@@ -269,7 +368,7 @@ channels may require different amplitude calibrations.
   values of an editable signal can change via cut and paste operations.
   [Why have two classes of mutable signals? Why not have just editable
   signals (though we might just call them mutable), which subsume
-  extendible signals?]
+  extensible signals?]
   
   Mutability complicates signal processing. I have in mind implementing
   signal processing lazily inside various `Signal` subclasses. For
@@ -282,8 +381,8 @@ channels may require different amplitude calibrations.
   notifications would include an indication of where along the time
   axis the changes occurred.
   
-  [Some signal processors might two or more output signals. For
-  example, a spectrograph might offer complex, magnitude, and
+  [Some signal processors might have two or more output signals.
+  For example, a spectrograph might offer complex, magnitude, and
   phase output signals. In this case the spectrograph would not
   itself be a `Signal` or a `MultichannelSignal`, but would be
   some other type of object (a `SignalProcessor`, perhaps) that
