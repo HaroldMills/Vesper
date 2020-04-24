@@ -1,55 +1,71 @@
+import numpy as np
+
 from vesper.signal.signal import Signal
-from vesper.signal.tests.test_signal_base import SignalBaseTests
+from vesper.signal.time_axis import TimeAxis
 from vesper.tests.test_case import TestCase
-import vesper.signal.tests.utils as utils
 
 
 class SignalTests(TestCase):
 
 
     @staticmethod
-    def assert_signal(s, name, parent, time_axis, array_axes, amplitude_axis):
+    def assert_signal(s, name, time_axis, channel_count, array_shape, dtype):
         
-        SignalBaseTests.assert_signal_base(
-            s, name, time_axis, array_axes, amplitude_axis)
+        _assert_metadata(s, name, time_axis, array_shape, dtype)
         
-        assert s.parent == parent
-
-        time_axis_length = time_axis.length
-        array_shape = tuple(a.length for a in array_axes)
-        shape = (time_axis_length,) + array_shape
-        assert s.shape == shape
-        assert len(s) == time_axis_length
-
+        assert len(s.channels) == channel_count
+        
+        for i in range(channel_count):
+            
+            name = str(i)
+            
+            # Check channel access by number.
+            c = s.channels[i]
+            SignalTests.assert_channel(
+                c, s, name, i, time_axis, array_shape, dtype)
+            
+            # Check channel access by name.
+            c = s.channels[name]
+            SignalTests.assert_channel(
+                c, s, name, i, time_axis, array_shape, dtype)
+             
+            
+    @staticmethod
+    def assert_channel(c, signal, name, number, time_axis, array_shape, dtype):
+        
+        _assert_metadata(c, name, time_axis, array_shape, dtype)
+        
+        assert c.signal == signal
+        assert c.number == number
+             
         
     def test_init(self):
         
-        shapes = [
-            (0,),
-            (1,),
-            (2,),
-            (2, 0),
-            (2, 1),
-            (2, 3),
-            (2, 3, 4)
+        cases = [
+            ('A', 0, 0, (), 'int16'),
+            ('B', 2, 0, (10,), 'float'),
+            ('Bobo', 0, 3, (20, 30), '<i2'),
+            ('Bibi', 1, 2, (40, 50, 60), '>i4'),
         ]
         
-        for shape in shapes:
-            
-            time_axis, array_axes, amplitude_axis = \
-                utils.create_signal_axes(shape)
+        frame_rate = 24000
         
-            # In practice the parent of a `Signal` will be either a
-            # `MultichannelSignal` or `None`. We use a string here for
-            # simplicity.
-            args = ('Signal', 'Parent', time_axis, array_axes, amplitude_axis)
+        for name, length, channel_count, array_shape, dtype in cases:
             
-            s = Signal(*args)
+            time_axis = TimeAxis(length, frame_rate)
+            s = Signal(time_axis, channel_count, array_shape, dtype, name)
             
-            self.assert_signal(s, *args)
+            self.assert_signal(
+                s, name, time_axis, channel_count, array_shape, dtype)
+        
+            # Check initializer with default name.
+            s = Signal(time_axis, channel_count, array_shape, dtype)
+            self.assert_signal(
+                s, 'Signal', time_axis, channel_count, array_shape, dtype)
+                        
             
-            self.assertEqual(s.shape, shape)
-            self.assertEqual(len(s), shape[0])
-            
-            self.assertRaises(NotImplementedError, getattr, s, 'dtype')
-            self.assertRaises(NotImplementedError, s.__getitem__, 0)
+def _assert_metadata(s, name, time_axis, array_shape, dtype):
+    assert s.name == name
+    assert s.time_axis == time_axis
+    assert s.array_shape == array_shape
+    assert s.dtype == np.dtype(dtype)

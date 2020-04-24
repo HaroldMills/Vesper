@@ -14,6 +14,10 @@ class Named:
         self._name = name
         
         
+    def __eq__(self, other):
+        return isinstance(other, Named) and self.name == other.name
+
+
     @property
     def name(self):
         return self._name

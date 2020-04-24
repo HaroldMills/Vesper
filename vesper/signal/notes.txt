@@ -1,3 +1,139 @@
+Signals to do:
+
+* Decide on "sample" vs. "value" vs. "amplitude". I'm leaning against
+  "amplitude" as too domain-specific. We often speak of sample types,
+  values, and times in various contexts. I think I prefer "value axis"
+  to "sample axis", and "value range", "min value", and "max value"
+  to the corresponding "sample" terms. We speak of "real-valued" and
+  "complex-valued" signals but not "real-sampled" and "complex-sampled"
+  ones. We use the terms "sample rate" and "sample period" but not
+  "value rate" and "value period". A "sample" has a "value", but not
+  vice versa. A "sample" has various attributes, including a "value",
+  a "time", a "channel", a "sample frame", and a "signal". A "value"
+  does not have those things. A "sample" is more than just a number,
+  but a "value" is not. "Value" is short for "sample value". Tentative
+  conclusion: use the terms "value axis", "value calibration",
+  "value range", "min value", and "max value", in which "value" is
+  understood to be short for "sample value".
+  
+  Okay, so if we have a "value axis", why do we have "sample frames"
+  and "sample arrays" instead of "value frames" and "value arrays"?
+  I think the answer is that it's a matter of focus. The value axis
+  relates specifically to sample values but not to sample times.
+  Sample frames and sample arrays are not so specifically concerned
+  with sample values: they also have times associated with them, for
+  example. The time associated with a sample frame or sample array
+  is the same time associated with each of its samples.
+  
+* Consider providing at least some time axis functionality on signals
+  and channels, for example so that one can say `signal.sample_rate`
+  in addition to `signal.time_axis.sample_rate`. Consider also
+  whether it would make sense to do something similar for the value
+  axis. [I'm inclined to hold off on this until I've gotten some
+  experience using these classes.]
+  
+* Reconsider the class name `IndexedAxis`. Would `DiscreteAxis` make
+  more sense, or perhaps `IndexAxis`? What distinguishes this axis
+  from `Axis`? Is it really a subclass of `Axis`, i.e. a specialization
+  of `Axis`? How do sample value ranges relate to this? An `IndexedAxis`
+  has a length N and in one of the coordinate systems that it maps
+  between values are often (but not necessarily) integers in the range
+  [0, N - 1]. It seems to me that this does relate to sample value
+  ranges. Sample values for many signals are integers in some range,
+  though the range usually does not start at zero. Perhaps it would
+  make sense to redesign the Axis class hierarchy so its members
+  accurately capture the semantics of time axes, sample array axes,
+  and sample value axes. Perhaps one of the coordinate systems of
+  `DiscreteAxis` would be discrete with arbitrary integer limits
+  and be useful for sample values, and the the lower discrete
+  limit of a subclass `IndexAxis` of `DiscreteAxis` would be zero.
+  But perhaps it isn't important that sample values are often
+  discrete, with integer nominal limits.
+  
+  Axes can have names, units, and limits. We store integer signal
+  frame counts and sample array dimensions as axis lengths. We use
+  axes to map between different coordinate systems, including more
+  than two for the time axis. Is this too much?
+  
+  Perhaps we should explicitly represent coordinate systems, and
+  associate units with coordinate systems rather than axes.
+  
+
+* Thoughts about axes after thinking about several specific kinds of
+  signals:
+  
+  1. It might not make sense for the top level `Signal` class to have
+     sample array and sample value axes. Needs regarding these axes vary
+     sufficiently over the class of signals we want to work with that any
+     accurate generalization would be trivial (like maybe just `Named`).
+     I think it probably will make sense for various `Signal` subclasses
+     (like, say, `Tfr`) to offer additional axes.
+     
+     Some specific types of signals that I found it helpful to think about:
+     
+     * Waveforms.
+     * Spectrograms.
+     * More general TFRs with either linear or nonlinear frequency axes.
+     * A signal obtained from another signal by computing one or more
+       time-varying feature values with a hopped window. A TFR is one
+       specific example of this, as is a time-varying detector score.
+       There are many other examples. The sample arrays of the resulting
+       signal might have any number of dimensions. Note that the units
+       of the sample array values might vary within a dimension, for
+       example if you compute a vector of values of disparate features,
+       so that there is no single kind of unit for that dimension. The
+       value ranges of different features might also differ.
+     * Videos. Video sample array axes often have names, like "X" and "Y"
+       or "Horizontal" and "Vertical", but (as with many sample value axes)
+       we might not be able to relate these exactly to real world values
+       like horizontal and vertical angles.
+     
+  2. It does make sense for `Signal` to offer time axis functionality.
+     I'm inclined to keep this functionality inside a `time_axis` property
+     in anticipation of having additional axes in subclasses. That makes
+     the time axis functionality more cumbersome to access  (e.g.
+     `signal.time_axis.frame_rate` instead of `signal.frame_rate`, but
+     I think that dumping it all into the top level would be confusing.
+     In any case, I'd like to start with things this way and see how it
+     feels.
+
+
+TimeAxis:
+
+Linear or quasilinear time axis. Axis values are numbers of seconds elapsed
+from time at index zero. A `TimeAxis` may be *datetime calibrated*, in which
+case the date and time at each index is known.
+
+a.name                     # 'Time'
+
+a.length                   # signal length in sample frames
+
+a.start_index
+a.end_index
+
+a.frame_rate               # signal frame rate, in hertz
+a.frame_period             # signal frame period, in seconds
+
+a.index_to_time_map
+a.index_to_time(i)         # `i` in [0, length], scalar or array, int or float
+a.time_to_index(t)         # `t` can be scalar or array. Result is float
+                           # Maybe offer rounded int result as an option?
+                           
+a.start_time
+a.end_time
+      
+a.get_span(i, j)           # `index_to_time[j] - index_to_time[i]`
+a.span                     # `get_span(0, length - 1)`, or None if length zero
+a.duration                 # `get_span(0, length)`, or zero if length zero
+
+a.index_to_datetime_map
+a.index_to_datetime(f)     # `f` can be scalar or array, int or float.
+a.datetime_to_index(t)     # `t` can be scalar or array. Result is float.
+
+a.start_datetime           # `datetime` at start index, `None` if unknown
+a.end_datetime             # `datetime` at end index, `None` if unknown
+
+
 2020-04-16 Notes:
 
 Signal
@@ -12,7 +148,7 @@ NumPy arrays?]
 
 [Describe time calibration.]
 
-[Describe amplitude calibration.]
+[Describe value calibration.]
 
 A Vesper *signal* is an D-dimensional array of numeric *samples*, along
 with some associated metadata. D is always at least two, with one of the
@@ -232,39 +368,64 @@ with temperature?
 
 Signal
 
-* Sequence of `Channel` objects.
-* All channels have the same shape.
-* Sequence of sample arrays at a given signal index is a *sample frame*.
-* Indexing yields NumPy array of samples.
-* First index is channel number.
-* Second index is for time axis.
-* Other indices are for sample array axes.
-* Each channel has its own amplitude axis.
+* Sequence of *sample frames*.
+* Indexed like a NumPy array with frame, channel, and zero or more
+  sample array indices, in that order.
+* Often useful to think in terms of channels rather than sample frames,
+  with each channel a sequence of sample arrays.
+* `channel_first` property is indexed like a `Signal` object but with
+  the first two indices swapped, so that the channel index precedes the
+  frame index. That is, it is indexed like a NumPy array with channel,
+  frame, and zero or more sample array indices, in that order.
+* `channels` property is a sequence of `Channel` objects that can be indexed to
+  retrieve sample arrays of individual channels. A `Channel` object is
+  indexed like a `Signal` object except without a channel index. That
+  is, it is indexed like a NumPy array with a frame index followed by
+  zero or more sample array indices.
 * Implement only immutable signals initially, then perhaps extensible
-  and editable signals. Those will probably require some sort of thread
-  synchronization.
+  and editable signals.
 
 s.name
 
-s.channels                 # `NamedSequence` of `Channel` objects
+s.time_axis                  # `TimeAxis`
 
-s.time_axis                # `TimeAxis`
-s.array_axes               # `NamedSequence` of `ArrayAxis` objects
-s.amplitude_axis           # `SampleAxis`
-s.axes                     # mapping from axis name to axis object
+s.frame_count                # number of signal sample frames
+len(s)                       # same as `frame_count`
+s.channel_count              # number of signal channels
+s.array_shape                # sample array shape
+s.dtype                      # NumPy sample `dtype`
 
-s.dtype                    # NumPy sample `dtype`
+s[:]                         # all samples of all sample frames
+s[10]                        # all samples of sample frame 10
+s[10:20]                     # all samples of sample frames 10 through 19
 
-s.shape                    # tuple of number of channels and axis lengths
-len(s)                     # number of channels
+s.channel_first              # indexed channel first to yield NumPy arrays
 
-s[:]                       # all samples of all channels
-s[0]                       # all samples of channel 0
-s[0, 10]                   # sample array 10 of channel 0
-s[0, 10:20]                # sample arrays 10 through 19 of channel 0
-s[:, 10]                   # sample frame 10
-s[:, 10:20]                # sample frames 10 through 19
+s.channels                   # `NamedSequence` of `Channel` objects
 
+
+s.channel_first[:]           # all samples of all channels
+s.channel_first[0]           # all samples of channel 0
+s.channel_first[0, 10]       # sample array 10 of channel 0
+s.channel_first[0, 10:20]    # sample arrays 10 through 19 of channel 0
+s.channel_first[:, 10]       # sample frame 10
+s.channel_first[:, 10:20]    # sample frames 10 through 19
+
+len(s.channel_first)         # same as `channel_count`
+
+
+for channel in audio.channels:
+    samples = channel[...]
+    
+cf = audio.channel_first
+
+
+audio = AudioFileUtils.openAudioFileSequence(file_paths)
+spectrogram = Spectrogram(audio, spectrogram_settings)
+graph = _create_averaging_graph(spectrogram, averaging_settings)
+graph.run()
+
+ 
 
 Channel
 
@@ -351,13 +512,12 @@ a.end_value                # value at index length - 1, `None` if length zero
 a.span                     # end value less start value, `None` if length zero
 
 
-AmplitudeAxis(Axis)
+ValueAxis(Axis)
 
-For now, `AmplitudeAxis` is just a subclass of `Axis` with a specialized
-initializer and no other methods. It will (probably) eventually provide
-amplitude calibration functionality. Note that we may want to allow
-different amplitude axes for different signal channels, since different
-channels may require different amplitude calibrations.
+For now, `ValueAxis` is just a subclass of `Axis` with a specialized
+initializer and no other methods. It may eventually provide calibration
+functionality. Note that different channels will need to have different
+calibrations.
 
 
 * How do we support mutable signals? The two types of mutable signals

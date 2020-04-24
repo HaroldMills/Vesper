@@ -29,13 +29,13 @@ class NamedSequence(Sequence):
             try:
                 return self._dict[i]
             except KeyError:
-                raise IndexError('name "{}" not found'.format(i))
+                raise IndexError(f'Name "{i}" not found.')
             
         else:
             try:
                 return self._tuple[i]
             except IndexError:
-                raise IndexError('index {} out of range'.format(i))
+                raise IndexError(f'Index {i} out of range.')
 
 
     @property

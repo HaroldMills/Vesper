@@ -85,4 +85,3 @@ class NamedSequenceTests(TestCase):
         self.assertEqual(s.count(one), 1)
         self.assertEqual(s.count(two), 1)
         self.assertEqual(s.count(three), 0)
-        

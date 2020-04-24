@@ -2,14 +2,10 @@
 
 
 from numbers import Number
-import datetime
 import os.path
 
 import numpy as np
 
-from vesper.signal.amplitude_axis import AmplitudeAxis
-from vesper.signal.array_axis import ArrayAxis
-from vesper.signal.time_axis import TimeAxis
 from vesper.util.bunch import Bunch
 
 
@@ -65,22 +61,6 @@ def assert_arrays_equal(x, y, strict=False):
     if strict:
         assert x.dtype == y.dtype
     assert np.alltrue(x == y)
-
-
-def create_signal_axes(shape):
-    
-    if len(shape) == 0:
-        shape = (0,)
-        
-    reference = Bunch(index=0, datetime=datetime.datetime.now())
-    time_axis = TimeAxis(length=shape[0], reference_datetime=reference)
-    
-    lengths = shape[1:]
-    n = len(lengths)
-    array_axes = tuple(
-        ArrayAxis(name='Axis ' + str(i), length=lengths[i]) for i in range(n))
-    
-    return (time_axis, array_axes, AmplitudeAxis())
 
 
 def create_samples(shape, factor=100, dtype='int32'):

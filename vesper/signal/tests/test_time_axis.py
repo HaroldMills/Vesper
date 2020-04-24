@@ -1,13 +1,6 @@
-import datetime
-
-import numpy as np
-
-from vesper.signal.linear_mapping import LinearMapping
-from vesper.signal.tests.test_indexed_axis import IndexedAxisTests
-from vesper.signal.tests.utils import TIME_UNITS
+from vesper.signal.linear_map import LinearMap
 from vesper.signal.time_axis import TimeAxis
 from vesper.tests.test_case import TestCase
-from vesper.util.bunch import Bunch
 import vesper.signal.tests.utils as utils
 
 
@@ -15,103 +8,91 @@ class TimeAxisTests(TestCase):
 
 
     @staticmethod
-    def assert_axis(
-            a, start_index, length, sample_rate, mapping, reference,
-            start_datetime, end_datetime):
+    def assert_axis(a, length, frame_rate):
         
-        sample_period = 1 / sample_rate
+        frame_period = 1 / frame_rate
         
-        IndexedAxisTests.assert_axis(a, 'Time', TIME_UNITS, start_index, length)
+        start_index = 0 if length != 0 else None
+        assert a.start_index == start_index
         
-        assert a.sample_rate == sample_rate
-        assert a.sample_period == sample_period
+        end_index = length - 1 if length != 0 else None
+        assert a.end_index == end_index
         
-        if mapping is None:
-            mapping = LinearMapping(sample_period)
-        assert a.index_to_time_mapping == mapping
+        assert a.length == length
+        assert a.frame_rate == frame_rate
+        assert a.frame_period == frame_period
         
-        start_time = mapping.map(a.start_index)
+        index_to_time = LinearMap(frame_period)
+
+        start_time = index_to_time(a.start_index) if length != 0 else None
         assert a.start_time == start_time
         
-        end_time = mapping.map(a.end_index) if length != 0 else None
+        end_time = index_to_time(a.end_index) if length != 0 else None
         assert a.end_time == end_time
         
         span = end_time - start_time if length != 0 else None
         assert a.span == span
         
-        duration = span + sample_period if length != 0 else 0
+        duration = span + frame_period if length != 0 else 0
         assert a.duration == duration
-        
-        assert a.reference_datetime == reference
-        assert a.start_datetime == start_datetime
-        assert a.end_datetime == end_datetime
-            
+                    
 
     def test_init(self):
                  
-        start_index = 5
-        length = 10
-        sample_rate = 2
-        mapping = LinearMapping(1 / sample_rate, .25)
-        start_datetime = datetime.datetime(2016, 5, 4, 1, 2, 3, 250000)
-        reference = Bunch(index=start_index, datetime=start_datetime)
-        all_args = (start_index, length, sample_rate, mapping, reference)
+        cases = [
+            (0, 24000),
+            (1, 32000),
+            (10, 48000)
+        ]
          
-        defaults = (0, 0, 1, None, None)
-         
-        for i in range(len(all_args)):
-             
-            args = all_args[:i]
-             
-            a = TimeAxis(*args)
-             
-            expected = all_args[:i] + defaults[i:]
-             
-            if expected[-1] is None:
-                start_datetime = None
-                end_datetime = None
-            else:
-                seconds = (length - 1) / sample_rate
-                td = datetime.timedelta(seconds=seconds)
-                end_datetime = start_datetime + td
-                 
-            expected = expected + (start_datetime, end_datetime)
-             
-            self.assert_axis(a, *expected)
+        for case in cases:
+            a = TimeAxis(*case)
+            self.assert_axis(a, *case)
             
             
+    def test_initializer_errors(self):
+        
+        cases = [
+            (-1, 24000),
+            (0, 0)
+        ]
+        
+        for case in cases:
+            self._assert_raises(ValueError, TimeAxis, *case)
+        
+        
     def test_eq(self):
-        args = (5, 10, 2, LinearMapping(.5), None)
-        reference_datetime = Bunch(index=0, datetime=datetime.datetime.now())
-        changes = (0, 0, 1, LinearMapping(1), reference_datetime)
+        args = (10, 2)
+        changes = (11, 3)
         utils.test_eq(TimeAxis, args, changes)
         
         
-    def test_index_to_time_mapping(self):
-          
-        a = TimeAxis(5, 10, 2, LinearMapping(.5, .25))
-           
-        cases = [
-            (10, 5.25),
-            (np.array([]), np.array([])),
-            (np.array([10, 11]), np.array([5.25, 5.75]))
-        ]
-           
-        utils.test_mapping(a, 'index_to_time', 'time_to_index', cases)
-  
-      
-    def test_index_to_datetime_mapping(self):
-  
-        dt = datetime.datetime
-          
-        reference = Bunch(index=5, datetime=dt(2016, 4, 29, 1, 2, 3))
-        a = TimeAxis(5, 10, 2, None, reference)
-           
-        cases = [
-            (10, dt(2016, 4, 29, 1, 2, 5, 500000)),
-            (np.array([]), []),
-            (np.array([9, 11]),
-                 np.array([dt(2016, 4, 29, 1, 2, 5), dt(2016, 4, 29, 1, 2, 6)]))
-        ]
-           
-        utils.test_mapping(a, 'index_to_datetime', 'datetime_to_index', cases)
+#     def test_index_to_time_mapping(self):
+#           
+#         a = TimeAxis(5, 10, 2, LinearMapping(.5, .25))
+#            
+#         cases = [
+#             (10, 5.25),
+#             (np.array([]), np.array([])),
+#             (np.array([10, 11]), np.array([5.25, 5.75]))
+#         ]
+#            
+#         utils.test_mapping(a, 'index_to_time', 'time_to_index', cases)
+#   
+#       
+#     def test_index_to_datetime_mapping(self):
+#   
+#         dt = datetime.datetime
+#           
+#         reference = Bunch(index=5, datetime=dt(2016, 4, 29, 1, 2, 3))
+#         a = TimeAxis(5, 10, 2, None, reference)
+#            
+#         cases = [
+#             (10, dt(2016, 4, 29, 1, 2, 5, 500000)),
+#             (np.array([]), []),
+#             (np.array([9, 11]), np.array(
+#                 [dt(2016, 4, 29, 1, 2, 5), dt(2016, 4, 29, 1, 2, 6)]))
+#         ]
+#            
+#         utils.test_mapping(
+#             a, 'index_to_datetime', 'datetime_to_index', cases)
