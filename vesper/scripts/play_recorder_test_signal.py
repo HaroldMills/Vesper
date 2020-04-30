@@ -29,11 +29,10 @@ import time
 
 import numpy as np
 import pyaudio
+import ruamel.yaml as yaml
 
-import vesper.util.yaml_utils as yaml_utils
 
-
-_CONFIG = yaml_utils.load('''
+_CONFIG = yaml.safe_load('''
     
     channel_signals:
     
