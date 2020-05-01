@@ -19,6 +19,7 @@ Classifier:
     - vesper.mpg_ranch.nfc_coarse_classifier_4_0.classifier.Classifier
     - vesper.mpg_ranch.nfc_detector_low_score_classifier_1_0.classifier.Classifier
     - vesper.mpg_ranch.outside_classifier.OutsideClassifier
+    - vesper.old_bird.lighthouse_outside_classifier.LighthouseOutsideClassifier
     
 Command:
     - vesper.command.add_recording_audio_files_command.AddRecordingAudioFilesCommand
