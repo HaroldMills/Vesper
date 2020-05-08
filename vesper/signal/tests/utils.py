@@ -3,16 +3,9 @@
 
 from numbers import Number
 import os.path
+import random
 
 import numpy as np
-
-from vesper.util.bunch import Bunch
-
-
-DEFAULT_UNITS = Bunch(plural=None, singular=None, abbreviation=None)
-TIME_UNITS = Bunch(plural='seconds', singular='second', abbreviation='S')
-FREQ_UNITS = Bunch(plural='hertz', singular='hertz', abbreviation='Hz')
-POWER_UNITS = Bunch(plural='decibels', singular='decibel', abbreviation='dB')
 
 
 def test_init(args, defaults, cls, check):
@@ -37,17 +30,63 @@ def test_eq(cls, args, changes):
         assert a != b
 
 
-def test_mapping(a, forward_name, inverse_name, cases):
+def test_indexing(x, expected, test_count):
      
-    for x, y in cases:
+    # Before random indexing, try indexing with a single colon.
+    # This will elicit many possible bugs.
+    assert_arrays_equal(x[:], expected[:], strict=True)
+    
+    shape = expected.shape
+     
+    if _any_zero(shape):
+        return
+     
+    for _ in range(test_count):
          
-        method = getattr(a, forward_name)
-        result = method(x)
-        assert_numbers_or_arrays_equal(result, y)
-          
-        method = getattr(a, inverse_name)
-        result = method(y)
-        assert_numbers_or_arrays_equal(result, x)
+        index_count = random.randrange(len(shape)) + 1
+         
+        if index_count == 1:
+            key = _get_test_index(shape[0])
+             
+        else:
+            key = tuple(_get_test_index(n) for n in shape[:index_count])
+             
+        # print(key, x[key], expected[key])
+         
+        assert_arrays_equal(x[key], expected[key], strict=True)
+
+    
+def _any_zero(x):
+    return not np.all(np.array(x))
+
+
+def _get_test_index(n):
+    
+    index_type = random.choice(('number', 'range', 'colon'))
+    
+    if index_type == 'number':
+        return random.randrange(n)
+    
+    elif index_type == 'range':
+        start = random.randrange(-n, n)
+        stop = random.randrange(-n, n)
+        return slice(start, stop)
+    
+    else:
+        return slice(None, None, None)
+    
+    
+# def test_mapping(a, forward_name, inverse_name, cases):
+#      
+#     for x, y in cases:
+#          
+#         method = getattr(a, forward_name)
+#         result = method(x)
+#         assert_numbers_or_arrays_equal(result, y)
+#           
+#         method = getattr(a, inverse_name)
+#         result = method(y)
+#         assert_numbers_or_arrays_equal(result, x)
          
          
 def assert_numbers_or_arrays_equal(x, y):
@@ -64,6 +103,8 @@ def assert_arrays_equal(x, y, strict=False):
 
 
 def create_samples(shape, factor=100, dtype='int32'):
+    if dtype == 'int32':
+        pass
     arrays = [
         _create_samples_aux(shape, factor, dtype, i)
         for i in range(len(shape))]
