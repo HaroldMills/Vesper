@@ -111,11 +111,7 @@ def _assert_metadata(s, name, time_axis, array_shape, dtype):
     assert s.name == name
     assert s.time_axis == time_axis
     assert s.array_shape == array_shape
-    # assert s.dtype == np.dtype(dtype)
-    try:
-        assert s.dtype == np.dtype(dtype)
-    except AssertionError as e:
-        pass
+    assert s.dtype == np.dtype(dtype)
     
 
 def _check_indexer(i, s, frame_first):

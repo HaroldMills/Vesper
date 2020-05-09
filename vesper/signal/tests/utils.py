@@ -103,8 +103,6 @@ def assert_arrays_equal(x, y, strict=False):
 
 
 def create_samples(shape, factor=100, dtype='int32'):
-    if dtype == 'int32':
-        pass
     arrays = [
         _create_samples_aux(shape, factor, dtype, i)
         for i in range(len(shape))]

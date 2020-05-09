@@ -3,8 +3,7 @@
 
 from numbers import Number
 
-import numpy as np
-
+from vesper.signal.sample_provider import SampleProvider
 from vesper.signal.signal import Signal
 from vesper.signal.time_axis import TimeAxis
 
@@ -19,78 +18,55 @@ class RamSignal(Signal):
     """
     
     
-    def __init__(
-            self, samples, time_axis, name=None, samples_channel_first=False):
+    def __init__(self, time_axis, samples, frame_first, name=None):
         
-        self._samples = samples
-        self._samples_channel_first = samples_channel_first
-        
-        self._as_frames, self._as_channels = \
-            _get_sample_views(samples, samples_channel_first)
- 
-        shape = self._as_frames.shape
-        frame_count = shape[0]
-        channel_count = shape[1]
-        array_shape = shape[2:]
-        
+        frame_count, channel_count, array_shape = \
+            _get_shape(samples, frame_first)
+            
         # Create `TimeAxis` from frame rate if needed.
         if isinstance(time_axis, Number):
             time_axis = TimeAxis(frame_count, time_axis)
+        else:
+            _check_frame_count(frame_count, time_axis)
             
+        sample_provider = _SampleProvider(samples, frame_first)
+        
         super().__init__(
-            time_axis, channel_count, array_shape, samples.dtype, name)
+            time_axis, channel_count, array_shape, samples.dtype,
+            sample_provider, name)
         
         
-    @property
-    def samples(self):
-        return self._samples
+def _get_shape(samples, frame_first):
     
-    
-    @property
-    def samples_channel_first(self):
-        return self._samples_channel_first
-    
-    
-    @property
-    def as_frames(self):
-        return self._as_frames
-    
-    
-    @property
-    def as_channels(self):
-        return self._as_channels
-
-
-def _get_sample_views(samples, samples_channel_first):
-    
-    if samples_channel_first:
-        # first `samples` index is channel number
-        
-        as_channels, as_frames = _get_sample_views_aux(samples)
-            
-    else:
-        # first `samples` index is frame number
-        
-        as_frames, as_channels = _get_sample_views_aux(samples)
-            
-    return as_frames, as_channels
-            
-            
-def _get_sample_views_aux(samples):
-        
     shape = samples.shape
     
-    if len(shape) == 0:
+    if len(shape) < 2:
         raise ValueError(
-            'RamSignal sample NumPy array must have at least one dimension.')
-    
-    if len(shape) == 1:
-        # `samples` has only one dimension
+            'RamSignal sample NumPy array must have at least two dimensions.')
+
+    if frame_first:
+        frame_count, channel_count = shape[:2]
+    else:
+        channel_count, frame_count = shape[:2]
         
-        # Append unit dimension to `samples` shape.
-        samples = samples.reshape((shape[0], 1))
-                
-    # Create `samples` view with first two axes swapped.
-    swapped = np.swapaxes(samples, 0, 1)
+    array_shape = shape[2:]
     
-    return samples, swapped
+    return frame_count, channel_count, array_shape
+
+
+def _check_frame_count(frame_count, time_axis):
+    
+    if frame_count != time_axis.length:
+        raise ValueError(
+            f'Number of sample frames {frame_count} in NumPy sample '
+            f'array does not match time axis length {len(time_axis)}.')
+
+
+class _SampleProvider(SampleProvider):
+    
+    def __init__(self, samples, frame_first):
+        super().__init__(frame_first)
+        self._samples = samples
+        
+    def get_samples(self, first_key, second_key):
+        return self._samples[first_key, second_key]
