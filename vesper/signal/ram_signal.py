@@ -42,7 +42,7 @@ def _get_shape(samples, frame_first):
     
     if len(shape) < 2:
         raise ValueError(
-            'RamSignal sample NumPy array must have at least two dimensions.')
+            'RamSignal NumPy sample array must have at least two dimensions.')
 
     if frame_first:
         frame_count, channel_count = shape[:2]
@@ -59,7 +59,7 @@ def _check_frame_count(frame_count, time_axis):
     if frame_count != time_axis.length:
         raise ValueError(
             f'Number of sample frames {frame_count} in NumPy sample '
-            f'array does not match time axis length {len(time_axis)}.')
+            f'array does not match time axis length {time_axis.length}.')
 
 
 class _SampleProvider(SampleProvider):
