@@ -12,6 +12,8 @@ a.length                   # signal length in sample frames
 a.frame_rate               # signal frame rate, in hertz
 a.frame_period             # signal frame period, in seconds
 
+a.offset                   # index to time offset, in seconds
+
 a.index_to_time(i)         # `i` in [0, length], scalar or array, int or float
 a.time_to_index(t)         # `t` can be scalar or array. Result is float
                            # Maybe offer rounded int result as an option?
@@ -56,7 +58,7 @@ class TimeAxis:
     """Signal time axis."""
     
     
-    def __init__(self, length, frame_rate):
+    def __init__(self, length, frame_rate, offset=0):
         
         if length < 0:
             raise ValueError('Time axis length cannot be negative.')
@@ -66,8 +68,9 @@ class TimeAxis:
         
         self._length = length
         self._frame_rate = frame_rate
+        self._offset = offset
  
-        self._index_to_time_map = LinearMap(1 / frame_rate)
+        self._index_to_time_map = LinearMap(1 / frame_rate, offset)
 
         
     def __eq__(self, other):
@@ -106,6 +109,11 @@ class TimeAxis:
     @property
     def frame_period(self):
         return 1 / self.frame_rate
+    
+    
+    @property
+    def offset(self):
+        return self._offset
     
     
     def index_to_time(self, indices):
