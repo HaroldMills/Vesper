@@ -17,15 +17,30 @@ import vesper.command.command_utils as command_utils
 
 # Settings for exports from 2017 and 2018 MPG Ranch archives for coarse
 # classifier training.
+# _EXTRACTION_START_OFFSETS = {
+#     'Tseep': -.1,
+#     'Thrush': -.05
+# }
+# _EXTRACTION_DURATIONS = {
+#     'Tseep': .5,
+#     'Thrush': .65
+# }
+# _ANNOTATION_NAMES = ['Classification']
+# _DEFAULT_ANNOTATION_VALUES = {}
+# _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
+
+# Settings for exports from 2017 MPG Ranch Archive 30k for NFC time bounds
+# marker training.
 _EXTRACTION_START_OFFSETS = {
-    'Tseep': -.1,
-    'Thrush': -.05
+    'Tseep': -.3,
+    'Thrush': -.25
 }
 _EXTRACTION_DURATIONS = {
-    'Tseep': .5,
-    'Thrush': .65
+    'Tseep': 1,
+    'Thrush': 1
 }
-_ANNOTATION_NAMES = ['Classification']
+_ANNOTATION_NAMES = ['Classification', 'Call Start Index', 'Call End Index']
 _DEFAULT_ANNOTATION_VALUES = {}
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
@@ -89,7 +104,13 @@ class ClipsHdf5FileExporter:
             annotations = _get_annotations(clip)
             for name, value in annotations.items():
                 name = name.lower().replace(' ', '_')
-                attrs[name] = value
+                try:
+                    attrs[name] = value
+                except Exception:
+                    _logger.error(
+                        f'Could not assign value "{value}" for attribute '
+                        f'"{name}" for clip starting at {clip.start_time}.')
+                    raise
 
             return True
         
