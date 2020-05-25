@@ -40,7 +40,10 @@ _EXTRACTION_DURATIONS = {
     'Tseep': 1,
     'Thrush': 1
 }
-_ANNOTATION_NAMES = ['Classification', 'Call Start Index', 'Call End Index']
+_ANNOTATION_INFOS = [
+    ('Classification', None), 
+    ('Call Start Index', int), 
+    ('Call End Index', int)]
 _DEFAULT_ANNOTATION_VALUES = {}
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
@@ -194,12 +197,13 @@ def _format_datetime(dt):
     
 
 def _get_annotations(clip):
+    
     return dict([
-        (name, _get_annotation_value(clip, name))
-        for name in _ANNOTATION_NAMES])
+        (name, _get_annotation_value(clip, name, value_converter))
+        for name, value_converter in _ANNOTATION_INFOS])
         
         
-def _get_annotation_value(clip, annotation_name):
+def _get_annotation_value(clip, annotation_name, value_converter):
     
     try:
         annotation = clip.string_annotations.get(
@@ -209,4 +213,8 @@ def _get_annotation_value(clip, annotation_name):
         return _DEFAULT_ANNOTATION_VALUES.get(annotation_name)
     
     else:
-        return annotation.value
+        
+        if value_converter is None:
+            return annotation.value
+        else:
+            return value_converter(annotation.value)
