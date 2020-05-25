@@ -39,11 +39,16 @@ To create a conda environment using a Vesper package from the real PyPI:
     conda activate test
     pip install vesper==<version>
     
-To create a conda environment for Vesper development:
+To create a conda environment for Vesper development with Tensorflow 1.x:
 
     conda create -n vesper-dev python=3.6
     conda activate vesper-dev
     pip install birdvoxdetect bokeh django jsonschema matplotlib pyephem ruamel_yaml sphinx sphinx_rtd_theme
+    
+To create a conda environment for Vesper development with TensorFlow 2.x:
+    conda create -n vesper-dev-tf2 python=3.7
+    conda activate vesper-dev-tf2
+    pip install bokeh django jsonschema matplotlib pyephem resampy ruamel_yaml sphinx sphinx_rtd_theme tensorflow
     
 Whenever you modify plugin entry points, you must run:
 
