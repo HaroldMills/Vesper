@@ -1,4 +1,4 @@
-"""Creates coarse classifier training datasets from clip HDF5 files."""
+"""Creates NFC time bound marker datasets from clip HDF5 files."""
 
 
 from pathlib import Path
@@ -18,7 +18,7 @@ TEST_FRACTION = .1
 CALL_TYPE = 'Tseep'
 
 DATA_DIR_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/Vesper ML/NFC Time Bounds Marker 1.0/')
+    '/Users/harold/Desktop/NFC/Data/Vesper ML/NFC Time Bound Marker 1.0/')
 
 INPUT_DIR_PATH = DATA_DIR_PATH / 'HDF5 Files' / CALL_TYPE
 
@@ -94,13 +94,11 @@ def create_tfrecord_file(file_name_prefix, dataset_name, clip_group, clip_ids):
     
     start_time = time.time()
     
-    print('        Creating TF examples...')
-    
+    file_path = get_output_file_path(file_name_prefix, dataset_name)
+
+    print(f'Writing {len(clip_ids)} clips to file "{file_path}"...')
     examples = create_tf_examples(clip_group, clip_ids)
     
-    print('        Writing TF examples to file...')
-    
-    file_path = get_output_file_path(file_name_prefix, dataset_name)
     os_utils.create_parent_directory(file_path)
     with tf.io.TFRecordWriter(str(file_path)) as writer:
         for example in examples:
