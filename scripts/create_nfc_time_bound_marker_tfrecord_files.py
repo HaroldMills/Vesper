@@ -120,19 +120,19 @@ def create_tf_example(clip_group, clip_id):
     
     clip = clip_group[clip_id]
     
-    samples, call_start_index, call_end_index = get_clip_data(clip)
+    waveform, call_start_index, call_end_index = get_clip_data(clip)
     
-    samples_feature = create_bytes_feature(samples.tobytes())
+    waveform_feature = create_bytes_feature(waveform.tobytes())
     clip_id_feature = create_int64_feature(int(clip_id))
     start_index_feature = create_int64_feature(call_start_index)
     end_index_feature = create_int64_feature(call_end_index)
     
     features = tf.train.Features(
         feature={
-            'samples': samples_feature,
-            'clip_id': clip_id_feature,
+            'waveform': waveform_feature,
             'call_start_index': start_index_feature,
-            'call_end_index': end_index_feature
+            'call_end_index': end_index_feature,
+            'clip_id': clip_id_feature,
         })
      
     return tf.train.Example(features=features)
@@ -140,7 +140,7 @@ def create_tf_example(clip_group, clip_id):
 
 def get_clip_data(clip):
     
-    samples = clip[:]
+    waveform = clip[:]
     
     attrs = clip.attrs
     
@@ -151,13 +151,13 @@ def get_clip_data(clip):
     # Resample if needed.
     sample_rate = attrs['sample_rate']
     if sample_rate != OUTPUT_SAMPLE_RATE:
-        samples = resampling_utils.resample_to_24000_hz(samples, sample_rate)
+        waveform = resampling_utils.resample_to_24000_hz(waveform, sample_rate)
         call_start_index = adjust_index(
             call_start_index, sample_rate, OUTPUT_SAMPLE_RATE)
         call_end_index = adjust_index(
             call_end_index, sample_rate, OUTPUT_SAMPLE_RATE)
         
-    return samples, call_start_index, call_end_index
+    return waveform, call_start_index, call_end_index
     
 
 def adjust_index(index, old_sample_rate, new_sample_rate):
