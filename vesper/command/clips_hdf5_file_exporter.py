@@ -30,15 +30,15 @@ import vesper.command.command_utils as command_utils
 # _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
-# Settings for exports from 2017 MPG Ranch Archive 30k for NFC time bounds
+# Settings for exports from 2017 MPG Ranch Archive 30k for NFC time bound
 # marker training.
 _EXTRACTION_START_OFFSETS = {
-    'Tseep': -.3,
-    'Thrush': -.25
+    'Tseep': -.5,
+    'Thrush': -.5
 }
 _EXTRACTION_DURATIONS = {
-    'Tseep': 1,
-    'Thrush': 1
+    'Tseep': 1.2,
+    'Thrush': 1.5
 }
 _ANNOTATION_INFOS = [
     ('Classification', None), 
@@ -81,7 +81,9 @@ class ClipsHdf5FileExporter:
     
     def export(self, clip):
         
-        result = self._extract_samples(clip)
+        annotations = _get_annotations(clip)
+        
+        result = self._extract_samples(clip, annotations)
         
         if result is not None:
             
@@ -104,7 +106,6 @@ class ClipsHdf5FileExporter:
             attrs['clip_length'] = clip.length
             attrs['extraction_start_index'] = start_index
             
-            annotations = _get_annotations(clip)
             for name, value in annotations.items():
                 name = name.lower().replace(' ', '_')
                 try:
@@ -114,16 +115,16 @@ class ClipsHdf5FileExporter:
                         f'Could not assign value "{value}" for attribute '
                         f'"{name}" for clip starting at {clip.start_time}.')
                     raise
-
+                
             return True
         
         else:
             return False
         
  
-    def _extract_samples(self, clip):
+    def _extract_samples(self, clip, annotations):
         
-        extent = _get_extraction_extent(clip)
+        extent = _get_extraction_extent(clip, annotations)
         
         if extent is None:
             return None
@@ -137,10 +138,9 @@ class ClipsHdf5FileExporter:
                     self._clip_manager.get_samples(clip, start_offset, length)
             
             except Exception as e:
-                _logger.warning((
-                    'Could not get samples for clip {}, so it will not '
-                    'appear in output. Error message was: {}').format(
-                        str(clip), str(e)))
+                _logger.warning(
+                    f'Could not get samples for clip {clip}, so it will '
+                    f'not appear in output. Error message was: {e}')
                 return None
             
             start_index = clip.start_index + start_offset
@@ -152,7 +152,7 @@ class ClipsHdf5FileExporter:
         pass
 
 
-def _get_extraction_extent(clip):
+def _get_extraction_extent(clip, annotations):
     
     detector_name = _get_detector_name(clip)
     
@@ -170,7 +170,33 @@ def _get_extraction_extent(clip):
         start_offset = _seconds_to_samples(start_offset, sample_rate)
         length = _seconds_to_samples(duration, sample_rate)
         
+        # Make start offset relative to clip start index rather
+        # than call start index.
+        call_start_index = annotations['Call Start Index']
+        start_offset += call_start_index - clip.start_index
+        
         return start_offset, length
+        
+
+# def _get_extraction_extent(clip, annotations):
+#     
+#     detector_name = _get_detector_name(clip)
+#     
+#     if detector_name is None:
+#         return None
+#     
+#     else:
+#         
+#         # Get start offset and duration in seconds.
+#         start_offset = _EXTRACTION_START_OFFSETS[detector_name]
+#         duration = _EXTRACTION_DURATIONS[detector_name]
+#         
+#         # Convert to samples.
+#         sample_rate = clip.sample_rate
+#         start_offset = _seconds_to_samples(start_offset, sample_rate)
+#         length = _seconds_to_samples(duration, sample_rate)
+#         
+#         return start_offset, length
         
 
 def _get_detector_name(clip):
