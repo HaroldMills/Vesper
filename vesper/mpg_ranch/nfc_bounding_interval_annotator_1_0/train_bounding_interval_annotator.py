@@ -14,6 +14,7 @@ import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.dataset_utils \
 
 
 CALL_TYPE = 'Tseep'
+BOUND_NAME = 'end'
 
 ML_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Vesper ML/'
@@ -110,7 +111,8 @@ def main():
     
     train_and_validate_annotator()
     
-    # plot_first_gram('Validation', '20200610-121339')
+    # plot_first_gram('Validation', 'end_2020-06-10_17.27.22')
+    # plot_first_gram('Validation', 'start_2020-06-10_12.13.39')
     
 
 def train_and_validate_annotator():
@@ -120,7 +122,8 @@ def train_and_validate_annotator():
 
 
 def get_run_name():
-    return datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    start_time = datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
+    return f'{BOUND_NAME}_{start_time}'
 
 
 def train_annotator(run_name):
@@ -168,16 +171,19 @@ def get_dataset(name):
     return dataset.map(diddle_example)
     
 
-def diddle_example(gram, call_start_index, call_end_index, clip_id):
+def diddle_example(gram, call_start_index, call_end_index, _):
     
     # Reshape gram for input into Keras CNN.
     gram = tf.expand_dims(gram, 2)
         
     spectrum_count = EXAMPLE_SHAPE[0]
-    call_start_fraction = call_start_index / spectrum_count
-    call_end_fraction = call_end_index / spectrum_count
     
-    return gram, call_end_fraction
+    if BOUND_NAME == 'start':
+        bound_fraction = call_start_index / spectrum_count
+    else:
+        bound_fraction = call_end_index / spectrum_count
+    
+    return gram, bound_fraction
 
 
 def validate_annotator(run_name):
@@ -204,7 +210,7 @@ def plot_first_gram(dataset_name, run_name):
     # model_dir_path = MODEL_DIR_PATH / run_name
     # model = tf.keras.models.load_model(model_dir_path)
     
-    for gram, call_end_fraction in dataset:
+    for gram, bound_fraction in dataset:
         
         # grams = tf.expand_dims(gram, 0)
         # predictions = model.predict(grams)
@@ -214,10 +220,9 @@ def plot_first_gram(dataset_name, run_name):
         plt.imshow(gram)
         
         spectrum_count = gram.shape[1]
-        # call_start_index = call_start_fraction * spectrum_count
-        call_end_index = call_end_fraction * spectrum_count
+        bound_index = bound_fraction * spectrum_count
         # prediction_index = prediction * spectrum_count
-        plt.vlines(call_end_index, 0, gram.shape[0], colors='r')
+        plt.vlines(bound_index, 0, gram.shape[0], colors='r')
         
         plt.show()
         
