@@ -1,4 +1,6 @@
-"""Constants and functions pertaining to classification datasets."""
+"""
+Constants and functions pertaining to NFC bounding interval annotator datasets.
+"""
 
 
 # import functools
