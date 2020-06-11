@@ -9,14 +9,15 @@ import numpy as np
 import tensorflow as tf
 
 from vesper.util.settings import Settings
-import vesper.mpg_ranch.nfc_time_bound_marker_1_0.dataset_utils \
+import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.dataset_utils \
     as dataset_utils
 
 
 CALL_TYPE = 'Tseep'
 
 ML_DIR_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/Vesper ML/NFC Time Bound Marker 1.0/')
+    '/Users/harold/Desktop/NFC/Data/Vesper ML/'
+    'NFC Bounding Interval Annotator 1.0/')
 
 DATASET_DIR_PATH = ML_DIR_PATH / 'Datasets' / CALL_TYPE
 MODEL_DIR_PATH = ML_DIR_PATH / 'Models' / CALL_TYPE
@@ -107,22 +108,22 @@ def main():
     
     # test_create_spectrogram_dataset('Training')
     
-    train_and_validate_marker()
+    train_and_validate_annotator()
     
     # plot_first_gram('Validation', '20200610-121339')
     
 
-def train_and_validate_marker():
+def train_and_validate_annotator():
     run_name = get_run_name()
-    train_marker(run_name)
-    validate_marker(run_name)
+    train_annotator(run_name)
+    validate_annotator(run_name)
 
 
 def get_run_name():
     return datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 
 
-def train_marker(run_name):
+def train_annotator(run_name):
     
     training_dataset = get_dataset('Training').batch(32)
     validation_dataset = get_dataset('Validation').batch(1)
@@ -179,7 +180,7 @@ def diddle_example(gram, call_start_index, call_end_index, clip_id):
     return gram, call_end_fraction
 
 
-def validate_marker(run_name):
+def validate_annotator(run_name):
     
     model_dir_path = MODEL_DIR_PATH / run_name
     model = tf.keras.models.load_model(model_dir_path)
