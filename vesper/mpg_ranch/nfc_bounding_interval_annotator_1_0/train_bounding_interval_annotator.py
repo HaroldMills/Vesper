@@ -128,7 +128,7 @@ def get_run_name():
 
 def train_annotator(run_name):
     
-    training_dataset = get_dataset('Training').batch(32)
+    training_dataset = get_dataset('Training').batch(128)
     validation_dataset = get_dataset('Validation').batch(1)
     
     model = Sequential([
@@ -151,7 +151,7 @@ def train_annotator(run_name):
         log_dir=log_dir_path, histogram_freq=1)
     
     model.fit(
-        training_dataset, epochs=100, steps_per_epoch=500, verbose=2,
+        training_dataset, epochs=20, steps_per_epoch=100, verbose=1,
         validation_data=validation_dataset, validation_steps=500,
         callbacks=[callback])
     
