@@ -18,7 +18,8 @@ TEST_FRACTION = .1
 CALL_TYPE = 'Tseep'
 
 DATA_DIR_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/Vesper ML/NFC Time Bound Marker 1.0/')
+    '/Users/harold/Desktop/NFC/Data/Vesper ML/'
+    'NFC Bounding Interval Annotator 1.0/')
 
 INPUT_DIR_PATH = DATA_DIR_PATH / 'HDF5 Files' / CALL_TYPE
 
@@ -120,19 +121,24 @@ def create_tf_example(clip_group, clip_id):
     
     clip = clip_group[clip_id]
     
-    waveform, call_start_index, call_end_index = get_clip_data(clip)
+    (waveform, clip_start_index, clip_end_index, call_start_index,
+        call_end_index) = get_clip_data(clip)
     
-    waveform_feature = create_bytes_feature(waveform.tobytes())
     clip_id_feature = create_int64_feature(int(clip_id))
-    start_index_feature = create_int64_feature(call_start_index)
-    end_index_feature = create_int64_feature(call_end_index)
+    waveform_feature = create_bytes_feature(waveform.tobytes())
+    clip_start_index_feature = create_int64_feature(clip_start_index)
+    clip_end_index_feature = create_int64_feature(clip_end_index)
+    call_start_index_feature = create_int64_feature(call_start_index)
+    call_end_index_feature = create_int64_feature(call_end_index)
     
     features = tf.train.Features(
         feature={
-            'waveform': waveform_feature,
-            'call_start_index': start_index_feature,
-            'call_end_index': end_index_feature,
             'clip_id': clip_id_feature,
+            'waveform': waveform_feature,
+            'clip_start_index': clip_start_index_feature,
+            'clip_end_index': clip_end_index_feature,
+            'call_start_index': call_start_index_feature,
+            'call_end_index': call_end_index_feature,
         })
      
     return tf.train.Example(features=features)
@@ -145,6 +151,8 @@ def get_clip_data(clip):
     attrs = clip.attrs
     
     extraction_start_index = attrs['extraction_start_index']
+    clip_start_index = attrs['clip_start_index'] - extraction_start_index
+    clip_end_index = clip_start_index + attrs['clip_length']
     call_start_index = attrs['call_start_index'] - extraction_start_index
     call_end_index = attrs['call_end_index'] - extraction_start_index
     
@@ -152,12 +160,18 @@ def get_clip_data(clip):
     sample_rate = attrs['sample_rate']
     if sample_rate != OUTPUT_SAMPLE_RATE:
         waveform = resampling_utils.resample_to_24000_hz(waveform, sample_rate)
+        clip_start_index = adjust_index(
+            clip_start_index, sample_rate, OUTPUT_SAMPLE_RATE)
+        clip_end_index = adjust_index(
+            clip_end_index, sample_rate, OUTPUT_SAMPLE_RATE)
         call_start_index = adjust_index(
             call_start_index, sample_rate, OUTPUT_SAMPLE_RATE)
         call_end_index = adjust_index(
             call_end_index, sample_rate, OUTPUT_SAMPLE_RATE)
         
-    return waveform, call_start_index, call_end_index
+    return (
+        waveform, clip_start_index, clip_end_index, call_start_index,
+        call_end_index)
     
 
 def adjust_index(index, old_sample_rate, new_sample_rate):
