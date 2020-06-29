@@ -72,7 +72,17 @@ To install the most recent version of Vesper in a new conda environment:
    via BirdVoxDetect, but for some reason if you don't install NumPy
    explicitly you wind up with the wrong version of it.)
    
-6. Install Vesper and various dependencies into the environment with::
+6. Install Numba into the environment with::
+
+       pip install numba==0.48
+       
+   (Numba is a dependency of librosa, which is a dependency of
+   BirdVoxDetect. The version of librosa (0.7.0) required by
+   BirdVoxDetect does not work with versions of Numba past 0.48,
+   so for the time being, at least, when installing Vesper you must
+   explicitly install that version of Numba.)
+
+7. Install Vesper and various dependencies into the environment with::
 
        pip install vesper==0.4.8
        
