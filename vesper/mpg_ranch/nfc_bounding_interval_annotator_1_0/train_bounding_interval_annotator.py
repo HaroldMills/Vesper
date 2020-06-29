@@ -2,7 +2,8 @@ from pathlib import Path
 import datetime
 import time
 
-from tensorflow.keras.layers import Conv2D, Dense, Flatten, MaxPooling2D
+from tensorflow.keras.layers import (
+    BatchNormalization, Conv2D, Dense, Flatten, MaxPooling2D)
 from tensorflow.keras.models import Sequential
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,7 +15,7 @@ import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.dataset_utils \
 
 
 CALL_TYPE = 'Tseep'
-BOUND_NAME = 'end'
+BOUND_NAME = 'start'
 
 ML_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Vesper ML/'
@@ -114,6 +115,8 @@ def main():
     # plot_first_gram('Validation', 'end_2020-06-10_17.27.22')
     # plot_first_gram('Validation', 'start_2020-06-10_12.13.39')
     
+    # show_model_summary('start_2020-06-10_12.13.39')
+    
 
 def train_and_validate_annotator():
     run_name = get_run_name()
@@ -126,39 +129,91 @@ def get_run_name():
     return f'{BOUND_NAME}_{start_time}'
 
 
+'''
+    Model that performs best so far:
+    
+    model = Sequential([
+        Conv2D(32, (3, 3), activation='relu', input_shape=EXAMPLE_SHAPE),
+        # BatchNormalization(),
+        MaxPooling2D((2, 2)),
+        Conv2D(64, (3, 3), activation='relu'),
+        # BatchNormalization(),
+        MaxPooling2D((2, 2)),
+        Conv2D(64, (3, 3), activation='relu'),
+        # BatchNormalization(),
+        Flatten(),
+        # Dense(32, activation='relu'),
+        # BatchNormalization(),
+        Dense(64, activation='relu'),
+        # BatchNormalization(),
+        Dense(1)
+    ])
+    
+    
+    Switching pooling parameter to (1, 2) to try to improve temporal
+    resolution actually increases MSE. I'm not sure why. Network has
+    roughly five times the number of weights, though. The first
+    dense layer accounts for most of the network parameters.
+
+'''
+
+
 def train_annotator(run_name):
     
     training_dataset = get_dataset('Training').batch(128)
     validation_dataset = get_dataset('Validation').batch(1)
     
     model = Sequential([
+        
         Conv2D(32, (3, 3), activation='relu', input_shape=EXAMPLE_SHAPE),
+        # BatchNormalization(),
         MaxPooling2D((2, 2)),
+        
+        # Conv2D(32, (1, 1), activation='relu'),
+        # BatchNormalization(),
+ 
         Conv2D(64, (3, 3), activation='relu'),
+        # BatchNormalization(),
         MaxPooling2D((2, 2)),
+        
+        # Conv2D(32, (1, 1), activation='relu'),
+        # BatchNormalization(),
+
         Conv2D(64, (3, 3), activation='relu'),
+        # BatchNormalization(),
+        
+        Conv2D(32, (1, 1), activation='relu'),
+        # BatchNormalization(),
+        
         Flatten(),
+        
+        # Dense(32, activation='relu'),
+        # BatchNormalization(),
+        
         Dense(64, activation='relu'),
+        # BatchNormalization(),
+        
         Dense(1)
+        
     ])
     
     loss_fn = tf.keras.losses.MeanSquaredError()
     
     model.compile(optimizer='adam', loss=loss_fn)
     
+    model.summary()
+    
     log_dir_path = LOG_DIR_PATH / run_name
     callback = tf.keras.callbacks.TensorBoard(
         log_dir=log_dir_path, histogram_freq=1)
-    
+     
     model.fit(
-        training_dataset, epochs=20, steps_per_epoch=100, verbose=1,
+        training_dataset, epochs=100, steps_per_epoch=100, verbose=2,
         validation_data=validation_dataset, validation_steps=500,
         callbacks=[callback])
-    
+     
     model_dir_path = MODEL_DIR_PATH / run_name
     model.save(model_dir_path)
-    
-    model.summary()
 
 
 def get_dataset(name):
@@ -195,12 +250,12 @@ def validate_annotator(run_name):
     
     dataset = get_dataset('Validation').take(10)
     
-    for gram, call_end_fraction in dataset:
+    for gram, bound_fraction in dataset:
         
         grams = tf.expand_dims(gram, 0)
         predictions = model.predict(grams)
         
-        print(predictions, call_end_fraction.numpy())
+        print(predictions, bound_fraction.numpy())
 
 
 def plot_first_gram(dataset_name, run_name):
@@ -226,6 +281,12 @@ def plot_first_gram(dataset_name, run_name):
         
         plt.show()
         
+    
+def show_model_summary(run_name):
+    model_dir_path = MODEL_DIR_PATH / run_name
+    model = tf.keras.models.load_model(model_dir_path)
+    model.summary()
+    
     
 def test_bincount():
     
