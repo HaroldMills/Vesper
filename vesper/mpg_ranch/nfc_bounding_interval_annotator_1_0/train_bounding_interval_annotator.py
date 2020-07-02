@@ -31,12 +31,6 @@ TSEEP_SETTINGS = Settings(
     
     waveform_sample_rate=24000,
     
-    # `True` if and only if data augmentation is enabled during evaluation.
-    # Data augmentation is always enabled during training (though some
-    # individual augmentations can be turned on or off by settings below),
-    # and it is always disabled during inference.
-    evaluation_data_augmentation_enabled=False,
-    
     # `True` if and only if the waveform time reversal data augmentation
     # is enabled. This augmentation reverses each waveform with
     # probability .5.
@@ -46,11 +40,6 @@ TSEEP_SETTINGS = Settings(
     
     waveform_slice_duration=.055,
     
-    call_start_window_center_time=.0275,
-    
-    # call_start_window_duration=.005,
-    call_start_window_duration=0.0001,
-
     # `True` if and only if the waveform amplitude scaling data
     # augmentation is enabled. This augmentation scales each waveform
     # randomly to distribute the waveform log RMS amplitudes uniformly
@@ -176,7 +165,7 @@ def train_annotator(model_name):
         log_dir=log_dir_path, histogram_freq=1)
      
     model.fit(
-        training_dataset, epochs=500, steps_per_epoch=50, verbose=2,
+        training_dataset, epochs=50, steps_per_epoch=50, verbose=2,
         validation_data=validation_dataset, validation_steps=500,
         callbacks=[callback])
      

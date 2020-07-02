@@ -75,17 +75,6 @@ Subsequent optional processing:
 '''
 
 
-# dataset parts
-DATASET_PART_TRAINING = 'Training'
-DATASET_PART_VALIDATION = 'Validation'
-DATASET_PART_TEST = 'Test'
-
-# dataset modes, which influence the preprocessing performed by the dataset
-DATASET_MODE_TRAINING = 'Training'
-DATASET_MODE_EVALUATION = 'Evaluation'
-DATASET_MODE_INFERENCE = 'Inference'
-
-
 _WAVEFORM_EXAMPLE_FEATURES = {
     'waveform': FixedLenFeature((), tf.string),
     'clip_start_index': FixedLenFeature((), tf.int64),
@@ -216,7 +205,7 @@ def create_training_dataset(dir_path, settings):
     
     dataset = create_waveform_dataset_from_tfrecord_files(dir_path)
     
-    processor = _ExampleProcessor(DATASET_MODE_TRAINING, settings)
+    processor = _ExampleProcessor(settings)
     
     dataset = dataset.map(
         processor.preprocess_waveform,
@@ -277,7 +266,7 @@ def create_inference_dataset(waveform_dataset, settings):
     """
     
     
-    processor = _ExampleProcessor(DATASET_MODE_INFERENCE, settings)
+    processor = _ExampleProcessor(settings)
     
     dataset = waveform_dataset.map(
         processor.compute_spectrogram,
@@ -302,55 +291,33 @@ class _ExampleProcessor:
     """
      
      
-    def __init__(self, mode, settings):
+    def __init__(self, settings):
          
-        # `mode` can be `DATASET_MODE_TRAINING` or `DATASET_MODE_INFERENCE`.
-        #
-        # When `mode` is `DATASET_MODE_TRAINING`, dataset examples are
-        # preprocessed according to certain settings that control waveform
-        # slicing and modification.
-        #
-        # When `mode` is `DATASET_MODE_INFERENCE`, waveform slicing
-        # and modification are disabled.
- 
         self._settings = settings
          
         s = settings
-        
-        data_augmentation_enabled = \
-            mode == DATASET_MODE_TRAINING or \
-            (mode == DATASET_MODE_EVALUATION and
-                s.evaluation_data_augmentation_enabled)
-                
-        self._waveform_time_reversal_data_augmentation_enabled = \
-            data_augmentation_enabled and \
-            s.waveform_time_reversal_data_augmentation_enabled
-        
-        self._call_start_time_shift_data_augmentation_enabled = \
-            data_augmentation_enabled
-            
         s2f = signal_utils.seconds_to_frames
         sample_rate = s.waveform_sample_rate
+        
+        # Get the length of an example waveform in samples.
         self._waveform_slice_length = \
             s2f(s.waveform_slice_duration, sample_rate)
-        if self._call_start_time_shift_data_augmentation_enabled:
-            call_start_window_start_time = \
-                s.call_start_window_center_time - \
-                s.call_start_window_duration / 2
-            self._positive_slice_window_start_offset = \
-                -s2f(call_start_window_start_time, s.waveform_sample_rate)
-            self._call_start_window_length = \
-                s2f(s.call_start_window_duration, s.waveform_sample_rate)
-                
-        self._waveform_amplitude_scaling_data_augmentation_enabled = \
-            data_augmentation_enabled and \
-            s.waveform_amplitude_scaling_data_augmentation_enabled
             
+        # Get the call start index in a positive example waveform.
+        self._positive_example_call_start_index = \
+            self._waveform_slice_length // 2
+            
+        # Get low-level spectrogram settings.
         (self._window_size, self._hop_size, self._dft_size,
          self._freq_start_index, self._freq_end_index) = \
             _get_low_level_spectrogram_settings(s)
-        
         self._window_fn = tf.signal.hann_window
+
+        # Get values for slicing negative example waveforms.
+        self._negative_example_exclusion_window_length = self._window_size
+        self._negative_example_exclusion_window_start_offset = -(
+            self._positive_example_call_start_index + 
+            self._negative_example_exclusion_window_length // 2)
         
         
     def preprocess_waveform(
@@ -364,62 +331,69 @@ class _ExampleProcessor:
         according to this preprocessor's settings.
         """
         
-        if self._waveform_time_reversal_data_augmentation_enabled:
+        s = self._settings
+        
+        if s.waveform_time_reversal_data_augmentation_enabled:
             waveform, call_start_index, call_end_index = \
                 _maybe_time_reverse_waveform(
                     waveform, call_start_index, call_end_index)
         
-        waveform_slice, slice_start_index, label = \
+        waveform_slice, label = \
             self._slice_waveform(waveform, call_start_index)
         
         # Cast waveform to float32 for subsequent processing.
         waveform_slice = tf.cast(waveform_slice, tf.float32)
         
-        if self._waveform_amplitude_scaling_data_augmentation_enabled:
+        if s.waveform_amplitude_scaling_data_augmentation_enabled:
             waveform_slice = self._scale_waveform_amplitude(waveform_slice)
         
-        return (waveform_slice, label, clip_id)
+        return waveform_slice, label, clip_id
         
         
     def _slice_waveform(self, waveform, call_start_index):
         
-        # Get start and end indices of window in which slice for positive
-        # example should start.
-        positive_slice_window_start_index = \
-            call_start_index + self._positive_slice_window_start_offset
-        positive_slice_window_end_index = \
-            positive_slice_window_start_index + self._call_start_window_length
-            
         # Decide whether example is positive or negative.
         positive = tf.random.uniform(()) <= self._settings.positive_probability
         
         if positive:
             
-            # Slice so call start is within call start window.
-            minval = positive_slice_window_start_index
-            maxval = positive_slice_window_end_index
+            # Slice so call starts at desired index.
             slice_start_index = \
-                tf.random.uniform((), minval, maxval, dtype=tf.int64)
+                call_start_index - self._positive_example_call_start_index
             
         else:
             # negative example
             
-            # Slice so call start is outside of call start window.
+            # Slice so call start is outside of negative example call
+            # start exclusion window. The slice start index is uniformly
+            # distributed over the portion of the waveform from the
+            # beginning to the end less the waveform slice length,
+            # with the exception of the exclusion window.
+            
+            # TODO: Perhaps we should modify datasets so waveforms
+            # contain clips only, without padding to make them all
+            # the same length?
+            
             minval = 0
             maxval = tf.cast(
                 len(waveform) - self._waveform_slice_length -
-                self._call_start_window_length, tf.int64)
+                self._negative_example_exclusion_window_length,
+                tf.int64)
             slice_start_index = \
                 tf.random.uniform((), minval, maxval, dtype=tf.int64)
-            if slice_start_index >= positive_slice_window_start_index:
-                slice_start_index += self._call_start_window_length
+            exclusion_window_start_index = \
+                call_start_index + \
+                self._negative_example_exclusion_window_start_offset
+            if slice_start_index >= exclusion_window_start_index:
+                slice_start_index += \
+                    self._negative_example_exclusion_window_length
                 
         slice_end_index = slice_start_index + self._waveform_slice_length
         waveform_slice = waveform[slice_start_index:slice_end_index]
         
         label = 1 if positive else 0
         
-        return waveform_slice, slice_start_index, label
+        return waveform_slice, label
     
     
     def _scale_waveform_amplitude(self, waveform):
