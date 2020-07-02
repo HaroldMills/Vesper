@@ -88,32 +88,64 @@ DATASET_MODE_INFERENCE = 'Inference'
 
 _WAVEFORM_EXAMPLE_FEATURES = {
     'waveform': FixedLenFeature((), tf.string),
+    'clip_start_index': FixedLenFeature((), tf.int64),
+    'clip_end_index': FixedLenFeature((), tf.int64),
     'call_start_index': FixedLenFeature((), tf.int64),
     'call_end_index': FixedLenFeature((), tf.int64),
-    'clip_id': FixedLenFeature([], tf.int64),
+    'clip_id': FixedLenFeature((), tf.int64),
 }
 
 
-# if shuffle:
-#     dataset = dataset.shuffle(10 * batch_size)
-#      
-# if batch_size != 1:
-#     dataset = dataset.batch(batch_size)
-    
+'''
+Types of dataset we use:
 
-def create_spectrogram_dataset_from_waveform_array(waveforms, mode, settings):
-    dataset = Dataset.from_tensor_slices(waveforms)
-    dataset = create_preprocessed_waveform_dataset(dataset, mode, settings)
-    return _create_spectrogram_dataset(dataset, mode, settings)
-    
-    
-def create_spectrogram_dataset_from_waveform_files(dir_path, mode, settings):
-    dataset = create_waveform_dataset_from_waveform_files(dir_path)
-    dataset = create_preprocessed_waveform_dataset(dataset, mode, settings)
-    return _create_spectrogram_dataset(dataset, mode, settings)
+* training, comprising individual spectrogram slices with augmentation
+* validation, like training
+* inference, comprising spectrogram slice sequences without augmentation
 
+Functions:
+* create_training_dataset(dir_path, settings)
+* create_inference_dataset(waveforms, settings)
+'''
+
+
+def create_waveform_dataset_from_tensors(waveforms):
     
-def create_waveform_dataset_from_waveform_files(dir_path):
+    # One might like to just say:
+    #
+    #     dataset = tf.data.Dataset.from_tensor_slices(waveforms)
+    #
+    # here instead of using a generator, but that only works if
+    # the waveforms all have the same length. Using a generator
+    # works even if the waveform lengths differ.
+    
+    def generator():
+        for waveform in waveforms:
+            yield _normalize_waveform(waveform)
+            
+    return tf.data.Dataset.from_generator(generator, tf.float32)
+    
+    
+def create_waveform_dataset_from_tfrecord_files(dir_path):
+    
+    """
+    Creates a dataset of waveforms and associated metadata.
+    
+    Each dataset example has the form:
+    
+        (waveform, clip_start_index, clip_end_index, call_start_index,
+         call_end_index, clip_id)
+         
+    All of the waveforms of the dataset have the same length. Each
+    waveform contains one Vesper clip, which starts and ends at 
+    waveform indices `clip_start_index` and `clip_end_index`. Each
+    clip contains a nocturnal flight call that starts and ends at
+    waveform indices `call_start_index` and `call_end_index`.
+    
+    The `clip_id` of a dataset example is the ID of the clip included
+    in the waveform in the Vesper archive to which the clip belongs.
+    """
+    
     
     file_paths = dir_path.glob('*.tfrecords')
     
@@ -152,74 +184,225 @@ def _parse_example(proto):
     # Get waveform tensor.
     bytes_ = example['waveform']
     waveform = tf.io.decode_raw(bytes_, out_type=tf.int16, little_endian=True)
+    waveform = _normalize_waveform(waveform)
     
-    # Normalize waveform so samples are in [-1, 1].
-    waveform = tf.cast(waveform, tf.float32) / 32768
-    
+    clip_start_index = example['clip_start_index']
+    clip_end_index = example['clip_end_index']
     call_start_index = example['call_start_index']
     call_end_index = example['call_end_index']
     clip_id = example['clip_id']
     
-    return waveform, call_start_index, call_end_index, clip_id
+    return (
+        waveform, clip_start_index, clip_end_index,
+        call_start_index, call_end_index, clip_id)
     
     
-def create_preprocessed_waveform_dataset(waveform_dataset, mode, settings):
+def _normalize_waveform(waveform):
     
-    # TODO: Figure out what to do about `feature_name` argument.
-    preprocessor = _Preprocessor(mode, settings)
+    """
+    Normalizes a waveform so it has 32-bit floating point samples in [-1, 1].
+    """
+
+    return tf.cast(waveform, tf.float32) / 32768
+
+
+def create_training_dataset(dir_path, settings):
     
-    dataset = waveform_dataset
+    """
+    Creates a dataset suitable for training a neural network.
+    
+    Each dataset example has the form:
+    
+        (spectrogram slice, label)
+        
+    All of the spectrogram slices of the dataset have the same shape,
+    of the form (spectrum count, bin count, 1). The exact shape depends
+    on the values of several `settings` attributes. The spectrogram slices
+    are suitable for input into a Keras convolutional neural network.
+    
+    The `label` of a dataset example is zero if the spectrogram slice
+    does not contain a call starting at a certain index (it may or may
+    not contain a call starting at another index). and one if it does
+    contain a call starting at that index.
+    """
+    
+    
+    dataset = create_waveform_dataset_from_tfrecord_files(dir_path)
+    
+    processor = _ExampleProcessor(DATASET_MODE_TRAINING, settings)
     
     dataset = dataset.map(
-        preprocessor.preprocess_waveform,
+        processor.preprocess_waveform,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    dataset = dataset.map(
+        processor.compute_spectrogram,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    dataset = dataset.map(
+        _diddle_example,
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     return dataset
     
     
-def _create_spectrogram_dataset(waveform_dataset, mode, settings):
+def _diddle_example(gram, label, _):
     
-    preprocessor = _Preprocessor(mode, settings)
+    # Reshape gram for input into Keras CNN.
+    gram = tf.expand_dims(gram, 2)
+        
+    # Return only gram and label, discarding clip ID.
+    return gram, label
+
+
+def create_validation_dataset(dir_path, settings):
     
-    dataset = waveform_dataset
-    
-    # RESUME: Handle call start and end indices in `compute_spectrograms`.
-    # How does batching work on waveform dataset tuples? What is the
-    # structure of the batched waveform dataset elements? Might it
-    # make more sense to shuffle and batch after computing spectrograms?
-    # How would that affect dataset generation speed? Maybe we should
-    # profile both options. It might well be that the speed difference
-    # is small or negligible, at least on a CPU, which is a reasonable
-    # place to perform dataset computations.
+    dataset = create_waveform_dataset_from_tfrecord_files(dir_path)
     
     dataset = dataset.map(
-        preprocessor.compute_spectrogram,
+        _extract_clip_waveform,
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     return dataset
- 
- 
-class _Preprocessor:
+
+
+def _extract_clip_waveform(
+        waveform, clip_start_index, clip_end_index, call_start_index,
+        call_end_index, _):
+    
+    waveform = waveform[clip_start_index:clip_end_index]
+    call_start_index -= clip_start_index
+    call_end_index -= clip_start_index
+    
+    return waveform, call_start_index, call_end_index
+    
+    
+# def create_spectrogram_dataset_from_waveform_array(waveforms, mode, settings):
+#     dataset = Dataset.from_tensor_slices(waveforms)
+#     dataset = create_preprocessed_waveform_dataset(dataset, mode, settings)
+#     return _create_spectrogram_dataset(dataset, mode, settings)
+#     
+#     
+# def create_spectrogram_dataset_from_waveform_files(dir_path, mode, settings):
+#     dataset = create_waveform_dataset_from_waveform_files(dir_path)
+#     dataset = create_preprocessed_waveform_dataset(dataset, mode, settings)
+#     return _create_spectrogram_dataset(dataset, mode, settings)
+
+    
+def create_inference_dataset(waveform_dataset, settings):
+    
+    """
+    Creates a dataset of spectrogram slice sequences.
+    
+    Each dataset example is a sequence of consecutive slices of the
+    spectrogram of one input dataset waveform, with a hop size of one
+    spectrum. The slices all have the same shape. Different dataset
+    examples may have different numbers of slices, according to the
+    (possibly differing) lengths of the input waveforms.
+    """
+    
+    
+    processor = _ExampleProcessor(DATASET_MODE_INFERENCE, settings)
+    
+    dataset = waveform_dataset.map(
+        processor.compute_spectrogram,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    dataset = dataset.map(
+        processor.slice_spectrogram,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    return dataset
+    
+    
+# def _create_preprocessed_waveform_dataset(waveform_dataset, mode, settings):
+#     
+#     # TODO: Figure out what to do about `feature_name` argument.
+#     preprocessor = _Preprocessor(mode, settings)
+#     
+#     dataset = waveform_dataset.map(
+#         preprocessor.preprocess_waveform,
+#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
+#     
+#     return dataset
+#     
+#     
+# def create_sliced_clip_spectrogram_dataset_from_waveform_files(
+#         dir_path, settings):
+#     
+#     dataset = create_waveform_dataset_from_waveform_files(dir_path)
+#     
+#     dataset = dataset.map(_extract_clip)
+#     
+#     dataset = _create_sliced_clip_spectrogram_dataset(dataset, settings)
+#     
+#     return dataset
+#     
+#     
+# def _extract_clip(
+#         waveform, clip_start_index, clip_end_index,
+#         call_start_index, call_end_index, clip_id):
+#     
+#     waveform = waveform[clip_start_index:clip_end_index]
+#     call_start_index -= clip_start_index
+#     call_end_index -= clip_start_index
+#     
+#     waveform, call_start_index, call_end_index = \
+#         _maybe_time_reverse_waveform(
+#             waveform, call_start_index, call_end_index)
+#     
+#     return waveform, call_start_index, call_end_index, clip_id
+# 
+#     
+# def _create_spectrogram_dataset(waveform_dataset, mode, settings):
+#     
+#     preprocessor = _Preprocessor(mode, settings)
+#     
+#     dataset = waveform_dataset.map(
+#         preprocessor.compute_spectrogram,
+#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
+#     
+#     return dataset
+# 
+# 
+# def _create_sliced_clip_spectrogram_dataset(dataset, settings):
+#     
+#     preprocessor = _Preprocessor(DATASET_MODE_INFERENCE, settings)
+#     
+#     dataset = dataset.map(
+#         preprocessor.compute_spectrogram,
+#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
+#      
+#     dataset = dataset.map(
+#         preprocessor.adjust_call_bounds_for_spectrogram,
+#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
+#      
+#     dataset = dataset.map(
+#         preprocessor.slice_spectrogram,
+#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
+#     
+#     return dataset
+    
+    
+class _ExampleProcessor:
      
     """
-    Dataset example preprocessor.
+    Dataset example processor.
      
-    A dataset example preprocessor prepares dataset examples for input to
-    a neural network during training, evaluation, and inference. It
-    performs waveform slicing, waveform modifications for dataset
-    augmentation, and spectrogram computation.
+    A dataset example processor prepares dataset examples for input to
+    a neural network during training or inference. It performs waveform
+    slicing, waveform modifications for dataset augmentation, and
+    spectrogram computation.
     """
      
      
     def __init__(self, mode, settings):
          
-        # `mode` can be `DATASET_MODE_TRAINING`, `DATASET_MODE_EVALUATION`,
-        # or `DATASET_MODE_INFERENCE`.
+        # `mode` can be `DATASET_MODE_TRAINING` or `DATASET_MODE_INFERENCE`.
         #
-        # When `mode` is `DATASET_MODE_TRAINING` or
-        # `DATASET_MODE_EVALUATION`, dataset examples are preprocessed
-        # according to certain settings that control waveform slicing
-        # and modification.
+        # When `mode` is `DATASET_MODE_TRAINING`, dataset examples are
+        # preprocessed according to certain settings that control waveform
+        # slicing and modification.
         #
         # When `mode` is `DATASET_MODE_INFERENCE`, waveform slicing
         # and modification are disabled.
@@ -245,10 +428,13 @@ class _Preprocessor:
         self._waveform_slice_length = \
             s2f(s.waveform_slice_duration, sample_rate)
         if self._call_start_time_shift_data_augmentation_enabled:
-            self._call_start_window_start_index = \
-                s2f(s.call_start_window_start_time, sample_rate)
+            call_start_window_start_time = \
+                s.call_start_window_center_time - \
+                s.call_start_window_duration / 2
+            self._positive_slice_window_start_offset = \
+                -s2f(call_start_window_start_time, s.waveform_sample_rate)
             self._call_start_window_length = \
-                s2f(s.call_start_window_duration, sample_rate)
+                s2f(s.call_start_window_duration, s.waveform_sample_rate)
                 
         self._waveform_amplitude_scaling_data_augmentation_enabled = \
             data_augmentation_enabled and \
@@ -262,7 +448,8 @@ class _Preprocessor:
         
         
     def preprocess_waveform(
-            self, waveform, call_start_index, call_end_index, clip_id):
+            self, waveform, clip_start_index, clip_end_index,
+            call_start_index, call_end_index, clip_id):
         
         """
         Preprocesses one input waveform.
@@ -273,64 +460,85 @@ class _Preprocessor:
         
         if self._waveform_time_reversal_data_augmentation_enabled:
             waveform, call_start_index, call_end_index = \
-                self._maybe_time_reverse_waveform(
+                _maybe_time_reverse_waveform(
                     waveform, call_start_index, call_end_index)
-                
-        waveform, call_start_index, call_end_index = \
-            self._slice_waveform(waveform, call_start_index, call_end_index)
-            
+        
+        waveform_slice, slice_start_index, label = \
+            self._slice_waveform(waveform, call_start_index)
+        
         # Cast waveform to float32 for subsequent processing.
-        waveform = tf.cast(waveform, tf.float32)
+        waveform_slice = tf.cast(waveform_slice, tf.float32)
         
         if self._waveform_amplitude_scaling_data_augmentation_enabled:
-            waveform = self._scale_waveform_amplitude(waveform)
+            waveform_slice = self._scale_waveform_amplitude(waveform_slice)
         
-        return waveform, call_start_index, call_end_index, clip_id
+#         return (
+#             waveform_slice, len(waveform), call_start_index,
+#             slice_start_index, label, clip_id)
+        
+        return (waveform_slice, label, clip_id)
         
         
-    def _maybe_time_reverse_waveform(
-            self, waveform, call_start_index, call_end_index):
-        
-        reverse = tf.random.uniform((), maxval=2, dtype=tf.int32)
-         
-        if reverse != 0:
-        
-            # Reverse waveform.
-            waveform = tf.reverse(waveform, [0])
-            
-            # Get waveform length, casting to int64 for arithmetic below.
-            length = tf.cast(len(waveform), tf.int64)
-            
-            # Swap and complement call bounds.
-            temp = call_start_index
-            call_start_index = length - call_end_index
-            call_end_index = length - temp
-            
-        return waveform, call_start_index, call_end_index
+#     def _maybe_time_reverse_waveform(
+#             self, waveform, call_start_index, call_end_index):
+#         
+#         reverse = tf.random.uniform((), maxval=2, dtype=tf.int32)
+#          
+#         if reverse != 0:
+#         
+#             # Reverse waveform.
+#             waveform = tf.reverse(waveform, [0])
+#             
+#             # Get waveform length, casting to int64 for arithmetic below.
+#             length = tf.cast(len(waveform), tf.int64)
+#             
+#             # Swap and complement call bounds.
+#             temp = call_start_index
+#             call_start_index = length - call_end_index
+#             call_end_index = length - temp
+#             
+#         return waveform, call_start_index, call_end_index
     
     
-    def _slice_waveform(self, waveform, call_start_index, call_end_index):
+    def _slice_waveform(self, waveform, call_start_index):
         
-        # Get random shift to distribute call start time uniformly
-        # within call start time window.
-        if self._call_start_time_shift_data_augmentation_enabled:
-            shift = tf.random.uniform(
-                (), maxval=self._call_start_window_length, dtype=tf.int64)
+        # Get start and end indices of window in which slice for positive
+        # example should start.
+        positive_slice_window_start_index = \
+            call_start_index + self._positive_slice_window_start_offset
+        positive_slice_window_end_index = \
+            positive_slice_window_start_index + self._call_start_window_length
+            
+        # Decide whether example is positive or negative.
+        positive = tf.random.uniform(()) <= self._settings.positive_probability
+        
+        if positive:
+            
+            # Slice so call start is within call start window.
+            minval = positive_slice_window_start_index
+            maxval = positive_slice_window_end_index
+            slice_start_index = \
+                tf.random.uniform((), minval, maxval, dtype=tf.int64)
+            
         else:
-            shift = 0
+            # negative example
             
-        # Slice waveform.
-        intro_length = self._call_start_window_start_index + shift
-        slice_start_index = call_start_index - intro_length
+            # Slice so call start is outside of call start window.
+            minval = 0
+            maxval = tf.cast(
+                len(waveform) - self._waveform_slice_length -
+                self._call_start_window_length, tf.int64)
+            slice_start_index = \
+                tf.random.uniform((), minval, maxval, dtype=tf.int64)
+            if slice_start_index >= positive_slice_window_start_index:
+                slice_start_index += self._call_start_window_length
+                
         slice_end_index = slice_start_index + self._waveform_slice_length
-        waveform = waveform[slice_start_index:slice_end_index]
+        waveform_slice = waveform[slice_start_index:slice_end_index]
         
-        # Get call start and end indices after slicing.
-        call_length = call_end_index - call_start_index
-        call_start_index = intro_length
-        call_end_index = call_start_index + call_length
+        label = 1 if positive else 0
         
-        return waveform, call_start_index, call_end_index
+        return waveform_slice, slice_start_index, label
     
     
     def _scale_waveform_amplitude(self, waveform):
@@ -367,10 +575,9 @@ class _Preprocessor:
             # Scale waveform by chosen factor.
             return factor * waveform
             
-    
-    def compute_spectrogram(
-            self, waveform, call_start_index, call_end_index, clip_id):
-        
+            
+    def compute_spectrogram(self, waveform, *args):
+
         """Computes the spectrogram of a waveform."""
         
         s = self._settings
@@ -410,115 +617,91 @@ class _Preprocessor:
         gram = tf.math.log(gram + s.spectrogram_log_epsilon)
         decibel_scale_factor = 10 / math.log(10)
         gram = 100 + decibel_scale_factor * gram
+                
+        return (gram,) + tuple(args)
+    
+    
+    def adjust_call_bounds_for_spectrogram(
+            self, gram, call_start_index, call_end_index, clip_id):
         
         call_start_index /= self._hop_size
         call_end_index /= self._hop_size
         
         return gram, call_start_index, call_end_index, clip_id
-
+    
+    
+    def slice_spectrogram(self, gram, *args):
+    
+        s = self._settings
+        slice_duration = s.waveform_slice_duration
+        window_size = s.spectrogram_window_size
+        hop_size = window_size * s.spectrogram_hop_size / 100
+        slice_length = \
+            1 + int(round((slice_duration - window_size) / hop_size))
         
-#         # Compute STFTs.
-#         stfts = tf.signal.stft(
-#             waveform, self._window_size, self._hop_size,
-#             fft_length=self._dft_size, window_fn=self._window_fn)
-#         
-#         # Slice STFTs along frequency axis.
-#         stfts = stfts[..., self._freq_start_index:self._freq_end_index]
-#         
-#         # Get STFT magnitudes squared, i.e. squared spectrograms.
-#         grams = tf.math.real(stfts * tf.math.conj(stfts))
-#         # grams = tf.abs(stft) ** 2
-#         
-#         # Take natural log of squared spectrograms. Adding an epsilon
-#         # avoids log-of-zero errors.
-#         grams = tf.math.log(grams + s.spectrogram_log_epsilon)
-#         
-#         # Clip spectrograms if indicated.
-#         if s.spectrogram_clipping_enabled:
-#             grams = tf.clip_by_value(
-#                 grams, s.spectrogram_clipping_min, s.spectrogram_clipping_max)
-#             
-#         # Normalize spectrograms if indicated.
-#         if s.spectrogram_normalization_enabled:
-#             grams = \
-#                 s.spectrogram_normalization_scale_factor * grams + \
-#                 s.spectrogram_normalization_offset
-#         
-#         # Reshape spectrograms for input into Keras neural network.
-#         grams = self._reshape_grams(grams)
-#         
-#         return grams
-               
-    
-#     def _reshape_grams(self, grams):
-#         
-#         """
-#         Reshapes a batch of spectrograms for input to a Keras neural network.
-#          
-#         The batch must be reshaped differently depending on whether the
-#         network's input layer is convolutional or dense.
-#         """
-#         
-#         s = self._settings
-#         
-#         if len(s.convolutional_layer_sizes) != 0:
-#             # model is CNN
-#             
-#             # Add channel dimension for Keras `Conv2D` layer compatibility.
-#             return tf.expand_dims(grams, 3)
-#             
-#         else:
-#             # model is DNN
-#             
-#             # Flatten spectrograms for Keras `Dense` layer compatibility.
-#             size = get_sliced_spectrogram_size(s)
-#             return tf.reshape(grams, (-1, size))
+        forward_slices = _slice_spectrogram(gram, slice_length, 1)
+        
+        reversed_gram = tf.reverse(gram, axis=(0,))
+        backward_slices = _slice_spectrogram(reversed_gram, slice_length, 1)
+        
+        return (forward_slices, backward_slices) + tuple(args)
 
-    
+
 def _get_low_level_spectrogram_settings(settings):
-    
+     
     s = settings
     fs = s.waveform_sample_rate
     s2f = signal_utils.seconds_to_frames
-    
+     
     # spectrogram
     window_size = s2f(s.spectrogram_window_size, fs)
     fraction = s.spectrogram_hop_size / 100
     hop_size = s2f(s.spectrogram_window_size * fraction, fs)
     dft_size = tfa_utils.get_dft_size(window_size)
-    
+     
     # frequency slicing
     f2i = tfa_utils.get_dft_bin_num
     freq_start_index = f2i(s.spectrogram_start_freq, fs, dft_size)
     freq_end_index = f2i(s.spectrogram_end_freq, fs, dft_size) + 1
-    
+     
     return (window_size, hop_size, dft_size, freq_start_index, freq_end_index)
+
+
+def _maybe_time_reverse_waveform(waveform, call_start_index, call_end_index):
+     
+    reverse = tf.random.uniform((), maxval=2, dtype=tf.int32)
+      
+    if reverse != 0:
+     
+        # Reverse waveform.
+        waveform = tf.reverse(waveform, [0])
+         
+        # Get waveform length, casting to int64 for arithmetic below.
+        length = tf.cast(len(waveform), tf.int64)
+         
+        # Swap and complement call bounds.
+        temp = call_start_index
+        call_start_index = length - call_end_index
+        call_end_index = length - temp
+         
+    return waveform, call_start_index, call_end_index
  
  
-# def get_sliced_spectrogram_size(settings):
-#     num_spectra, num_bins = get_sliced_spectrogram_shape(settings)
-#     return num_spectra * num_bins
-# 
-# 
-# def get_sliced_spectrogram_shape(settings):
-#     
-#     (window_size, hop_size, _, freq_start_index, freq_end_index) = \
-#         _get_low_level_spectrogram_settings(
-#             DATASET_MODE_TRAINING, settings)
-#         
-#     num_samples = time_end_index - time_start_index
-#     num_spectra = tfa_utils.get_num_analysis_records(
-#         num_samples, window_size, hop_size)
-#     
-#     num_bins = freq_end_index - freq_start_index
-#     
-#     return (num_spectra, num_bins)
-    
-    
 def _f32(x):
     return tf.cast(x, tf.float32)
 
 
+def _slice_spectrogram(gram, slice_length, slice_step):
+    
+    # Get tensor of consecutive spectrogram slices.
+    slices = tf.signal.frame(gram, slice_length, slice_step, axis=0)
+    
+    # Add trailing dimension for input into Keras CNN.
+    slices = tf.expand_dims(slices, 3)
+    
+    return slices
+    
+    
 def _main():
     _test_stft()
 
@@ -591,7 +774,6 @@ def _test_stft_new():
                 gram = tf.abs(stft) ** 2
                 
                 bin_value_sum += gram[0, 0, bin_num]
-                
                 
 #                 normalizing_scale_factor = 1 / (window_size / 2) ** 2
 #                 gram *= normalizing_scale_factor
