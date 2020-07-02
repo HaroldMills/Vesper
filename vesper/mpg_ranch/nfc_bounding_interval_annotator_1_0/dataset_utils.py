@@ -3,7 +3,6 @@ Constants and functions pertaining to NFC bounding interval annotator datasets.
 """
 
 
-# import functools
 import math
 
 from tensorflow.data import Dataset, TFRecordDataset
@@ -18,9 +17,10 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 '''
 Source datasets are tfrecord files.
 
-Each of these is repeated, and elements from the different sources are
-interleaved and parsed. Each element includes a waveform, a classification,
-call start and end indices (when the element is a call), and a clip ID.
+Each source dataset is repeated, and elements from the different sources
+are interleaved and parsed. Each element includes a waveform, clip start
+and end indices, call start and end indices (when the element is a call),
+and a clip ID.
 
 Subsequent optional processing:
 
@@ -94,19 +94,6 @@ _WAVEFORM_EXAMPLE_FEATURES = {
     'call_end_index': FixedLenFeature((), tf.int64),
     'clip_id': FixedLenFeature((), tf.int64),
 }
-
-
-'''
-Types of dataset we use:
-
-* training, comprising individual spectrogram slices with augmentation
-* validation, like training
-* inference, comprising spectrogram slice sequences without augmentation
-
-Functions:
-* create_training_dataset(dir_path, settings)
-* create_inference_dataset(waveforms, settings)
-'''
 
 
 def create_waveform_dataset_from_tensors(waveforms):
@@ -277,18 +264,6 @@ def _extract_clip_waveform(
     return waveform, call_start_index, call_end_index
     
     
-# def create_spectrogram_dataset_from_waveform_array(waveforms, mode, settings):
-#     dataset = Dataset.from_tensor_slices(waveforms)
-#     dataset = create_preprocessed_waveform_dataset(dataset, mode, settings)
-#     return _create_spectrogram_dataset(dataset, mode, settings)
-#     
-#     
-# def create_spectrogram_dataset_from_waveform_files(dir_path, mode, settings):
-#     dataset = create_waveform_dataset_from_waveform_files(dir_path)
-#     dataset = create_preprocessed_waveform_dataset(dataset, mode, settings)
-#     return _create_spectrogram_dataset(dataset, mode, settings)
-
-    
 def create_inference_dataset(waveform_dataset, settings):
     
     """
@@ -313,77 +288,8 @@ def create_inference_dataset(waveform_dataset, settings):
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     return dataset
-    
-    
-# def _create_preprocessed_waveform_dataset(waveform_dataset, mode, settings):
-#     
-#     # TODO: Figure out what to do about `feature_name` argument.
-#     preprocessor = _Preprocessor(mode, settings)
-#     
-#     dataset = waveform_dataset.map(
-#         preprocessor.preprocess_waveform,
-#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
-#     
-#     return dataset
-#     
-#     
-# def create_sliced_clip_spectrogram_dataset_from_waveform_files(
-#         dir_path, settings):
-#     
-#     dataset = create_waveform_dataset_from_waveform_files(dir_path)
-#     
-#     dataset = dataset.map(_extract_clip)
-#     
-#     dataset = _create_sliced_clip_spectrogram_dataset(dataset, settings)
-#     
-#     return dataset
-#     
-#     
-# def _extract_clip(
-#         waveform, clip_start_index, clip_end_index,
-#         call_start_index, call_end_index, clip_id):
-#     
-#     waveform = waveform[clip_start_index:clip_end_index]
-#     call_start_index -= clip_start_index
-#     call_end_index -= clip_start_index
-#     
-#     waveform, call_start_index, call_end_index = \
-#         _maybe_time_reverse_waveform(
-#             waveform, call_start_index, call_end_index)
-#     
-#     return waveform, call_start_index, call_end_index, clip_id
-# 
-#     
-# def _create_spectrogram_dataset(waveform_dataset, mode, settings):
-#     
-#     preprocessor = _Preprocessor(mode, settings)
-#     
-#     dataset = waveform_dataset.map(
-#         preprocessor.compute_spectrogram,
-#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
-#     
-#     return dataset
-# 
-# 
-# def _create_sliced_clip_spectrogram_dataset(dataset, settings):
-#     
-#     preprocessor = _Preprocessor(DATASET_MODE_INFERENCE, settings)
-#     
-#     dataset = dataset.map(
-#         preprocessor.compute_spectrogram,
-#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
-#      
-#     dataset = dataset.map(
-#         preprocessor.adjust_call_bounds_for_spectrogram,
-#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
-#      
-#     dataset = dataset.map(
-#         preprocessor.slice_spectrogram,
-#         num_parallel_calls=tf.data.experimental.AUTOTUNE)
-#     
-#     return dataset
-    
-    
+
+
 class _ExampleProcessor:
      
     """
@@ -472,34 +378,9 @@ class _ExampleProcessor:
         if self._waveform_amplitude_scaling_data_augmentation_enabled:
             waveform_slice = self._scale_waveform_amplitude(waveform_slice)
         
-#         return (
-#             waveform_slice, len(waveform), call_start_index,
-#             slice_start_index, label, clip_id)
-        
         return (waveform_slice, label, clip_id)
         
         
-#     def _maybe_time_reverse_waveform(
-#             self, waveform, call_start_index, call_end_index):
-#         
-#         reverse = tf.random.uniform((), maxval=2, dtype=tf.int32)
-#          
-#         if reverse != 0:
-#         
-#             # Reverse waveform.
-#             waveform = tf.reverse(waveform, [0])
-#             
-#             # Get waveform length, casting to int64 for arithmetic below.
-#             length = tf.cast(len(waveform), tf.int64)
-#             
-#             # Swap and complement call bounds.
-#             temp = call_start_index
-#             call_start_index = length - call_end_index
-#             call_end_index = length - temp
-#             
-#         return waveform, call_start_index, call_end_index
-    
-    
     def _slice_waveform(self, waveform, call_start_index):
         
         # Get start and end indices of window in which slice for positive
@@ -731,18 +612,15 @@ def _test_stft():
         gram = 100 + decibel_scale_factor * tf.math.log(gram + epsilon)
         
         print(window_size, gram)
-        
-        
-def _create_waveform_old(window_size):
-    
-    fs = 24000
-    f = 3000
-    
-    phase_factor = 2 * math.pi * f / fs
+
+
+def _create_sinusoid(window_size, sample_rate):
+    freq = 3000
+    phase_factor = 2 * math.pi * freq / sample_rate
     phases = phase_factor * tf.range(window_size, dtype=tf.float32)
     return tf.math.cos(phases)
-    
-    
+        
+        
 def _test_stft_new():
     
     epsilon = 1e-10
@@ -789,13 +667,6 @@ def _test_stft_new():
         
 def _create_white_noise(window_size):
     return tf.random.uniform((window_size,), minval=-1, maxval=1)
-
-
-def _create_sinusoid(window_size, sample_rate):
-    freq = 3000
-    phase_factor = 2 * math.pi * freq / sample_rate
-    phases = phase_factor * tf.range(window_size, dtype=tf.float32)
-    return tf.math.cos(phases)
     
     
 if __name__ == '__main__':
