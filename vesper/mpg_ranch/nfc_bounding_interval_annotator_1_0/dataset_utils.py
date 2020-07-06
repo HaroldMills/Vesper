@@ -216,6 +216,10 @@ def create_training_dataset(dir_path, settings):
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     dataset = dataset.map(
+        processor.slice_spectrogram_along_frequency_axis_with_shift,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    dataset = dataset.map(
         _diddle_example,
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
@@ -273,7 +277,11 @@ def create_inference_dataset(waveform_dataset, settings):
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     dataset = dataset.map(
-        processor.slice_spectrogram,
+        processor.slice_spectrogram_along_frequency_axis,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    dataset = dataset.map(
+        processor.slice_spectrogram_along_time_axis,
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     return dataset
@@ -305,7 +313,7 @@ class _ExampleProcessor:
             
         # Get the call start index in a positive example waveform.
         self._positive_example_call_start_index = \
-            self._waveform_slice_length // 2
+            s2f(s.positive_example_call_start_offset, sample_rate)
             
         # Get low-level spectrogram settings.
         (self._window_size, self._hop_size, self._dft_size,
@@ -341,9 +349,6 @@ class _ExampleProcessor:
         waveform_slice, label = \
             self._slice_waveform(waveform, call_start_index)
         
-        # Cast waveform to float32 for subsequent processing.
-        waveform_slice = tf.cast(waveform_slice, tf.float32)
-        
         if s.waveform_amplitude_scaling_data_augmentation_enabled:
             waveform_slice = self._scale_waveform_amplitude(waveform_slice)
         
@@ -353,7 +358,9 @@ class _ExampleProcessor:
     def _slice_waveform(self, waveform, call_start_index):
         
         # Decide whether example is positive or negative.
-        positive = tf.random.uniform(()) <= self._settings.positive_probability
+        positive = \
+            tf.random.uniform(()) <= \
+            self._settings.positive_example_probability
         
         if positive:
             
@@ -447,9 +454,6 @@ class _ExampleProcessor:
             self._window_fn)
         stft = stfts[0]
         
-        # Slice STFT along frequency axis.
-        stft = stft[..., self._freq_start_index:self._freq_end_index]
-        
         # Get spectrogram, i.e. squared magnitude of STFT.
         gram = tf.math.real(stft * tf.math.conj(stft))
         # gram = tf.abs(stft) ** 2
@@ -476,16 +480,26 @@ class _ExampleProcessor:
         return (gram,) + tuple(args)
     
     
-    def adjust_call_bounds_for_spectrogram(
-            self, gram, call_start_index, call_end_index, clip_id):
+    def slice_spectrogram_along_frequency_axis(self, gram, *args):
+        gram = gram[..., self._freq_start_index:self._freq_end_index]
+        return (gram,) + tuple(args)
         
-        call_start_index /= self._hop_size
-        call_end_index /= self._hop_size
+
+    def slice_spectrogram_along_frequency_axis_with_shift(
+            self, gram, *args):
         
-        return gram, call_start_index, call_end_index, clip_id
-    
-    
-    def slice_spectrogram(self, gram, *args):
+        # Get frequency shift in bins.
+        max_shift = self._settings.max_spectrogram_frequency_shift
+        shift = tf.random.uniform(
+            (), -max_shift, max_shift + 1, dtype=tf.int64)
+        
+        gram = gram[
+            ..., self._freq_start_index + shift:self._freq_end_index + shift]
+        
+        return (gram,) + tuple(args)
+        
+
+    def slice_spectrogram_along_time_axis(self, gram, *args):
     
         s = self._settings
         slice_duration = s.waveform_slice_duration
@@ -518,7 +532,7 @@ def _get_low_level_spectrogram_settings(settings):
     f2i = tfa_utils.get_dft_bin_num
     freq_start_index = f2i(s.spectrogram_start_freq, fs, dft_size)
     freq_end_index = f2i(s.spectrogram_end_freq, fs, dft_size) + 1
-     
+    
     return (window_size, hop_size, dft_size, freq_start_index, freq_end_index)
 
 

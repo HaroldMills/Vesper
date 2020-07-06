@@ -4,7 +4,7 @@ import math
 import time
 
 from tensorflow.keras.layers import (
-    BatchNormalization, Conv2D, Dense, Flatten)
+    BatchNormalization, Conv2D, Dense, Flatten, MaxPooling2D)
 from tensorflow.keras.models import Sequential
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +23,7 @@ import vesper.util.yaml_utils as yaml_utils
 CLIP_TYPE = 'Tseep'
 
 # TODO: Compute this from settings rather than hard-coding it.
-EXAMPLE_SHAPE = (21, 33, 1)
+EXAMPLE_SHAPE = (31, 36, 1)
 
 TSEEP_SETTINGS = Settings(
     
@@ -36,9 +36,10 @@ TSEEP_SETTINGS = Settings(
     # probability .5.
     waveform_time_reversal_data_augmentation_enabled=True,
     
-    positive_probability=.25,
+    positive_example_probability=.5,
+    positive_example_call_start_offset=.0275,
     
-    waveform_slice_duration=.055,
+    waveform_slice_duration=.080,
     
     # `True` if and only if the waveform amplitude scaling data
     # augmentation is enabled. This augmentation scales each waveform
@@ -53,7 +54,11 @@ TSEEP_SETTINGS = Settings(
     
     # spectrogram frequency axis slicing settings
     spectrogram_start_freq=4000,
-    spectrogram_end_freq=10000,
+    spectrogram_end_freq=10500,
+    
+    # The maximum spectrogram frequency shift for data augmentation,
+    # in bins. Set this to zero to disable this augmentation.
+    max_spectrogram_frequency_shift=2,
     
     # offset for converting inference value to spectrogram index
     call_bound_index_offset=10
@@ -97,6 +102,8 @@ def main():
     
     train_and_validate_annotator()
     
+    # validate_annotator('2020-07-06_09.33.54')
+    
     # show_model_summary('start_2020-06-10_12.13.39')
     
     # test_bincount()
@@ -127,16 +134,16 @@ def train_annotator(model_name):
     
     model = Sequential([
         
-        Conv2D(16, (3, 3), activation='relu', input_shape=EXAMPLE_SHAPE),
+        Conv2D(32, (3, 3), activation='relu', input_shape=EXAMPLE_SHAPE),
         BatchNormalization(),
-        # MaxPooling2D((1, 2)),
+        MaxPooling2D((1, 2)),
         
         # Conv2D(32, (1, 1), activation='relu'),
         # BatchNormalization(),
  
-        Conv2D(16, (3, 3), activation='relu'),
+        Conv2D(32, (3, 3), activation='relu'),
         BatchNormalization(),
-        # MaxPooling2D((1, 2)),
+        MaxPooling2D((1, 2)),
         
         # Conv2D(32, (1, 1), activation='relu'),
         # BatchNormalization(),
@@ -146,7 +153,7 @@ def train_annotator(model_name):
         # Dense(32, activation='relu'),
         # BatchNormalization(),
         
-        Dense(16, activation='relu'),
+        Dense(32, activation='relu'),
         BatchNormalization(),
         
         Dense(1, activation='sigmoid')
@@ -206,7 +213,7 @@ def validate_annotator(model_name):
     
     dataset = dataset.take(500)
     
-    inferrer = Inferrer(CLIP_TYPE)
+    inferrer = Inferrer(CLIP_TYPE, model_name)
     
     bounds = inferrer.get_call_bounds(dataset)
     

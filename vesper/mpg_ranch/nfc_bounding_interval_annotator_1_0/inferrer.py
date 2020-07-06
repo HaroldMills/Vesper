@@ -12,17 +12,26 @@ import vesper.util.yaml_utils as yaml_utils
 
 
 _MODEL_NAMES = {
-    'Tseep': 'start_2020-06-23_15.10.16',
+    'Tseep': '2020-07-06_09.33.54',
+    # 'Tseep': '2020-07-03_15.00.57',
+    # 'Tseep': '2020-07-02_18.09.08',
+    # 'Tseep': '2020-07-02_18.01.56',
+    # 'Tseep': '2020-07-02_17.47.55',
+    # 'Tseep': '2020-07-02_17.38.18',
+    # 'Tseep': '2020-07-02_15.05.08',
+    # 'Tseep': '2020-07-02_14.58.08',
+    # 'Tseep': '2020-07-02_14.46.36',
+    # 'Tseep': 'start_2020-06-23_15.10.16',
 }
 
 
 class Inferrer:
     
     
-    def __init__(self, clip_type):
+    def __init__(self, clip_type, model_name=None):
         self.clip_type = clip_type
-        self._model = self._load_model()
-        self._settings = self._load_settings()
+        self._model = _load_model(clip_type, model_name)
+        self._settings = _load_settings(clip_type, model_name)
     
     
     @property
@@ -30,25 +39,6 @@ class Inferrer:
         return self._settings.waveform_sample_rate
     
     
-    def _load_model(self):
-        model_name = _MODEL_NAMES[self.clip_type]
-        dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(
-            self.clip_type, model_name)
-        model = tf.keras.models.load_model(dir_path)
-        return model
-        
-        
-    def _load_settings(self):
-        model_name = _MODEL_NAMES[self.clip_type]
-        file_path = annotator_utils.get_model_settings_file_path(
-            self.clip_type, model_name)
-        logging.info(
-            'Loading annotator settings from "{}"...'.format(file_path))
-        text = file_path.read_text()
-        d = yaml_utils.load(text)
-        return Settings.create_from_dict(d)
-        
-        
     def get_call_bounds(self, waveform_dataset):
         
         dataset = dataset_utils.create_inference_dataset(
@@ -125,3 +115,27 @@ class Inferrer:
             end_index = gram_length - 1 - end_index
             
             return self._gram_index_to_waveform_index(end_index)
+
+
+def _load_model(clip_type, model_name):
+    if model_name is None:
+        model_name = _MODEL_NAMES[clip_type]
+    dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(
+        clip_type, model_name)
+    logging.info(
+        'Loading annotator model from "{}"...'.format(dir_path))
+    model = tf.keras.models.load_model(dir_path)
+    return model
+    
+    
+def _load_settings(clip_type, model_name):
+    if model_name is None:
+        model_name = _MODEL_NAMES[clip_type]
+    file_path = annotator_utils.get_model_settings_file_path(
+        clip_type, model_name)
+    logging.info(
+        'Loading annotator settings from "{}"...'.format(file_path))
+    text = file_path.read_text()
+    settings_dict = yaml_utils.load(text)
+    settings = Settings.create_from_dict(settings_dict)
+    return settings
