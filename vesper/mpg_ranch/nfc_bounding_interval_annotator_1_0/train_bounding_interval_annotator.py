@@ -19,9 +19,6 @@ import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.dataset_utils \
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Compute this from settings rather than hard-coding it.
-EXAMPLE_SHAPE = (31, 36, 1)
-
 TSEEP_SETTINGS = Settings(
     
     clip_type='Tseep',
@@ -97,9 +94,11 @@ def train_annotator(model_name, settings):
     training_dataset = get_dataset('Training', s).batch(128)
     validation_dataset = get_dataset('Validation', s).batch(1)
     
+    input_shape = dataset_utils.get_spectrogram_slice_shape(settings)
+    
     model = Sequential([
         
-        Conv2D(32, (3, 3), activation='relu', input_shape=EXAMPLE_SHAPE),
+        Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
         BatchNormalization(),
         MaxPooling2D((1, 2)),
         

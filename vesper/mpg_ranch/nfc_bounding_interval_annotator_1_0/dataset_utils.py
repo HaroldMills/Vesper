@@ -287,6 +287,26 @@ def create_inference_dataset(waveform_dataset, settings):
     return dataset
 
 
+def get_spectrogram_slice_shape(settings):
+    
+    spectrum_count = _get_spectrogram_slice_length(settings)
+    
+    _, _, _, freq_start_index, freq_end_index = \
+        _get_low_level_spectrogram_settings(settings)
+    
+    bin_count = freq_end_index - freq_start_index
+    
+    return (spectrum_count, bin_count, 1)
+    
+    
+def _get_spectrogram_slice_length(settings):
+    s = settings
+    slice_duration = s.waveform_slice_duration
+    window_size = s.spectrogram_window_size
+    hop_size = window_size * s.spectrogram_hop_size / 100
+    return 1 + int(round((slice_duration - window_size) / hop_size))
+    
+    
 class _ExampleProcessor:
      
     """
@@ -501,17 +521,12 @@ class _ExampleProcessor:
 
     def slice_spectrogram_along_time_axis(self, gram, *args):
     
-        s = self._settings
-        slice_duration = s.waveform_slice_duration
-        window_size = s.spectrogram_window_size
-        hop_size = window_size * s.spectrogram_hop_size / 100
-        slice_length = \
-            1 + int(round((slice_duration - window_size) / hop_size))
+        slice_length = _get_spectrogram_slice_length(self._settings)
         
-        forward_slices = _slice_spectrogram(gram, slice_length, 1)
+        forward_slices = _slice_spectrogram(gram, slice_length)
         
         reversed_gram = tf.reverse(gram, axis=(0,))
-        backward_slices = _slice_spectrogram(reversed_gram, slice_length, 1)
+        backward_slices = _slice_spectrogram(reversed_gram, slice_length)
         
         return (forward_slices, backward_slices) + tuple(args)
 
@@ -560,10 +575,10 @@ def _f32(x):
     return tf.cast(x, tf.float32)
 
 
-def _slice_spectrogram(gram, slice_length, slice_step):
+def _slice_spectrogram(gram, slice_length):
     
     # Get tensor of consecutive spectrogram slices.
-    slices = tf.signal.frame(gram, slice_length, slice_step, axis=0)
+    slices = tf.signal.frame(gram, slice_length, frame_step=1, axis=0)
     
     # Add trailing dimension for input into Keras CNN.
     slices = tf.expand_dims(slices, 3)
