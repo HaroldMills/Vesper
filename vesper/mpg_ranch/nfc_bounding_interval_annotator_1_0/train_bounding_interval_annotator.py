@@ -29,7 +29,7 @@ TSEEP_SETTINGS = Settings(
     # `True` if and only if the waveform time reversal data augmentation
     # is enabled. This augmentation reverses each waveform with
     # probability .5.
-    waveform_time_reversal_data_augmentation_enabled=True,
+    waveform_time_reversal_data_augmentation_enabled=False,
     
     positive_example_probability=.5,
     positive_example_call_start_offset=.0275,
