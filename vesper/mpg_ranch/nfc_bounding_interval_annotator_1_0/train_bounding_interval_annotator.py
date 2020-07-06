@@ -1,5 +1,4 @@
 from collections import defaultdict
-import datetime
 import math
 import time
 
@@ -20,14 +19,12 @@ import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.dataset_utils \
 import vesper.util.yaml_utils as yaml_utils
 
 
-CLIP_TYPE = 'Tseep'
-
 # TODO: Compute this from settings rather than hard-coding it.
 EXAMPLE_SHAPE = (31, 36, 1)
 
 TSEEP_SETTINGS = Settings(
     
-    dataset_name='Tseep',
+    clip_type='Tseep',
     
     waveform_sample_rate=24000,
     
@@ -66,43 +63,13 @@ TSEEP_SETTINGS = Settings(
 )
 
 
-'''
-start_2020-06-23_15.10.16
-window duration 52.5 ms
-offset 9 spectra
-    -172 1
-    -80 1
-    -16 1
-    -13 1
-    -5 2
-    -4 2
-    -3 5
-    -2 10
-    -1 85
-    0 193
-    1 102
-    2 33
-    3 29
-    4 13
-    5 7
-    6 3
-    7 3
-    8 2
-    10 1
-    11 1
-    14 1
-    32 1
-    42 1
-    44 1
-    499 0.2625250501002004 9.285993635172202
-'''
-
-
 def main():
     
-    train_and_validate_annotator()
+    settings = TSEEP_SETTINGS
     
-    # validate_annotator('2020-07-06_09.33.54')
+    train_and_validate_annotator(settings)
+    
+    # validate_annotator('2020-07-06_09.33.54', settings)
     
     # show_model_summary('start_2020-06-10_12.13.39')
     
@@ -110,27 +77,25 @@ def main():
     
     # test_create_waveform_dataset_from_tensors()
     
-    # test_create_waveform_dataset_from_tfrecord_files('Training')
+    # test_create_waveform_dataset_from_tfrecord_files('Training', settings)
     
-    # test_create_training_dataset('Training')
+    # test_create_training_dataset('Training', settings)
     
-    # test_create_inference_dataset()
+    # test_create_inference_dataset(settings)
 
 
-def train_and_validate_annotator():
-    model_name = create_model_name()
-    train_annotator(model_name)
-    validate_annotator(model_name)
+def train_and_validate_annotator(settings):
+    model_name = annotator_utils.create_model_name(settings)
+    train_annotator(model_name, settings)
+    validate_annotator(model_name, settings)
 
 
-def create_model_name():
-    return datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
-
-
-def train_annotator(model_name):
+def train_annotator(model_name, settings):
     
-    training_dataset = get_dataset('Training').batch(128)
-    validation_dataset = get_dataset('Validation').batch(1)
+    s = settings
+    
+    training_dataset = get_dataset('Training', s).batch(128)
+    validation_dataset = get_dataset('Validation', s).batch(1)
     
     model = Sequential([
         
@@ -167,7 +132,7 @@ def train_annotator(model_name):
     
     model.summary()
     
-    log_dir_path = annotator_utils.get_log_dir_path(CLIP_TYPE, model_name)
+    log_dir_path = annotator_utils.get_log_dir_path(model_name)
     callback = tf.keras.callbacks.TensorBoard(
         log_dir=log_dir_path, histogram_freq=1)
      
@@ -177,43 +142,39 @@ def train_annotator(model_name):
         callbacks=[callback])
      
     model_dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(
-        CLIP_TYPE, model_name)
+        model_name)
     model.save(model_dir_path)
     
-    save_model_settings(TSEEP_SETTINGS, model_name)
+    save_model_settings(settings, model_name)
 
 
-def get_dataset(name):
-    dir_path = annotator_utils.get_dataset_dir_path(CLIP_TYPE, name)
-    return dataset_utils.create_training_dataset(dir_path, TSEEP_SETTINGS)
+def get_dataset(name, settings):
+    dir_path = annotator_utils.get_dataset_dir_path(settings.clip_type, name)
+    return dataset_utils.create_training_dataset(dir_path, settings)
 
 
 def save_model_settings(settings, model_name):
-    
-    file_path = annotator_utils.get_model_settings_file_path(
-        CLIP_TYPE, model_name)
-    
+    file_path = annotator_utils.get_model_settings_file_path(model_name)
     text = yaml_utils.dump(settings.__dict__, default_flow_style=False)
-    
     file_path.write_text(text)
 
 
-def validate_annotator(model_name):
+def validate_annotator(model_name, settings):
     
-    settings = TSEEP_SETTINGS
+    s = settings
     
     model_dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(
-        CLIP_TYPE, model_name)
+        model_name)
     model = tf.keras.models.load_model(model_dir_path)
     
     model.summary()
     
-    dir_path = annotator_utils.get_dataset_dir_path(CLIP_TYPE, 'Validation')
+    dir_path = annotator_utils.get_dataset_dir_path(s.clip_type, 'Validation')
     dataset = dataset_utils.create_validation_dataset(dir_path, settings)
     
     dataset = dataset.take(500)
     
-    inferrer = Inferrer(CLIP_TYPE, model_name)
+    inferrer = Inferrer(model_name)
     
     bounds = inferrer.get_call_bounds(dataset)
     
@@ -302,7 +263,7 @@ def _plot_diff_counts_aux(axes, title, counts):
     
 def show_model_summary(model_name):
     model_dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(
-        CLIP_TYPE, model_name)
+        model_name)
     model = tf.keras.models.load_model(model_dir_path)
     model.summary()
     
@@ -324,6 +285,7 @@ def test_bincount():
     # Transpose tensor so first dimension is frequency.
     x = tf.transpose(x)
     
+    print('rounded and transposed spectrogram:')
     print(x)
     
     def fn(x):
@@ -332,6 +294,8 @@ def test_bincount():
     
     counts = tf.map_fn(fn, x)
     
+    print()
+    print('cumulative sums of rounded bin values:')
     print(counts)
     
     
@@ -347,19 +311,18 @@ def test_create_waveform_dataset_from_tensors():
         print(waveform)
         
         
-def test_create_waveform_dataset_from_tfrecord_files(name):
+def test_create_waveform_dataset_from_tfrecord_files(dataset_name, settings):
     
-    dir_path = annotator_utils.get_dataset_dir_path(CLIP_TYPE, name)
+    dir_path = annotator_utils.get_dataset_dir_path(
+        settings.clip_type, dataset_name)
     
     dataset = dataset_utils.create_waveform_dataset_from_tfrecord_files(
         dir_path)
     
-    show_waveform_dataset_stats(dataset)
+    show_waveform_dataset_stats(dataset, settings.waveform_sample_rate)
     
     
-def show_waveform_dataset_stats(dataset):
-    
-    sample_rate = TSEEP_SETTINGS.waveform_sample_rate
+def show_waveform_dataset_stats(dataset, sample_rate):
     
     example_count = 10000
     dataset = dataset.take(example_count)
@@ -411,11 +374,12 @@ def show_waveform_dataset_stats(dataset):
     print(f'call duration range ({min_duration}, {max_duration})')
     
     
-def test_create_training_dataset(name):
+def test_create_training_dataset(dataset_name, settings):
     
-    dir_path = annotator_utils.get_dataset_dir_path(CLIP_TYPE, name)
+    dir_path = annotator_utils.get_dataset_dir_path(
+        settings.clip_type, dataset_name)
     
-    dataset = dataset_utils.create_training_dataset(dir_path, TSEEP_SETTINGS)
+    dataset = dataset_utils.create_training_dataset(dir_path, settings)
     
     show_training_dataset_stats(dataset)
     
@@ -444,13 +408,17 @@ def show_training_dataset_stats(dataset):
     print(f'{positive_count} examples, or {percent} percent, were positives.')
     
     
-def test_create_inference_dataset():
+def test_create_inference_dataset(settings):
     
     waveform_durations = [.5, .6]
-    waveforms = [_create_random_waveform(d) for d in waveform_durations]
+    sample_rate = settings.waveform_sample_rate
+    waveforms = [
+        _create_random_waveform(d, sample_rate)
+        for d in waveform_durations
+    ]
     dataset = dataset_utils.create_waveform_dataset_from_tensors(waveforms)
     
-    dataset = dataset_utils.create_inference_dataset(dataset, TSEEP_SETTINGS)
+    dataset = dataset_utils.create_inference_dataset(dataset, settings)
     
     for forward_slices, backward_slices in dataset:
         slice_count = forward_slices.shape[0]
@@ -471,9 +439,9 @@ def _compare_tensors(x, y):
     assert(tf.reduce_all(x == tf.reverse(y, (0,))))
     
 
-def _create_random_waveform(duration):
-    length = int(round(duration * TSEEP_SETTINGS.waveform_sample_rate))
-    return np.random.random_integers(-32768, 32767, length)
+def _create_random_waveform(duration, sample_rate):
+    length = int(round(duration * sample_rate))
+    return np.random.randint(-32768, 32768, length)
     
     
 if __name__ == '__main__':
