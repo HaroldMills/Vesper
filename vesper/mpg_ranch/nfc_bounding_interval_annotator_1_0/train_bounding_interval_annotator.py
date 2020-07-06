@@ -2,6 +2,7 @@ from collections import defaultdict
 import math
 import time
 
+from matplotlib.backends.backend_pdf import PdfPages
 from tensorflow.keras.layers import (
     BatchNormalization, Conv2D, Dense, Flatten, MaxPooling2D)
 from tensorflow.keras.models import Sequential
@@ -54,14 +55,17 @@ TSEEP_SETTINGS = Settings(
     # in bins. Set this to zero to disable this augmentation.
     max_spectrogram_frequency_shift=2,
     
-    # training batch and epoch settings
+    # training settings
     training_batch_size=128,
     training_epoch_count=50,
     training_epoch_step_count=50,
     
-    # validation batch and step settings
+    # validation settings
     validation_batch_size=1,
     validation_step_count=500,
+    
+    # validation plot settings
+    max_validation_inlier_diff=20,
     
     # offset for converting inference value to spectrogram index
     call_bound_index_offset=10
@@ -75,7 +79,7 @@ def main():
     
     train_and_validate_annotator(settings)
     
-    # validate_annotator('2020-07-06_09.33.54', settings)
+    # validate_annotator('2020-07-06_09.33.54')
     
     # show_model_summary('start_2020-06-10_12.13.39')
     
@@ -93,7 +97,7 @@ def main():
 def train_and_validate_annotator(settings):
     model_name = annotator_utils.create_model_name(settings)
     train_annotator(model_name, settings)
-    validate_annotator(model_name, settings)
+    validate_annotator(model_name)
 
 
 def train_annotator(model_name, settings):
@@ -170,20 +174,17 @@ def save_model_settings(settings, model_name):
     file_path.write_text(text)
 
 
-def validate_annotator(model_name, settings):
+def validate_annotator(model_name):
     
-    s = settings
-    
-    model_dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(
-        model_name)
-    model = tf.keras.models.load_model(model_dir_path)
+    model, settings = annotator_utils.load_model_and_settings(model_name)
     
     model.summary()
     
-    dir_path = annotator_utils.get_dataset_dir_path(s.clip_type, 'Validation')
+    dir_path = annotator_utils.get_dataset_dir_path(
+        settings.clip_type, 'Validation')
     dataset = dataset_utils.create_validation_dataset(dir_path, settings)
     
-    dataset = dataset.take(s.validation_step_count)
+    dataset = dataset.take(settings.validation_step_count)
     
     inferrer = Inferrer(model_name)
     
@@ -213,9 +214,9 @@ def validate_annotator(model_name, settings):
 #             inferred_start_index, inferred_end_index,
 #             dataset_start_index, dataset_end_index)
 
-    _show_diff_counts('start', start_diff_counts)
-    _show_diff_counts('end', end_diff_counts)
-    _plot_diff_counts(start_diff_counts, end_diff_counts)
+    _show_diff_counts('start', start_diff_counts, settings)
+    _show_diff_counts('end', end_diff_counts, settings)
+    _plot_diff_counts(model_name, start_diff_counts, end_diff_counts, settings)
     
     
 def _get_diff(inferred_index, dataset_index, sample_rate):
@@ -228,39 +229,56 @@ def _get_diff(inferred_index, dataset_index, sample_rate):
         return int(round(1000 * sample_count / sample_rate))
 
 
-def _show_diff_counts(name, counts):
+def _show_diff_counts(name, counts, settings):
     
     diffs = sorted(counts.keys())
     
-    # Calculate difference mean and standard deviation.
+    # Calculate error mean and standard deviation, excluding outliers.
     diff_sum = 0
     diff_sum_2 = 0
+    inlier_count = 0
+    outlier_count = 0
     for diff in diffs:
         count = counts[diff]
-        diff_sum += count * diff
-        diff_sum_2 += count * diff * diff
-    total_count = sum(counts.values())
-    diff_mean = diff_sum / total_count
-    diff_std = math.sqrt(diff_sum_2 / total_count - diff_mean * diff_mean)
+        if diff <= settings.max_validation_inlier_diff:
+            diff_sum += count * diff
+            diff_sum_2 += count * diff * diff
+            inlier_count += count
+        else:
+            outlier_count += count
+    diff_mean = diff_sum / inlier_count
+    diff_std = math.sqrt(diff_sum_2 / inlier_count - diff_mean * diff_mean)
     
-    print(f'{name} {total_count} {diff_mean} {diff_std}')
-    
-    
-def _plot_diff_counts(start_diff_counts, end_diff_counts):
-    
-    _, (start_axes, end_axes) = plt.subplots(2)
-    
-    _plot_diff_counts_aux(start_axes, 'Clip Starts', start_diff_counts)
-    _plot_diff_counts_aux(end_axes, 'Clip Ends', end_diff_counts)
-    
-    plt.tight_layout()
-    
-    plt.show()
+    print(f'{name} {inlier_count} {diff_mean} {diff_std} {outlier_count}')
     
     
-def _plot_diff_counts_aux(axes, title, counts):
+def _plot_diff_counts(
+        model_name, start_diff_counts, end_diff_counts, settings):
+
+    file_path = annotator_utils.get_validation_plot_file_path(model_name)
     
-    limit = 20
+    with PdfPages(file_path) as pdf:
+    
+        _, (start_axes, end_axes) = plt.subplots(2)
+        
+        title = f'{model_name} Clip Start Errors'
+        _plot_diff_counts_aux(start_axes, title, start_diff_counts, settings)
+        
+        title = f'{model_name} Clip End Errors'
+        _plot_diff_counts_aux(end_axes, title, end_diff_counts, settings)
+        
+        plt.tight_layout()
+        
+        pdf.savefig()
+        
+        plt.close()
+        
+    # plt.show()
+    
+    
+def _plot_diff_counts_aux(axes, title, counts, settings):
+    
+    limit = settings.max_validation_inlier_diff
     x = np.arange(-limit, limit + 1)
     
     total_count = sum(counts.values())

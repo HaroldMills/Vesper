@@ -1,22 +1,17 @@
-import logging
-
 import numpy as np
-import tensorflow as tf
 
-from vesper.util.settings import Settings
 import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.annotator_utils \
     as annotator_utils
 import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.dataset_utils \
     as dataset_utils
-import vesper.util.yaml_utils as yaml_utils
 
 
 class Inferrer:
     
     
     def __init__(self, model_name):
-        self._model = _load_model(model_name)
-        self._settings = _load_settings(model_name)
+        self._model, self._settings = \
+            annotator_utils.load_model_and_settings(model_name)
     
     
     @property
@@ -100,19 +95,3 @@ class Inferrer:
             end_index = gram_length - 1 - end_index
             
             return self._gram_index_to_waveform_index(end_index)
-
-
-def _load_model(model_name):
-    dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(model_name)
-    logging.info('Loading annotator model from "{}"...'.format(dir_path))
-    model = tf.keras.models.load_model(dir_path)
-    return model
-    
-    
-def _load_settings(model_name):
-    file_path = annotator_utils.get_model_settings_file_path(model_name)
-    logging.info('Loading annotator settings from "{}"...'.format(file_path))
-    text = file_path.read_text()
-    dict_ = yaml_utils.load(text)
-    settings = Settings.create_from_dict(dict_)
-    return settings
