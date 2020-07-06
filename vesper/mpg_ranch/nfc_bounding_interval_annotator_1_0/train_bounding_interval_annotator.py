@@ -54,6 +54,15 @@ TSEEP_SETTINGS = Settings(
     # in bins. Set this to zero to disable this augmentation.
     max_spectrogram_frequency_shift=2,
     
+    # training batch and epoch settings
+    training_batch_size=128,
+    training_epoch_count=50,
+    training_epoch_step_count=50,
+    
+    # validation batch and step settings
+    validation_batch_size=1,
+    validation_step_count=500,
+    
     # offset for converting inference value to spectrogram index
     call_bound_index_offset=10
     
@@ -91,8 +100,9 @@ def train_annotator(model_name, settings):
     
     s = settings
     
-    training_dataset = get_dataset('Training', s).batch(128)
-    validation_dataset = get_dataset('Validation', s).batch(1)
+    training_dataset = get_dataset('Training', s).batch(s.training_batch_size)
+    validation_dataset = \
+        get_dataset('Validation', s).batch(s.validation_batch_size)
     
     input_shape = dataset_utils.get_spectrogram_slice_shape(settings)
     
@@ -136,8 +146,10 @@ def train_annotator(model_name, settings):
         log_dir=log_dir_path, histogram_freq=1)
      
     model.fit(
-        training_dataset, epochs=50, steps_per_epoch=50, verbose=2,
-        validation_data=validation_dataset, validation_steps=500,
+        training_dataset, epochs=s.training_epoch_count,
+        steps_per_epoch=s.training_epoch_step_count, verbose=2,
+        validation_data=validation_dataset,
+        validation_steps=s.validation_step_count,
         callbacks=[callback])
      
     model_dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(
@@ -171,7 +183,7 @@ def validate_annotator(model_name, settings):
     dir_path = annotator_utils.get_dataset_dir_path(s.clip_type, 'Validation')
     dataset = dataset_utils.create_validation_dataset(dir_path, settings)
     
-    dataset = dataset.take(500)
+    dataset = dataset.take(s.validation_step_count)
     
     inferrer = Inferrer(model_name)
     
