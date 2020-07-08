@@ -21,24 +21,6 @@ Each source dataset is repeated, and elements from the different sources
 are interleaved and parsed. Each element includes a waveform, clip start
 and end indices, call start and end indices (when the element is a call),
 and a clip ID.
-
-Subsequent optional processing:
-
-* Time reversal augmentation.
-
-  The time reversal augmentation time reverses an example with
-  probability .5.
-
-* Slicing with optional time shift augmentation.
-
-  The time shift augmentation randomly adjusts the slice bounds to
-  distribute the call start time uniformly within some window.
-
-* Amplitude scaling augmentation.
-
-  The amplitude scaling augmentation randomly scales the waveform
-  to distribute the log of its RMS amplitude uniformly within some
-  window.
 '''
 
 
