@@ -9,20 +9,28 @@ import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.dataset_utils \
 class Inferrer:
     
     
-    def __init__(self, model_name):
-        self._model, self._settings = \
-            annotator_utils.load_model_and_settings(model_name)
+    def __init__(self, start_model_name, end_model_name=None):
+        
+        self._start_model, self._start_settings = \
+            annotator_utils.load_model_and_settings(start_model_name)
+        
+        if end_model_name is None:
+            self._end_model = self._start_model
+            self._end_settings = self._start_settings
+        else:
+            self._end_model, self._end_settings = \
+                annotator_utils.load_model_and_settings(end_model_name)
     
     
     @property
     def sample_rate(self):
-        return self._settings.waveform_sample_rate
+        return self._start_settings.waveform_sample_rate
     
     
     def get_call_bounds(self, waveform_dataset):
         
         dataset = dataset_utils.create_inference_dataset(
-            waveform_dataset, self._settings)
+            waveform_dataset, self._start_settings)
         
         return tuple(
             self._get_call_bounds(*element) for element in dataset)
@@ -48,18 +56,19 @@ class Inferrer:
         else:
             # at least one gram slice
             
-            start_index = self._get_call_bound_index(gram_slices)
+            start_index = self._get_call_bound_index(
+                self._start_model, self._start_settings, gram_slices)
             return self._gram_index_to_waveform_index(start_index)
     
     
-    def _get_call_bound_index(self, gram_slices):
-        scores = self._model.predict(gram_slices).flatten()
-        return np.argmax(scores) + self._settings.call_bound_index_offset
+    def _get_call_bound_index(self, model, settings, gram_slices):
+        scores = model.predict(gram_slices).flatten()
+        return np.argmax(scores) + settings.call_bound_index_offset
     
     
     def _gram_index_to_waveform_index(self, gram_index):
         
-        s = self._settings
+        s = self._start_settings
         
         # Get center time of window from which spectrum was computed.
         window_size = s.spectrogram_window_size
@@ -82,7 +91,8 @@ class Inferrer:
         else:
             # at least one gram slice
             
-            end_index = self._get_call_bound_index(gram_slices)
+            end_index = self._get_call_bound_index(
+                self._end_model, self._end_settings, gram_slices)
             
             # Recover spectrogram length from slices shape.
             shape = gram_slices.shape

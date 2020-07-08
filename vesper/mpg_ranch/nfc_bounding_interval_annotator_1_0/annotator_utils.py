@@ -24,12 +24,25 @@ def get_dataset_dir_path(clip_type, dataset_name):
     
 def create_model_name(settings):
     clip_type = settings.clip_type
+    bound_type = settings.bound_type
     now = datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
-    return f'{clip_type}_{now}'
+    return f'{clip_type}_{bound_type}_{now}'
+
+
+def get_model_name_parts(model_name):
+    return model_name.split('_')
 
 
 def get_model_clip_type(model_name):
-    return model_name.split('_')[0]
+    return get_model_name_parts(model_name)[0]
+
+
+def get_model_bound_type(model_name):
+    return get_model_name_parts(model_name)[1]
+
+
+def get_model_timestamp(model_name):
+    return get_model_name_parts(model_name)[2]
 
 
 def get_log_dir_path(model_name):

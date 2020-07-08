@@ -36,7 +36,8 @@ _START_INDEX_ANNOTATION_NAME = 'Call Start Index'
 _END_INDEX_ANNOTATION_NAME = 'Call End Index'
 
 _MODEL_NAMES = {
-    'Tseep': '2020-07-06_09.33.54',
+    'Tseep':
+        ('Tseep_Start_2020-07-08_15.34.21', 'Tseep_End_2020-07-08_15.40.39'),
 }
 
 
@@ -58,7 +59,7 @@ class Annotator(AnnotatorBase):
         self._clip_manager = clip_manager.instance
 
         self._inferrers = dict(
-            (t, Inferrer(_MODEL_NAMES[t]))
+            (t, _create_inferrer(t))
             for t in ('Tseep',))
                
         self._annotation_infos = _get_annotation_infos()
@@ -178,6 +179,11 @@ class Annotator(AnnotatorBase):
             creating_processor=self._creating_processor)
         
         
+def _create_inferrer(clip_type):
+    model_names = _MODEL_NAMES[clip_type]
+    return Inferrer(*model_names)
+
+
 # class _Annotator:
 #     
 #     

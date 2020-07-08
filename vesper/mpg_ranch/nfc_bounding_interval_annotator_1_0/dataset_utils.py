@@ -361,10 +361,17 @@ class _ExampleProcessor:
         
         s = self._settings
         
+        if s.bound_type == 'End':
+            (waveform, clip_start_index, clip_end_index, call_start_index,
+             call_end_index) = _time_reverse_waveform(
+                 waveform, clip_start_index, clip_end_index, call_start_index,
+                 call_end_index)
+        
         if s.waveform_time_reversal_data_augmentation_enabled:
             waveform, call_start_index, call_end_index = \
                 _maybe_time_reverse_waveform(
-                    waveform, call_start_index, call_end_index)
+                    waveform, clip_start_index, clip_end_index,
+                    call_start_index, call_end_index)
         
         waveform_slice, label = \
             self._slice_waveform(waveform, call_start_index)
@@ -551,26 +558,46 @@ def _get_low_level_spectrogram_settings(settings):
     return (window_size, hop_size, dft_size, freq_start_index, freq_end_index)
 
 
-def _maybe_time_reverse_waveform(waveform, call_start_index, call_end_index):
-     
+def _maybe_time_reverse_waveform(*args):
+    
     reverse = tf.random.uniform((), maxval=2, dtype=tf.int32)
-      
+    
     if reverse != 0:
-     
-        # Reverse waveform.
-        waveform = tf.reverse(waveform, [0])
-         
-        # Get waveform length, casting to int64 for arithmetic below.
-        length = tf.cast(len(waveform), tf.int64)
-         
-        # Swap and complement call bounds.
-        temp = call_start_index
-        call_start_index = length - call_end_index
-        call_end_index = length - temp
-         
-    return waveform, call_start_index, call_end_index
- 
- 
+        return _time_reverse_waveform(*args)
+    
+    else:
+        return args
+    
+    
+def _time_reverse_waveform(
+        waveform, clip_start_index, clip_end_index, call_start_index,
+        call_end_index):
+    
+    # Reverse waveform.
+    waveform = tf.reverse(waveform, [0])
+    
+    # Get waveform length, casting to int64 for bounds swapping arithmetic.
+    length = tf.cast(len(waveform), tf.int64)
+    
+    # Swap and complement clip bounds.
+    clip_start_index, clip_end_index = \
+        _swap_bounds(clip_start_index, clip_end_index, length)
+        
+    # Swap and complement call bounds.
+    call_start_index, call_end_index = \
+        _swap_bounds(call_start_index, call_end_index, length)
+        
+    return (
+        waveform, clip_start_index, clip_end_index, call_start_index,
+        call_end_index)
+
+
+def _swap_bounds(start_index, end_index, length):
+    new_start_index = length - 1 - end_index
+    new_end_index = length - 1 - start_index
+    return new_start_index, new_end_index
+
+
 def _f32(x):
     return tf.cast(x, tf.float32)
 

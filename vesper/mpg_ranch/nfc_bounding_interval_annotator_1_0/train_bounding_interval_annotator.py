@@ -41,6 +41,8 @@ TSEEP_SETTINGS = Settings(
     
     clip_type='Tseep',
     
+    bound_type='Start',
+    
     waveform_sample_rate=24000,
     
     # `True` if and only if the waveform time reversal data augmentation
@@ -193,9 +195,7 @@ def save_model_settings(settings, model_name):
 
 def validate_annotator(model_name):
     
-    model, settings = annotator_utils.load_model_and_settings(model_name)
-    
-    model.summary()
+    _, settings = annotator_utils.load_model_and_settings(model_name)
     
     dir_path = annotator_utils.get_dataset_dir_path(
         settings.clip_type, 'Validation')
@@ -233,6 +233,7 @@ def validate_annotator(model_name):
 
     _show_diff_counts('start', start_diff_counts, settings)
     _show_diff_counts('end', end_diff_counts, settings)
+    
     _plot_diff_counts(model_name, start_diff_counts, end_diff_counts, settings)
     
     
@@ -289,8 +290,6 @@ def _plot_diff_counts(
         pdf.savefig()
         
         plt.close()
-        
-    # plt.show()
     
     
 def _plot_diff_counts_aux(axes, title, counts, settings):
