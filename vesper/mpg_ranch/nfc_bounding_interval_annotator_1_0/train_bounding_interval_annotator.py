@@ -1,3 +1,20 @@
+"""
+Script that trains an NFC bounding interval annotator.
+
+To use tensorboard during or after model training, open a terminal and say:
+
+    conda activate vesper-dev-tf2
+    tensorboard --logdir "/Users/Harold/Desktop/NFC/Data/Vesper ML/
+        NFC Bounding Interval Annotator 1.0/Logs/<training log dir path>"
+        
+and then visit:
+
+    127.0.0.1:6006
+    
+in Chrome.
+"""
+
+
 from collections import defaultdict
 import math
 import time
