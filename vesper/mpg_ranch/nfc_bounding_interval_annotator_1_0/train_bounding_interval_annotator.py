@@ -279,10 +279,10 @@ def _plot_diff_counts(
     
         _, (start_axes, end_axes) = plt.subplots(2)
         
-        title = f'{model_name} Clip Start Errors'
+        title = f'{model_name} Call Start Errors'
         _plot_diff_counts_aux(start_axes, title, start_diff_counts, settings)
         
-        title = f'{model_name} Clip End Errors'
+        title = f'{model_name} Call End Errors'
         _plot_diff_counts_aux(end_axes, title, end_diff_counts, settings)
         
         plt.tight_layout()
