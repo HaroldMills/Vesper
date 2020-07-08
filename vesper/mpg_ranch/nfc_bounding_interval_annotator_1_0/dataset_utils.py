@@ -307,6 +307,26 @@ def _get_spectrogram_slice_length(settings):
     return 1 + int(round((slice_duration - window_size) / hop_size))
     
     
+def _get_low_level_spectrogram_settings(settings):
+     
+    s = settings
+    fs = s.waveform_sample_rate
+    s2f = signal_utils.seconds_to_frames
+     
+    # spectrogram
+    window_size = s2f(s.spectrogram_window_size, fs)
+    fraction = s.spectrogram_hop_size / 100
+    hop_size = s2f(s.spectrogram_window_size * fraction, fs)
+    dft_size = tfa_utils.get_dft_size(window_size)
+     
+    # frequency slicing
+    f2i = tfa_utils.get_dft_bin_num
+    freq_start_index = f2i(s.spectrogram_start_freq, fs, dft_size)
+    freq_end_index = f2i(s.spectrogram_end_freq, fs, dft_size) + 1
+    
+    return (window_size, hop_size, dft_size, freq_start_index, freq_end_index)
+
+
 class _ExampleProcessor:
      
     """
@@ -366,12 +386,6 @@ class _ExampleProcessor:
              call_end_index) = _time_reverse_waveform(
                  waveform, clip_start_index, clip_end_index, call_start_index,
                  call_end_index)
-        
-        if s.waveform_time_reversal_data_augmentation_enabled:
-            waveform, call_start_index, call_end_index = \
-                _maybe_time_reverse_waveform(
-                    waveform, clip_start_index, clip_end_index,
-                    call_start_index, call_end_index)
         
         waveform_slice, label = \
             self._slice_waveform(waveform, call_start_index)
@@ -538,37 +552,6 @@ class _ExampleProcessor:
         return (forward_slices, backward_slices) + tuple(args)
 
 
-def _get_low_level_spectrogram_settings(settings):
-     
-    s = settings
-    fs = s.waveform_sample_rate
-    s2f = signal_utils.seconds_to_frames
-     
-    # spectrogram
-    window_size = s2f(s.spectrogram_window_size, fs)
-    fraction = s.spectrogram_hop_size / 100
-    hop_size = s2f(s.spectrogram_window_size * fraction, fs)
-    dft_size = tfa_utils.get_dft_size(window_size)
-     
-    # frequency slicing
-    f2i = tfa_utils.get_dft_bin_num
-    freq_start_index = f2i(s.spectrogram_start_freq, fs, dft_size)
-    freq_end_index = f2i(s.spectrogram_end_freq, fs, dft_size) + 1
-    
-    return (window_size, hop_size, dft_size, freq_start_index, freq_end_index)
-
-
-def _maybe_time_reverse_waveform(*args):
-    
-    reverse = tf.random.uniform((), maxval=2, dtype=tf.int32)
-    
-    if reverse != 0:
-        return _time_reverse_waveform(*args)
-    
-    else:
-        return args
-    
-    
 def _time_reverse_waveform(
         waveform, clip_start_index, clip_end_index, call_start_index,
         call_end_index):
