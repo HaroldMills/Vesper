@@ -30,8 +30,15 @@ _START_INDEX_ANNOTATION_NAME = 'Call Start Index'
 _END_INDEX_ANNOTATION_NAME = 'Call End Index'
 
 _MODEL_NAMES = {
+    
+    # trained without dropout
     'Tseep':
         ('Tseep_Start_2020-07-08_19.11.45', 'Tseep_End_2020-07-08_19.37.02'),
+    
+    # trained with dropout of .25 : performance seems to be worse than without
+    # 'Tseep':
+    #     ('Tseep_Start_2020-07-08_20.36.20', 'Tseep_End_2020-07-09_11.00.19'),
+        
 }
 
 

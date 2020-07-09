@@ -22,6 +22,7 @@ import time
 from matplotlib.backends.backend_pdf import PdfPages
 from tensorflow.keras.layers import (
     BatchNormalization, Conv2D, Dense, Flatten, MaxPooling2D)
+# from tensorflow.keras.layers import Dropout
 from tensorflow.keras.models import Sequential
 import matplotlib.pyplot as plt
 import numpy as np
@@ -73,6 +74,7 @@ TSEEP_SETTINGS = Settings(
     training_batch_size=128,
     training_epoch_count=50,
     training_epoch_step_count=50,
+    dropout_rate=.25,
     
     # validation settings
     validation_batch_size=1,
@@ -125,22 +127,22 @@ def train_annotator(model_name, settings):
     
     input_shape = dataset_utils.get_spectrogram_slice_shape(settings)
     
-    print(f'input shape {input_shape}')
-    
     model = Sequential([
         
         Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
+        # Dropout(s.dropout_rate),
         BatchNormalization(),
         MaxPooling2D((1, 2)),
         
-        # Conv2D(32, (1, 1), activation='relu'),
+        # Conv2D(16, (1, 1), activation='relu'),
         # BatchNormalization(),
  
         Conv2D(32, (3, 3), activation='relu'),
+        # Dropout(s.dropout_rate),
         BatchNormalization(),
         MaxPooling2D((1, 2)),
         
-        # Conv2D(32, (1, 1), activation='relu'),
+        # Conv2D(16, (1, 1), activation='relu'),
         # BatchNormalization(),
 
         Flatten(),
@@ -149,6 +151,7 @@ def train_annotator(model_name, settings):
         # BatchNormalization(),
         
         Dense(32, activation='relu'),
+        # Dropout(s.dropout_rate),
         BatchNormalization(),
         
         Dense(1, activation='sigmoid')
