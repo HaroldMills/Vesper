@@ -46,7 +46,7 @@ TSEEP_SETTINGS = Settings(
     waveform_sample_rate=24000,
     
     positive_example_probability=.5,
-    positive_example_call_start_offset=.0275,
+    positive_example_call_start_offset=.025,
     
     waveform_slice_duration=.080,
     
@@ -58,7 +58,7 @@ TSEEP_SETTINGS = Settings(
     
     # spectrogram settings
     spectrogram_window_size=.005,
-    spectrogram_hop_size=50,
+    spectrogram_hop_size=20,
     spectrogram_log_epsilon=1e-10,
     
     # spectrogram frequency axis slicing settings
@@ -81,8 +81,9 @@ TSEEP_SETTINGS = Settings(
     # validation plot settings
     max_validation_inlier_diff=20,
     
-    # offset for converting inference value to spectrogram index
-    call_bound_index_offset=10
+    # offsets for converting inference value to spectrogram index
+    call_start_index_offset=23,
+    call_end_index_offset=22,
     
 )
 
@@ -123,6 +124,8 @@ def train_annotator(model_name, settings):
         get_dataset('Validation', s).batch(s.validation_batch_size)
     
     input_shape = dataset_utils.get_spectrogram_slice_shape(settings)
+    
+    print(f'input shape {input_shape}')
     
     model = Sequential([
         

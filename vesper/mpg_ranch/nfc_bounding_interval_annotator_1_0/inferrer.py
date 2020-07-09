@@ -62,8 +62,15 @@ class Inferrer:
     
     
     def _get_call_bound_index(self, model, settings, gram_slices):
+        
         scores = model.predict(gram_slices).flatten()
-        return np.argmax(scores) + settings.call_bound_index_offset
+        
+        if settings.bound_type == 'Start':
+            offset = settings.call_start_index_offset
+        else:
+            offset = settings.call_end_index_offset
+            
+        return np.argmax(scores) + offset
     
     
     def _gram_index_to_waveform_index(self, gram_index):

@@ -31,7 +31,7 @@ _END_INDEX_ANNOTATION_NAME = 'Call End Index'
 
 _MODEL_NAMES = {
     'Tseep':
-        ('Tseep_Start_2020-07-08_15.34.21', 'Tseep_End_2020-07-08_15.40.39'),
+        ('Tseep_Start_2020-07-08_19.11.45', 'Tseep_End_2020-07-08_19.37.02'),
 }
 
 
