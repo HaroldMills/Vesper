@@ -73,12 +73,12 @@ TSEEP_SETTINGS = Settings(
     # training settings
     training_batch_size=128,
     training_epoch_count=50,
-    training_epoch_step_count=50,
+    training_epoch_step_count=100,
     dropout_rate=.25,
     
     # validation settings
     validation_batch_size=1,
-    validation_step_count=500,
+    validation_step_count=1000,
     
     # validation plot settings
     max_validation_inlier_diff=20,
