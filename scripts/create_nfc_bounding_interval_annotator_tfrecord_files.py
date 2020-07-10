@@ -13,7 +13,7 @@ import vesper.signal.resampling_utils as resampling_utils
 
 
 VALIDATION_FRACTION = .1
-TEST_FRACTION = .1
+TEST_FRACTION = .01
 
 CALL_TYPE = 'Tseep'
 
@@ -31,6 +31,10 @@ Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Bear.h5
 Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Bell Crossing.h5
 Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Darby.h5
 Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Dashiell.h5
+Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Davies.h5
+Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Deer Mountain.h5
+Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Floodplain.h5
+Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Florence.h5
 '''.strip().split('\n')
 
 INPUT_FILE_NAMES = {
