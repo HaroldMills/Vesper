@@ -94,7 +94,7 @@ const _DEFAULT_KEY_BINDINGS = {
     		'<': ['show_previous_page'],
     	    '.': ['select_next_clip'],
     	    ',': ['select_previous_clip'],
-    	    '/': ['play_selected_clip']
+    	    '/': ['play_selected_clip'],
         }
 
     }
@@ -140,6 +140,9 @@ const _COMMAND_SPECS = [
     ['unannotate_selected_clips'],
     ['unannotate_page_clips'],
     ['unannotate_all_clips'],
+    
+    ['go_to_next_date'],
+    ['go_to_previous_date'],
 
 ];
 
@@ -247,6 +250,20 @@ export class ClipAlbum {
         this._initSettingsModal();
         this._initFilterClipsModal();
         
+        // go to next date anchor
+        const nextAnchor =
+            document.getElementById('go-to-next-date-anchor');
+        if (nextAnchor !== null)
+            nextAnchor.addEventListener(
+                'click', e => this._onGoToNextDateAnchorClick(e));
+
+        // go to previous date anchor
+        const prevAnchor =
+            document.getElementById('go-to-previous-date-anchor');
+        if (prevAnchor !== null)
+            prevAnchor.addEventListener(
+                'click', e => this._onGoToPreviousDateAnchorClick(e));
+
         this._installKeyPressEventListener();
 
 	}
@@ -428,8 +445,50 @@ export class ClipAlbum {
         window.location.href = url;
         
     }
+    
+    
+    _onGoToNextDateAnchorClick(event) {
+        this._goToNextDate();
+    }
+    
 
-
+    _goToNextDate() {
+        this._goToRelativeDate(1);
+    }
+    
+    
+    _goToRelativeDate(dayCount) {
+        
+        // Get URL of this clip album.
+        const url = new URL(window.location.href);
+        
+        // Get date of this clip album.
+        const dateString = url.searchParams.get('date');
+        const date = _parseDate(dateString);
+        
+        // Get next date.
+        const nextDate = _addDaysToDate(date, dayCount);
+        const nextDateString = _formatDate(nextDate);
+        
+        // Update date in URL.
+        url.searchParams.set('date', nextDateString);
+        
+        // Go to new URL.
+        window.location.href = url.href;
+        
+    }
+    
+    
+    _onGoToPreviousDateAnchorClick(event) {
+        this._goToPreviousDate();
+    }
+    
+    
+    _goToPreviousDate() {
+        this._goToRelativeDate(-1);
+    }
+    
+    
 	_createClipViews(settings) {
 
         const viewSettings = settings.clipView;
@@ -1465,6 +1524,16 @@ export class ClipAlbum {
 		const name = env.getRequired('annotation_name');
 		this._annotateAllClips(name, null);
 	}
+    
+    
+    _executeGoToNextDateCommand(env) {
+        this._goToNextDate();
+    }
+    
+    
+    _executeGoToPreviousDateCommand(env) {
+        this._goToPreviousDate();
+    }
 
 
 }
@@ -1492,6 +1561,17 @@ class _WindowResizeThrottle {
 }
 
 
+function _getPreset(presetInfos, presetPath) {
+
+    for (const [path, preset] of presetInfos)
+        if (path.join('/') === presetPath)
+            return preset;
+
+    return null;
+
+}
+
+
 function _populatePresetSelect(select, presetInfos, presetPath) {
 
     for (const [i, [path, preset]] of presetInfos.entries()) {
@@ -1514,14 +1594,28 @@ function _getSelectedPreset(selectId, presets) {
 }
 
 
-function _getPreset(presetInfos, presetPath) {
+function _parseDate(dateString) {
+    const [yearString, monthString, dayString] = dateString.split('-');
+    const year = parseInt(yearString);
+    const month = parseInt(monthString);
+    const day = parseInt(dayString);
+    return new Date(year, month - 1, day);
+}
 
-    for (const [path, preset] of presetInfos)
-        if (path.join('/') === presetPath)
-            return preset;
 
-    return null;
+function _formatDate(date) {
+    const yearString = date.getFullYear().toString();
+    const monthString = (date.getMonth() + 1).toString().padStart(2, '0');
+    const dayString = date.getDate().toString().padStart(2, '0');
+    return [yearString, monthString, dayString].join('-');
+}
 
+
+function _addDaysToDate(date, dayCount) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate() + dayCount;
+    return new Date(year, month, day);
 }
 
 
