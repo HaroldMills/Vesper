@@ -36,10 +36,10 @@ function setTitle() {
 
 	const title =
 		`${state.stationMicName} / ${state.detectorName} / ` +
-		`${state.classification} Clips`;
+		`${state.classification}`;
 
 	const titleElement = document.getElementById('title');
-	titleElement.textContent = title;
+	titleElement.textContent = `${title} Clips`;
 
 	document.title = `Clip Calendar - ${title}`;
 
