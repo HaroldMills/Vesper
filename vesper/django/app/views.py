@@ -295,7 +295,7 @@ def _create_navbar_right_items(request):
                 type='dropdown',
                 items=[
                     Bunch(
-                        name='Log Out',
+                        name='Log out',
                         type='link',
                         url='/logout/' + query)
                 ])
@@ -304,7 +304,7 @@ def _create_navbar_right_items(request):
             # user is not logged in
     
             item = Bunch(
-                name='Log In',
+                name='Log in',
                 type='link',
                 url='/login/' + query)
     
