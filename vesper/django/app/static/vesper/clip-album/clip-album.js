@@ -567,16 +567,14 @@ export class ClipAlbum {
 
 		const f = this.clipFilter;
 
-		const pageText = this._getTitlePageText();
-
-        let title = `${f.stationMicName} / ${f.detectorName} / ` +
-            `${f.classification} / ${pageText}`;
-
-		if (f.date !== null)
-		    title = `${f.date} / ` + title;
+        const dateText = f.date !== null ? ` / ${f.date}` : '';
+        
+        const title = `${f.stationMicName} / ${f.detectorName} / ` +
+            `${f.classification}${dateText}`;
 
 		const titleHeading = document.getElementById('title')
-		titleHeading.textContent = title;
+        const pageText = this._getTitlePageText();
+		titleHeading.textContent = `${title} / ${pageText}`;
 
 		document.title = `Clips - ${title}`;
 
