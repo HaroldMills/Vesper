@@ -246,9 +246,9 @@ export class ClipAlbum {
         nextButton.addEventListener(
             'click', e => this._onNextPageButtonClick(e));
         
-        this._initGoToPageModal();
-        this._initSettingsModal();
         this._initFilterClipsModal();
+        this._initChoosePresetsModal();
+        this._initGoToPageModal();
         
         // go to next date anchor
         const nextAnchor =
@@ -279,6 +279,85 @@ export class ClipAlbum {
 	}
 	
 	
+    _initFilterClipsModal() {
+        
+        const button = document.getElementById('filter-clips-modal-ok-button');
+        
+        // Some clip albums do not have a filter clips modal, so we have
+        // to test for the existence of the OK button here.
+        if (button !== null)
+            button.addEventListener(
+                'click', e => this._onFilterClipsModalOkButtonClick());
+        
+    }
+    
+    
+    _onFilterClipsModalOkButtonClick() {
+        
+        // TODO: Only set URL if query has changed.
+
+        const encode = UrlUtils.encodeQueryParameterValue;
+        
+        const stationMic = encode(document.getElementById(
+            'filter-clips-modal-station-mic-select').value);
+        
+        const detector = encode(document.getElementById(
+            'filter-clips-modal-detector-select').value);
+        
+        const classification = encode(document.getElementById(
+            'filter-clips-modal-classification-select').value);
+        
+        const url =
+            `/clip-album/?` +
+            `station_mic=${stationMic}&` +
+            `detector=${detector}&` +
+            `classification=${classification}`;
+        
+        window.location.href = url;
+        
+    }
+    
+    
+    _initChoosePresetsModal() {
+
+        // TODO: Rather than having the server send presets to the client,
+        // perhaps the client should fetch the presets from the server.
+        // We could set up URLs so that a client could request all presets
+        // of a specified type as JSON.
+
+        const settingsSelect =
+            document.getElementById('choose-presets-modal-settings-select');
+        _populatePresetSelect(
+            settingsSelect, this.settingsPresets, this.settingsPresetPath);
+
+        const keyBindingsSelect = document.getElementById(
+            'choose-presets-modal-key-bindings-select');
+        _populatePresetSelect(
+            keyBindingsSelect, this.keyBindingsPresets,
+            this.keyBindingsPresetPath);
+
+        const button = 
+            document.getElementById('choose-presets-modal-ok-button');
+        button.addEventListener(
+            'click', e => this._onChoosePresetsModalOkButtonClick());
+
+    }
+
+
+    _onChoosePresetsModalOkButtonClick() {
+
+        if (this.settingsPresets.length > 0)
+            this.settings = _getSelectedPreset(
+                'choose-presets-modal-settings-select', this.settingsPresets);
+
+        if (this.keyBindingsPresets.length > 0)
+            this.keyBindings = _getSelectedPreset(
+                'choose-presets-modal-key-bindings-select',
+                this.keyBindingsPresets);
+
+    }
+
+
     _initGoToPageModal() {
         
         // show listener
@@ -366,83 +445,6 @@ export class ClipAlbum {
             event.stopImmediatePropagation();
             
         }
-        
-    }
-    
-    
-    _initSettingsModal() {
-
-        // TODO: Rather than having the server send presets to the client,
-        // perhaps the client should fetch the presets from the server.
-        // We could set up URLs so that a client could request all presets
-        // of a specified type as JSON.
-
-        const settingsSelect =
-            document.getElementById('presets-modal-settings-select');
-        _populatePresetSelect(
-            settingsSelect, this.settingsPresets, this.settingsPresetPath);
-
-        const keyBindingsSelect =
-            document.getElementById('presets-modal-key-bindings-select');
-        _populatePresetSelect(
-            keyBindingsSelect, this.keyBindingsPresets,
-            this.keyBindingsPresetPath);
-
-        const button = document.getElementById('presets-modal-ok-button');
-        button.addEventListener(
-            'click', e => this._onSettingsModalOkButtonClick());
-
-    }
-
-
-    _onSettingsModalOkButtonClick() {
-
-        if (this.settingsPresets.length > 0)
-            this.settings = _getSelectedPreset(
-                'presets-modal-settings-select', this.settingsPresets);
-
-        if (this.keyBindingsPresets.length > 0)
-            this.keyBindings = _getSelectedPreset(
-                'presets-modal-key-bindings-select', this.keyBindingsPresets);
-
-    }
-
-
-    _initFilterClipsModal() {
-        
-        const button = document.getElementById('filter-clips-modal-ok-button');
-        
-        // Some clip albums do not have a filter clips modal, so we have
-        // to test for the existence of the OK button here.
-        if (button !== null)
-            button.addEventListener(
-                'click', e => this._onFilterClipsModalOkButtonClick());
-        
-    }
-    
-    
-    _onFilterClipsModalOkButtonClick() {
-        
-        // TODO: Only set URL if query has changed.
-
-        const encode = UrlUtils.encodeQueryParameterValue;
-        
-        const stationMic = encode(document.getElementById(
-            'filter-clips-modal-station-mic-select').value);
-        
-        const detector = encode(document.getElementById(
-            'filter-clips-modal-detector-select').value);
-        
-        const classification = encode(document.getElementById(
-            'filter-clips-modal-classification-select').value);
-        
-        const url =
-            `/clip-album/?` +
-            `station_mic=${stationMic}&` +
-            `detector=${detector}&` +
-            `classification=${classification}`;
-        
-        window.location.href = url;
         
     }
     
