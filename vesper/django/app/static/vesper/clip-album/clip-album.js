@@ -378,17 +378,17 @@ export class ClipAlbum {
         // of a specified type as JSON.
 
         const settingsSelect =
-            document.getElementById('settings-modal-settings-select');
+            document.getElementById('presets-modal-settings-select');
         _populatePresetSelect(
             settingsSelect, this.settingsPresets, this.settingsPresetPath);
 
         const keyBindingsSelect =
-            document.getElementById('settings-modal-key-bindings-select');
+            document.getElementById('presets-modal-key-bindings-select');
         _populatePresetSelect(
             keyBindingsSelect, this.keyBindingsPresets,
             this.keyBindingsPresetPath);
 
-        const button = document.getElementById('settings-modal-ok-button');
+        const button = document.getElementById('presets-modal-ok-button');
         button.addEventListener(
             'click', e => this._onSettingsModalOkButtonClick());
 
@@ -399,11 +399,11 @@ export class ClipAlbum {
 
         if (this.settingsPresets.length > 0)
             this.settings = _getSelectedPreset(
-                'settings-modal-settings-select', this.settingsPresets);
+                'presets-modal-settings-select', this.settingsPresets);
 
         if (this.keyBindingsPresets.length > 0)
             this.keyBindings = _getSelectedPreset(
-                'settings-modal-key-bindings-select', this.keyBindingsPresets);
+                'presets-modal-key-bindings-select', this.keyBindingsPresets);
 
     }
 
