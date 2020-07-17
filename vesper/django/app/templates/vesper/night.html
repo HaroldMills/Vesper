@@ -37,9 +37,9 @@
 <body>
 
     {% include "vesper/navbar.html" %}
-	{% include "vesper/go-to-page-modal.html" %}
     {% include "vesper/clip-album-settings-modal.html" %}
-        
+    {% include "vesper/go-to-page-modal.html" %}
+ 
     <div id="title-div">
     
         <h3 id="title"></h3>
@@ -61,8 +61,8 @@
                 </button>
                 
                 <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                    <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go to page...</a></li>
                     <li><a id="settings-anchor" class="dropdown-item title-dropdown-anchor" href="#settings" data-toggle="modal" data-target="#settings-modal">Edit settings...</a></li>
+                    <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go to page...</a></li>
                     <li class="divider"></li>
                     <li><a id="go-to-next-date-anchor" class="dropdown-item title-dropdown-anchor">Go to next date</a></li>
                     <li><a id="go-to-previous-date-anchor" class="dropdown-item title-dropdown-anchor">Go to previous date</a></li>
