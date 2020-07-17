@@ -214,6 +214,11 @@ export class ClipAlbum {
     }
     
     
+    _isSingleDate() {
+        return this._clipFilter.date !== null;
+    }
+    
+    
     _createClips(clipInfos) {
 
         const clips = [];
@@ -567,7 +572,7 @@ export class ClipAlbum {
 
 		const f = this.clipFilter;
 
-        const dateText = f.date !== null ? ` / ${f.date}` : '';
+        const dateText = this._isSingleDate() ? ` / ${f.date}` : '';
         
         const title = `${f.stationMicName} / ${f.detectorName} / ` +
             `${f.classification}${dateText}`;
