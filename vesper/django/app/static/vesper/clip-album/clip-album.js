@@ -214,7 +214,7 @@ export class ClipAlbum {
     }
     
     
-    _isSingleDate() {
+    _isSingleDateClipAlbum() {
         return this._clipFilter.date !== null;
     }
     
@@ -299,26 +299,35 @@ export class ClipAlbum {
     
     _onFilterClipsModalOkButtonClick() {
         
-        // TODO: Only set URL if query has changed.
-
-        const encode = UrlUtils.encodeQueryParameterValue;
+        // Get current URL and clip filter.
+        const url = new URL(window.location.href);
+        const params = url.searchParams;
+        const stationMic = params.get('station_mic');
+        const detector = params.get('detector');
+        const classification = params.get('classification');
         
-        const stationMic = encode(document.getElementById(
-            'filter-clips-modal-station-mic-select').value);
+        // Get new clip filter.
+        const newStationMic = document.getElementById(
+            'filter-clips-modal-station-mic-select').value;
+        const newDetector = document.getElementById(
+            'filter-clips-modal-detector-select').value;
+        const newClassification = document.getElementById(
+            'filter-clips-modal-classification-select').value;
         
-        const detector = encode(document.getElementById(
-            'filter-clips-modal-detector-select').value);
-        
-        const classification = encode(document.getElementById(
-            'filter-clips-modal-classification-select').value);
-        
-        const url =
-            `/clip-album/?` +
-            `station_mic=${stationMic}&` +
-            `detector=${detector}&` +
-            `classification=${classification}`;
-        
-        window.location.href = url;
+        if (newStationMic !== stationMic ||
+                newDetector !== detector ||
+                newClassification !== classification) {
+                // new clip filter differs from current one
+            
+            // Update clip filter in URL.
+            params.set('station_mic', newStationMic);
+            params.set('detector', newDetector);
+            params.set('classification', newClassification);
+            
+            // Go to new URL.
+            window.location.href = url.href;
+            
+        }
         
     }
     
@@ -572,7 +581,7 @@ export class ClipAlbum {
 
 		const f = this.clipFilter;
 
-        const dateText = this._isSingleDate() ? ` / ${f.date}` : '';
+        const dateText = this._isSingleDateClipAlbum() ? ` / ${f.date}` : '';
         
         const title = `${f.stationMicName} / ${f.detectorName} / ` +
             `${f.classification}${dateText}`;

@@ -37,6 +37,7 @@
 <body>
 
     {% include "vesper/navbar.html" %}
+    {% include "vesper/clip-album-filter-clips-modal.html" %}
     {% include "vesper/clip-album-choose-presets-modal.html" %}
     {% include "vesper/clip-album-go-to-page-modal.html" %}
  
@@ -61,6 +62,7 @@
                 </button>
                 
                 <ul class="dropdown-menu dropdown-menu-right" role="menu">
+                    <li><a id="filter-clips-anchor" class="dropdown-item title-dropdown-anchor" href="#filter-clips" data-toggle="modal" data-target="#filter-clips-modal">Filter clips...</a></li>
                     <li><a id="choose-presets-anchor" class="dropdown-item title-dropdown-anchor" href="#choose-presets" data-toggle="modal" data-target="#choose-presets-modal">Choose presets...</a></li>
                     <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go to page...</a></li>
                     <li class="divider"></li>
