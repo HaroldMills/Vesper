@@ -1,6 +1,5 @@
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { Clip } from '/static/vesper/clip-album/clip.js';
-import { ClipView } from '/static/vesper/clip-album/clip-view.js';
 import { CommandableDelegate, KeyboardInputInterpreter }
     from '/static/vesper/clip-album/keyboard-input-interpreter.js';
 import { Layout } from '/static/vesper/clip-album/layout.js';
@@ -10,7 +9,6 @@ import { PreloadingClipManager }
     from '/static/vesper/clip-album/clip-manager.js';
 import { SpectrogramClipView }
     from '/static/vesper/clip-album/spectrogram-clip-view.js';
-import { UrlUtils } from '/static/vesper/util/url-utils.js';
 
 
 /*
