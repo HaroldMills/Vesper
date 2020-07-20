@@ -9,6 +9,7 @@ import { PreloadingClipManager }
     from '/static/vesper/clip-album/clip-manager.js';
 import { SpectrogramClipView }
     from '/static/vesper/clip-album/spectrogram-clip-view.js';
+import { ViewUtils } from '/static/vesper/view/view-utils.js';
 
 
 /*
@@ -290,42 +291,7 @@ export class ClipAlbum {
         // to test for the existence of the OK button here.
         if (button !== null)
             button.addEventListener(
-                'click', e => this._onFilterClipsModalOkButtonClick());
-        
-    }
-    
-    
-    _onFilterClipsModalOkButtonClick() {
-        
-        // Get current URL and clip filter.
-        const url = new URL(window.location.href);
-        const params = url.searchParams;
-        const stationMic = params.get('station_mic');
-        const detector = params.get('detector');
-        const classification = params.get('classification');
-        
-        // Get new clip filter.
-        const newStationMic = document.getElementById(
-            'filter-clips-modal-station-mic-select').value;
-        const newDetector = document.getElementById(
-            'filter-clips-modal-detector-select').value;
-        const newClassification = document.getElementById(
-            'filter-clips-modal-classification-select').value;
-        
-        if (newStationMic !== stationMic ||
-                newDetector !== detector ||
-                newClassification !== classification) {
-                // new clip filter differs from current one
-            
-            // Update clip filter in URL.
-            params.set('station_mic', newStationMic);
-            params.set('detector', newDetector);
-            params.set('classification', newClassification);
-            
-            // Go to new URL.
-            window.location.href = url.href;
-            
-        }
+                'click', e => ViewUtils.onFilterClipsModalOkButtonClick(e));
         
     }
     

@@ -1,4 +1,5 @@
 import { UrlUtils } from '/static/vesper/util/url-utils.js';
+import { ViewUtils } from '/static/vesper/view/view-utils.js';
 
 
 const _NONZERO_COUNT_CIRCLE_COLOR = 'orange';
@@ -55,34 +56,8 @@ function addButtonEventListeners() {
 
     // filter clips modal OK button
     const okButton = document.getElementById('filter-clips-modal-ok-button');
-    okButton.onclick = onFilterClipsModalOkButtonClick;
+    okButton.onclick = ViewUtils.onFilterClipsModalOkButtonClick;
     
-}
-
-
-function onFilterClipsModalOkButtonClick(event) {
-
-    // TODO: Only set URL if query has changed.
-
-    const encode = UrlUtils.encodeQueryParameterValue;
-    
-    const stationMic = encode(document.getElementById(
-        'filter-clips-modal-station-mic-select').value);
-    
-    const detector = encode(document.getElementById(
-        'filter-clips-modal-detector-select').value);
-    
-    const classification = encode(document.getElementById(
-        'filter-clips-modal-classification-select').value);
-    
-    const url =
-        `/clip-calendar/?` +
-        `station_mic=${stationMic}&` +
-        `detector=${detector}&` +
-        `classification=${classification}`;
-    
-    window.location.href = url;
-        
 }
 
 
