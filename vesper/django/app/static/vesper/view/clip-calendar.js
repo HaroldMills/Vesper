@@ -1,4 +1,3 @@
-import { UrlUtils } from '/static/vesper/util/url-utils.js';
 import { ViewUtils } from '/static/vesper/view/view-utils.js';
 
 
@@ -179,22 +178,16 @@ function addMonthDay(day, daysDiv) {
 	} else {
 
 	    
-		// Get circle URL.
-	    
-	    const encode = UrlUtils.encodeQueryParameterValue;
-	    const stationMic = encode(state.stationMicName);
-	    const detector = encode(state.detectorName);
-	    const classification = encode(state.classification);
-		const date = formatDate(day.date);
-		
-		const url =
-		    `/night?` +
-		    `station_mic=${stationMic}&` +
-	        `detector=${detector}&` +
-			`classification=${classification}&` +
-			`date=${date}`;
-
-
+        // Get circle URL.
+        const url = new URL(window.location.href);
+        url.pathname = '/night';
+        const params = url.searchParams;
+        params.set('station_mic', state.stationMicName);
+        params.set('detector', state.detectorName);
+        params.set('classification', state.classification);
+        params.set('date', formatDate(day.date));
+        
+        
 		// Add day number.
 
 		let num = null;
@@ -208,7 +201,7 @@ function addMonthDay(day, daysDiv) {
 			// one or more recordings for this day
 
 		    num = document.createElement('a');
-	        num.href = url;
+	        num.href = url.href;
 
 		}
 
@@ -226,7 +219,7 @@ function addMonthDay(day, daysDiv) {
 			circleDiv.className = 'circle';
 
 			// Set circle attributes.
-			circleDiv.setAttribute('data-url', url);
+			circleDiv.setAttribute('data-url', url.href);
 			circleDiv.setAttribute('data-count', day.count.toString());
 			const radius = getCircleRadius(day.count).toFixed(1);
 			circleDiv.setAttribute('data-radius', radius);
