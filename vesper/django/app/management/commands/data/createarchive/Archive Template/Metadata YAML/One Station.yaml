@@ -149,12 +149,12 @@ station_devices:
 # code.
 detectors:
 
-    - name: BirdVoxDetect 0.2.3 AT 50
+    - name: BirdVoxDetect 0.2.5 AT 50
       description: >
           BirdVoxDetect NFC detector with an adaptive threshold
           whose nominal value is 50.
 
-    - name: BirdVoxDetect 0.2.3 FT 50
+    - name: BirdVoxDetect 0.2.5 FT 50
       description: >
           BirdVoxDetect NFC detector with a fixed threshold of 50.
 
