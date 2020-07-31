@@ -112,6 +112,9 @@ export class SpectrogramClipView extends ClipView {
 			// spectrogram canvas and the spectrogram image data have the
 			// same size as the spectrogram.
 			this._spectrogram = _computeSpectrogram(clip.samples, settings);
+            // _showSpectrogramStats(this._spectrogram, settings);
+            // this._spectrogram =
+            //     _normalizeSpectrogramBackground(this._spectrogram, settings);
 			this._spectrogramCanvas =
 				_createSpectrogramCanvas(this._spectrogram, settings);
 			this._spectrogramImageData =
@@ -397,6 +400,192 @@ function _createSpectrogramCanvas(spectrogram, settings) {
 
 	return canvas;
 
+}
+
+
+// This is similar to the other normalizing function in that it
+// subtracts an estimate of the background and then applies an
+// affine transformation to the result. The only difference is
+// the affine transformation. The one here aims to leave signal
+// bins more or less alone, and uses a scale factor of one. The
+// other puts the background at zero dB and scales by something
+// other than one to put the signal roughly in the range [50, 100].
+function _normalizeSpectrogramBackgroundX(spectrogram, settings) {
+    
+    const percentile = 30;
+    const gain = 1;
+    
+    const numBins = settings.low.dftSize / 2 + 1;
+    const numSpectra = spectrogram.length / numBins;
+    
+    const backgroundSpectrum = _getSpectrogramBackgroundSpectrum(
+        spectrogram, numBins, numSpectra, percentile);
+    
+    const backgroundSpectrumMedian =
+        _getArrayPercentileValue(backgroundSpectrum, 50);
+    
+    const normalizedSpectrogram = new Float64Array(spectrogram.length);
+    
+    for (let i = 0; i < numBins; i++) {
+        
+        const offset =
+            gain * (backgroundSpectrumMedian - backgroundSpectrum[i])
+            
+        let k = i;
+        
+        for (let j = 0; j < numSpectra; j++) {
+            normalizedSpectrogram[k] = spectrogram[k] + offset;
+            k += numBins;
+        }
+        
+    }
+    
+    return normalizedSpectrogram;
+    
+}
+
+
+function _normalizeSpectrogramBackground(spectrogram, settings) {
+    
+    const percentile = 30;
+    const gain = 1;
+    const scaleFactor = 1.5;
+    const offset = 10;
+    // const scaleFactor = 1;
+    // const offset = 0;
+    
+    const numBins = settings.low.dftSize / 2 + 1;
+    const numSpectra = spectrogram.length / numBins;
+    
+    const backgroundSpectrum = _getSpectrogramBackgroundSpectrum(
+        spectrogram, numBins, numSpectra, percentile);
+    
+    const normalizedSpectrogram = new Float64Array(spectrogram.length);
+    
+    for (let i = 0; i < numBins; i++) {
+        
+        let k = i;
+        
+        for (let j = 0; j < numSpectra; j++) {
+            
+            normalizedSpectrogram[k] =
+                scaleFactor * (spectrogram[k] - gain * backgroundSpectrum[i]) +
+                offset;
+                
+            k += numBins;
+        }
+        
+    }
+    
+    return normalizedSpectrogram;
+    
+}
+
+
+function _getSpectrogramBackgroundSpectrum(
+        spectrogram, numBins, numSpectra, percentile) {
+    
+    const spectrum = new Float64Array(numBins);
+    
+    for (let i = 0; i < numBins; i++)
+        spectrum[i] = _getSpectrogramBackgroundBinValue(
+            spectrogram, i, numBins, numSpectra, percentile);
+                 
+    return spectrum;
+
+}
+
+
+function _getSpectrogramBackgroundBinValue(
+        spectrogram, binNum, numBins, numSpectra, percentile) {
+    
+    const histogramStartValue = 0;
+    const histogramEndValue = 100;
+    const histogram = new Uint32Array(histogramEndValue - histogramStartValue);
+    
+    let k = binNum;
+    
+    for (let i = 0; i < numSpectra; i++) {
+        
+        const binNum = _getHistogramBinNum(
+            spectrogram[k], histogramStartValue, histogramEndValue);
+        
+        histogram[binNum] += 1;
+        
+        k += numBins;
+        
+    }
+    
+    const threshold = Math.round(numSpectra * percentile / 100.);
+    
+    let cumulativeValueCount = 0;
+    
+    for (let i = 0; i < histogram.length; i++) {
+        
+        cumulativeValueCount += histogram[i];
+        
+        if (cumulativeValueCount >= threshold)
+            return histogramStartValue + i;
+        
+    }
+    
+}
+
+
+function _getArrayPercentileValue(x, percentile) {
+    const temp = x.slice();
+    temp.sort((a, b) => a - b);
+    const i = Math.round(percentile / 100. * (temp.length - 1));
+    return temp[i];
+}
+
+
+function _showSpectrogramStats(spectrogram, settings) {
+    
+    const histogramStartValue = 0;
+    const histogramEndValue = 100;
+    const histogramLength = histogramEndValue - histogramStartValue;
+    const histogram = new Uint32Array(histogramLength);
+    
+    let minValue = 1000000;
+    let maxValue = -1000000;
+    
+    for (let i = 0; i < spectrogram.length; i++) {
+        
+        const value = spectrogram[i];
+        
+        if (value < minValue)
+            minValue = value;
+            
+        if (value > maxValue)
+            maxValue = value;
+            
+        const binNum = _getHistogramBinNum(
+            value, histogramStartValue, histogramEndValue);
+            
+        histogram[binNum] += 1;
+    
+    }
+    
+    console.log(`spectogram min ${minValue} max ${maxValue}`);
+    
+    for (let i = 0; i < histogram.length; i++)
+        console.log(`${histogramStartValue + i} ${histogram[i]}`);
+    
+}
+
+
+function _getHistogramBinNum(value, startValue, endValue) {
+    
+    if (value < startValue)
+        return 0;
+        
+    else if (value >= endValue)
+        return endValue - startValue - 1;
+        
+    else
+        return Math.floor(value);
+    
 }
 
 
