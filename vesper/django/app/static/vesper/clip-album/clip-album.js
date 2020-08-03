@@ -1551,17 +1551,20 @@ export class ClipAlbum {
     
     
     _executeGoToNextDateCommand(env) {
-        this._goToNextDate();
+        if (this._isSingleDateClipAlbum())
+            this._goToNextDate();
     }
     
     
     _executeGoToPreviousDateCommand(env) {
-        this._goToPreviousDate();
+        if (this._isSingleDateClipAlbum())
+            this._goToPreviousDate();
     }
     
     
     _executeGoToClipCalendarCommand(env) {
-        this._goToClipCalendar();
+        if (this._isSingleDateClipAlbum())
+            this._goToClipCalendar();
     }
 
 
