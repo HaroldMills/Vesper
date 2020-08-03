@@ -195,14 +195,8 @@ export class ClipAlbum {
         this._resizeThrottle = new _WindowResizeThrottle(this);
 
         this._layout = this._createLayout(this.settings);
-
-        const rugPlotDiv = document.getElementById('rug-plot');
-        if (rugPlotDiv !== null)
-            this._rugPlot = new NightRugPlot(
-                this, rugPlotDiv, this.clips, state.recordings,
-                state.solarEventTimes);
-        else
-            this._rugPlot = null;
+        
+        this._rugPlot = this._createRugPlot(state);
 
         // We use a Web Audio `AudioContext` object to play clips.
         this._audioContext = new AudioContext();
@@ -211,11 +205,6 @@ export class ClipAlbum {
 
         this.pageNum = 0;
         
-    }
-    
-    
-    _isSingleDateClipAlbum() {
-        return this._clipFilter.date !== null;
     }
     
     
@@ -522,8 +511,32 @@ export class ClipAlbum {
 		return new layoutClass(
 			this._clipsDiv, this._clipViews, settings.layout);
 	}
-
-
+    
+    
+    _createRugPlot(state) {
+        
+        if (this._isSingleDateClipAlbum()) {
+            
+            const rugPlotDiv = document.getElementById('rug-plot');
+            
+            return new NightRugPlot(
+                this, rugPlotDiv, this.clips, state.recordings,
+                state.solarEventTimes);
+                
+        } else {
+            
+            return null;
+            
+        }
+        
+    }
+    
+    
+    _isSingleDateClipAlbum() {
+        return this._clipFilter.date !== null;
+    }
+    
+    
 	_createClipManager() {
 	    
         const settings = {
