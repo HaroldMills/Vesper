@@ -142,6 +142,7 @@ const _COMMAND_SPECS = [
     
     ['go_to_next_date'],
     ['go_to_previous_date'],
+    ['go_to_clip_calendar'],
 
 ];
 
@@ -267,6 +268,13 @@ export class ClipAlbum {
         if (prevAnchor !== null)
             prevAnchor.addEventListener(
                 'click', e => this._onGoToPreviousDateAnchorClick(e));
+
+        // go to clip calendar anchor
+        const clipCalendarAnchor =
+            document.getElementById('go-to-clip-calendar-anchor');
+        if (clipCalendarAnchor !== null)
+            clipCalendarAnchor.addEventListener(
+                'click', e => this._onGoToClipCalendarAnchorClick(e));
 
         this._installKeyPressEventListener();
 
@@ -466,6 +474,31 @@ export class ClipAlbum {
     
     _goToPreviousDate() {
         this._goToRelativeDate(-1);
+    }
+    
+    
+    _onGoToClipCalendarAnchorClick(event) {
+        this._goToClipCalendar();
+    }
+    
+    
+    _goToClipCalendar() {
+        
+        // Get URL of this clip album.
+        const albumUrl = new URL(window.location.href);
+        const albumParams = albumUrl.searchParams;
+        
+        // Build URL of corresponding clip calendar.
+        const calendarUrl = new URL(albumUrl.origin + '/clip-calendar');
+        const calendarParams = calendarUrl.searchParams;
+        calendarParams.set('station_mic', albumParams.get('station_mic'));
+        calendarParams.set('detector', albumParams.get('detector'));
+        calendarParams.set(
+            'classification', albumParams.get('classification'));
+        
+       // Go to new URL.
+        window.location.href = calendarUrl.href;
+        
     }
     
     
@@ -1511,6 +1544,11 @@ export class ClipAlbum {
     
     _executeGoToPreviousDateCommand(env) {
         this._goToPreviousDate();
+    }
+    
+    
+    _executeGoToClipCalendarCommand(env) {
+        this._goToClipCalendar();
     }
 
 
