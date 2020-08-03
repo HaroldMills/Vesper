@@ -1052,9 +1052,10 @@ export class ClipAlbum {
 			if (this._rugPlot !== null)
 			    this._rugPlot.setPageClipNumRange(range);
 			this._clipManager.pageNum = newPageNum;
+            
+            this._update();
+            
 		}
-
-		this._update();
 
 	}
 
