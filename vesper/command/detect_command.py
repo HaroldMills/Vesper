@@ -642,7 +642,7 @@ def _get_time_intervals_intersection(a, b):
 
 def _get_file_detection_intervals(file_, recording_intervals):
     
-    """Gets the audio file index intervals on which to run detectors."""
+    """Gets the audio file time intervals on which to run detectors."""
     
     file_interval = Interval(file_.start_time, file_.end_time)
     
@@ -672,21 +672,6 @@ def _get_index_interval(time_interval, start_time, sample_rate):
     return Interval(start=start_index, end=start_index + length)
 
 
-def _get_index_intervals_intersection(a, b):
-    
-    if a.end <= b.start or b.end <= a.start:
-        # intervals do not intersect
-        
-        return None
-    
-    else:
-        # intervals intersect
-        
-        start = a.start if b.start < a.start else b.start
-        end = a.end if a.end < b.end else b.end
-        return Interval(start=start, end=end)
-    
-    
 def _generate_sample_buffers(file_reader, interval):
     
     index = interval.start
