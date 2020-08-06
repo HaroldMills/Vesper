@@ -24,10 +24,10 @@
 # example with each file name including a unique combination of a
 # station name and a file start time.
 #
-# The example setting below has been commented out to disable
-# it. To enable the setting, remove the two-character sequence
-# "# " (i.e. a pound sign followed by a space) from the beginning
-# of each line of the setting.
+# The example setting below has been commented out to disable it.
+# To enable the setting, remove the two-character sequence "# "
+# (i.e. a pound sign followed by a space) from the beginning of each
+# line of the setting, including the "recording_directories" line.
 # recording_directories:
 #     - 'W:\NFC\Recordings'           # Windows
 #     - '/Volumes/NFC/Recordings'     # macOS
