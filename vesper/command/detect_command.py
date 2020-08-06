@@ -432,8 +432,7 @@ class DetectCommand(Command):
                         f'        The detection schedule '
                         f'"{self._schedule_name}" does not include any '
                         f'portion of the time interval of the file '
-                        f'"{abs_path}", so no detectors will be run on '
-                        f'the file.')
+                        f'"{abs_path}", so no detectors will be run on it.')
                     
                 for interval in intervals:
                     self._run_other_detectors_on_file_interval(
