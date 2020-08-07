@@ -202,6 +202,10 @@ def create_training_dataset(dir_path, settings):
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     dataset = dataset.map(
+        processor.normalize_spectrogram_background,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    dataset = dataset.map(
         _diddle_example,
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
@@ -260,6 +264,10 @@ def create_inference_dataset(waveform_dataset, settings):
     
     dataset = dataset.map(
         processor.slice_spectrogram_along_frequency_axis,
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    dataset = dataset.map(
+        processor.normalize_spectrogram_background,
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     dataset = dataset.map(
@@ -499,7 +507,7 @@ class _ExampleProcessor:
         gram = tf.math.log(gram + s.spectrogram_log_epsilon)
         decibel_scale_factor = 10 / math.log(10)
         gram = 100 + decibel_scale_factor * gram
-                
+        
         return (gram,) + tuple(args)
     
     
@@ -507,9 +515,22 @@ class _ExampleProcessor:
         gram = gram[..., self._freq_start_index:self._freq_end_index]
         return (gram,) + tuple(args)
         
-
-    def slice_spectrogram_along_frequency_axis_with_shift(
-            self, gram, *args):
+        
+    def normalize_spectrogram_background(self, gram, *args):
+        
+        s = self._settings
+        rank = s.spectrogram_background_normalization_percentile_rank
+        
+        if rank is not None:
+            ranks = tf.constant([rank])
+            percentiles = _get_spectrogram_percentiles(gram, ranks)
+            percentiles = tf.reshape(percentiles, (1, tf.size(percentiles)))
+            gram = gram - percentiles
+            
+        return (gram,) + tuple(args)
+        
+        
+    def slice_spectrogram_along_frequency_axis_with_shift(self, gram, *args):
         
         # Get frequency shift in bins.
         max_shift = self._settings.max_spectrogram_frequency_shift
@@ -521,7 +542,7 @@ class _ExampleProcessor:
         
         return (gram,) + tuple(args)
         
-
+        
     def slice_spectrogram_along_time_axis(self, gram, *args):
     
         slice_length = _get_spectrogram_slice_length(self._settings)
@@ -565,6 +586,51 @@ def _swap_bounds(start_index, end_index, length):
 
 def _f32(x):
     return tf.cast(x, tf.float32)
+
+
+_MAX_GRAM_VALUE = 120
+
+
+def _get_spectrogram_percentiles(gram, percentile_ranks):
+    
+    # Round gram values to nearest integer.
+    gram = tf.cast(tf.round(gram), tf.int32)
+    
+    # Clip values.
+    gram = tf.clip_by_value(gram, 0, _MAX_GRAM_VALUE)
+    
+    # Transpose gram so first dimension is frequency.
+    gram = tf.transpose(gram)
+    
+    # print('rounded, clipped, and transposed spectrogram:')
+    # print(gram)
+    
+    def accumulate_counts(x):
+        length = _MAX_GRAM_VALUE + 1
+        counts = tf.math.bincount(x, minlength=length, maxlength=length)
+        return tf.cumsum(counts)
+    
+    cumulative_counts = tf.map_fn(accumulate_counts, gram)
+    
+    # print()
+    # print('cumulative sums of rounded bin value counts:')
+    # print(cumulative_counts)
+
+    shape = tf.shape(gram)
+    bin_count = shape[0]
+    spectrum_count = shape[1]
+    percentile_ranks = tf.cast(percentile_ranks, tf.float32)
+    thresholds = percentile_ranks / 100. * tf.cast(spectrum_count, tf.float32)
+    thresholds = tf.cast(tf.round(thresholds), tf.int32)
+    thresholds = tf.reshape(thresholds, (1, len(thresholds)))
+    thresholds = tf.tile(thresholds, (bin_count, 1))
+    percentiles = tf.searchsorted(cumulative_counts, thresholds)
+    
+    # print()
+    # print('percentiles:')
+    # print(percentiles)
+    
+    return tf.cast(percentiles, tf.float32)
 
 
 def _slice_spectrogram(gram, slice_length):

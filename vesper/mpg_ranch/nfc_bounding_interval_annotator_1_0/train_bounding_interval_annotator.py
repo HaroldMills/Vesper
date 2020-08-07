@@ -55,7 +55,7 @@ TSEEP_SETTINGS = Settings(
     # augmentation is enabled. This augmentation scales each waveform
     # randomly to distribute the waveform log RMS amplitudes uniformly
     # within a roughly 48 dB window.
-    waveform_amplitude_scaling_data_augmentation_enabled=True,
+    waveform_amplitude_scaling_data_augmentation_enabled=False,
     
     # spectrogram settings
     spectrogram_window_size=.005,
@@ -69,6 +69,8 @@ TSEEP_SETTINGS = Settings(
     # The maximum spectrogram frequency shift for data augmentation,
     # in bins. Set this to zero to disable this augmentation.
     max_spectrogram_frequency_shift=2,
+    
+    spectrogram_background_normalization_percentile_rank=30,
     
     # training settings
     training_batch_size=128,
@@ -100,7 +102,7 @@ def main():
     
     # show_model_summary('start_2020-06-10_12.13.39')
     
-    # test_bincount()
+    # test_get_spectrogram_percentiles()
     
     # test_create_waveform_dataset_from_tensors()
     
@@ -314,35 +316,31 @@ def show_model_summary(model_name):
     model.summary()
     
     
-def test_bincount():
+def test_get_spectrogram_percentiles():
     
-    # Start with two-dimensional float tensor of spectra. First dimension
-    # is time, second is frequency.
-    x = tf.convert_to_tensor([
-        [.9, 1, 2],
-        [0, 2.1, 1],
-        [0, 2, 1.2],
-        [0, 0.1, 0]
+    # For convenience of specification, here first dimension is frequency,
+    # second is time. This tensor is transposed below, though, preceding
+    # the call to `_get_spectrogram_percentiles`.
+    gram = tf.constant([
+        [1.1, 0, 0, 89.9],      # 0, 0, 1, 90
+        [80, 60, 40, 20],       # 20, 40, 60, 80
+        [40, 80, 130, -10]      # 0, 40, 80, 120
     ])
     
-    # Round values to nearest integer.
-    x = tf.cast(tf.round(x), tf.int32)
+    print('gram:')
+    print(gram)
     
-    # Transpose tensor so first dimension is frequency.
-    x = tf.transpose(x)
+    # Transpose gram so it's a sequence of spectra (i.e. so that first
+    # dimension is time and second is frequency), as expected by
+    # `_get_spectrogram_percentiles`.
+    gram = tf.transpose(gram)
     
-    print('rounded and transposed spectrogram:')
-    print(x)
+    ranks = tf.constant([25, 50, 75, 100])
     
-    def fn(x):
-        counts = tf.math.bincount(x, minlength=3)
-        return tf.cumsum(counts)
+    percentiles = dataset_utils._get_spectrogram_percentiles(gram, ranks)
     
-    counts = tf.map_fn(fn, x)
-    
-    print()
-    print('cumulative sums of rounded bin values:')
-    print(counts)
+    print('gram percentiles:')
+    print(percentiles)
     
     
 def test_create_waveform_dataset_from_tensors():
