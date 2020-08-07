@@ -1,6 +1,7 @@
 """Creates NFC time bound marker datasets from clip HDF5 files."""
 
 
+from collections import defaultdict
 from pathlib import Path
 import time
 
@@ -12,8 +13,10 @@ import vesper.util.os_utils as os_utils
 import vesper.signal.resampling_utils as resampling_utils
 
 
-VALIDATION_FRACTION = .1
-TEST_FRACTION = .01
+DATASET_SIZES = {
+    'Training': None,
+    'Validation': .1
+}
 
 CALL_TYPE = 'Tseep'
 
@@ -35,6 +38,10 @@ Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Davies.h5
 Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Deer Mountain.h5
 Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Floodplain.h5
 Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Florence.h5
+Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_KBK.h5
+Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Lilo.h5
+Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Nelson.h5
+Tseep_2017 MPG Ranch 30k_Old Bird Redux 1.1_Powell.h5
 '''.strip().split('\n')
 
 INPUT_FILE_NAMES = {
@@ -50,6 +57,8 @@ OUTPUT_FILE_NAME_FORMAT = '{}_{}.tfrecords'
 
 def main():
     
+    dataset_sizes = defaultdict(int)
+    
     for input_file_name in INPUT_FILE_NAMES:
         
         # Get clip IDs from input file.
@@ -58,42 +67,54 @@ def main():
         clip_group = file_['clips']
         clip_ids = list(clip_group.keys())
         
-        # Shuffle IDs.
-        shuffled_clip_ids = np.random.permutation(clip_ids)
-        
-        # Partition shuffled IDs for training, validation, and test datasets.
-        train_clip_ids, val_clip_ids, test_clip_ids = \
-            partition_clip_ids(shuffled_clip_ids)
+        dataset_clip_ids = get_dataset_clip_ids(DATASET_SIZES, clip_ids)
         
         # Create tfrecord files.
         file_name_prefix = input_file_path.stem
-        create_tfrecord_file(
-            file_name_prefix, 'Training', clip_group, train_clip_ids)
-        create_tfrecord_file(
-            file_name_prefix, 'Validation', clip_group, val_clip_ids)
-        create_tfrecord_file(
-            file_name_prefix, 'Test', clip_group, test_clip_ids)
+        for dataset_name, clip_ids in dataset_clip_ids.items():
+            create_tfrecord_file(
+                file_name_prefix, dataset_name, clip_group, clip_ids)
+            dataset_sizes[dataset_name] += len(clip_ids)
+            
+    show_dataset_sizes(dataset_sizes)
         
         
-def partition_clip_ids(ids):
+def get_dataset_clip_ids(dataset_sizes, clip_ids):
     
-    clip_count = len(ids)
+    # Make sure all datasets have sizes.
+    dataset_sizes = complete_dataset_sizes(dataset_sizes)
     
-    val_start_index = get_subset_start_index(
-        clip_count, VALIDATION_FRACTION + TEST_FRACTION)
-    
-    test_start_index = get_subset_start_index(clip_count, TEST_FRACTION)
-    
-    train_ids = ids[:val_start_index]
-    val_ids = ids[val_start_index:test_start_index]
-    test_ids = ids[test_start_index:]
-    
-    return train_ids, val_ids, test_ids
+    # Shuffle clip IDs.
+    clip_ids = np.random.permutation(clip_ids)
 
+    dataset_clip_ids = {}
+    clip_count = len(clip_ids)
+    start_index = 0
     
-def get_subset_start_index(clip_count, offset):
-    return int(round(clip_count * (1 - offset)))
+    for name, fraction in dataset_sizes.items():
+        
+        end_index = start_index + int(round(fraction * clip_count))
+        
+        dataset_clip_ids[name] = clip_ids[start_index:end_index]
+        
+        start_index = end_index
+    
+    return dataset_clip_ids
+        
 
+def complete_dataset_sizes(sizes):
+    fraction_sum = sum(s for s in sizes.values() if s is not None)
+    return dict(
+        (name, complete_dataset_size(fraction, fraction_sum))
+        for name, fraction in sizes.items())
+    
+    
+def complete_dataset_size(fraction, fraction_sum):
+    if fraction is None:
+        return 1 - fraction_sum
+    else:
+        return fraction
+            
 
 def create_tfrecord_file(file_name_prefix, dataset_name, clip_group, clip_ids):
     
@@ -196,6 +217,13 @@ def get_output_file_path(file_name_prefix, dataset_name):
         file_name_prefix, dataset_name)
     
     return OUTPUT_DIR_PATH / dataset_name / file_name
+
+
+def show_dataset_sizes(dataset_sizes):
+    print('Dataset sizes:')
+    for name in sorted(dataset_sizes.keys()):
+        size = dataset_sizes[name]
+        print(f'    {name}: {size}')
 
 
 if __name__ == '__main__':
