@@ -74,16 +74,17 @@ TSEEP_SETTINGS = Settings(
     
     # training settings
     training_batch_size=128,
-    training_epoch_count=50,
-    training_epoch_step_count=100,
+    training_epoch_step_count=100,  # epoch size is batch size times step count
+    training_epoch_count=30,
+    model_save_period=5,            # epochs
     dropout_rate=.25,
     
     # validation settings
     validation_batch_size=1,
     validation_step_count=1000,
     
-    # validation plot settings
-    max_validation_inlier_diff=20,
+    # evaluation plot settings
+    max_evaluation_inlier_diff=20,
     
     # offsets for converting inference value to spectrogram index
     call_start_index_offset=23,
@@ -96,11 +97,11 @@ def main():
     
     settings = TSEEP_SETTINGS
     
-    train_and_validate_annotator(settings)
+    train_annotator(settings)
     
-    # validate_annotator('2020-07-06_09.33.54')
+    # evaluate_annotator('2020-07-06_09.33.54')
     
-    # show_model_summary('start_2020-06-10_12.13.39')
+    # show_model_summary('start_2020-06-10_12.13.39', 20)
     
     # test_get_spectrogram_percentiles()
     
@@ -113,15 +114,11 @@ def main():
     # test_create_inference_dataset(settings)
 
 
-def train_and_validate_annotator(settings):
-    model_name = annotator_utils.create_model_name(settings)
-    train_annotator(model_name, settings)
-    validate_annotator(model_name)
-
-
-def train_annotator(model_name, settings):
+def train_annotator(settings):
     
     s = settings
+    
+    training_name = annotator_utils.create_training_name(s)
     
     training_dataset = get_dataset('Training', s).batch(s.training_batch_size)
     validation_dataset = \
@@ -167,38 +164,63 @@ def train_annotator(model_name, settings):
     
     model.summary()
     
-    log_dir_path = annotator_utils.get_log_dir_path(model_name)
-    callback = tf.keras.callbacks.TensorBoard(
+    log_dir_path = annotator_utils.get_training_log_dir_path(training_name)
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir=log_dir_path, histogram_freq=1)
+    
+    model_save_callback = ModelSaveCallback(training_name, settings)
      
     model.fit(
         training_dataset, epochs=s.training_epoch_count,
         steps_per_epoch=s.training_epoch_step_count, verbose=2,
         validation_data=validation_dataset,
         validation_steps=s.validation_step_count,
-        callbacks=[callback])
+        callbacks=[tensorboard_callback, model_save_callback])
      
-    model_dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(
-        model_name)
-    model.save(model_dir_path)
+
+class ModelSaveCallback(tf.keras.callbacks.Callback):
     
-    save_model_settings(settings, model_name)
+    
+    def __init__(self, training_name, settings):
+        self._training_name = training_name
+        self._settings = settings
+        
+        
+    def on_epoch_end(self, epoch, logs=None):
+        
+        epoch_num = epoch + 1
+        
+        if epoch_num % self._settings.model_save_period == 0:
+            
+            model_dir_path = \
+                annotator_utils.get_tensorflow_saved_model_dir_path(
+                    self._training_name, epoch_num)
+                
+            self.model.save(model_dir_path)
+            
+            save_training_settings(self._settings, self._training_name)
+            
+            print(f'Saved model at end of epoch {epoch_num}.')
+            
+            print('Evaluating model...')
+            evaluate_annotator(self._training_name, epoch_num)
 
-
+        
 def get_dataset(name, settings):
     dir_path = annotator_utils.get_dataset_dir_path(settings.clip_type, name)
     return dataset_utils.create_training_dataset(dir_path, settings)
 
 
-def save_model_settings(settings, model_name):
-    file_path = annotator_utils.get_model_settings_file_path(model_name)
+def save_training_settings(settings, training_name):
+    file_path = annotator_utils.get_training_settings_file_path(training_name)
     text = yaml_utils.dump(settings.__dict__, default_flow_style=False)
     file_path.write_text(text)
 
 
-def validate_annotator(model_name):
+def evaluate_annotator(training_name, epoch_num):
     
-    _, settings = annotator_utils.load_model_and_settings(model_name)
+    _, settings = annotator_utils.load_model_and_settings(
+        training_name, epoch_num)
     
     dir_path = annotator_utils.get_dataset_dir_path(
         settings.clip_type, 'Validation')
@@ -206,7 +228,7 @@ def validate_annotator(model_name):
     
     dataset = dataset.take(settings.validation_step_count)
     
-    inferrer = Inferrer(model_name)
+    inferrer = Inferrer((training_name, epoch_num))
     
     bounds = inferrer.get_call_bounds(dataset)
     
@@ -234,10 +256,11 @@ def validate_annotator(model_name):
 #             inferred_start_index, inferred_end_index,
 #             dataset_start_index, dataset_end_index)
 
-    _show_diff_counts('start', start_diff_counts, settings)
-    _show_diff_counts('end', end_diff_counts, settings)
+    _show_diff_counts('Start', start_diff_counts, settings)
+    _show_diff_counts('End', end_diff_counts, settings)
     
-    _plot_diff_counts(model_name, start_diff_counts, end_diff_counts, settings)
+    _plot_diff_counts(
+        training_name, epoch_num, start_diff_counts, end_diff_counts, settings)
     
     
 def _get_diff(inferred_index, dataset_index, sample_rate):
@@ -261,7 +284,7 @@ def _show_diff_counts(name, counts, settings):
     outlier_count = 0
     for diff in diffs:
         count = counts[diff]
-        if diff <= settings.max_validation_inlier_diff:
+        if diff <= settings.max_evaluation_inlier_diff:
             diff_sum += count * diff
             diff_sum_2 += count * diff * diff
             inlier_count += count
@@ -274,18 +297,20 @@ def _show_diff_counts(name, counts, settings):
     
     
 def _plot_diff_counts(
-        model_name, start_diff_counts, end_diff_counts, settings):
+        training_name, epoch_num, start_diff_counts, end_diff_counts,
+        settings):
 
-    file_path = annotator_utils.get_validation_plot_file_path(model_name)
+    file_path = annotator_utils.get_evaluation_plot_file_path(
+        training_name, epoch_num)
     
     with PdfPages(file_path) as pdf:
     
         _, (start_axes, end_axes) = plt.subplots(2)
         
-        title = f'{model_name} Call Start Errors'
+        title = f'{training_name} Epoch {epoch_num} Call Start Errors'
         _plot_diff_counts_aux(start_axes, title, start_diff_counts, settings)
         
-        title = f'{model_name} Call End Errors'
+        title = f'{training_name} Epoch {epoch_num} Call End Errors'
         _plot_diff_counts_aux(end_axes, title, end_diff_counts, settings)
         
         plt.tight_layout()
@@ -297,7 +322,7 @@ def _plot_diff_counts(
     
 def _plot_diff_counts_aux(axes, title, counts, settings):
     
-    limit = settings.max_validation_inlier_diff
+    limit = settings.max_evaluation_inlier_diff
     x = np.arange(-limit, limit + 1)
     
     total_count = sum(counts.values())
@@ -309,9 +334,9 @@ def _plot_diff_counts_aux(axes, title, counts, settings):
     axes.set_ylabel('fraction')
 
     
-def show_model_summary(model_name):
+def show_model_summary(training_name, epoch_num):
     model_dir_path = annotator_utils.get_tensorflow_saved_model_dir_path(
-        model_name)
+        training_name, epoch_num)
     model = tf.keras.models.load_model(model_dir_path)
     model.summary()
     

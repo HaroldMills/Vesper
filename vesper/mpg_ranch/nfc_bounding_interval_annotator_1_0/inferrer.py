@@ -9,17 +9,17 @@ import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.dataset_utils \
 class Inferrer:
     
     
-    def __init__(self, start_model_name, end_model_name=None):
+    def __init__(self, start_model_info, end_model_info=None):
         
         self._start_model, self._start_settings = \
-            annotator_utils.load_model_and_settings(start_model_name)
+            annotator_utils.load_model_and_settings(*start_model_info)
         
-        if end_model_name is None:
+        if end_model_info is None:
             self._end_model = self._start_model
             self._end_settings = self._start_settings
         else:
             self._end_model, self._end_settings = \
-                annotator_utils.load_model_and_settings(end_model_name)
+                annotator_utils.load_model_and_settings(*end_model_info)
     
     
     @property
