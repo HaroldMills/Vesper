@@ -29,11 +29,16 @@ _CLASSIFICATION_ANNOTATION_NAME = 'Classification'
 _START_INDEX_ANNOTATION_NAME = 'Call Start Index'
 _END_INDEX_ANNOTATION_NAME = 'Call End Index'
 
-_MODEL_NAMES = {
+_MODEL_INFOS = {
     
-    # Tseep 9.5k
+    # Tseep 14k
     'Tseep':
-        ('Tseep_Start_2020-07-10_17.17.48', 'Tseep_End_2020-07-10_18.02.04'),
+        (('Tseep_Start_2020-08-07_14.02.08', 30),
+         ('Tseep_End_2020-08-07_15.10.03', 10)),
+        
+    # Tseep 9.5k
+    # 'Tseep':
+    #     ('Tseep_Start_2020-07-10_17.17.48', 'Tseep_End_2020-07-10_18.02.04'),
     
     # Tseep 10k
     # 'Tseep':
@@ -189,8 +194,8 @@ class Annotator(AnnotatorBase):
         
         
 def _create_inferrer(clip_type):
-    model_names = _MODEL_NAMES[clip_type]
-    return Inferrer(*model_names)
+    model_infos = _MODEL_INFOS[clip_type]
+    return Inferrer(*model_infos)
 
 
 def _get_annotation_infos():
