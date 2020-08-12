@@ -471,19 +471,19 @@ class Job(Model):
     
     command = TextField()
     processor = ForeignKey(
-        Processor, CASCADE, null=True,
+        Processor, CASCADE, null=True, blank=True,
         related_name='jobs',
         related_query_name='job')
-    start_time = DateTimeField(null=True)
-    end_time = DateTimeField(null=True)
+    start_time = DateTimeField(null=True, blank=True)
+    end_time = DateTimeField(null=True, blank=True)
     status = CharField(max_length=255)
     creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True,
+        User, CASCADE, null=True, blank=True,
         related_name='jobs',
         related_query_name='job')
     creating_job = ForeignKey(
-        'Job', CASCADE, null=True,
+        'Job', CASCADE, null=True, blank=True,
         related_name='jobs',
         related_query_name='job')
     
@@ -533,7 +533,7 @@ class Recording(Model):
     end_time = DateTimeField()
     creation_time = DateTimeField()
     creating_job = ForeignKey(
-        Job, CASCADE, null=True,
+        Job, CASCADE, null=True, blank=True,
         related_name='recordings',
         related_query_name='recording')
     
@@ -707,7 +707,7 @@ class Clip(Model):
         related_name='clips',
         related_query_name='clip')
     
-    start_index = BigIntegerField(null=True)
+    start_index = BigIntegerField(null=True, blank=True)
     length = BigIntegerField()
     
     sample_rate = FloatField()
@@ -723,15 +723,15 @@ class Clip(Model):
     
     creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True,
+        User, CASCADE, null=True, blank=True,
         related_name='clips',
         related_query_name='clip')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True,
+        Job, CASCADE, null=True, blank=True,
         related_name='clips',
         related_query_name='clip')
     creating_processor = ForeignKey(
-        Processor, CASCADE, null=True,
+        Processor, CASCADE, null=True, blank=True,
         related_name='clips',
         related_query_name='clip')
     
@@ -793,11 +793,11 @@ class AnnotationConstraint(Model):
     text = TextField(blank=True)
     creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True,
+        User, CASCADE, null=True, blank=True,
         related_name='annotation_constraints',
         related_query_name='annotation_constraint')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True,
+        Job, CASCADE, null=True, blank=True,
         related_name='annotation_constraints',
         related_query_name='annotation_constraint')
     
@@ -817,16 +817,16 @@ class AnnotationInfo(Model):
     description = TextField(blank=True)
     type = CharField(max_length=255, choices=TYPE_CHOICES)
     constraint = ForeignKey(
-        AnnotationConstraint, null=True, on_delete=SET_NULL,
+        AnnotationConstraint, null=True, blank=True, on_delete=SET_NULL,
         related_name='annotation_infos',
         related_query_name='annotation_info')
     creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True,
+        User, CASCADE, null=True, blank=True,
         related_name='annotation_infos',
         related_query_name='annotation_info')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True,
+        Job, CASCADE, null=True, blank=True,
         related_name='annotation_infos',
         related_query_name='annotation_info')
     
@@ -850,15 +850,15 @@ class StringAnnotation(Model):
     value = CharField(max_length=255)
     creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True,
+        User, CASCADE, null=True, blank=True,
         related_name='string_annotations',
         related_query_name='string_annotation')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True,
+        Job, CASCADE, null=True, blank=True,
         related_name='string_annotations',
         related_query_name='string_annotation')
     creating_processor = ForeignKey(
-        Processor, CASCADE, null=True,
+        Processor, CASCADE, null=True, blank=True,
         related_name='string_annotations',
         related_query_name='string_annotations')
     
@@ -888,18 +888,18 @@ class StringAnnotationEdit(Model):
         related_name='string_annotation_edits',
         related_query_name='string_annotation_edit')
     action = CharField(max_length=1, choices=ACTION_CHOICES)
-    value = CharField(max_length=255, null=True)
+    value = CharField(max_length=255, null=True, blank=True)
     creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True,
+        User, CASCADE, null=True, blank=True,
         related_name='string_annotation_edits',
         related_query_name='string_annotation_edit')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True,
+        Job, CASCADE, null=True, blank=True,
         related_name='string_annotation_edits',
         related_query_name='string_annotation_edit')
     creating_processor = ForeignKey(
-        Processor, CASCADE, null=True,
+        Processor, CASCADE, null=True, blank=True,
         related_name='string_annotation_edits',
         related_query_name='string_annotation_edits')
 
@@ -919,11 +919,11 @@ class TagInfo(Model):
     description = TextField(blank=True)
     creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True,
+        User, CASCADE, null=True, blank=True,
         related_name='tag_infos',
         related_query_name='tag_info')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True,
+        Job, CASCADE, null=True, blank=True,
         related_name='tag_infos',
         related_query_name='tag_info')
      
@@ -946,15 +946,15 @@ class Tag(Model):
         related_query_name='tag')
     creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True,
+        User, CASCADE, null=True, blank=True,
         related_name='tags',
         related_query_name='tag')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True,
+        Job, CASCADE, null=True, blank=True,
         related_name='tags',
         related_query_name='tag')
     creating_processor = ForeignKey(
-        Processor, CASCADE, null=True,
+        Processor, CASCADE, null=True, blank=True,
         related_name='tags',
         related_query_name='tags')
      
@@ -985,15 +985,15 @@ class TagEdit(Model):
     action = CharField(max_length=1, choices=ACTION_CHOICES)
     creation_time = DateTimeField()
     creating_user = ForeignKey(
-        User, CASCADE, null=True,
+        User, CASCADE, null=True, blank=True,
         related_name='tag_edits',
         related_query_name='tag_edit')
     creating_job = ForeignKey(
-        Job, CASCADE, null=True,
+        Job, CASCADE, null=True, blank=True,
         related_name='tag_edits',
         related_query_name='tag_edit')
     creating_processor = ForeignKey(
-        Processor, CASCADE, null=True,
+        Processor, CASCADE, null=True, blank=True,
         related_name='tag_edits',
         related_query_name='tag_edits')
  
