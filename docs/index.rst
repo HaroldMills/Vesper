@@ -45,8 +45,8 @@ Contents
    
    installation
    tutorial
+   faq
    
-
 .. Indices and tables
    ==================
 
