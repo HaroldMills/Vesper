@@ -24,7 +24,7 @@ class DeleteClipAudioFilesForm(forms.Form):
         
         # Populate station/mics field.
         names = model_utils.get_station_mic_output_pair_ui_names()
-        choices = [(n, n) for n in names]
+        choices = [(name, name) for name in names]
         self.fields['station_mics'].choices = choices
         
         # Populate classification field.

@@ -12,6 +12,7 @@ class DeleteClipsForm(forms.Form):
     classification = forms.ChoiceField(label='Classification')
     start_date = forms.DateField(label='Start date')
     end_date = forms.DateField(label='End date')
+    
     retain_count = forms.IntegerField(
         label='Retain count', min_value=0, initial=0)
     
@@ -26,7 +27,7 @@ class DeleteClipsForm(forms.Form):
         
         # Populate station/mics field.
         names = model_utils.get_station_mic_output_pair_ui_names()
-        choices = [(n, n) for n in names]
+        choices = [(name, name) for name in names]
         self.fields['station_mics'].choices = choices
         
         # Populate classification field.
