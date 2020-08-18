@@ -22,10 +22,7 @@ from vesper.django.app.add_recording_audio_files_form import \
     AddRecordingAudioFilesForm
 from vesper.django.app.adjust_clips_form import AdjustClipsForm
 from vesper.django.app.classify_form import ClassifyForm
-from vesper.django.app.create_clip_audio_files_form import \
-    CreateClipAudioFilesForm
-from vesper.django.app.delete_clip_audio_files_form import \
-    DeleteClipAudioFilesForm
+from vesper.django.app.clip_set_form import ClipSetForm
 from vesper.django.app.delete_clips_form import DeleteClipsForm
 from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
@@ -797,11 +794,11 @@ def _create_adjust_clips_command_spec(form):
 def create_clip_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
-        form = CreateClipAudioFilesForm()
+        form = ClipSetForm()
 
     elif request.method == 'POST':
 
-        form = CreateClipAudioFilesForm(request.POST)
+        form = ClipSetForm(request.POST)
 
         if form.is_valid():
             command_spec = _create_create_clip_audio_files_command_spec(form)
@@ -836,11 +833,11 @@ def _create_create_clip_audio_files_command_spec(form):
 def delete_clip_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
-        form = DeleteClipAudioFilesForm()
+        form = ClipSetForm()
 
     elif request.method == 'POST':
 
-        form = DeleteClipAudioFilesForm(request.POST)
+        form = ClipSetForm(request.POST)
 
         if form.is_valid():
             command_spec = _create_delete_clip_audio_files_command_spec(form)

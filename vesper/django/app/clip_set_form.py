@@ -1,10 +1,21 @@
+"""
+Form with fields for specifying a set of clips.
+
+The clips are specified as a set of detectors, a set of station/mic pairs,
+a classification, and a range of dates.
+
+This form can be used by a Django view either as is, or with additional
+fields specified in a subclass.
+"""
+
+
 from django import forms
 
 import vesper.django.app.form_utils as form_utils
 import vesper.django.app.model_utils as model_utils
 
 
-class DeleteClipAudioFilesForm(forms.Form):
+class ClipSetForm(forms.Form):
     
 
     detectors = forms.MultipleChoiceField(label='Detectors')
