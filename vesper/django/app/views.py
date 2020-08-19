@@ -1635,13 +1635,12 @@ def night(request):
     detectors = archive_.get_visible_processors_of_type('Detector')
     detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
     
-    # TODO: Should this be more like the analogous code in `clip_album`?
     annotation_name = 'Classification'
+    annotation_ui_value_specs = \
+        archive_.get_visible_string_annotation_ui_value_specs(annotation_name)
     annotation_value_spec = params['classification']
     annotation_name, annotation_value = \
         _get_string_annotation_info(annotation_name, annotation_value_spec)
-    annotation_ui_value_specs = \
-        archive_.get_visible_string_annotation_ui_value_specs(annotation_name)
 
     date_string = params['date']
     date = time_utils.parse_date(*date_string.split('-'))
