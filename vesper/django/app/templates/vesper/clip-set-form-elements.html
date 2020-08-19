@@ -1,0 +1,9 @@
+<!-- HTML elements for forms that specify sets of clips. -->
+
+{% load vesper_extras %}
+
+{{ form.detectors|block_form_element }}
+{{ form.station_mics|block_form_element }}
+{{ form.classification|form_element }}
+{{ form.start_date|form_element }}
+{{ form.end_date|form_element }}

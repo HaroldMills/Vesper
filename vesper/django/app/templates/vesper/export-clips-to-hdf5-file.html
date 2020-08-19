@@ -42,11 +42,8 @@
 
     <form class="form" role="form" action="{% url 'export-clips-to-hdf5-file' %}" method="post">
 
-        {{ form.detectors|block_form_element }}
-        {{ form.station_mics|block_form_element }}
-        {{ form.classification|form_element }}
-        {{ form.start_date|form_element }}
-        {{ form.end_date|form_element }}
+        {% include "vesper/clip-set-form-elements.html" %}
+        
         {{ form.output_file_path|block_form_element }}
 
         <button type="submit" class="btn btn-default form-spacing command-form-spacing">Export</button>
