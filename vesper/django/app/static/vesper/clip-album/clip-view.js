@@ -423,15 +423,20 @@ export class ClipView {
 	}
 
 
-	playClip() {
+	playClip(rate = 1) {
 
 		if (this.clip.audioBuffer != null) {
 			// have clip samples
 
-			const context = this.parent._audioContext;
+            
+            const context = this.parent._audioContext;
 			const source = context.createBufferSource();
 			source.buffer = this.clip.audioBuffer;
-			source.connect(context.destination);
+            
+            if (rate != 1)
+                source.playbackRate.value = rate;
+                
+           	source.connect(context.destination);
 			source.start();
 
 		}

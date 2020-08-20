@@ -121,6 +121,7 @@ const _COMMAND_SPECS = [
     ['select_previous_clip'],
 
     ['play_selected_clip'],
+    ['play_selected_clip_at_rate', 'playback_rate'],
 
     ['toggle_clip_labels'],
     ['toggle_clip_overlays'],
@@ -1189,10 +1190,10 @@ export class ClipAlbum {
 	}
 
 
-	_playSelectedClip() {
+	_playSelectedClip(rate = 1) {
 		if (this._isSelectionSingleton()) {
 			const i = this._selection.selectedIntervals[0][0];
-			this._clipViews[i].playClip();
+			this._clipViews[i].playClip(rate);
 		}
 	}
 
@@ -1334,6 +1335,12 @@ export class ClipAlbum {
 
     _executePlaySelectedClipCommand(env) {
         this._playSelectedClip();
+    }
+
+
+    _executePlaySelectedClipAtRateCommand(env) {
+        const rate = env.getRequired('playback_rate');
+        this._playSelectedClip(rate);
     }
 
 
