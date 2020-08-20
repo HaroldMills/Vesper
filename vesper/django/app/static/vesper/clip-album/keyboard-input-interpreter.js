@@ -308,6 +308,49 @@ Clip Album Key Bindings
 */
 
 
+/*
+
+TODO: Add support for optional command arguments with default values.
+Then, for example, the clip album `play_selected_clip` command could
+have an optional `playback_rate` argument, obviating the existing
+`play_selected_clip_at_rate` command.
+
+We can do this by augmenting the kinds of JSON that describe commands.
+
+For example, one might write:
+
+    {
+        'name': 'play_selected_clip',
+        'args': [
+            {
+                'name': 'playback_rate',
+                'default': 1
+            }
+        ]
+    }
+    
+to describe a command with an optional argument.
+
+Using JSON objects to describe commands and command arguments could also
+allow us to specify things like documentation and argument types.
+
+For commands without arguments, we might allow specification of the
+command with  just the name of the command as a string instead of
+putting the string in a list, e.g.:
+
+    'show_next_page'
+    
+rather than:
+
+    ['show_next_page']
+    
+This will become less useful the more completely we specify commands,
+e.g. by including documentation, since then fewer commands will be
+specifiable by just their names.
+
+*/
+
+
 // I don't think we want this to be a JavaScript class, but it might
 // make sense for it to be a TypeScript interface.
 /*
