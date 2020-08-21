@@ -1434,26 +1434,24 @@ def clip_calendar(request):
     get_ui_name = model_utils.get_station_mic_output_pair_ui_name
     sm_pair = _get_calendar_query_object(
         sm_pairs, 'station_mic', params, preferences, name_getter=get_ui_name)
+    sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
+    sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
 
     detector_name = _get_calendar_query_field_value(
         'detector', params, preferences)
     detector = archive_.get_processor(detector_name)
+    detectors = archive_.get_visible_processors_of_type('Detector')
+    detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
+    detector_ui_name = archive_.get_processor_ui_name(detector)
     
     annotation_name = 'Classification'
     annotation_ui_value_specs = \
         archive_.get_visible_string_annotation_ui_value_specs(annotation_name)
     annotation_ui_value_spec = _get_string_annotation_ui_value_spec(
         annotation_ui_value_specs, params, preferences)
-
-    sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
-    sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
-
-    detectors = archive_.get_visible_processors_of_type('Detector')
-    detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
-    detector_ui_name = archive_.get_processor_ui_name(detector)
-    
     annotation_name, annotation_value = \
         _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
+        
     periods_json = _get_periods_json(
         sm_pair, detector, annotation_name, annotation_value)
 
