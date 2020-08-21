@@ -6,7 +6,7 @@ import time
 
 from vesper.command.command import Command
 from vesper.django.app.models import AnnotationInfo, Job, Processor
-from vesper.singletons import extension_manager
+from vesper.singletons import archive, extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.text_utils as text_utils
@@ -32,6 +32,7 @@ class ClassifyCommand(Command):
         self._sm_pair_ui_names = get('station_mics', args)
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
+        self._tag = get('tag', args)
         
 
     def execute(self, job_info):
@@ -42,9 +43,14 @@ class ClassifyCommand(Command):
     
         value_tuples = self._create_clip_query_values_iterator()
         
+        if self._tag == archive.instance.NOT_APPLICABLE:
+            tag_name = None
+        else:
+            tag_name = self._tag
+        
         for detector, station, mic_output, date in value_tuples:
             
-            clips = _get_clips(station, mic_output, detector, date)
+            clips = _get_clips(station, mic_output, detector, date, tag_name)
             
             count = clips.count()
             count_text = text_utils.create_count_text(count, 'clip')
@@ -138,9 +144,10 @@ def _create_classifier(name, annotation_info, job, processor):
     return cls(annotation_info, creating_job=job, creating_processor=processor)
     
     
-def _get_clips(*args):
+def _get_clips(station, mic_output, detector, date, tag_name):
     try:
-        return model_utils.get_clips(*args)
+        return model_utils.get_clips(
+            station, mic_output, detector, date, tag_name=tag_name)
     except Exception as e:
         command_utils.log_and_reraise_fatal_exception(e, 'Clip query')
     

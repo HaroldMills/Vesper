@@ -38,3 +38,9 @@ def get_string_annotation_value_choices(annotation_name):
     specs = archive_.get_visible_string_annotation_ui_value_specs(
         annotation_name)
     return [(s, s) for s in specs]
+
+
+def get_tag_choices():
+    archive_ = archive.instance
+    specs = archive_.get_tag_specs()
+    return [(s, s) for s in specs]

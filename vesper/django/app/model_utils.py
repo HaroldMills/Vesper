@@ -11,7 +11,7 @@ from django.db.models import Count, F
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Recording, RecordingChannel,
-    StationDevice, StringAnnotation, StringAnnotationEdit)
+    StationDevice, StringAnnotation, StringAnnotationEdit, TagInfo)
 from vesper.singletons import archive, recording_manager
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
@@ -413,7 +413,7 @@ def get_clip_counts(
     
 def get_clips(
         station, mic_output, detector, date=None, annotation_name=None,
-        annotation_value=None, order=True):
+        annotation_value=None, tag_name=None, order=True):
     
     kwargs = {}
     if date is not None:
@@ -457,6 +457,11 @@ def get_clips(
                 clips = clips.filter(
                     string_annotation__value__startswith=prefix)
                 
+    # TODO: Support tag exclusion as well as inclusion.
+    if tag_name is not None:
+        info = TagInfo.objects.get(name=tag_name)
+        clips = clips.filter(tag__info=info)
+        
     if order:
         clips = clips.order_by('start_time')
         

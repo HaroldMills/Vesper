@@ -12,6 +12,7 @@ class ClassifyForm(forms.Form):
     station_mics = forms.MultipleChoiceField(label='Station/mics')
     start_date = forms.DateField(label='Start date')
     end_date = forms.DateField(label='End date')
+    tag = forms.ChoiceField(label='Tag')
     
     
     def __init__(self, *args, **kwargs):
@@ -30,3 +31,6 @@ class ClassifyForm(forms.Form):
         names = model_utils.get_station_mic_output_pair_ui_names()
         choices = [(name, name) for name in names]
         self.fields['station_mics'].choices = choices
+ 
+        # Populate tag field.
+        self.fields['tag'].choices = form_utils.get_tag_choices()

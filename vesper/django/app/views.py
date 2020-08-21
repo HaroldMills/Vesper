@@ -417,7 +417,8 @@ def _create_classify_command_spec(form):
             'detectors': data['detectors'],
             'station_mics': data['station_mics'],
             'start_date': data['start_date'],
-            'end_date': data['end_date']
+            'end_date': data['end_date'],
+            'tag': data['tag']
         }
     }
 

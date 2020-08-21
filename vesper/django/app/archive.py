@@ -4,10 +4,11 @@
 from collections import defaultdict
 
 from vesper.django.app.models import (
-    AnnotationConstraint, AnnotationInfo, Processor)
+    AnnotationConstraint, AnnotationInfo, Processor, TagInfo)
 import vesper.util.yaml_utils as yaml_utils
 
 
+_NOT_APPLICABLE = 'N/A'
 _STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
 _STRING_ANNOTATION_VALUE_WILDCARD = '*'
 _STRING_ANNOTATION_VALUE_NONE = '-None-'
@@ -106,6 +107,11 @@ class Archive:
         self._processor_cache_dirty = True
         self._string_anno_values_cache_dirty = True
         
+    
+    @property
+    def NOT_APPLICABLE(self):
+        return _NOT_APPLICABLE
+    
     
     @property
     def STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR(self):
@@ -384,6 +390,13 @@ class Archive:
                 annotation_name]
         except KeyError:
             _handle_unrecognized_annotation_name(annotation_name)
+            
+            
+    def get_tag_specs(self):
+        infos = TagInfo.objects.all().order_by('name')
+        names = [i.name for i in infos]
+        specs = [_NOT_APPLICABLE] + names
+        return specs
     
     
 def _get_hidden_objects(preferences):
