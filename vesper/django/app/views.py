@@ -1415,8 +1415,6 @@ def clip_calendar(request):
         
     params = request.GET
     
-    archive_ = archive.instance
-
     preference_manager.instance.reload_preferences()
     preferences = preference_manager.instance.preferences
 
@@ -1430,39 +1428,19 @@ def clip_calendar(request):
         
         return _render_clip_calendar(request, context)
 
-    sm_pairs = model_utils.get_station_mic_output_pairs_list()
-    get_ui_name = model_utils.get_station_mic_output_pair_ui_name
-    sm_pair = _get_calendar_query_object(
-        sm_pairs, 'station_mic', params, preferences, name_getter=get_ui_name)
-    sm_pair_ui_name = None if sm_pair is None else get_ui_name(sm_pair)
-    sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
+    d = _get_clip_filter_data(params, preferences)
 
-    detector_name = _get_calendar_query_field_value(
-        'detector', params, preferences)
-    detector = archive_.get_processor(detector_name)
-    detectors = archive_.get_visible_processors_of_type('Detector')
-    detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
-    detector_ui_name = archive_.get_processor_ui_name(detector)
-    
-    annotation_name = 'Classification'
-    annotation_ui_value_specs = \
-        archive_.get_visible_string_annotation_ui_value_specs(annotation_name)
-    annotation_ui_value_spec = _get_string_annotation_ui_value_spec(
-        annotation_ui_value_specs, params, preferences)
-    annotation_name, annotation_value = \
-        _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
-        
     periods_json = _get_periods_json(
-        sm_pair, detector, annotation_name, annotation_value)
+        d.sm_pair, d.detector, d.annotation_name, d.annotation_value)
 
     context = _create_template_context(
         request, 'View',
-        station_mic_names=sm_pair_ui_names,
-        station_mic_name=sm_pair_ui_name,
-        detector_names=detector_ui_names,
-        detector_name=detector_ui_name,
-        classifications=annotation_ui_value_specs,
-        classification=annotation_ui_value_spec,
+        station_mic_names=d.sm_pair_ui_names,
+        station_mic_name=d.sm_pair_ui_name,
+        detector_names=d.detector_ui_names,
+        detector_name=d.detector_ui_name,
+        classifications=d.annotation_ui_value_specs,
+        classification=d.annotation_ui_value_spec,
         periods_json=periods_json)
 
     return _render_clip_calendar(request, context)
@@ -1607,7 +1585,7 @@ def _get_periods_json(
 
 def night(request):
 
-    # TODO: Combine this view with `clip_album` view.
+    # TODO: Combine this view with `clip_album` view?
 
     # TODO: Check URL query items.
     params = request.GET
@@ -1811,13 +1789,11 @@ def _limit_index(index, min_index, max_index):
 
 def clip_album(request):
 
-    # TODO: Combine this view with `night` view.
+    # TODO: Combine this view with `night` view?
 
     # TODO: Check URL query items.
     params = request.GET
     
-    archive_ = archive.instance
-
     # Reload presets and preferences to make sure we have the latest.
     # TODO: For efficiency's sake, be more selective about what we reload.
     # We might reload only presets of specified types, for example.
@@ -1834,6 +1810,46 @@ def clip_album(request):
             request, 'View', error_message=message)
         
         return _render_clip_album(request, context)
+
+    d = _get_clip_filter_data(params, preferences)
+
+    station, mic_output = d.sm_pair
+    clips = model_utils.get_clips(
+        station, mic_output, d.detector, None,
+        d.annotation_name, d.annotation_value)
+    clips_json = _get_clips_json(clips, station)
+
+    settings_presets_json = _get_presets_json('Clip Album Settings')
+    commands_presets_json = _get_presets_json('Clip Album Commands')
+
+    settings_preset_path = \
+        preferences.get('default_presets.Clip Album Settings')
+    commands_preset_path = \
+        preferences.get('default_presets.Clip Album Commands')
+
+    context = _create_template_context(
+        request, 'View',
+        station_mic_names=d.sm_pair_ui_names,
+        station_mic_name=d.sm_pair_ui_name,
+        detector_names=d.detector_ui_names,
+        detector_name=d.detector_ui_name,
+        classifications=d.annotation_ui_value_specs,
+        classification=d.annotation_ui_value_spec,
+        solar_event_times_json='null',
+        recordings_json='[]',
+        clips_json=clips_json,
+        settings_presets_json=settings_presets_json,
+        settings_preset_path=settings_preset_path,
+        commands_presets_json=commands_presets_json,
+        commands_preset_path=commands_preset_path,
+        archive_read_only=settings.ARCHIVE_READ_ONLY)
+
+    return _render_clip_album(request, context)
+
+
+def _get_clip_filter_data(params, preferences):
+    
+    archive_ = archive.instance
 
     sm_pairs = model_utils.get_station_mic_output_pairs_list()
     get_ui_name = model_utils.get_station_mic_output_pair_ui_name
@@ -1856,38 +1872,23 @@ def clip_album(request):
         annotation_ui_value_specs, params, preferences)
     annotation_name, annotation_value = \
         _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
-
-    station, mic_output = sm_pair
-    clips = model_utils.get_clips(
-        station, mic_output, detector, None, annotation_name, annotation_value)
-    clips_json = _get_clips_json(clips, station)
-
-    settings_presets_json = _get_presets_json('Clip Album Settings')
-    commands_presets_json = _get_presets_json('Clip Album Commands')
-
-    settings_preset_path = \
-        preferences.get('default_presets.Clip Album Settings')
-    commands_preset_path = \
-        preferences.get('default_presets.Clip Album Commands')
-
-    context = _create_template_context(
-        request, 'View',
-        station_mic_names=sm_pair_ui_names,
-        station_mic_name=sm_pair_ui_name,
-        detector_names=detector_ui_names,
-        detector_name=detector_ui_name,
-        classifications=annotation_ui_value_specs,
-        classification=annotation_ui_value_spec,
-        solar_event_times_json='null',
-        recordings_json='[]',
-        clips_json=clips_json,
-        settings_presets_json=settings_presets_json,
-        settings_preset_path=settings_preset_path,
-        commands_presets_json=commands_presets_json,
-        commands_preset_path=commands_preset_path,
-        archive_read_only=settings.ARCHIVE_READ_ONLY)
-
-    return _render_clip_album(request, context)
+        
+    return Bunch(
+        
+        sm_pair=sm_pair,
+        sm_pair_ui_names=sm_pair_ui_names,
+        sm_pair_ui_name=sm_pair_ui_name,
+        
+        detector=detector,
+        detector_ui_names=detector_ui_names,
+        detector_ui_name=detector_ui_name,
+        
+        annotation_name=annotation_name,
+        annotation_value=annotation_value,
+        annotation_ui_value_specs=annotation_ui_value_specs,
+        annotation_ui_value_spec=annotation_ui_value_spec
+        
+    )
 
 
 def _render_clip_album(request, context):
