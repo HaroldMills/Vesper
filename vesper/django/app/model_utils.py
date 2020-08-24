@@ -388,7 +388,7 @@ def get_clip_recording_file(clip):
 
 def get_clip_counts(
         station, mic_output, detector, annotation_name=None,
-        annotation_value=None):
+        annotation_value=None, tag_name=None):
     
     dates = get_recording_dates(station, mic_output)
     
@@ -396,7 +396,7 @@ def get_clip_counts(
     
     clips = get_clips(
         station, mic_output, detector, annotation_name=annotation_name,
-        annotation_value=annotation_value, order=False)
+        annotation_value=annotation_value, tag_name=tag_name, order=False)
     
     count_dicts = clips.values('date').annotate(count=Count('date'))
     

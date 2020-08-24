@@ -185,6 +185,7 @@ function addMonthDay(day, daysDiv) {
         params.set('station_mic', state.stationMicName);
         params.set('detector', state.detectorName);
         params.set('classification', state.classification);
+        params.set('tag', state.tag);
         params.set('date', formatDate(day.date));
         
         

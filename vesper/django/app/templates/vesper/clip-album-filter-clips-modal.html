@@ -60,6 +60,21 @@
                         </div>
                     </div>
 
+                    <div class="form-group">
+                        <label class="control-label col-sm-4" for="filter-clips-modal-tag-select">Tag:</label>
+                        <div class="col-sm-6">
+                            <select id="filter-clips-modal-tag-select" class="form-control modal-select">
+                                {% for t in tags %}
+                                    {% if t == tag %}
+                                        <option selected>{{t}}</option>
+                                    {% else %}
+                                        <option>{{t}}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="modal-footer">

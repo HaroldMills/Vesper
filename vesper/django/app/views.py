@@ -1431,7 +1431,8 @@ def clip_calendar(request):
     d = _get_clip_filter_data(params, preferences)
 
     periods_json = _get_periods_json(
-        d.sm_pair, d.detector, d.annotation_name, d.annotation_value)
+        d.sm_pair, d.detector, d.annotation_name, d.annotation_value,
+        d.tag_name)
 
     context = _create_template_context(
         request, 'View',
@@ -1441,6 +1442,8 @@ def clip_calendar(request):
         detector_name=d.detector_ui_name,
         classifications=d.annotation_ui_value_specs,
         classification=d.annotation_ui_value_spec,
+        tags=d.tag_specs,
+        tag=d.tag_spec,
         periods_json=periods_json)
 
     return _render_clip_calendar(request, context)
@@ -1563,8 +1566,26 @@ def _get_string_annotation_info(annotation_name, annotation_ui_value_spec):
     return annotation_name, annotation_value
 
 
+def _get_tag_spec(tag_specs, params, preferences):
+    
+    spec = _get_calendar_query_field_value('tag', params, preferences)
+    
+    if spec is None or spec not in tag_specs:
+        spec = archive.instance.NOT_APPLICABLE
+        
+    return spec
+    
+    
+def _get_tag_name(tag_spec):
+    if tag_spec == archive.instance.NOT_APPLICABLE:
+        return None
+    else:
+        return tag_spec
+    
+    
 def _get_periods_json(
-        sm_pair, detector, annotation_name=None, annotation_value=None):
+        sm_pair, detector, annotation_name=None, annotation_value=None,
+        tag_name=None):
 
     if sm_pair is None or detector is None:
         return '[]'
@@ -1575,7 +1596,7 @@ def _get_periods_json(
 
         clip_counts = model_utils.get_clip_counts(
             station, mic_output, detector, annotation_name=annotation_name,
-            annotation_value=annotation_value)
+            annotation_value=annotation_value, tag_name=tag_name)
 
         dates = sorted(list(clip_counts.keys()))
         periods = calendar_utils.get_calendar_periods(dates)
@@ -1619,6 +1640,10 @@ def night(request):
     annotation_name, annotation_value = \
         _get_string_annotation_info(annotation_name, annotation_value_spec)
 
+    tag_specs = archive_.get_tag_specs()
+    tag_spec = _get_tag_spec(tag_specs, params, preferences)
+    tag_name = _get_tag_name(tag_spec)
+
     date_string = params['date']
     date = time_utils.parse_date(*date_string.split('-'))
 
@@ -1629,7 +1654,8 @@ def night(request):
     recordings_json = _get_recordings_json(recordings, station)
 
     clips = model_utils.get_clips(
-        station, mic_output, detector, date, annotation_name, annotation_value)
+        station, mic_output, detector, date,
+        annotation_name, annotation_value, tag_name)
     clips_json = _get_clips_json(clips, station)
 
     settings_presets_json = _get_presets_json('Clip Album Settings')
@@ -1648,6 +1674,8 @@ def night(request):
         detector_name=detector_ui_name,
         classifications=annotation_ui_value_specs,
         classification=annotation_value_spec,
+        tags=tag_specs,
+        tag=tag_spec,
         date=date_string,
         solar_event_times_json=solar_event_times_json,
         recordings_json=recordings_json,
@@ -1816,7 +1844,7 @@ def clip_album(request):
     station, mic_output = d.sm_pair
     clips = model_utils.get_clips(
         station, mic_output, d.detector, None,
-        d.annotation_name, d.annotation_value)
+        d.annotation_name, d.annotation_value, d.tag_name)
     clips_json = _get_clips_json(clips, station)
 
     settings_presets_json = _get_presets_json('Clip Album Settings')
@@ -1835,6 +1863,8 @@ def clip_album(request):
         detector_name=d.detector_ui_name,
         classifications=d.annotation_ui_value_specs,
         classification=d.annotation_ui_value_spec,
+        tags=d.tag_specs,
+        tag=d.tag_spec,
         solar_event_times_json='null',
         recordings_json='[]',
         clips_json=clips_json,
@@ -1873,6 +1903,10 @@ def _get_clip_filter_data(params, preferences):
     annotation_name, annotation_value = \
         _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
         
+    tag_specs = archive_.get_tag_specs()
+    tag_spec = _get_tag_spec(tag_specs, params, preferences)
+    tag_name = _get_tag_name(tag_spec)
+        
     return Bunch(
         
         sm_pair=sm_pair,
@@ -1886,7 +1920,11 @@ def _get_clip_filter_data(params, preferences):
         annotation_name=annotation_name,
         annotation_value=annotation_value,
         annotation_ui_value_specs=annotation_ui_value_specs,
-        annotation_ui_value_spec=annotation_ui_value_spec
+        annotation_ui_value_spec=annotation_ui_value_spec,
+        
+        tag_name=tag_name,
+        tag_specs=tag_specs,
+        tag_spec=tag_spec
         
     )
 

@@ -18,6 +18,7 @@ export var ViewUtils;
         const stationMic = params.get('station_mic');
         const detector = params.get('detector');
         const classification = params.get('classification');
+        const tag = params.get('tag');
         
         // Get new clip filter.
         const newStationMic = document.getElementById(
@@ -26,16 +27,20 @@ export var ViewUtils;
             'filter-clips-modal-detector-select').value;
         const newClassification = document.getElementById(
             'filter-clips-modal-classification-select').value;
+        const newTag = document.getElementById(
+            'filter-clips-modal-tag-select').value;
         
         if (newStationMic !== stationMic ||
                 newDetector !== detector ||
-                newClassification !== classification) {
+                newClassification !== classification ||
+                newTag !== tag) {
                 // new clip filter differs from current one
             
             // Update clip filter in URL.
             params.set('station_mic', newStationMic);
             params.set('detector', newDetector);
             params.set('classification', newClassification);
+            params.set('tag', newTag);
             
             // Go to new URL.
             window.location.href = url.href;
