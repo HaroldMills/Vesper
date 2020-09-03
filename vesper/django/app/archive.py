@@ -8,7 +8,7 @@ from vesper.django.app.models import (
 import vesper.util.yaml_utils as yaml_utils
 
 
-_NOT_APPLICABLE = 'N/A'
+_NOT_APPLICABLE = '-----'
 _STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
 _STRING_ANNOTATION_VALUE_WILDCARD = '*'
 _STRING_ANNOTATION_VALUE_NONE = '-None-'
