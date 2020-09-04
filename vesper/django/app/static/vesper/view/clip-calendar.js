@@ -39,8 +39,13 @@ function setTitle() {
         state.classification === NOT_APPLICABLE
         ? '' : ` / ${state.classification}`;
         
+    const tagText =
+        state.tag === NOT_APPLICABLE
+        ? '' : ` / ${state.tag}`;
+        
 	const title =
-		`${state.stationMicName} / ${state.detectorName}${classificationText}`;
+		`${state.stationMicName} / ${state.detectorName}` +
+        `${classificationText}${tagText}`;
 
 	const titleElement = document.getElementById('title');
 	titleElement.textContent = `${title} Clips`;
