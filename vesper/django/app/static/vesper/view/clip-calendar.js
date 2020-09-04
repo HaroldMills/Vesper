@@ -1,3 +1,4 @@
+import { NOT_APPLICABLE } from '/static/vesper/ui-constants.js';
 import { ViewUtils } from '/static/vesper/view/view-utils.js';
 
 
@@ -34,9 +35,12 @@ function onLoad() {
 
 function setTitle() {
 
+    const classificationText =
+        state.classification === NOT_APPLICABLE
+        ? '' : ` / ${state.classification}`;
+        
 	const title =
-		`${state.stationMicName} / ${state.detectorName} / ` +
-		`${state.classification}`;
+		`${state.stationMicName} / ${state.detectorName}${classificationText}`;
 
 	const titleElement = document.getElementById('title');
 	titleElement.textContent = `${title} Clips`;

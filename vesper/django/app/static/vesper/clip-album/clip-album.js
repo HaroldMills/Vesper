@@ -5,6 +5,7 @@ import { CommandableDelegate, KeyboardInputInterpreter }
 import { Layout } from '/static/vesper/clip-album/layout.js';
 import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
+import { NOT_APPLICABLE } from '/static/vesper/ui-constants.js';
 import { PreloadingClipManager }
     from '/static/vesper/clip-album/clip-manager.js';
 import { SpectrogramClipView }
@@ -592,10 +593,14 @@ export class ClipAlbum {
 
 		const f = this.clipFilter;
 
+        const classificationText =
+            f.classification === NOT_APPLICABLE
+            ? '' : ` / ${f.classification}`;
+            
         const dateText = this._isSingleDateClipAlbum() ? ` / ${f.date}` : '';
         
-        const title = `${f.stationMicName} / ${f.detectorName} / ` +
-            `${f.classification}${dateText}`;
+        const title = `${f.stationMicName} / ${f.detectorName}` +
+            `${classificationText}${dateText}`;
 
 		const titleHeading = document.getElementById('title')
         const pageText = this._getTitlePageText();

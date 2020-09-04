@@ -133,13 +133,6 @@ class Archive:
         return _STRING_ANNOTATION_VALUE_NONE
     
     
-    @property
-    def STRING_ANNOTATION_VALUE_ANY_OR_NONE(self):
-        return ' | '.join([
-            _STRING_ANNOTATION_VALUE_WILDCARD,
-            _STRING_ANNOTATION_VALUE_NONE])
-            
-            
     def get_processors_of_type(self, processor_type):
         self._refresh_processor_cache_if_needed()
         return self._processors_by_type.get(processor_type, [])
@@ -580,17 +573,14 @@ def _get_string_annotation_archive_value_specs(annotation_values):
     
     In addition to the specified archive values, the list includes specs
     for all ancestors of multicomponent values, as well as two wildcard
-    specs for each ancestor. The list begins with specs for no annotation,
-    any or no annotation, and any annotation.
+    specs for each ancestor. The list begins with specs for any or no
+    annotation, no annotation, and any annotation.
     """
     
-    wildcard = _STRING_ANNOTATION_VALUE_WILDCARD
-    none = _STRING_ANNOTATION_VALUE_NONE
-    
     default_specs = [
-        none,
-        wildcard + ' | ' + none,
-        wildcard
+        _NOT_APPLICABLE,
+        _STRING_ANNOTATION_VALUE_NONE,
+        _STRING_ANNOTATION_VALUE_WILDCARD
     ]
     
     specs = set()

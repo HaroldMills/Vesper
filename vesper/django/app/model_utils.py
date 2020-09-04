@@ -621,11 +621,11 @@ def get_clip_query_annotation_data(annotation_name, annotation_value):
     value = archive_.get_string_annotation_archive_value(
         annotation_name, annotation_value)
     
-    if value == archive_.STRING_ANNOTATION_VALUE_NONE:
-        return annotation_name, None
-    
-    elif value == archive_.STRING_ANNOTATION_VALUE_ANY_OR_NONE:
+    if value == archive_.NOT_APPLICABLE:
         return None, None
+    
+    elif value == archive_.STRING_ANNOTATION_VALUE_NONE:
+        return annotation_name, None
     
     else:
         return annotation_name, value

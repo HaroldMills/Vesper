@@ -152,7 +152,6 @@ class ArchiveTests(TestCase):
         self.assertEqual(a.STRING_ANNOTATION_VALUE_WILDCARD, '*')
         self.assertEqual(a.STRING_ANNOTATION_VALUE_ANY, '*')
         self.assertEqual(a.STRING_ANNOTATION_VALUE_NONE, '-None-')
-        self.assertEqual(a.STRING_ANNOTATION_VALUE_ANY_OR_NONE, '* | -None-')
         
         
     def test_get_string_annotation_values(self):

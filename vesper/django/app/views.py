@@ -1538,7 +1538,7 @@ def _get_string_annotation_ui_value_spec(
     spec = archive_.get_string_annotation_ui_value('Classification', spec)
 
     if spec is None or spec not in annotation_ui_value_specs:
-        spec = archive_.STRING_ANNOTATION_VALUE_ANY_OR_NONE
+        spec = archive_.NOT_APPLICABLE
 
     return spec
 
@@ -1550,7 +1550,7 @@ def _get_string_annotation_info(annotation_name, annotation_ui_value_spec):
     value_spec = archive_.get_string_annotation_archive_value(
         annotation_name, annotation_ui_value_spec)
     
-    if value_spec == archive_.STRING_ANNOTATION_VALUE_ANY_OR_NONE:
+    if value_spec == archive_.NOT_APPLICABLE:
         
         # We return an `annotation_name` of `None` to denote all clips.
         annotation_name = None
@@ -1881,6 +1881,7 @@ def _get_clip_filter_data(params, preferences):
     
     archive_ = archive.instance
 
+    # TODO: Figure out how to handle wildcard station mic here.
     sm_pairs = model_utils.get_station_mic_output_pairs_list()
     get_ui_name = model_utils.get_station_mic_output_pair_ui_name
     sm_pair = _get_calendar_query_object(
