@@ -593,14 +593,14 @@ export class ClipAlbum {
 
 		const f = this.clipFilter;
 
+        const dateText = this._isSingleDateClipAlbum() ? ` / ${f.date}` : '';
+        
         const classificationText =
             f.classification === NOT_APPLICABLE
             ? '' : ` / ${f.classification}`;
             
-        const dateText = this._isSingleDateClipAlbum() ? ` / ${f.date}` : '';
-        
-        const title = `${f.stationMicName} / ${f.detectorName}` +
-            `${classificationText}${dateText}`;
+        const title = `${f.stationMicName}${dateText} / ${f.detectorName}` +
+            `${classificationText}`;
 
 		const titleHeading = document.getElementById('title')
         const pageText = this._getTitlePageText();
