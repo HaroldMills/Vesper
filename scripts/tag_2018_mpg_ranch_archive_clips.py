@@ -25,17 +25,25 @@ SELECT DISTINCT
     value Classification
 FROM
     vesper_clip
-INNER JOIN vesper_processor
-    ON vesper_clip.creating_processor_id = vesper_processor.id
+INNER JOIN vesper_tag
+    ON vesper_clip.id = vesper_tag.clip_id
 INNER JOIN vesper_string_annotation
     ON vesper_clip.id = vesper_string_annotation.clip_id
 WHERE
-    vesper_processor.name = 'Old Bird Tseep Detector Redux 1.1'
+    vesper_clip.creating_processor_id = (
+        SELECT id from vesper_processor
+        WHERE name = 'Old Bird Tseep Detector Redux 1.1')
+    AND vesper_tag.info_id = (
+        SELECT id from vesper_tag_info
+        WHERE name = 'Tseep Classification Dataset')
     AND vesper_string_annotation.info_id = (
         SELECT id from vesper_annotation_info
         WHERE name = 'Classification')
     AND vesper_string_annotation.value LIKE 'Call.%'
+    ORDER BY value
 '''.lstrip()
+
+# TODO: Handle processor in queries below as in query above.
 
 ALL_CLIPS_QUERY = '''
 SELECT
