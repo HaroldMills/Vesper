@@ -412,29 +412,59 @@ def get_clip_counts(
     
     
 def get_clips(
-        station, mic_output, detector, date=None, annotation_name=None,
-        annotation_value=None, tag_name=None, order=True):
+        station=None, mic_output=None, detector=None, date=None,
+        annotation_name=None, annotation_value=None, tag_name=None,
+        order=True):
+    
+    clips = _get_base_clips(station, mic_output, detector, date)
+    
+    clips = _filter_clips_by_annotation_if_needed(
+        clips, annotation_name, annotation_value)
+    
+    clips = _filter_clips_by_tag_if_needed(clips, tag_name)
+        
+    if order:
+        clips = clips.order_by('start_time')
+        
+    return clips
+
+
+def _get_base_clips(station, mic_output, detector, date):
     
     kwargs = {}
-    if date is not None:
-        kwargs['date'] = date
-        
-    # Get all clips, whether or not they are annotated.
-    clips = Clip.objects.filter(
-        station=station,
-        mic_output=mic_output,
-        creating_processor=detector,
-        **kwargs)
+    _add_kwarg_if_needed(kwargs, 'station', station)
+    _add_kwarg_if_needed(kwargs, 'mic_output', mic_output)
+    _add_kwarg_if_needed(kwargs, 'creating_processor', detector)
+    _add_kwarg_if_needed(kwargs, 'date', date)
     
-    if annotation_name is not None:
-        # whether or not clips are annotated will matter
+    if len(kwargs) == 0:
+        return Clip.objects.all()
+    else:
+        return Clip.objects.filter(**kwargs)
+    
+
+def _add_kwarg_if_needed(kwargs, key, value):
+    if value is not None:
+        kwargs[key] = value
+        
+
+def _filter_clips_by_annotation_if_needed(
+        clips, annotation_name, annotation_value):
+    
+    if annotation_name is None:
+        # want all clips regardless of annotation
+        
+        return clips
+    
+    else:
+        # want to filter clips according to annotation
         
         info = AnnotationInfo.objects.get(name=annotation_name)
         
         if annotation_value is None:
             # want only unannotated clips
             
-            clips = clips.exclude(string_annotation__info=info)
+            return clips.exclude(string_annotation__info=info)
             
         else:
             # want only annotated clips
@@ -457,15 +487,19 @@ def get_clips(
                 clips = clips.filter(
                     string_annotation__value__startswith=prefix)
                 
+            return clips
+                
+
+def _filter_clips_by_tag_if_needed(clips, tag_name):
+    
     # TODO: Support tag exclusion as well as inclusion.
-    if tag_name is not None:
+
+    if tag_name is None:
+        return clips
+    
+    else:
         info = TagInfo.objects.get(name=tag_name)
-        clips = clips.filter(tag__info=info)
-        
-    if order:
-        clips = clips.order_by('start_time')
-        
-    return clips
+        return clips.filter(tag__info=info)
 
 
 def create_clip_query_values_iterator(
