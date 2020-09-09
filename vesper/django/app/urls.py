@@ -77,7 +77,6 @@ if not settings.ARCHIVE_READ_ONLY:
              name='add-old-bird-clip-start-indices'),
         path('delete-recordings/', views.delete_recordings,
              name='delete-recordings'),
-        path('adjust-clips/', views.adjust_clips, name='adjust-clips'),
         path('delete-clips/', views.delete_clips, name='delete-clips'),
         path('create-clip-audio-files/', views.create_clip_audio_files,
              name='create-clip-audio-files'),

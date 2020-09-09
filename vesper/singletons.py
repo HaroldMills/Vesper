@@ -147,7 +147,6 @@ Classifier:
     
 Command:
     - vesper.command.add_recording_audio_files_command.AddRecordingAudioFilesCommand
-    - vesper.command.adjust_clips_command.AdjustClipsCommand
     - vesper.command.classify_command.ClassifyCommand
     - vesper.command.create_clip_audio_files_command.CreateClipAudioFilesCommand
     - vesper.command.delete_clip_audio_files_command.DeleteClipAudioFilesCommand

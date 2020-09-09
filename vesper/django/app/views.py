@@ -20,7 +20,6 @@ import numpy as np
 
 from vesper.django.app.add_recording_audio_files_form import \
     AddRecordingAudioFilesForm
-from vesper.django.app.adjust_clips_form import AdjustClipsForm
 from vesper.django.app.classify_form import ClassifyForm
 from vesper.django.app.clip_set_form import ClipSetForm
 from vesper.django.app.delete_clips_form import DeleteClipsForm
@@ -152,9 +151,6 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
  
       - name: Execute deferred actions
         url_name: execute-deferred-actions
-        
-      # - name: Adjust clips
-      #   url_name: adjust-clips
         
 - name: Admin
   dropdown:
@@ -745,47 +741,6 @@ def _create_delete_clips_command_spec(form):
             'start_date': data['start_date'],
             'end_date': data['end_date'],
             'retain_count': data['retain_count']
-        }
-    }
-
-
-@login_required
-@csrf_exempt
-def adjust_clips(request):
-
-    if request.method in _GET_AND_HEAD:
-        form = AdjustClipsForm()
-
-    elif request.method == 'POST':
-
-        form = AdjustClipsForm(request.POST)
-
-        if form.is_valid():
-            command_spec = _create_adjust_clips_command_spec(form)
-            return _start_job(command_spec, request.user)
-
-    else:
-        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
-
-    context = _create_template_context(request, 'Other', form=form)
-
-    return render(request, 'vesper/adjust-clips.html', context)
-
-
-def _create_adjust_clips_command_spec(form):
-
-    data = form.cleaned_data
-
-    return {
-        'name': 'adjust_clips',
-        'arguments': {
-            'detectors': data['detectors'],
-            'station_mics': data['station_mics'],
-            'classification': data['classification'],
-            'start_date': data['start_date'],
-            'end_date': data['end_date'],
-            'duration': data['duration'],
-            'annotation_name': data['annotation_name']
         }
     }
 
