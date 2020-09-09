@@ -25,11 +25,11 @@ class ExportCommand(Command):
         
         get = command_utils.get_required_arg
         self._exporter_spec = get('exporter', args)
-        self._detector_names = get('detectors', args)
         self._sm_pair_ui_names = get('station_mics', args)
-        self._classification = get('classification', args)
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
+        self._detector_names = get('detectors', args)
+        self._classification = get('classification', args)
         
         self._exporter = self._create_exporter()
         
@@ -55,7 +55,7 @@ class ExportCommand(Command):
             
         value_tuples = self._create_clip_query_values_iterator()
         
-        for detector, station, mic_output, date in value_tuples:
+        for station, mic_output, date, detector in value_tuples:
             
             clips = _get_clips(
                 station, mic_output, detector, date, annotation_name,
@@ -64,11 +64,10 @@ class ExportCommand(Command):
             count = clips.count()
             count_text = text_utils.create_count_text(count, 'clip')
             
-            _logger.info((
-                'Exporter will visit {} for detector "{}", station "{}", '
-                'mic output "{}", and date {}.').format(
-                    count_text, detector.name, station.name, mic_output.name,
-                    date))
+            _logger.info(
+                f'Exporter will visit {count_text} for station '
+                f'"{station.name}", mic output "{mic_output.name}", '
+                f'date {date}, and detector {detector.name}.')
             
             try:
                 _export_clips(clips, self._exporter)
@@ -87,8 +86,8 @@ class ExportCommand(Command):
         
         try:
             return model_utils.create_clip_query_values_iterator(
-                self._detector_names, self._sm_pair_ui_names,
-                self._start_date, self._end_date)
+                self._sm_pair_ui_names, self._start_date, self._end_date,
+                self._detector_names)
             
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(
@@ -114,7 +113,7 @@ def _create_exporter(name, arguments):
     try:
         cls = classes[name]
     except KeyError:
-        raise ValueError('Unrecognized exporter "{}".'.format(name))
+        raise ValueError(f'Unrecognized exporter "{name}".')
     
     return cls(arguments)
 
@@ -128,7 +127,7 @@ def _get_clips(*args):
     
 def _create_clip_count_text(count):
     suffix = '' if count == 1 else 's'
-    return '{} clip{}'.format(count, suffix)
+    return f'{count} clip{suffix}'
         
 
 _LOGGING_PERIOD = 500    # clips
@@ -147,8 +146,7 @@ def _export_clips(clips, exporter):
         visited_count += 1
         
         if visited_count % _LOGGING_PERIOD == 0:
-            _logger.info('Visited {} clips...'.format(visited_count))
+            _logger.info(f'Visited {visited_count} clips...')
             
     _logger.info(
-        'Exported {} of {} visited clips.'.format(
-            exported_count, visited_count))
+        f'Exported {exported_count} of {visited_count} visited clips.')

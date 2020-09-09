@@ -28,10 +28,10 @@ class ClassifyCommand(Command):
         get = command_utils.get_required_arg
         self._classifier_name = get('classifier', args)
         self._annotation_name = get('annotation_name', args)
-        self._detector_names = get('detectors', args)
         self._sm_pair_ui_names = get('station_mics', args)
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
+        self._detector_names = get('detectors', args)
         self._tag = get('tag', args)
         
 
@@ -48,18 +48,17 @@ class ClassifyCommand(Command):
         else:
             tag_name = self._tag
         
-        for detector, station, mic_output, date in value_tuples:
+        for station, mic_output, date, detector in value_tuples:
             
             clips = _get_clips(station, mic_output, detector, date, tag_name)
             
             count = clips.count()
             count_text = text_utils.create_count_text(count, 'clip')
             
-            _logger.info((
-                'Classifier will visit {} for detector "{}", station "{}", '
-                'mic output "{}", and date {}.').format(
-                    count_text, detector.name, station.name, mic_output.name,
-                    date))
+            _logger.info(
+                f'Classifier will visit {count_text} for station '
+                f'"{station.name}", mic output "{mic_output.name}", '
+                f'date {date}, and detector "{detector.name}".')
             
             try:
                 _classify_clips(clips, classifier)
@@ -93,8 +92,8 @@ class ClassifyCommand(Command):
         
         try:
             return model_utils.create_clip_query_values_iterator(
-                self._detector_names, self._sm_pair_ui_names,
-                self._start_date, self._end_date)
+                self._sm_pair_ui_names, self._start_date, self._end_date,
+                self._detector_names)
             
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(
@@ -105,22 +104,21 @@ def _get_annotation_info(name):
     try:
         return AnnotationInfo.objects.get(name=name)
     except AnnotationInfo.DoesNotExist:
-        raise ValueError(
-            'Unrecognized annotation "{}".'.format(name))
+        raise ValueError(f'Unrecognized annotation "{name}".')
     
         
 def _get_job(job_id):
     try:
         return Job.objects.get(id=job_id)
     except Job.DoesNotExist:
-        raise ValueError('Unrecognized job ID {}.'.format(job_id))
+        raise ValueError(f'Unrecognized job ID {job_id}.')
         
 
 def _get_processor(name):
     try:
         return Processor.objects.get(name=name, type='Classifier')
     except Processor.DoesNotExist:
-        raise ValueError('Unrecognized processor "{}".'.format(name))
+        raise ValueError(f'Unrecognized processor "{name}".')
         
 
 # TODO: Who is the authority regarding classifiers: `Processor` instances
@@ -139,7 +137,7 @@ def _create_classifier(name, annotation_info, job, processor):
     try:
         cls = classes[name]
     except KeyError:
-        raise ValueError('Unrecognized classifier "{}".'.format(name))
+        raise ValueError(f'Unrecognized classifier "{name}".')
     
     return cls(annotation_info, creating_job=job, creating_processor=processor)
     
@@ -171,9 +169,9 @@ def _classify_clips(clips, classifier):
     timing_text = command_utils.get_timing_text(
         elapsed_time, num_clips, 'clips')
             
-    _logger.info((
-        'Classified {} of {} visited clips{}.').format(
-            num_clips_classified, num_clips, timing_text))
+    _logger.info(
+        f'Classified {num_clips_classified} of {num_clips} visited clips'
+        f'{timing_text}.')
 
 
 def _classify_clip_batches(clips, classifier):
@@ -192,13 +190,13 @@ def _classify_clips_individually(clips, classifier):
                 num_classified_clips += 1
                         
         except Exception as e:
-            _logger.error((
-                'Classification failed for clip "{}". Error message '
-                'was: {}').format(str(clip), str(e)))
+            _logger.error(
+                f'Classification failed for clip "{str(clip)}". '
+                f'Error message was: {str(e)}')
         
         num_visited_clips += 1
         
         if num_visited_clips % _LOGGING_PERIOD == 0:
-            _logger.info('Visited {} clips...'.format(num_visited_clips))
+            _logger.info(f'Visited {num_visited_clips} clips...')
             
     return num_classified_clips

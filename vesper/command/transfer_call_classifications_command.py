@@ -125,8 +125,8 @@ class TransferCallClassificationsCommand(Command):
         
         try:
             return model_utils.create_clip_query_values_iterator(
-                [self._source_detector_name], self._sm_pair_ui_names,
-                self._start_date, self._end_date)
+                self._sm_pair_ui_names, self._start_date, self._end_date,
+                [self._source_detector_name])
             
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(
@@ -157,10 +157,10 @@ class TransferCallClassificationsCommand(Command):
         
         matches = self._match_clips_with_calls(source_clips, target_clips)
         
-        _logger.info('{} -> {} / {} / {} / {} / {}  {} {}'.format(
-            self._source_detector.name, self._target_detector.name,
-            station.name, mic_output.name, date, source_clips.count(),
-            target_clips.count(), len(matches)))
+        _logger.info(
+            f'{self._source_detector.name} -> {self._target_detector.name} / '
+            f'{station.name} / {mic_output.name} / {date} / '
+            f'{source_clips.count()}  {target_clips.count()} {len(matches)}')
         
         if len(matches) > 0:
             
@@ -287,8 +287,8 @@ def _get_call_start_window(detector_name):
             # no `_CALL_START_WINDOWS` key is a prefix of `detector_name`
             
             raise ValueError(
-                ('Could not find call start window for detector "{}". '
-                 'The archive was not modified.').format(detector_name))
+                f'Could not find call start window for detector '
+                f'"{detector_name}". The archive was not modified.')
         
     return result
         

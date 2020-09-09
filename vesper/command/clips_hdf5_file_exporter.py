@@ -170,9 +170,13 @@ def _get_extraction_extent(clip, annotations):
         start_offset = _seconds_to_samples(start_offset, sample_rate)
         length = _seconds_to_samples(duration, sample_rate)
         
+        # Get call start index.
+        call_start_index = annotations['Call Start Index']
+        if call_start_index is None:
+            raise ValueError(f'Call start index missing for clip {clip}.')
+        
         # Make start offset relative to clip start index rather
         # than call start index.
-        call_start_index = annotations['Call Start Index']
         start_offset += call_start_index - clip.start_index
         
         return start_offset, length

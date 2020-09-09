@@ -23,12 +23,12 @@ class CreateClipAudioFilesCommand(Command):
     def __init__(self, args):
         super().__init__(args)
         get = command_utils.get_required_arg
-        self._detector_names = get('detectors', args)
         self._sm_pair_ui_names = get('station_mics', args)
-        self._classification = get('classification', args)
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
-        
+        self._detector_names = get('detectors', args)
+        self._classification = get('classification', args)
+ 
         
     def execute(self, job_info):
         
@@ -54,7 +54,7 @@ class CreateClipAudioFilesCommand(Command):
         total_num_clips = 0
         total_num_created_files = 0
         
-        for detector, station, mic_output, date in value_tuples:
+        for station, mic_output, date, detector in value_tuples:
             
             clips = model_utils.get_clips(
                 station, mic_output, detector, date, self._annotation_name,
@@ -69,11 +69,11 @@ class CreateClipAudioFilesCommand(Command):
                 
             # Log file creations for this detector/station/mic_output/date.
             count_text = text_utils.create_count_text(num_clips, 'clip')
-            _logger.info((
-                'Created audio files for {} of {} for detector "{}", '
-                'station "{}", mic output "{}", and date {}.').format(
-                    num_created_files, count_text, detector.name,
-                    station.name, mic_output.name, date))
+            _logger.info(
+                f'Created audio files for {num_created_files} of '
+                f'{count_text} for station "{station.name}", '
+                f'mic output "{mic_output.name}", date {date}, '
+                f'and detector "{detector.name}".')
                 
             total_num_clips += num_clips
             total_num_created_files += num_created_files
@@ -83,16 +83,15 @@ class CreateClipAudioFilesCommand(Command):
         elapsed_time = time.time() - start_time
         timing_text = command_utils.get_timing_text(
             elapsed_time, total_num_clips, 'clips')
-        _logger.info(
-            'Processed a total of {}{}.'.format(count_text, timing_text))
+        _logger.info(f'Processed a total of {count_text}{timing_text}.')
 
 
     def _create_clip_query_values_iterator(self):
         
         try:
             return model_utils.create_clip_query_values_iterator(
-                self._detector_names, self._sm_pair_ui_names,
-                self._start_date, self._end_date)
+                self._sm_pair_ui_names, self._start_date, self._end_date,
+                self._detector_names)
             
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(
@@ -113,4 +112,4 @@ class CreateClipAudioFilesCommand(Command):
                     
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(
-                e, 'Creation of audio file for clip "{}"'.format(str(clip)))
+                e, f'Creation of audio file for clip "{str(clip)}"')

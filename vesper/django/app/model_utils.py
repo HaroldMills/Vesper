@@ -469,26 +469,26 @@ def get_clips(
 
 
 def create_clip_query_values_iterator(
-        detector_names, sm_pair_ui_names, start_date, end_date):
+        sm_pair_ui_names, start_date, end_date, detector_names):
     
-    # We create lists of detectors, station/mic output pairs, and
-    # dates immediately so that if we will raise an exception due
-    # to a bad detector name, station/mic output pair, or date
-    # range we do so before we start yielding query values.
+    # We create lists of station/mic output pairs, dates, and detectors
+    # immediately so that if we will raise an exception due to a bad
+    # station/mic output pair, date range, or detector name we do so
+    # before we start yielding query values.
     
     archive_ = archive.instance
     
-    detectors = [archive_.get_processor(name) for name in detector_names]
-
     sm_pairs_dict = get_station_mic_output_pairs_dict()
     sm_pairs = [sm_pairs_dict[name] for name in sm_pair_ui_names]
     
     dates = list(create_date_iterator(start_date, end_date))
     
-    for detector in detectors:
-        for station, mic_output in sm_pairs:
-            for date in dates:
-                yield (detector, station, mic_output, date)
+    detectors = [archive_.get_processor(name) for name in detector_names]
+
+    for station, mic_output in sm_pairs:
+        for date in dates:
+            for detector in detectors:
+                yield (station, mic_output, date, detector)
            
          
 _ONE_DAY = datetime.timedelta(days=1)

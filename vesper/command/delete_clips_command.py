@@ -28,11 +28,11 @@ class DeleteClipsCommand(Command):
     def __init__(self, args):
         super().__init__(args)
         get = command_utils.get_required_arg
-        self._detector_names = get('detectors', args)
         self._sm_pair_ui_names = get('station_mics', args)
-        self._classification = get('classification', args)
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
+        self._detector_names = get('detectors', args)
+        self._classification = get('classification', args)
         self._retain_count = get('retain_count', args)
         
         
@@ -97,8 +97,8 @@ class DeleteClipsCommand(Command):
         
         try:
             return model_utils.create_clip_query_values_iterator(
-                self._detector_names, self._sm_pair_ui_names,
-                self._start_date, self._end_date)
+                self._sm_pair_ui_names, self._start_date, self._end_date,
+                self._detector_names)
             
         except Exception as e:
             command_utils.log_and_reraise_fatal_exception(
@@ -117,7 +117,7 @@ class DeleteClipsCommand(Command):
         index = 0
         total_retained_count = 0
         
-        for detector, station, mic_output, date in value_tuples:
+        for station, mic_output, date, detector in value_tuples:
             
             # Get clips for this detector, station, mic_output, and date
             clips = model_utils.get_clips(
@@ -147,21 +147,21 @@ class DeleteClipsCommand(Command):
                 self._delete_clip_batch(clips_to_delete)
             except Exception as e:
                 batch_text = \
-                    _get_batch_text(detector, station, mic_output, date)
+                    _get_batch_text(station, mic_output, date, detector)
                 command_utils.log_and_reraise_fatal_exception(
-                    e, 'Deletion of clips for {}'.format(batch_text))
+                    e, f'Deletion of clips for {batch_text}')
 
             # Log deletions.
             if retaining_clips:
                 prefix = 'Deleted'
             else:
                 deleted_count = count - retained_count
-                prefix = 'Deleted {} and retained {} of'.format(
-                    deleted_count, retained_count)
+                prefix = (
+                    f'Deleted {deleted_count} and retained '
+                    f'{retained_count} of')
             count_text = text_utils.create_count_text(count, 'clip')
-            batch_text = _get_batch_text(detector, station, mic_output, date)
-            _logger.info(
-                '{} {} for {}.'.format(prefix, count_text, batch_text))
+            batch_text = _get_batch_text(station, mic_output, date, detector)
+            _logger.info(f'{prefix} {count_text} for {batch_text}.')
 
             total_retained_count += retained_count
                 
@@ -170,14 +170,14 @@ class DeleteClipsCommand(Command):
             prefix = 'Deleted'
         else:
             deleted_count = index - total_retained_count
-            prefix = 'Deleted {} and retained {} of'.format(
-                deleted_count, total_retained_count)
+            prefix = (
+                f'Deleted {deleted_count} and retained '
+                f'{total_retained_count} of')
         count_text = text_utils.create_count_text(index, 'clip')
         elapsed_time = time.time() - start_time
         timing_text = command_utils.get_timing_text(
             elapsed_time, index, 'clips')
-        _logger.info('{} a total of {}{}.'.format(
-            prefix, count_text, timing_text))
+        _logger.info(f'{prefix} a total of {count_text}{timing_text}.')
 
 
     def _delete_clip_batch(self, clips):
@@ -217,7 +217,7 @@ class DeleteClipsCommand(Command):
             self._clip_manager.delete_audio_file(clip)
 
 
-def _get_batch_text(detector, station, mic_output, date):
-    return \
-        'detector "{}", station "{}", mic output "{}", and date {}'.format(
-            detector.name, station.name, mic_output.name, date)
+def _get_batch_text(station, mic_output, date, detector):
+    return (
+        f'station "{station.name}", mic output "{mic_output.name}", '
+        f'date {date}, and detector "{detector.name}"')
