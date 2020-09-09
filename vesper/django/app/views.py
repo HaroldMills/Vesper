@@ -350,7 +350,6 @@ def _create_detect_command_spec(form):
             'start_date': data['start_date'],
             'end_date': data['end_date'],
             'schedule': data['schedule'],
-            # 'create_clip_files': data['create_clip_files'],
             'defer_clip_creation': data['defer_clip_creation']
         }
     }
@@ -410,10 +409,10 @@ def _create_classify_command_spec(form):
         'arguments': {
             'classifier': data['classifier'],
             'annotation_name': 'Classification',
-            'detectors': data['detectors'],
             'station_mics': data['station_mics'],
             'start_date': data['start_date'],
             'end_date': data['end_date'],
+            'detectors': data['detectors'],
             'tag': data['tag']
         }
     }
@@ -531,11 +530,11 @@ def _create_export_clip_metadata_to_csv_file_command_spec(form):
                     'output_file_path': data['output_file_path'],
                 }
             },
-            'detectors': data['detectors'],
             'station_mics': data['station_mics'],
-            'classification': data['classification'],
             'start_date': data['start_date'],
-            'end_date': data['end_date']
+            'end_date': data['end_date'],
+            'detectors': data['detectors'],
+            'classification': data['classification']
         }
     }
 
@@ -581,11 +580,11 @@ def _create_export_clips_to_audio_files_command_spec(form):
                     }
                 }
             },
-            'detectors': data['detectors'],
             'station_mics': data['station_mics'],
-            'classification': data['classification'],
             'start_date': data['start_date'],
-            'end_date': data['end_date']
+            'end_date': data['end_date'],
+            'detectors': data['detectors'],
+            'classification': data['classification']
         }
     }
 
@@ -626,11 +625,11 @@ def _create_export_clips_to_hdf5_file_command_spec(form):
                     'output_file_path': data['output_file_path'],
                 }
             },
-            'detectors': data['detectors'],
             'station_mics': data['station_mics'],
-            'classification': data['classification'],
             'start_date': data['start_date'],
-            'end_date': data['end_date']
+            'end_date': data['end_date'],
+            'detectors': data['detectors'],
+            'classification': data['classification']
         }
     }
 
@@ -735,11 +734,11 @@ def _create_delete_clips_command_spec(form):
     return {
         'name': 'delete_clips',
         'arguments': {
-            'detectors': data['detectors'],
             'station_mics': data['station_mics'],
-            'classification': data['classification'],
             'start_date': data['start_date'],
             'end_date': data['end_date'],
+            'detectors': data['detectors'],
+            'classification': data['classification'],
             'retain_count': data['retain_count']
         }
     }
@@ -775,11 +774,11 @@ def _create_create_clip_audio_files_command_spec(form):
     return {
         'name': 'create_clip_audio_files',
         'arguments': {
-            'detectors': data['detectors'],
             'station_mics': data['station_mics'],
-            'classification': data['classification'],
             'start_date': data['start_date'],
             'end_date': data['end_date'],
+            'detectors': data['detectors'],
+            'classification': data['classification']
         }
     }
 
@@ -814,11 +813,11 @@ def _create_delete_clip_audio_files_command_spec(form):
     return {
         'name': 'delete_clip_audio_files',
         'arguments': {
-            'detectors': data['detectors'],
             'station_mics': data['station_mics'],
-            'classification': data['classification'],
             'start_date': data['start_date'],
             'end_date': data['end_date'],
+            'detectors': data['detectors'],
+            'classification': data['classification']
         }
     }
 
