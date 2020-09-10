@@ -395,8 +395,13 @@ def get_clip_counts(
     counts = dict((date, 0) for date in dates)
     
     clips = get_clips(
-        station, mic_output, detector, annotation_name=annotation_name,
-        annotation_value=annotation_value, tag_name=tag_name, order=False)
+        station=station,
+        mic_output=mic_output,
+        detector=detector,
+        annotation_name=annotation_name,
+        annotation_value=annotation_value,
+        tag_name=tag_name,
+        order=False)
     
     count_dicts = clips.values('date').annotate(count=Count('date'))
     
@@ -411,12 +416,18 @@ def get_clip_counts(
     return counts
     
     
-def get_clips(
-        station=None, mic_output=None, detector=None, date=None,
-        annotation_name=None, annotation_value=None, tag_name=None,
-        order=True):
+def get_clips(**kwargs):
     
-    clips = _get_base_clips(station, mic_output, detector, date)
+    station = kwargs.get('station')
+    mic_output = kwargs.get('mic_output')
+    date = kwargs.get('date')
+    detector = kwargs.get('detector')
+    annotation_name = kwargs.get('annotation_name')
+    annotation_value = kwargs.get('annotation_value')
+    tag_name = kwargs.get('tag_name')
+    order = kwargs.get('order', True)
+    
+    clips = _get_base_clips(station, mic_output, date, detector)
     
     clips = _filter_clips_by_annotation_if_needed(
         clips, annotation_name, annotation_value)
@@ -429,13 +440,13 @@ def get_clips(
     return clips
 
 
-def _get_base_clips(station, mic_output, detector, date):
+def _get_base_clips(station, mic_output, date, detector):
     
     kwargs = {}
     _add_kwarg_if_needed(kwargs, 'station', station)
     _add_kwarg_if_needed(kwargs, 'mic_output', mic_output)
-    _add_kwarg_if_needed(kwargs, 'creating_processor', detector)
     _add_kwarg_if_needed(kwargs, 'date', date)
+    _add_kwarg_if_needed(kwargs, 'creating_processor', detector)
     
     if len(kwargs) == 0:
         return Clip.objects.all()

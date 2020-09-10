@@ -82,11 +82,16 @@ class DeleteClipsCommand(Command):
         value_tuples = self._create_clip_query_values_iterator()
         count = 0
         
-        for detector, station, mic_output, date in value_tuples:
+        for station, mic_output, date, detector in value_tuples:
             
             clips = model_utils.get_clips(
-                station, mic_output, detector, date, self._annotation_name,
-                self._annotation_value, order=False)
+                station=station,
+                mic_output=mic_output,
+                date=date,
+                detector=detector,
+                annotation_name=self._annotation_name,
+                annotation_value=self._annotation_value,
+                order=False)
             
             count += clips.count()
             
@@ -119,10 +124,15 @@ class DeleteClipsCommand(Command):
         
         for station, mic_output, date, detector in value_tuples:
             
-            # Get clips for this detector, station, mic_output, and date
+            # Get clips for this station, mic_output, date, and detector
             clips = model_utils.get_clips(
-                station, mic_output, detector, date, self._annotation_name,
-                self._annotation_value, order=False)
+                station=station,
+                mic_output=mic_output,
+                date=date,
+                detector=detector,
+                annotation_name=self._annotation_name,
+                annotation_value=self._annotation_value,
+                order=False)
             
             
             # Figure out which clips should be deleted.

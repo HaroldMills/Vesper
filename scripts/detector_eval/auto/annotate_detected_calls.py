@@ -92,8 +92,11 @@ def annotate_detected_calls():
             print('{} {}...'.format(short_detector_name, station_num))
             
             ground_truth_clips = list(model_utils.get_clips(
-                station, mic_output, ground_truth_detector, None,
-                CLASSIFICATION_ANNOTATION_NAME, annotation_value))
+                station=station,
+                mic_output=mic_output,
+                detector=ground_truth_detector,
+                annotation_name=CLASSIFICATION_ANNOTATION_NAME,
+                annotation_value=annotation_value))
             
             ground_truth_call_center_indices = \
                 [c.start_index + c.length // 2 for c in ground_truth_clips]
@@ -101,7 +104,9 @@ def annotate_detected_calls():
             ground_truth_call_count = len(ground_truth_clips)
 
             old_bird_clips = list(model_utils.get_clips(
-                station, mic_output, old_bird_detector))
+                station=station,
+                mic_output=mic_output,
+                detector=old_bird_detector))
             
             old_bird_clip_count = len(old_bird_clips)
 

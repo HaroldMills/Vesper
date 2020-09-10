@@ -196,8 +196,12 @@ def _get_bird_counts(
             for date in _date_range(start_date, end_date):
                 
                 clips = model_utils.get_clips(
-                    station, mic_output, detector, date, annotation_name,
-                    annotation_value)
+                    station=station,
+                    mic_output=mic_output,
+                    date=date,
+                    detector=detector,
+                    annotation_name=annotation_name,
+                    annotation_value=annotation_value)
                 
                 times = sorted(c.start_time for c in clips)
                 

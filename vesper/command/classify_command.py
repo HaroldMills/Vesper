@@ -50,7 +50,7 @@ class ClassifyCommand(Command):
         
         for station, mic_output, date, detector in value_tuples:
             
-            clips = _get_clips(station, mic_output, detector, date, tag_name)
+            clips = _get_clips(station, mic_output, date, detector, tag_name)
             
             count = clips.count()
             count_text = text_utils.create_count_text(count, 'clip')
@@ -142,10 +142,17 @@ def _create_classifier(name, annotation_info, job, processor):
     return cls(annotation_info, creating_job=job, creating_processor=processor)
     
     
-def _get_clips(station, mic_output, detector, date, tag_name):
+def _get_clips(station, mic_output, date, detector, tag_name):
+    
     try:
+        
         return model_utils.get_clips(
-            station, mic_output, detector, date, tag_name=tag_name)
+            station=station,
+            mic_output=mic_output,
+            date=date,
+            detector=detector,
+            tag_name=tag_name)
+        
     except Exception as e:
         command_utils.log_and_reraise_fatal_exception(e, 'Clip query')
     

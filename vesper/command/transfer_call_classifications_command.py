@@ -141,19 +141,26 @@ class TransferCallClassificationsCommand(Command):
     
     def _transfer_classifications(self):
         value_tuples = self._create_clip_query_values_iterator()
-        for _, station, mic_output, date in value_tuples:
+        for station, mic_output, date, _ in value_tuples:
             self._transfer_classifications_aux(station, mic_output, date)
             
             
     def _transfer_classifications_aux(self, station, mic_output, date):
         
         source_clips = model_utils.get_clips(
-            station, mic_output, self._source_detector, date,
-            self._annotation_name, self._annotation_value)
+            station=station,
+            mic_output=mic_output,
+            date=date,
+            detector=self._source_detector,
+            annotation_name=self._annotation_name,
+            annotation_value=self._annotation_value)
                 
         target_clips = model_utils.get_clips(
-            station, mic_output, self._target_detector, date,
-            self._annotation_name, None)
+            station=station,
+            mic_output=mic_output,
+            date=date,
+            detector=self._target_detector,
+            annotation_name=self._annotation_name)
         
         matches = self._match_clips_with_calls(source_clips, target_clips)
         

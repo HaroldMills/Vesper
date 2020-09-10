@@ -1608,8 +1608,13 @@ def night(request):
     recordings_json = _get_recordings_json(recordings, station)
 
     clips = model_utils.get_clips(
-        station, mic_output, detector, date,
-        annotation_name, annotation_value, tag_name)
+        station=station,
+        mic_output=mic_output,
+        date=date,
+        detector=detector,
+        annotation_name=annotation_name,
+        annotation_value=annotation_value,
+        tag_name=tag_name)
     clips_json = _get_clips_json(clips, station)
 
     settings_presets_json = _get_presets_json('Clip Album Settings')
@@ -1797,8 +1802,12 @@ def clip_album(request):
 
     station, mic_output = d.sm_pair
     clips = model_utils.get_clips(
-        station, mic_output, d.detector, None,
-        d.annotation_name, d.annotation_value, d.tag_name)
+        station=station,
+        mic_output=mic_output,
+        detector=d.detector,
+        annotation_name=d.annotation_name,
+        annotation_value=d.annotation_value,
+        tag_name=d.tag_name)
     clips_json = _get_clips_json(clips, station)
 
     settings_presets_json = _get_presets_json('Clip Album Settings')

@@ -57,8 +57,13 @@ class DeleteClipAudioFilesCommand(Command):
         for station, mic_output, date, detector in value_tuples:
             
             clips = model_utils.get_clips(
-                station, mic_output, detector, date, self._annotation_name,
-                self._annotation_value, order=False)
+                station=station,
+                mic_output=mic_output,
+                date=date,
+                detector=detector,
+                annotation_name=self._annotation_name,
+                annotation_value=self._annotation_value,
+                order=False)
             
             num_clips = len(clips)
             num_deleted_files = 0

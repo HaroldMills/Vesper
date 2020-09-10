@@ -58,7 +58,7 @@ class ExportCommand(Command):
         for station, mic_output, date, detector in value_tuples:
             
             clips = _get_clips(
-                station, mic_output, detector, date, annotation_name,
+                station, mic_output, date, detector, annotation_name,
                 annotation_value)
             
             count = clips.count()
@@ -118,9 +118,19 @@ def _create_exporter(name, arguments):
     return cls(arguments)
 
 
-def _get_clips(*args):
+def _get_clips(
+        station, mic_output, date, detector, annotation_name,
+        annotation_value):
+    
     try:
-        return model_utils.get_clips(*args)
+        return model_utils.get_clips(
+            station=station,
+            mic_output=mic_output,
+            date=date,
+            detector=detector,
+            annotation_name=annotation_name,
+            annotation_value=annotation_value)
+        
     except Exception as e:
         command_utils.log_and_reraise_fatal_exception(e, 'Clip query')
     
