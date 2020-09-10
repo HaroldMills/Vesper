@@ -164,11 +164,11 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       # - name: Add Old Bird clip start indices
       #   url_name: add-old-bird-clip-start-indices
         
-      - name: Create clip audio files
-        url_name: create-clip-audio-files
+      # - name: Create clip audio files
+      #   url_name: create-clip-audio-files
         
-      - name: Delete clip audio files
-        url_name: delete-clip-audio-files
+      # - name: Delete clip audio files
+      #   url_name: delete-clip-audio-files
    
 - name: Help
   dropdown:
