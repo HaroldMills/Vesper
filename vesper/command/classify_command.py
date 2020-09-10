@@ -6,7 +6,7 @@ import time
 
 from vesper.command.command import Command
 from vesper.django.app.models import AnnotationInfo, Job, Processor
-from vesper.singletons import archive, extension_manager
+from vesper.singletons import extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.text_utils as text_utils
@@ -32,7 +32,7 @@ class ClassifyCommand(Command):
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
         self._detector_names = get('detectors', args)
-        self._tag = get('tag', args)
+        self._tag_name = get('tag', args)
         
 
     def execute(self, job_info):
@@ -43,10 +43,7 @@ class ClassifyCommand(Command):
     
         value_tuples = self._create_clip_query_values_iterator()
         
-        if self._tag == archive.instance.NOT_APPLICABLE:
-            tag_name = None
-        else:
-            tag_name = self._tag
+        tag_name = model_utils.get_clip_query_tag_name(self._tag_name)
         
         for station, mic_output, date, detector in value_tuples:
             

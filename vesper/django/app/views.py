@@ -521,7 +521,7 @@ def _create_export_clip_metadata_to_csv_file_command_spec(form):
 
     data = form.cleaned_data
 
-    return {
+    spec = {
         'name': 'export',
         'arguments': {
             'exporter': {
@@ -529,15 +529,32 @@ def _create_export_clip_metadata_to_csv_file_command_spec(form):
                 'arguments': {
                     'output_file_path': data['output_file_path'],
                 }
-            },
-            'station_mics': data['station_mics'],
-            'start_date': data['start_date'],
-            'end_date': data['end_date'],
-            'detectors': data['detectors'],
-            'classification': data['classification']
+            }
         }
     }
+    
+    _add_clip_set_command_arguments(spec, data)
+    
+    return spec
 
+
+_CLIP_SET_ARG_NAMES = (
+    'station_mics',
+    'start_date',
+    'end_date',
+    'detectors',
+    'classification',
+    'tag'
+)
+
+
+def _add_clip_set_command_arguments(command_spec, form_data):
+    
+    args = command_spec['arguments']
+    
+    for name in _CLIP_SET_ARG_NAMES:
+        args[name] = form_data[name]
+       
 
 @login_required
 @csrf_exempt
@@ -567,7 +584,7 @@ def _create_export_clips_to_audio_files_command_spec(form):
 
     data = form.cleaned_data
 
-    return {
+    spec = {
         'name': 'export',
         'arguments': {
             'exporter': {
@@ -580,13 +597,13 @@ def _create_export_clips_to_audio_files_command_spec(form):
                     }
                 }
             },
-            'station_mics': data['station_mics'],
-            'start_date': data['start_date'],
-            'end_date': data['end_date'],
-            'detectors': data['detectors'],
-            'classification': data['classification']
         }
     }
+    
+    _add_clip_set_command_arguments(spec, data)
+    
+    return spec
+
 
 
 @login_required
@@ -616,7 +633,7 @@ def _create_export_clips_to_hdf5_file_command_spec(form):
 
     data = form.cleaned_data
 
-    return {
+    spec = {
         'name': 'export',
         'arguments': {
             'exporter': {
@@ -625,13 +642,12 @@ def _create_export_clips_to_hdf5_file_command_spec(form):
                     'output_file_path': data['output_file_path'],
                 }
             },
-            'station_mics': data['station_mics'],
-            'start_date': data['start_date'],
-            'end_date': data['end_date'],
-            'detectors': data['detectors'],
-            'classification': data['classification']
         }
     }
+    
+    _add_clip_set_command_arguments(spec, data)
+    
+    return spec
 
 
 @login_required
@@ -731,17 +747,16 @@ def _create_delete_clips_command_spec(form):
 
     data = form.cleaned_data
 
-    return {
+    spec = {
         'name': 'delete_clips',
         'arguments': {
-            'station_mics': data['station_mics'],
-            'start_date': data['start_date'],
-            'end_date': data['end_date'],
-            'detectors': data['detectors'],
-            'classification': data['classification'],
             'retain_count': data['retain_count']
         }
     }
+    
+    _add_clip_set_command_arguments(spec, data)
+    
+    return spec
 
 
 @login_required
@@ -771,16 +786,14 @@ def _create_create_clip_audio_files_command_spec(form):
 
     data = form.cleaned_data
 
-    return {
+    spec = {
         'name': 'create_clip_audio_files',
-        'arguments': {
-            'station_mics': data['station_mics'],
-            'start_date': data['start_date'],
-            'end_date': data['end_date'],
-            'detectors': data['detectors'],
-            'classification': data['classification']
-        }
+        'arguments': {}
     }
+    
+    _add_clip_set_command_arguments(spec, data)
+    
+    return spec
 
 
 @login_required
@@ -810,16 +823,14 @@ def _create_delete_clip_audio_files_command_spec(form):
 
     data = form.cleaned_data
 
-    return {
+    spec = {
         'name': 'delete_clip_audio_files',
-        'arguments': {
-            'station_mics': data['station_mics'],
-            'start_date': data['start_date'],
-            'end_date': data['end_date'],
-            'detectors': data['detectors'],
-            'classification': data['classification']
-        }
+        'arguments': {}
     }
+    
+    _add_clip_set_command_arguments(spec, data)
+    
+    return spec
 
 
 @login_required

@@ -3,7 +3,8 @@
 
 import logging
 
-from vesper.command.command import Command, CommandSyntaxError
+from vesper.command.clip_set_command import ClipSetCommand
+from vesper.command.command import CommandSyntaxError
 from vesper.singletons import extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
@@ -13,7 +14,7 @@ import vesper.util.text_utils as text_utils
 _logger = logging.getLogger()
 
 
-class ExportCommand(Command):
+class ExportCommand(ClipSetCommand):
     
     
     extension_name = 'export'
@@ -21,15 +22,10 @@ class ExportCommand(Command):
     
     def __init__(self, args):
         
-        super().__init__(args)
+        super().__init__(args, False)
         
         get = command_utils.get_required_arg
         self._exporter_spec = get('exporter', args)
-        self._sm_pair_ui_names = get('station_mics', args)
-        self._start_date = get('start_date', args)
-        self._end_date = get('end_date', args)
-        self._detector_names = get('detectors', args)
-        self._classification = get('classification', args)
         
         self._exporter = self._create_exporter()
         
@@ -49,17 +45,13 @@ class ExportCommand(Command):
         
         self._exporter.begin_exports()
     
-        annotation_name, annotation_value = \
-            model_utils.get_clip_query_annotation_data(
-                'Classification', self._classification)
-            
         value_tuples = self._create_clip_query_values_iterator()
         
         for station, mic_output, date, detector in value_tuples:
             
             clips = _get_clips(
-                station, mic_output, date, detector, annotation_name,
-                annotation_value)
+                station, mic_output, date, detector, self._annotation_name,
+                self._annotation_value, self._tag_name)
             
             count = clips.count()
             count_text = text_utils.create_count_text(count, 'clip')
@@ -82,18 +74,6 @@ class ExportCommand(Command):
         return True
 
 
-    def _create_clip_query_values_iterator(self):
-        
-        try:
-            return model_utils.create_clip_query_values_iterator(
-                self._sm_pair_ui_names, self._start_date, self._end_date,
-                self._detector_names)
-            
-        except Exception as e:
-            command_utils.log_and_reraise_fatal_exception(
-                e, 'Clip query values iterator construction')
-            
-            
 def _parse_exporter_spec(spec):
     
     try:
@@ -120,7 +100,7 @@ def _create_exporter(name, arguments):
 
 def _get_clips(
         station, mic_output, date, detector, annotation_name,
-        annotation_value):
+        annotation_value, tag_name):
     
     try:
         return model_utils.get_clips(
@@ -129,7 +109,8 @@ def _get_clips(
             date=date,
             detector=detector,
             annotation_name=annotation_name,
-            annotation_value=annotation_value)
+            annotation_value=annotation_value,
+            tag_name=tag_name)
         
     except Exception as e:
         command_utils.log_and_reraise_fatal_exception(e, 'Clip query')

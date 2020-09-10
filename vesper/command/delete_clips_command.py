@@ -7,7 +7,7 @@ import time
 
 from django.db import transaction
 
-from vesper.command.command import Command
+from vesper.command.clip_set_command import ClipSetCommand
 from vesper.django.app.models import Clip
 from vesper.singletons import clip_manager
 import vesper.command.command_utils as command_utils
@@ -19,37 +19,25 @@ import vesper.util.text_utils as text_utils
 _logger = logging.getLogger()
 
 
-class DeleteClipsCommand(Command):
+class DeleteClipsCommand(ClipSetCommand):
     
     
     extension_name = 'delete_clips'
     
     
     def __init__(self, args):
-        super().__init__(args)
+        
+        super().__init__(args, True)
+        
         get = command_utils.get_required_arg
-        self._sm_pair_ui_names = get('station_mics', args)
-        self._start_date = get('start_date', args)
-        self._end_date = get('end_date', args)
-        self._detector_names = get('detectors', args)
-        self._classification = get('classification', args)
         self._retain_count = get('retain_count', args)
         
         
     def execute(self, job_info):
-        
         self._job_info = job_info
-
-        self._annotation_name, self._annotation_value = \
-            model_utils.get_clip_query_annotation_data(
-                'Classification', self._classification)
-
         retain_indices = self._get_retain_clip_indices()
-        
         self._clip_manager = clip_manager.instance
-        
         self._delete_clips(retain_indices)
-        
         return True
     
     
@@ -91,6 +79,7 @@ class DeleteClipsCommand(Command):
                 detector=detector,
                 annotation_name=self._annotation_name,
                 annotation_value=self._annotation_value,
+                tag_name=self._tag_name,
                 order=False)
             
             count += clips.count()
@@ -98,19 +87,6 @@ class DeleteClipsCommand(Command):
         return count
             
 
-    def _create_clip_query_values_iterator(self):
-        
-        try:
-            return model_utils.create_clip_query_values_iterator(
-                self._sm_pair_ui_names, self._start_date, self._end_date,
-                self._detector_names)
-            
-        except Exception as e:
-            command_utils.log_and_reraise_fatal_exception(
-                e, 'Clip query values iterator construction',
-                'The archive was not modified.')
-
-    
     def _delete_clips(self, retain_indices):
         
         start_time = time.time()
@@ -132,6 +108,7 @@ class DeleteClipsCommand(Command):
                 detector=detector,
                 annotation_name=self._annotation_name,
                 annotation_value=self._annotation_value,
+                tag_name=self._tag_name,
                 order=False)
             
             

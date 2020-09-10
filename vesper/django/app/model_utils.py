@@ -674,3 +674,10 @@ def get_clip_query_annotation_data(annotation_name, annotation_value):
     
     else:
         return annotation_name, value
+
+
+def get_clip_query_tag_name(tag_name):
+    if tag_name == archive.instance.NOT_APPLICABLE:
+        return None
+    else:
+        return tag_name
