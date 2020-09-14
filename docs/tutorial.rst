@@ -96,11 +96,16 @@ Create a new Vesper archive
 #. Unzip the downloaded file. This should create an archive directory
    called ``Archive Template`` containing several files and directories.
    
-#. Rename the archive directory to whatever you want. In the following we
-   will assume the name ``Tutorial Archive``. Move the directory to wherever
-   you want your archive, for example on your desktop or in a different
-   directory that you reserve for your Vesper archives.
+#. Rename the archive directory whatever you want. In the following we
+   will assume the name ``Tutorial Archive``.
    
+#. Move the directory wherever you want. For example, you might put it
+   on your desktop or in a different directory that you reserve just for
+   your Vesper archives.
+   
+Add a user to the archive
+-------------------------
+
 #. Open a Windows Anaconda Prompt or Unix terminal and activate your
    Vesper conda environment with a command like::
 
