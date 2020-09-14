@@ -65,17 +65,13 @@ To install the most recent version of Vesper in a new conda environment:
 
 5. Install Vesper and various dependencies into the environment with::
 
-       pip install vesper==0.4.8 birdvoxdetect
+       pip install vesper==0.4.8 birdvoxdetect==0.2.5
        
    Here you must use pip rather than conda since Vesper is distributed
    as a pip package. In addition to the Vesper package, pip will install
    several other packages on which Vesper depends, including, for example,
-   ones for Django and SciPy. (As far as I know, it should not be necessary
-   to include ``birdvoxdetect`` in this command, since the Vesper pip
-   package includes it as a dependency, but for some reason if you don't
-   specify it you may wind up with the wrong version of NumPy and/or Numba.)
+   ones for Django and SciPy.
    
-
 Conda environments
 ==================
 

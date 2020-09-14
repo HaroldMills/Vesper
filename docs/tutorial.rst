@@ -89,6 +89,18 @@ archive.
 Create a new Vesper archive
 ---------------------------
 
+#. Download the `Vesper archive template
+   <https://www.dropbox.com/s/uwckqtqwvo9fsti/Archive%20Template.zip?dl=1>`_
+   to your computer.
+
+#. Unzip the downloaded file. This should create an archive directory
+   called ``Archive Template`` containing several files and directories.
+   
+#. Rename the archive directory to whatever you want. In the following we
+   will assume the name ``Tutorial Archive``. Move the directory to wherever
+   you want your archive, for example on your desktop or in a different
+   directory that you reserve for your Vesper archives.
+   
 #. Open a Windows Anaconda Prompt or Unix terminal and activate your
    Vesper conda environment with a command like::
 
@@ -98,36 +110,20 @@ Create a new Vesper archive
    environment. See the `Installation <installation.html>`_ section
    of this documentation for more about installation and conda
    environments.
-      
-#. In your Anaconda Prompt or terminal, change the current working
-   directory to the directory that you want to be the parent of your
-   new archive directory by issuing an appropriate ``cd`` command.
-   For example, if you're on Windows and you want your archive
-   directory to be ``C:\Users\Nora\Desktop\Tutorial Archive``,
-   the command is::
    
-      cd C:\Users\Nora\Desktop
+#. In your Anaconda Prompt or terminal, change the current working
+   directory to your archive directory by issuing an appropriate ``cd``
+   command. For example, if you're on Windows and you put your archive
+   in ``C:\Users\Nora\Desktop\Tutorial Archive``, the command is::
+   
+      cd "C:\Users\Nora\Desktop\Tutorial Archive"
       
    The analogous command for macOS or Linux is::
    
-      cd /Users/Nora/Desktop
-   
-#. Create your new archive by issuing a command like::
-
-       vesper_admin createarchive "Tutorial Archive"
-       
-   But with ``"Tutorial Archive"`` replaced with whatever you
-   would like to name the archive directory. You can specify any
-   valid directory name, but note that if the name contains
-   spaces it should be enclosed in double quotes, as above.
-   
-#. After you have created your archive, ``cd`` into its directory
-   with a command like::
-   
-       cd "Tutorial Archive"
-       
-   Again, note that if the directory name contains spaces, it must
-   be enclosed in double quotes in the command.
+      cd "/Users/Nora/Desktop/Tutorial Archive"
+      
+   Note that if the name of your archive contains spaces you must
+   enclose the directory path in double quotes in the command.
    
 #. Vesper keeps track of who makes what changes in an archive via the
    notion of a *user*. You can add any number of users to an archive,
