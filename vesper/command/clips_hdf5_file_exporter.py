@@ -76,6 +76,9 @@ class ClipsHdf5FileExporter:
         except OSError as e:
             raise CommandExecutionError(str(e))
         
+        # Always create the "clips" group, even if it will be empty.
+        self._file.create_group('/clips')
+        
         self._clip_manager = clip_manager.instance
         
     
