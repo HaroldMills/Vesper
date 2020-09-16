@@ -68,3 +68,37 @@ title. To choose the default preset for your clip albums, edit the
 ``default_presets`` item in your archive preferences, stored in the file
 ``Preferences.yaml`` in your archive directory. After you edit this file,
 you should restart your Vesper server to be sure to pick up your changes.
+
+When I start the Vesper server, it tells me I have "unapplied migrations". What does that mean, and what can I do about it?
+===========================================================================================================================
+
+It means that the relational database of your Vesper archive has an older
+and different structure than that expected by your version of the Vesper
+software. This kind of version mismatch can happen when you update Vesper
+to a new version, or if somebody supplies you with an archive created with
+an older version of Vesper than yours. The mismatch may (or may not,
+depending on the particular differences) make it impossible for Vesper to
+work properly with the database.
+
+The process of updating the structure of your database is called
+*migration*, and it is typically straightforward. To migrate your
+database:
+
+1. Make a backup copy of the ``Archive Database.sqlite`` database file
+   that's in your archive directory.
+   
+.. WARNING::
+   Always make a copy of your archive database before migrating it.
+   Then if something goes wrong with the migration, you can always
+   recover by restoring the original version of the database from
+   your copy. If you don't make a copy of your database and the
+   migration fails, you may lose some or all of your data!
+   
+2. Run the command:
+
+        vesper_admin migrate
+        
+   in your archive directory from an Anaconda Prompt (on Windows) or
+   terminal (on macOS or Linux). This should apply any needed migrations
+   to your database to bring it up to date.
+   
