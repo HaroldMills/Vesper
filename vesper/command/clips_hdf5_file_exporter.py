@@ -30,15 +30,15 @@ import vesper.command.command_utils as command_utils
 # _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
-# Settings for exports from 2017 MPG Ranch Archive 30k for NFC time bound
-# marker training.
+# Settings for exports from 2018 MPG Ranch archives for species classifier
+# training.
 _EXTRACTION_START_OFFSETS = {
     'Tseep': -.5,
     'Thrush': -.5
 }
 _EXTRACTION_DURATIONS = {
     'Tseep': 1.2,
-    'Thrush': 1.5
+    'Thrush': 1.2
 }
 _ANNOTATION_INFOS = [
     ('Classification', None), 
@@ -46,6 +46,24 @@ _ANNOTATION_INFOS = [
     ('Call End Index', int)]
 _DEFAULT_ANNOTATION_VALUES = {}
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
+
+# # Settings for exports from 2017 MPG Ranch Archive 30k for NFC time bound
+# # marker training.
+# _EXTRACTION_START_OFFSETS = {
+#     'Tseep': -.5,
+#     'Thrush': -.5
+# }
+# _EXTRACTION_DURATIONS = {
+#     'Tseep': 1.2,
+#     'Thrush': 1.5
+# }
+# _ANNOTATION_INFOS = [
+#     ('Classification', None), 
+#     ('Call Start Index', int), 
+#     ('Call End Index', int)]
+# _DEFAULT_ANNOTATION_VALUES = {}
+# _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
 _logger = logging.getLogger()
