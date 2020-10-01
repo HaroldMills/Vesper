@@ -79,7 +79,15 @@ EXAMPLE_DURATION = {
 
 EXAMPLE_SAMPLE_RATE = 24000
 
-DATASET_CLASSIFICATIONS = {
+CLASSIFICATION_CHANGES = {
+    'Call.YRWA': 'Call.DBUP',
+    'Call.YEWA': 'Call.Zeep'
+}
+"""
+Classification changes, for lumping classes together.
+"""
+
+CLASSIFICATION_LABELS = {
     'Call.ATSP': 0,
     'Call.CCSP_BRSP': 1,
     'Call.CHSP': 2,
@@ -91,13 +99,11 @@ DATASET_CLASSIFICATIONS = {
     'Call.VESP': 8,
     'Call.WCSP': 9,
     'Call.WIWA': 10,
-    'Call.YEWA': 11,
-    'Call.YRWA': 12,
-    'Call.Zeep': 13
+    'Call.Zeep': 11
 }
 """
-Mapping from clip classifications in HDF5 files to clip classifications in
-datasets.
+Mapping from classification strings used in HDF5 files to numeric labels
+used in datasets.
 """
 
 
@@ -135,7 +141,14 @@ def get_input_file_path_lists():
     file_paths = sorted(INPUT_DIR_PATH.glob('*.h5'))
     
     for path in file_paths:
+        
+        # Get classification from file path.
         classification = get_classification(path)
+        
+        # Change classification if needed for lumping.
+        classification = CLASSIFICATION_CHANGES.get(
+            classification, classification)
+        
         file_path_lists[classification].append(path)
         
     return file_path_lists
@@ -338,7 +351,9 @@ def create_tf_example(clip_ds):
     waveform_feature = create_bytes_feature(waveform.tobytes())
     
     classification = attrs['classification']
-    label = DATASET_CLASSIFICATIONS[classification]
+    classification = CLASSIFICATION_CHANGES.get(
+        classification, classification)
+    label = CLASSIFICATION_LABELS[classification]
     label_feature = create_int64_feature(label)
     
     clip_id = attrs['clip_id']
