@@ -12,6 +12,25 @@ with the recorder.
 The recorder logs messages to the file `Vesper Recorder Log.txt`, also in
 the recorder home directory. This script also logs essentially the same
 messages to the console.
+
+To create a conda environment in which to run the Vesper Recorder:
+
+    conda create -n vesper_recorder python
+    conda activate vesper_recorder
+    conda install pyaudio
+    pip install jsonschema pyephem pytz ruamel.yaml
+    
+To run the Vesper Recorder, you must have the PYTHONPATH and
+VESPER_RECORDER_HOME environment variables set. On Unix, for example:
+
+    export PYTHONPATH="/Users/Harold/Documents/Code/Python/Vesper/vesper"
+    export VESPER_RECORDER_HOME="/Users/Harold/Desktop/Vesper Recorder"
+    
+Then, in an Anaconda Prompt or terminal window, run the Vesper Recorder
+script:
+
+    conda activate vesper_recorder
+    python -m vesper.scripts.vesper_recorder
 """
 
 
