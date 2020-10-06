@@ -8,6 +8,12 @@ from vesper.django.app.models import (
 import vesper.util.yaml_utils as yaml_utils
 
 
+# TODO: Move code that modifies lists of items for presentation in
+# the UI to the client? This includes, for example, wildcard additions
+# and UI name substitutions. The basic idea is to move UI concerns to
+# the client.
+
+
 _NOT_APPLICABLE = '-----'
 _STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
 _STRING_ANNOTATION_VALUE_WILDCARD = '*'
