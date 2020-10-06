@@ -22,7 +22,7 @@ class LazilyInitialized:
     def initter(method):
         
         """
-        Decorator for `LazilyInitialized` instance methods that initializes
+        Decorator for `LazilyInitialized` instance method that initializes
         an object if needed before invoking the decorated method on it.
         """
         
