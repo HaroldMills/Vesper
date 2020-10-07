@@ -19,7 +19,7 @@ class LazilyInitialized:
     def initializer(method):
         
         """
-        Decorator for subclass instance methods that initializes if needed
+        Decorator for subclass instance methods that initialize if needed
         before doing anything else.
         
         An instance method that needs to ensure that the object it's called
