@@ -61,7 +61,7 @@ entry points that no longer exist.
 
 
 from pathlib import Path
-from setuptools import find_packages, setup
+from setuptools import find_namespace_packages, setup
 import importlib
 import sys
 
@@ -88,10 +88,31 @@ setup(
     author_email='harold.mills@gmail.com',
     license='MIT',
     
-    # We exclude the unit test packages since some of them contain a
-    # lot of data, for example large audio files.
-    packages=find_packages(
-        exclude=['tests', 'tests.*', '*.tests.*', '*.tests']),
+    # The `vesper` Python package is a *namespace package* (and more
+    # specifically a *native* namespace package): it is split across
+    # multiple, separate distribution packages to allow optional ones
+    # (e.g. ones containing optional plugins) to be omitted from an
+    # installation. See
+    # https://packaging.python.org/guides/packaging-namespace-packages/
+    # for a discussion of namespace packages. Two important points of
+    # that discussion are that:
+    #
+    # 1. Every distribution package that is part of the `vesper` package
+    #    must omit `__init__.py` from its `vesper` package directory.
+    #
+    # 2. The `setup.py` file of every distribution package must use
+    #    `setuptools.find_namespace_packages` rather than
+    #    `setuptools.find_packages` to find its packages, as in the
+    #    following
+    packages=find_namespace_packages(
+        
+        include=['vesper.*'],
+        
+        # We exclude the unit test packages since some of them contain a
+        # lot of data, for example large audio files.
+        exclude=['tests', 'tests.*', '*.tests.*', '*.tests']
+        
+    ),
     
     classifiers=[
         'Programming Language :: Python :: 3',
