@@ -16,7 +16,7 @@ class LazilyInitialized:
     
     
     @staticmethod
-    def initter(method):
+    def initializer(method):
         
         """
         Decorator for subclass instance methods that initializes if needed

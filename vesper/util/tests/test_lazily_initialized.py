@@ -26,11 +26,11 @@ class _Test(LazilyInitialized):
 
         
     @property
-    @LazilyInitialized.initter
+    @LazilyInitialized.initializer
     def x(self):
         return self._x
     
     
-    @LazilyInitialized.initter
+    @LazilyInitialized.initializer
     def yy(self):
         return self._y + self._y
