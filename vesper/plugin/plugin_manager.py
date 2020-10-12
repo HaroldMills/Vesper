@@ -122,18 +122,18 @@ class PluginManager(LazilyInitialized):
         self._plugin_types = dict((t.name, t) for t in plugin_types)
                
         
-    @LazilyInitialized.initter
+    @LazilyInitialized.initializer
     def get_plugin_type(self, type_name):
         return self._root_plugin_type.get_plugin(type_name)
         
         
-    @LazilyInitialized.initter
+    @LazilyInitialized.initializer
     def get_plugins(self, type_name):
         plugin_type = self.get_plugin_type(type_name)
         return plugin_type.get_plugins()
         
         
-    @LazilyInitialized.initter
+    @LazilyInitialized.initializer
     def get_plugin(self, type_name, plugin_name):
         plugin_type = self.get_plugin_type(type_name)
         return plugin_type.get_plugin(plugin_name)
