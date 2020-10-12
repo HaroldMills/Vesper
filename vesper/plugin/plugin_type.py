@@ -28,8 +28,12 @@ class PluginType(Plugin):
     entry_point_group_name = None
     """The setuptools entry point group name of this plugin type, a string."""
     
-    supported_api_versions = None
-    """The API versions supported for this plugin type, a tuple of strings."""
+    supported_interfaces = None
+    """
+    The plugin interfaces supported for this plugin type, a tuple of
+    abstract `Plugin` subclasses. Every plugin of this type should
+    subclass one of these interfaces.
+    """
     
     
     def __init__(self):
@@ -89,16 +93,24 @@ class PluginType(Plugin):
                 f'"{module_name}". Error message was: {str(e)}')
             
             return None
+        
+        # TODO: Should the value of the `type` attribute be a class or
+        # an instance?
+        plugin_class.type = self.__class__
 
         return plugin_class
-
-
+    
+    
     def _validate_plugin(self, plugin):
         
         _check_class_attribute(plugin, 'name', str)
         
         # TODO: Make sure plugin class has the required attributes, and
         # that they have the correct types.
+        
+        # TODO: Make sure plugin subclasses one of the plugin interfaces
+        # of its plugin type.
+        
         pass
     
     

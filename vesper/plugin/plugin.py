@@ -28,8 +28,21 @@ class Plugin:
     license = None
     """The license of this plugin, a string."""
     
-    plugin_type_name = None
-    """The name of the plugin type of this plugin, a string."""
+    type = None
+    """
+    The plugin type of this plugin, a subclass of the `PluginType` class.
     
-    implemented_api_version = None
-    """The plugin type API version implemented by this plugin, a string."""
+    This attribute is set automatically when the plugin is loaded,
+    according to the plugin's declared setuptools entry point group.
+    """
+    
+    interface_version = None
+    """
+    The plugin interface version implemented by this plugin, a string.
+    
+    This attribute is typically set by plugin interface classes.
+    A plugin interface class is an abstract subclass of the `Plugin`
+    class that defines the methods and behavior of a plugin interface.
+    A plugin interface class serves as a superclass for concrete
+    plugin subclasses that implement the interface.
+    """

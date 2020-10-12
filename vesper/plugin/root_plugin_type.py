@@ -29,14 +29,15 @@ class RootPluginType(PluginType):
     description = 'The plugin type of plugin types.'
     author = 'Harold Mills'
     license = 'MIT'
-    plugin_type_name = 'Plugin Type'
-    implemented_api_version = '1.0'
     
     # Plugin type attributes.
     entry_point_group_name = 'vesper.plugin_types'
-    supported_api_versions = ('1.0',)
+    supported_interfaces = ('1.0',)
     
     
     def _load_plugins(self):
         plugins = super()._load_plugins()
         return (self,) + plugins
+    
+    
+    # TODO: Perform extra validation needed for plugin types.
