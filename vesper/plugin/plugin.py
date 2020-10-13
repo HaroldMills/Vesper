@@ -42,7 +42,7 @@ class Plugin:
     `Plugin` subclass.
     
     This attribute is set automatically when the plugin is loaded,
-    according to the plugin interface that the plugin is an instance
-    of. Every plugin must be a subclass of exactly one of the
-    supported plugin interfaces of its plugin type.
+    according to the plugin interface that the plugin subclasses.
+    Every plugin must be a subclass of exactly one of the supported
+    plugin interfaces of its plugin type.
     """

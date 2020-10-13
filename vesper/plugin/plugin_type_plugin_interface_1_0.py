@@ -5,6 +5,7 @@ import logging
 import pkg_resources
 
 from vesper.plugin.plugin_type import PluginType
+import vesper.plugin.plugin_utils as plugin_utils
 
 
 class PluginTypePluginInterface_1_0(PluginType):
@@ -25,9 +26,6 @@ class PluginTypePluginInterface_1_0(PluginType):
     subclass is probably most likely to want to override the
     `_validate_plugin` method.
     """
-    
-    
-    interface_version = '1.0'
 
 
     def __init__(self):
@@ -75,7 +73,7 @@ class PluginTypePluginInterface_1_0(PluginType):
         
         # Set `type` and `interface` plugin class attributes.
         try:
-            self._set_plugin_attributes(plugin)
+            plugin_utils._set_plugin_type_attributes(plugin, self.__class__)
         except Exception as e:
             self._handle_load_failure(
                 'Validation', plugin_name, module_name, e)
@@ -100,38 +98,6 @@ class PluginTypePluginInterface_1_0(PluginType):
             f'"{module_name}". Error message was: {str(exception)}')
             
 
-    def _set_plugin_attributes(self, plugin):
-        plugin.type = self.__class__
-        plugin.interface = self._get_plugin_interface(plugin)
-        
-        
-    def _get_plugin_interface(self, plugin):
-        
-        interfaces = [
-            i for i in self.supported_interfaces if issubclass(plugin, i)]
-        
-        interface_count = len(interfaces)
-        
-        if interface_count == 1:
-            return interfaces[0]
-        
-        elif interface_count == 0:
-            self._handle_plugin_interface_error(
-                f'Plugin is not a subclass of any supported '
-                f'{plugin.type.name} plugin interface.')
-            
-        else:
-            self._handle_plugin_interface_error(
-                f'Plugin is a subclass of more than one supported '
-                f'{plugin.type.name} plugin interface.')
-            
-            
-    def _handle_plugin_interface_error(self, message):
-        raise ValueError(
-            f'{message} A plugin must be a subclass of exactly one of '
-            f'the plugin interfaces supported by its plugin type.')
-         
-         
     def _validate_plugin(self, plugin):
         
         _check_class_attribute(plugin, 'name', str)
