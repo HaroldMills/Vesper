@@ -36,13 +36,13 @@ class Plugin:
     according to the plugin's declared setuptools entry point group.
     """
     
-    interface_version = None
+    interface = None
     """
-    The plugin interface version implemented by this plugin, a string.
+    The plugin interface implemented by this plugin, an abstract
+    `Plugin` subclass.
     
-    This attribute is typically set by plugin interface classes.
-    A plugin interface class is an abstract subclass of the `Plugin`
-    class that defines the methods and behavior of a plugin interface.
-    A plugin interface class serves as a superclass for concrete
-    plugin subclasses that implement the interface.
+    This attribute is set automatically when the plugin is loaded,
+    according to the plugin interface that the plugin is an instance
+    of. Every plugin must be a subclass of exactly one of the
+    supported plugin interfaces of its plugin type.
     """

@@ -10,7 +10,7 @@ via the `plugin_manager` module attribute, e.g.:
 """
 
 
-from vesper.plugin.root_plugin_type import RootPluginType
+from vesper.plugin.plugin_type_plugin_type import PluginTypePluginType
 from vesper.util.lazily_initialized import LazilyInitialized
 
 
@@ -117,8 +117,9 @@ class PluginManager(LazilyInitialized):
     
     
     def _init(self):
-        self._root_plugin_type = RootPluginType()
+        self._root_plugin_type = PluginTypePluginType()
         plugin_types = self._root_plugin_type.get_plugins()
+        # TODO: Create instances of plugin types.
         self._plugin_types = dict((t.name, t) for t in plugin_types)
                
         
