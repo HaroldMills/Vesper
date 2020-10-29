@@ -10,11 +10,28 @@ from vesper.ephem.usno_rise_set_table import UsnoRiseSetTable
 USNO_TABLES_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Astronomy/USNO Tables')
 
-INPUT_FILE_PATH = USNO_TABLES_DIR_PATH / 'USNO Solar Events.csv'
-
 OUTPUT_FILE_PATH = USNO_TABLES_DIR_PATH / 'Solar Event Differences.csv'
 
-ONE_MINUTE = datetime.timedelta(minutes=1)
+SOLAR_TABLE_TYPES = frozenset((
+    'Astronomical Twilight',
+    'Nautical Twilight',
+    'Civil Twilight',
+    'Sunrise/Sunset'
+))
+
+RISING_EVENT_NAMES = {
+    'Astronomical Twilight': 'Astronomical Dawn',
+    'Nautical Twilight': 'Nautical Dawn',
+    'Civil Twilight': 'Civil Dawn',
+    'Sunrise/Sunset': 'Sunrise'
+}
+
+SETTING_EVENT_NAMES = {
+    'Astronomical Twilight': 'Astronomical Dusk',
+    'Nautical Twilight': 'Nautical Dusk',
+    'Civil Twilight': 'Civil Dusk',
+    'Sunrise/Sunset': 'Sunset'
+}
 
 EVENT_NAMES = (
     'Astronomical Dawn',
@@ -26,10 +43,6 @@ EVENT_NAMES = (
     'Nautical Dusk',
     'Astronomical Dusk'
 )
-
-PROGRESS_MESSAGE_PERIOD = 10000000
-MAX_LOCATION_DAY_COUNT = None
-LARGE_DIFF_THRESHOLD = 2
 
 OUTPUT_COLUMN_NAMES = (
     'Latitude',
@@ -55,7 +68,8 @@ def create_diff_count_dict():
     return defaultdict(create_count_dict)
 
 
-time_zones = {}
+skyfield_event_cache = {}
+"""(lat, lon, year) -> (time, event_name) list"""
 
 unmatched_usno_event_counts = defaultdict(create_count_dict)
 """(lat, lon) -> event name -> count"""
@@ -69,48 +83,9 @@ event_time_diff_counts = defaultdict(create_diff_count_dict)
 
 def main():
     
-    test_table_comparison()
-    
-#     print('Reading USNO solar events file...')
-#     usno_event_lists = get_usno_events(INPUT_FILE_PATH)
-#     
-#     print(f'Comparing events for {len(usno_event_lists)} location-days...')
-#     count_event_diffs(usno_event_lists)
-#         
-#     show_event_diffs()
-#     
-#     write_output_file(OUTPUT_FILE_PATH)
-
-
-SOLAR_TABLE_TYPES = frozenset((
-    'Astronomical Twilight',
-    'Nautical Twilight',
-    'Civil Twilight',
-    'Sunrise/Sunset'
-))
-
-
-RISING_EVENT_NAMES = {
-    'Astronomical Twilight': 'Astronomical Dawn',
-    'Nautical Twilight': 'Nautical Dawn',
-    'Civil Twilight': 'Civil Dawn',
-    'Sunrise/Sunset': 'Sunrise'
-}
-
-
-SETTING_EVENT_NAMES = {
-    'Astronomical Twilight': 'Astronomical Dusk',
-    'Nautical Twilight': 'Nautical Dusk',
-    'Civil Twilight': 'Civil Dusk',
-    'Sunrise/Sunset': 'Sunset'
-}
-
-
-def test_table_comparison():
-    
     table_file_paths = list(USNO_TABLES_DIR_PATH.glob('**/*.txt'))
     
-    # table_file_paths = table_file_paths[:10]
+    table_file_paths = table_file_paths[:10]
     
     table_file_count = len(table_file_paths)
     
@@ -142,10 +117,10 @@ def get_and_compare_skyfield_event_times(t, usno_times, event_name):
     sf_times = get_skyfield_event_times(
         t.lat, t.lon, t.year, event_name, t.utc_offset)
     
-    match_events(t.lat, t.lon, t.year, event_name, usno_times, sf_times)
+    match_events(t.lat, t.lon, event_name, usno_times, sf_times)
     
     
-def match_events(lat, lon, year, event_name, usno_times, sf_times):
+def match_events(lat, lon, event_name, usno_times, sf_times):
     
     loc = (lat, lon)
     
@@ -188,9 +163,6 @@ def match_events(lat, lon, year, event_name, usno_times, sf_times):
     unmatched_sf_event_counts[loc][event_name] += sf_count - sf_index
 
 
-skyfield_event_cache = {}
-
-
 def get_skyfield_event_times(lat, lon, year, event_name, utc_offset):
     
     events = skyfield_event_cache.get((lat, lon, year))
@@ -218,152 +190,6 @@ def read_usno_table(file_path):
         text = table_file.read()
         
     return UsnoRiseSetTable(text)
-
-
-def get_usno_events(input_file_path):
-    events = read_usno_data_file(input_file_path)
-    return group_events_by_day(events)
-
-
-def read_usno_data_file(input_file_path):
-    
-    with open(input_file_path) as csv_file:
-        text = csv_file.read()
-        
-    lines = text.strip().split('\n')
-    
-    events = [parse_event(line) for line in lines[1:]]
-    
-    # events = [e for e in events if abs(e[0]) < 60]
-     
-    # events = events[:10000]
-    
-    return events
-
-
-def parse_event(line):
-    
-    lat, lon, dt, day, night, event_name = line.split(',')
-    
-    lat = float(lat)
-    lon = float(lon)
-    dt = datetime.datetime.fromisoformat(dt)
-    day = datetime.date.fromisoformat(day)
-    night = datetime.date.fromisoformat(night)
-    
-    return lat, lon, dt, day, night, event_name
-    
-    
-def group_events_by_day(events):
-    
-    # (lat, lon, date) -> (time, event name) list
-    
-    event_lists = defaultdict(list)
-    
-    for event in events:
-        lat, lon, dt, _, _, event_name = event
-        day = get_local_day(dt, lon)
-        event_lists[(lat, lon, day)].append((dt, event_name))
-        
-    for event_list in event_lists.values():
-        event_list.sort()
-        
-    return event_lists
-        
-        
-def get_local_day(dt, lon):
-    
-    time_zone = time_zones.get(lon)
-    if time_zone is None:
-        time_zone = create_local_time_zone(lon)
-        time_zones[lon] = time_zone
-        
-    day = dt.astimezone(time_zone).date()
-    
-    return day
-
-
-def create_local_time_zone(lon):
-    
-    # Get longitude in units of hours east.
-    hours = 24 * lon / 360
-    
-    # Get local time zone offset.
-    offset = datetime.timedelta(hours=hours)
-    
-    return datetime.timezone(offset)
-        
-        
-def count_event_diffs(usno_event_lists):
-    
-    calculators = {}
-    
-    count = 0
-    
-    for (lat, lon, day), usno_events in usno_event_lists.items():
-        
-        calculator = calculators.get((lat, lon))
-        if calculator is None:
-            calculator = AstronomicalCalculator(lat, lon)
-            calculators[(lat, lon)] = calculator
-            
-        sf_events = calculator.get_day_solar_events(day)
-        
-        count_event_diffs_aux(lat, lon, sf_events, usno_events)
-        
-        count += 1
-        if count == MAX_LOCATION_DAY_COUNT:
-            break
-        elif count % PROGRESS_MESSAGE_PERIOD == 0:
-            print(f'    {count}...')
-
-
-def count_event_diffs_aux(lat, lon, sf_events, usno_events):
-    
-    loc = (lat, lon)
-    
-    sf_events = create_event_dict(sf_events)
-    usno_events = create_event_dict(usno_events)
-    
-    for event_name, sf_time in sf_events.items():
-        
-        usno_time = usno_events.get(event_name)
-        
-        if usno_time is None:
-            unmatched_sf_event_counts[loc][event_name] += 1
-            
-        else:
-            
-            diff = sf_time - usno_time
-            minutes = int(round(diff.total_seconds() / 60))
-            
-            if abs(minutes) >= LARGE_DIFF_THRESHOLD:
-                print(
-                    f'Large difference: {minutes},{str(sf_time)}, '
-                    f'{str(usno_time)},{lat},{lon},{event_name}')
-                show_events(sf_events, 'Skyfield events')
-                show_events(usno_events, 'USNO events')
-                
-            event_time_diff_counts[loc][event_name][minutes] += 1
-            
-    for event_name, usno_time in usno_events.items():
-        
-        sf_time = sf_events.get(event_name)
-        
-        if sf_time is None:
-            unmatched_usno_event_counts[loc][event_name] += 1
-            
-            
-def create_event_dict(events):
-    return dict((e[1], e[0]) for e in events)
-
-
-def show_events(events, title):
-    print(f'{title}:')
-    evs = dict((time, name) for name, time in events.items())
-    times = sorted(evs.keys())
-    for time in times:
-        print(f'    {time}: {evs[time]}')
 
 
 def show_event_diffs():
@@ -470,6 +296,8 @@ def write_output_file(output_file_path):
     with open(output_file_path, 'w') as csv_file:
         
         writer = csv.writer(csv_file)
+        
+        writer.writerow(OUTPUT_COLUMN_NAMES)
         
         locs = sorted(event_time_diff_counts.keys())
         
