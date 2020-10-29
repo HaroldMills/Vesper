@@ -7,10 +7,13 @@ from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 from vesper.ephem.usno_rise_set_table import UsnoRiseSetTable
 
 
-USNO_TABLES_DIR_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/Astronomy/USNO Tables')
+DATA_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/Astronomy')
 
-OUTPUT_FILE_PATH = USNO_TABLES_DIR_PATH / 'Solar Event Differences.csv'
+USNO_TABLES_DIR_PATH = DATA_DIR_PATH / 'USNO Tables'
+
+RESULTS_DIR_PATH = DATA_DIR_PATH / 'Skyfield Test Results'
+
+DIFF_COUNTS_FILE_PATH = RESULTS_DIR_PATH / 'Solar Event Difference Counts.csv'
 
 SOLAR_TABLE_TYPES = frozenset((
     'Astronomical Twilight',
@@ -109,7 +112,7 @@ def main():
             
     show_event_diffs()
     
-    write_output_file(OUTPUT_FILE_PATH)
+    write_diff_counts_file(DIFF_COUNTS_FILE_PATH)
     
     
 def get_and_compare_skyfield_event_times(t, usno_times, event_name):
@@ -291,7 +294,7 @@ def show_aggregated_event_time_diff_counts():
     show_diff_counts('All Events', total_counts)
             
             
-def write_output_file(output_file_path):
+def write_diff_counts_file(output_file_path):
     
     with open(output_file_path, 'w') as csv_file:
         
