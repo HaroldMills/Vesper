@@ -112,8 +112,8 @@ def main():
         
         t = read_usno_table(table_file_path)
         
-        if t.lat != -80 or t.lon != -180:
-            continue
+        # if t.lat != -80 or t.lon != -180:
+        #     continue
         
         if t.type in SOLAR_TABLE_TYPES:
             
