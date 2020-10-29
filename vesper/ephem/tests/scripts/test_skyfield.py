@@ -1,3 +1,9 @@
+"""
+Script that tests the Skyfield Python package by comparing its output
+to tables produced by the U.S. Naval Observatory (USNO).
+"""
+
+
 from collections import defaultdict
 from pathlib import Path
 import csv
@@ -13,7 +19,9 @@ USNO_TABLES_DIR_PATH = DATA_DIR_PATH / 'USNO Tables'
 
 RESULTS_DIR_PATH = DATA_DIR_PATH / 'Skyfield Test Results'
 
-DIFF_COUNTS_FILE_PATH = RESULTS_DIR_PATH / 'Solar Event Difference Counts.csv'
+DIFF_COUNT_FILE_PATH = RESULTS_DIR_PATH / 'Solar Event Difference Counts.csv'
+
+UNMATCHED_EVENTS_FILE_PATH = RESULTS_DIR_PATH / 'Unmatched Solar Events.csv'
 
 SOLAR_TABLE_TYPES = frozenset((
     'Astronomical Twilight',
@@ -47,7 +55,7 @@ EVENT_NAMES = (
     'Astronomical Dusk'
 )
 
-OUTPUT_COLUMN_NAMES = (
+DIFF_COUNT_FILE_COLUMN_NAMES = (
     'Latitude',
     'Longitude',
     'Year',
@@ -61,6 +69,15 @@ OUTPUT_COLUMN_NAMES = (
     'Unmatched USNO Events'
 )
 
+UNMATCHED_EVENT_FILE_COLUMN_NAMES = (
+    'Latitude',
+    'Longitude',
+    'Year',
+    'Time',
+    'Event Name',
+    'Source'
+)
+
 
 def create_count_dict():
     return defaultdict(int)
@@ -72,18 +89,18 @@ skyfield_event_cache = {}
 event_time_diff_counts = defaultdict(create_count_dict)
 """(lat, lon, year, event name) -> diff -> count"""
 
-unmatched_usno_event_counts = defaultdict(int)
-"""(lat, lon, year, event name) -> count"""
+unmatched_event_counts = defaultdict(create_count_dict)
+"""source name -> (lat, lon, year, event name) -> count"""
 
-unmatched_sf_event_counts = defaultdict(int)
-"""(lat, lon, year, event_name) -> count"""
+unmatched_events = []
+"""(source, (lat, lon, year, event name), time) list"""
 
 
 def main():
     
     table_file_paths = list(USNO_TABLES_DIR_PATH.glob('**/*.txt'))
     
-    table_file_paths = table_file_paths[:10]
+    # table_file_paths = table_file_paths[:2]
     
     table_file_count = len(table_file_paths)
     
@@ -95,6 +112,9 @@ def main():
         
         t = read_usno_table(table_file_path)
         
+        if t.lat != -80 or t.lon != -180:
+            continue
+        
         if t.type in SOLAR_TABLE_TYPES:
             
             usno_times = t.rising_times
@@ -105,9 +125,8 @@ def main():
             event_name = SETTING_EVENT_NAMES[t.type]
             get_and_match_skyfield_events(t, usno_times, event_name)
             
-    write_diff_counts_file(DIFF_COUNTS_FILE_PATH)
-    
-    # show_event_diffs()
+    write_diff_count_file(DIFF_COUNT_FILE_PATH)
+    write_unmatched_events_file(UNMATCHED_EVENTS_FILE_PATH)
     
     
 def get_and_match_skyfield_events(t, usno_times, event_name):
@@ -177,34 +196,46 @@ def match_events(lat, lon, year, event_name, usno_times, sf_times):
             if diff < 0:
                 # USNO time precedes Skyfield time
                 
-                unmatched_usno_event_counts[key] += 1
+                record_unmatched_event('USNO', key, usno_time)
                 usno_index += 1
                 
             else:
                 # Skyfield time precedes USNO time
                 
-                unmatched_usno_event_counts[key] += 1
+                record_unmatched_event('Skyfield', key, sf_time)
                 sf_index += 1
             
-    unmatched_usno_event_counts[key] += usno_count - usno_index
-    unmatched_sf_event_counts[key] += sf_count - sf_index
+    while usno_index != usno_count:
+        usno_time = usno_times[usno_index]
+        record_unmatched_event('USNO', key, usno_time)
+        usno_index += 1
+        
+    while sf_index != sf_count:
+        sf_time = sf_times[sf_index]
+        record_unmatched_event('Skyfield', key, sf_time)
+        sf_index += 1
 
 
-def write_diff_counts_file(output_file_path):
+def record_unmatched_event(source, key, time):
+    unmatched_event_counts[source][key] += 1
+    unmatched_events.append((source, key, time))
+
+
+def write_diff_count_file(file_path):
     
-    with open(output_file_path, 'w') as csv_file:
+    with open(file_path, 'w') as csv_file:
         
         writer = csv.writer(csv_file)
         
-        writer.writerow(OUTPUT_COLUMN_NAMES)
+        writer.writerow(DIFF_COUNT_FILE_COLUMN_NAMES)
         
         keys = sorted(event_time_diff_counts.keys())
         
         for key in keys:
             
             c = event_time_diff_counts[key]
-            sf = unmatched_sf_event_counts[key]
-            usno = unmatched_usno_event_counts[key]
+            sf = unmatched_event_counts['Skyfield'][key]
+            usno = unmatched_event_counts['USNO'][key]
             
             lat, lon, year, event_name = key
             
@@ -212,106 +243,26 @@ def write_diff_counts_file(output_file_path):
                 lat, lon, year, event_name,
                 c[-2], c[-1], c[0], c[1], c[2],
                 sf, usno))
-
-
-# def show_event_diffs():
-#     show_unmatched_events(unmatched_sf_event_counts, 'Skyfield', 'USNO')
-#     show_unmatched_events(unmatched_usno_event_counts, 'USNO', 'Skyfield')
-#     show_event_time_diff_counts()
-#     show_aggregated_event_time_diff_counts()
-#     
-#     
-# def show_unmatched_events(events, name_a, name_b):
-#     
-#     locs = sorted(events.keys())
-#     
-#     for loc in locs:
-#         
-#         print(
-#             f'Location {loc} {name_a} events for which there was no '
-#             f'matching {name_b} event:')
-#         
-#         counts = events[loc]
-#         event_names = frozenset(counts.keys())
-#         
-#         for event_name in EVENT_NAMES:
-#             if event_name in event_names:
-#                 count = counts[event_name]
-#                 print(f'    {event_name}: {count}')
-#                 
-#                 
-# def show_event_time_diff_counts():
-#     
-#     diff_counts = event_time_diff_counts
-#     
-#     locs = sorted(diff_counts.keys())
-#     
-#     for loc in locs:
-#         
-#         print(f'Location {loc} event time differences:')
-#         
-#         count_dicts = diff_counts[loc]
-#         event_names = frozenset(count_dicts.keys())
-#         
-#         for event_name in EVENT_NAMES:
-#             if event_name in event_names:
-#                 counts = count_dicts[event_name]
-#                 show_diff_counts(event_name, counts)
-#     
-#     
-# def show_diff_counts(event_name, counts):
-#     counts_string = get_diff_counts_string(counts)
-#     normalized_counts_string = get_normalized_diff_counts_string(counts)
-#     print(f'    {event_name}: {counts_string} {normalized_counts_string}')
-# 
-# 
-# def get_diff_counts_string(counts):
-#     diffs = sorted(counts.keys())
-#     items = ', '.join([f'{diff}: {counts[diff]}' for diff in diffs])
-#     return '{' + items + '}'
-# 
-# 
-# def get_normalized_diff_counts_string(counts):
-#     
-#     # Get normalized counts.
-#     total = sum(counts.values())
-#     normalized_counts = dict(
-#         (diff, 100 * count / total) for diff, count in counts.items())
-#     
-#     # Format count items.
-#     diffs = sorted(counts.keys())
-#     items = ', '.join(
-#         [f'{diff}: {normalized_counts[diff]:.2f}' for diff in diffs])
-#     
-#     return '{' + items + '}'
-# 
-#     
-# def show_aggregated_event_time_diff_counts():
-#     
-#     # Have (lat, lon) -> event name -> diff -> count, want
-#     # event name -> diff -> count, i.e. counts aggregated over location.
-#     
-#     aggregated_counts = defaultdict(create_count_dict)
-#     
-#     diff_counts = event_time_diff_counts
-#     
-#     for _, count_dict in diff_counts.items():
-#         for event_name, counts in count_dict.items():
-#             for diff, count in counts.items():
-#                 aggregated_counts[event_name][diff] += count
-#                 
-#     print('Event time differences aggregated over location:')
-#     for event_name in EVENT_NAMES:
-#         counts = aggregated_counts[event_name]
-#         show_diff_counts(event_name, counts)
-#         
-#     print('Event time differences aggregated over location and event type:')
-#     total_counts = defaultdict(int)
-#     for counts in aggregated_counts.values():
-#         for diff, count in counts.items():
-#             total_counts[diff] += count
-#     show_diff_counts('All Events', total_counts)
             
             
+def write_unmatched_events_file(file_path):
+    
+    with open(file_path, 'w') as csv_file:
+        
+        writer = csv.writer(csv_file)
+        
+        writer.writerow(UNMATCHED_EVENT_FILE_COLUMN_NAMES)
+        
+        rows = [get_unmatched_events_file_row(*e) for e in unmatched_events]
+        rows.sort()
+        
+        writer.writerows(rows)
+           
+    
+def get_unmatched_events_file_row(source, key, time):
+    lat, lon, year, event_name = key
+    return lat, lon, year, str(time), event_name, source
+
+
 if __name__ == '__main__':
     main()
