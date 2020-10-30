@@ -129,12 +129,20 @@ def main():
     write_unmatched_events_file(UNMATCHED_EVENTS_FILE_PATH)
     
     
+def read_usno_table(file_path):
+    
+    with open(file_path) as table_file:
+        text = table_file.read()
+        
+    return UsnoRiseSetTable(text)
+
+
 def get_and_match_skyfield_events(t, usno_times, event_name):
     
     sf_times = get_skyfield_event_times(
         t.lat, t.lon, t.year, event_name, t.utc_offset)
     
-    match_events(t.lat, t.lon, t.year, event_name, usno_times, sf_times)
+    match_events(t.lat, t.lon, t.year, event_name, sf_times, usno_times)
     
     
 def get_skyfield_event_times(lat, lon, year, event_name, utc_offset):
@@ -158,62 +166,54 @@ def get_skyfield_event_times(lat, lon, year, event_name, utc_offset):
     return times
     
     
-def read_usno_table(file_path):
-    
-    with open(file_path) as table_file:
-        text = table_file.read()
-        
-    return UsnoRiseSetTable(text)
-
-
-def match_events(lat, lon, year, event_name, usno_times, sf_times):
+def match_events(lat, lon, year, event_name, sf_times, usno_times):
     
     key = (lat, lon, year, event_name)
     
-    usno_count = len(usno_times)
     sf_count = len(sf_times)
+    usno_count = len(usno_times)
     
-    usno_index = 0
     sf_index = 0
+    usno_index = 0
     
-    while usno_index != usno_count and sf_index != sf_count:
+    while sf_index != sf_count and usno_index != usno_count:
         
-        usno_time = usno_times[usno_index]
         sf_time = sf_times[sf_index]
+        usno_time = usno_times[usno_index]
         
-        diff = int(round((usno_time - sf_time).total_seconds() / 60))
+        diff = int(round((sf_time - usno_time).total_seconds() / 60))
         
         if abs(diff) <= 2:
             # times close: events match
             
             event_time_diff_counts[key][diff] += 1
-            usno_index += 1
             sf_index += 1
-            
+            usno_index += 1
+        
         else:
             # times not close: events do not match
             
             if diff < 0:
-                # USNO time precedes Skyfield time
-                
-                record_unmatched_event('USNO', key, usno_time)
-                usno_index += 1
-                
-            else:
                 # Skyfield time precedes USNO time
                 
                 record_unmatched_event('Skyfield', key, sf_time)
                 sf_index += 1
+                
+            else:
+                # USNO time precedes Skyfield time
+                
+                record_unmatched_event('USNO', key, usno_time)
+                usno_index += 1
             
-    while usno_index != usno_count:
-        usno_time = usno_times[usno_index]
-        record_unmatched_event('USNO', key, usno_time)
-        usno_index += 1
-        
     while sf_index != sf_count:
         sf_time = sf_times[sf_index]
         record_unmatched_event('Skyfield', key, sf_time)
         sf_index += 1
+        
+    while usno_index != usno_count:
+        usno_time = usno_times[usno_index]
+        record_unmatched_event('USNO', key, usno_time)
+        usno_index += 1
 
 
 def record_unmatched_event(source, key, time):
