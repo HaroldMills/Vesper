@@ -23,7 +23,7 @@ def main():
     summarize_matched_events(df, 'all solar')
     
     grid_df = get_grid_data(df)
-    summarize_events(grid_df, 'grid solar')
+    summarize_events(grid_df, 'lat/lon grid solar')
     
     ithaca_df = get_ithaca_data(df)
     summarize_events(ithaca_df, 'Ithaca solar')
