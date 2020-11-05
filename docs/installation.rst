@@ -65,7 +65,7 @@ To install the most recent version of Vesper in a new conda environment:
 
 5. Install Vesper and various dependencies into the environment with::
 
-       pip install vesper==0.4.8 birdvoxdetect==0.2.5
+       pip install vesper==0.4.8 birdvoxdetect==0.2.5 birdvoxclassify==0.1.0b3
        
    Here you must use pip rather than conda since Vesper is distributed
    as a pip package. In addition to the Vesper package, pip will install
