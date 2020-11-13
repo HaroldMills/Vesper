@@ -8,10 +8,11 @@ from skyfield import almanac
 from skyfield.api import Topos, load, load_file
 
 
-_JPL_DE_FILE_PATH = Path(__file__).parent / 'data' / 'de421.bsp'
+_EPHEMERIS_FILE_PATH = Path(__file__).parent / 'data' / 'de421.bsp'
 """
-JPL Development Ephemeris (JPL DE) Spice Planet Kernel (SPK) file path.
-See en.wikipedia.org/wiki/Jet_Propulsion_Laboratory_Development_Ephemeris
+Jet Propulsion Laboratory Development Ephemeris (JPL DE) Spice Planet
+Kernel (SPK) file path. See
+en.wikipedia.org/wiki/Jet_Propulsion_Laboratory_Development_Ephemeris
 for a discussion of the JPL DE.
 
 See https://pypi.org/project/jplephem/ for instructions on excerpting
@@ -29,9 +30,6 @@ _SOLAR_ALTITUDE_EVENT_NAMES = {
     (1, 0): 'Astronomical Dusk'
 }
 
-# TODO: Should we attempt to distinguish between morning and evening
-# twilight periods? How would we handle high-latitude twilight periods
-# during which the sun reaches an altitudinal extremum?
 _SOLAR_ALTITUDE_PERIOD_NAMES = {
     0: 'Night',
     1: 'Astronomical Twilight',
@@ -61,6 +59,28 @@ def get_solar_altitude_period(self, dt)
 def get_lunar_position(self, dt)
     
 def get_lunar_fraction_illuminated(self, dt)
+
+
+These would be helpful:
+
+    def get_day_solar_altitude_events(self, date)
+    def get_day_solar_altitude_event_time(self, event_name, date)
+    def get_night_solar_altitude_events(self, date)
+    def get_night_solar_altitude_event_time(self, event_name, date)
+
+but would require that a calculator have a time zone.
+
+Or perhaps we should have:
+
+    def get_solar_altitude_events(self, **kwargs)
+
+and require either `start_dt` and `end_dt` or `day` or `night` keyword
+arguments? Invocations would look like:
+
+   get_solar_altitude_events(start_dt=start_dt, end_dt=end_dt)
+   get_solar_altitude_events(day=day)
+   get_solar_altitude_events(night=night)
+
 
 # Omit these initially. Skyfield does not yet offer moonrise and moonset
 # calculations. It is more difficult to calculate lunar altitude events
@@ -95,8 +115,7 @@ class AstronomicalCalculator:
     @classmethod
     def _init_if_needed(cls):
         if cls._eph is None:
-            # print(f'JPL file path is "{_JPL_DE_FILE_PATH}".')
-            cls._eph = load_file(_JPL_DE_FILE_PATH)
+            cls._eph = load_file(_EPHEMERIS_FILE_PATH)
             cls._sun = cls._eph['sun']
             cls._earth = cls._eph['earth']
             cls._moon = cls._eph['moon']

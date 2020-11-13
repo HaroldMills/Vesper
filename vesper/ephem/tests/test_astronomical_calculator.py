@@ -114,6 +114,11 @@ LUNAR_FRACTION_ILLUMINATED_ERROR_THRESHOLD = .070
 TIME_DIFFERENCE_ERROR_THRESHOLD = 60   # seconds
 
 
+# TODO: Test vector arguments to `get_solar_position`,
+# `get_solar_altitude_period`, `get_lunar_position`, and
+# `get_lunar_fraction_illuminated`.
+
+
 class AstronomicalCalculatorTests(TestCase):
 
 
