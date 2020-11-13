@@ -17,8 +17,10 @@ import vesper.util.time_utils as time_utils
 
 
 DETECTORS = (
-    ('Old Bird Tseep Detector', 'Original'),
-    ('Old Bird Tseep Detector Redux 1.1', 'Redux'),
+    # ('Old Bird Tseep Detector', 'Original'),
+    # ('Old Bird Tseep Detector Redux 1.1', 'Redux'),
+    ('Old Bird Thrush Detector', 'Original'),
+    ('Old Bird Thrush Detector Redux 1.1', 'Redux'),
 )
 
 STATION_MIC_PAIRS = (
@@ -27,6 +29,8 @@ STATION_MIC_PAIRS = (
     ('Station 3', '21c 3'),
     ('Station 4', '21c 4'),
     ('Station 5', '21c 5'),
+    ('Station 6', '21c 6'),
+    ('Station 7', '21c 7'),
 )
 
 START_DATE = datetime.date(2016, 4, 1)
@@ -35,7 +39,7 @@ END_DATE = datetime.date(2016, 6, 30)
 OUTPUT_FILE_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Old Bird/Lighthouse/'
     'Lighthouse 2016 Old Bird Detector Comparison Archive/'
-    'Old Bird Detector Comparison.csv')
+    'Old Bird Thrush Detector Comparison.csv')
 
 OUTPUT_FILE_HEADER_FORMAT = (
     'Station / Mic,Date,'
