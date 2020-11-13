@@ -6,57 +6,19 @@ import datetime
 
 from skyfield import almanac
 from skyfield.api import Topos, load, load_file
-import pytz
 
 
-'''
-Functions we want:
+_JPL_DE_FILE_PATH = Path(__file__).parent / 'data' / 'de421.bsp'
+"""
+JPL Development Ephemeris (JPL DE) Spice Planet Kernel (SPK) file path.
+See en.wikipedia.org/wiki/Jet_Propulsion_Laboratory_Development_Ephemeris
+for a discussion of the JPL DE.
 
-* Given time period, return sequence of (time, event) pairs for
-  solar events that occur during that time period. The events are:
-  
-      Sunrise
-      Sunset
-      Civil Dawn
-      Civil Dusk
-      Nautical Dawn
-      Nautical Dusk
-      Astronomical Dawn
-      Astronomical Dusk
-  
-* Given date, return solar events that occur during the day of that date,
-  i.e. from midnight on that date to midnight on the next date.
-  
-* Given date, return solar events that occur during the night of that date,
-  i.e. from noon on that date to noon on the next date.
-  
-* Given time, return solar period at that time.
+See https://pypi.org/project/jplephem/ for instructions on excerpting
+SPK files. This might be a good idea to reduce the SPK file size.
+"""
 
-* Given time, return sun altitude and azimuth at that time.
-
-* Given time period, return sequence of (time, event) pairs for lunar
-  events that occur during that time period. The events are:
-  
-      Moonrise
-      Moonset
-      
-* Given time, get moon altitude, azimuth, phase, and illumination at that time.
-'''
-
-'''
-Deline 65.187782, -123.422775
-Ithaca 42.431964, -76.501656
-
-Might get test data from timeanddate.com.
-'''
-
-
-# TODO: Include "de421.bsp" file in Vesper package?
-
-
-_JPL_FILE_PATH = Path(__file__).parent / 'de421.bsp'
-
-_SOLAR_EVENT_NAMES = {
+_SOLAR_ALTITUDE_EVENT_NAMES = {
     (0, 1): 'Astronomical Dawn',
     (1, 2): 'Nautical Dawn',
     (2, 3): 'Civil Dawn',
@@ -67,44 +29,59 @@ _SOLAR_EVENT_NAMES = {
     (1, 0): 'Astronomical Dusk'
 }
 
+# TODO: Should we attempt to distinguish between morning and evening
+# twilight periods? How would we handle high-latitude twilight periods
+# during which the sun reaches an altitudinal extremum?
+_SOLAR_ALTITUDE_PERIOD_NAMES = {
+    0: 'Night',
+    1: 'Astronomical Twilight',
+    2: 'Nautical Twilight',
+    3: 'Civil Twilight',
+    4: 'Day'
+}
+
 _ONE_DAY = datetime.timedelta(days=1)
 
 
 '''
-A "day" is a 24 hour period starting 12 hours before local noon.
-A "night" is a 24 hour period starting at local noon.
-
 Methods that have `datetime` arguments require that those arguments be
 time-zone-aware.
 
 All `datetime` objects returned by methods are UTC. If callers want
 `datetime` objects in other time zones, they must convert them themselves.
 
-
 def __init__(self, latitude, longitude, elevation=0)
 
 def get_solar_position(self, dt)
 
-def get_solar_events(self, start_dt, end_dt)
+def get_solar_altitude_events(self, start_dt, end_dt)
 
-def get_day_solar_events(self, date)
-    
-def get_night_solar_events(self, date)
-    
-def get_solar_period(self, dt)
+def get_solar_altitude_period(self, dt)
     
 def get_lunar_position(self, dt)
     
-def get_lunar_events(self, start_dt, end_dt)
-    
-def get_day_lunar_events(self, date)
-    
-def get_night_lunar_events(self, date)
-    
-def get_lunar_phase(self, dt)
+def get_lunar_fraction_illuminated(self, dt)
+
+# Omit these initially. Skyfield does not yet offer moonrise and moonset
+# calculations. It is more difficult to calculate lunar altitude events
+# than solar altitude events because of the nearness of the moon to the
+# earth and the eccentricity of its orbit.
+def get_lunar_altitude_events(self, start_dt, end_dt)
+def get_lunar_altitude_period(self, dt)
 '''
 
 
+'''
+Solar altitude period definitions, with numbers in degrees:
+
+Night: altitude < -18
+Astronomical Twilight: -18 <= altitude < -12
+Nautical Twilight: -12 <= altitude < -6
+Civil Twilight: -6 <= altitude < -.833333
+Day: altitude >= -8.33333
+'''
+    
+    
 class AstronomicalCalculator:
     
     
@@ -118,14 +95,16 @@ class AstronomicalCalculator:
     @classmethod
     def _init_if_needed(cls):
         if cls._eph is None:
-            # print(f'JPL file path is "{_JPL_FILE_PATH}".')
-            cls._eph = load_file(_JPL_FILE_PATH)
+            # print(f'JPL file path is "{_JPL_DE_FILE_PATH}".')
+            cls._eph = load_file(_JPL_DE_FILE_PATH)
             cls._sun = cls._eph['sun']
             cls._earth = cls._eph['earth']
             cls._moon = cls._eph['moon']
             cls._ts = load.timescale()
             
             
+    # TODO: What effect does nonzero elevation have on calculated times?
+    # If none, maybe we should omit it?
     def __init__(self, latitude, longitude, elevation=0):
         
         AstronomicalCalculator._init_if_needed()
@@ -141,7 +120,8 @@ class AstronomicalCalculator:
         
         self._loc = self._earth + self._topos
         
-        self._local_time_offset = _get_local_time_offset(longitude)
+        self._solar_altitude_period_function = \
+            almanac.dark_twilight_day(self._eph, self._topos)
         
         
     @property
@@ -187,52 +167,21 @@ class AstronomicalCalculator:
         return self._ts.from_datetime(dt)
        
 
-    '''
-    K A N C D C N A K
-    K A N C N A K
-    K A N A K
-    K A K
-    K
-    
-    D C N A K A N C D
-    D C N A N C D
-    D C N C D
-    D C D
-    D
-    
-    D: {C}
-    C: {N, D}
-    N: {A, C}
-    A: {K, N}
-    K: {A}
-    
-    K
-        -18
-    A
-        -12
-    N
-        -6
-    C
-        -.8333
-    D
-    '''
-    
-    
-    def get_solar_events(self, start_dt, end_dt):
+    def get_solar_altitude_events(self, start_dt, end_dt):
         
         # Get start and end times as Skyfield `Time` objects.
         start_time = self._get_scalar_skyfield_time(start_dt)
         end_time = self._get_scalar_skyfield_time(end_dt)
         
-        # Get solar event times and codes.
-        function = almanac.dark_twilight_day(self._eph, self._topos)
-        times, codes = almanac.find_discrete(start_time, end_time, function)
+        # Get solar altitude event times and codes.
+        times, codes = almanac.find_discrete(
+            start_time, end_time, self._solar_altitude_period_function)
         
         # Get event times as UTC `datetime` objects.
         dts = [t.utc_datetime() for t in times]
         
-        # Get solar event names.
-        names = self._get_solar_event_names(dts, codes)
+        # Get event names.
+        names = self._get_solar_altitude_event_names(dts, codes)
         
         # Combine event times and names into pairs.
         events = list(zip(dts, names))
@@ -240,7 +189,7 @@ class AstronomicalCalculator:
         return events
     
     
-    def _get_solar_event_names(self, times, codes):
+    def _get_solar_altitude_event_names(self, times, codes):
         
         event_count = len(codes)
         
@@ -251,16 +200,16 @@ class AstronomicalCalculator:
             # have at least one event
             
             first_event_name = \
-                self._get_first_solar_event_name(times[0], codes[0])
+                self._get_first_solar_altitude_event_name(times[0], codes[0])
                 
             other_event_names = [
-                self._get_solar_event_name(codes[i], codes[i + 1])
+                self._get_solar_altitude_event_name(codes[i], codes[i + 1])
                 for i in range(event_count - 1)]
             
             return [first_event_name] + other_event_names
             
             
-    def _get_first_solar_event_name(self, time, code):
+    def _get_first_solar_altitude_event_name(self, time, code):
         
         if code == 0:
             # event is at start of night
@@ -320,75 +269,31 @@ class AstronomicalCalculator:
                     return 'Sunset'
             
             
-    def _get_solar_event_name(self, code_0, code_1):
-        return _SOLAR_EVENT_NAMES[(code_0, code_1)]
+    def _get_solar_altitude_event_name(self, code_0, code_1):
+        return _SOLAR_ALTITUDE_EVENT_NAMES[(code_0, code_1)]
     
     
-    def get_day_solar_events(self, date):
-        return self._get_solar_events_aux(date, 0)
-    
-    
-    def _get_solar_events_aux(self, date, start_hour):
-        
-        # Get event period start at prime meridian.
-        start_dt = datetime.datetime(
-            date.year, date.month, date.day, start_hour, tzinfo=pytz.utc)
-        
-        # Adjust for longitude of this calculator.
-        start_dt += self._local_time_offset
-        
-        # Get event period end time.
-        end_dt = start_dt + _ONE_DAY
-        
-        # Get events.
-        return self.get_solar_events(start_dt, end_dt)
-    
-    
-    def get_night_solar_events(self, date):
-        return self._get_solar_events_aux(date, 12)
-    
-    
-    def get_solar_period(self, dt):
-        pass
+    def get_solar_altitude_period(self, dt):
+        arg = self._get_skyfield_time(dt)
+        period_codes = self._solar_altitude_period_function(arg)
+        if len(period_codes.shape) == 0:
+            period_names = _SOLAR_ALTITUDE_PERIOD_NAMES[float(period_codes)]
+        else:
+            period_names = [
+                _SOLAR_ALTITUDE_PERIOD_NAMES(c) for c in period_codes]
+        return period_names
     
     
     def get_lunar_position(self, dt):
         return self._get_position(self._moon, dt)
     
     
-    def get_lunar_events(self, start_dt, end_dt):
-        pass
-    
-    
-    def get_day_lunar_events(self, date):
-        pass
-    
-    
-    def get_night_lunar_events(self, date):
-        pass
-    
-    
-    def get_lunar_phase(self, dt):
-        pass
+    def get_lunar_fraction_illuminated(self, dt):
+        t = self._get_skyfield_time(dt)
+        return almanac.fraction_illuminated(self._eph, 'moon', t)
 
 
-def _get_local_time_offset(longitude):
-    
-    # Normalize longitude to [-180, 180).
-    while longitude < -180:
-        longitude += 360
-    while longitude >= 180:
-        longitude -= 360
-        
-    # Get longitude in units of hours east.
-    hours = 24 * longitude / 360
-    
-    # Get offset as `timedelta`.
-    offset = datetime.timedelta(hours=-hours)
-    
-    return offset
-        
-        
 def _check_time_zone_awareness(dt):
     tzinfo = dt.tzinfo
-    return tzinfo is not None and tzinfo.utcoffset(dt) is not None
+    if tzinfo is None or tzinfo.utcoffset(dt) is None:
+        raise ValueError('Time does not include a time zone.')
