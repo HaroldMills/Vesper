@@ -1,12 +1,14 @@
 """Module containing class `AddOldBirdClipStartIndicesCommand`."""
 
 
+from collections import defaultdict
 import datetime
 import itertools
 import logging
 import time
 
 from django.db import transaction
+import numpy as np
 
 from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import Clip, Processor, Recording, Station
@@ -19,7 +21,8 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.text_utils as text_utils
 
 
-_CLIP_SEARCH_PADDING = 5
+_INITIAL_CLIP_SEARCH_PADDING = 2
+_FINAL_CLIP_SEARCH_PADDING = 0
 """
 Padding for recording clip search, in seconds.
 
@@ -67,6 +70,14 @@ audio file sample can differ from a recording audio file sample
 and still be considered the same.
 """
 
+# clip search result codes
+_CLIP_AUDIO_FILE_NOT_FOUND = 'Could not find clip audio file.'
+_CLIP_SAMPLES_UNAVAILABLE = 'Could not get clip samples.'
+_CLIP_AUDIO_FILE_EMPTY = 'Clip audio file is empty.'
+_CLIP_SAMPLES_ALL_ZERO = 'Clip samples are all zero.'
+_CLIP_NOT_FOUND = 'Could not find clip in recording.'
+_CLIP_FOUND_MULTIPLE_TIMES = 'Found clip multiple times in recording.'
+
 
 class AddOldBirdClipStartIndicesCommand(Command):
     
@@ -87,7 +98,6 @@ class AddOldBirdClipStartIndicesCommand(Command):
         
         self._job_info = job_info
         self._logger = logging.getLogger()
-        self._clip_manager = clip_manager.instance
         
         self._detectors = _get_detectors()
         
@@ -109,10 +119,99 @@ class AddOldBirdClipStartIndicesCommand(Command):
                     'indicating that it is modifying the archive database. '
                     'However, it will not actually modify the database.')
                 
-            recordings = self._get_recordings()  
-            self._add_clip_start_indices(recordings)
+            self._gather_recording_info()
+            self._clip_manager = clip_manager.instance
+            self._add_clip_start_indices()
             
         return True
+    
+    
+    def _gather_recording_info(self):
+        self._gather_single_recording_info()
+        self._gather_multiple_recording_info()
+        
+        
+    def _gather_single_recording_info(self):
+        
+        self._recordings = []
+        self._recording_readers = {}
+        self._channel_infos = {}
+         
+        for recording in self._get_recordings():
+            
+            files = recording.files.all().order_by('file_num')
+            
+            if files.count() == 0:
+                # archive has no files for this recording
+                
+                self._logger.warning(
+                    f'Archive contains no audio files for recording '
+                    f'"{str(recording)}". No clips of this recording '
+                    f'will be processed.')
+                    
+            else:
+                # archive has files for this recording
+                
+                # Remember recording.
+                self._recordings.append(recording)
+                
+                # Create recording reader.
+                recording_reader = self._create_recording_reader(files)
+                self._recording_readers[recording] = recording_reader
+                
+                # Gather recording channel info.
+                start_time = recording.start_time
+                length = recording.length
+                sample_rate = recording.sample_rate
+                for channel in recording.channels.all():
+                    self._channel_infos[channel] = (
+                        start_time, length, sample_rate, channel.channel_num,
+                        recording_reader)
+    
+    
+    def _gather_multiple_recording_info(self):
+        
+        self._intersecting_channels = defaultdict(list)
+        
+        station_night_recording_sets = self._get_station_night_recording_sets()
+        
+        for recordings in station_night_recording_sets:
+            
+            for recording in recordings:
+                
+                other_recordings = recordings - frozenset((recording,))
+                
+                for other_recording in other_recordings:
+                    
+                    if self._recordings_intersect(recording, other_recording):
+                        
+                        # self._logger.info(
+                        #     f'    Recording {recording} intersects '
+                        #     f'recording {other_recording}.')
+                        
+                        for channel in recording.channels.all():
+                            
+                            other_channel = other_recording.channels.get(
+                                channel_num=channel.channel_num)
+                            
+                            self._intersecting_channels[channel].append(
+                                other_channel)
+    
+    
+    def _get_station_night_recording_sets(self):
+        
+        recording_sets = defaultdict(set)
+        
+        for recording in self._recordings:
+            station = recording.station
+            night = station.get_night(recording.start_time)
+            recording_sets[(station, night)].add(recording)
+            
+        return recording_sets.values()
+    
+    
+    def _recordings_intersect(self, a, b):
+        return a.end_time >= b.start_time and a.start_time <= b.end_time
     
     
     def _get_recordings(self):
@@ -124,89 +223,30 @@ class AddOldBirdClipStartIndicesCommand(Command):
                 for name in self._station_names))
             
         except Exception as e:
-            self._logger.error((
-                'Collection of recordings failed with an exception.\n'
-                'The exception message was:\n'
-                '    {}\n'
-                'The archive was not modified.\n'
-                'See below for exception traceback.').format(str(e)))
+            self._logger.error(
+                f'Collection of recordings failed with an exception.\n'
+                f'The exception message was:\n'
+                f'    {str(e)}\n'
+                f'The archive was not modified.\n'
+                f'See below for exception traceback.')
             raise
-
-            
+    
+    
     def _get_station_recordings(self, station_name, start_date, end_date):
-
+        
         try:
             station = Station.objects.get(name=station_name)
         except Station.DoesNotExist:
             raise CommandExecutionError(
-                'Unrecognized station "{}".'.format(station_name))
+                f'Unrecognized station "{station_name}".')
         
         time_interval = station.get_night_interval_utc(start_date, end_date)
         
         return Recording.objects.filter(
             station=station,
             start_time__range=time_interval)
-
-
-    def _add_clip_start_indices(self, recordings):
-        
-        start_time = time.time()
-        
-        total_clips = 0
-        total_clips_found = 0
-        
-        for recording in recordings:
-            
-            files = recording.files.all().order_by('file_num')
-        
-            if files.count() == 0:
-                # archive has no files for this recording
-                
-                self._logger.warning(
-                    f'Archive contains no audio files for recording '
-                    f'"{str(recording)}". No clips of this recording '
-                    f'will be processed.')
-                
-            else:
-                # archive has files for this recording
-                
-                self._recording_reader = self._create_recording_reader(files)
-                
-                for channel in recording.channels.all():
-                    
-                    for detector in self._detectors:
-                        
-                        try:
-                            num_clips, num_clips_found = \
-                                self._add_channel_clip_start_indices(
-                                    channel, detector)
-                            
-                        except Exception as e:
-                            
-                            self._logger.error(
-                                f'Processing of clips for recording channel '
-                                f'"{str(channel)}" failed with an exception.\n'
-                                f'The exception message was:\n'
-                                f'    {str(e)}\n'
-                                f'No clips of the channel were modified.\n'
-                                f'See below for exception traceback.')
-                            
-                            raise
-                        
-                        total_clips += num_clips
-                        total_clips_found += num_clips_found
-                        
-        elapsed_time = time.time() - start_time
-        timing_text = command_utils.get_timing_text(
-            elapsed_time, total_clips, 'clips')
-
-        self._logger.info(
-            f'Added start indices for {total_clips_found} of {total_clips} '
-            f'processed clips{timing_text}.')
-        
-        self._log_archive_status()
-
-
+    
+    
     def _create_recording_reader(self, files):
         bunches = [self._create_recording_file_bunch(f) for f in files]
         return RecordingReader(bunches)
@@ -215,8 +255,8 @@ class AddOldBirdClipStartIndicesCommand(Command):
     def _create_recording_file_bunch(self, f):
         path = self._get_absolute_file_path(f.path)
         return Bunch(path=path, start_index=f.start_index, length=f.length)
-
-        
+    
+    
     def _get_absolute_file_path(self, rel_path):
         
         manager = recording_manager.instance
@@ -238,17 +278,64 @@ class AddOldBirdClipStartIndicesCommand(Command):
                 f'Recording file "{rel_path}" could not be found in {s}.')
 
             
+    def _add_clip_start_indices(self):
+        
+        start_time = time.time()
+        
+        self._min_start_time_change = 100
+        self._max_start_time_change = -100
+        
+        total_clips = 0
+        total_clips_found = 0
+        
+        for recording in self._recordings:
+            
+            for channel in recording.channels.all():
+                
+                for detector in self._detectors:
+                    
+                    try:
+                        num_clips, num_clips_found = \
+                            self._add_channel_clip_start_indices(
+                                channel, detector)
+                        
+                    except Exception as e:
+                        
+                        self._logger.error(
+                            f'Processing of clips for recording channel '
+                            f'"{str(channel)}" failed with an exception.\n'
+                            f'The exception message was:\n'
+                            f'    {str(e)}\n'
+                            f'No clips of the channel were modified.\n'
+                            f'See below for exception traceback.')
+                        
+                        raise
+                    
+                    total_clips += num_clips
+                    total_clips_found += num_clips_found
+                        
+        elapsed_time = time.time() - start_time
+        timing_text = command_utils.get_timing_text(
+            elapsed_time, total_clips, 'clips')
+
+        self._logger.info(
+            f'Added start indices for {total_clips_found} of {total_clips} '
+            f'processed clips{timing_text}.')
+        
+        self._logger.info(
+            f'Range of start time changes was '
+            f'({self._min_start_time_change}, {self._max_start_time_change}).')
+        
+        self._log_archive_status()
+    
+    
     def _add_channel_clip_start_indices(self, channel, detector):
         
-        # Stash some data as object attributes so we don't have to
-        # repeatedly pass them to `_find_clip_in_recording_channel`
-        # method or query database there.
         recording = channel.recording
-        self._recording_start_time = recording.start_time
-        self._recording_length = recording.length
-        self._sample_rate = recording.sample_rate
-        self._channel_num = channel.channel_num
-                    
+        recording_start_time = recording.start_time
+        recording_length = recording.length
+        sample_rate = recording.sample_rate
+        
         create_count_text = text_utils.create_count_text
         
         with archive_lock.atomic():
@@ -270,33 +357,69 @@ class AddOldBirdClipStartIndicesCommand(Command):
                     self._logger.info(
                         f'Processing {count_text} for recording channel '
                         f'"{str(channel)}" and detector "{detector.name}...')
+                    
+                    start_time = recording_start_time
+                    duration = datetime.timedelta(
+                        seconds=recording_length / sample_rate)
+                    end_time = start_time + duration
+                    
+                    # self._logger.info(
+                    #     f'    Recording has start time {str(start_time)} '
+                    #     f'and end time {end_time}.')
                         
                     for clip in clips:
                         
-                        result = self._find_clip_in_recording_channel(clip)
+                        result = self._find_clip_in_recording(clip, channel)
                         
-                        if result is not None:
+                        if not isinstance(result, str):
+                            # found clip
                             
-                            start_index = result[1]
+                            # Get result parts. Note that the clip channel
+                            # can change when the clip is found, since in
+                            # some cases clips were attributed to the wrong
+                            # recordings when the clips were imported. In
+                            # one scenario, for example, a clip that was
+                            # actually toward the beginning of the second
+                            # of two contiguous recordings of a night was
+                            # incorrectly assigned to the end of the first
+                            # recording, since according to the purported
+                            # start times and sample rates of the recordings
+                            # the end of the first recording overlapped
+                            # the start of the second recording in time.
+                            samples, found_channel, start_index = result
                             
-                            start_seconds = start_index / self._sample_rate
+                            # Get clip start time.
+                            start_seconds = start_index / sample_rate
                             delta = datetime.timedelta(seconds=start_seconds)
-                            start_time = self._recording_start_time + delta
+                            if found_channel == channel:
+                                start_time = recording_start_time + delta
+                            else:
+                                start_time = \
+                                    found_channel.recording.start_time + delta
                             
-                            end_time = signal_utils.get_end_time(
-                                start_time, clip.length, self._sample_rate)
-                            
+                            # Get change in clip start time.
                             start_time_change = \
                                 (start_time - clip.start_time).total_seconds()
-                                
-                            duration = (clip.length - 1) / self._sample_rate
+                            if start_time_change < self._min_start_time_change:
+                                self._min_start_time_change = start_time_change
+                            if start_time_change > self._max_start_time_change:
+                                self._max_start_time_change = start_time_change
+
+                            # Get clip length. The Old Bird detectors
+                            # sometimes append zeros to a clip that were
+                            # not in the recording that the clip refers
+                            # to. We ignore the appended zeros.
+                            length = len(samples)
+                            duration = signal_utils.get_duration(
+                                length, sample_rate)
                             
-                            self._logger.info(
-                                f'    {start_index} {str(clip.start_time)} '
-                                f'-> {str(start_time)} {start_time_change} '
-                                f'{duration} {str(end_time)}')
+                            # Get clip end time.
+                            end_time = signal_utils.get_end_time(
+                                start_time, length, sample_rate)
                             
+                            clip.channel = found_channel
                             clip.start_index = start_index
+                            clip.length = length
                             clip.start_time = start_time
                             clip.end_time = end_time
                                 
@@ -309,20 +432,67 @@ class AddOldBirdClipStartIndicesCommand(Command):
                         self._log_clips_not_found(num_clips - num_clips_found)
                         
                 return num_clips, num_clips_found
-
-
-    def _index_to_time(self, index):
-        seconds = index / self._sample_rate
-        delta = datetime.timedelta(seconds=seconds)
-        return self._recording_start_time + delta
-
-
-    def _find_clip_in_recording_channel(self, clip):
+    
+    
+    def _get_channel_info(self, channel):
+        
+        result = self._channel_infos.get(channel)
+        
+        if result is None:
+            # cache miss
+            
+            recording = channel.recording
+            start_time = recording.start_time
+            length = recording.length
+            sample_rate = recording.sample_rate
+            channel_num = channel.channel_num
+            recording_reader = self._recording_readers[recording]
+            
+            result = (
+                start_time, length, sample_rate, channel_num,
+                recording_reader)
+            
+            self._channel_infos[channel] = result
+            
+        return result
+    
+    
+    def _find_clip_in_recording(self, clip, channel):
+        
+        result = self._find_clip_in_recording_aux(clip, channel)
+        
+        if result == _CLIP_NOT_FOUND:
+                        
+            channels = self._intersecting_channels.get(channel)
+            
+            if channels is not None:
+                for channel in channels:
+                    result = self._find_clip_in_recording_aux(clip, channel)
+                    if not isinstance(result, str):
+                        return result
+                
+            # If we get here, the clip was not found in an intersecting
+            # channel.
+            
+            self._logger.warning(
+                f'    Could not find samples of clip "{str(clip)}" in '
+                f'recording channel.')
+            
+            return _CLIP_NOT_FOUND
+        
+        else:
+            return result
+    
+    
+    def _find_clip_in_recording_aux(self, clip, channel):
+        
+        recording_start_time, recording_length, sample_rate, channel_num, \
+            recording_reader = self._get_channel_info(channel)
         
         if not clip_manager.instance.has_audio_file(clip):
             self._logger.warning(
                 f'    Could not find audio file for clip "{str(clip)}".')
-            return None
+            return _CLIP_AUDIO_FILE_NOT_FOUND
         
         try:
             clip_samples = clip_manager.instance.get_samples(clip)
@@ -330,81 +500,160 @@ class AddOldBirdClipStartIndicesCommand(Command):
             self._logger.warning(
                 f'    Could not get samples for clip "{str(clip)}". '
                 f'Error message was: {str(e)}')
-            return None
+            return _CLIP_SAMPLES_UNAVAILABLE
         
         # For some reason, the Old Bird detectors sometimes create
         # length-zero clips, which we handle here.
         if len(clip_samples) == 0:
             self._logger.warning(
                 f'    Audio file for clip "{str(clip)}" has zero length.')
-            return None
+            return _CLIP_AUDIO_FILE_EMPTY
         
-        start_delta = clip.start_time - self._recording_start_time
-        start_seconds = start_delta.total_seconds() - _CLIP_SEARCH_PADDING
-        start_index = int(round(start_seconds * self._sample_rate))
+        # Get start index of recording search interval.
+        start_delta = clip.start_time - recording_start_time
+        start_seconds = \
+            start_delta.total_seconds() - _INITIAL_CLIP_SEARCH_PADDING
+        search_start_index = int(round(start_seconds * sample_rate))
         
-        padding_length = int(round(_CLIP_SEARCH_PADDING * self._sample_rate))
-        length = len(clip_samples) + 2 * padding_length
+        # Get length of recording search interval.
+        clip_length = len(clip_samples)
+        padding_dur = _INITIAL_CLIP_SEARCH_PADDING + _FINAL_CLIP_SEARCH_PADDING
+        padding_length = int(round(padding_dur * sample_rate))
+        search_length = clip_length + 2 * padding_length
         
-        # Adjust start index and length if search interval would extend
-        # past start of file.
-        if start_index < 0:
-            length += start_index
-            start_index = 0
+        # Adjust start index and length if search interval would start
+        # before start of recording.
+        if search_start_index < 0:
+            search_length += search_start_index
+            search_start_index = 0
         
-        # Adjust length if search interval would extend past end of recording.
-        end_index = start_index + length
-        if end_index > self._recording_length:
-            length -= end_index - self._recording_length
+        # Adjust length if search interval would end past end of recording.
+        end_index = search_start_index + search_length
+        if end_index > recording_length:
+            search_length -= end_index - recording_length
 
         # Read recording samples from file.
-        recording_samples = self._recording_reader.read_samples(
-            self._channel_num, start_index, length)
+        recording_samples = recording_reader.read_samples(
+            channel_num, search_start_index, search_length)
         
-        # Find clip in recording samples. Note that we cannot just search
-        # for an exact copy of the clip samples in the recording samples,
-        # since the clip samples may differ slightly from the recording
-        # samples, presumably because of some scaling that happens inside
-        # the Old Bird detectors. So we allow each clip sample to differ
-        # from the corresponding recording sample by a magnitude of up to
-        # one.
+#         print(
+#             f'Searching for length-{clip_length} clip {clip.id} in '
+#             f'({search_start_index}, {search_length})...')
+#         zero_count = 0
+#         while clip_samples[-(zero_count + 1)] == 0:
+#             zero_count += 1
+#         print(f'Last ten clip samples before trailing {zero_count} zeros:')
+#         for i in range(10):
+#             print(f'    {clip_samples[-(zero_count + 10 + i)]}')
+#         print('Last ten recording samples:')
+#         for i in range(10):
+#             print(f'    {recording_samples[-(10 + i)]}')
+        
+        match_length = clip_length
+        
+        if search_start_index + search_length == recording_length:
+            # search interval extends to end of recording
+            
+            # For some reason, the Old Bird detectors sometimes append
+            # zeros to a clip that extends to the end of a recording.
+            # Since the zeros are not in the recording, they would
+            # confound a search for the clip's samples in the recording.
+            # Hence when the search interval extends to the end of the
+            # recording, we initially ignore trailing zero clip samples
+            # in our search. If that search is successful, we search
+            # for as many of the initially-ignored zeros as might match
+            # trailing recording samples below.
+            
+            # Adjust match length to exclude trailing zero clip samples.
+            while match_length != 0 and clip_samples[match_length - 1] == 0:
+                match_length -= 1
+                
+            if match_length == 0:
+                # clip samples are all zero
+                
+                # This should never happen, since the Old Bird detectors
+                # should never produce a clip with all zero samples.
+                self._logger.warning(
+                    f'    Encountered unexpected all-zero clip '
+                    f'"{str(clip)}". ')
+                
+                return _CLIP_SAMPLES_ALL_ZERO
+
+        # Find clip samples in recording samples. Note that we cannot
+        # just search for an exact copy of the clip samples in the
+        # recording samples, since the clip samples may differ slightly
+        # from the recording samples, presumably because of some scaling
+        # that happens inside the Old Bird detectors. So we allow each
+        # clip sample to differ from the corresponding recording sample
+        # by a magnitude of up to `_CLIP_SEARCH_TOLERANCE`.
         indices = signal_utils.find_samples(
-            clip_samples, recording_samples, tolerance=_CLIP_SEARCH_TOLERANCE)
+            clip_samples[:match_length], recording_samples,
+            tolerance=_CLIP_SEARCH_TOLERANCE)
         
         if len(indices) == 0:
+            return _CLIP_NOT_FOUND
+        
+        if len(indices) > 1:
+            
+            # For some reason, the Old Bird detectors sometimes
+            # create very short clips (for example, with only one
+            # sample) whose samples may occur more than once in a
+            # recording. We handle such clips here.
             self._logger.warning(
-                f'    Could not find samples of clip "{str(clip)}" in '
-                f'recording channel.')
-            return None
+                f'    Found {len(indices)} copies of length-'
+                f'{clip_length} clip "{str(clip)}".')
+            return _CLIP_FOUND_MULTIPLE_TIMES
         
-        else:
-            # found clip samples in recording samples
+        # If we get here, we found exactly one copy of the clip samples
+        # in the recording.
+        
+        # Get start index of clip in the whole recording.
+        clip_start_index = search_start_index + indices[0]
+        
+        if match_length != clip_length:
+            # search ignored some zeros at end of clip
             
-            if len(indices) > 1:
-                
-                # For some reason, the Old Bird detectors sometimes
-                # create very short clips (for example, with only one
-                # sample) whose samples may occur more than once in a
-                # recording. We handle such clips here.
-                self._logger.warning(
-                    f'    Found {len(indices)} copies of length-'
-                    f'{clip.length} clip "{str(clip)}".')
-                return None
-                
-            # Get start index of clip in the whole recording.
-            clip_start_index = start_index + indices[0]
-                
-            # Extract clip samples from portion of recording in which
-            # they were found. We return these instead of the clip file
-            # samples since as explained above the recording samples
-            # may differ slightly from the clip file samples.
-            start_index = indices[0]
-            end_index = start_index + len(clip_samples)
-            clip_samples = recording_samples[start_index:end_index]
+            # Check that any of the ignored trailing zero clip samples for
+            # which there are corresponding trailing recording samples match
+            # the recording samples.
             
-            return (clip_samples, clip_start_index)
+            ignored_zero_count = clip_length - match_length
+            search_end_index = clip_start_index + match_length
+            remaining_sample_count = recording_length - search_end_index
+            zero_count = min(ignored_zero_count, remaining_sample_count)
+            
+            if zero_count != 0:
+                
+                start_index = match_length
+                end_index = start_index + zero_count
+                diffs = recording_samples[start_index:end_index]
+                
+                if np.max(np.abs(diffs)) > _CLIP_SEARCH_TOLERANCE:
+                    # recording samples do not match trailing zero clip samples
+                    
+                    return _CLIP_NOT_FOUND
+                
+                else:
+                    # recording samples match trailing zero clip samples
+                    
+                    match_length += zero_count
+                    
+            self._logger.info(
+                f'    For clip {clip.id} at end of recording, '
+                f'found {match_length} of {clip_length} clip samples, '
+                f'including {zero_count} trailing zeros.')
         
+        # Extract clip samples from portion of recording in which
+        # they were found. We return these instead of the clip file
+        # samples since as explained above the recording samples
+        # may differ slightly from the clip file samples.
+        start_index = indices[0]
+        end_index = start_index + match_length
+        clip_samples = recording_samples[start_index:end_index]
         
+        return clip_samples, channel, clip_start_index
+    
+    
     def _log_clips_not_found(self, num_clips):
         
         indices_text = 'index' if num_clips == 1 else 'indices'
@@ -418,6 +667,8 @@ class AddOldBirdClipStartIndicesCommand(Command):
 
     def _log_archive_status(self):
         
+        return
+    
         total_clips = Clip.objects.all().count()
         total_clips_without = Clip.objects.filter(start_index=None).count()
 
