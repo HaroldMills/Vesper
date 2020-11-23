@@ -62,8 +62,8 @@ class RecordingReader:
             
         # If we get here, start index is past end of last file.
         raise Exception(
-            f'Read start index {start_index} is past end of '
-            f'recording "{str(self._recording)}".')
+            f'Read start index {start_index} is past end of recording '
+            f'of length {file_end_index}.')
                 
                 
 class _RecordingFileReader:

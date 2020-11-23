@@ -21,8 +21,8 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.text_utils as text_utils
 
 
-_INITIAL_CLIP_SEARCH_PADDING = 2
-_FINAL_CLIP_SEARCH_PADDING = 0
+_INITIAL_CLIP_SEARCH_PADDING = 5
+_FINAL_CLIP_SEARCH_PADDING = 5
 """
 Padding for recording clip search, in seconds.
 
@@ -31,8 +31,9 @@ of a clip in a recording (as an integer number of seconds from the
 start of the recording), to find the exact index of a clip in a
 recording we must search for the clip in the recording. We do this
 by searching for the clip in the portion of the recording that starts
-`_CLIP_SEARCH_PADDING` seconds before the approximate clip start time
-and whose duration is the clip duration plus twice the padding.
+`_INITIAL_CLIP_SEARCH_PADDING` seconds before the approximate clip
+start time and ends `_FINAL_CLIP_SEARCH_PADDING` seconds after the
+approximate end time.
 
 We calculate the start index of the portion of a recording in which
 to search for clip samples using the purported sample rate of the
@@ -528,10 +529,16 @@ class AddOldBirdClipStartIndicesCommand(Command):
             search_start_index = 0
         
         # Adjust length if search interval would end past end of recording.
-        end_index = search_start_index + search_length
-        if end_index > recording_length:
-            search_length -= end_index - recording_length
-
+        search_end_index = search_start_index + search_length
+        if search_end_index > recording_length:
+            search_length -= search_end_index - recording_length
+            
+        if search_start_index > recording_length or search_end_index < 0:
+            # no samples in this recording to search
+            
+            print('Clip samples to search for do not intersect recording.')
+            return _CLIP_NOT_FOUND
+        
         # Read recording samples from file.
         recording_samples = recording_reader.read_samples(
             channel_num, search_start_index, search_length)
