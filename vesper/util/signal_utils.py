@@ -121,6 +121,7 @@ def find_samples(x, y, tolerance=0):
             
             if len(i) <= 1:
                 # zero or one matches of x[:k] in y
+                
                 break
             
             # Find indices j of x[k] in y[i + k]. These are the indices
@@ -141,7 +142,7 @@ def find_samples(x, y, tolerance=0):
                 return np.array([], dtype='int64')
         
         else:
-            # i is the answer
+            # i is the answer (it may have length zero, one, or more)
             
             return i
 
