@@ -357,7 +357,7 @@ class AddOldBirdClipStartIndicesCommand(Command):
                         
                     self._logger.info(
                         f'Processing {count_text} for recording channel '
-                        f'"{str(channel)}" and detector "{detector.name}...')
+                        f'"{str(channel)}" and detector "{detector.name}"...')
                     
                     start_time = recording_start_time
                     duration = datetime.timedelta(

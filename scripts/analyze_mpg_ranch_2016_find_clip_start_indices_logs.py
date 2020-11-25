@@ -62,10 +62,12 @@ SHORT_DETECTOR_NAMES = {
     'Old Bird Tseep Detector': 'Tseep'
 }
 
+# We make the final double quote optional in the following since that was
+# accidentally omitted for awhile from the logs we analyze.
 CHANNEL_START_RE = re.compile(
-    r'^.* INFO     Processing (\d+) clips for recording channel "(.*) / '
+    r'INFO     Processing (\d+) clips for recording channel "(.*) / '
     r'.* / start (.*) / duration (.*) h / Channel (\d)" and detector '
-    r'"(.*)\.\.\.$')
+    r'"(.*)"?\.\.\.')
 
 SHORT_CLIP_RE = re.compile(
     r'WARNING      Found \d+ copies of length-(\d+) clip')
