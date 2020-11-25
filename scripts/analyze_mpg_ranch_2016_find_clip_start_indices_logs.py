@@ -10,30 +10,6 @@ import csv
 import re
 
 
-'''
-Input: job logs
-
-Output: File "MPG Ranch 2016 Add Clip Start Index Clip Counts.csv"
-
-Columns:
-    Station Channel
-    Start Time
-    Duration
-    Detector
-    Clips
-    Not Found
-    Short
-    All-Zero
-    Padded
-    
-Output: File "MPG Ranch 2016 Short Clip Counts.csv"
-
-Columns:
-    Clip Length
-    Clip Count
-'''
-
-
 ARCHIVE_DIR_PATH = Path('/Volumes/2012_2015_2016/2016_NFC/2016_NFC_All')
 
 LOG_DIR_PATH = ARCHIVE_DIR_PATH / 'Logs' / 'Jobs'
@@ -45,7 +21,7 @@ JOB_NUMS = (88, 100, 118, 122, 123, 125, 126)
 OUTPUT_FILE_PATH = \
     ARCHIVE_DIR_PATH / 'MPG Ranch 2016 Add Clip Start Index Clip Counts.csv'
 
-CSV_COLUMN_NAMES = (
+OUTPUT_COLUMN_NAMES = (
     'Station Channel',
     'Start Time',
     'Duration',
@@ -96,9 +72,9 @@ class JobLog:
         
         self.job_num = job_num
         
-        self._counts = []
+        self._channel_clip_counts = []
         self._short_clip_counts = defaultdict(int)
-        self._channel_counts = None
+        self._current_clip_counts = None
         
         lines = read_job_log(job_num)
         
@@ -127,7 +103,7 @@ class JobLog:
     
     @property
     def counts(self):
-        return self._counts
+        return self._channel_clip_counts
     
     
     @property
@@ -159,7 +135,7 @@ class JobLog:
             counts['Duration'] = duration
             counts['Detector'] = SHORT_DETECTOR_NAMES[detector_name]
             counts['Clips'] = clip_count
-            self._channel_counts = counts
+            self._current_clip_counts = counts
             
             return True
             
@@ -168,15 +144,15 @@ class JobLog:
     
     
     def _complete_channel_counts_if_needed(self):
-        if self._channel_counts is not None:
-            self._counts.append(self._channel_counts)
+        if self._current_clip_counts is not None:
+            self._channel_clip_counts.append(self._current_clip_counts)
     
     
     def _parse_not_found_clip_line(self, line):
         
         if line.find('WARNING      Could not find samples of clip') != -1:
             # print('    Clip not found...')
-            self._channel_counts['Not Found'] += 1
+            self._current_clip_counts['Not Found'] += 1
             return True
         
         else:
@@ -191,8 +167,8 @@ class JobLog:
             
             # print('    Short clip...')
             
-            self._channel_counts['Short'] += 1
-            self._channel_counts['Not Found'] += 1
+            self._current_clip_counts['Short'] += 1
+            self._current_clip_counts['Not Found'] += 1
             
             clip_length = int(m.group(1))
             self._short_clip_counts[clip_length] += 1
@@ -209,8 +185,8 @@ class JobLog:
                 != -1:
             
             # print('    Zero clip...')
-            self._channel_counts['All-Zero'] += 1
-            self._channel_counts['Not Found'] += 1
+            self._current_clip_counts['All-Zero'] += 1
+            self._current_clip_counts['Not Found'] += 1
             return True
         
         else:
@@ -221,7 +197,7 @@ class JobLog:
         
         if line.find(' at end of recording, found ') != -1:
             # print('    End of recording clip...')
-            self._channel_counts['Zero-Padded'] += 1
+            self._current_clip_counts['Zero-Padded'] += 1
             return True
         
         else:
@@ -249,14 +225,14 @@ def write_clip_count_csv_file(job_logs):
     tuples = []
     for log in job_logs:
         for c in log.counts:
-            t = tuple(c[n] for n in CSV_COLUMN_NAMES)
+            t = tuple(c[n] for n in OUTPUT_COLUMN_NAMES)
             tuples.append(t)
     
     tuples.sort()
     
     with open(OUTPUT_FILE_PATH, 'w') as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow(CSV_COLUMN_NAMES)
+        writer.writerow(OUTPUT_COLUMN_NAMES)
         for t in tuples:
             writer.writerow(t)
 
