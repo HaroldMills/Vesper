@@ -62,16 +62,13 @@ SHORT_DETECTOR_NAMES = {
     'Old Bird Tseep Detector': 'Tseep'
 }
 
-
-def main():
-    job_logs = [JobLog(n) for n in JOB_NUMS]
-    output_clip_counts(job_logs)
-
-
 CHANNEL_START_RE = re.compile(
     r'^.* INFO     Processing (\d+) clips for recording channel "(.*) / '
     r'.* / start (.*) / duration (.*) h / Channel (\d)" and detector '
     r'"(.*)\.\.\.$')
+
+SHORT_CLIP_RE = re.compile(
+    r'WARNING      Found \d+ copies of length-(\d+) clip')
 
 '''
 2020-11-21 21:52:20,845 INFO     Processing 1816 clips for recording channel "Ridge / SM2+ 010798 / start 2016-05-27 02:47:00+00:00 / duration 6.763 h / Channel 0" and detector "Old Bird Thrush Detector...
@@ -80,6 +77,12 @@ CHANNEL_START_RE = re.compile(
 2020-11-21 22:49:15,427 WARNING      Found 25 copies of length-2 clip "Ridge / SMX-NFC RD Output / Old Bird Tseep Detector / start 2016-07-03 10:58:56+00:00 / duration 0.000 s".
 2020-11-22 04:38:19,370 WARNING      Encountered unexpected all-zero clip "Ridge / SMX-NFC RD Output / Old Bird Thrush Detector / start 2016-09-16 13:46:03+00:00 / duration 0.113 s". 
 '''
+
+
+def main():
+    job_logs = [JobLog(n) for n in JOB_NUMS]
+    write_clip_count_csv_file(job_logs)
+    show_short_clip_counts(job_logs)
 
 
 class JobLog:
@@ -92,6 +95,7 @@ class JobLog:
         self.job_num = job_num
         
         self._counts = []
+        self._short_clip_counts = defaultdict(int)
         self._channel_counts = None
         
         lines = read_job_log(job_num)
@@ -124,9 +128,14 @@ class JobLog:
         return self._counts
     
     
+    @property
+    def short_clip_counts(self):
+        return self._short_clip_counts
+    
+    
     def _parse_channel_start_line(self, line):
         
-        m = CHANNEL_START_RE.match(line)
+        m = CHANNEL_START_RE.search(line)
         
         if m is not None:
             
@@ -174,10 +183,18 @@ class JobLog:
     
     def _parse_short_clip_line(self, line):
         
-        if line.find(' copies of length-') != -1:
+        m = SHORT_CLIP_RE.search(line)
+        
+        if m is not None:
+            
             # print('    Short clip...')
+            
             self._channel_counts['Short'] += 1
             self._channel_counts['Not Found'] += 1
+            
+            clip_length = int(m.group(1))
+            self._short_clip_counts[clip_length] += 1
+            
             return True
         
         else:
@@ -225,7 +242,7 @@ def get_log_file_path(job_num):
     return LOG_DIR_PATH / log_file_name
 
 
-def output_clip_counts(job_logs):
+def write_clip_count_csv_file(job_logs):
     
     tuples = []
     for log in job_logs:
@@ -240,7 +257,20 @@ def output_clip_counts(job_logs):
         writer.writerow(CSV_COLUMN_NAMES)
         for t in tuples:
             writer.writerow(t)
-            
 
+
+def show_short_clip_counts(job_logs):
+    
+    total_counts = defaultdict(int)
+    for log in job_logs:
+        for length, count in log.short_clip_counts.items():
+            total_counts[length] += count
+    
+    print('Short clip counts:')
+    lengths = sorted(total_counts.keys())
+    for length in lengths:
+        print(f'    {length}: {total_counts[length]}')
+    
+        
 if __name__ == '__main__':
     main()
