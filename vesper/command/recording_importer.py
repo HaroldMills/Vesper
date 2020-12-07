@@ -12,6 +12,7 @@ from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import (
     DeviceConnection, Job, Recording, RecordingChannel, RecordingFile)
 from vesper.singletons import recording_manager
+from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
 import vesper.util.audio_file_utils as audio_file_utils
@@ -54,56 +55,73 @@ class RecordingImporter:
         
         try:
             
-            recordings = self._get_recordings()
+            recordings = self._get_new_recordings()
             
-            new_recordings, old_recordings = \
-                self._partition_recordings(recordings)
-                
-            self._log_header(new_recordings, old_recordings)
+            self._log_header(recordings)
             
             with transaction.atomic():
-                self._import_recordings(new_recordings)
+                self._import_recordings(recordings)
             
         except Exception as e:
-            self._logger.error((
-                'Recording import failed with an exception.\n'
-                'The exception message was:\n'
-                '    {}\n'
-                'The archive was not modified.\n'
-                'See below for exception traceback.').format(str(e)))
+            self._logger.error(
+                f'Recording import failed with an exception.\n'
+                f'The exception message was:\n'
+                f'    {str(e)}\n'
+                f'The archive was not modified.\n'
+                f'See below for exception traceback.')
             raise
         
         else:
-            self._log_imports(new_recordings)
-
+            self._log_imports(recordings)
+        
         return True
-            
-            
-    def _get_recordings(self):
-        files = list(itertools.chain.from_iterable(
-            self._get_path_recording_files(path) for path in self.paths))
+    
+    
+    def _get_new_recordings(self):
+        files = self._get_unimported_disk_files()
         return recording_utils.group_recording_files(files)
-
-                
-    def _get_path_recording_files(self, path):
+    
+    
+    def _get_unimported_disk_files(self):
+        
+        db_files = RecordingFile.objects.all()
+        db_file_paths = frozenset(r.path for r in db_files)
+        
+        disk_file_infos = list(itertools.chain.from_iterable(
+            self._get_path_recording_file_infos(path) for path in self.paths))
+        
+        unimported_disk_files = []
+        
+        for info in disk_file_infos:
+            path = str(info.relative_path)
+            if path not in db_file_paths:
+                file = self._parse_recording_file(info.absolute_path)
+                file.path = info.relative_path
+                _set_recording_file_channel_info(file)
+                unimported_disk_files.append(file)
+        
+        return unimported_disk_files
+    
+    
+    def _get_path_recording_file_infos(self, path):
         
         if os.path.isdir(path):
-            return self._get_dir_recording_files(path)
+            return self._get_dir_recording_file_infos(path)
         
         else:
-            file = self._get_recording_file(path)
+            file = self._get_recording_file_info(path)
             return [] if file is None else [file]
-
-
-    def _get_dir_recording_files(self, path):
+    
+    
+    def _get_dir_recording_file_infos(self, path):
         
         files = []
-            
+        
         for (dir_path, dir_names, file_names) in os.walk(path):
             
             for file_name in file_names:
                 file_path = os.path.join(dir_path, file_name)
-                file = self._get_recording_file(Path(file_path))
+                file = self._get_recording_file_info(Path(file_path))
                 if file is not None:
                     files.append(file)
                 
@@ -113,55 +131,49 @@ class RecordingImporter:
                 del dir_names[:]
                 
         return files
-                
-                
-    def _get_recording_file(self, file_path):
+    
+    
+    def _get_recording_file_info(self, file_path):
         
         if not audio_file_utils.is_wave_file_path(file_path):
             return None
         
         else:
-            rel_path, abs_path = self._get_recording_file_paths(file_path)
-            file = self._parse_recording_file(abs_path)
-            file.path = rel_path
-            _set_recording_file_channel_info(file)
-            return file
-            
+            return self._get_recording_file_path_info(file_path)
     
-    def _get_recording_file_paths(self, file_path):
+    
+    def _get_recording_file_path_info(self, file_path):
         
         if file_path.is_absolute():
             
             if not file_path.exists():
                 raise CommandExecutionError(
-                    'Purported recording file "{}" does not exist.')
+                    f'Purported recording file "{file_path}" does not exist.')
                 
-            rel_path = self._get_relative_path(file_path)
-            return rel_path, file_path
-            
+            return self._get_absolute_path_info(file_path)
+        
         else:
             # path is relative
             
-            abs_path = self._get_absolute_path(file_path)
-            return file_path, abs_path
-                
+            return self._get_relative_path_info(file_path)
     
-    def _get_relative_path(self, file_path):
+    
+    def _get_relative_path_info(self, file_path):
         
         manager = recording_manager.instance
         
         try:
-            _, rel_path = manager.get_relative_recording_file_path(file_path)
+            abs_path = manager.get_absolute_recording_file_path(file_path)
             
         except ValueError:
             self._handle_bad_recording_file_path(
-                file_path, 'is not in', manager)
+                file_path, 'could not be found in', manager)
             
-        return rel_path
-                                    
-
+        return Bunch(absolute_path=abs_path, relative_path=file_path)
+    
+    
     def _handle_bad_recording_file_path(self, file_path, condition, manager):
-
+        
         dir_paths = manager.recording_dir_paths
         
         if len(dir_paths) == 1:
@@ -172,20 +184,22 @@ class RecordingImporter:
             
         raise CommandExecutionError(
             'Recording file "{}" {} {}.'.format(file_path, condition, s))
-            
-
-    def _get_absolute_path(self, file_path):
+    
+    
+    def _get_absolute_path_info(self, file_path):
         
         manager = recording_manager.instance
         
         try:
-            return manager.get_absolute_recording_file_path(file_path)
+            _, rel_path = manager.get_relative_recording_file_path(file_path)
             
         except ValueError:
             self._handle_bad_recording_file_path(
-                file_path, 'could not be found in', manager)
-
-
+                file_path, 'is not in', manager)
+            
+        return Bunch(absolute_path=file_path, relative_path=rel_path)
+    
+    
     def _parse_recording_file(self, file_path):
         
         try:
@@ -200,8 +214,8 @@ class RecordingImporter:
             file.recorder = _get_recorder(file)
             
         return file
-            
-
+    
+    
     def _partition_recordings(self, recordings):
         
         new_recordings = []
@@ -217,11 +231,11 @@ class RecordingImporter:
                 
         return (new_recordings, old_recordings)
     
-                
+    
     def _recording_exists(self, recording):
         
         try:
-            Recording.objects.get(
+            db_recording = Recording.objects.get(
                 station=recording.station,
                 recorder=recording.recorder,
                 start_time=recording.start_time)
@@ -230,37 +244,40 @@ class RecordingImporter:
             return False
         
         else:
-            return True
+            # found recording in database with same station, recorder,
+            # and start time as files on disk
             
-
-    def _log_header(self, new_recordings, old_recordings):
+            if db_recording.length != recording.length:
+                # length of recording in database differs from length
+                # of files
+                
+                # In this case we warn about the problem but do not
+                self._logger.warning(
+                    f'For recording "{str(db_recording)}", length '
+                    f'{db_recording.length} of recording indicated in '
+                    f'archive database differs from length '
+                    f'{recording.length} of files found on disk. No '
+                    f'action will be taken regarding this recording.')
+                
+            return True
+    
+    
+    def _log_header(self, recordings):
         
         log = self._logger.info
         
-        new_count = len(new_recordings)
-        old_count = len(old_recordings)
+        recording_count = len(recordings)
         
-        if new_count == 0 and old_count == 0:
-            log('Found no recordings at the specified paths.')
-            
-        else:
-            new_text = self._get_num_recordings_text(new_count, 'new')
-            old_text = self._get_num_recordings_text(old_count, 'old')
-            log('Found {} and {} at the specified paths.'.format(
-                new_text, old_text))
-
-        if len(new_recordings) == 0:
+        if recording_count == 0:
+            log('Found no new recordings at the specified paths.')
             log('No recordings will be imported.')
-            
-        else:
-            log('The new recordings will be imported.')
-            
 
-    def _get_num_recordings_text(self, count, description):
-        suffix = '' if count == 1 else 's'
-        return '{} {} recording{}'.format(count, description, suffix)
-        
-        
+        else:
+            log(f'Found {recording_count} new recordings at the '
+                f'specified paths.')
+            log('The new recordings will be imported.')
+    
+    
     def _import_recordings(self, recordings):
     
         for r in recordings:
@@ -318,16 +335,16 @@ class RecordingImporter:
                 file.save()
                 
                 start_index += f.length
-                
-
+    
+    
     def _log_imports(self, recordings):
         for r in recordings:
             log = self._logger.info
             log('Imported recording {} with files:'.format(str(r.model)))
             for f in r.files:
                 log('    {}'.format(f.path.as_posix()))
-            
-
+    
+    
 def _get_recorder(file):
     
     end_time = signal_utils.get_end_time(
@@ -348,8 +365,8 @@ def _get_recorder(file):
     
     else:
         return station_recorders[0].device
-        
-        
+    
+    
 def _set_recording_file_channel_info(file):
     
     mic_outputs = _get_recorder_mic_outputs(file.recorder, file.start_time)
@@ -373,27 +390,27 @@ def _set_recording_file_channel_info(file):
             # in increasing order.
             file.recorder_channel_nums = tuple(sorted(mic_outputs.keys()))
             
-    
+            
     file.mic_outputs = tuple(
         _get_mic_output(mic_outputs, i, file.path)
         for i in file.recorder_channel_nums)
-        
-        
+    
+    
 def _get_recorder_mic_outputs(recorder, time):
-     
+    
     """
     Gets a mapping from recorder input channel numbers to connected
     microphone outputs for the specified recorder and time.
     """
-     
+    
     connections = DeviceConnection.objects.filter(
         input__device=recorder,
         output__device__model__type='Microphone',
         start_time__lte=time,
         end_time__gt=time)
-     
+    
     # print('recording_importer.get_recorder_mic_outputs', connections.query)
-     
+    
     return dict((c.input.channel_num, c.output) for c in connections)
 
 
