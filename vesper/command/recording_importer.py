@@ -177,13 +177,13 @@ class RecordingImporter:
         dir_paths = manager.recording_dir_paths
         
         if len(dir_paths) == 1:
-            s = 'the recording directory "{}"'.format(dir_paths[0])
+            s = f'the recording directory "{dir_paths[0]}"'
         else:
             path_list = str(list(dir_paths))
-            s = 'any of the recording directories {}'.format(path_list)
+            s = f'any of the recording directories {path_list}'
             
         raise CommandExecutionError(
-            'Recording file "{}" {} {}.'.format(file_path, condition, s))
+            f'Recording file "{file_path}" {condition} {s}.')
     
     
     def _get_absolute_path_info(self, file_path):
@@ -207,8 +207,7 @@ class RecordingImporter:
         
         except ValueError as e:
             raise CommandExecutionError(
-                'Error parsing recording file "{}": {}'.format(
-                    file_path, str(e)))
+                f'Error parsing recording file "{file_path}": {str(e)}')
             
         if file.recorder is None:
             file.recorder = _get_recorder(file)
@@ -340,9 +339,9 @@ class RecordingImporter:
     def _log_imports(self, recordings):
         for r in recordings:
             log = self._logger.info
-            log('Imported recording {} with files:'.format(str(r.model)))
+            log(f'Imported recording {str(r.model)} with files:')
             for f in r.files:
-                log('    {}'.format(f.path.as_posix()))
+                log(f'    {f.path.as_posix()}')
     
     
 def _get_recorder(file):
@@ -355,13 +354,11 @@ def _get_recorder(file):
     
     if len(station_recorders) == 0:
         raise CommandExecutionError(
-            'Could not find recorder for recording file "{}".'.format(
-                file.path))
+            f'Could not find recorder for recording file "{file.path}".')
     
     elif len(station_recorders) > 1:
         raise CommandExecutionError(
-            'Found more than one possible recorder for file "{}".'.format(
-                file.path))
+            f'Found more than one possible recorder for file "{file.path}".')
     
     else:
         return station_recorders[0].device
@@ -378,9 +375,9 @@ def _set_recording_file_channel_info(file):
             # number of connected mic outputs does not match number
             # of file channels
             
-            raise CommandExecutionError((
-                'Could not infer recorder channel numbers for '
-                'recording file "{}".').format(file.path))
+            raise CommandExecutionError(
+                f'Could not infer recorder channel numbers for '
+                f'recording file "{file.path}".')
             
         else:
             # number of connected mic outputs matches number of file
@@ -420,6 +417,6 @@ def _get_mic_output(mic_outputs, channel_num, file_path):
         return mic_outputs[channel_num]
     
     except KeyError:
-        raise CommandExecutionError((
-            'Could not find microphone output connected to recorder input '
-            '{} for recording file "{}".').format(channel_num, file_path))
+        raise CommandExecutionError(
+            f'Could not find microphone output connected to recorder input '
+            f'{channel_num} for recording file "{file_path}".')
