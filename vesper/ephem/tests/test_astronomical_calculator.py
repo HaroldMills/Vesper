@@ -161,35 +161,33 @@ class AstronomicalCalculatorTests(TestCase):
         
         cases = (
             
-            ((), {}, (0, None, pytz.utc)),
+            ((), {}, (None, pytz.utc)),
             
-            ((0,), {}, (0, None, pytz.utc)),
+            ((TEST_TIME_ZONE_NAME,), {}, (TEST_TIME_ZONE, pytz.utc)),
             
-            ((0, TEST_TIME_ZONE_NAME), {}, (0, TEST_TIME_ZONE, pytz.utc)),
+            ((TEST_TIME_ZONE,), {}, (TEST_TIME_ZONE, pytz.utc)),
             
-            ((0, TEST_TIME_ZONE), {}, (0, TEST_TIME_ZONE, pytz.utc)),
+            ((TEST_TIME_ZONE_NAME, None), {},
+                (TEST_TIME_ZONE, pytz.utc)),
             
-            ((0, TEST_TIME_ZONE_NAME, None), {},
-                (0, TEST_TIME_ZONE, pytz.utc)),
-            
-            ((0, TEST_TIME_ZONE, TEST_TIME_ZONE_NAME), {}, 
-                (0, TEST_TIME_ZONE, TEST_TIME_ZONE)),
+            ((TEST_TIME_ZONE, TEST_TIME_ZONE_NAME), {}, 
+                (TEST_TIME_ZONE, TEST_TIME_ZONE)),
             
             ((), {'local_time_zone': TEST_TIME_ZONE_NAME},
-                (0, TEST_TIME_ZONE, pytz.utc)),
+                (TEST_TIME_ZONE, pytz.utc)),
             
             ((), {'local_time_zone': TEST_TIME_ZONE},
-                (0, TEST_TIME_ZONE, pytz.utc)),
+                (TEST_TIME_ZONE, pytz.utc)),
             
             ((), {'result_time_zone': TEST_TIME_ZONE_NAME},
-                (0, None, TEST_TIME_ZONE)),
+                (None, TEST_TIME_ZONE)),
             
             ((), {'result_time_zone': TEST_TIME_ZONE},
-                (0, None, TEST_TIME_ZONE)),
+                (None, TEST_TIME_ZONE)),
             
-            ((0, TEST_TIME_ZONE_NAME),
+            ((TEST_TIME_ZONE_NAME,),
                 {'result_time_zone': TEST_TIME_ZONE_NAME},
-                (0, TEST_TIME_ZONE, TEST_TIME_ZONE)),
+                (TEST_TIME_ZONE, TEST_TIME_ZONE)),
             
         )
         
@@ -199,11 +197,10 @@ class AstronomicalCalculatorTests(TestCase):
         
         
     def _test_initializer(self, lat, lon, args, kwargs, expected):
-        elevation, local_time_zone, result_time_zone = expected
+        local_time_zone, result_time_zone = expected
         c = AstronomicalCalculator(lat, lon, *args, **kwargs)
         self.assertEqual(c.latitude, TEST_LAT)
         self.assertEqual(c.longitude, TEST_LON)
-        self.assertEqual(c.elevation, elevation)
         self.assertEqual(c.local_time_zone, local_time_zone)
         self.assertEqual(c.result_time_zone, result_time_zone)
         

@@ -105,6 +105,24 @@ Day: altitude >= -8.33333
 class AstronomicalCalculator:
     
     
+    """
+    Solar and lunar astronomical calculator.
+    
+    An `AstronomicalCalculator` calculates various quantities related to
+    the observation of the sun and the moon from a particular location on
+    the earth. These include the positions of the sun and moon in the sky,
+    the times of events (like sunrise and sunset) defined in terms of the
+    altitude of the sun, and the illuminated fraction of the moon.
+    
+    This class performs all computations for an observer at sea level,
+    since quantities computed at other elevations differ only slightly
+    from those. For example, sunrise times for observers at sea level
+    and an elevation of 10,000 meters (i.e. higher than Mount Everest)
+    differ by only about a millisecond at the latitude and longitude
+    of Ithaca, New York.
+    """
+    
+    
     _ephemeris = None
     _sun = None
     _earth = None
@@ -122,16 +140,14 @@ class AstronomicalCalculator:
             cls._timescale = load.timescale()
             
             
-    # TODO: Look into effect of nonzero elevations on calculated times.
     def __init__(
-            self, latitude, longitude, elevation=0,
-            local_time_zone=None, result_time_zone='UTC'):
+            self, latitude, longitude, local_time_zone=None,
+            result_time_zone='UTC'):
         
         AstronomicalCalculator._init_if_needed()
         
         self._lat = latitude
         self._lon = longitude
-        self._el = elevation
         
         self._local_time_zone = local_time_zone
         if isinstance(self.local_time_zone, str):
@@ -146,7 +162,7 @@ class AstronomicalCalculator:
         self._topos = Topos(
             latitude_degrees=self._lat,
             longitude_degrees=self._lon,
-            elevation_m=self._el)
+            elevation_m=0)
         
         self._loc = self._earth + self._topos
         
@@ -162,11 +178,6 @@ class AstronomicalCalculator:
     @property
     def longitude(self):
         return self._lon
-    
-    
-    @property
-    def elevation(self):
-        return self._el
     
     
     @property
