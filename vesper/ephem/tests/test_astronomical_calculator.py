@@ -29,8 +29,6 @@ from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 # `get_solar_altitude_period_name`, `get_lunar_position`, and
 # `get_lunar_fraction_illuminated`.
 
-# TODO: Include tests of non-time-zone-aware time errors and 
-
 
 # Ithaca, NY location and time zone.
 TEST_LAT = 42.431964
