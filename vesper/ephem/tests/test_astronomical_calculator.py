@@ -29,6 +29,8 @@ from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 # `get_solar_altitude_period_name`, `get_lunar_position`, and
 # `get_lunar_fraction_illuminated`.
 
+# TODO: Include tests of non-time-zone-aware time errors and 
+
 
 # Ithaca, NY location and time zone.
 TEST_LAT = 42.431964
@@ -305,6 +307,25 @@ class AstronomicalCalculatorTests(TestCase):
             self.assertEqual(actual, expected)
             
             
+    def test_day_night_method_errors(self):
+        
+        calculator = AstronomicalCalculator(TEST_LAT, TEST_LON)
+        
+        self._assert_raises(
+            ValueError, calculator.get_day_solar_altitude_events, TEST_DATE)
+        
+        self._assert_raises(
+            ValueError, calculator.get_day_solar_altitude_event_time,
+            TEST_DATE, 'Sunrise')
+        
+        self._assert_raises(
+            ValueError, calculator.get_night_solar_altitude_events, TEST_DATE)
+         
+        self._assert_raises(
+            ValueError, calculator.get_night_solar_altitude_event_time,
+            TEST_DATE, 'Sunrise')
+        
+        
     def test_get_lunar_position(self):
         for dt, expected_pos in LUNAR_POSITIONS:
             pos = self.calculator.get_lunar_position(dt)
@@ -318,8 +339,30 @@ class AstronomicalCalculatorTests(TestCase):
             fi = self.calculator.get_lunar_fraction_illuminated(dt)
             self._check_relative_error(
                 fi, expected_fi, LUNAR_FRACTION_ILLUMINATED_ERROR_THRESHOLD)
-
-
+            
+            
+    def test_naive_datetime_errors(self):
+        
+        c = self.calculator
+        
+        # Methods that accept a single `datetime` argument.
+        dt = datetime.datetime(2020, 10, 1)
+        self._assert_raises(ValueError, c.get_solar_position, dt)
+        self._assert_raises(ValueError, c.get_solar_altitude_period_name, dt)
+        self._assert_raises(ValueError, c.get_lunar_position, dt)
+        self._assert_raises(ValueError, c.get_lunar_fraction_illuminated, dt)
+        
+        # `get_solar_altitude_events` with first `datetime` naive.
+        dt1 = datetime.datetime(2020, 10, 1)
+        dt2 = _get_localized_datetime(2020, 10, 2)
+        self._assert_raises(ValueError, c.get_solar_altitude_events, dt1, dt2)
+        
+        # `get_solar_altitude_events` with second `datetime` naive.
+        dt1 = _get_localized_datetime(2020, 10, 1)
+        dt2 = datetime.datetime(2020, 10, 2)
+        self._assert_raises(ValueError, c.get_solar_altitude_events, dt1, dt2)
+        
+        
 class AstronomicalCalculatorTests2(AstronomicalCalculatorTests):
     
     """Tests for `AstronomicalCalculator` with US/Eastern result times."""
