@@ -20,7 +20,7 @@ import datetime
 
 import pytz
 
-import vesper.ephem.ephem_utils as ephem_utils
+from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 
@@ -59,11 +59,15 @@ TIME_ZONE = pytz.timezone('US/Mountain')
 
 OUTPUT_FILE_PATH = 'Schedule.csv'
 
+ONE_DAY = datetime.timedelta(days=1)
 
-def _main():
+
+def main():
+    
+    calculator = AstronomicalCalculator(
+        LAT, LON, local_time_zone=TIME_ZONE, result_time_zone=TIME_ZONE)
     
     night = START_NIGHT
-    one_day = datetime.timedelta(days=1)
     sunset_offset = datetime.timedelta(minutes=SUNSET_OFFSET)
     sunrise_offset = datetime.timedelta(minutes=SUNRISE_OFFSET)
     
@@ -71,29 +75,24 @@ def _main():
     
     while night <= END_NIGHT:
         
-        next_day = night + one_day
-        
-        start_time = _get_time('Sunset', LAT, LON, night, sunset_offset)
-        end_time = _get_time('Sunrise', LAT, LON, next_day, sunrise_offset)
+        start_time = _get_time(calculator, night, 'Sunset', sunset_offset)
+        end_time = _get_time(calculator, night, 'Sunrise', sunrise_offset)
                 
-        line = '{:s},{:s},{:s}'.format(str(night), start_time, end_time)
+        line = f'{str(night)},{start_time},{end_time}'
         lines.append(line)
         
-        night += one_day
+        night += ONE_DAY
         
     text = ''.join(line + '\n' for line in lines)
     os_utils.write_file(OUTPUT_FILE_PATH, text)
 
 
-def _get_time(event, lat, lon, date, offset):
-    
-    dt = ephem_utils.get_event_time(event, lat, lon, date)
+def _get_time(calculator, night, event_name, offset):
+    dt = calculator.get_night_solar_altitude_event_time(night, event_name)
     dt += offset
     dt = time_utils.round_datetime(dt, 60)
-    dt = dt.astimezone(TIME_ZONE)
-    
     return dt.strftime('%Y-%m-%d %H:%M')
 
 
 if __name__ == '__main__':
-    _main()
+    main()
