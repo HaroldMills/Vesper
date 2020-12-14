@@ -32,7 +32,7 @@ def move_file(file_path, station_name):
     new_file_name = f'{station_name}_{recorder_name}_{start_time_string}.wav'
     
     night_dir_path = file_path.parent / night_dir_name
-    night_dir_path.mkdir(mode=0x755, parents=True, exist_ok=True)
+    night_dir_path.mkdir(mode=0o755, parents=True, exist_ok=True)
     
     new_file_path = night_dir_path / new_file_name
     file_path.rename(new_file_path)
