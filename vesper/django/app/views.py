@@ -41,6 +41,7 @@ from vesper.django.app.transfer_call_classifications_form import \
     TransferCallClassificationsForm
 from vesper.django.app.refresh_recording_audio_file_paths_form import \
     RefreshRecordingAudioFilePathsForm
+from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm as OldBirdExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
@@ -49,7 +50,6 @@ from vesper.singletons import (
 from vesper.util.bunch import Bunch
 from vesper.util.byte_buffer import ByteBuffer
 import vesper.django.app.model_utils as model_utils
-import vesper.ephem.ephem_utils as ephem_utils
 import vesper.external_urls as external_urls
 from vesper.old_bird.add_old_bird_clip_start_indices_form import \
     AddOldBirdClipStartIndicesForm
@@ -1659,6 +1659,18 @@ def night(request):
     return render(request, 'vesper/night.html', context)
 
 
+_SOLAR_EVENT_NAMES = (
+    'Sunset',
+    'Civil Dusk',
+    'Nautical Dusk',
+    'Astronomical Dusk',
+    'Astronomical Dawn',
+    'Nautical Dawn',
+    'Civil Dawn',
+    'Sunrise',
+)
+
+
 def _get_solar_event_times_json(station, night):
 
     lat = station.latitude
@@ -1673,47 +1685,25 @@ def _get_solar_event_times_json(station, night):
         # See note near the top of this file about why we send local
         # instead of UTC times to clients.
 
-        utc_to_local = station.utc_to_local
-
-        times = {}
-
-        # TODO: Fix issue 85 and then simplify the following code.
-
-        def get(e):
-            return _get_solar_event_time(e, lat, lon, night, utc_to_local)
-
-        times['sunset'] = get('Sunset')
-        times['civilDusk'] = get('Civil Dusk')
-        times['nauticalDusk'] = get('Nautical Dusk')
-        times['astronomicalDusk'] = get('Astronomical Dusk')
-
-        next_day = night + _ONE_DAY
-
-        def get(e):
-            return _get_solar_event_time(e, lat, lon, next_day, utc_to_local)
-
-        times['astronomicalDawn'] = get('Astronomical Dawn')
-        times['nauticalDawn'] = get('Nautical Dawn')
-        times['civilDawn'] = get('Civil Dawn')
-        times['sunrise'] = get('Sunrise')
-
+        time_zone = station.time_zone
+        
+        calculator = AstronomicalCalculator(
+            lat, lon, local_time_zone=time_zone, result_time_zone=time_zone)
+        
+        events = calculator.get_night_solar_altitude_events(night)
+        
+        times = dict(
+            (_get_solar_event_variable_name(name), _format_time(time))
+            for time, name in events)
+        
         return json.dumps(times)
 
 
-def _get_solar_event_time(event, lat, lon, date, utc_to_local):
-
-    utc_time = ephem_utils.get_event_time(event, lat, lon, date)
-
-    if utc_time is None:
-        # event does not exist for specified date (e.g. at high latitude)
-
-        return None
-
-    else:
-        # event exists for specified date
-
-        local_time = utc_to_local(utc_time)
-        return _format_time(local_time)
+def _get_solar_event_variable_name(event_name):
+    
+    """Creates a JavaScript variable name from a solar altitude event name."""
+    
+    return (event_name[0].lower() + event_name[1:]).replace(' ', '')
 
 
 def _get_recordings_json(recordings, station):
