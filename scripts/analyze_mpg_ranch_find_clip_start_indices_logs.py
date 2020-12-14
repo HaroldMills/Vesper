@@ -1,6 +1,6 @@
 """
-Script that analyzes MPG Ranch 2016 archive logs of commands that add
-clip start indices.
+Script that analyzes MPG Ranch archive logs of commands that add clip
+start indices.
 """
 
 
@@ -10,16 +10,21 @@ import csv
 import re
 
 
-ARCHIVE_DIR_PATH = Path('/Volumes/2012_2015_2016/2016_NFC/2016_NFC_All')
+# 2016
+# ARCHIVE_DIR_PATH = Path('/Volumes/2012_2015_2016/2016_NFC/2016_NFC_All')
+# JOB_NUMS = (88, 100, 118, 122, 123, 125, 126)
+# OUTPUT_FILE_PATH = \
+#     ARCHIVE_DIR_PATH / 'MPG Ranch 2016 Add Clip Start Index Clip Counts.csv'
+
+# 2015
+ARCHIVE_DIR_PATH = Path('/Volumes/2012_2015_2016/2015_NFC/2015_NFC_All')
+JOB_NUMS = (42, 43, 44, 45)
+OUTPUT_FILE_PATH = \
+    ARCHIVE_DIR_PATH / 'MPG Ranch 2015 Add Clip Start Index Clip Counts.csv'
 
 LOG_DIR_PATH = ARCHIVE_DIR_PATH / 'Logs' / 'Jobs'
 
 LOG_FILE_NAME_FORMAT = 'Job {}.log'
-
-JOB_NUMS = (88, 100, 118, 122, 123, 125, 126)
-
-OUTPUT_FILE_PATH = \
-    ARCHIVE_DIR_PATH / 'MPG Ranch 2016 Add Clip Start Index Clip Counts.csv'
 
 OUTPUT_COLUMN_NAMES = (
     'Station Channel',
@@ -43,7 +48,7 @@ SHORT_DETECTOR_NAMES = {
 CHANNEL_START_RE = re.compile(
     r'INFO     Processing (\d+) clips for recording channel "(.*) / '
     r'.* / start (.*) / duration (.*) h / Channel (\d)" and detector '
-    r'"(.*)"?\.\.\.')
+    r'"(.*)"\.\.\.')
 
 SHORT_CLIP_RE = re.compile(
     r'WARNING      Found \d+ copies of length-(\d+) clip')
