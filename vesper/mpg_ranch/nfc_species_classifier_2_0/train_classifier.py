@@ -146,6 +146,8 @@ def main():
     
     # show_training_dataset_examples('Training', settings)
     
+    # show_dataset_sizes(settings)
+    
     
 def train_annotator(settings):
       
@@ -451,5 +453,31 @@ def show_training_dataset_examples(dataset_name, settings):
     print(f'{n / delta_time} clips per second.')
     
     
+def show_dataset_sizes(settings):
+    
+    from tensorflow.data import TFRecordDataset
+    
+    for dataset_name in ('Training', 'Validation'):
+        
+        total_size = 0
+        
+        print(f'Sizes of files in dataset "{dataset_name}":')
+        
+        dir_path = classifier_utils.get_dataset_dir_path(
+            settings.clip_type, dataset_name)
+        
+        file_paths = sorted(dir_path.glob('*.tfrecords'))
+        
+        for file_path in file_paths:
+            dataset = TFRecordDataset([str(file_path)])
+            size = 0
+            for _ in dataset:
+                size += 1
+            print(f'    {file_path.name}: {size}')
+            total_size += size
+        
+        print(f'Total size of dataset "{dataset_name}": {total_size}')
+
+
 if __name__ == '__main__':
     main()
