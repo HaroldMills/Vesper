@@ -112,6 +112,8 @@ def main():
     # test_create_training_dataset('Training', settings)
     
     # test_create_inference_dataset(settings)
+    
+    # show_dataset_sizes(settings)
 
 
 def train_annotator(settings):
@@ -513,5 +515,31 @@ def _create_random_waveform(duration, sample_rate):
     return np.random.randint(-32768, 32768, length)
     
     
+def show_dataset_sizes(settings):
+    
+    from tensorflow.data import TFRecordDataset
+    
+    for name in ('Training', 'Validation'):
+        
+        total_size = 0
+        
+        print(f'Sizes of files in dataset "{name}":')
+        
+        dir_path = annotator_utils.get_dataset_dir_path(
+            settings.clip_type, name)
+        
+        file_paths = sorted(dir_path.glob('*.tfrecords'))
+        
+        for file_path in file_paths:
+            dataset = TFRecordDataset([str(file_path)])
+            size = 0
+            for _ in dataset:
+                size += 1
+            print(f'    {file_path.name}: {size}')
+            total_size += size
+        
+        print(f'Total size of dataset "{name}": {total_size}')
+
+
 if __name__ == '__main__':
     main()
