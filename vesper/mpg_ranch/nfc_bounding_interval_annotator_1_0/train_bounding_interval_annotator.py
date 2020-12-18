@@ -519,14 +519,14 @@ def show_dataset_sizes(settings):
     
     from tensorflow.data import TFRecordDataset
     
-    for name in ('Training', 'Validation'):
+    for dataset_name in ('Training', 'Validation'):
         
         total_size = 0
         
-        print(f'Sizes of files in dataset "{name}":')
+        print(f'Sizes of files in dataset "{dataset_name}":')
         
         dir_path = annotator_utils.get_dataset_dir_path(
-            settings.clip_type, name)
+            settings.clip_type, dataset_name)
         
         file_paths = sorted(dir_path.glob('*.tfrecords'))
         
@@ -538,7 +538,7 @@ def show_dataset_sizes(settings):
             print(f'    {file_path.name}: {size}')
             total_size += size
         
-        print(f'Total size of dataset "{name}": {total_size}')
+        print(f'Total size of dataset "{dataset_name}": {total_size}')
 
 
 if __name__ == '__main__':
