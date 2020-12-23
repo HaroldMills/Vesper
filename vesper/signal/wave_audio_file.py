@@ -109,7 +109,7 @@ class WaveAudioFileReader(AudioFileReader):
         
         sample_size = 8 * sample_width
         
-        if compression_type is not 'NONE':
+        if compression_type != 'NONE':
             raise UnsupportedAudioFileError((
                 '{} appears to contain compressed data (with '
                 'compression name "{}"), which is not '
