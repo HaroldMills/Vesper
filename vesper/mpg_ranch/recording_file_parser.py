@@ -383,6 +383,31 @@ class _MpgRanchFileNameParser2(_FileNameParser):
         return station.local_to_utc(naive_start_time)
 
 
+class _MpgRanchFileNameParser3(_FileNameParser):
+    
+    """Parses MPG Ranch 2014 downsampled Song Meter recordings."""
+    
+    
+    _REGEX = re.compile(
+        r'^'
+        r'(?P<station_name>[^_]+)'
+        r'_0_'
+        r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
+        r'_'
+        r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
+        r'_000'
+        r'(__22050)?\.wav'
+        r'$')
+
+    
+    def _get_file_name_fields(self, file_name):
+        return _get_file_name_fields_with_regex(file_name, self._REGEX)
+
+
+    def _get_utc_start_time(self, naive_start_time, station):
+        return station.local_to_utc(naive_start_time)
+
+
 class _EasyHiQRecorderFileNameParser(_FileNameParser):
     
     
@@ -491,6 +516,7 @@ class RecordingFileParser:
             _MpgRanchFileNameParser0(stations, station_name_aliases),
             _MpgRanchFileNameParser1(stations, station_name_aliases),
             _MpgRanchFileNameParser2(stations, station_name_aliases),
+            _MpgRanchFileNameParser3(stations, station_name_aliases),
             _EasyHiQRecorderFileNameParser(stations, station_name_aliases)
         )
         
