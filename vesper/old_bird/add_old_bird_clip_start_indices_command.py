@@ -475,8 +475,9 @@ class AddOldBirdClipStartIndicesCommand(Command):
             # If we get here, the clip was not found in an intersecting
             # channel.
             
+            clip_string = _get_clip_string(clip)
             self._logger.warning(
-                f'    Could not find samples of clip "{str(clip)}" in '
+                f'    Could not find samples of clip {clip_string} in '
                 f'recording channel.')
             
             return _CLIP_NOT_FOUND
@@ -491,23 +492,26 @@ class AddOldBirdClipStartIndicesCommand(Command):
             recording_reader = self._get_channel_info(channel)
         
         if not clip_manager.instance.has_audio_file(clip):
+            clip_string = _get_clip_string(clip)
             self._logger.warning(
-                f'    Could not find audio file for clip "{str(clip)}".')
+                f'    Could not find audio file for clip {clip_string}.')
             return _CLIP_AUDIO_FILE_NOT_FOUND
         
         try:
             clip_samples = clip_manager.instance.get_samples(clip)
         except Exception as e:
+            clip_string = _get_clip_string(clip)
             self._logger.warning(
-                f'    Could not get samples for clip "{str(clip)}". '
+                f'    Could not get samples for clip {clip_string}. '
                 f'Error message was: {str(e)}')
             return _CLIP_SAMPLES_UNAVAILABLE
         
         # For some reason, the Old Bird detectors sometimes create
         # length-zero clips, which we handle here.
         if len(clip_samples) == 0:
+            clip_string = _get_clip_string(clip)
             self._logger.warning(
-                f'    Audio file for clip "{str(clip)}" has zero length.')
+                f'    Audio file for clip {clip_string} has zero length')
             return _CLIP_AUDIO_FILE_EMPTY
         
         # Get start index of recording search interval.
@@ -580,9 +584,9 @@ class AddOldBirdClipStartIndicesCommand(Command):
                 
                 # This should never happen, since the Old Bird detectors
                 # should never produce a clip with all zero samples.
+                clip_string = _get_clip_string(clip)
                 self._logger.warning(
-                    f'    Encountered unexpected all-zero clip '
-                    f'"{str(clip)}". ')
+                    f'    Encountered unexpected all-zero clip {clip_string}.')
                 
                 return _CLIP_SAMPLES_ALL_ZERO
 
@@ -608,7 +612,7 @@ class AddOldBirdClipStartIndicesCommand(Command):
             # recording. We handle such clips here.
             self._logger.warning(
                 f'    Found {len(indices)} copies of length-'
-                f'{clip_length} clip "{str(clip)}".')
+                f'{clip_length} clip {clip.id} "{str(clip)}".')
             return _CLIP_FOUND_MULTIPLE_TIMES
         
         # If we get here, we found exactly one copy of the clip samples
@@ -701,3 +705,7 @@ def _get_detector(name):
         return archive.instance.get_processor(name)
     except Processor.DoesNotExist:
         return None
+
+
+def _get_clip_string(clip):
+    return f'{clip.id} "{str(clip)}"'
