@@ -17,10 +17,16 @@ import re
 #     ARCHIVE_DIR_PATH / 'MPG Ranch 2016 Add Clip Start Index Clip Counts.csv'
 
 # 2015
-ARCHIVE_DIR_PATH = Path('/Volumes/2012_2015_2016/2015_NFC/2015_NFC_All')
-JOB_NUMS = (42, 43, 44, 45)
+# ARCHIVE_DIR_PATH = Path('/Volumes/2012_2015_2016/2015_NFC/2015_NFC_All')
+# JOB_NUMS = (42, 43, 44, 45)
+# OUTPUT_FILE_PATH = \
+#     ARCHIVE_DIR_PATH / 'MPG Ranch 2015 Add Clip Start Index Clip Counts.csv'
+
+# 2014
+ARCHIVE_DIR_PATH = Path('/Volumes/2012_2015_2016/2014_NFC/2014_NFC_All')
+JOB_NUMS = (24, 25, 26, 32)
 OUTPUT_FILE_PATH = \
-    ARCHIVE_DIR_PATH / 'MPG Ranch 2015 Add Clip Start Index Clip Counts.csv'
+    ARCHIVE_DIR_PATH / 'MPG Ranch 2014 Add Clip Start Index Clip Counts.csv'
 
 LOG_DIR_PATH = ARCHIVE_DIR_PATH / 'Logs' / 'Jobs'
 
