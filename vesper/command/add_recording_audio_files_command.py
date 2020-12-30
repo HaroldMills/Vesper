@@ -536,7 +536,7 @@ class AddRecordingAudioFilesCommand(Command):
         if r_length - f_length == two_seconds:
             # Recording length specified in database is exactly two
             # seconds longer than total length of files. The
-            # `populate_archie` script that was used to populate
+            # `populate_archive` script that was used to populate
             # web archives from desktop archives added two seconds
             # to recording durations to try to ensure that the times
             # of clips created by the original Old Bird detectors
@@ -626,7 +626,7 @@ class AddRecordingAudioFilesCommand(Command):
         
         two_seconds = 2 * recording.sample_rate
         
-        # The `populate_archie` script that was used to populate
+        # The `populate_archive` script that was used to populate
         # web archives from desktop archives added two seconds
         # to recording durations to try to ensure that the times
         # of clips created by the original Old Bird detectors
