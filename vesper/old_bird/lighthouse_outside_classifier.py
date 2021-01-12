@@ -5,7 +5,6 @@ A `LighthouseOutsideClassifier` assigns the `'Outside'` classification
 to a clip if the clip is unclassified and intersects the time interval
 from nautical dusk to nautical dawn. It does not modify the clip's
 classification otherwise.
-
 """
 
 
