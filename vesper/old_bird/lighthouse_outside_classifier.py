@@ -16,7 +16,7 @@ from vesper.ephem.astronomical_calculator import AstronomicalCalculatorCache
 class LighthouseOutsideClassifier(Annotator):
     
     
-    extension_name = 'Lighthouse Outside Classifier 1.0'
+    extension_name = 'Lighthouse Outside Classifier 1.1'
     
     
     def __init__(self, *args, **kwargs):
