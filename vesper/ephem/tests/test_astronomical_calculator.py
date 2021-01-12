@@ -13,7 +13,8 @@ import datetime
 import pytz
 
 from vesper.tests.test_case import TestCase
-from vesper.ephem.astronomical_calculator import AstronomicalCalculator
+from vesper.ephem.astronomical_calculator import (
+    AstronomicalCalculator, Location)
 
 
 # TODO: When the USNO web site is up again (as of 2020-12 it has been
@@ -26,7 +27,7 @@ from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 # Python wrapper for NOVAS available from PyPI.
 
 # TODO: Test vector arguments to `get_solar_position`,
-# `get_solar_altitude_period_name`, `get_lunar_position`, and
+# `get_solar_period_name`, `get_lunar_position`, and
 # `get_lunar_fraction_illuminated`.
 
 
@@ -36,102 +37,150 @@ TEST_LON = -76.501656
 TEST_ELEVATION = 0
 TEST_TIME_ZONE_NAME = 'US/Eastern'
 TEST_TIME_ZONE = pytz.timezone(TEST_TIME_ZONE_NAME)
+TEST_LOCATION = Location(TEST_LAT, TEST_LON, TEST_TIME_ZONE)
 TEST_DATE = datetime.date(2020, 10, 1)
 
 
-def _dt(*args):
-    local_dt = _get_localized_datetime(*args)
-    utc_dt = local_dt.astimezone(pytz.utc)
-    return utc_dt
+def _time(*args):
+    local_time = _get_localized_time(*args)
+    utc_time = local_time.astimezone(pytz.utc)
+    return utc_time
 
 
-def _get_localized_datetime(*args):
-    naive_dt = datetime.datetime(*args)
-    return TEST_TIME_ZONE.localize(naive_dt)
+def _get_localized_time(*args):
+    naive_time = datetime.datetime(*args)
+    return TEST_TIME_ZONE.localize(naive_time)
+
+
+_date = datetime.date
+
+
+def _round_time_to_nearest_minute(t):
+    floor = t.replace(second=0, microsecond=0)
+    delta = t - floor
+    if delta.total_seconds() < 30:
+        return floor
+    else:
+        return floor + datetime.timedelta(seconds=60)
 
 
 SOLAR_POSITIONS = [
-    (_dt(2020, 1, 1, 0), (-70.51, 353.67, 147103121)),
-    (_dt(2021, 2, 1, 2), (-56.78, 47.77, 147410473)),
-    (_dt(2022, 3, 1, 4), (-30.28, 70.88, 148224283)),
-    (_dt(2023, 4, 1, 6), (-9.75, 74.69, 149473176)),
-    (_dt(2024, 5, 1, 8), (20.73, 87.87, 150747972)),
-    (_dt(2025, 6, 1, 10), (46.85, 103.21, 151703723)),
-    (_dt(2026, 7, 1, 12), (65.80, 137.62, 152090988)),
-    (_dt(2027, 8, 1, 14), (63.49, 206.09, 151837501)),
-    (_dt(2028, 9, 1, 16), (38.48, 240.68, 150948366)),
-    (_dt(2029, 10, 1, 18), (7.83, 257.93, 149749701)),
-    (_dt(2030, 11, 1, 20), (-22.82, 270.65, 148464087)),
-    (_dt(2031, 12, 1, 22), (-58.42, 301.27, 147509001)),
+    (_time(2020, 1, 1, 0), (-70.51, 353.67, 147103121)),
+    (_time(2021, 2, 1, 2), (-56.78, 47.77, 147410473)),
+    (_time(2022, 3, 1, 4), (-30.28, 70.88, 148224283)),
+    (_time(2023, 4, 1, 6), (-9.75, 74.69, 149473176)),
+    (_time(2024, 5, 1, 8), (20.73, 87.87, 150747972)),
+    (_time(2025, 6, 1, 10), (46.85, 103.21, 151703723)),
+    (_time(2026, 7, 1, 12), (65.80, 137.62, 152090988)),
+    (_time(2027, 8, 1, 14), (63.49, 206.09, 151837501)),
+    (_time(2028, 9, 1, 16), (38.48, 240.68, 150948366)),
+    (_time(2029, 10, 1, 18), (7.83, 257.93, 149749701)),
+    (_time(2030, 11, 1, 20), (-22.82, 270.65, 148464087)),
+    (_time(2031, 12, 1, 22), (-58.42, 301.27, 147509001)),
 ]
 """Solar position test data, obtained from suncalc.org on 2020-11-02."""
 
-DAY_SOLAR_ALTITUDE_EVENTS = [
-    (_dt(2020, 10, 1, 5, 30), 'Astronomical Dawn'),
-    (_dt(2020, 10, 1, 6, 3), 'Nautical Dawn'),
-    (_dt(2020, 10, 1, 6, 36), 'Civil Dawn'),
-    (_dt(2020, 10, 1, 7, 4), 'Sunrise'),
-    (_dt(2020, 10, 1, 18, 47), 'Sunset'),
-    (_dt(2020, 10, 1, 19, 15), 'Civil Dusk'),
-    (_dt(2020, 10, 1, 19, 47), 'Nautical Dusk'),
-    (_dt(2020, 10, 1, 20, 20), 'Astronomical Dusk'),
-]
-"""Solar altitude event data for one day, obtained from USNO tables."""
 
-NIGHT_SOLAR_ALTITUDE_EVENTS = [
-    (_dt(2020, 10, 1, 18, 47), 'Sunset'),
-    (_dt(2020, 10, 1, 19, 15), 'Civil Dusk'),
-    (_dt(2020, 10, 1, 19, 47), 'Nautical Dusk'),
-    (_dt(2020, 10, 1, 20, 20), 'Astronomical Dusk'),
-    (_dt(2020, 10, 2, 5, 31), 'Astronomical Dawn'),
-    (_dt(2020, 10, 2, 6, 4), 'Nautical Dawn'),
-    (_dt(2020, 10, 2, 6, 37), 'Civil Dawn'),
-    (_dt(2020, 10, 2, 7, 5), 'Sunrise'),
+SOLAR_NOONS = [
+    (_date(2020, 1, 1), _time(2020, 1, 1, 12, 9)),
+    (_date(2021, 2, 1), _time(2021, 2, 1, 12, 19)),
+    (_date(2022, 3, 1), _time(2022, 3, 1, 12, 18)),
+    (_date(2023, 4, 1), _time(2023, 4, 1, 13, 9)),
+    (_date(2024, 5, 1), _time(2024, 5, 1, 13, 3)),
+    (_date(2025, 6, 1), _time(2025, 6, 1, 13, 3)),
+    (_date(2026, 7, 1), _time(2026, 7, 1, 13, 9)),
+    (_date(2027, 8, 1), _time(2027, 8, 1, 13, 12)),
+    (_date(2028, 9, 1), _time(2028, 9, 1, 13, 5)),
+    (_date(2029, 10, 1), _time(2029, 10, 1, 12, 55)),
+    (_date(2030, 11, 1), _time(2030, 11, 1, 12, 49)),
+    (_date(2031, 12, 1), _time(2031, 12, 1, 11, 55)),
 ]
-"""Solar altitude event data for one night, obtained from USNO tables."""
+"""Solar noon test data, obtained from timeanddate.com on 2021-01-04."""
 
-SOLAR_ALTITUDE_PERIODS = [
-    (_dt(2020, 10, 1, 5, 25), 'Night'),
-    (_dt(2020, 10, 1, 5, 35), 'Astronomical Twilight'),
-    (_dt(2020, 10, 1, 5, 58), 'Astronomical Twilight'),
-    (_dt(2020, 10, 1, 6, 8), 'Nautical Twilight'),
-    (_dt(2020, 10, 1, 6, 31), 'Nautical Twilight'),
-    (_dt(2020, 10, 1, 6, 41), 'Civil Twilight'),
-    (_dt(2020, 10, 1, 6, 59), 'Civil Twilight'),
-    (_dt(2020, 10, 1, 7, 9), 'Day'),
-    (_dt(2020, 10, 1, 18, 42), 'Day'),
-    (_dt(2020, 10, 1, 18, 52), 'Civil Twilight'),
-    (_dt(2020, 10, 1, 19, 10), 'Civil Twilight'),
-    (_dt(2020, 10, 1, 19, 20), 'Nautical Twilight'),
-    (_dt(2020, 10, 1, 19, 42), 'Nautical Twilight'),
-    (_dt(2020, 10, 1, 19, 52), 'Astronomical Twilight'),
-    (_dt(2020, 10, 1, 20, 15), 'Astronomical Twilight'),
-    (_dt(2020, 10, 1, 20, 25), 'Night'),
+
+SOLAR_MIDNIGHTS = [
+    (_date(2020, 1, 1), _time(2020, 1, 2, 0, 9)),
+    (_date(2021, 2, 1), _time(2021, 2, 2, 0, 19)),
+    (_date(2022, 3, 1), _time(2022, 3, 2, 0, 18)),
+    (_date(2023, 4, 1), _time(2023, 4, 2, 1, 9)),
+    (_date(2024, 5, 1), _time(2024, 5, 2, 1, 2)),
+    (_date(2025, 6, 1), _time(2025, 6, 2, 1, 4)),
+    (_date(2026, 7, 1), _time(2026, 7, 2, 1, 10)),
+    (_date(2027, 8, 1), _time(2027, 8, 2, 1, 12)),
+    (_date(2028, 9, 1), _time(2028, 9, 2, 1, 5)),
+    (_date(2029, 10, 1), _time(2029, 10, 2, 0, 55)),
+    (_date(2030, 11, 1), _time(2030, 11, 2, 0, 49)),
+    (_date(2031, 12, 1), _time(2031, 12, 1, 23, 55)),
 ]
-"""Solar altitude period data, derived from the event data above."""
+"""Solar noon test data, obtained from timeanddate.com on 2021-01-04."""
+
+
+DAY_SOLAR_EVENTS = [
+    (_time(2020, 10, 1, 5, 30), 'Astronomical Dawn'),
+    (_time(2020, 10, 1, 6, 3), 'Nautical Dawn'),
+    (_time(2020, 10, 1, 6, 36), 'Civil Dawn'),
+    (_time(2020, 10, 1, 7, 4), 'Sunrise'),
+    (_time(2020, 10, 1, 18, 47), 'Sunset'),
+    (_time(2020, 10, 1, 19, 15), 'Civil Dusk'),
+    (_time(2020, 10, 1, 19, 47), 'Nautical Dusk'),
+    (_time(2020, 10, 1, 20, 20), 'Astronomical Dusk'),
+]
+"""Solar event data for one day, obtained from USNO tables."""
+
+NIGHT_SOLAR_EVENTS = [
+    (_time(2020, 10, 1, 18, 47), 'Sunset'),
+    (_time(2020, 10, 1, 19, 15), 'Civil Dusk'),
+    (_time(2020, 10, 1, 19, 47), 'Nautical Dusk'),
+    (_time(2020, 10, 1, 20, 20), 'Astronomical Dusk'),
+    (_time(2020, 10, 2, 5, 31), 'Astronomical Dawn'),
+    (_time(2020, 10, 2, 6, 4), 'Nautical Dawn'),
+    (_time(2020, 10, 2, 6, 37), 'Civil Dawn'),
+    (_time(2020, 10, 2, 7, 5), 'Sunrise'),
+]
+"""Solar event data for one night, obtained from USNO tables."""
+
+SOLAR_PERIODS = [
+    (_time(2020, 10, 1, 5, 25), 'Night'),
+    (_time(2020, 10, 1, 5, 35), 'Astronomical Twilight'),
+    (_time(2020, 10, 1, 5, 58), 'Astronomical Twilight'),
+    (_time(2020, 10, 1, 6, 8), 'Nautical Twilight'),
+    (_time(2020, 10, 1, 6, 31), 'Nautical Twilight'),
+    (_time(2020, 10, 1, 6, 41), 'Civil Twilight'),
+    (_time(2020, 10, 1, 6, 59), 'Civil Twilight'),
+    (_time(2020, 10, 1, 7, 9), 'Day'),
+    (_time(2020, 10, 1, 18, 42), 'Day'),
+    (_time(2020, 10, 1, 18, 52), 'Civil Twilight'),
+    (_time(2020, 10, 1, 19, 10), 'Civil Twilight'),
+    (_time(2020, 10, 1, 19, 20), 'Nautical Twilight'),
+    (_time(2020, 10, 1, 19, 42), 'Nautical Twilight'),
+    (_time(2020, 10, 1, 19, 52), 'Astronomical Twilight'),
+    (_time(2020, 10, 1, 20, 15), 'Astronomical Twilight'),
+    (_time(2020, 10, 1, 20, 25), 'Night'),
+]
+"""Solar period data, derived from the event data above."""
 
 LUNAR_DATA = [
-    (_dt(2020, 1, 1, 15, 46), (36.45, 151.09, 404551, .377)),
-    (_dt(2021, 2, 1, 15, 46), (-45.98, .41, 371142, .806)),
-    (_dt(2022, 3, 1, 15, 46), (8.22, 238.10, 372082, .012)),
-    (_dt(2023, 4, 1, 15, 46), (7.09, 71.76, 403880, .825)),
-    (_dt(2024, 5, 1, 15, 46), (-36.17, 274.30, 372332, .462)),
-    (_dt(2025, 6, 1, 15, 46), (46.36, 117.75, 388663, .368)),
-    (_dt(2026, 7, 1, 15, 46), (-66.08, 40.92, 402120, .969)),
-    (_dt(2027, 8, 1, 15, 46), (44.69, 256.23, 357556, .006)),
-    (_dt(2028, 9, 1, 15, 46), (-29.70, 82.53, 403409, .958)),
-    (_dt(2029, 10, 1, 15, 46), (-7.22, 304.71, 387778, .405)),
-    (_dt(2030, 11, 1, 15, 46), (19.73, 137.72, 372843, .426)),
-    (_dt(2031, 12, 1, 15, 46), (-26.11, 24.15, 403198, .921)),
+    (_time(2020, 1, 1, 15, 46), (36.45, 151.09, 404551, .377)),
+    (_time(2021, 2, 1, 15, 46), (-45.98, .41, 371142, .806)),
+    (_time(2022, 3, 1, 15, 46), (8.22, 238.10, 372082, .012)),
+    (_time(2023, 4, 1, 15, 46), (7.09, 71.76, 403880, .825)),
+    (_time(2024, 5, 1, 15, 46), (-36.17, 274.30, 372332, .462)),
+    (_time(2025, 6, 1, 15, 46), (46.36, 117.75, 388663, .368)),
+    (_time(2026, 7, 1, 15, 46), (-66.08, 40.92, 402120, .969)),
+    (_time(2027, 8, 1, 15, 46), (44.69, 256.23, 357556, .006)),
+    (_time(2028, 9, 1, 15, 46), (-29.70, 82.53, 403409, .958)),
+    (_time(2029, 10, 1, 15, 46), (-7.22, 304.71, 387778, .405)),
+    (_time(2030, 11, 1, 15, 46), (19.73, 137.72, 372843, .426)),
+    (_time(2031, 12, 1, 15, 46), (-26.11, 24.15, 403198, .921)),
 ]
 """
 Lunar position and fraction illuminated test data, obtained from
 suncalc.org on 2020-11-02.
 """
 
-LUNAR_POSITIONS = [(dt, d[:3]) for dt, d in LUNAR_DATA]
+LUNAR_POSITIONS = [(time, d[:3]) for time, d in LUNAR_DATA]
 
-LUNAR_FRACTIONS_ILLUMINATED = [(dt, d[3]) for dt, d in LUNAR_DATA]
+LUNAR_FRACTIONS_ILLUMINATED = [(time, d[3]) for time, d in LUNAR_DATA]
 
 # The following were set to the minimum values with two significant digits
 # that were required for tests involving suncalc.org and mooncalc.org test
@@ -148,71 +197,49 @@ TIME_DIFFERENCE_ERROR_THRESHOLD = 60   # seconds
 
 
 class AstronomicalCalculatorTests(TestCase):
-
-    """Tests for `AstronomicalCalculator` with UTC result times."""
+    
+    """
+    Tests an `AstronomicalCalculator` that yields UTC result times.
+    """
+    
+    
+    RESULT_TIMES_LOCAL = False
     
     
     def setUp(self):
         self.calculator = AstronomicalCalculator(
-            TEST_LAT, TEST_LON, local_time_zone=TEST_TIME_ZONE_NAME)
-        
-        
+            TEST_LOCATION, self.RESULT_TIMES_LOCAL)
+    
+    
     def test_initializer(self):
         
-        cases = (
-            
-            ((), {}, (None, pytz.utc)),
-            
-            ((TEST_TIME_ZONE_NAME,), {}, (TEST_TIME_ZONE, pytz.utc)),
-            
-            ((TEST_TIME_ZONE,), {}, (TEST_TIME_ZONE, pytz.utc)),
-            
-            ((TEST_TIME_ZONE_NAME, None), {},
-                (TEST_TIME_ZONE, pytz.utc)),
-            
-            ((TEST_TIME_ZONE, TEST_TIME_ZONE_NAME), {}, 
-                (TEST_TIME_ZONE, TEST_TIME_ZONE)),
-            
-            ((), {'local_time_zone': TEST_TIME_ZONE_NAME},
-                (TEST_TIME_ZONE, pytz.utc)),
-            
-            ((), {'local_time_zone': TEST_TIME_ZONE},
-                (TEST_TIME_ZONE, pytz.utc)),
-            
-            ((), {'result_time_zone': TEST_TIME_ZONE_NAME},
-                (None, TEST_TIME_ZONE)),
-            
-            ((), {'result_time_zone': TEST_TIME_ZONE},
-                (None, TEST_TIME_ZONE)),
-            
-            ((TEST_TIME_ZONE_NAME,),
-                {'result_time_zone': TEST_TIME_ZONE_NAME},
-                (TEST_TIME_ZONE, TEST_TIME_ZONE)),
-            
-        )
+        loc = TEST_LOCATION
+        rtl = self.RESULT_TIMES_LOCAL
+
+        cases = [
+            ((loc,), {}, (loc, False)),
+            ((loc, rtl), {}, (loc, rtl)),
+            ((loc,), {'result_times_local': rtl}, (loc, rtl)),
+        ]
         
         for args, kwargs, expected in cases:
-            self._test_initializer(
-                TEST_LAT, TEST_LON, args, kwargs, expected)
-        
-        
-    def _test_initializer(self, lat, lon, args, kwargs, expected):
-        local_time_zone, result_time_zone = expected
-        c = AstronomicalCalculator(lat, lon, *args, **kwargs)
-        self.assertEqual(c.latitude, TEST_LAT)
-        self.assertEqual(c.longitude, TEST_LON)
-        self.assertEqual(c.local_time_zone, local_time_zone)
-        self.assertEqual(c.result_time_zone, result_time_zone)
-        
-        
+            actual = AstronomicalCalculator(*args, **kwargs)
+            self._assert_calculator(actual, *expected)
+    
+    
+    def _assert_calculator(self, calculator, location, result_times_local):
+        self.assertEqual(calculator.location, location)
+        self.assertEqual(calculator.result_times_local, result_times_local)
+    
+    
     def test_get_solar_position(self):
-        for dt, expected_pos in SOLAR_POSITIONS:
-            pos = self.calculator.get_solar_position(dt)
+        for time, expected_pos in SOLAR_POSITIONS:
+            pos = self.calculator.get_solar_position(time)
             self._check_pos(
                 pos, expected_pos, SOLAR_ALT_AZ_ERROR_THRESHOLD,
                 SOLAR_DISTANCE_ERROR_THRESHOLD)
-            
-            
+    
+    
     def _check_pos(
             self, pos, expected_pos, alt_az_error_threshold,
             distance_error_threshold):
@@ -227,146 +254,148 @@ class AstronomicalCalculatorTests(TestCase):
         self._check_absolute_error(alt, x_alt, alt_az_error_threshold)
         self._check_absolute_error(az, x_az, alt_az_error_threshold)
         self._check_relative_error(d, x_d, distance_error_threshold)
-               
-        
+    
+    
     def _check_absolute_error(self, a, b, error_threshold):
         error = abs(a - b)
         # print(f'{name} {a} {b} {error}')
         self.assertLess(error, error_threshold)
-        
-        
+    
+    
     def _check_relative_error(self, a, b, error_threshold):
         error = abs((a - b) / b)
         # print(f'{name} {a} {b} {error}')
         self.assertLess(error, error_threshold)
-        
-        
-    def test_get_solar_altitude_events(self):
+    
+    
+    def test_get_solar_noon(self):
+        self._test_get_solar_noon_or_midnight(
+            SOLAR_NOONS, self.calculator.get_solar_noon)
+    
+    
+    def _test_get_solar_noon_or_midnight(self, cases, method):
+        for date, expected in cases:
+            actual = _round_time_to_nearest_minute(method(date))
+            print(f'{str(actual)} {str(expected)}')
+            self._assert_datetimes_nearly_equal(actual, expected)
+    
+    
+    def test_get_solar_midnight(self):
+        self._test_get_solar_noon_or_midnight(
+            SOLAR_MIDNIGHTS, self.calculator.get_solar_midnight)
+    
+    
+    def test_get_solar_events(self):
         d = TEST_DATE
-        start_dt = _get_localized_datetime(d.year, d.month, d.day)
-        end_dt = start_dt + datetime.timedelta(days=1)
-        events = self.calculator.get_solar_altitude_events(start_dt, end_dt)
-        self._check_events(events, DAY_SOLAR_ALTITUDE_EVENTS)
-        
-        
+        start_time = _get_localized_time(d.year, d.month, d.day)
+        end_time = start_time + datetime.timedelta(days=1)
+        events = self.calculator.get_solar_events(start_time, end_time)
+        self._check_events(events, DAY_SOLAR_EVENTS)
+    
+    
     def _check_events(self, actual_events, expected_events):
         
         self.assertEqual(len(actual_events), len(expected_events))
         
-        for i, (actual_dt, actual_name) in enumerate(actual_events):
-            expected_dt, expected_name = expected_events[i]
-            self._assert_datetimes_nearly_equal(actual_dt, expected_dt)
-            self._assert_result_time_zone(actual_dt)
+        for i, (actual_time, actual_name) in enumerate(actual_events):
+            self._assert_result_time_zone(actual_time)
+            expected_time, expected_name = expected_events[i]
+            self._assert_datetimes_nearly_equal(actual_time, expected_time)
             self.assertEqual(actual_name, expected_name)
-        
-        
+    
+    
+    def _assert_result_time_zone(self, time):
+        if self.RESULT_TIMES_LOCAL:
+            self.assertEqual(time.tzinfo.zone, TEST_TIME_ZONE_NAME)
+        else:
+            self.assertEqual(time.tzname(), 'UTC')
+    
+    
     def _assert_datetimes_nearly_equal(self, a, b):
         delta = (a - b).total_seconds()
-        self.assertLess(delta, TIME_DIFFERENCE_ERROR_THRESHOLD)
-        
-        
-    def _assert_result_time_zone(self, dt):
-        self.assertEqual(dt.tzinfo.zone, self.calculator.result_time_zone.zone)
-        
-        
-    def _show_solar_altitude_events(self, events, heading):
+        self.assertLessEqual(delta, TIME_DIFFERENCE_ERROR_THRESHOLD)
+    
+    
+    def _show_solar_events(self, events, heading):
         print(heading + ':')
-        for dt, name in events:
-            print(dt, name)
-        
-        
-    def test_get_day_solar_altitude_events(self):
-        events = self.calculator.get_day_solar_altitude_events(TEST_DATE)
-        self._check_events(events, DAY_SOLAR_ALTITUDE_EVENTS)
-        
-        
-    def test_get_day_solar_altitude_event_time(self):
-        for expected_dt, event_name in DAY_SOLAR_ALTITUDE_EVENTS:
-            actual_dt = self.calculator.get_day_solar_altitude_event_time(
-                TEST_DATE, event_name)
-            self._assert_datetimes_nearly_equal(actual_dt, expected_dt)
-        
-        
-    def test_get_night_solar_altitude_events(self):
-        events = self.calculator.get_night_solar_altitude_events(TEST_DATE)
-        self._check_events(events, NIGHT_SOLAR_ALTITUDE_EVENTS)
-        
-        
-    def test_get_night_solar_altitude_event_time(self):
-        for expected_dt, event_name in NIGHT_SOLAR_ALTITUDE_EVENTS:
-            actual_dt = self.calculator.get_night_solar_altitude_event_time(
-                TEST_DATE, event_name)
-            self._assert_datetimes_nearly_equal(actual_dt, expected_dt)
-        
-        
-    def test_get_solar_altitude_period_name(self):
-        for dt, expected in SOLAR_ALTITUDE_PERIODS:
-            actual = self.calculator.get_solar_altitude_period_name(dt)
+        for time, name in events:
+            print(time, name)
+    
+    
+    def test_get_day_solar_events(self):
+        events = self.calculator.get_day_solar_events(TEST_DATE)
+        self._check_events(events, DAY_SOLAR_EVENTS)
+    
+    
+    def test_get_night_solar_events(self):
+        events = self.calculator.get_night_solar_events(TEST_DATE)
+        self._check_events(events, NIGHT_SOLAR_EVENTS)
+    
+    
+    def test_get_day_solar_event_time(self):
+        method = self.calculator.get_day_solar_event_time
+        self._test_get_date_solar_event_time(method, DAY_SOLAR_EVENTS)
+    
+    
+    def _test_get_date_solar_event_time(self, method, events):
+        for expected_time, event_name in events:
+            actual_time = method(TEST_DATE, event_name)
+            self._assert_datetimes_nearly_equal(actual_time, expected_time)
+    
+    
+    def test_get_night_solar_event_time(self):
+        method = self.calculator.get_night_solar_event_time
+        self._test_get_date_solar_event_time(method, NIGHT_SOLAR_EVENTS)
+    
+    
+    def test_get_solar_period_name(self):
+        for time, expected in SOLAR_PERIODS:
+            actual = self.calculator.get_solar_period_name(time)
             self.assertEqual(actual, expected)
-            
-            
-    def test_day_night_method_errors(self):
-        
-        calculator = AstronomicalCalculator(TEST_LAT, TEST_LON)
-        
-        self._assert_raises(
-            ValueError, calculator.get_day_solar_altitude_events, TEST_DATE)
-        
-        self._assert_raises(
-            ValueError, calculator.get_day_solar_altitude_event_time,
-            TEST_DATE, 'Sunrise')
-        
-        self._assert_raises(
-            ValueError, calculator.get_night_solar_altitude_events, TEST_DATE)
-         
-        self._assert_raises(
-            ValueError, calculator.get_night_solar_altitude_event_time,
-            TEST_DATE, 'Sunrise')
-        
-        
+    
+    
     def test_get_lunar_position(self):
-        for dt, expected_pos in LUNAR_POSITIONS:
-            pos = self.calculator.get_lunar_position(dt)
+        for time, expected_pos in LUNAR_POSITIONS:
+            pos = self.calculator.get_lunar_position(time)
             self._check_pos(
                 pos, expected_pos, LUNAR_ALT_AZ_ERROR_THRESHOLD,
                 LUNAR_DISTANCE_ERROR_THRESHOLD)
-             
-            
+    
+    
     def test_get_lunar_fraction_illuminated(self):
-        for dt, expected_fi in LUNAR_FRACTIONS_ILLUMINATED:
-            fi = self.calculator.get_lunar_fraction_illuminated(dt)
+        for time, expected_fi in LUNAR_FRACTIONS_ILLUMINATED:
+            fi = self.calculator.get_lunar_fraction_illuminated(time)
             self._check_relative_error(
                 fi, expected_fi, LUNAR_FRACTION_ILLUMINATED_ERROR_THRESHOLD)
-            
-            
-    def test_naive_datetime_errors(self):
-        
-        c = self.calculator
-        
-        # Methods that accept a single `datetime` argument.
-        dt = datetime.datetime(2020, 10, 1)
-        self._assert_raises(ValueError, c.get_solar_position, dt)
-        self._assert_raises(ValueError, c.get_solar_altitude_period_name, dt)
-        self._assert_raises(ValueError, c.get_lunar_position, dt)
-        self._assert_raises(ValueError, c.get_lunar_fraction_illuminated, dt)
-        
-        # `get_solar_altitude_events` with first `datetime` naive.
-        dt1 = datetime.datetime(2020, 10, 1)
-        dt2 = _get_localized_datetime(2020, 10, 2)
-        self._assert_raises(ValueError, c.get_solar_altitude_events, dt1, dt2)
-        
-        # `get_solar_altitude_events` with second `datetime` naive.
-        dt1 = _get_localized_datetime(2020, 10, 1)
-        dt2 = datetime.datetime(2020, 10, 2)
-        self._assert_raises(ValueError, c.get_solar_altitude_events, dt1, dt2)
-        
-        
-class AstronomicalCalculatorTests2(AstronomicalCalculatorTests):
     
-    """Tests for `AstronomicalCalculator` with US/Eastern result times."""
+    
+    def test_naive_datetime_errors(self):
+         
+        c = self.calculator
+         
+        # Methods that accept a single `datetime` argument.
+        time = datetime.datetime(2020, 10, 1)
+        self._assert_raises(ValueError, c.get_solar_position, time)
+        self._assert_raises(ValueError, c.get_solar_period_name, time)
+        self._assert_raises(ValueError, c.get_lunar_position, time)
+        self._assert_raises(ValueError, c.get_lunar_fraction_illuminated, time)
+         
+        # `get_solar_events` with first `datetime` naive.
+        time1 = datetime.datetime(2020, 10, 1)
+        time2 = _get_localized_time(2020, 10, 2)
+        self._assert_raises(ValueError, c.get_solar_events, time1, time2)
+         
+        # `get_solar_events` with second `datetime` naive.
+        time1 = _get_localized_time(2020, 10, 1)
+        time2 = datetime.datetime(2020, 10, 2)
+        self._assert_raises(ValueError, c.get_solar_events, time1, time2)
 
 
-    def setUp(self):
-        self.calculator = AstronomicalCalculator(
-            TEST_LAT, TEST_LON, local_time_zone=TEST_TIME_ZONE_NAME,
-            result_time_zone=TEST_TIME_ZONE_NAME)
+class AstronomicalCalculatorTests2(AstronomicalCalculatorTests):
+     
+    """
+    Tests an `AstronomicalCalculator` that yields local result times.
+    """
+    
+    
+    RESULT_TIMES_LOCAL = True

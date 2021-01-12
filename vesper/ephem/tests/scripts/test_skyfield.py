@@ -9,7 +9,8 @@ from pathlib import Path
 import csv
 import datetime
 
-from vesper.ephem.astronomical_calculator import AstronomicalCalculator
+from vesper.ephem.astronomical_calculator import (
+    AstronomicalCalculator, Location)
 from vesper.ephem.usno_rise_set_table import UsnoRiseSetTable
 
 
@@ -98,7 +99,7 @@ unmatched_events = []
 
 def main():
     
-    table_file_paths = list(USNO_TABLES_DIR_PATH.glob('**/*.txt'))
+    table_file_paths = sorted(USNO_TABLES_DIR_PATH.glob('**/*.txt'))
     
     # table_file_paths = table_file_paths[:2]
     
@@ -127,8 +128,8 @@ def main():
             
     write_diff_count_file(DIFF_COUNT_FILE_PATH)
     write_unmatched_events_file(UNMATCHED_EVENTS_FILE_PATH)
-    
-    
+
+
 def read_usno_table(file_path):
     
     with open(file_path) as table_file:
@@ -143,8 +144,8 @@ def get_and_match_skyfield_events(t, usno_times, event_name):
         t.lat, t.lon, t.year, event_name, t.utc_offset)
     
     match_events(t.lat, t.lon, t.year, event_name, sf_times, usno_times)
-    
-    
+
+
 def get_skyfield_event_times(lat, lon, year, event_name, utc_offset):
     
     events = skyfield_event_cache.get((lat, lon, year))
@@ -152,8 +153,9 @@ def get_skyfield_event_times(lat, lon, year, event_name, utc_offset):
     if events is None:
         
         # Get all Skyfield events for the specified lat, lon, and year.
-        c = AstronomicalCalculator(lat, lon)
         time_zone = datetime.timezone(utc_offset)
+        location = Location(lat, lon, time_zone)
+        c = AstronomicalCalculator(location)
         start_time = datetime.datetime(year, 1, 1, tzinfo=time_zone)
         end_time = datetime.datetime(year + 1, 1, 1, tzinfo=time_zone)
         events = c.get_solar_events(start_time, end_time)
@@ -164,8 +166,8 @@ def get_skyfield_event_times(lat, lon, year, event_name, utc_offset):
     times = [time for time, name in events if name == event_name]
     
     return times
-    
-    
+
+
 def match_events(lat, lon, year, event_name, sf_times, usno_times):
     
     key = (lat, lon, year, event_name)
