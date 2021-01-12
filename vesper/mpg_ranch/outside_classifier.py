@@ -6,6 +6,7 @@ if the clip's start time is outside of the interval from one hour after
 sunset to one half hour before sunrise, and does nothing otherwise.
 """
 
+
 import datetime
 
 from vesper.command.annotator import Annotator
