@@ -1673,30 +1673,18 @@ _SOLAR_EVENT_NAMES = (
 
 def _get_solar_event_times_json(station, night):
 
-    lat = station.latitude
-    lon = station.longitude
+    # See note near the top of this file about why we send local
+    # instead of UTC times to clients.
 
-    if lat is None or lon is None:
-        return 'null'
-
-    else:
-        # have station latitude and longitude
-
-        # See note near the top of this file about why we send local
-        # instead of UTC times to clients.
-
-        time_zone = station.time_zone
-        
-        calculator = AstronomicalCalculator(
-            lat, lon, local_time_zone=time_zone, result_time_zone=time_zone)
-        
-        events = calculator.get_night_solar_altitude_events(night)
-        
-        times = dict(
-            (_get_solar_event_variable_name(name), _format_time(time))
-            for time, name in events)
-        
-        return json.dumps(times)
+    calculator = AstronomicalCalculator(station, result_times_local=True)
+    
+    events = calculator.get_night_solar_events(night)
+    
+    times = dict(
+        (_get_solar_event_variable_name(e.name), _format_time(e.time))
+        for e in events)
+    
+    return json.dumps(times)
 
 
 def _get_solar_event_variable_name(event_name):
