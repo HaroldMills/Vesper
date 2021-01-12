@@ -7,58 +7,49 @@ sunset to one half hour before sunrise, and does nothing otherwise.
 """
 
 import datetime
-import logging
 
 from vesper.command.annotator import Annotator
-import vesper.ephem.ephem_utils as ephem_utils
-
-
-_logger = logging.getLogger()
+from vesper.ephem.astronomical_calculator import AstronomicalCalculatorCache
 
 
 _START_OFFSET = datetime.timedelta(minutes=60)
 _END_OFFSET = datetime.timedelta(minutes=-30)
-_ONE_DAY = datetime.timedelta(days=1)
 
 
 class OutsideClassifier(Annotator):
     
     
-    extension_name = 'MPG Ranch Outside Classifier 1.0'
+    extension_name = 'MPG Ranch Outside Classifier 1.1'
+    
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._astronomical_calculators = AstronomicalCalculatorCache()
     
     
     def annotate(self, clip):
         
-        annotated = False
-        
+        clip_start_time = clip.start_time
         station = clip.station
-        lat = station.latitude
-        lon = station.longitude
+        night = station.get_night(clip_start_time)
+        calculator = self._astronomical_calculators.get_calculator(station)
         
-        # TODO: Perhaps (at this point at least) we should require that
-        # each station have a latitude, a longitude, and an elevation.
-        
-        if lat is None or lon is None:
-            
-            _logger.warning(
-                'Station "{}" has no latitude and/or longitude, so the '
-                'outside classifier cannot classify its clips.'.format(
-                    station.name))
-            
-        else:
-        
-            get_event_time = ephem_utils.get_event_time
-        
-            night = station.get_night(clip.start_time)
-            sunset_time = get_event_time('Sunset', lat, lon, night)
+        # Check if clip start time precedes analysis period.
+        sunset_time = calculator.get_night_solar_event_time(night, 'Sunset')
+        if sunset_time is not None:
             start_time = sunset_time + _START_OFFSET
-            
-            sunrise_date = night + _ONE_DAY
-            sunrise_time = get_event_time('Sunrise', lat, lon, sunrise_date)
-            end_time = sunrise_time + _END_OFFSET
-            
-            if clip.start_time < start_time or clip.start_time > end_time:
+            if clip_start_time < start_time:
                 self._annotate(clip, 'Outside')
-                annotated = True
-                
-        return annotated
+                return True
+        
+        # Check if clip start time follows analysis period.
+        sunrise_time = calculator.get_night_solar_event_time(night, 'Sunrise')
+        if sunrise_time is not None:
+            end_time = sunrise_time + _END_OFFSET
+            if clip_start_time > end_time:
+                self._annotate(clip, 'Outside')
+                return True
+        
+        # If we get here, the clip is not outside of the analysis period,
+        # so we will not annotate it.
+        return False

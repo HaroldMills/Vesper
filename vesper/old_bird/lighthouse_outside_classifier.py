@@ -9,13 +9,8 @@ classification otherwise.
 """
 
 
-import datetime
-
 from vesper.command.annotator import Annotator
-import vesper.ephem.ephem_utils as ephem_utils
-
-
-_ONE_DAY = datetime.timedelta(days=1)
+from vesper.ephem.astronomical_calculator import AstronomicalCalculatorCache
 
 
 class LighthouseOutsideClassifier(Annotator):
@@ -24,37 +19,36 @@ class LighthouseOutsideClassifier(Annotator):
     extension_name = 'Lighthouse Outside Classifier 1.0'
     
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._astronomical_calculators = AstronomicalCalculatorCache()
+    
+    
     def annotate(self, clip):
         
         classification = self._get_annotation_value(clip)
         
-        if classification is not None:
-            # clip is classified
+        if classification is None:
+            # clip is not classified
             
-            return False
-        
-        else:
-            # clip is unclassified
-        
-            get_event_time = ephem_utils.get_event_time
-    
+            clip_start_time = clip.start_time
             station = clip.station
-            lat = station.latitude
-            lon = station.longitude
+            night = station.get_night(clip_start_time)
+            calculator = self._astronomical_calculators.get_calculator(station)
+            get_event_time = calculator.get_night_solar_event_time
             
-            date = station.get_night(clip.start_time)
-            start_time = get_event_time('Nautical Dusk', lat, lon, date)
-            
-            date += _ONE_DAY
-            end_time = get_event_time('Nautical Dawn', lat, lon, date)
-    
-            if clip.end_time < start_time or clip.start_time > end_time:
-                # clip is outside time interval of interest
-                
+            # Check if clip start time precedes analysis period.
+            start_time = get_event_time(night, 'Nautical Dusk')
+            if start_time is not None and clip_start_time < start_time:
                 self._annotate(clip, 'Outside')
                 return True
             
-            else:
-                # clip is inside time interval of interest
-                
-                return False
+            # Check if clip start time follows analysis period.
+            end_time = get_event_time(night, 'Nautical Dawn')
+            if end_time is not None and clip_start_time > end_time:
+                self._annotate(clip, 'Outside')
+                return True
+            
+        # If we get here, the clip is already classified or within the
+        # analysis period (possibly both), so we will not annotate it.
+        return False
