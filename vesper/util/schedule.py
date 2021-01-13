@@ -62,8 +62,8 @@ class Schedule:
         
     @staticmethod
     def compile_dict(spec, lat=None, lon=None, time_zone=None):
-        context = _Context(lat, lon, time_zone)
-        return _compile_schedule(spec, context)
+        location = _Location(lat, lon, time_zone)
+        return _compile_schedule(spec, location)
     
     
     def __init__(self, intervals):
@@ -539,17 +539,17 @@ _DATE_INTERVAL_PROPERTY_NAMES = ('start_date', 'end_date')
 _ONE_DAY = datetime.timedelta(days=1)
 
 
-def _compile_schedule(spec, context):
+def _compile_schedule(spec, location):
     
     for compile_ in _SCHEDULE_COMPILER_FUNCTIONS:
-        schedule = compile_(spec, context)
+        schedule = compile_(spec, location)
         if schedule is not None:
             return schedule
             
     raise ValueError('Schedule specification was not of a recognized type.')
 
 
-def _compile_interval_schedule(spec, context):
+def _compile_interval_schedule(spec, location):
     
     try:
         interval = spec['interval']
@@ -558,7 +558,7 @@ def _compile_interval_schedule(spec, context):
     
     try:
         _check_spec_against_schema(spec, _INTERVAL_SCHEMA)
-        interval = _compile_interval(interval, context)
+        interval = _compile_interval(interval, location)
     except ValueError as e:
         raise ValueError('Bad interval schedule: {}'.format(str(e)))
     
@@ -572,7 +572,7 @@ def _check_spec_against_schema(spec, schema):
         raise ValueError(e.message)
     
         
-def _compile_interval(interval, context):
+def _compile_interval(interval, location):
     
     start = interval.get('start')
     end = interval.get('end')
@@ -581,18 +581,18 @@ def _compile_interval(interval, context):
     _check_interval_properties_count(start, end, duration)
         
     if start is None:
-        end = _compile_date_time(end, context, 'end')
+        end = _compile_date_time(end, location, 'end')
         duration = _compile_duration(duration)
         return Interval(end - duration, end)
         
     elif end is None:
-        start = _compile_date_time(start, context, 'start')
+        start = _compile_date_time(start, location, 'start')
         duration = _compile_duration(duration)
         return Interval(start, start + duration)
     
     else:
-        start = _compile_date_time(start, context, 'start')
-        end = _compile_date_time(end, context, 'end')
+        start = _compile_date_time(start, location, 'start')
+        end = _compile_date_time(end, location, 'end')
         return Interval(start, end)
     
     
@@ -611,10 +611,10 @@ def _count_non_nones(*args):
     return count
     
     
-def _compile_date_time(dt, context, dt_name):
+def _compile_date_time(dt, location, dt_name):
     
     if isinstance(dt, datetime.datetime):
-        return _naive_to_utc(dt, context, dt_name)
+        return _naive_to_utc(dt, location, dt_name)
     
     elif isinstance(dt, str):
         
@@ -625,26 +625,28 @@ def _compile_date_time(dt, context, dt_name):
             raise ValueError('Bad interval {} "{}".'.format(dt_name, dt_text))
         
         if isinstance(dt, datetime.datetime):
-            return _naive_to_utc(dt, context, dt_name, dt_text)
+            return _naive_to_utc(dt, location, dt_name, dt_text)
             
         else:
-            _check_context_attribute(context.lat, 'latitude', dt_name, dt_text)
-            _check_context_attribute(
-                context.lon, 'longitude', dt_name, dt_text)
-            return dt.resolve(context)
+            _check_location_attribute(
+                location.lat, 'latitude', dt_name, dt_text)
+            _check_location_attribute(
+                location.lon, 'longitude', dt_name, dt_text)
+            return dt.resolve(location)
         
     else:
         raise ValueError(
             'Bad interval {} {}.'.format(dt_name, str(dt)))
         
     
-def _naive_to_utc(dt, context, dt_name, dt_text=None):
-    _check_context_attribute(context.time_zone, 'time zone', dt_name, dt_text)
-    localized_dt = context.time_zone.localize(dt)
+def _naive_to_utc(dt, location, dt_name, dt_text=None):
+    _check_location_attribute(
+        location.time_zone, 'time zone', dt_name, dt_text)
+    localized_dt = location.time_zone.localize(dt)
     return localized_dt.astimezone(pytz.utc)
     
 
-def _check_context_attribute(value, name, dt_name, dt_text=None):
+def _check_location_attribute(value, name, dt_name, dt_text=None):
     
     if value is None:
         
@@ -665,7 +667,7 @@ def _compile_duration(duration):
         raise ValueError('Bad interval duration "{}".'.format(duration))
     
     
-def _compile_intervals_schedule(spec, context):
+def _compile_intervals_schedule(spec, location):
     
     try:
         intervals = spec['intervals']
@@ -674,14 +676,14 @@ def _compile_intervals_schedule(spec, context):
     
     try:
         _check_spec_against_schema(spec, _INTERVALS_SCHEMA)
-        intervals = tuple(_compile_interval(i, context) for i in intervals)
+        intervals = tuple(_compile_interval(i, location) for i in intervals)
     except ValueError as e:
         raise ValueError('Bad intervals schedule: {}'.format(str(e)))
     
     return Schedule(intervals)
 
     
-def _compile_daily_schedule(spec, context):
+def _compile_daily_schedule(spec, location):
     
     try:
         daily = spec['daily']
@@ -692,7 +694,7 @@ def _compile_daily_schedule(spec, context):
         _check_daily_properties(spec)
         dates = _compile_daily_dates(daily)
         time_intervals = _compile_daily_time_intervals(daily)
-        intervals = _compile_daily_intervals(dates, time_intervals, context)
+        intervals = _compile_daily_intervals(dates, time_intervals, location)
     except ValueError as e:
         raise ValueError('Bad daily schedule: {}'.format(str(e)))
     
@@ -867,11 +869,11 @@ def _compile_time(time, name):
     return result
 
 
-def _compile_daily_intervals(dates, time_intervals, context):
-    return tuple(_compile_daily_intervals_aux(dates, time_intervals, context))
+def _compile_daily_intervals(dates, time_intervals, location):
+    return tuple(_compile_daily_intervals_aux(dates, time_intervals, location))
 
 
-def _compile_daily_intervals_aux(dates, time_intervals, context):
+def _compile_daily_intervals_aux(dates, time_intervals, location):
     
     combine = _combine_date_and_time
     
@@ -880,52 +882,52 @@ def _compile_daily_intervals_aux(dates, time_intervals, context):
         for interval in time_intervals:
             
             if 'start' not in interval:
-                end = combine(date, interval['end'], context, 'end')
+                end = combine(date, interval['end'], location, 'end')
                 duration = interval['duration']
                 yield Interval(end - duration, end)
                 
             elif 'end' not in interval:
-                start = combine(date, interval['start'], context, 'start')
+                start = combine(date, interval['start'], location, 'start')
                 duration = interval['duration']
                 yield Interval(start, start + duration)
                 
             else:
-                start = combine(date, interval['start'], context, 'start')
-                end = _get_daily_interval_end(start, interval['end'], context)
+                start = combine(date, interval['start'], location, 'start')
+                end = _get_daily_interval_end(start, interval['end'], location)
                 yield Interval(start, end)
             
             
-def _combine_date_and_time(date, time, context, name):
+def _combine_date_and_time(date, time, location, name):
     
     if isinstance(time, datetime.time):
-        _check_context_attribute(context.time_zone, 'time zone', name)
+        _check_location_attribute(location.time_zone, 'time zone', name)
         naive_dt = datetime.datetime.combine(date, time)
-        localized_dt = context.time_zone.localize(naive_dt)
+        localized_dt = location.time_zone.localize(naive_dt)
         return localized_dt.astimezone(pytz.utc)
         
     else:
-        _check_context_attribute(context.lat, 'latitude', name)
-        _check_context_attribute(context.lon, 'longitude', name)
+        _check_location_attribute(location.lat, 'latitude', name)
+        _check_location_attribute(location.lon, 'longitude', name)
         dt = _SolarEventDateTime(date, time.event_name, time.offset)
-        return dt.resolve(context)
+        return dt.resolve(location)
 
 
-def _get_daily_interval_end(start, end_time, context):
+def _get_daily_interval_end(start, end_time, location):
     
     combine = _combine_date_and_time
     date = start.date()
     
-    end = combine(date, end_time, context, 'end')
+    end = combine(date, end_time, location, 'end')
     
     if end < start:
         # end time will be on date following start time
         
-        end = combine(date + _ONE_DAY, end_time, context, 'end')
+        end = combine(date + _ONE_DAY, end_time, location, 'end')
         
     return end
         
 
-def _compile_union_schedule(spec, context):
+def _compile_union_schedule(spec, location):
     
     try:
         union = spec['union']
@@ -937,7 +939,7 @@ def _compile_union_schedule(spec, context):
     except ValueError as e:
         raise ValueError('Bad union schedule: {}'.format(str(e)))
     
-    schedules = tuple(_compile_schedule(s, context) for s in union)
+    schedules = tuple(_compile_schedule(s, location) for s in union)
     intervals = tuple(itertools.chain.from_iterable(
         s.get_intervals() for s in schedules))
     
@@ -952,9 +954,10 @@ _SCHEDULE_COMPILER_FUNCTIONS = (
 )
 
 
-# This module uses its own `_Context` class instead of the
-# `AstronomicalCalculator.Location` class
-class _Context:
+# TODO: Use `AstronomicalCalculator.Location` class instead of this one?
+
+
+class _Location:
     
     def __init__(self, lat=None, lon=None, time_zone=None):
         self.lat = lat
@@ -1270,8 +1273,8 @@ class _SolarEventTime:
             self.offset = offset
          
          
-    def resolve(self, context, date):
-        return _resolve(date, self.event_name, context, self.offset)
+    def resolve(self, location, date):
+        return _resolve(date, self.event_name, location, self.offset)
          
          
 class _SolarEventDateTime:
@@ -1288,14 +1291,14 @@ class _SolarEventDateTime:
             self.offset = offset
          
          
-    def resolve(self, context):
-        return _resolve(self.date, self.event_name, context, self.offset)
+    def resolve(self, location):
+        return _resolve(self.date, self.event_name, location, self.offset)
  
  
-def _resolve(date, event_name, context, offset):
+def _resolve(date, event_name, location, offset):
     
-    context = Location(context.lat, context.lon, context.time_zone)
-    calculator = AstronomicalCalculator(context)
+    location = Location(location.lat, location.lon, location.time_zone)
+    calculator = AstronomicalCalculator(location)
     dt = calculator.get_day_solar_event_time(date, event_name)
      
     if dt is None:
