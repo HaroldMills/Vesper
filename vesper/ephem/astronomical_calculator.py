@@ -209,6 +209,18 @@ class AstronomicalCalculator:
     name (e.g. "US/Eastern") or a `datetime.tzinfo` subclass, including
     a `pytz` time zone.
     
+    Note that it is essential for the correct functioning of the
+    various methods of this class that yield event times for a
+    particular date (including the `get_solar_noon`,
+    `get_solar_midnight`, `get_day_solar_events`,
+    `get_night_solar_events`, `get_day_solar_event_time`, and
+    `get_night_solar_event_time` methods) that an
+    `AstronomicalCalculator` know the time zone of its location.
+    It is only with such a time zone that the methods can relate
+    a time on a specific date to the correct UTC time for any
+    location on earth, including all locations near the
+    international date line.
+    
     The `result_times_local` initializer argument determines whether
     times returned by the methods of a calculator are in the local
     time zone or UTC.
@@ -328,10 +340,30 @@ class AstronomicalCalculator:
     def _get_solar_noon_or_midnight(self, date, noon):
         
         # Get start hour of day and duration in hours of period that
-        # includes desired solar noon or midnight.
-        start_hour = 9 if noon else 21
-        duration = 6
+        # includes desired solar noon or midnight. We use a period
+        # from four hours before noon or midnight in the local time
+        # zone to account for the full range of possible differences
+        # between local clock time and local solar time all over the
+        # earth.
+        start_hour = 8 if noon else 20
+        duration = 8
         
+        # Note that it is essential for the correct functioning of
+        # this method that we use the local time zone of this
+        # calculator's location to construct the start time of
+        # the search interval for the desired solar noon or midnight.
+        # It is only with such a time zone that the method can relate
+        # a time on a specific date to the correct UTC time for any
+        # location on earth, including all locations near the
+        # international date line.
+        #
+        # Note that this is the only place in this class where we
+        # use the local time zone, except for those where we convert
+        # result times to it. The usage is essential, however, for
+        # all methods that find events by date, including the
+        # `get_solar_noon`, `get_solar_midnight`, `get_day_solar_events`,
+        # `get_night_solar_events`, `get_day_solar_event_time`, and
+        # `get_night_solar_event_time` methods.
         local_start_time = _create_aware_datetime(
             self.location.time_zone, date.year, date.month, date.day,
             start_hour)
