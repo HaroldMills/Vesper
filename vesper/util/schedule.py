@@ -10,8 +10,9 @@ import re
 import jsonschema
 import pytz
 
+from vesper.ephem.astronomical_calculator import (
+    AstronomicalCalculator, Location)
 from vesper.util.notifier import Notifier
-import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
@@ -630,7 +631,7 @@ def _compile_date_time(dt, context, dt_name):
             _check_context_attribute(context.lat, 'latitude', dt_name, dt_text)
             _check_context_attribute(
                 context.lon, 'longitude', dt_name, dt_text)
-            return dt.resolve(context.lat, context.lon)
+            return dt.resolve(context)
         
     else:
         raise ValueError(
@@ -906,12 +907,10 @@ def _combine_date_and_time(date, time, context, name):
         _check_context_attribute(context.lat, 'latitude', name)
         _check_context_attribute(context.lon, 'longitude', name)
         dt = _SolarEventDateTime(date, time.event_name, time.offset)
-        return dt.resolve(context.lat, context.lon)
+        return dt.resolve(context)
 
 
 def _get_daily_interval_end(start, end_time, context):
-    
-    # TODO: Consider changing this when issue 85 is fixed.
     
     combine = _combine_date_and_time
     date = start.date()
@@ -951,8 +950,10 @@ _SCHEDULE_COMPILER_FUNCTIONS = (
     _compile_daily_schedule,
     _compile_union_schedule
 )
- 
-    
+
+
+# This module uses its own `_Context` class instead of the
+# `AstronomicalCalculator.Location` class
 class _Context:
     
     def __init__(self, lat=None, lon=None, time_zone=None):
@@ -1269,8 +1270,8 @@ class _SolarEventTime:
             self.offset = offset
          
          
-    def resolve(self, lat, lon, date):
-        return _resolve(date, self.event_name, lat, lon, self.offset)
+    def resolve(self, context, date):
+        return _resolve(date, self.event_name, context, self.offset)
          
          
 class _SolarEventDateTime:
@@ -1287,13 +1288,15 @@ class _SolarEventDateTime:
             self.offset = offset
          
          
-    def resolve(self, lat, lon):
-        return _resolve(self.date, self.event_name, lat, lon, self.offset)
+    def resolve(self, context):
+        return _resolve(self.date, self.event_name, context, self.offset)
  
  
-def _resolve(date, event_name, lat, lon, offset):
-     
-    dt = ephem_utils.get_event_time(event_name, lat, lon, date)
+def _resolve(date, event_name, context, offset):
+    
+    context = Location(context.lat, context.lon, context.time_zone)
+    calculator = AstronomicalCalculator(context)
+    dt = calculator.get_day_solar_event_time(date, event_name)
      
     if dt is None:
         return None

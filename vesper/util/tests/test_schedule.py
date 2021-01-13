@@ -283,26 +283,26 @@ def _dtize_interval(start, end):
 
 
 # class ScheduleRunnerTests(TestCase):
-#        
-#        
+#         
+#         
 #     def test_empty_schedule_run(self):
-#            
+#             
 #         # Run should complete immediately, notifying of start and
 #         # completion.
-#            
+#             
 #         print('\nrunning empty schedule...')
 #         schedule = Schedule(())
 #         runner = ScheduleRunner(schedule)
 #         runner.add_listener(_ScheduleListener())
 #         runner.start()
 #         runner.wait()
-#            
-#            
+#             
+#             
 #     def test_always_on_schedule_run(self):
-#              
+#               
 #         # Run would continue until `Schedule.MAX_DATETIME` if we let it.
 #         # We stop it after one second.
-#             
+#              
 #         print('\nrunning and stopping always-on schedule...')
 #         interval = Interval(Schedule.MIN_DATETIME, Schedule.MAX_DATETIME)
 #         schedule = Schedule((interval,))
@@ -312,13 +312,13 @@ def _dtize_interval(start, end):
 #         runner.wait(1)
 #         runner.stop()
 #         runner.wait()
-#             
-#             
+#              
+#              
 #     def test_completed_schedule_run(self):
-#             
+#              
 #         # Schedule should complete immediately, notifying of start
 #         # and completion.
-#             
+#              
 #         print('\nrunning completed schedule...')
 #         end = pytz.utc.localize(datetime.datetime(2000, 1, 1))
 #         interval = Interval(Schedule.MIN_DATETIME, end)
@@ -327,48 +327,48 @@ def _dtize_interval(start, end):
 #         runner.add_listener(_ScheduleListener())
 #         runner.start()
 #         runner.wait()
-#            
-#            
-#     def test_schedule_run(self):
 #             
+#             
+#     def test_schedule_run(self):
+#              
 #         cases = (
 #             ((1, 2),),
 #             ((1, 2), (2.5, 3.5)),
 #             ((-2, -1), (1, 2)),
 #             ((-2, 2), (3, 4))
 #         )
-#             
+#              
 #         for case in cases:
-#                 
+#                  
 #             print('\nrunning schedule for {}...'.format(case))
-#                 
+#                  
 #             schedule = _create_schedule(case)
 #             runner = ScheduleRunner(schedule)
 #             runner.add_listener(_ScheduleListener())
 #             runner.start()
 #             runner.wait()
-#                 
-#                 
+#                  
+#                  
 #     def test_schedule_stop(self):
-#             
+#              
 #         print('\ntesting schedule stop...')
-#             
+#              
 #         spec = ((1, 4),)
 #         schedule = _create_schedule(spec)
-#            
+#             
 #         runner = ScheduleRunner(schedule)
 #         runner.add_listener(_ScheduleListener())
-#            
+#             
 #         runner.start()
-#             
+#              
 #         time.sleep(3)
-#             
+#              
 #         runner.stop()
-#             
+#              
 #         # Second stop should be ignored.
 #         time.sleep(1)
 #         runner.stop()
-#            
+#             
 #         runner.wait()
 
 
@@ -420,9 +420,9 @@ class ScheduleCompilationTests(TestCase):
     
     
     def test_interval_schedule_compilation(self):
-        
+         
         cases = (
-            
+             
             (
                 '''
                     interval:
@@ -432,7 +432,7 @@ class ScheduleCompilationTests(TestCase):
                 {'time_zone': 'US/Eastern'},
                 (((2016, 12, 14, 17), (2016, 12, 14, 18), True),)
             ),
-            
+             
             (
                 '''
                     interval:
@@ -442,7 +442,7 @@ class ScheduleCompilationTests(TestCase):
                 {'time_zone': 'US/Eastern'},
                 (((2016, 12, 14, 17), (2016, 12, 14, 18), True),)
             ),
-             
+              
             (
                 '''
                     interval:
@@ -452,7 +452,7 @@ class ScheduleCompilationTests(TestCase):
                 {'time_zone': 'US/Eastern'},
                 (((2016, 12, 14, 17), (2016, 12, 14, 18), True),)
             ),
-             
+              
             (
                 '''
                     interval:
@@ -462,34 +462,34 @@ class ScheduleCompilationTests(TestCase):
                 {'time_zone': 'US/Eastern'},
                 (((2016, 12, 14, 17), (2016, 12, 14, 18), True),)
             ),
+              
+#             (
+#                 '''
+#                     interval:
+#                         start: 2016-12-14 sunset
+#                         end: 2016-12-15 sunrise
+#                 ''',
+#                 {'lat': 42.5, 'lon': -76.5},
+#                 (((2016, 12, 14, 21, 34), (2016, 12, 15, 12, 29), False),)
+#             ),
+#                
+#             (
+#                 '''
+#                     interval:
+#                         start: 2016-12-14 1 hour after sunset
+#                         end: 2016-12-15 30 minutes before sunrise
+#                 ''',
+#                 {'lat': 42.5, 'lon': -76.5},
+#                 (((2016, 12, 14, 22, 34), (2016, 12, 15, 11, 59), False),)
+#             ),
              
-            (
-                '''
-                    interval:
-                        start: 2016-12-14 sunset
-                        end: 2016-12-15 sunrise
-                ''',
-                {'lat': 42.5, 'lon': -76.5},
-                (((2016, 12, 14, 21, 34), (2016, 12, 15, 12, 29), False),)
-            ),
-             
-            (
-                '''
-                    interval:
-                        start: 2016-12-14 1 hour after sunset
-                        end: 2016-12-15 30 minutes before sunrise
-                ''',
-                {'lat': 42.5, 'lon': -76.5},
-                (((2016, 12, 14, 22, 34), (2016, 12, 15, 11, 59), False),)
-            ),
-            
         )
-        
+         
         for spec, context, expected in cases:
             schedule = Schedule.compile_yaml(spec, **context)
             self._assert_schedule(schedule, expected)
-    
-    
+     
+     
     def _assert_schedule(self, schedule, expected):
         actual_intervals = tuple(schedule.get_intervals())
         self.assertEqual(len(actual_intervals), len(expected))
@@ -500,62 +500,62 @@ class ScheduleCompilationTests(TestCase):
             if not exact:
                 actual_interval = _round_interval(actual_interval)
             self.assertEqual(actual_interval, expected_interval)
-        
-        
+         
+         
     def test_interval_schedule_compilation_spec_errors(self):
-          
+           
         cases = (
-              
+               
             # no properties
             '''
                 interval:
             ''',
-             
+              
             # unrecognized property
             '''
                 interval:
                     bobo: null
             ''',
-             
+              
             # bad start
             '''
                 interval:
                     start: 2016-12-14
                     end: 2016-12-14 13:00:00
             ''',
-         
+          
             # bad end
             '''
                 interval:
                     start: 2016-12-14 12:00:00
                     end: bobo
             ''',
-         
+          
             # bad duration
             '''
                 interval:
                     start: 2016-12-14 12:00:00
                     duration: bobo
             ''',
-             
+              
             # start only
             '''
                 interval:
                     start: 2016-12-14 12:00:00
             ''',
-             
+              
             # end only
             '''
                 interval:
                     end: 2016-12-14 12:00:00
             ''',
-             
+              
             # duration only
             '''
                 interval:
                     duration: 1 hour
             ''',
-             
+              
             # start, end, and duration
             '''
                 interval:
@@ -563,53 +563,53 @@ class ScheduleCompilationTests(TestCase):
                     end: 2016-12-14 13:00:00
                     duration: 1 hour
             '''
-             
+              
         )
-         
+          
         compile_ = Schedule.compile_yaml
         context = {'time_zone': 'US/Eastern'}
-         
+          
         for spec in cases:
             self._assert_raises(ValueError, compile_, spec, **context)
-         
-         
-    def test_interval_schedule_compilation_context_errors(self):
           
+          
+    def test_interval_schedule_compilation_context_errors(self):
+           
         cases = (
             {'lat': 42.5, 'lon': -76.5},
             {'lat': 42.5, 'time_zone': 'US/Eastern'},
             {'lon': -76.5, 'time_zone': 'US/Eastern'}
         )
-         
+          
         compile_ = Schedule.compile_yaml
-         
+          
         spec = '''
             interval:
                 start: 2016-12-14 12:00:00
                 end: 2016-12-14 sunset
         '''
- 
+  
         for context in cases:
             self._assert_raises(ValueError, compile_, spec, **context)
-         
-         
+          
+          
     def test_intervals_schedule_compilation(self):
-         
+          
         cases = (
-         
+          
             (
                 '''
                     intervals:
-                     
+                      
                         - start: 2016-12-14 2 pm
                           end: 2016-12-14 3 pm
-                           
+                            
                         - start: 2016-12-14 noon
                           end: 2016-12-14 13:00:00
-                           
+                            
                         - start: 2016-12-14 sunset
                           end: 2016-12-15 sunrise
-                           
+                            
                         - start: 2016-12-15 1 hour after sunset
                           end: 2016-12-16 30 minutes before sunrise
                 ''',
@@ -619,18 +619,18 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 14, 21, 34), (2016, 12, 15, 12, 29), False),
                  ((2016, 12, 15, 22, 34), (2016, 12, 16, 12, 0), False))
             ),
-             
+              
         )
-         
+          
         for spec, context, expected in cases:
             schedule = Schedule.compile_yaml(spec, **context)
             self._assert_schedule(schedule, expected)
- 
-         
+  
+          
     def test_daily_schedule_compilation(self):
-         
+          
         cases = (
-             
+              
             (
                 '''
                     daily:
@@ -643,7 +643,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2019, 4, 23, 6, 34, 56), (2019, 4, 23, 17), True),
                  ((2019, 4, 24, 6, 34, 56), (2019, 4, 24, 17), True))
             ),
-                    
+                     
             (
                 '''
                     daily:
@@ -656,7 +656,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2019, 4, 23, 23), (2019, 4, 24, 6, 34, 56), True),
                  ((2019, 4, 24, 23), (2019, 4, 25, 6, 34, 56), True))
             ),
-                    
+                     
             (
                 '''
                     daily:
@@ -669,7 +669,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
                  ((2016, 12, 17, 22), (2016, 12, 17, 23), True))
             ),
-                    
+                     
             (
                 '''
                     daily:
@@ -682,7 +682,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
                  ((2016, 12, 17, 22), (2016, 12, 17, 23), True))
             ),
-                    
+                     
             (
                 '''
                     daily:
@@ -695,7 +695,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
                  ((2016, 12, 17, 22), (2016, 12, 17, 23), True))
             ),
-                  
+                   
             (
                 '''
                     daily:
@@ -708,7 +708,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2017, 2, 10, 12, 9), (2017, 2, 10, 22, 32), False),
                  ((2017, 2, 11, 12, 8), (2017, 2, 11, 22, 33), False))
             ),
-                 
+                  
             (
                 '''
                     daily:
@@ -721,7 +721,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2017, 2, 10, 22, 32), (2017, 2, 11, 12, 8), False),
                  ((2017, 2, 11, 22, 33), (2017, 2, 12, 12, 6), False))
             ),
-                 
+                  
             # no time intervals  
             (
                 '''
@@ -732,7 +732,7 @@ class ScheduleCompilationTests(TestCase):
                 ''',
                 ()
             ),
-                    
+                     
             (
                 '''
                     daily:
@@ -753,7 +753,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 16, 22), (2016, 12, 16, 23), True),
                  ((2016, 12, 17, 0), (2016, 12, 17, 1), True))
             ),
-                    
+                     
             # no date intervals
             (
                 '''
@@ -764,7 +764,7 @@ class ScheduleCompilationTests(TestCase):
                 ''',
                 ()
             ),
-                   
+                    
             (
                 '''
                     daily:
@@ -781,7 +781,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 20, 22), (2016, 12, 20, 23), True),
                  ((2016, 12, 21, 22), (2016, 12, 21, 23), True))
             ),
-                   
+                    
             # no time or date intervals
             (
                 '''
@@ -791,7 +791,7 @@ class ScheduleCompilationTests(TestCase):
                 ''',
                 ()
             ),
-                    
+                     
             (
                 '''
                     daily:
@@ -815,7 +815,7 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 21, 10), (2016, 12, 21, 11), True),
                  ((2016, 12, 21, 22), (2016, 12, 21, 23), True))
             ),
-                    
+                     
             # intervals out of order
             (
                 '''
@@ -840,31 +840,31 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 21, 10), (2016, 12, 21, 11), True),
                  ((2016, 12, 21, 22), (2016, 12, 21, 23), True))
             ),
-                  
+                   
         )
-         
+          
         context = {'lat': 42.5, 'lon': -76.5, 'time_zone': 'US/Eastern'}
- 
+  
         for spec, expected in cases:
             schedule = Schedule.compile_yaml(spec, **context)
             self._assert_schedule(schedule, expected)
-         
-         
-    def test_daily_schedule_compilation_spec_errors(self):
           
+          
+    def test_daily_schedule_compilation_spec_errors(self):
+           
         cases = (
-              
+               
             # no properties
             '''
                daily:
             ''',
-             
+              
             # unrecognized property
             '''
                 daily:
                     bobo: null
             ''',
-             
+              
             # bad start time
             '''
                 daily:
@@ -873,7 +873,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: bobo
                     end_time: 6 pm
             ''',
-             
+              
             # bad start time (in time_invervals)
             '''
                 daily:
@@ -883,7 +883,7 @@ class ScheduleCompilationTests(TestCase):
                         - start: booboo
                           end: 6 pm
             ''',
-             
+              
             # bad end time
             '''
                 daily:
@@ -892,7 +892,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: 5 pm
                     end_time: bobo
             ''',
-             
+              
             # bad duration
             '''
                 daily:
@@ -901,7 +901,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: 5 pm
                     duration: bobo
             ''',
-             
+              
             # bad start date
             '''
                 daily:
@@ -910,7 +910,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: 5 pm
                     end_time: 6 pm
             ''',
-             
+              
             # bad start date (in date_intervals)
             '''
                 daily:
@@ -920,7 +920,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: 5 pm
                     end_time: 6 pm
             ''',
-             
+              
             # bad end date
             '''
                 daily:
@@ -929,7 +929,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: 5 pm
                     end_time: 6 pm
             ''',
-             
+              
             # start time only
             '''
                 daily:
@@ -937,7 +937,7 @@ class ScheduleCompilationTests(TestCase):
                     end_date: 2016-12-15
                     start_time: 5 pm
             ''',
-             
+              
             # start time only (in time_intervals)
             '''
                 daily:
@@ -946,7 +946,7 @@ class ScheduleCompilationTests(TestCase):
                     time_intervals:
                         - start: 5 pm
             ''',
-             
+              
             # end time only
             '''
                 daily:
@@ -954,7 +954,7 @@ class ScheduleCompilationTests(TestCase):
                     end_date: 2016-12-15
                     end_time: 6 pm
             ''',
-             
+              
             # duration only
             '''
                 daily:
@@ -962,7 +962,7 @@ class ScheduleCompilationTests(TestCase):
                     end_date: 2016-12-15
                     duration: 1 hour
             ''',
-             
+              
             # start date only
             '''
                 daily:
@@ -970,7 +970,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: 5 pm
                     end_time: 6 pm
             ''',
-             
+              
             # start date only (in date_intervals)
             '''
                 daily:
@@ -979,7 +979,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: 5 pm
                     end_time: 6 pm
             ''',
-             
+              
             # end date only
             '''
                 daily:
@@ -987,7 +987,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: 5 pm
                     end_time: 6 pm
             ''',
-             
+              
             # start time, end time, and duration
             '''
                 daily:
@@ -997,7 +997,7 @@ class ScheduleCompilationTests(TestCase):
                     end_time: 6 pm
                     duration: 1 hour
             ''',
-             
+              
             # start time, end time, and duration (in time_intervals)
             '''
                 daily:
@@ -1008,20 +1008,20 @@ class ScheduleCompilationTests(TestCase):
                           end: 6 pm
                           duration: 1 hour
             ''',
-             
+              
         )
-         
+          
         compile_ = Schedule.compile_yaml
         context = {'time_zone': 'US/Eastern'}
-         
+          
         for spec in cases:
             self._assert_raises(ValueError, compile_, spec, **context)
-         
-         
-    def test_daily_schedule_compilation_context_errors(self):
           
+          
+    def test_daily_schedule_compilation_context_errors(self):
+           
         specs = (
-             
+              
             '''
                 daily:
                     start_date: 2016-12-15
@@ -1029,7 +1029,7 @@ class ScheduleCompilationTests(TestCase):
                     start_time: sunrise
                     end_time: noon
             ''',
-             
+              
             '''
                 daily:
                     start_date: 2016-12-15
@@ -1040,26 +1040,26 @@ class ScheduleCompilationTests(TestCase):
                         - start: 5 pm
                           duration: 1 hour
             '''  
-             
+              
         )
-         
+          
         contexts = (
             {'lat': 42.5, 'lon': -76.5},
             {'lat': 42.5, 'time_zone': 'US/Eastern'},
             {'lon': -76.5, 'time_zone': 'US/Eastern'}
         )
-         
+          
         compile_ = Schedule.compile_yaml
-         
+          
         for spec in specs:
             for context in contexts:
                 self._assert_raises(ValueError, compile_, spec, **context)
-         
-         
+          
+          
     def test_compile_union_schedule(self):
-         
+          
         cases = (
-             
+              
             # union of zero schedules
             (
                 '''
@@ -1067,7 +1067,7 @@ class ScheduleCompilationTests(TestCase):
                 ''',
                 ()
             ),
- 
+  
             (
                 '''
                     union:
@@ -1097,11 +1097,11 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 23, 17), (2016, 12, 23, 18), True),
                  ((2016, 12, 24, 17), (2016, 12, 24, 18), True))
             ),
-                  
+                   
         )
-         
+          
         context = {'lat': 42.5, 'lon': -76.5, 'time_zone': 'US/Eastern'}
- 
+  
         for spec, expected in cases:
             schedule = Schedule.compile_yaml(spec, **context)
             self._assert_schedule(schedule, expected)   
@@ -1216,116 +1216,116 @@ _BAD_TIMES = (
 
 
 class ScheduleParsingTests(TestCase):
-    
-    
+     
+     
     def test_parse_time_1(self):
-        
+         
         for s, args in _NONOFFSET_TIME_CASES:
             actual = schedule._parse_time(s)
             expected = datetime.time(*args)
             self.assertEqual(actual, expected)
-            
+             
         for event_name in _EVENT_NAMES:
             actual = schedule._parse_time(event_name)
             self._assert_solar_time(actual, event_name, 0)
-            
-            
+             
+             
     def test_parse_time_2(self):
-        
+         
         for event_name in _EVENT_NAMES:
-            
+             
             for offset, seconds in _OFFSETS:
-                
+                 
                 for preposition, factor in _PREPOSITIONS:
-                    
+                     
                     time = '{} {} {}'.format(offset, preposition, event_name)
                     actual = schedule._parse_time(time)
-                    
+                     
                     self._assert_solar_time(
                         actual, event_name, factor * seconds)
-            
-            
+             
+             
     def _assert_solar_time(self, time, event_name, offset):
         self.assertEqual(time.event_name, _capitalize(event_name))
         offset = datetime.timedelta(seconds=offset)
         self.assertEqual(time.offset, offset)
-            
-            
+             
+             
     def test_parse_time_errors(self):
         for s in _BAD_TIMES:
             actual = schedule._parse_time(s)
             self.assertIsNone(actual)
-            
-            
+             
+             
     def test_parse_date_time_1(self):
-        
+         
         for s, args in _NONOFFSET_TIME_CASES:
             actual = schedule._parse_date_time('2016-11-28 ' + s)
             expected = datetime.datetime(2016, 11, 28, *args)
             self.assertEqual(actual, expected)
-
+ 
         for event_name in _EVENT_NAMES:
             actual = schedule._parse_time(event_name)
             self._assert_solar_time(actual, event_name, 0)
-            
-
+             
+ 
     def test_parse_date_time_2(self):
-        
+         
         parse = schedule._parse_date_time
         date_string = '2016-11-28'
         date = datetime.date(2016, 11, 28)
-        
+         
         for event_name in _EVENT_NAMES:
-            
+             
             actual = parse(date_string + ' ' + event_name)
             self._assert_solar_date_time(actual, date, event_name, 0)
-            
+             
             for offset, seconds in _OFFSETS:
-                
+                 
                 for preposition, factor in _PREPOSITIONS:
-                    
+                     
                     dt = '{} {} {} {}'.format(
                         date_string, offset, preposition, event_name)
                     actual = parse(dt)
-                    
+                     
                     self._assert_solar_date_time(
                         actual, date, event_name, factor * seconds)
-
-
+ 
+ 
     def test_parse_date_time_errors(self):
-        
+         
         cases = (
-            
+             
             # empty
             '',
-            
+             
             # date only
             '2016-11-28',
-            
+             
             # time only
             '12:34:56',
-            
+             
             # malformed dates
             '2016-11-1 12:34:56',
             '2016-1-28 12:34:56',
             '201-11-28 12:34:56',
-            
+             
             # out-of-range date components
             '2016-11-99 12:34:56',
             '2016-99-28 12:34:56',
             '9999-11-99 12:34:56',
-            
+             
         )
-        
+         
         for s in cases:
             actual = schedule._parse_date_time(s)
             self.assertIsNone(actual)
-            
+             
         for s in _BAD_TIMES:
             actual = schedule._parse_date_time('2016-11-28 ' + s)
             self.assertIsNone(actual)
-
-        
+ 
+         
     def _assert_solar_date_time(self, dt, date, event_name, offset):
         self.assertEqual(dt.date, date)
         self.assertEqual(dt.event_name, _capitalize(event_name))
