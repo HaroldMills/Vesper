@@ -962,17 +962,17 @@ _SCHEDULE_COMPILER_FUNCTIONS = (
 )
 
 
-# TODO: Use `AstronomicalCalculator.Location` class instead of this one?
-
-
 class _Location:
     
     def __init__(self, latitude=None, longitude=None, time_zone=None):
+        
         self.latitude = latitude
         self.longitude = longitude
-        self.time_zone = time_zone
-        if isinstance(self.time_zone, str):
-            self.time_zone = pytz.timezone(self.time_zone)
+        
+        if isinstance(time_zone, str):
+            self.time_zone = pytz.timezone(time_zone)
+        else:
+            self.time_zone = time_zone
             
         
 _HHMMSS = re.compile(r'(\d?\d):(\d\d):(\d\d)')
