@@ -47,6 +47,14 @@ class Schedule:
     MAX_DATETIME = pytz.utc.localize(datetime.datetime.max)
     
     
+    # The `latitude`, `longitude`, and `time_zone` arguments to
+    # `compile_yaml` and `compile_dict` are separate rather than
+    # collected into an object since for many purposes (namely,
+    # those that involve schedules that specify local times but
+    # no solar events like sunrise or sunset) the time zone is
+    # needed but not the latitude and longitude.
+    
+    
     @staticmethod
     def compile_yaml(spec, lat=None, lon=None, time_zone=None):
         
