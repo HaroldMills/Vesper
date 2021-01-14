@@ -56,7 +56,7 @@ class Schedule:
     
     
     @staticmethod
-    def compile_yaml(spec, lat=None, lon=None, time_zone=None):
+    def compile_yaml(spec, latitude=None, longitude=None, time_zone=None):
         
         try:
             spec = yaml_utils.load(spec)
@@ -65,12 +65,12 @@ class Schedule:
                 'Could not load schedule YAML. Error message was: {}'.format(
                     e.message))
             
-        return Schedule.compile_dict(spec, lat, lon, time_zone)
+        return Schedule.compile_dict(spec, latitude, longitude, time_zone)
     
         
     @staticmethod
-    def compile_dict(spec, lat=None, lon=None, time_zone=None):
-        location = _Location(lat, lon, time_zone)
+    def compile_dict(spec, latitude=None, longitude=None, time_zone=None):
+        location = _Location(latitude, longitude, time_zone)
         return _compile_schedule(spec, location)
     
     
@@ -637,9 +637,9 @@ def _compile_date_time(dt, location, dt_name):
             
         else:
             _check_location_attribute(
-                location.lat, 'latitude', dt_name, dt_text)
+                location.latitude, 'latitude', dt_name, dt_text)
             _check_location_attribute(
-                location.lon, 'longitude', dt_name, dt_text)
+                location.longitude, 'longitude', dt_name, dt_text)
             return dt.resolve(location)
         
     else:
@@ -914,8 +914,8 @@ def _combine_date_and_time(date, time, location, name):
         return localized_dt.astimezone(pytz.utc)
         
     else:
-        _check_location_attribute(location.lat, 'latitude', name)
-        _check_location_attribute(location.lon, 'longitude', name)
+        _check_location_attribute(location.latitude, 'latitude', name)
+        _check_location_attribute(location.longitude, 'longitude', name)
         dt = _SolarEventDateTime(date, time.event_name, time.offset)
         return dt.resolve(location)
 
@@ -967,9 +967,9 @@ _SCHEDULE_COMPILER_FUNCTIONS = (
 
 class _Location:
     
-    def __init__(self, lat=None, lon=None, time_zone=None):
-        self.lat = lat
-        self.lon = lon
+    def __init__(self, latitude=None, longitude=None, time_zone=None):
+        self.latitude = latitude
+        self.longitude = longitude
         self.time_zone = time_zone
         if isinstance(self.time_zone, str):
             self.time_zone = pytz.timezone(self.time_zone)
@@ -1305,7 +1305,8 @@ class _SolarEventDateTime:
  
 def _resolve(date, event_name, location, offset):
     
-    location = Location(location.lat, location.lon, location.time_zone)
+    location = Location(
+        location.latitude, location.longitude, location.time_zone)
     calculator = AstronomicalCalculator(location)
     dt = calculator.get_day_solar_event_time(date, event_name)
      

@@ -462,31 +462,11 @@ class ScheduleCompilationTests(TestCase):
                 {'time_zone': 'US/Eastern'},
                 (((2016, 12, 14, 17), (2016, 12, 14, 18), True),)
             ),
-              
-#             (
-#                 '''
-#                     interval:
-#                         start: 2016-12-14 sunset
-#                         end: 2016-12-15 sunrise
-#                 ''',
-#                 {'lat': 42.5, 'lon': -76.5},
-#                 (((2016, 12, 14, 21, 34), (2016, 12, 15, 12, 29), False),)
-#             ),
-#                
-#             (
-#                 '''
-#                     interval:
-#                         start: 2016-12-14 1 hour after sunset
-#                         end: 2016-12-15 30 minutes before sunrise
-#                 ''',
-#                 {'lat': 42.5, 'lon': -76.5},
-#                 (((2016, 12, 14, 22, 34), (2016, 12, 15, 11, 59), False),)
-#             ),
-             
+                           
         )
          
-        for spec, context, expected in cases:
-            schedule = Schedule.compile_yaml(spec, **context)
+        for spec, location, expected in cases:
+            schedule = Schedule.compile_yaml(spec, **location)
             self._assert_schedule(schedule, expected)
      
      
@@ -567,18 +547,18 @@ class ScheduleCompilationTests(TestCase):
         )
           
         compile_ = Schedule.compile_yaml
-        context = {'time_zone': 'US/Eastern'}
+        location = {'time_zone': 'US/Eastern'}
           
         for spec in cases:
-            self._assert_raises(ValueError, compile_, spec, **context)
+            self._assert_raises(ValueError, compile_, spec, **location)
           
           
-    def test_interval_schedule_compilation_context_errors(self):
+    def test_interval_schedule_compilation_location_errors(self):
            
         cases = (
-            {'lat': 42.5, 'lon': -76.5},
-            {'lat': 42.5, 'time_zone': 'US/Eastern'},
-            {'lon': -76.5, 'time_zone': 'US/Eastern'}
+            {'latitude': 42.5, 'longitude': -76.5},
+            {'latitude': 42.5, 'time_zone': 'US/Eastern'},
+            {'longitude': -76.5, 'time_zone': 'US/Eastern'}
         )
           
         compile_ = Schedule.compile_yaml
@@ -589,8 +569,8 @@ class ScheduleCompilationTests(TestCase):
                 end: 2016-12-14 sunset
         '''
   
-        for context in cases:
-            self._assert_raises(ValueError, compile_, spec, **context)
+        for location in cases:
+            self._assert_raises(ValueError, compile_, spec, **location)
           
           
     def test_intervals_schedule_compilation(self):
@@ -613,7 +593,8 @@ class ScheduleCompilationTests(TestCase):
                         - start: 2016-12-15 1 hour after sunset
                           end: 2016-12-16 30 minutes before sunrise
                 ''',
-                {'lat': 42.5, 'lon': -76.5, 'time_zone': 'US/Eastern'},
+                {'latitude': 42.5, 'longitude': -76.5,
+                 'time_zone': 'US/Eastern'},
                 (((2016, 12, 14, 17), (2016, 12, 14, 18), True),
                  ((2016, 12, 14, 19), (2016, 12, 14, 20), True),
                  ((2016, 12, 14, 21, 34), (2016, 12, 15, 12, 29), False),
@@ -622,8 +603,8 @@ class ScheduleCompilationTests(TestCase):
               
         )
           
-        for spec, context, expected in cases:
-            schedule = Schedule.compile_yaml(spec, **context)
+        for spec, location, expected in cases:
+            schedule = Schedule.compile_yaml(spec, **location)
             self._assert_schedule(schedule, expected)
   
           
@@ -843,10 +824,14 @@ class ScheduleCompilationTests(TestCase):
                    
         )
           
-        context = {'lat': 42.5, 'lon': -76.5, 'time_zone': 'US/Eastern'}
+        location = {
+            'latitude': 42.5,
+            'longitude': -76.5,
+            'time_zone': 'US/Eastern'
+        }
   
         for spec, expected in cases:
-            schedule = Schedule.compile_yaml(spec, **context)
+            schedule = Schedule.compile_yaml(spec, **location)
             self._assert_schedule(schedule, expected)
           
           
@@ -1012,13 +997,13 @@ class ScheduleCompilationTests(TestCase):
         )
           
         compile_ = Schedule.compile_yaml
-        context = {'time_zone': 'US/Eastern'}
+        location = {'time_zone': 'US/Eastern'}
           
         for spec in cases:
-            self._assert_raises(ValueError, compile_, spec, **context)
+            self._assert_raises(ValueError, compile_, spec, **location)
           
           
-    def test_daily_schedule_compilation_context_errors(self):
+    def test_daily_schedule_compilation_location_errors(self):
            
         specs = (
               
@@ -1043,17 +1028,17 @@ class ScheduleCompilationTests(TestCase):
               
         )
           
-        contexts = (
-            {'lat': 42.5, 'lon': -76.5},
-            {'lat': 42.5, 'time_zone': 'US/Eastern'},
-            {'lon': -76.5, 'time_zone': 'US/Eastern'}
+        locations = (
+            {'latitude': 42.5, 'longitude': -76.5},
+            {'latitude': 42.5, 'time_zone': 'US/Eastern'},
+            {'longitude': -76.5, 'time_zone': 'US/Eastern'}
         )
           
         compile_ = Schedule.compile_yaml
           
         for spec in specs:
-            for context in contexts:
-                self._assert_raises(ValueError, compile_, spec, **context)
+            for location in locations:
+                self._assert_raises(ValueError, compile_, spec, **location)
           
           
     def test_compile_union_schedule(self):
@@ -1100,10 +1085,14 @@ class ScheduleCompilationTests(TestCase):
                    
         )
           
-        context = {'lat': 42.5, 'lon': -76.5, 'time_zone': 'US/Eastern'}
+        location = {
+            'latitude': 42.5,
+            'longitude': -76.5,
+            'time_zone': 'US/Eastern'
+        }
   
         for spec, expected in cases:
-            schedule = Schedule.compile_yaml(spec, **context)
+            schedule = Schedule.compile_yaml(spec, **location)
             self._assert_schedule(schedule, expected)   
    
     
