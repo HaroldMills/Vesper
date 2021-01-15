@@ -8,14 +8,25 @@ import pytz
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo, StringAnnotation
+from vesper.ephem.astronomical_calculator import AstronomicalCalculatorCache
 from vesper.singletons import clip_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
-import vesper.ephem.ephem_utils as ephem_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.yaml_utils as yaml_utils
 
+
+# TODO: Change "Sun" and "Moon" to "Solar" and "Lunar" where appropriate.
+# TODO: Change `klass` to `cls`.
+# TODO: Change `(object)` to ``.
+# TODO: Refactor solar event measurement classes to simplify them?
+
+# TODO: Return UTC times instead of local times from all measurements
+# (and from all astronomical calculators).
+
+# TODO: Add clip as argument to formatters and offer two time formatters,
+# "UTC Time" and "Local Time".
 
 # TODO: Write file in chunks to avoid accumulating an unreasonable
 # number of table lines in memory.
@@ -187,7 +198,7 @@ columns:
     - name: moon_illumination
       measurement: Moon Illumination
       format:
-          name: Decimal
+          name: Percent
           parameters:
               detail: ".1"
       
@@ -242,7 +253,11 @@ columns:
 #             
 # ''')
 
-     
+
+_ASTRONOMICAL_CALCULATORS = \
+    AstronomicalCalculatorCache(result_times_local=True)
+
+
 class ClipMetadataCsvFileExporter(object):
     
     
@@ -250,7 +265,6 @@ class ClipMetadataCsvFileExporter(object):
     
     
     def __init__(self, args):
-    
         get = command_utils.get_required_arg
         self._output_file_path = get('output_file_path', args)
         self._columns = _create_table_columns(_TABLE_FORMAT)
@@ -369,32 +383,15 @@ class AstronomicalDawnMeasurement(object):
     name = 'Astronomical Dawn Time'
     
     def measure(self, clip):
-        return _get_time(clip, 'Astronomical Dawn', increment_date=True)
+        return _get_time(clip, 'Astronomical Dawn')
 
 
-def _get_time(clip, event, increment_date=False):
-    
-    date = clip.date
-    if increment_date:
-        date += datetime.timedelta(days=1)
-    
+def _get_time(clip, event_name):
     station = clip.station
+    calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(station)
+    night = station.get_night(clip.start_time)
+    return calculator.get_night_solar_event_time(night, event_name)
     
-    lat = station.latitude
-    lon = station.longitude
-    if lat is None or lon is None:
-        return None
-    
-    try:
-        time = ephem_utils.get_event_time(event, lat, lon, date)
-    except ValueError:
-        return None
-    
-    time_zone = _get_time_zone(station.time_zone)
-    time = time.astimezone(time_zone)
-    
-    return time
-
     
 def _get_time_zone(name):
     return pytz.timezone(name)
@@ -413,7 +410,7 @@ class CivilDawnMeasurement(object):
     name = 'Civil Dawn Time'
     
     def measure(self, clip):
-        return _get_time(clip, 'Civil Dawn', increment_date=True)
+        return _get_time(clip, 'Civil Dawn')
 
 
 class CivilDuskMeasurement(object):
@@ -565,19 +562,12 @@ class MoonAltitudeMeasurement(object):
     name = 'Moon Altitude'
     
     def measure(self, clip):
-        return _get_ephem(ephem_utils.get_altitude, 'Moon', clip)
+        return _get_lunar_position(clip).altitude
     
     
-def _get_ephem(function, body, clip):
-    
-    station = clip.station
-    lat = station.latitude
-    lon = station.longitude
-    
-    if lat is None or lon is None:
-        return None
-    else:
-        return function(body, lat, lon, clip.start_time)
+def _get_lunar_position(clip):
+    calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(clip.station)
+    return calculator.get_lunar_position(clip.start_time)
     
     
 class MoonAzimuthMeasurement(object):
@@ -585,7 +575,7 @@ class MoonAzimuthMeasurement(object):
     name = 'Moon Azimuth'
     
     def measure(self, clip):
-        return _get_ephem(ephem_utils.get_azimuth, 'Moon', clip)
+        return _get_lunar_position(clip).azimuth
     
     
 class MoonIlluminationMeasurement(object):
@@ -593,7 +583,8 @@ class MoonIlluminationMeasurement(object):
     name = 'Moon Illumination'
     
     def measure(self, clip):
-        return _get_ephem(ephem_utils.get_illumination, 'Moon', clip)
+        calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(clip.station)
+        return calculator.get_lunar_illumination(clip.start_time)
     
     
 class NauticalDawnMeasurement(object):
@@ -601,7 +592,7 @@ class NauticalDawnMeasurement(object):
     name = 'Nautical Dawn Time'
     
     def measure(self, clip):
-        return _get_time(clip, 'Nautical Dawn', increment_date=True)
+        return _get_time(clip, 'Nautical Dawn')
 
 
 class NauticalDuskMeasurement(object):
@@ -688,7 +679,12 @@ class SunAltitudeMeasurement(object):
     name = 'Sun Altitude'
     
     def measure(self, clip):
-        return _get_ephem(ephem_utils.get_altitude, 'Sun', clip)
+        return _get_solar_position(clip).altitude
+    
+    
+def _get_solar_position(clip):
+    calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(clip.station)
+    return calculator.get_solar_position(clip.start_time)
     
     
 class SunAzimuthMeasurement(object):
@@ -696,7 +692,7 @@ class SunAzimuthMeasurement(object):
     name = 'Sun Azimuth'
     
     def measure(self, clip):
-        return _get_ephem(ephem_utils.get_azimuth, 'Sun', clip)
+        return _get_solar_position(clip).azimuth
     
     
 class SunriseTimeMeasurement(object):
@@ -704,7 +700,7 @@ class SunriseTimeMeasurement(object):
     name = 'Sunrise Time'
     
     def measure(self, clip):
-        return _get_time(clip, 'Sunrise', increment_date=True)
+        return _get_time(clip, 'Sunrise')
     
     
 class SunsetTimeMeasurement(object):
@@ -810,8 +806,16 @@ class DecimalFormat(object):
             
     def format(self, x):
         return self._format.format(x)
+
+
+class PercentFormat(DecimalFormat):
     
-        
+    name = 'Percent'
+    
+    def format(self, x):
+        return self._format.format(100 * x)
+
+
 class DurationFormat(object):
 
     
@@ -922,6 +926,7 @@ _FORMAT_CLASSES = dict((c.name, c) for c in [
     BooleanFormat,
     CallClipClassFormat,
     DecimalFormat,
+    PercentFormat,
     DurationFormat,
     LowerCaseFormat,
     MappingFormat,
