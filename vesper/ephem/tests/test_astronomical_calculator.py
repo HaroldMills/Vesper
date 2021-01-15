@@ -245,10 +245,6 @@ class AstronomicalCalculatorTests(TestCase):
             distance_error_threshold):
         
         alt, az, d = pos
-        alt = alt.degrees
-        az = az.degrees
-        d = d.km
-        
         x_alt, x_az, x_d = expected_pos
         
         self._check_absolute_error(alt, x_alt, alt_az_error_threshold)

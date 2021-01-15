@@ -13,6 +13,11 @@ from skyfield.api import Topos, load, load_file
 from vesper.util.lru_cache import LruCache
 
 
+# TODO: Eliminate `Location` class, or require it for `get_calculator`?
+# TODO: Make time zone optional and drop support for local time results?
+# TODO: Reconsider "time" versus "datetime".
+
+
 _EPHEMERIS_FILE_PATH = Path(__file__).parent / 'data' / 'de421.bsp'
 """
 Jet Propulsion Laboratory Development Ephemeris (JPL DE) Spice Planet
@@ -119,7 +124,23 @@ Day: altitude >= -8.33333
 '''
 
 
+Position = namedtuple('Position', ('altitude', 'azimuth', 'distance'))
+"""
+Position of the sun or moon in the sky.
+
+A `Position` is a `namedtuple` with three attributes: `altitude`,
+`azimuth`, and `distance`. The altitude and azimuth are in degrees,
+and the distance is in kilometers.
+"""
+
+
 Event = namedtuple('Event', ('time', 'name'))
+"""
+Astronomical event, for example sunrise or sunset.
+
+An `Event` is a `namedtuple` with two attributes: `time` and `name`.
+The time is a Python `datetime` and the name is a string.
+"""
 
 
 class Location:
@@ -304,8 +325,17 @@ class AstronomicalCalculator:
     
     
     def _get_position(self, body, time):
-        t = self._get_skyfield_time(time)
-        return self._loc.at(t).observe(body).apparent().altaz()
+        
+        # Get Skyfield position.
+        time = self._get_skyfield_time(time)
+        position = self._loc.at(time).observe(body).apparent().altaz()
+        
+        # Get position attributes with desired units.
+        altitude = position[0].degrees
+        azimuth = position[1].degrees
+        distance = position[2].km
+        
+        return Position(altitude, azimuth, distance)
     
     
     def _get_skyfield_time(self, arg):
@@ -454,8 +484,7 @@ class AstronomicalCalculator:
         else:
             # code could indicate either of two events
             
-            altitude, _, _ = self.get_solar_position(time)
-            altitude = altitude.degrees
+            altitude = self.get_solar_position(time).altitude
             
             if code == 1:
                 # event is at start of astronomical twilight
