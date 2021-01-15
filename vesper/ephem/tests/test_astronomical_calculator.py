@@ -20,7 +20,7 @@ from vesper.ephem.astronomical_calculator import (
 # TODO: When the USNO web site is up again (as of 2020-12 it has been
 # down for months, since it is "undergoing modernization efforts"), get
 # more (and perhaps more accurate) solar and lunar position and
-# fraction illuminated test data from it.
+# illumination test data from it.
 
 # TODO: Should we be using the USNO's NOVAS software for anything,
 # for example for generating test data? There is a pip-installable
@@ -28,7 +28,7 @@ from vesper.ephem.astronomical_calculator import (
 
 # TODO: Test vector arguments to `get_solar_position`,
 # `get_solar_period_name`, `get_lunar_position`, and
-# `get_lunar_fraction_illuminated`.
+# `get_lunar_illumination`.
 
 
 # Ithaca, NY location and time zone.
@@ -174,13 +174,13 @@ LUNAR_DATA = [
     (_time(2031, 12, 1, 15, 46), (-26.11, 24.15, 403198, .921)),
 ]
 """
-Lunar position and fraction illuminated test data, obtained from
-suncalc.org on 2020-11-02.
+Lunar position and illumination test data, obtained from suncalc.org
+on 2020-11-02.
 """
 
 LUNAR_POSITIONS = [(time, d[:3]) for time, d in LUNAR_DATA]
 
-LUNAR_FRACTIONS_ILLUMINATED = [(time, d[3]) for time, d in LUNAR_DATA]
+LUNAR_ILLUMINATIONS = [(time, d[3]) for time, d in LUNAR_DATA]
 
 # The following were set to the minimum values with two significant digits
 # that were required for tests involving suncalc.org and mooncalc.org test
@@ -191,7 +191,7 @@ SOLAR_ALT_AZ_ERROR_THRESHOLD = .12
 SOLAR_DISTANCE_ERROR_THRESHOLD = .00012
 LUNAR_ALT_AZ_ERROR_THRESHOLD = .14
 LUNAR_DISTANCE_ERROR_THRESHOLD = .015
-LUNAR_FRACTION_ILLUMINATED_ERROR_THRESHOLD = .070
+LUNAR_ILLUMINATION_ERROR_THRESHOLD = .070
 
 TIME_DIFFERENCE_ERROR_THRESHOLD = 60   # seconds
 
@@ -358,11 +358,12 @@ class AstronomicalCalculatorTests(TestCase):
                 LUNAR_DISTANCE_ERROR_THRESHOLD)
     
     
-    def test_get_lunar_fraction_illuminated(self):
-        for time, expected_fi in LUNAR_FRACTIONS_ILLUMINATED:
-            fi = self.calculator.get_lunar_fraction_illuminated(time)
+    def test_get_lunar_illumination(self):
+        for time, expected_illumination in LUNAR_ILLUMINATIONS:
+            illumination = self.calculator.get_lunar_illumination(time)
             self._check_relative_error(
-                fi, expected_fi, LUNAR_FRACTION_ILLUMINATED_ERROR_THRESHOLD)
+                illumination, expected_illumination,
+                LUNAR_ILLUMINATION_ERROR_THRESHOLD)
     
     
     def test_naive_datetime_errors(self):
@@ -374,7 +375,7 @@ class AstronomicalCalculatorTests(TestCase):
         self._assert_raises(ValueError, c.get_solar_position, time)
         self._assert_raises(ValueError, c.get_solar_period_name, time)
         self._assert_raises(ValueError, c.get_lunar_position, time)
-        self._assert_raises(ValueError, c.get_lunar_fraction_illuminated, time)
+        self._assert_raises(ValueError, c.get_lunar_illumination, time)
          
         # `get_solar_events` with first `datetime` naive.
         time1 = datetime.datetime(2020, 10, 1)

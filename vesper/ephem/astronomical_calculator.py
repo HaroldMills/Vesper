@@ -97,7 +97,7 @@ def get_solar_period_name(self, time)
     
 def get_lunar_position(self, time)
     
-def get_lunar_fraction_illuminated(self, time)
+def get_lunar_illumination(self, time)
 
 
 Omit the following methods initially. Skyfield does not yet offer
@@ -653,7 +653,7 @@ class AstronomicalCalculator:
         return self._get_position(self._moon, time)
     
     
-    def get_lunar_fraction_illuminated(self, time):
+    def get_lunar_illumination(self, time):
         t = self._get_skyfield_time(time)
         return almanac.fraction_illuminated(self._ephemeris, 'moon', t)
 
