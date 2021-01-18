@@ -18,8 +18,6 @@ import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Change "Sun" and "Moon" to "Solar" and "Lunar" where appropriate.
-# TODO: Change `klass` to `cls`.
-# TODO: Change `(object)` to ``.
 # TODO: Refactor solar event measurement classes to simplify them?
 
 # TODO: Return UTC times instead of local times from all measurements
@@ -258,7 +256,7 @@ _ASTRONOMICAL_CALCULATORS = \
     AstronomicalCalculatorCache(result_times_local=True)
 
 
-class ClipMetadataCsvFileExporter(object):
+class ClipMetadataCsvFileExporter:
     
     
     extension_name = 'Clip Metadata CSV File Exporter'
@@ -313,20 +311,20 @@ def _get_column_measurement(column):
     if isinstance(measurement, str):
         # `measurement` is string measurement name
         
-        klass = _MEASUREMENT_CLASSES[measurement]
-        return klass()
+        cls = _MEASUREMENT_CLASSES[measurement]
+        return cls()
     
     else:
         
         # We assume that `measurement` is a `dict`
         
         name = measurement['name']
-        klass = _MEASUREMENT_CLASSES[name]
+        cls = _MEASUREMENT_CLASSES[name]
         parameters = measurement.get('parameters')
         if parameters is None:
-            return klass()
+            return cls()
         else:
-            return klass(parameters)
+            return cls(parameters)
     
     
 def _get_column_format(column):
@@ -339,20 +337,20 @@ def _get_column_format(column):
     elif isinstance(format_, str):
         # `format_` is string format name
         
-        klass = _FORMAT_CLASSES[format_]
-        return klass()
+        cls = _FORMAT_CLASSES[format_]
+        return cls()
         
     else:
         
         # We assume that `format_` is a `dict`.
         
         name = format_['name']
-        klass = _FORMAT_CLASSES[name]
+        cls = _FORMAT_CLASSES[name]
         parameters = format_.get('parameters')
         if parameters is None:
-            return klass()
+            return cls()
         else:
-            return klass(parameters)
+            return cls(parameters)
     
     
 def _get_column_value(column, clip):
@@ -374,11 +372,11 @@ def _create_measurements(table_format):
 
 def _create_measurement(column):
     name = column['measurement']
-    klass = _MEASUREMENT_CLASSES[name]
-    return klass()
+    cls = _MEASUREMENT_CLASSES[name]
+    return cls()
 
 
-class AstronomicalDawnMeasurement(object):
+class AstronomicalDawnMeasurement:
     
     name = 'Astronomical Dawn Time'
     
@@ -397,7 +395,7 @@ def _get_time_zone(name):
     return pytz.timezone(name)
 
 
-class AstronomicalDuskMeasurement(object):
+class AstronomicalDuskMeasurement:
     
     name = 'Astronomical Dusk Time'
     
@@ -405,7 +403,7 @@ class AstronomicalDuskMeasurement(object):
         return _get_time(clip, 'Astronomical Dusk')
 
 
-class CivilDawnMeasurement(object):
+class CivilDawnMeasurement:
     
     name = 'Civil Dawn Time'
     
@@ -413,7 +411,7 @@ class CivilDawnMeasurement(object):
         return _get_time(clip, 'Civil Dawn')
 
 
-class CivilDuskMeasurement(object):
+class CivilDuskMeasurement:
     
     name = 'Civil Dusk Time'
     
@@ -421,7 +419,7 @@ class CivilDuskMeasurement(object):
         return _get_time(clip, 'Civil Dusk')
 
 
-class ClipClassMeasurement(object):
+class ClipClassMeasurement:
     
     name = 'Clip Class'
     
@@ -456,7 +454,7 @@ def _get_classification(clip):
         return annotation.value
     
     
-class DetectorMeasurement(object):
+class DetectorMeasurement:
     
     name = 'Detector'
     
@@ -464,7 +462,7 @@ class DetectorMeasurement(object):
         return model_utils.get_clip_type(clip)
     
     
-class DuplicateCallMeasurement(object):
+class DuplicateCallMeasurement:
     
     
     # This measurement assumes that clips of a given clip class are
@@ -533,7 +531,7 @@ def _get_detector_name(clip):
         return processor.name
 
 
-class ElapsedStartTimeMeasurement(object):
+class ElapsedStartTimeMeasurement:
     
     name = 'Elapsed Start Time'
     
@@ -545,7 +543,7 @@ class ElapsedStartTimeMeasurement(object):
             return clip.start_time - recording.start_time
         
             
-class FileNameMeasurement(object):
+class FileNameMeasurement:
     
     name = 'File Name'
     
@@ -557,7 +555,7 @@ class FileNameMeasurement(object):
             return os.path.basename(audio_file_path)
     
     
-class MoonAltitudeMeasurement(object):
+class MoonAltitudeMeasurement:
     
     name = 'Moon Altitude'
     
@@ -570,7 +568,7 @@ def _get_lunar_position(clip):
     return calculator.get_lunar_position(clip.start_time)
     
     
-class MoonAzimuthMeasurement(object):
+class MoonAzimuthMeasurement:
     
     name = 'Moon Azimuth'
     
@@ -578,7 +576,7 @@ class MoonAzimuthMeasurement(object):
         return _get_lunar_position(clip).azimuth
     
     
-class MoonIlluminationMeasurement(object):
+class MoonIlluminationMeasurement:
     
     name = 'Moon Illumination'
     
@@ -587,7 +585,7 @@ class MoonIlluminationMeasurement(object):
         return calculator.get_lunar_illumination(clip.start_time)
     
     
-class NauticalDawnMeasurement(object):
+class NauticalDawnMeasurement:
     
     name = 'Nautical Dawn Time'
     
@@ -595,7 +593,7 @@ class NauticalDawnMeasurement(object):
         return _get_time(clip, 'Nautical Dawn')
 
 
-class NauticalDuskMeasurement(object):
+class NauticalDuskMeasurement:
     
     name = 'Nautical Dusk Time'
     
@@ -603,7 +601,7 @@ class NauticalDuskMeasurement(object):
         return _get_time(clip, 'Nautical Dusk')
 
 
-class NightMeasurement(object):
+class NightMeasurement:
     
     name = 'Night'
     
@@ -611,7 +609,7 @@ class NightMeasurement(object):
         return clip.date
     
     
-class RecordingDurationMeasurement(object):
+class RecordingDurationMeasurement:
     
     name = 'Recording Duration'
     
@@ -623,7 +621,7 @@ class RecordingDurationMeasurement(object):
             return datetime.timedelta(seconds=recording.duration)
         
         
-class RecordingStartTimeMeasurement(object):
+class RecordingStartTimeMeasurement:
     
     name = 'Recording Start Time'
     
@@ -637,7 +635,7 @@ class RecordingStartTimeMeasurement(object):
     
     
 # TODO: Use time rounding function of `time_utils`?
-class RoundedStartTimeMeasurement(object):
+class RoundedStartTimeMeasurement:
     
     
     name = 'Rounded Start Time'
@@ -657,7 +655,7 @@ class RoundedStartTimeMeasurement(object):
         return time + delta
     
     
-class StartTimeMeasurement(object):
+class StartTimeMeasurement:
     
     name = 'Start Time'
     
@@ -666,7 +664,7 @@ class StartTimeMeasurement(object):
         return clip.start_time.astimezone(time_zone)
     
     
-class StationMeasurement(object):
+class StationMeasurement:
     
     name = 'Station'
     
@@ -674,7 +672,7 @@ class StationMeasurement(object):
         return clip.station.name
     
     
-class SunAltitudeMeasurement(object):
+class SunAltitudeMeasurement:
     
     name = 'Sun Altitude'
     
@@ -687,7 +685,7 @@ def _get_solar_position(clip):
     return calculator.get_solar_position(clip.start_time)
     
     
-class SunAzimuthMeasurement(object):
+class SunAzimuthMeasurement:
     
     name = 'Sun Azimuth'
     
@@ -695,7 +693,7 @@ class SunAzimuthMeasurement(object):
         return _get_solar_position(clip).azimuth
     
     
-class SunriseTimeMeasurement(object):
+class SunriseTimeMeasurement:
     
     name = 'Sunrise Time'
     
@@ -703,7 +701,7 @@ class SunriseTimeMeasurement(object):
         return _get_time(clip, 'Sunrise')
     
     
-class SunsetTimeMeasurement(object):
+class SunsetTimeMeasurement:
     
     name = 'Sunset Time'
     
@@ -742,7 +740,7 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
 _NONE_STRING = ''
 
 
-class BirdMigrationSeasonFormat(object):
+class BirdMigrationSeasonFormat:
     
     name = 'Bird Migration Season'
         
@@ -759,7 +757,7 @@ _DEFAULT_BOOLEAN_VALUES = {
 }
 
 
-class BooleanFormat(object):
+class BooleanFormat:
     
     name = 'Boolean'
     
@@ -775,7 +773,7 @@ class BooleanFormat(object):
             return self._values[value]
     
     
-class CallClipClassFormat(object):
+class CallClipClassFormat:
     
     name = 'Call Clip Class'
     
@@ -794,7 +792,7 @@ class CallClipClassFormat(object):
             return self._mapping.get(name, name.lower())
         
            
-class DecimalFormat(object):
+class DecimalFormat:
     
     name = 'Decimal'
     
@@ -816,7 +814,7 @@ class PercentFormat(DecimalFormat):
         return self._format.format(100 * x)
 
 
-class DurationFormat(object):
+class DurationFormat:
 
     
     name = 'Duration'
@@ -867,7 +865,7 @@ class DurationFormat(object):
                 return duration
 
     
-class LowerCaseFormat(object):
+class LowerCaseFormat:
     
     name = 'Lower Case'
     
@@ -878,7 +876,7 @@ class LowerCaseFormat(object):
             return value.lower()
     
     
-class MappingFormat(object):
+class MappingFormat:
     
     name = 'Mapping'
     
@@ -895,7 +893,7 @@ class MappingFormat(object):
             return self._mapping.get(value, value)
     
     
-class TimeFormat(object):
+class TimeFormat:
     
     name = 'Time'
     
