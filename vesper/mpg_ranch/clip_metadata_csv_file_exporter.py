@@ -15,8 +15,6 @@ import vesper.util.os_utils as os_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Use the term "formatter" instead of "format"?
-
 # TODO: Support table format presets.
 
 # TODO: Provide exporter-level control of CSV options, like the
@@ -798,6 +796,14 @@ class _TimeFormat:
             return time_string
 
 
+# TODO: Use `time_utils.round_datetime` and `time_utils.round_time`
+# here to allow rounding increments larger than one hour. Note that
+# some times in the middles of increments might round differently
+# afterward. Would that be a problem?
+# TODO: Perhaps require that rounding increment evenly divide 24 hours?
+# TODO: Add support for different rounding modes, so that, for
+# example, one could round down or up to nearest hour as well as to
+# nearest hour.
 def _round_time(time, increment):
     
     if isinstance(time, (datetime.datetime, datetime.time)):
