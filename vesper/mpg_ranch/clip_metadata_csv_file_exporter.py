@@ -623,12 +623,15 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
 ])
 
 
-_NONE_STRING = ''
-
 _DEFAULT_BOOLEAN_VALUES = {
     True: 'True',
     False: 'False'
 }
+
+# TODO: Consider renaming this to "_NO_VALUE_STRING".
+_NONE_STRING = ''
+
+_TEST_DATETIME = datetime.datetime(2020, 1, 1)
 
 
 class BooleanFormat:
@@ -734,20 +737,40 @@ class DurationFormat:
 class _TimeFormat:
     
     
-    # TODO: Validate format string. A simple way to do this might be
-    # to create a time and invoke its `strftime` method on the format.
-    # What exceptions might this raise and how would we handle them?
-    
-    
     def __init__(self, local, settings=None):
+        
         self._local = local
+        
         if settings is None:
             settings = {}
-        self._format = settings.get('format', '%H:%M:%S')
+        
+        self._format = self._get_format(settings)
         self._rounding_increment = settings.get('rounding_increment', None)
         self._quote = settings.get('quote', False)
+    
+    
+    def _get_format(self, settings):
         
+        format_ = settings.get('format')
         
+        if format_ is None:
+            return '%H:%M:%S'
+        
+        else:
+            # format string provided
+            
+            # Try format string on test `datetime` and raise an exception
+            # if there's a problems.
+            try:
+                _TEST_DATETIME.strftime(format_)
+            except Exception as e:
+                raise ValueError(
+                    f'Could not format test time with "{format_}". '
+                    f'Error message was: {str(e)}')
+            
+            return format_
+    
+    
     def format(self, time, clip):
         
         if time is None:
