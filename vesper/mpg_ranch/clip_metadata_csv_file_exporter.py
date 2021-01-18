@@ -4,8 +4,6 @@
 import datetime
 import os.path
 
-import pytz
-
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo, StringAnnotation
 from vesper.ephem.astronomical_calculator import AstronomicalCalculatorCache
@@ -547,14 +545,9 @@ class RecordingStartTimeMeasurement:
         if recording is None:
             return None
         else:
-            time_zone = _get_time_zone(recording.station.time_zone)
-            return recording.start_time.astimezone(time_zone)
+            return recording.start_time
     
     
-def _get_time_zone(name):
-    return pytz.timezone(name)
-
-
 # TODO: Use time rounding function of `time_utils`?
 class RoundedStartTimeMeasurement:
     
@@ -564,8 +557,7 @@ class RoundedStartTimeMeasurement:
     
     def measure(self, clip):
         
-        time_zone = _get_time_zone(clip.station.time_zone)
-        time = clip.start_time.astimezone(time_zone)
+        time = clip.start_time
         seconds_after_the_hour = time.minute * 60 + time.second
         
         time = time.replace(minute=0, second=0, microsecond=0)
@@ -602,8 +594,7 @@ class StartTimeMeasurement:
     name = 'Start Time'
     
     def measure(self, clip):
-        time_zone = _get_time_zone(clip.station.time_zone)
-        return clip.start_time.astimezone(time_zone)
+        return clip.start_time
     
     
 class StationMeasurement:
