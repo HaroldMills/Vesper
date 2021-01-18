@@ -15,6 +15,8 @@ import vesper.util.os_utils as os_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
+# TODO: Use the term "formatter" instead of "format"?
+
 # TODO: Support table format presets.
 
 # TODO: Provide exporter-level control of CSV options, like the
@@ -628,8 +630,7 @@ _DEFAULT_BOOLEAN_VALUES = {
     False: 'False'
 }
 
-# TODO: Consider renaming this to "_NO_VALUE_STRING".
-_NONE_STRING = ''
+_NO_VALUE_STRING = ''
 
 _TEST_DATETIME = datetime.datetime(2020, 1, 1)
 
@@ -645,7 +646,7 @@ class BooleanFormat:
         
     def format(self, value, clip):
         if value is None:
-            return _NONE_STRING
+            return _NO_VALUE_STRING
         else:
             return self._values[value]
     
@@ -663,7 +664,7 @@ class CallClipClassFormat:
     def format(self, clip_class_name, clip):
         prefix = 'Call.'
         if clip_class_name is None or not clip_class_name.startswith(prefix):
-            return _NONE_STRING
+            return _NO_VALUE_STRING
         else:
             name = clip_class_name[len(prefix):]
             return self._mapping.get(name, name.lower())
@@ -712,7 +713,7 @@ class DurationFormat:
     def format(self, duration, clip):
         
         if duration is None:
-            return _NONE_STRING
+            return _NO_VALUE_STRING
         
         else:
             
@@ -774,7 +775,7 @@ class _TimeFormat:
     def format(self, time, clip):
         
         if time is None:
-            return _NONE_STRING
+            return _NO_VALUE_STRING
         
         else:
             
@@ -825,7 +826,7 @@ class LowerCaseFormat:
     
     def format(self, value, clip):
         if value is None:
-            return _NONE_STRING
+            return _NO_VALUE_STRING
         else:
             return value.lower()
     
@@ -842,7 +843,7 @@ class MappingFormat:
             
     def format(self, value, clip):
         if value is None:
-            return _NONE_STRING
+            return _NO_VALUE_STRING
         else:
             return self._mapping.get(value, value)
     
@@ -862,7 +863,7 @@ class NightFormat:
     def format(self, time, clip):
         
         if time is None:
-            return _NONE_STRING
+            return _NO_VALUE_STRING
         
         else:
             
@@ -885,7 +886,7 @@ class NocturnalBirdMigrationSeasonFormat:
         
     def format(self, time, clip):
         if time is None:
-            return _NONE_STRING
+            return _NO_VALUE_STRING
         else:
             night = clip.station.get_night(time)
             return 'Fall' if night.month >= 7 else 'Spring'
