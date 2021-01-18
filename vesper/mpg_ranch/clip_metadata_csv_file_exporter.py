@@ -17,8 +17,6 @@ import vesper.util.os_utils as os_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Change "parameters" to "settings".
-
 # TODO: Write file in chunks to avoid accumulating an unreasonable
 # number of table lines in memory.
 
@@ -45,7 +43,7 @@ columns:
       measurement: Start Time
       format:
           name: Night
-          parameters:
+          settings:
               format: "%Y"
 
     - name: detector
@@ -56,7 +54,7 @@ columns:
       measurement: Clip Class
       format:
           name: Call Clip Class
-          parameters:
+          settings:
               mapping:
                   DoubleUp: dbup
                   Other: othe
@@ -66,7 +64,7 @@ columns:
       measurement: Station
       format:
           name: Mapping
-          parameters:
+          settings:
               mapping:
                   Baldy: baldy
                   Floodplain: flood
@@ -77,7 +75,7 @@ columns:
       measurement: Start Time
       format:
           name: Night
-          parameters:
+          settings:
               format: "%m/%d/%y"
               
     - name: recording_start
@@ -96,14 +94,14 @@ columns:
       measurement: Start Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%H:%M:%S"
               
     - name: real_detection_time
       measurement: Start Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%m/%d/%y %H:%M:%S"
               
     - name: rounded_to_half_hour
@@ -113,12 +111,12 @@ columns:
     - name: duplicate
       measurement:
           name: Duplicate Call
-          parameters:
+          settings:
               min_intercall_interval: 60
               ignored_classes: [Other, Unknown, Weak]
       format:
           name: Boolean
-          parameters:
+          settings:
               values:
                   true: 'yes'
                   false: 'no'
@@ -127,70 +125,70 @@ columns:
       measurement: Sunset Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: civil_dusk
       measurement: Civil Dusk Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: nautical_dusk
       measurement: Nautical Dusk Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: astronomical_dusk
       measurement: Astronomical Dusk Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: astronomical_dawn
       measurement: Astronomical Dawn Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: nautical_dawn
       measurement: Nautical Dawn Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: civil_dawn
       measurement: Civil Dawn Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: sunrise
       measurement: Sunrise Time
       format:
           name: Local Time
-          parameters:
+          settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: moon_altitude
       measurement: Lunar Altitude
       format:
           name: Decimal
-          parameters:
+          settings:
               detail: ".1"
 
     - name: moon_illumination
       measurement: Lunar Illumination
       format:
           name: Percent
-          parameters:
+          settings:
               detail: ".1"
       
 ''')
@@ -204,7 +202,7 @@ columns:
 #       measurement: Station
 #       format:
 #           name: Mapping
-#           parameters:
+#           settings:
 #               mapping:
 #                   Floodplain: Floodplain NFC
 #                   Sheep Camp: Sheep Camp NFC
@@ -218,7 +216,7 @@ columns:
 #       measurement: Night
 #       format:
 #           name: Local Time
-#           parameters:
+#           settings:
 #               format: "%Y"
 #  
 #     - name: Season
@@ -229,14 +227,14 @@ columns:
 #       measurement: Night
 #       format:
 #           name: Local Time
-#           parameters:
+#           settings:
 #               format: "%Y-%m-%d"
 #  
 #     - name: Start Date/Time (MDT)
 #       measurement: Start Time
 #       format:
 #           name: Local Time
-#           parameters:
+#           settings:
 #               format: "%Y-%m-%d %H:%M:%S"
 #                
 #     - name: Clip Class
@@ -312,11 +310,11 @@ def _get_column_measurement(column):
         
         name = measurement['name']
         cls = _MEASUREMENT_CLASSES[name]
-        parameters = measurement.get('parameters')
-        if parameters is None:
+        settings = measurement.get('settings')
+        if settings is None:
             return cls()
         else:
-            return cls(parameters)
+            return cls(settings)
     
     
 def _get_column_format(column):
@@ -338,11 +336,11 @@ def _get_column_format(column):
         
         name = format_['name']
         cls = _FORMAT_CLASSES[name]
-        parameters = format_.get('parameters')
-        if parameters is None:
+        settings = format_.get('settings')
+        if settings is None:
             return cls()
         else:
-            return cls(parameters)
+            return cls(settings)
     
     
 def _get_column_value(column, clip):
@@ -447,15 +445,15 @@ class DuplicateCallMeasurement:
     name = 'Duplicate Call'
     
     
-    def __init__(self, parameters=None):
+    def __init__(self, settings=None):
         
-        if parameters is None:
-            parameters = {}
+        if settings is None:
+            settings = {}
             
-        interval = parameters.get('min_intercall_interval', 60)
+        interval = settings.get('min_intercall_interval', 60)
         self._min_intercall_interval = datetime.timedelta(seconds=interval)
         
-        names = parameters.get('ignored_classes', [])
+        names = settings.get('ignored_classes', [])
         self._ignored_class_names = frozenset('Call.' + n for n in names)
         
         self._last_call_times = {}
@@ -712,10 +710,10 @@ class BooleanFormat:
     
     name = 'Boolean'
     
-    def __init__(self, parameters=None):
-        if parameters is None:
-            parameters = {}
-        self._values = parameters.get('values', _DEFAULT_BOOLEAN_VALUES)
+    def __init__(self, settings=None):
+        if settings is None:
+            settings = {}
+        self._values = settings.get('values', _DEFAULT_BOOLEAN_VALUES)
         
     def format(self, value, clip):
         if value is None:
@@ -728,11 +726,11 @@ class CallClipClassFormat:
     
     name = 'Call Clip Class'
     
-    def __init__(self, parameters=None):
-        if parameters is None:
+    def __init__(self, settings=None):
+        if settings is None:
             self._mapping = {}
         else:
-            self._mapping = parameters.get('mapping', {})
+            self._mapping = settings.get('mapping', {})
             
     def format(self, clip_class_name, clip):
         prefix = 'Call.'
@@ -747,11 +745,11 @@ class DecimalFormat:
     
     name = 'Decimal'
     
-    def __init__(self, parameters=None):
-        if parameters is None:
+    def __init__(self, settings=None):
+        if settings is None:
             self._format = '{:f}'
         else:
-            self._format = '{:' + parameters.get('detail', '') + 'f}'
+            self._format = '{:' + settings.get('detail', '') + 'f}'
             
     def format(self, x, clip):
         return self._format.format(x)
@@ -763,16 +761,16 @@ class DurationFormat:
     name = 'Duration'
     
     
-    def __init__(self, parameters=None):
+    def __init__(self, settings=None):
         
-        if parameters is None:
+        if settings is None:
             self._format = '{:d}:{:02d}:{:02d}'
             self._quote = False
             
         else:
             
-            sep = parameters.get('separator', ':')
-            num_hours_digits = parameters.get('num_hours_digits')
+            sep = settings.get('separator', ':')
+            num_hours_digits = settings.get('num_hours_digits')
             
             if num_hours_digits is None:
                 hours_format = '{:d}'
@@ -780,7 +778,7 @@ class DurationFormat:
                 hours_format = '{:0' + str(num_hours_digits) + '}'
                 
             self._format = hours_format + sep + '{:02d}' + sep + '{:02d}'
-            self._quote = parameters.get('quote', False)
+            self._quote = settings.get('quote', False)
         
         
     def format(self, duration, clip):
@@ -814,12 +812,12 @@ class _TimeFormat:
     # on the format. What exceptions can this raise and how do we
     # handle them?
     
-    def __init__(self, local, parameters=None):
+    def __init__(self, local, settings=None):
         self._local = local
-        if parameters is None:
-            parameters = {}
-        self._format = parameters.get('format', '%H:%M:%S')
-        self._quote = parameters.get('quote', False)
+        if settings is None:
+            settings = {}
+        self._format = settings.get('format', '%H:%M:%S')
+        self._quote = settings.get('quote', False)
         
         
     def format(self, time, clip):
@@ -848,8 +846,8 @@ class LocalTimeFormat(_TimeFormat):
     
     name = 'Local Time'
     
-    def __init__(self, parameters=None):
-        super().__init__(True, parameters)
+    def __init__(self, settings=None):
+        super().__init__(True, settings)
     
     
 class LowerCaseFormat:
@@ -867,11 +865,11 @@ class MappingFormat:
     
     name = 'Mapping'
     
-    def __init__(self, parameters=None):
-        if parameters is None:
+    def __init__(self, settings=None):
+        if settings is None:
             self._mapping = {}
         else:
-            self._mapping = parameters.get('mapping', {})
+            self._mapping = settings.get('mapping', {})
             
     def format(self, value, clip):
         if value is None:
@@ -884,11 +882,11 @@ class NightFormat:
     
     name = 'Night'
     
-    def __init__(self, parameters=None):
-        if parameters is None:
-            parameters = {}
-        self._format = parameters.get('format', '%H:%M:%S')
-        self._quote = parameters.get('quote', False)
+    def __init__(self, settings=None):
+        if settings is None:
+            settings = {}
+        self._format = settings.get('format', '%H:%M:%S')
+        self._quote = settings.get('quote', False)
     
     def format(self, time, clip):
         
@@ -934,8 +932,8 @@ class UtcTimeFormat(_TimeFormat):
     
     name = 'UTC Time'
     
-    def __init__(self, parameters=None):
-        super().__init__(False, parameters)
+    def __init__(self, settings=None):
+        super().__init__(False, settings)
             
     
 _FORMAT_CLASSES = dict((c.name, c) for c in [
