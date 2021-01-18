@@ -104,8 +104,11 @@ columns:
               format: "%m/%d/%y %H:%M:%S"
               
     - name: rounded_to_half_hour
-      measurement: Rounded Start Time
-      format: Local Time
+      measurement: Start Time
+      format:
+          name: Local Time
+          settings:
+              rounding_increment: 1800
       
     - name: duplicate
       measurement:
@@ -548,26 +551,6 @@ class RecordingStartTimeMeasurement:
             return recording.start_time
     
     
-# TODO: Use time rounding function of `time_utils`?
-class RoundedStartTimeMeasurement:
-    
-    
-    name = 'Rounded Start Time'
-    
-    
-    def measure(self, clip):
-        
-        time = clip.start_time
-        seconds_after_the_hour = time.minute * 60 + time.second
-        
-        time = time.replace(minute=0, second=0, microsecond=0)
-        
-        half_hours = int(round(seconds_after_the_hour / 1800.))
-        delta = datetime.timedelta(seconds=half_hours * 1800)
-        
-        return time + delta
-    
-    
 class SolarAltitudeMeasurement:
     
     name = 'Solar Altitude'
@@ -631,7 +614,6 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     NightMeasurement,
     RecordingDurationMeasurement,
     RecordingStartTimeMeasurement,
-    RoundedStartTimeMeasurement,
     SolarAltitudeMeasurement,
     SolarAzimuthMeasurement,
     StartTimeMeasurement,
@@ -762,6 +744,7 @@ class _TimeFormat:
         if settings is None:
             settings = {}
         self._format = settings.get('format', '%H:%M:%S')
+        self._rounding_increment = settings.get('rounding_increment', None)
         self._quote = settings.get('quote', False)
         
         
@@ -772,6 +755,10 @@ class _TimeFormat:
         
         else:
             
+            # Round time if needed.
+            if self._rounding_increment is not None:
+                time = _round_time(time, self._rounding_increment)
+                
             # Get local time if needed.
             if self._local:
                 time_zone = clip.station.tz
@@ -785,6 +772,20 @@ class _TimeFormat:
                 time_string = '"' + time_string + '"'
                 
             return time_string
+
+
+def _round_time(time, increment):
+    
+    if isinstance(time, (datetime.datetime, datetime.time)):
+                  
+        seconds_after_the_hour = time.minute * 60 + time.second
+        
+        time = time.replace(minute=0, second=0, microsecond=0)
+        
+        increments = int(round(seconds_after_the_hour / increment))
+        delta = datetime.timedelta(seconds=increments * increment)
+        
+        return time + delta
 
 
 class LocalTimeFormat(_TimeFormat):
