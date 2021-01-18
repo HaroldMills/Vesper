@@ -17,11 +17,7 @@ import vesper.util.os_utils as os_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Return UTC times instead of local times from all measurements
-# (and from all astronomical calculators).
-
-# TODO: Add clip as argument to formatters and offer two time formatters,
-# "UTC Time" and "Local Time".
+# TODO: Change "parameters" to "settings".
 
 # TODO: Write file in chunks to avoid accumulating an unreasonable
 # number of table lines in memory.
@@ -42,13 +38,13 @@ _TABLE_FORMAT = yaml_utils.load('''
 columns:
 
     - name: season
-      measurement: Night
-      format: Bird Migration Season
+      measurement: Start Time
+      format: Nocturnal Bird Migration Season
   
     - name: year
-      measurement: Night
+      measurement: Start Time
       format:
-          name: Time
+          name: Night
           parameters:
               format: "%Y"
 
@@ -78,15 +74,15 @@ columns:
                   Sheep Camp: sheep
       
     - name: date
-      measurement: Night
+      measurement: Start Time
       format:
-          name: Time
+          name: Night
           parameters:
               format: "%m/%d/%y"
               
     - name: recording_start
       measurement: Recording Start Time
-      format: Time
+      format: Local Time
               
     - name: recording_length
       measurement: Recording Duration
@@ -99,20 +95,20 @@ columns:
     - name: real_detection_time
       measurement: Start Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%H:%M:%S"
               
     - name: real_detection_time
       measurement: Start Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%m/%d/%y %H:%M:%S"
               
     - name: rounded_to_half_hour
       measurement: Rounded Start Time
-      format: Time
+      format: Local Time
       
     - name: duplicate
       measurement:
@@ -130,56 +126,56 @@ columns:
     - name: sunset
       measurement: Sunset Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: civil_dusk
       measurement: Civil Dusk Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: nautical_dusk
       measurement: Nautical Dusk Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: astronomical_dusk
       measurement: Astronomical Dusk Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: astronomical_dawn
       measurement: Astronomical Dawn Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: nautical_dawn
       measurement: Nautical Dawn Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: civil_dawn
       measurement: Civil Dawn Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: sunrise
       measurement: Sunrise Time
       format:
-          name: Time
+          name: Local Time
           parameters:
               format: "%m/%d/%y %H:%M:%S"
       
@@ -221,7 +217,7 @@ columns:
 #     - name: Year
 #       measurement: Night
 #       format:
-#           name: Time
+#           name: Local Time
 #           parameters:
 #               format: "%Y"
 #  
@@ -232,14 +228,14 @@ columns:
 #     - name: Night
 #       measurement: Night
 #       format:
-#           name: Time
+#           name: Local Time
 #           parameters:
 #               format: "%Y-%m-%d"
 #  
 #     - name: Start Date/Time (MDT)
 #       measurement: Start Time
 #       format:
-#           name: Time
+#           name: Local Time
 #           parameters:
 #               format: "%Y-%m-%d %H:%M:%S"
 #                
@@ -249,8 +245,7 @@ columns:
 # ''')
 
 
-_ASTRONOMICAL_CALCULATORS = \
-    AstronomicalCalculatorCache(result_times_local=True)
+_ASTRONOMICAL_CALCULATORS = AstronomicalCalculatorCache()
 
 
 class ClipMetadataCsvFileExporter:
@@ -359,7 +354,7 @@ def _get_column_value(column, clip):
     if format_ is None:
         return str(value)
     else:
-        return format_.format(value)
+        return format_.format(value, clip)
     
     
 def _create_measurements(table_format):
@@ -631,23 +626,6 @@ class RoundedStartTimeMeasurement:
         return time + delta
     
     
-class StartTimeMeasurement:
-    
-    name = 'Start Time'
-    
-    def measure(self, clip):
-        time_zone = _get_time_zone(clip.station.time_zone)
-        return clip.start_time.astimezone(time_zone)
-    
-    
-class StationMeasurement:
-    
-    name = 'Station'
-    
-    def measure(self, clip):
-        return clip.station.name
-    
-    
 class SolarAltitudeMeasurement:
     
     name = 'Solar Altitude'
@@ -667,6 +645,23 @@ class SolarAzimuthMeasurement:
     
     def measure(self, clip):
         return _get_solar_position(clip).azimuth
+    
+    
+class StartTimeMeasurement:
+    
+    name = 'Start Time'
+    
+    def measure(self, clip):
+        time_zone = _get_time_zone(clip.station.time_zone)
+        return clip.start_time.astimezone(time_zone)
+    
+    
+class StationMeasurement:
+    
+    name = 'Station'
+    
+    def measure(self, clip):
+        return clip.station.name
     
     
 class SunriseTimeMeasurement(_SolarEventTimeMeasurement):
@@ -696,10 +691,10 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     RecordingDurationMeasurement,
     RecordingStartTimeMeasurement,
     RoundedStartTimeMeasurement,
-    StartTimeMeasurement,
-    StationMeasurement,
     SolarAltitudeMeasurement,
     SolarAzimuthMeasurement,
+    StartTimeMeasurement,
+    StationMeasurement,
     SunriseTimeMeasurement,
     SunsetTimeMeasurement
 ])
@@ -707,18 +702,6 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
 
 _NONE_STRING = ''
 
-
-class BirdMigrationSeasonFormat:
-    
-    name = 'Bird Migration Season'
-        
-    def format(self, date):
-        if date is None:
-            return _NONE_STRING
-        else:
-            return 'Fall' if date.month >= 7 else 'Spring'
-    
-    
 _DEFAULT_BOOLEAN_VALUES = {
     True: 'True',
     False: 'False'
@@ -734,7 +717,7 @@ class BooleanFormat:
             parameters = {}
         self._values = parameters.get('values', _DEFAULT_BOOLEAN_VALUES)
         
-    def format(self, value):
+    def format(self, value, clip):
         if value is None:
             return _NONE_STRING
         else:
@@ -751,7 +734,7 @@ class CallClipClassFormat:
         else:
             self._mapping = parameters.get('mapping', {})
             
-    def format(self, clip_class_name):
+    def format(self, clip_class_name, clip):
         prefix = 'Call.'
         if clip_class_name is None or not clip_class_name.startswith(prefix):
             return _NONE_STRING
@@ -770,16 +753,8 @@ class DecimalFormat:
         else:
             self._format = '{:' + parameters.get('detail', '') + 'f}'
             
-    def format(self, x):
+    def format(self, x, clip):
         return self._format.format(x)
-
-
-class PercentFormat(DecimalFormat):
-    
-    name = 'Percent'
-    
-    def format(self, x):
-        return self._format.format(100 * x)
 
 
 class DurationFormat:
@@ -808,7 +783,7 @@ class DurationFormat:
             self._quote = parameters.get('quote', False)
         
         
-    def format(self, duration):
+    def format(self, duration, clip):
         
         if duration is None:
             return _NONE_STRING
@@ -832,12 +807,56 @@ class DurationFormat:
             else:
                 return duration
 
+
+class _TimeFormat:
+    
+    # TODO: Validate format by creating a date and invoking strftime
+    # on the format. What exceptions can this raise and how do we
+    # handle them?
+    
+    def __init__(self, local, parameters=None):
+        self._local = local
+        if parameters is None:
+            parameters = {}
+        self._format = parameters.get('format', '%H:%M:%S')
+        self._quote = parameters.get('quote', False)
+        
+        
+    def format(self, time, clip):
+        
+        if time is None:
+            return _NONE_STRING
+        
+        else:
+            
+            # Get local time if needed.
+            if self._local:
+                time_zone = clip.station.tz
+                time = time.astimezone(time_zone)
+            
+            # Get time string.
+            time_string = time.strftime(self._format)
+            
+            # Quote if needed.
+            if self._quote:
+                time_string = '"' + time_string + '"'
+                
+            return time_string
+
+
+class LocalTimeFormat(_TimeFormat):
+    
+    name = 'Local Time'
+    
+    def __init__(self, parameters=None):
+        super().__init__(True, parameters)
+    
     
 class LowerCaseFormat:
     
     name = 'Lower Case'
     
-    def format(self, value):
+    def format(self, value, clip):
         if value is None:
             return _NONE_STRING
         else:
@@ -854,47 +873,81 @@ class MappingFormat:
         else:
             self._mapping = parameters.get('mapping', {})
             
-    def format(self, value):
+    def format(self, value, clip):
         if value is None:
             return _NONE_STRING
         else:
             return self._mapping.get(value, value)
     
     
-class TimeFormat:
+class NightFormat:
     
-    name = 'Time'
-    
-    # TODO: Validate format by creating a date and invoking strftime
-    # on the format. What exceptions can this raise and how do we
-    # handle them?
+    name = 'Night'
     
     def __init__(self, parameters=None):
         if parameters is None:
             parameters = {}
         self._format = parameters.get('format', '%H:%M:%S')
         self._quote = parameters.get('quote', False)
+    
+    def format(self, time, clip):
         
+        if time is None:
+            return _NONE_STRING
         
-    def format(self, time):
+        else:
+            
+            # Get local night.
+            night = clip.station.get_night(time)
+            
+            # Get night string.
+            night_string = night.strftime(self._format)
+            
+            # Quote if needed.
+            if self._quote:
+                night_string = '"' + night_string + '"'
+                
+            return night_string
+
+
+class NocturnalBirdMigrationSeasonFormat:
+    
+    name = 'Nocturnal Bird Migration Season'
+        
+    def format(self, time, clip):
         if time is None:
             return _NONE_STRING
         else:
-            time = time.strftime(self._format)
-            if self._quote:
-                return '"' + time + '"'
-            else:
-                return time
+            night = clip.station.get_night(time)
+            return 'Fall' if night.month >= 7 else 'Spring'
     
+    
+class PercentFormat(DecimalFormat):
+    
+    name = 'Percent'
+    
+    def format(self, x, clip):
+        return self._format.format(100 * x)
+
+
+class UtcTimeFormat(_TimeFormat):
+    
+    name = 'UTC Time'
+    
+    def __init__(self, parameters=None):
+        super().__init__(False, parameters)
+            
     
 _FORMAT_CLASSES = dict((c.name, c) for c in [
-    BirdMigrationSeasonFormat,
     BooleanFormat,
     CallClipClassFormat,
     DecimalFormat,
-    PercentFormat,
     DurationFormat,
+    LocalTimeFormat,
     LowerCaseFormat,
     MappingFormat,
-    TimeFormat
+    NightFormat,
+    NocturnalBirdMigrationSeasonFormat,
+    PercentFormat,
+    UtcTimeFormat,
 ])
