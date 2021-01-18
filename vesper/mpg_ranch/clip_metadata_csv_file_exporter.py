@@ -17,20 +17,21 @@ import vesper.util.os_utils as os_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Write file in chunks to avoid accumulating an unreasonable
-# number of table lines in memory.
-
-# TODO: Create a format superclass that provides a boolean `quote-values`
-# option. (Or perhaps there should be a third option to quote only if
-# needed.
+# TODO: Support table format presets.
 
 # TODO: Provide exporter-level control of CSV options, like the
 # separator and quote characters, the `None` value string, and whether
 # or not values are quoted by default. Provide a function to escape
 # quotes as needed.
 
+# TODO: Write file in chunks to avoid accumulating an unreasonable
+# number of table lines in memory.
 
-# TODO: Allow specification of table format YAML file via command line.
+# TODO: Create a format superclass that provides a boolean `quote-values`
+# option. (Or perhaps there should be a third option to quote only if
+# needed.)
+
+
 _TABLE_FORMAT = yaml_utils.load('''
 
 columns:
@@ -808,9 +809,11 @@ class DurationFormat:
 
 class _TimeFormat:
     
-    # TODO: Validate format by creating a date and invoking strftime
-    # on the format. What exceptions can this raise and how do we
-    # handle them?
+    
+    # TODO: Validate format string. A simple way to do this might be
+    # to create a time and invoke its `strftime` method on the format.
+    # What exceptions might this raise and how would we handle them?
+    
     
     def __init__(self, local, settings=None):
         self._local = local
@@ -880,7 +883,9 @@ class MappingFormat:
     
 class NightFormat:
     
+    
     name = 'Night'
+    
     
     def __init__(self, settings=None):
         if settings is None:
