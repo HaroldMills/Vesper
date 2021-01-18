@@ -107,23 +107,31 @@ export class SpectrogramClipView extends ClipView {
 				settings.high, clip.sampleRate);
 			settings.display = this.settings.spectrogram.display;
 
+
 			// Compute spectrogram, offscreen spectrogram canvas, and
-			// spectrogram image data and put image data to canvas. The
-			// spectrogram canvas and the spectrogram image data have the
-			// same size as the spectrogram.
-			// Uncomment the assignment to `this._spectrogram` in the following
-			// to normalize the spectrogram background.
+			// spectrogram image data. The spectrogram canvas and the
+            // spectrogram image data have the same size as the
+            // spectrogram.
+            
 			this._spectrogram = _computeSpectrogram(clip.samples, settings);
+            
             // _showSpectrogramStats(this._spectrogram, settings);
+            
+            // Uncomment the following assignment to normalize the
+            // spectrogram background.
             // this._spectrogram =
             //     _normalizeSpectrogramBackground(this._spectrogram, settings);
+            
 			this._spectrogramCanvas =
 				_createSpectrogramCanvas(this._spectrogram, settings);
+                
 			this._spectrogramImageData =
 				_createSpectrogramImageData(this._spectrogramCanvas);
+                
 			_computeSpectrogramImage(
 				this._spectrogram, this._spectrogramCanvas,
 				this._spectrogramImageData, settings);
+                
 
 			// Draw spectrogram image.
 			const canvas = this.canvas;
