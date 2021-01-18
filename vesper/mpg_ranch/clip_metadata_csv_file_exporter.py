@@ -17,9 +17,6 @@ import vesper.util.os_utils as os_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Change "Sun" and "Moon" to "Solar" and "Lunar" where appropriate.
-# TODO: Refactor solar event measurement classes to simplify them?
-
 # TODO: Return UTC times instead of local times from all measurements
 # (and from all astronomical calculators).
 
@@ -187,14 +184,14 @@ columns:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: moon_altitude
-      measurement: Moon Altitude
+      measurement: Lunar Altitude
       format:
           name: Decimal
           parameters:
               detail: ".1"
 
     - name: moon_illumination
-      measurement: Moon Illumination
+      measurement: Lunar Illumination
       format:
           name: Percent
           parameters:
@@ -376,47 +373,30 @@ def _create_measurement(column):
     return cls()
 
 
-class AstronomicalDawnMeasurement:
+class _SolarEventTimeMeasurement:
     
+    def measure(self, clip):
+        station = clip.station
+        calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(station)
+        night = station.get_night(clip.start_time)
+        event_name = self.name[:-5]
+        return calculator.get_night_solar_event_time(night, event_name)
+    
+    
+class AstronomicalDawnTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Astronomical Dawn Time'
-    
-    def measure(self, clip):
-        return _get_time(clip, 'Astronomical Dawn')
 
 
-def _get_time(clip, event_name):
-    station = clip.station
-    calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(station)
-    night = station.get_night(clip.start_time)
-    return calculator.get_night_solar_event_time(night, event_name)
-    
-    
-def _get_time_zone(name):
-    return pytz.timezone(name)
-
-
-class AstronomicalDuskMeasurement:
-    
+class AstronomicalDuskTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Astronomical Dusk Time'
-    
-    def measure(self, clip):
-        return _get_time(clip, 'Astronomical Dusk')
 
 
-class CivilDawnMeasurement:
-    
+class CivilDawnTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Civil Dawn Time'
-    
-    def measure(self, clip):
-        return _get_time(clip, 'Civil Dawn')
 
 
-class CivilDuskMeasurement:
-    
+class CivilDuskTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Civil Dusk Time'
-    
-    def measure(self, clip):
-        return _get_time(clip, 'Civil Dusk')
 
 
 class ClipClassMeasurement:
@@ -555,9 +535,9 @@ class FileNameMeasurement:
             return os.path.basename(audio_file_path)
     
     
-class MoonAltitudeMeasurement:
+class LunarAltitudeMeasurement:
     
-    name = 'Moon Altitude'
+    name = 'Lunar Altitude'
     
     def measure(self, clip):
         return _get_lunar_position(clip).altitude
@@ -568,37 +548,29 @@ def _get_lunar_position(clip):
     return calculator.get_lunar_position(clip.start_time)
     
     
-class MoonAzimuthMeasurement:
+class LunarAzimuthMeasurement:
     
-    name = 'Moon Azimuth'
+    name = 'Lunar Azimuth'
     
     def measure(self, clip):
         return _get_lunar_position(clip).azimuth
     
     
-class MoonIlluminationMeasurement:
+class LunarIlluminationMeasurement:
     
-    name = 'Moon Illumination'
+    name = 'Lunar Illumination'
     
     def measure(self, clip):
         calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(clip.station)
         return calculator.get_lunar_illumination(clip.start_time)
     
     
-class NauticalDawnMeasurement:
-    
+class NauticalDawnTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Nautical Dawn Time'
-    
-    def measure(self, clip):
-        return _get_time(clip, 'Nautical Dawn')
 
 
-class NauticalDuskMeasurement:
-    
+class NauticalDuskTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Nautical Dusk Time'
-    
-    def measure(self, clip):
-        return _get_time(clip, 'Nautical Dusk')
 
 
 class NightMeasurement:
@@ -634,6 +606,10 @@ class RecordingStartTimeMeasurement:
             return recording.start_time.astimezone(time_zone)
     
     
+def _get_time_zone(name):
+    return pytz.timezone(name)
+
+
 # TODO: Use time rounding function of `time_utils`?
 class RoundedStartTimeMeasurement:
     
@@ -672,9 +648,9 @@ class StationMeasurement:
         return clip.station.name
     
     
-class SunAltitudeMeasurement:
+class SolarAltitudeMeasurement:
     
-    name = 'Sun Altitude'
+    name = 'Solar Altitude'
     
     def measure(self, clip):
         return _get_solar_position(clip).altitude
@@ -685,53 +661,45 @@ def _get_solar_position(clip):
     return calculator.get_solar_position(clip.start_time)
     
     
-class SunAzimuthMeasurement:
+class SolarAzimuthMeasurement:
     
-    name = 'Sun Azimuth'
+    name = 'Solar Azimuth'
     
     def measure(self, clip):
         return _get_solar_position(clip).azimuth
     
     
-class SunriseTimeMeasurement:
-    
+class SunriseTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Sunrise Time'
     
-    def measure(self, clip):
-        return _get_time(clip, 'Sunrise')
     
-    
-class SunsetTimeMeasurement:
-    
+class SunsetTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Sunset Time'
-    
-    def measure(self, clip):
-        return _get_time(clip, 'Sunset')
     
     
 _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
-    AstronomicalDawnMeasurement,
-    AstronomicalDuskMeasurement,
-    CivilDawnMeasurement,
-    CivilDuskMeasurement,
+    AstronomicalDawnTimeMeasurement,
+    AstronomicalDuskTimeMeasurement,
+    CivilDawnTimeMeasurement,
+    CivilDuskTimeMeasurement,
     ClipClassMeasurement,
     DetectorMeasurement,
     DuplicateCallMeasurement,
     ElapsedStartTimeMeasurement,
     FileNameMeasurement,
-    MoonAltitudeMeasurement,
-    MoonAzimuthMeasurement,
-    MoonIlluminationMeasurement,
-    NauticalDawnMeasurement,
-    NauticalDuskMeasurement,
+    LunarAltitudeMeasurement,
+    LunarAzimuthMeasurement,
+    LunarIlluminationMeasurement,
+    NauticalDawnTimeMeasurement,
+    NauticalDuskTimeMeasurement,
     NightMeasurement,
     RecordingDurationMeasurement,
     RecordingStartTimeMeasurement,
     RoundedStartTimeMeasurement,
     StartTimeMeasurement,
     StationMeasurement,
-    SunAltitudeMeasurement,
-    SunAzimuthMeasurement,
+    SolarAltitudeMeasurement,
+    SolarAzimuthMeasurement,
     SunriseTimeMeasurement,
     SunsetTimeMeasurement
 ])
