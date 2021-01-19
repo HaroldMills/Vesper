@@ -560,6 +560,19 @@ def get_clip_annotations(clip):
     return dict((a.name, a.value) for a in annotations)
 
 
+def get_clip_annotation_value(clip, annotation_info):
+
+    try:
+        annotation = StringAnnotation.objects.get(
+            clip=clip, info=annotation_info)
+        
+    except StringAnnotation.DoesNotExist:
+        return None
+    
+    else:
+        return annotation.value
+
+
 @archive_lock.atomic
 @transaction.atomic
 def annotate_clip(
@@ -640,6 +653,17 @@ def delete_clip_annotation(
             creating_user=creating_user,
             creating_job=creating_job,
             creating_processor=creating_processor)
+
+
+def get_clip_detector_name(clip):
+    
+    processor = clip.creating_processor
+    
+    if processor is None:
+        return None
+    
+    else:
+        return processor.name
 
 
 def get_clip_type(clip):

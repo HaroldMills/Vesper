@@ -5,7 +5,7 @@ import datetime
 import os.path
 
 from vesper.command.command import CommandExecutionError
-from vesper.django.app.models import AnnotationInfo, StringAnnotation
+from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.astronomical_calculator import AstronomicalCalculatorCache
 from vesper.singletons import clip_manager
 from vesper.util.bunch import Bunch
@@ -16,6 +16,13 @@ import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Support table format presets.
+
+# TODO: Support format composition, e.g. to format a measurement value
+# and then apply a mapping to the result, change its case, convert it
+# to a percent, etc.
+
+# TODO: Test what happens when required measurement and format settings
+# are missing.
 
 # TODO: Provide exporter-level control of CSV options, like the
 # separator and quote characters, the `None` value string, and whether
@@ -28,6 +35,46 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Create a format superclass that provides a boolean `quote-values`
 # option. (Or perhaps there should be a third option to quote only if
 # needed.)
+
+
+'''
+Measurement names:
+
+    Annotation Value
+    Astronomical Dawn Time
+    Astronomical Dusk Time
+    Civil Dawn Time
+    Civil Dusk Time
+    Detector Name
+    Detector Type
+    Duplicate Call
+    Elapsed Start Time
+    File Name
+    Lunar Altitude
+    Lunar Azimuth
+    Lunar Illumination
+    Nautical Dawn Time
+    Nautical Dusk Time
+    Night
+    Recording Duration
+    Recording Start Time
+    Solar Altitude
+    Solar Azimuth
+    Start Time
+    Station Name
+    Sunrise Time
+    Sunset Time
+
+Some comments and questions:
+
+* We may want day solar event times or night solar event times, depending
+  on the project. The setting events are the same in the two cases, but
+  the rising events differ. How to specify which you want? One possibility
+  would be that we replace each rising event measurement with two
+  measurements, e.g. replace Sunrise Time with Day Sunrise Time and
+  Night Sunrise Time. Another possibility would be to add a "diurnal"
+  table setting that affects the behavior of the rising event measurements.
+'''
 
 
 _TABLE_FORMAT = yaml_utils.load('''
@@ -46,13 +93,16 @@ columns:
               format: "%Y"
 
     - name: detector
-      measurement: Detector
+      measurement: Detector Type
       format: Lower Case
 
     - name: species
-      measurement: Clip Class
+      measurement:
+          name: Annotation Value
+          settings:
+              annotation_name: Classification
       format:
-          name: Call Clip Class
+          name: Call Species
           settings:
               mapping:
                   DoubleUp: dbup
@@ -60,7 +110,7 @@ columns:
                   Unknown: unkn
       
     - name: site
-      measurement: Station
+      measurement: Station Name
       format:
           name: Mapping
           settings:
@@ -115,7 +165,7 @@ columns:
           name: Duplicate Call
           settings:
               min_intercall_interval: 60
-              ignored_classes: [Other, Unknown, Weak]
+              ignored_classifications: [Other, Unknown, Weak]
       format:
           name: Boolean
           settings:
@@ -319,6 +369,23 @@ def _create_measurement(column):
     return cls()
 
 
+class AnnotationValueMeasurement:
+    
+    name = 'Annotation Value'
+    
+    def __init__(self, settings):
+        annotation_name = settings.get('annotation_name')
+        if annotation_name is None:
+            raise ValueError(
+                'Measurement settings lack required annotation_name item.')
+        self._annotation_info = \
+            AnnotationInfo.objects.get(name=annotation_name)
+    
+    def measure(self, clip):
+        return model_utils.get_clip_annotation_value(
+            clip, self._annotation_info)
+        
+
 class _SolarEventTimeMeasurement:
     
     def measure(self, clip):
@@ -345,58 +412,28 @@ class CivilDuskTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Civil Dusk Time'
 
 
-class ClipClassMeasurement:
+class DetectorNameMeasurement:
     
-    name = 'Clip Class'
+    name = 'Detector Name'
     
     def measure(self, clip):
-        return _get_classification(clip)
+        return model_utils.get_clip_detector_name(clip)
     
     
-_classification_annotation_info = None
-
-
-def _get_classification_annotation_info():
-    
-    global _classification_annotation_info
-    
-    if _classification_annotation_info is None:
-        _classification_annotation_info = \
-            AnnotationInfo.objects.get(name='Classification')
-            
-    return _classification_annotation_info
-
-
-def _get_classification(clip):
-    
-    try:
-        annotation = StringAnnotation.objects.get(
-            clip=clip, info=_get_classification_annotation_info())
-        
-    except StringAnnotation.DoesNotExist:
-        return None
-    
-    else:
-        return annotation.value
-    
-    
-class DetectorMeasurement:
-    
-    name = 'Detector'
-    
+class DetectorTypeMeasurement:
+     
+    name = 'Detector Type'
+     
     def measure(self, clip):
         return model_utils.get_clip_type(clip)
     
     
 class DuplicateCallMeasurement:
     
-    
-    # This measurement assumes that clips of a given clip class are
-    # visited in order of increasing start time.
-    
+    # This measurement assumes that clips of a given station, detector,
+    # and classification are visited in order of increasing start time.
     
     name = 'Duplicate Call'
-    
     
     def __init__(self, settings=None):
         
@@ -406,57 +443,49 @@ class DuplicateCallMeasurement:
         interval = settings.get('min_intercall_interval', 60)
         self._min_intercall_interval = datetime.timedelta(seconds=interval)
         
-        names = settings.get('ignored_classes', [])
-        self._ignored_class_names = frozenset('Call.' + n for n in names)
+        names = settings.get('ignored_classifications', [])
+        self._ignored_classifications = frozenset('Call.' + n for n in names)
         
         self._last_call_times = {}
         
+        self._annotation_info = \
+            AnnotationInfo.objects.get(name='Classification')
     
     def measure(self, clip):
         
-        class_name = _get_classification(clip)
+        classification = \
+            model_utils.get_clip_annotation_value(clip, self._annotation_info)
         
-        if class_name is None or not class_name.startswith('Call.'):
+        if classification is None or not classification.startswith('Call.'):
             return None
         
         else:
             # clip is a call
             
-            if class_name in self._ignored_class_names:
+            if classification in self._ignored_classifications:
                 return None
             
             else:
-                # call class should not be ignored
+                # classification should not be ignored
                 
-                detector_name = _get_detector_name(clip)
-                key = (clip.station.name, detector_name, class_name)
+                detector_name = model_utils.get_clip_detector_name(clip)
+                key = (clip.station.name, detector_name, classification)
                 last_time = self._last_call_times.get(key)
                 
                 time = clip.start_time
                 self._last_call_times[key] = time
                 
                 if last_time is None:
-                    # first call of this class
+                    # first clip with this classification
                     
                     return False
                 
                 else:
-                    # not first call of this class
+                    # not first clip with this classification
                     
                     return time - last_time < self._min_intercall_interval
     
     
-def _get_detector_name(clip):
-    
-    processor = clip.creating_processor
-    
-    if processor is None:
-        return None
-    
-    else:
-        return processor.name
-
-
 class ElapsedStartTimeMeasurement:
     
     name = 'Elapsed Start Time'
@@ -580,9 +609,9 @@ class StartTimeMeasurement:
         return clip.start_time
     
     
-class StationMeasurement:
+class StationNameMeasurement:
     
-    name = 'Station'
+    name = 'Station Name'
     
     def measure(self, clip):
         return clip.station.name
@@ -597,12 +626,13 @@ class SunsetTimeMeasurement(_SolarEventTimeMeasurement):
     
     
 _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
+    AnnotationValueMeasurement,
     AstronomicalDawnTimeMeasurement,
     AstronomicalDuskTimeMeasurement,
     CivilDawnTimeMeasurement,
     CivilDuskTimeMeasurement,
-    ClipClassMeasurement,
-    DetectorMeasurement,
+    DetectorNameMeasurement,
+    DetectorTypeMeasurement,
     DuplicateCallMeasurement,
     ElapsedStartTimeMeasurement,
     FileNameMeasurement,
@@ -617,7 +647,7 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     SolarAltitudeMeasurement,
     SolarAzimuthMeasurement,
     StartTimeMeasurement,
-    StationMeasurement,
+    StationNameMeasurement,
     SunriseTimeMeasurement,
     SunsetTimeMeasurement
 ])
@@ -649,9 +679,9 @@ class BooleanFormat:
             return self._values[value]
     
     
-class CallClipClassFormat:
+class CallSpeciesFormat:
     
-    name = 'Call Clip Class'
+    name = 'Call Species'
     
     def __init__(self, settings=None):
         if settings is None:
@@ -659,12 +689,12 @@ class CallClipClassFormat:
         else:
             self._mapping = settings.get('mapping', {})
             
-    def format(self, clip_class_name, clip):
+    def format(self, classification, clip):
         prefix = 'Call.'
-        if clip_class_name is None or not clip_class_name.startswith(prefix):
+        if classification is None or not classification.startswith(prefix):
             return _NO_VALUE_STRING
         else:
-            name = clip_class_name[len(prefix):]
+            name = classification[len(prefix):]
             return self._mapping.get(name, name.lower())
         
            
@@ -684,9 +714,7 @@ class DecimalFormat:
 
 class DurationFormat:
 
-    
     name = 'Duration'
-    
     
     def __init__(self, settings=None):
         
@@ -706,7 +734,6 @@ class DurationFormat:
                 
             self._format = hours_format + sep + '{:02d}' + sep + '{:02d}'
             self._quote = settings.get('quote', False)
-        
         
     def format(self, duration, clip):
         
@@ -735,7 +762,6 @@ class DurationFormat:
 
 class _TimeFormat:
     
-    
     def __init__(self, local, settings=None):
         
         self._local = local
@@ -746,7 +772,6 @@ class _TimeFormat:
         self._format = self._get_format(settings)
         self._rounding_increment = settings.get('rounding_increment', None)
         self._quote = settings.get('quote', False)
-    
     
     def _get_format(self, settings):
         
@@ -768,7 +793,6 @@ class _TimeFormat:
                     f'Error message was: {str(e)}')
             
             return format_
-    
     
     def format(self, time, clip):
         
@@ -856,9 +880,7 @@ class MappingFormat:
     
 class NightFormat:
     
-    
     name = 'Night'
-    
     
     def __init__(self, settings=None):
         if settings is None:
@@ -916,7 +938,7 @@ class UtcTimeFormat(_TimeFormat):
     
 _FORMAT_CLASSES = dict((c.name, c) for c in [
     BooleanFormat,
-    CallClipClassFormat,
+    CallSpeciesFormat,
     DecimalFormat,
     DurationFormat,
     LocalTimeFormat,
