@@ -15,25 +15,17 @@ import vesper.util.os_utils as os_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Support table format presets.
-
-# TODO: Use `jsonschema` package to check table format specification.
-
-# TODO: Support format composition, e.g. to format a measurement value
-# and then apply a mapping to the result, change its case, convert it
-# to a percent, etc.
+# TODO: Use `csv` module to write temporary output file. Move file to
+# make it permanent on success.
 
 # TODO: Provide exporter-level control of CSV options, like the
 # separator and quote characters, the `None` value string, and whether
 # or not values are quoted by default. Provide a function to escape
 # quotes as needed.
 
-# TODO: Write file in chunks to avoid accumulating an unreasonable
-# number of table lines in memory.
+# TODO: Use `jsonschema` package to check table format specification.
 
-# TODO: Create a format superclass that provides a boolean `quote-values`
-# option. (Or perhaps there should be a third option to quote only if
-# needed.)
+# TODO: Support table format presets.
 
 
 '''
@@ -101,12 +93,14 @@ columns:
           settings:
               annotation_name: Classification
       format:
-          name: Call Species
-          settings:
-              mapping:
-                  DoubleUp: dbup
-                  Other: othe
-                  Unknown: unkn
+          - Call Species
+          - name: Mapping
+            settings:
+                mapping:
+                    DoubleUp: dbup
+                    Other: othe
+                    Unknown: unkn
+          - Lower Case
       
     - name: site
       measurement: Station Name
@@ -166,12 +160,13 @@ columns:
               min_intercall_interval: 60
               ignored_classifications: [Other, Unknown, Weak]
       format:
-          name: Boolean
-          settings:
-              values:
-                  true: 'yes'
-                  false: 'no'
-                  
+          - Boolean
+          - name: Mapping
+            settings:
+                mapping:
+                    true: 'yes'
+                    false: 'no'
+    
     - name: sunset
       measurement: Sunset Time
       format:
@@ -339,16 +334,28 @@ def _get_column_format(column):
     
     if format_ is None:
         return None
+    
+    elif isinstance(format_, (list, tuple)):
+        # sequence of format specifications
         
-    elif isinstance(format_, str):
-        # `format_` is string format name
+        return [_get_format(f) for f in format_]
+    
+    else:
+        # single format specification
+        
+        return _get_format(format_)
+
+
+def _get_format(format_):
+    
+    if isinstance(format_, str):
+        # string format name
         
         cls = _FORMAT_CLASSES[format_]
         return cls()
         
     else:
-        
-        # We assume that `format_` is a `dict`.
+        # `dict` format specification
         
         name = format_['name']
         cls = _FORMAT_CLASSES[name]
@@ -367,7 +374,17 @@ def _get_column_value(column, clip):
     
     if format_ is None:
         return str(value)
+    
+    elif isinstance(format_, (list, tuple)):
+        # sequence of formats
+        
+        for f in format_:
+            value = f.format(value, clip)
+        return value
+            
     else:
+        # single format
+        
         return format_.format(value, clip)
     
     
@@ -666,11 +683,6 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
 ])
 
 
-_DEFAULT_BOOLEAN_VALUES = {
-    True: 'True',
-    False: 'False'
-}
-
 _NO_VALUE_STRING = ''
 
 _TEST_DATETIME = datetime.datetime(2020, 1, 1)
@@ -680,35 +692,25 @@ class BooleanFormat:
     
     name = 'Boolean'
     
-    def __init__(self, settings=None):
-        if settings is None:
-            settings = {}
-        self._values = settings.get('values', _DEFAULT_BOOLEAN_VALUES)
-        
     def format(self, value, clip):
         if value is None:
             return _NO_VALUE_STRING
+        elif value:
+            return 'True'
         else:
-            return self._values[value]
+            return 'False'
     
     
 class CallSpeciesFormat:
     
     name = 'Call Species'
     
-    def __init__(self, settings=None):
-        if settings is None:
-            self._mapping = {}
-        else:
-            self._mapping = settings.get('mapping', {})
-            
     def format(self, classification, clip):
         prefix = 'Call.'
         if classification is None or not classification.startswith(prefix):
             return _NO_VALUE_STRING
         else:
-            name = classification[len(prefix):]
-            return self._mapping.get(name, name.lower())
+            return classification[len(prefix):]
         
            
 class DecimalFormat:
@@ -733,8 +735,7 @@ class DurationFormat:
         
         if settings is None:
             self._format = '{:d}:{:02d}:{:02d}'
-            self._quote = False
-            
+ 
         else:
             
             sep = settings.get('separator', ':')
@@ -746,7 +747,6 @@ class DurationFormat:
                 hours_format = '{:0' + str(num_hours_digits) + '}'
                 
             self._format = hours_format + sep + '{:02d}' + sep + '{:02d}'
-            self._quote = settings.get('quote', False)
         
     def format(self, duration, clip):
         
@@ -765,13 +765,8 @@ class DurationFormat:
             
             seconds = int(round(seconds))
             
-            duration = self._format.format(hours, minutes, seconds)
+            return self._format.format(hours, minutes, seconds)
             
-            if self._quote:
-                return '"' + duration + '"'
-            else:
-                return duration
-
 
 class _TimeFormat:
     
@@ -784,7 +779,6 @@ class _TimeFormat:
         
         self._format = self._get_format(settings)
         self._rounding_increment = settings.get('rounding_increment', None)
-        self._quote = settings.get('quote', False)
     
     def _get_format(self, settings):
         
@@ -824,14 +818,8 @@ class _TimeFormat:
                 time = time.astimezone(time_zone)
             
             # Get time string.
-            time_string = time.strftime(self._format)
-            
-            # Quote if needed.
-            if self._quote:
-                time_string = '"' + time_string + '"'
-                
-            return time_string
-
+            return time.strftime(self._format)
+           
 
 # TODO: Use `time_utils.round_datetime` and `time_utils.round_time`
 # here to allow rounding increments larger than one hour. Note that
@@ -899,7 +887,6 @@ class NightFormat:
         if settings is None:
             settings = {}
         self._format = settings.get('format', '%H:%M:%S')
-        self._quote = settings.get('quote', False)
     
     def format(self, time, clip):
         
@@ -912,13 +899,7 @@ class NightFormat:
             night = clip.station.get_night(time)
             
             # Get night string.
-            night_string = night.strftime(self._format)
-            
-            # Quote if needed.
-            if self._quote:
-                night_string = '"' + night_string + '"'
-                
-            return night_string
+            return night.strftime(self._format)
 
 
 class NocturnalBirdMigrationSeasonFormat:
