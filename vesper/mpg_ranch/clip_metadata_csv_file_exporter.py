@@ -25,7 +25,13 @@ import vesper.util.yaml_utils as yaml_utils
 
 # TODO: Use `jsonschema` package to check table format specification.
 
-# TODO: Support table format presets.
+# TODO: Consider moving measurement and format settings up one level
+# in specification dictionaries, i.e. eliminating "settings"  key.
+# The disadvantage of this is the possibility of collisions between
+# setting names and specification item keys. Currently, though, the
+# only specification keys we use are "name" and "settings".
+
+# TODO: Implement table format presets.
 
 
 '''
@@ -62,8 +68,8 @@ Some comments and questions:
   on the project. The setting events are the same in the two cases, but
   the rising events differ. How to specify which you want? One possibility
   would be that we replace each rising event measurement with two
-  measurements, e.g. replace Sunrise Time with Day Sunrise Time and
-  Night Sunrise Time. Another possibility would be to add a "diurnal"
+  measurements, e.g. replace "Sunrise Time" with "Day Sunrise Time" and
+  "Night Sunrise Time". Another possibility would be to add a "diurnal"
   table setting that affects the behavior of the rising event measurements.
 '''
 
