@@ -96,7 +96,7 @@ columns:
           - Call Species
           - name: Mapping
             settings:
-                mapping:
+                items:
                     DoubleUp: dbup
                     Other: othe
                     Unknown: unkn
@@ -107,7 +107,7 @@ columns:
       format:
           name: Mapping
           settings:
-              mapping:
+              items:
                   Baldy: baldy
                   Floodplain: flood
                   Ridge: ridge
@@ -163,7 +163,7 @@ columns:
           - Boolean
           - name: Mapping
             settings:
-                mapping:
+                items:
                     true: 'yes'
                     false: 'no'
     
@@ -870,7 +870,7 @@ class MappingFormat:
         if settings is None:
             self._mapping = {}
         else:
-            self._mapping = settings.get('mapping', {})
+            self._mapping = settings.get('items', {})
             
     def format(self, value, clip):
         if value is None:
