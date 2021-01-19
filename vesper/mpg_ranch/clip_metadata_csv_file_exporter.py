@@ -17,12 +17,11 @@ import vesper.util.yaml_utils as yaml_utils
 
 # TODO: Support table format presets.
 
+# TODO: Use `jsonschema` package to check table format specification.
+
 # TODO: Support format composition, e.g. to format a measurement value
 # and then apply a mapping to the result, change its case, convert it
 # to a percent, etc.
-
-# TODO: Test what happens when required measurement and format settings
-# are missing.
 
 # TODO: Provide exporter-level control of CSV options, like the
 # separator and quote characters, the `None` value string, and whether
@@ -286,9 +285,23 @@ def _create_table_columns(table_format):
 
 
 def _create_table_column(column):
+    
     name = _get_column_name(column)
-    measurement = _get_column_measurement(column)
-    format_ = _get_column_format(column)
+    
+    try:
+        measurement = _get_column_measurement(column)
+    except Exception as e:
+        raise ValueError(
+            f'Error creating measurement for clip metadata column '
+            f'"{name}": {str(e)}')
+    
+    try:
+        format_ = _get_column_format(column)
+    except Exception as e:
+        raise ValueError(
+            f'Error creating format for clip metadata column '
+            f'"{name}": {str(e)}')
+        
     return Bunch(name=name, measurement=measurement, format=format_)
     
     
@@ -377,7 +390,7 @@ class AnnotationValueMeasurement:
         annotation_name = settings.get('annotation_name')
         if annotation_name is None:
             raise ValueError(
-                'Measurement settings lack required annotation_name item.')
+                'Measurement settings lack required "annotation_name" item.')
         self._annotation_info = \
             AnnotationInfo.objects.get(name=annotation_name)
     
