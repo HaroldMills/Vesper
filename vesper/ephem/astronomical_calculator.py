@@ -634,18 +634,74 @@ class AstronomicalCalculator:
     
     def get_solar_period_name(self, time):
         
+        """
+        Gets the name of the solar period that includes the specified time.
+        
+        The possible return values are:
+        
+            Night
+            Morning Astronomical Twilight
+            Morning Nautical Twilight
+            Morning Civil Twilight
+            Day
+            Evening Civil Twilight
+            Evening Nautical Twilight
+            Evening Astronomical Twilight
+ 
+        By definition, morning twilight occurs between solar midnight
+        and the following solar noon, when the sun's altitude is
+        increasing. Evening twilight occurs between solar noon and the
+        following solar midnight, when the sun's altitude is decreasing.
+        
+        Note that at sufficiently high latitudes, a night may have just
+        one civil, nautical, or astronomical twilight period if the
+        sun's altitude remains sufficiently low. Such a twilight period
+        still has evening and morning portions, however (unless the
+        period comprises a single point, solar midnight), with the
+        evening portion prior to and the morning portion beginning at
+        solar midnight.
+        """
+        
         arg = self._get_skyfield_time(time)
         period_codes = self._solar_period_function(arg)
         
         if len(period_codes.shape) == 0:
             # getting period name for single time
             
-            return _SOLAR_PERIOD_NAMES[float(period_codes)]
+            return self._get_solar_period_name(period_codes, time)
         
         else:
             # getting period names for list of times
             
-            return [_SOLAR_PERIOD_NAMES(c) for c in period_codes]
+            return [self._get_solar_period_name(c, time) for c in period_codes]
+    
+    
+    def _get_solar_period_name(self, code, time):
+        
+        code = float(code)
+        
+        name = _SOLAR_PERIOD_NAMES[code]
+        
+        if name == 'Day' or name == 'Night':
+            return name
+        
+        else:
+            # some kind of twilight
+            
+            # Get solar midnight of solar night that includes `time`.
+            # If `time` is before the solar noon of its day, the relevant
+            # solar midnight is the one that precedes that solar noon.
+            # Otherwise it's the one after. This solar midnight always
+            # separates the evening and morning twilight periods.
+            date = time.date()
+            noon = self.get_solar_noon(date)
+            if time < noon:
+                date = date - _ONE_DAY
+            midnight = self.get_solar_midnight(date)
+            
+            prefix = 'Evening' if time < midnight else 'Morning'
+            
+            return f'{prefix} {name}'
     
     
     @lru_cache(_MAX_CACHE_SIZE)
