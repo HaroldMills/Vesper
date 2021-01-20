@@ -1,8 +1,8 @@
 """Module containing class `ClipMetadataCsvFileExporter`."""
 
 
+from pathlib import Path
 import datetime
-import os.path
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
@@ -539,11 +539,11 @@ class FileNameMeasurement:
     name = 'File Name'
     
     def measure(self, clip):
-        audio_file_path = clip_manager.instance.get_audio_file_path(clip)
+        audio_file_path = Path(clip_manager.instance.get_audio_file_path(clip))
         if audio_file_path is None:
             return None
         else:
-            return os.path.basename(audio_file_path)
+            return audio_file_path.name
     
     
 class LunarAltitudeMeasurement:
