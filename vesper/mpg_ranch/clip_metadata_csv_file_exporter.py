@@ -163,8 +163,8 @@ columns:
           - name: Mapping
             settings:
                 items:
-                    true: 'yes'
-                    false: 'no'
+                    'True': 'yes'
+                    'False': 'no'
     
     - name: sunset
       measurement: Sunset Time
