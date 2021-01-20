@@ -2,7 +2,9 @@
 
 
 from pathlib import Path
+import csv
 import datetime
+import tempfile
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
@@ -11,17 +13,8 @@ from vesper.singletons import clip_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
-import vesper.util.os_utils as os_utils
 import vesper.util.yaml_utils as yaml_utils
 
-
-# TODO: Use `csv` module to write temporary output file. Move file to
-# make it permanent on success.
-
-# TODO: Provide exporter-level control of CSV options, like the
-# separator and quote characters, the `None` value string, and whether
-# or not values are quoted by default. Provide a function to escape
-# quotes as needed.
 
 # TODO: Use `jsonschema` package to check table format specification.
 
@@ -254,32 +247,87 @@ class ClipMetadataCsvFileExporter:
     
     extension_name = 'Clip Metadata CSV File Exporter'
     
+    _OUTPUT_CHUNK_SIZE = 100
+    
     
     def __init__(self, args):
         get = command_utils.get_required_arg
         self._output_file_path = get('output_file_path', args)
         self._columns = _create_table_columns(_TABLE_FORMAT)
+        self._rows = []
     
     
     def begin_exports(self):
+        self._open_output_file()
         column_names = [c.name for c in self._columns]
-        self._lines = [','.join(column_names)]
+        self._write_row(column_names)
+    
+    
+    def _open_output_file(self):
+        
+        # Create output file in temporary file directory.
+        try:
+            self._output_file = tempfile.NamedTemporaryFile(
+                'wt', prefix='vesper-', suffix='.csv', delete=False)
+        except Exception as e:
+            self._handle_output_error('Could not open output file.', e)
+        
+        # Create output CSV writer.
+        try:
+            self._output_writer = csv.writer(self._output_file)
+        except Exception as e:
+            self._handle_output_error(
+                'Could not create output file CSV writer.', e)
+    
+    
+    def _handle_output_error(self, message, e):
+        raise CommandExecutionError(f'{message} Error message was: {str(e)}.')
+    
+    
+    def _write_row(self, row):
+        self._rows.append(row)
+        if len(self._rows) == self._OUTPUT_CHUNK_SIZE:
+            self._write_rows()
+    
+    
+    def _write_rows(self):
+        
+        # Write output rows.
+        try:
+            self._output_writer.writerows(self._rows)
+        except Exception as e:
+            self._handle_output_error('Could not write to output file.', e)
+        
+        self._rows = []
     
     
     def export(self, clip):
-        values = [_get_column_value(c, clip) for c in self._columns]
-        self._lines.append(','.join(values))
+        row = [_get_column_value(c, clip) for c in self._columns]
+        self._write_row(row)
         return True
-        
-        
+    
+    
     def end_exports(self):
-        table = '\n'.join(self._lines) + '\n'
+        
+        if len(self._rows) != 0:
+            self._write_rows()
+            
+        temp_file_path = Path(self._output_file.name)
+        
+        # Close output file.
         try:
-            os_utils.write_file(self._output_file_path, table)
-        except OSError as e:
-            raise CommandExecutionError(str(e))
+            self._output_file.close()
+        except Exception as e:
+            self._handle_output_error('Could not close output file.', e)
         
-        
+        # Move output file from temporary file directory to specified
+        # location.
+        try:
+            temp_file_path.rename(self._output_file_path)
+        except Exception as e:
+            self._handle_output_error('Could not rename output file.', e)
+    
+    
 def _create_table_columns(table_format):
     columns = table_format['columns']
     return [_create_table_column(c) for c in columns]
@@ -292,14 +340,14 @@ def _create_table_column(column):
     try:
         measurement = _get_column_measurement(column)
     except Exception as e:
-        raise ValueError(
+        raise CommandExecutionError(
             f'Error creating measurement for clip metadata column '
             f'"{name}": {str(e)}')
     
     try:
         format_ = _get_column_format(column)
     except Exception as e:
-        raise ValueError(
+        raise CommandExecutionError(
             f'Error creating format for clip metadata column '
             f'"{name}": {str(e)}')
         
