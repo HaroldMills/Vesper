@@ -50,6 +50,7 @@ Measurement names:
     Recording Start Time
     Solar Altitude
     Solar Azimuth
+    Solar Period Name
     Start Time
     Station Name
     Sunrise Time
@@ -235,7 +236,37 @@ columns:
           name: Percent
           settings:
               detail: ".1"
-      
+    
+    - name: twilight
+      measurement: Solar Period Name
+      format:
+          name: Mapping
+          settings:
+              items:
+                  Day: day
+                  Evening Civil Twilight: civil_twilight
+                  Evening Nautical Twilight: nautical_twilight
+                  Evening Astronomical Twilight: astronomical_twilight
+                  Night: night
+                  Morning Astronomical Twilight: astronomical_twilight
+                  Morning Nautical Twilight: nautical_twilight
+                  Morning Civil Twilight: civil_twilight
+        
+    - name: dusk_dawn
+      measurement: Solar Period Name
+      format:
+          name: Mapping
+          settings:
+              items:
+                  Day: day
+                  Evening Civil Twilight: dusk
+                  Evening Nautical Twilight: dusk
+                  Evening Astronomical Twilight: dusk
+                  Night: night
+                  Morning Astronomical Twilight: dawn
+                  Morning Nautical Twilight: dawn
+                  Morning Civil Twilight: dawn
+        
 ''')
 
 
@@ -685,6 +716,15 @@ class SolarAzimuthMeasurement:
         return _get_solar_position(clip).azimuth
     
     
+class SolarPeriodNameMeasurement:
+    
+    name = 'Solar Period Name'
+    
+    def measure(self, clip):
+        calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(clip.station)
+        return calculator.get_solar_period_name(clip.start_time)
+
+
 class StartTimeMeasurement:
     
     name = 'Start Time'
@@ -730,6 +770,7 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     RecordingStartTimeMeasurement,
     SolarAltitudeMeasurement,
     SolarAzimuthMeasurement,
+    SolarPeriodNameMeasurement,
     StartTimeMeasurement,
     StationNameMeasurement,
     SunriseTimeMeasurement,
