@@ -13,6 +13,9 @@ from skyfield.api import Topos, load, load_file
 from vesper.util.lru_cache import LruCache
 
 
+# TODO: Use the terms "twilight event" and "sunlight period"?
+# TODO: Reject attempts to create astronomical calculators for the poles.
+# TODO: Clarify which ends of solar periods are closed and open, and document.
 # TODO: Eliminate `Location` class, or require it for `get_calculator`?
 # TODO: Make time zone optional and drop support for local time results?
 # TODO: Reconsider "time" versus "datetime".
