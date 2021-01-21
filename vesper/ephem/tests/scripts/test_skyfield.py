@@ -9,8 +9,7 @@ from pathlib import Path
 import csv
 import datetime
 
-from vesper.ephem.astronomical_calculator import (
-    AstronomicalCalculator, Location)
+from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 from vesper.ephem.usno_rise_set_table import UsnoRiseSetTable
 
 
@@ -154,8 +153,7 @@ def get_skyfield_event_times(lat, lon, year, event_name, utc_offset):
         
         # Get all Skyfield events for the specified lat, lon, and year.
         time_zone = datetime.timezone(utc_offset)
-        location = Location(lat, lon, time_zone)
-        c = AstronomicalCalculator(location)
+        c = AstronomicalCalculator(lat, lon, time_zone)
         start_time = datetime.datetime(year, 1, 1, tzinfo=time_zone)
         end_time = datetime.datetime(year + 1, 1, 1, tzinfo=time_zone)
         events = c.get_solar_events(start_time, end_time)

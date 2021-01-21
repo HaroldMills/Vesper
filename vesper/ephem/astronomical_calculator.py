@@ -13,11 +13,10 @@ from skyfield.api import Topos, load, load_file
 from vesper.util.lru_cache import LruCache
 
 
-# TODO: Use the terms "twilight event" and "sunlight period"?
-# TODO: Reject attempts to create astronomical calculators for the poles.
+# TODO: Make time zone optional. When absent, use UTC-offset time zone.
+# TODO: Reject attempts to create astronomical calculators at the poles.
 # TODO: Clarify which ends of solar periods are closed and open, and document.
-# TODO: Eliminate `Location` class, or require it for `get_calculator`?
-# TODO: Make time zone optional and drop support for local time results?
+# TODO: Use the terms "twilight event" and "sunlight period"?
 # TODO: Reconsider "time" versus "datetime".
 
 
@@ -72,10 +71,16 @@ _THIRTEEN_HOURS = datetime.timedelta(hours=13)
 '''
 AstronomicalCalculator methods:
 
-def __init__(self, location, result_times_local=False)
+def __init__(self, latitude, longitude, time_zone, result_times_local=False)
 
 @property
-def location(self)
+def latitude(self)
+
+@property
+def longitude(self)
+
+@property
+def time_zone(self)
 
 @property
 def result_times_local(self)
@@ -146,65 +151,6 @@ The time is a Python `datetime` and the name is a string.
 """
 
 
-class Location:
-    
-    """
-    A location on the earth.
-    
-    A `Location` has a latitude, longitude, time zone, and optional
-    name. `Location` objects are hashable, and two `Location` objects
-    are considered equal if they have the same latitude, longitude,
-    and time zone.
-    """
-    
-    
-    def __init__(self, latitude, longitude, time_zone, name=None):
-        
-        self._latitude = latitude
-        self._longitude = longitude
-        
-        if isinstance(time_zone, str):
-            self._time_zone = pytz.timezone(time_zone)
-        else:
-            self._time_zone = time_zone
-        
-        self._name = name
-    
-    
-    @property
-    def latitude(self):
-        return self._latitude
-    
-    
-    @property
-    def longitude(self):
-        return self._longitude
-    
-    
-    @property
-    def time_zone(self):
-        return self._time_zone
-    
-    
-    @property
-    def name(self):
-        return self._name
-    
-    
-    def __eq__(self, other):
-        if not isinstance(other, Location):
-            return False
-        else:
-            return (
-                self._latitude == other.latitude and
-                self._longitude == other.longitude and
-                self._time_zone == other.time_zone)
-    
-    
-    def __hash__(self):
-        return hash((self._latitude, self._longitude, self._time_zone))
-
-
 class AstronomicalCalculator:
     
     
@@ -226,28 +172,40 @@ class AstronomicalCalculator:
     than the top of Mount Everest) differ by only about a
     millisecond at the latitude and longitude of Ithaca, New York.
     
-    The `location` initializer argument must have the three
-    attributes `latitude`, `longitude`, and `time_zone`. The `latitude`
-    and `longitude` attributes must be numbers with units of degrees.
-    The `time_zone` attribute can be either a string IANA time zone
-    name (e.g. "US/Eastern") or a `datetime.tzinfo` subclass, including
-    a `pytz` time zone.
+    The `latitude` and `longitude` initializer arguments specify
+    the location for which the calculator should perform computations.
+    They have units of degrees.
     
-    Note that it is essential for the correct functioning of the
-    various methods of this class that yield event times for a
-    particular date (including the `get_solar_noon`,
-    `get_solar_midnight`, `get_day_solar_events`,
-    `get_night_solar_events`, `get_day_solar_event_time`, and
-    `get_night_solar_event_time` methods) that an
-    `AstronomicalCalculator` know the time zone of its location.
-    It is only with such a time zone that the methods can relate
-    a time on a specific date to the correct UTC time for any
-    location on earth, including all locations near the
-    international date line.
+    The `time_zone` initializer argument specifies the local time
+    zone of a calculator. It can be either a string IANA time zone
+    name (e.g. "US/Eastern") or an instance of a `datetime.tzinfo`
+    subclass, including a `pytz` time zone.
     
     The `result_times_local` initializer argument determines whether
     times returned by the methods of a calculator are in the local
     time zone or UTC.
+    
+    The time zone of an astronomical calculator is used for two
+    purposes. First, if the `result_times_local` property of the
+    calculator is `True`, the calculator uses the time zone to
+    all times returned by its methods local.
+    
+    Second, all calculator methods that find events for a specified
+    date use the time zone to help identify the correct UTC interval
+    to search for the events. For most locations, including all those
+    a sufficient longitudinal distance from the 180th meridian, the
+    the correct interval can be found by a simple algorithm that
+    assumes that that meridian is the international date line. The
+    international date line is not simply that meridian, however, so
+    the algorithm fails in some areas near it. In order to guarantee
+    correct results for all locations on earth, we have chosen to
+    simply require specification of a time zone for every astronomical
+    calculator.
+    
+    A future version of this class may make time zones optional for
+    calculators that don't need them, i.e. for calculators with
+    locations for which the algorithm mentioned in the previous
+    paragraph works, and that return UTC times instead of local ones.
     
     Methods that have `datetime` arguments require that those arguments
     be time-zone-aware.
@@ -264,7 +222,6 @@ class AstronomicalCalculator:
         * get_day_solar_event_time
         * get_night_solar_event_time
         * get_lunar_position
-    
     """
     
     
@@ -289,18 +246,21 @@ class AstronomicalCalculator:
             cls._timescale = load.timescale()
     
     
-    def __init__(self, location, result_times_local=False):
+    def __init__(
+            self, latitude, longitude, time_zone, result_times_local=False):
         
         AstronomicalCalculator._init_if_needed()
         
-        self._location = _get_location(location)
+        self._latitude = latitude
+        self._longitude = longitude
+        self._time_zone = _get_time_zone(time_zone)
         self._result_times_local = result_times_local
         
         # See comment in class docstring about why we perform all
         # computations for an observer at zero elevation, i.e. at sea level.
         self._topos = Topos(
-            latitude_degrees=location.latitude,
-            longitude_degrees=location.longitude,
+            latitude_degrees=self._latitude,
+            longitude_degrees=self._longitude,
             elevation_m=0)
         
         self._loc = self._earth + self._topos
@@ -313,8 +273,18 @@ class AstronomicalCalculator:
     
     
     @property
-    def location(self):
-        return self._location
+    def latitude(self):
+        return self._latitude
+    
+    
+    @property
+    def longitude(self):
+        return self._longitude
+    
+    
+    @property
+    def time_zone(self):
+        return self._time_zone
     
     
     @property
@@ -381,24 +351,17 @@ class AstronomicalCalculator:
         start_hour = 8 if noon else 20
         duration = 8
         
-        # Note that it is essential for the correct functioning of
-        # this method that we use the local time zone of this
-        # calculator's location to construct the start time of
-        # the search interval for the desired solar noon or midnight.
-        # It is only with such a time zone that the method can relate
-        # a time on a specific date to the correct UTC time for any
-        # location on earth, including all locations near the
-        # international date line.
-        #
         # Note that this is the only place in this class where we
-        # use the local time zone, except for those where we convert
-        # result times to it. The usage is essential, however, for
-        # all methods that find events by date, including the
-        # `get_solar_noon`, `get_solar_midnight`, `get_day_solar_events`,
-        # `get_night_solar_events`, `get_day_solar_event_time`, and
-        # `get_night_solar_event_time` methods.
+        # use the local time zone, except when we convert result
+        # UTC times to local times. If we decide to make the time
+        # zone optional, when we don't have it here we can use a
+        # UTC-offset time zone instead, with the offset computed
+        # assuming that the 180th meridian is the international
+        # date line. That will work for most locations, except
+        # those where the date differs from what it would be if
+        # the 180th meridian were the international date line.
         local_start_time = _create_aware_datetime(
-            self.location.time_zone, date.year, date.month, date.day,
+            self.time_zone, date.year, date.month, date.day,
             start_hour)
         
         start_time = self._timescale.from_datetime(local_start_time)
@@ -412,7 +375,7 @@ class AstronomicalCalculator:
         time = ts[0].utc_datetime()
         
         if self.result_times_local:
-            time = time.astimezone(self.location.time_zone)
+            time = time.astimezone(self.time_zone)
             
         return time
     
@@ -437,7 +400,7 @@ class AstronomicalCalculator:
         
         # Convert event times from UTC to local time zone if needed.
         if self.result_times_local:
-            time_zone = self.location.time_zone
+            time_zone = self.time_zone
             times = [time.astimezone(time_zone) for time in times]
 
         # Get event names.
@@ -717,12 +680,21 @@ class AstronomicalCalculator:
         return almanac.fraction_illuminated(self._ephemeris, 'moon', t)
 
 
-def _get_location(location):
-    if isinstance(location, Location):
-        return location
+def _get_time_zone(time_zone):
+    
+    if time_zone is None:
+        return None
+    
+    elif isinstance(time_zone, str):
+        return pytz.timezone(time_zone)
+    
+    elif isinstance(time_zone, datetime.tzinfo):
+        return time_zone
+    
     else:
-        return Location(
-            location.latitude, location.longitude, location.time_zone)
+        raise TypeError(
+            f'Unrecognized time zone type "{time_zone.__class__.__name__}".'
+            f'Time zone must be string, tzinfo, or None.')
 
 
 def _check_time_zone_awareness(time):
@@ -846,12 +818,6 @@ class AstronomicalCalculatorCache:
         """
         `AstronomicalCalculator` cache.
         
-        This class uses a (latitude, longitude, time_zone) tuple as a
-        cache key instead of a `location` object so that a single
-        calculator can be cached for several different `location` objects
-        (even objects of different types) as long as they have the same
-        latitude, longitude, and time zone.
-        
         We use the `LruCache` class instead of the `functools.lru_cache`
         decorator to implement caching so we can make the cache size
         configurable via an initializer argument.
@@ -868,19 +834,36 @@ class AstronomicalCalculatorCache:
         return self._calculators.max_size
     
     
-    def get_calculator(self, location):
-         
-        key = (location.latitude, location.longitude, location.time_zone)
-         
+    def get_calculator(self, latitude, longitude, time_zone):
+        
+        """
+        Gets a calculator for the specified latitude, longitude, and
+        time zone.
+        
+        The `latitude` and `longitude` arguments specify the location
+        of the desired calculator. They have units of degrees.
+        
+        The `time_zone` argument specifies the local time zone at the
+        calculator's location.
+        
+        Note that a calculator stores calculators according to their
+        locations, but not their time zones. The time zone of a
+        calculator is used only to construct it, the first time this
+        method is called for the calculator's location. The time
+        zone is ignored in subsequent calls.
+        """
+        
+        key = (latitude, longitude)
+        
         try:
             return self._calculators[key]
-         
+        
         except KeyError:
             # cache miss
-             
+            
             calculator = AstronomicalCalculator(
-                location, self.result_times_local)
-             
+                latitude, longitude, time_zone, self.result_times_local)
+            
             self._calculators[key] = calculator
-             
+            
             return calculator

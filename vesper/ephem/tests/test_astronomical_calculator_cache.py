@@ -1,7 +1,7 @@
 import pytz
 
-from vesper.ephem.astronomical_calculator import (
-    AstronomicalCalculatorCache, Location)
+from vesper.ephem.astronomical_calculator import \
+    AstronomicalCalculatorCache
 from vesper.tests.test_case import TestCase
 
 
@@ -33,26 +33,22 @@ class AstronomicalCalculatorCacheTests(TestCase):
         
         lat_1 = 1
         lon_1 = 2
-        time_zone_1_name = 'US/Eastern'
-        time_zone_1 = pytz.timezone(time_zone_1_name)
+        tz_name_1 = 'US/Eastern'
+        tz_1 = pytz.timezone(tz_name_1)
         
         lat_2 = 3
         lon_2 = 4
-        time_zone_2_name = 'US/Mountain'
-        
-        loc_1a = Location(lat_1, lon_1, time_zone_1_name)
-        loc_1b = Location(lat_1, lon_1, time_zone_1_name)
-        loc_1c = Location(lat_1, lon_1, time_zone_1)
-        loc_2 = Location(lat_2, lon_2, time_zone_2_name)
+        tz_name_2 = 'US/Mountain'
+        tz_2 = pytz.timezone(tz_name_2)
         
         for result_times_local in (False, True):
             
             cache = AstronomicalCalculatorCache(result_times_local)
             
-            calc_1a = cache.get_calculator(loc_1a)
-            calc_1b = cache.get_calculator(loc_1b)
-            calc_1c = cache.get_calculator(loc_1c)
-            calc_2 = cache.get_calculator(loc_2)
+            calc_1a = cache.get_calculator(lat_1, lon_1, tz_name_1)
+            calc_1b = cache.get_calculator(lat_1, lon_1, tz_name_1)
+            calc_1c = cache.get_calculator(lat_1, lon_1, tz_1)
+            calc_2 = cache.get_calculator(lat_2, lon_2, tz_name_2)
             
             # Check that only one calculator is cached for the three
             # different versions of location 1.
@@ -64,10 +60,17 @@ class AstronomicalCalculatorCacheTests(TestCase):
             self.assertIsNot(calc_1a, calc_2)
             
             # Check calculator property values.
-            self._assert_calculator(calc_1a, loc_1a, result_times_local)
-            self._assert_calculator(calc_2, loc_2, result_times_local)
+            self._assert_calculator(
+                calc_1a, lat_1, lon_1, tz_1, result_times_local)
+            self._assert_calculator(
+                calc_2, lat_2, lon_2, tz_2, result_times_local)
     
     
-    def _assert_calculator(self, calculator, location, result_times_local):
-        self.assertEqual(calculator.location, location)
+    def _assert_calculator(
+            self, calculator, latitude, longitude, time_zone,
+            result_times_local):
+        
+        self.assertEqual(calculator.latitude, latitude)
+        self.assertEqual(calculator.longitude, longitude)
+        self.assertEqual(calculator.time_zone, time_zone)
         self.assertEqual(calculator.result_times_local, result_times_local)

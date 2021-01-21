@@ -10,8 +10,7 @@ import re
 import jsonschema
 import pytz
 
-from vesper.ephem.astronomical_calculator import (
-    AstronomicalCalculator, Location)
+from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 from vesper.util.notifier import Notifier
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
@@ -1305,9 +1304,8 @@ class _SolarEventDateTime:
  
 def _resolve(date, event_name, location, offset):
     
-    location = Location(
+    calculator = AstronomicalCalculator(
         location.latitude, location.longitude, location.time_zone)
-    calculator = AstronomicalCalculator(location)
     dt = calculator.get_day_solar_event_time(date, event_name)
      
     if dt is None:

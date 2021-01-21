@@ -32,9 +32,10 @@ class LighthouseOutsideClassifier(Annotator):
             
             clip_start_time = clip.start_time
             station = clip.station
-            night = station.get_night(clip_start_time)
-            calculator = self._astronomical_calculators.get_calculator(station)
+            calculator = self._astronomical_calculators.get_calculator(
+                station.latitude, station.longitude, station.tz)
             get_event_time = calculator.get_night_solar_event_time
+            night = station.get_night(clip_start_time)
             
             # Check if clip start time precedes analysis period.
             start_time = get_event_time(night, 'Nautical Dusk')

@@ -14,17 +14,21 @@ events.
 """
 
 
+from collections import namedtuple
 import cProfile
 import datetime
 import itertools
 import time
 
 from vesper.ephem.astronomical_calculator import (
-    AstronomicalCalculatorCache, Event, Location)
+    AstronomicalCalculatorCache, Event)
 from vesper.util.date_range import DateRange
 
 
 PROFILING_ENABLED = False
+
+Location = namedtuple(
+    'Location', ('latitude', 'longitude', 'time_zone', 'name'))
 
 ITHACA = Location(42.4440, -76.5019, 'US/Eastern', 'Ithaca')
 MISSOULA = Location(46.8721, -113.9940, 'US/Mountain', 'Missoula')
@@ -60,7 +64,8 @@ def main():
 
 def get_events_for_two_locations(cache):
     for location in (ITHACA, MISSOULA):
-        calculator = cache.get_calculator(location)
+        calculator = cache.get_calculator(
+            location.latitude, location.longitude, location.time_zone)
         get_events_for_location(location.name, calculator)
 
 
@@ -122,7 +127,7 @@ def get_events(function, calculator, day, method):
 
 
 def get_events_by_year(calculator, day):
-    time_zone = calculator.location.time_zone
+    time_zone = calculator.time_zone
     hour = 0 if day else 12
     start_dt = time_zone.localize(datetime.datetime(YEAR, 1, 1, hour))
     end_dt = time_zone.localize(datetime.datetime(YEAR + 1, 1, 1, hour))

@@ -1676,7 +1676,9 @@ def _get_solar_event_times_json(station, night):
     # See note near the top of this file about why we send local
     # instead of UTC times to clients.
 
-    calculator = AstronomicalCalculator(station, result_times_local=True)
+    calculator = AstronomicalCalculator(
+        station.latitude, station.longitude, station.tz,
+        result_times_local=True)
     
     events = calculator.get_night_solar_events(night)
     

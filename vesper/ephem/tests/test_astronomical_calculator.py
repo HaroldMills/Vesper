@@ -13,8 +13,7 @@ import datetime
 import pytz
 
 from vesper.tests.test_case import TestCase
-from vesper.ephem.astronomical_calculator import (
-    AstronomicalCalculator, Location)
+from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 
 
 # TODO: When the USNO web site is up again (as of 2020-12 it has been
@@ -37,7 +36,6 @@ TEST_LON = -76.501656
 TEST_ELEVATION = 0
 TEST_TIME_ZONE_NAME = 'US/Eastern'
 TEST_TIME_ZONE = pytz.timezone(TEST_TIME_ZONE_NAME)
-TEST_LOCATION = Location(TEST_LAT, TEST_LON, TEST_TIME_ZONE)
 TEST_DATE = datetime.date(2020, 10, 1)
 
 
@@ -208,18 +206,27 @@ class AstronomicalCalculatorTests(TestCase):
     
     def setUp(self):
         self.calculator = AstronomicalCalculator(
-            TEST_LOCATION, self.RESULT_TIMES_LOCAL)
+            TEST_LAT, TEST_LON, TEST_TIME_ZONE, self.RESULT_TIMES_LOCAL)
     
     
     def test_initializer(self):
         
-        loc = TEST_LOCATION
         rtl = self.RESULT_TIMES_LOCAL
-
+        locn = (TEST_LAT, TEST_LON, TEST_TIME_ZONE_NAME)
+        locn_rtl = locn + (rtl,)
+        loc = (TEST_LAT, TEST_LON, TEST_TIME_ZONE)
+        loc_rtl = loc + (rtl,)
+        
         cases = [
-            ((loc,), {}, (loc, False)),
-            ((loc, rtl), {}, (loc, rtl)),
-            ((loc,), {'result_times_local': rtl}, (loc, rtl)),
+            
+            (locn, {}, loc + (False,)),
+            (locn_rtl, {}, loc_rtl),
+            (locn, {'result_times_local': rtl}, loc_rtl),
+            
+            (loc, {}, loc + (False,)),
+            (loc_rtl, {}, loc_rtl),
+            (loc, {'result_times_local': rtl}, loc_rtl),
+            
         ]
         
         for args, kwargs, expected in cases:
@@ -227,8 +234,13 @@ class AstronomicalCalculatorTests(TestCase):
             self._assert_calculator(actual, *expected)
     
     
-    def _assert_calculator(self, calculator, location, result_times_local):
-        self.assertEqual(calculator.location, location)
+    def _assert_calculator(
+            self, calculator, latitude, longitude, time_zone,
+            result_times_local):
+        
+        self.assertEqual(calculator.latitude, latitude)
+        self.assertEqual(calculator.longitude, longitude)
+        self.assertEqual(calculator.time_zone, time_zone)
         self.assertEqual(calculator.result_times_local, result_times_local)
     
     

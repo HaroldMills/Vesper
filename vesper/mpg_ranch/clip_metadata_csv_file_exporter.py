@@ -236,38 +236,39 @@ columns:
           name: Percent
           settings:
               detail: ".1"
-    
-    - name: twilight
-      measurement: Solar Period Name
-      format:
-          name: Mapping
-          settings:
-              items:
-                  Day: day
-                  Evening Civil Twilight: civil_twilight
-                  Evening Nautical Twilight: nautical_twilight
-                  Evening Astronomical Twilight: astronomical_twilight
-                  Night: night
-                  Morning Astronomical Twilight: astronomical_twilight
-                  Morning Nautical Twilight: nautical_twilight
-                  Morning Civil Twilight: civil_twilight
-        
-    - name: dusk_dawn
-      measurement: Solar Period Name
-      format:
-          name: Mapping
-          settings:
-              items:
-                  Day: day
-                  Evening Civil Twilight: dusk
-                  Evening Nautical Twilight: dusk
-                  Evening Astronomical Twilight: dusk
-                  Night: night
-                  Morning Astronomical Twilight: dawn
-                  Morning Nautical Twilight: dawn
-                  Morning Civil Twilight: dawn
-        
 ''')
+
+#     - name: twilight
+#       measurement: Solar Period Name
+#       format:
+#           name: Mapping
+#           settings:
+#               items:
+#                   Day: day
+#                   Evening Civil Twilight: civil_twilight
+#                   Evening Nautical Twilight: nautical_twilight
+#                   Evening Astronomical Twilight: astronomical_twilight
+#                   Night: night
+#                   Morning Astronomical Twilight: astronomical_twilight
+#                   Morning Nautical Twilight: nautical_twilight
+#                   Morning Civil Twilight: civil_twilight
+#         
+#     - name: dusk_dawn
+#       measurement: Solar Period Name
+#       format:
+#           name: Mapping
+#           settings:
+#               items:
+#                   Day: day
+#                   Evening Civil Twilight: dusk
+#                   Evening Nautical Twilight: dusk
+#                   Evening Astronomical Twilight: dusk
+#                   Night: night
+#                   Morning Astronomical Twilight: dawn
+#                   Morning Nautical Twilight: dawn
+#                   Morning Civil Twilight: dawn
+#         
+# ''')
 
 
 _ASTRONOMICAL_CALCULATORS = AstronomicalCalculatorCache()
@@ -505,12 +506,13 @@ class _SolarEventTimeMeasurement:
     
     def measure(self, clip):
         station = clip.station
-        calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(station)
+        calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(
+            station.latitude, station.longitude, station.tz)
         night = station.get_night(clip.start_time)
         event_name = self.name[:-5]
         return calculator.get_night_solar_event_time(night, event_name)
-    
-    
+
+
 class AstronomicalDawnTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Astronomical Dawn Time'
 
@@ -634,10 +636,16 @@ class LunarAltitudeMeasurement:
     
     
 def _get_lunar_position(clip):
-    calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(clip.station)
+    calculator = _get_astronomical_calculator(clip)
     return calculator.get_lunar_position(clip.start_time)
     
     
+def _get_astronomical_calculator(clip):
+    station = clip.station
+    return _ASTRONOMICAL_CALCULATORS.get_calculator(
+        station.latitude, station.longitude, station.tz)
+
+
 class LunarAzimuthMeasurement:
     
     name = 'Lunar Azimuth'
@@ -651,7 +659,7 @@ class LunarIlluminationMeasurement:
     name = 'Lunar Illumination'
     
     def measure(self, clip):
-        calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(clip.station)
+        calculator = _get_astronomical_calculator(clip)
         return calculator.get_lunar_illumination(clip.start_time)
     
     
@@ -704,7 +712,7 @@ class SolarAltitudeMeasurement:
     
     
 def _get_solar_position(clip):
-    calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(clip.station)
+    calculator = _get_astronomical_calculator(clip)
     return calculator.get_solar_position(clip.start_time)
     
     
@@ -721,7 +729,7 @@ class SolarPeriodNameMeasurement:
     name = 'Solar Period Name'
     
     def measure(self, clip):
-        calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(clip.station)
+        calculator = _get_astronomical_calculator(clip)
         return calculator.get_solar_period_name(clip.start_time)
 
 

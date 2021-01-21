@@ -20,8 +20,7 @@ import datetime
 
 import pytz
 
-from vesper.ephem.astronomical_calculator import (
-    AstronomicalCalculator, Location)
+from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 
@@ -65,8 +64,8 @@ ONE_DAY = datetime.timedelta(days=1)
 
 def main():
     
-    location = Location(LAT, LON, TIME_ZONE)
-    calculator = AstronomicalCalculator(location, result_times_local=True)
+    calculator = AstronomicalCalculator(
+        LAT, LON, TIME_ZONE, result_times_local=True)
     
     night = START_NIGHT
     sunset_offset = datetime.timedelta(minutes=SUNSET_OFFSET)
