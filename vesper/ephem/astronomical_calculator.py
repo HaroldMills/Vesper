@@ -14,7 +14,6 @@ from vesper.util.lru_cache import LruCache
 
 
 # TODO: Make time zone optional. When absent, use UTC-offset time zone.
-# TODO: Reject attempts to create astronomical calculators at the poles.
 # TODO: Clarify which ends of solar periods are closed and open, and document.
 # TODO: Use the terms "twilight event" and "sunlight period"?
 # TODO: Reconsider "time" versus "datetime".
@@ -265,7 +264,7 @@ class AstronomicalCalculator:
         
         self._loc = self._earth + self._topos
         
-        self._solar_noon_midnight_function = \
+        self._solar_transit_function = \
             almanac.meridian_transits(self._ephemeris, self._sun, self._topos)
         
         self._solar_period_function = \
@@ -337,9 +336,15 @@ class AstronomicalCalculator:
     
     @lru_cache(_MAX_CACHE_SIZE)
     def get_solar_noon(self, date):
+        self._check_for_polar_location('get solar noon')
         return self._get_solar_noon_or_midnight(date, True)
     
     
+    def _check_for_polar_location(self, action):
+        if abs(self.latitude) == 90:
+            raise ValueError(f'Cannot {action} at a pole.')
+
+
     def _get_solar_noon_or_midnight(self, date, noon):
         
         # Get start hour of day and duration in hours of period that
@@ -370,7 +375,7 @@ class AstronomicalCalculator:
         end_time = self._timescale.from_datetime(local_end_time)
         
         ts, _ = almanac.find_discrete(
-            start_time, end_time, self._solar_noon_midnight_function)
+            start_time, end_time, self._solar_transit_function)
         
         time = ts[0].utc_datetime()
         
@@ -382,6 +387,7 @@ class AstronomicalCalculator:
     
     @lru_cache(_MAX_CACHE_SIZE)
     def get_solar_midnight(self, date):
+        self._check_for_polar_location('get solar midnight')
         return self._get_solar_noon_or_midnight(date, False)
            
     
@@ -495,6 +501,7 @@ class AstronomicalCalculator:
             
             
     def get_day_solar_events(self, date, name_filter=None):
+        self._check_for_polar_location('get day solar events')
         events = self._get_day_solar_events(date)
         return _filter_events(events, name_filter)
     
@@ -559,6 +566,7 @@ class AstronomicalCalculator:
     
     
     def get_night_solar_events(self, date, name_filter=None):
+        self._check_for_polar_location('get night solar events')
         events = self._get_night_solar_events(date)
         return _filter_events(events, name_filter)
     
@@ -569,6 +577,7 @@ class AstronomicalCalculator:
     
     
     def get_day_solar_event_time(self, date, event_name):
+        self._check_for_polar_location('get day solar event time')
         events = self._get_day_solar_event_dict(date)
         return events.get(event_name)
     
@@ -589,6 +598,7 @@ class AstronomicalCalculator:
     
         
     def get_night_solar_event_time(self, date, event_name):
+        self._check_for_polar_location('get night solar event time')
         events = self._get_night_solar_event_dict(date)
         return events.get(event_name)
     
@@ -628,6 +638,8 @@ class AstronomicalCalculator:
         solar midnight.
         """
         
+        self._check_for_polar_location('get solar period name')
+
         arg = self._get_skyfield_time(time)
         period_codes = self._solar_period_function(arg)
         

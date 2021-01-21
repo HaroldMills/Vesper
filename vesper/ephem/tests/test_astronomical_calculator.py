@@ -398,8 +398,55 @@ class AstronomicalCalculatorTests(TestCase):
         time1 = _get_localized_time(2020, 10, 1)
         time2 = datetime.datetime(2020, 10, 2)
         self._assert_raises(ValueError, c.get_solar_events, time1, time2)
-
-
+    
+    
+    def test_that_some_polar_functions_do_not_raise_exceptions(self):
+        
+        polar_latitudes = [-90, 90]
+        time_1 = _get_localized_time(2020, 1, 1)
+        time_2 = _get_localized_time(2021, 1, 1)
+        
+        for latitude in polar_latitudes:
+            
+            c = AstronomicalCalculator(latitude, TEST_LON, TEST_TIME_ZONE_NAME)
+            
+            cases = (
+                (c.get_solar_position, time_1),
+                (c.get_solar_events, time_1, time_2),
+                (c.get_lunar_position, time_1),
+                (c.get_lunar_illumination, time_1)
+            )
+            
+            for case in cases:
+                method = case[0]
+                args = case[1:]
+                method(*args)
+    
+    
+    def test_polar_errors(self):
+        
+        polar_latitudes = [-90, 90]
+        date = datetime.date(2020, 1, 1)
+        time = _get_localized_time(2020, 1, 1)
+        
+        for latitude in polar_latitudes:
+            
+            c = AstronomicalCalculator(latitude, TEST_LON, TEST_TIME_ZONE_NAME)
+            
+            cases = (
+                (c.get_solar_noon, date),
+                (c.get_solar_midnight, date),
+                (c.get_day_solar_events, date),
+                (c.get_night_solar_events, date),
+                (c.get_day_solar_event_time, date, 'Sunrise'),
+                (c.get_night_solar_event_time, date, 'Sunrise'),
+                (c.get_solar_period_name, time),
+            )
+        
+            for case in cases:
+                self._assert_raises(ValueError, *case)
+    
+    
 class AstronomicalCalculatorTests2(AstronomicalCalculatorTests):
      
     """
