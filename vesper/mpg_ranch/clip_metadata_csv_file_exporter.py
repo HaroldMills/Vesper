@@ -237,39 +237,38 @@ columns:
           name: Percent
           settings:
               detail: ".1"
+    
+    - name: twilight
+      measurement: Sunlight Period Name
+      format:
+          name: Mapping
+          settings:
+              items:
+                  Day: day
+                  Evening Civil Twilight: civil_twilight
+                  Evening Nautical Twilight: nautical_twilight
+                  Evening Astronomical Twilight: astronomical_twilight
+                  Night: night
+                  Morning Astronomical Twilight: astronomical_twilight
+                  Morning Nautical Twilight: nautical_twilight
+                  Morning Civil Twilight: civil_twilight
+          
+    - name: dusk_dawn
+      measurement: Sunlight Period Name
+      format:
+          name: Mapping
+          settings:
+              items:
+                  Day: day
+                  Evening Civil Twilight: dusk
+                  Evening Nautical Twilight: dusk
+                  Evening Astronomical Twilight: dusk
+                  Night: night
+                  Morning Astronomical Twilight: dawn
+                  Morning Nautical Twilight: dawn
+                  Morning Civil Twilight: dawn
+          
 ''')
-
-#     - name: twilight
-#       measurement: Sunlight Period Name
-#       format:
-#           name: Mapping
-#           settings:
-#               items:
-#                   Day: day
-#                   Evening Civil Twilight: civil_twilight
-#                   Evening Nautical Twilight: nautical_twilight
-#                   Evening Astronomical Twilight: astronomical_twilight
-#                   Night: night
-#                   Morning Astronomical Twilight: astronomical_twilight
-#                   Morning Nautical Twilight: nautical_twilight
-#                   Morning Civil Twilight: civil_twilight
-#          
-#     - name: dusk_dawn
-#       measurement: Sunlight Period Name
-#       format:
-#           name: Mapping
-#           settings:
-#               items:
-#                   Day: day
-#                   Evening Civil Twilight: dusk
-#                   Evening Nautical Twilight: dusk
-#                   Evening Astronomical Twilight: dusk
-#                   Night: night
-#                   Morning Astronomical Twilight: dawn
-#                   Morning Nautical Twilight: dawn
-#                   Morning Civil Twilight: dawn
-#          
-# ''')
 
 
 _ASTRONOMICAL_CALCULATORS = AstronomicalCalculatorCache()
