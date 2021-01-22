@@ -2,9 +2,12 @@
 
 
 from collections import namedtuple
+from datetime import (
+    datetime as DateTime,
+    timedelta as TimeDelta,
+    tzinfo as TzInfo)
 from functools import lru_cache
 from pathlib import Path
-import datetime
 import pytz
 
 from skyfield import almanac
@@ -14,7 +17,6 @@ from vesper.util.lru_cache import LruCache
 
 
 # TODO: Make time zone optional. When absent, use UTC-offset time zone.
-# TODO: Reconsider "time" versus "datetime".
 
 
 _EPHEMERIS_FILE_PATH = Path(__file__).parent / 'data' / 'de421.bsp'
@@ -61,8 +63,8 @@ _SUNLIGHT_PERIOD_NAMES = {
     4: 'Day'
 }
 
-_ONE_DAY = datetime.timedelta(days=1)
-_THIRTEEN_HOURS = datetime.timedelta(hours=13)
+_ONE_DAY = TimeDelta(days=1)
+_THIRTEEN_HOURS = TimeDelta(hours=13)
 
 
 '''
@@ -316,7 +318,7 @@ class AstronomicalCalculator:
     
     def _get_skyfield_time(self, arg):
         
-        if isinstance(arg, datetime.datetime):
+        if isinstance(arg, DateTime):
             return self._get_scalar_skyfield_time(arg)
             
         else:
@@ -375,7 +377,7 @@ class AstronomicalCalculator:
         
         start_time = self._timescale.from_datetime(local_start_time)
         
-        local_end_time = local_start_time + datetime.timedelta(hours=duration)
+        local_end_time = local_start_time + TimeDelta(hours=duration)
         end_time = self._timescale.from_datetime(local_end_time)
         
         ts, _ = almanac.find_discrete(
@@ -706,7 +708,7 @@ def _get_time_zone(time_zone):
     elif isinstance(time_zone, str):
         return pytz.timezone(time_zone)
     
-    elif isinstance(time_zone, datetime.tzinfo):
+    elif isinstance(time_zone, TzInfo):
         return time_zone
     
     else:
@@ -737,7 +739,7 @@ def _create_aware_datetime(time_zone, *args):
         # `localize` method. See the "Localized times and date arithmetic"
         # section of the pytz documentation (pytz.sourceforge.net)
         # for more information.
-        naive_dt = datetime.datetime(*args)
+        naive_dt = DateTime(*args)
         return time_zone.localize(naive_dt)
     
     else:
@@ -747,7 +749,7 @@ def _create_aware_datetime(time_zone, *args):
         # `localize` attribute it's safe to use it as the `tzinfo`
         # argument to the `datetime` initializer. This is the case,
         # for example, for `datetime.timezone` objects.
-        return datetime.datetime(*args, tzinfo=time_zone)
+        return DateTime(*args, tzinfo=time_zone)
 
 
 def _filter_events(events, name_filter):

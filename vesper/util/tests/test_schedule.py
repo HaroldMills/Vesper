@@ -1,4 +1,8 @@
-import datetime
+from datetime import (
+    date as Date,
+    datetime as DateTime,
+    time as Time,
+    timedelta as TimeDelta)
 import itertools
 import time
 
@@ -12,7 +16,7 @@ import vesper.util.time_utils as time_utils
 
 
 def _dt(hour, minute=0, second=0):
-    dt = datetime.datetime(2016, 12, 2, hour, minute, second)
+    dt = DateTime(2016, 12, 2, hour, minute, second)
     return pytz.utc.localize(dt)
 
 
@@ -270,7 +274,7 @@ class ScheduleTests(TestCase):
         s = Schedule(())
         self.assertEqual(len(tuple(s.get_intervals())), 0)
         self.assertEqual(len(tuple(s.get_transitions())), 0)
-        now = datetime.datetime.now(pytz.utc)
+        now = DateTime.now(pytz.utc)
         self.assertEqual(s.get_state(now), False)
         
         
@@ -320,7 +324,7 @@ def _dtize_interval(start, end):
 #         # and completion.
 #              
 #         print('\nrunning completed schedule...')
-#         end = pytz.utc.localize(datetime.datetime(2000, 1, 1))
+#         end = pytz.utc.localize(DateTime(2000, 1, 1))
 #         interval = Interval(Schedule.MIN_DATETIME, end)
 #         schedule = Schedule((interval,))
 #         runner = ScheduleRunner(schedule)
@@ -397,11 +401,11 @@ def _show_event(name, time, state):
 
 def _create_schedule(interval_offsets):
     
-    t = datetime.datetime.now(pytz.utc)
-    t = datetime.datetime(t.year, t.month, t.day, t.hour, t.minute, t.second)
+    t = DateTime.now(pytz.utc)
+    t = DateTime(t.year, t.month, t.day, t.hour, t.minute, t.second)
     t = pytz.utc.localize(t)
     if t.microsecond != 0:
-        t += datetime.timedelta(seconds=1) 
+        t += TimeDelta(seconds=1) 
     
     intervals = tuple(
         _create_interval(t, *offsets)
@@ -411,8 +415,8 @@ def _create_schedule(interval_offsets):
     
     
 def _create_interval(time, start_offset, end_offset):
-    start = time + datetime.timedelta(seconds=start_offset)
-    end = time + datetime.timedelta(seconds=end_offset)
+    start = time + TimeDelta(seconds=start_offset)
+    end = time + TimeDelta(seconds=end_offset)
     return Interval(start, end)
 
 
@@ -1097,7 +1101,7 @@ class ScheduleCompilationTests(TestCase):
    
     
 def _dt2(year, month, day, hour=0, minute=0, second=0):
-    dt = datetime.datetime(year, month, day, hour, minute, second)
+    dt = DateTime(year, month, day, hour, minute, second)
     return pytz.utc.localize(dt)
 
 
@@ -1211,7 +1215,7 @@ class ScheduleParsingTests(TestCase):
          
         for s, args in _NONOFFSET_TIME_CASES:
             actual = schedule._parse_time(s)
-            expected = datetime.time(*args)
+            expected = Time(*args)
             self.assertEqual(actual, expected)
              
         for event_name in _EVENT_NAMES:
@@ -1236,7 +1240,7 @@ class ScheduleParsingTests(TestCase):
              
     def _assert_twilight_event_time(self, time, event_name, offset):
         self.assertEqual(time.event_name, _capitalize(event_name))
-        offset = datetime.timedelta(seconds=offset)
+        offset = TimeDelta(seconds=offset)
         self.assertEqual(time.offset, offset)
              
              
@@ -1250,7 +1254,7 @@ class ScheduleParsingTests(TestCase):
          
         for s, args in _NONOFFSET_TIME_CASES:
             actual = schedule._parse_date_time('2016-11-28 ' + s)
-            expected = datetime.datetime(2016, 11, 28, *args)
+            expected = DateTime(2016, 11, 28, *args)
             self.assertEqual(actual, expected)
  
         for event_name in _EVENT_NAMES:
@@ -1262,7 +1266,7 @@ class ScheduleParsingTests(TestCase):
          
         parse = schedule._parse_date_time
         date_string = '2016-11-28'
-        date = datetime.date(2016, 11, 28)
+        date = Date(2016, 11, 28)
          
         for event_name in _EVENT_NAMES:
              
@@ -1318,7 +1322,7 @@ class ScheduleParsingTests(TestCase):
     def _assert_twilight_event_date_time(self, dt, date, event_name, offset):
         self.assertEqual(dt.date, date)
         self.assertEqual(dt.event_name, _capitalize(event_name))
-        offset = datetime.timedelta(seconds=offset)
+        offset = TimeDelta(seconds=offset)
         self.assertEqual(dt.offset, offset)
 
 

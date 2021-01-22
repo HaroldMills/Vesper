@@ -1,8 +1,12 @@
 """Utility functions pertaining to time."""
 
 
+from datetime import (
+    date as Date,
+    datetime as DateTime,
+    time as Time,
+    timedelta as TimeDelta)
 import calendar
-import datetime
 
 import pytz
 
@@ -12,7 +16,7 @@ _MAX_YEAR = 2099
 
 
 def get_utc_now():
-    return datetime.datetime.now(pytz.utc)
+    return DateTime.now(pytz.utc)
 
 
 def create_utc_datetime(
@@ -20,7 +24,7 @@ def create_utc_datetime(
         time_zone=None, is_dst=None):
     
     """
-    Creates a UTC `datetime.datetime` object.
+    Creates a UTC `datetime` object.
     
     The date and time specified by the arguments to this function may
     be for a non-UTC time zone, in which case they are converted to UTC.
@@ -51,7 +55,7 @@ def create_utc_datetime(
     
     if time_zone is None:
         
-        return datetime.datetime(
+        return DateTime(
             year, month, day, hour, minute, second, microsecond, pytz.utc)
     
     else:
@@ -66,7 +70,7 @@ def create_utc_datetime(
         # Note that contrary to what one might think we should not do the
         # following:
         #
-        #     dt = datetime.datetime(
+        #     dt = DateTime(
         #         year, month day, hour, minute, second, microsecond,
         #         tzinfo=time_zone)
         #
@@ -74,8 +78,7 @@ def create_utc_datetime(
         # observer DST cannot be used as arguments to the standard
         # datetime constructor. See the "Example & Usage" section of
         # http://pytz.sourceforge.net for more information.
-        dt = datetime.datetime(
-            year, month, day, hour, minute, second, microsecond)
+        dt = DateTime(year, month, day, hour, minute, second, microsecond)
         
         # Note that if `is_dst` is `None`, the following will raise
         # an exception if the time `dt` is nonexistent or ambiguous
@@ -117,7 +120,7 @@ def _raise_dst_value_error(fragment, dt, time_zone):
 def parse_date_time(y, MM, dd, hh, mm, ss=None, f=None):
     d = parse_date(y, MM, dd)
     t = parse_time(hh, mm, ss, f)
-    return datetime.datetime(
+    return DateTime(
         d.year, d.month, d.day, t.hour, t.minute, t.second, t.microsecond)
     
     
@@ -137,7 +140,7 @@ def parse_date(y, mm, dd):
     _check('month', mm, check_month, month)
     _check('day', dd, check_day, day, year, month)
          
-    return datetime.date(year, month, day)
+    return Date(year, month, day)
 
 
 def parse_time(hh, mm, ss=None, f=None):
@@ -151,7 +154,7 @@ def parse_time(hh, mm, ss=None, f=None):
     _check('minute', mm, check_minute, minute)
     _check('second', ss, check_second, second)
     
-    return datetime.time(hour, minute, second, microsecond)
+    return Time(hour, minute, second, microsecond)
 
 
 def _parse_fractional_second(f):
@@ -174,7 +177,7 @@ def parse_time_delta(h, mm, ss=None, f=None):
     _check('minutes', mm, check_minutes, minutes)
     _check('seconds', ss, check_seconds, seconds)
     
-    return datetime.timedelta(
+    return TimeDelta(
         hours=hours, minutes=minutes, seconds=seconds,
         microseconds=microseconds)
     
@@ -236,9 +239,8 @@ def round_datetime(dt, unit_size):
     """
     
     seconds = _round_time(dt.time(), unit_size)
-    delta = datetime.timedelta(seconds=seconds)
-    return datetime.datetime(
-        dt.year, dt.month, dt.day, tzinfo=dt.tzinfo) + delta
+    delta = TimeDelta(seconds=seconds)
+    return DateTime(dt.year, dt.month, dt.day, tzinfo=dt.tzinfo) + delta
 
 
 _ONE_DAY = 24 * 3600
@@ -277,7 +279,7 @@ def _round_time(time, unit_size):
              'divide one day.').format(int(unit_size)))
         
     # Convert time to number of seconds.
-    delta = datetime.timedelta(
+    delta = TimeDelta(
         hours=time.hour, minutes=time.minute, seconds=time.second,
         microseconds=time.microsecond)
     seconds = delta.total_seconds()
@@ -302,4 +304,4 @@ def round_time(time, unit_size):
     minute = seconds // 60
     second = seconds % 60
 
-    return datetime.time(hour=hour, minute=minute, second=second)
+    return Time(hour=hour, minute=minute, second=second)

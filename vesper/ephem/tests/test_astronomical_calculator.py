@@ -8,7 +8,10 @@ much longer to run than the tests of this module, however.
 """
 
 
-import datetime
+from datetime import (
+    date as Date,
+    datetime as DateTime,
+    timedelta as TimeDelta)
 
 import pytz
 
@@ -36,7 +39,7 @@ TEST_LON = -76.501656
 TEST_ELEVATION = 0
 TEST_TIME_ZONE_NAME = 'US/Eastern'
 TEST_TIME_ZONE = pytz.timezone(TEST_TIME_ZONE_NAME)
-TEST_DATE = datetime.date(2020, 10, 1)
+TEST_DATE = Date(2020, 10, 1)
 
 
 def _time(*args):
@@ -46,11 +49,8 @@ def _time(*args):
 
 
 def _get_localized_time(*args):
-    naive_time = datetime.datetime(*args)
+    naive_time = DateTime(*args)
     return TEST_TIME_ZONE.localize(naive_time)
-
-
-_date = datetime.date
 
 
 def _round_time_to_nearest_minute(t):
@@ -59,7 +59,7 @@ def _round_time_to_nearest_minute(t):
     if delta.total_seconds() < 30:
         return floor
     else:
-        return floor + datetime.timedelta(seconds=60)
+        return floor + TimeDelta(seconds=60)
 
 
 SOLAR_POSITIONS = [
@@ -80,35 +80,35 @@ SOLAR_POSITIONS = [
 
 
 SOLAR_NOONS = [
-    (_date(2020, 1, 1), _time(2020, 1, 1, 12, 9)),
-    (_date(2021, 2, 1), _time(2021, 2, 1, 12, 19)),
-    (_date(2022, 3, 1), _time(2022, 3, 1, 12, 18)),
-    (_date(2023, 4, 1), _time(2023, 4, 1, 13, 9)),
-    (_date(2024, 5, 1), _time(2024, 5, 1, 13, 3)),
-    (_date(2025, 6, 1), _time(2025, 6, 1, 13, 3)),
-    (_date(2026, 7, 1), _time(2026, 7, 1, 13, 9)),
-    (_date(2027, 8, 1), _time(2027, 8, 1, 13, 12)),
-    (_date(2028, 9, 1), _time(2028, 9, 1, 13, 5)),
-    (_date(2029, 10, 1), _time(2029, 10, 1, 12, 55)),
-    (_date(2030, 11, 1), _time(2030, 11, 1, 12, 49)),
-    (_date(2031, 12, 1), _time(2031, 12, 1, 11, 55)),
+    (Date(2020, 1, 1), _time(2020, 1, 1, 12, 9)),
+    (Date(2021, 2, 1), _time(2021, 2, 1, 12, 19)),
+    (Date(2022, 3, 1), _time(2022, 3, 1, 12, 18)),
+    (Date(2023, 4, 1), _time(2023, 4, 1, 13, 9)),
+    (Date(2024, 5, 1), _time(2024, 5, 1, 13, 3)),
+    (Date(2025, 6, 1), _time(2025, 6, 1, 13, 3)),
+    (Date(2026, 7, 1), _time(2026, 7, 1, 13, 9)),
+    (Date(2027, 8, 1), _time(2027, 8, 1, 13, 12)),
+    (Date(2028, 9, 1), _time(2028, 9, 1, 13, 5)),
+    (Date(2029, 10, 1), _time(2029, 10, 1, 12, 55)),
+    (Date(2030, 11, 1), _time(2030, 11, 1, 12, 49)),
+    (Date(2031, 12, 1), _time(2031, 12, 1, 11, 55)),
 ]
 """Solar noon test data, obtained from timeanddate.com on 2021-01-04."""
 
 
 SOLAR_MIDNIGHTS = [
-    (_date(2020, 1, 1), _time(2020, 1, 2, 0, 9)),
-    (_date(2021, 2, 1), _time(2021, 2, 2, 0, 19)),
-    (_date(2022, 3, 1), _time(2022, 3, 2, 0, 18)),
-    (_date(2023, 4, 1), _time(2023, 4, 2, 1, 9)),
-    (_date(2024, 5, 1), _time(2024, 5, 2, 1, 2)),
-    (_date(2025, 6, 1), _time(2025, 6, 2, 1, 4)),
-    (_date(2026, 7, 1), _time(2026, 7, 2, 1, 10)),
-    (_date(2027, 8, 1), _time(2027, 8, 2, 1, 12)),
-    (_date(2028, 9, 1), _time(2028, 9, 2, 1, 5)),
-    (_date(2029, 10, 1), _time(2029, 10, 2, 0, 55)),
-    (_date(2030, 11, 1), _time(2030, 11, 2, 0, 49)),
-    (_date(2031, 12, 1), _time(2031, 12, 1, 23, 55)),
+    (Date(2020, 1, 1), _time(2020, 1, 2, 0, 9)),
+    (Date(2021, 2, 1), _time(2021, 2, 2, 0, 19)),
+    (Date(2022, 3, 1), _time(2022, 3, 2, 0, 18)),
+    (Date(2023, 4, 1), _time(2023, 4, 2, 1, 9)),
+    (Date(2024, 5, 1), _time(2024, 5, 2, 1, 2)),
+    (Date(2025, 6, 1), _time(2025, 6, 2, 1, 4)),
+    (Date(2026, 7, 1), _time(2026, 7, 2, 1, 10)),
+    (Date(2027, 8, 1), _time(2027, 8, 2, 1, 12)),
+    (Date(2028, 9, 1), _time(2028, 9, 2, 1, 5)),
+    (Date(2029, 10, 1), _time(2029, 10, 2, 0, 55)),
+    (Date(2030, 11, 1), _time(2030, 11, 2, 0, 49)),
+    (Date(2031, 12, 1), _time(2031, 12, 1, 23, 55)),
 ]
 """Solar midnight test data, obtained from timeanddate.com on 2021-01-04."""
 
@@ -296,7 +296,7 @@ class AstronomicalCalculatorTests(TestCase):
     def test_get_twilight_events(self):
         d = TEST_DATE
         start_time = _get_localized_time(d.year, d.month, d.day)
-        end_time = start_time + datetime.timedelta(days=1)
+        end_time = start_time + TimeDelta(days=1)
         events = self.calculator.get_twilight_events(start_time, end_time)
         self._check_events(events, DAY_TWILIGHT_EVENTS)
     
@@ -383,20 +383,20 @@ class AstronomicalCalculatorTests(TestCase):
         c = self.calculator
          
         # Methods that accept a single `datetime` argument.
-        time = datetime.datetime(2020, 10, 1)
+        time = DateTime(2020, 10, 1)
         self._assert_raises(ValueError, c.get_solar_position, time)
         self._assert_raises(ValueError, c.get_sunlight_period_name, time)
         self._assert_raises(ValueError, c.get_lunar_position, time)
         self._assert_raises(ValueError, c.get_lunar_illumination, time)
          
         # `get_twilight_events` with first `datetime` naive.
-        time1 = datetime.datetime(2020, 10, 1)
+        time1 = DateTime(2020, 10, 1)
         time2 = _get_localized_time(2020, 10, 2)
         self._assert_raises(ValueError, c.get_twilight_events, time1, time2)
          
         # `get_twilight_events` with second `datetime` naive.
         time1 = _get_localized_time(2020, 10, 1)
-        time2 = datetime.datetime(2020, 10, 2)
+        time2 = DateTime(2020, 10, 2)
         self._assert_raises(ValueError, c.get_twilight_events, time1, time2)
     
     
@@ -426,7 +426,7 @@ class AstronomicalCalculatorTests(TestCase):
     def test_polar_errors(self):
         
         polar_latitudes = [-90, 90]
-        date = datetime.date(2020, 1, 1)
+        date = Date(2020, 1, 1)
         time = _get_localized_time(2020, 1, 1)
         
         for latitude in polar_latitudes:

@@ -1,4 +1,8 @@
-import datetime
+from datetime import (
+    date as Date,
+    datetime as DateTime,
+    time as Time,
+    timedelta as TimeDelta)
 
 import pytz
 
@@ -6,11 +10,6 @@ import pytz
 from vesper.tests.test_case import TestCase
 import vesper.util.time_utils as time_utils
 
-
-_DT = datetime.datetime
-_D = datetime.date
-_T = datetime.time
-_TD = datetime.timedelta
 
 _D2 = '{:02d}'.format
 _D4 = '{:04d}'.format
@@ -25,8 +24,8 @@ def _get_four_digit_year(y):
     
     
 def _create_utc_datetime(y, M, d, h, m, s, u, delta):
-    dt = _DT(y, M, d, h, m, s, u, pytz.utc)
-    return dt + _TD(hours=delta)
+    dt = DateTime(y, M, d, h, m, s, u, pytz.utc)
+    return dt + TimeDelta(hours=delta)
 
 
 _TIME_ROUNDING_CASES = [
@@ -96,7 +95,7 @@ class TimeUtilsTests(TestCase):
             (2099, 12, 31, 23, 59, 59, 999999),
             (2015, 4, 23, 10, 12, 34, 500000),
             
-            (00, 1, 1, 0, 0, 0, 0),
+            (0, 1, 1, 0, 0, 0, 0),
             (99, 12, 31, 23, 59, 59, 999999),
             (15, 4, 23, 10, 12, 34, 500000),
             
@@ -104,7 +103,7 @@ class TimeUtilsTests(TestCase):
         
         for y, M, d, h, m, s, f in cases:
             year = _get_four_digit_year(y)
-            expected_result = _DT(year, M, d, h, m, s, f)
+            expected_result = DateTime(year, M, d, h, m, s, f)
             format_ = _D2 if y < 100 else _D4
             y = format_(y)
             M = _D2(M)
@@ -177,7 +176,7 @@ class TimeUtilsTests(TestCase):
         
         for y, m, d in cases:
             year = _get_four_digit_year(y)
-            expected_result = _D(year, m, d)
+            expected_result = Date(year, m, d)
             format_ = _D2 if y < 100 else _D4
             y = format_(y)
             m = _D2(m)
@@ -283,17 +282,17 @@ class TimeUtilsTests(TestCase):
             if len(case) == 4:
                 h, m, s, f = case
                 u = time_utils._parse_fractional_second(str(f))
-                expected_result = _T(h, m, s, u)
+                expected_result = Time(h, m, s, u)
                 result = time_utils.parse_time(_D2(h), _D2(m), _D2(s), str(f))
                  
             elif len(case) == 3:
                 h, m, s = case
-                expected_result = _T(h, m, s)
+                expected_result = Time(h, m, s)
                 result = time_utils.parse_time(_D2(h), _D2(m), _D2(s))
                  
             else:
                 h, m = case
-                expected_result = _T(h, m)
+                expected_result = Time(h, m)
                 result = time_utils.parse_time(_D2(h), _D2(m))
                 
             self.assertEqual(result, expected_result)
@@ -361,19 +360,19 @@ class TimeUtilsTests(TestCase):
             if len(case) == 4:
                 h, m, s, f = case
                 u = time_utils._parse_fractional_second(str(f))
-                expected_result = _TD(
+                expected_result = TimeDelta(
                     hours=h, minutes=m, seconds=s, microseconds=u)
                 result = time_utils.parse_time_delta(
                     str(h), _D2(m), _D2(s), str(f))
                  
             elif len(case) == 3:
                 h, m, s = case
-                expected_result = _TD(hours=h, minutes=m, seconds=s)
+                expected_result = TimeDelta(hours=h, minutes=m, seconds=s)
                 result = time_utils.parse_time_delta(str(h), _D2(m), _D2(s))
                  
             else:
                 h, m = case
-                expected_result = _TD(hours=h, minutes=m)
+                expected_result = TimeDelta(hours=h, minutes=m)
                 result = time_utils.parse_time_delta(str(h), _D2(m))
                 
             self.assertEqual(result, expected_result)
@@ -455,28 +454,28 @@ class TimeUtilsTests(TestCase):
     def test_round_datetime(self):
         
         for (h, m, s, u, unit_size), (eh, em, es) in _TIME_ROUNDING_CASES:
-            dt = _DT(2015, 8, 14, h, m, s, u)
+            dt = DateTime(2015, 8, 14, h, m, s, u)
             r = time_utils.round_datetime(dt, unit_size)
-            edt = _DT(2015, 8, 14, eh, em, es)
+            edt = DateTime(2015, 8, 14, eh, em, es)
             self.assertEqual(r, edt)
             
         # case that rounds to the beginning of the next day
-        dt = _DT(2015, 8, 31, 23, 59)
+        dt = DateTime(2015, 8, 31, 23, 59)
         r = time_utils.round_datetime(dt, 900)
-        edt = _DT(2015, 9, 1)
+        edt = DateTime(2015, 9, 1)
         self.assertEqual(r, edt)
         
         # case with an aware `datetime`
         localize = pytz.utc.localize
-        dt = localize(_DT(2015, 8, 14, 1, 1))
+        dt = localize(DateTime(2015, 8, 14, 1, 1))
         r = time_utils.round_datetime(dt, 3600)
-        edt = localize(_DT(2015, 8, 14, 1))
+        edt = localize(DateTime(2015, 8, 14, 1))
         self.assertEqual(r, edt)
         
         
     def test_round_datetime_errors(self):
         for unit_size in _BAD_TIME_ROUNDING_UNIT_SIZES:
-            dt = _DT(2015, 8, 14)
+            dt = DateTime(2015, 8, 14)
             self._assert_raises(
                 ValueError, time_utils.round_datetime, dt, unit_size)
         
@@ -484,21 +483,21 @@ class TimeUtilsTests(TestCase):
     def test_round_time(self):
         
         for (h, m, s, u, unit_size), (eh, em, es) in _TIME_ROUNDING_CASES:
-            time = _T(h, m, s, u)
+            time = Time(h, m, s, u)
             result = time_utils.round_time(time, unit_size)
-            expected = _T(eh, em, es)
+            expected = Time(eh, em, es)
             self.assertEqual(result, expected)
             
         # case that rounds up to midnight
-        time = _T(23, 59)
+        time = Time(23, 59)
         result = time_utils.round_time(time, 900)
-        expected = _T()
+        expected = Time()
         self.assertEqual(result, expected)
         
         
     def test_round_time_errors(self):
         for unit_size in _BAD_TIME_ROUNDING_UNIT_SIZES:
-            time = _T()
+            time = Time()
             self._assert_raises(
                 ValueError, time_utils.round_time, time, unit_size)
         

@@ -1,9 +1,12 @@
 """Module containing class `ClipMetadataCsvFileExporter`."""
 
 
+from datetime import (
+    datetime as DateTime,
+    time as Time,
+    timedelta as TimeDelta)
 from pathlib import Path
 import csv
-import datetime
 import tempfile
 
 from vesper.command.command import CommandExecutionError
@@ -558,7 +561,7 @@ class DuplicateCallMeasurement:
             settings = {}
             
         interval = settings.get('min_intercall_interval', 60)
-        self._min_intercall_interval = datetime.timedelta(seconds=interval)
+        self._min_intercall_interval = TimeDelta(seconds=interval)
         
         names = settings.get('ignored_classifications', [])
         self._ignored_classifications = frozenset('Call.' + n for n in names)
@@ -688,7 +691,7 @@ class RecordingDurationMeasurement:
         if recording is None:
             return None
         else:
-            return datetime.timedelta(seconds=recording.duration)
+            return TimeDelta(seconds=recording.duration)
         
         
 class RecordingStartTimeMeasurement:
@@ -788,7 +791,7 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
 
 _NO_VALUE_STRING = ''
 
-_TEST_DATETIME = datetime.datetime(2020, 1, 1)
+_TEST_DATETIME = DateTime(2020, 1, 1)
 
 
 class BooleanFormat:
@@ -934,14 +937,14 @@ class _TimeFormat:
 # nearest hour.
 def _round_time(time, increment):
     
-    if isinstance(time, (datetime.datetime, datetime.time)):
+    if isinstance(time, (DateTime, Time)):
                   
         seconds_after_the_hour = time.minute * 60 + time.second
         
         time = time.replace(minute=0, second=0, microsecond=0)
         
         increments = int(round(seconds_after_the_hour / increment))
-        delta = datetime.timedelta(seconds=increments * increment)
+        delta = TimeDelta(seconds=increments * increment)
         
         return time + delta
 

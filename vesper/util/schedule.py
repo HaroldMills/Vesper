@@ -2,8 +2,12 @@
 
 
 from collections import namedtuple
+from datetime import (
+    date as Date,
+    datetime as DateTime,
+    time as Time,
+    timedelta as TimeDelta)
 from threading import Event, Thread
-import datetime
 import itertools
 import re
 
@@ -42,8 +46,8 @@ class Schedule:
     """
     
     
-    MIN_DATETIME = pytz.utc.localize(datetime.datetime.min)
-    MAX_DATETIME = pytz.utc.localize(datetime.datetime.max)
+    MIN_DATETIME = pytz.utc.localize(DateTime.min)
+    MAX_DATETIME = pytz.utc.localize(DateTime.max)
     
     
     # The `latitude`, `longitude`, and `time_zone` arguments to
@@ -543,7 +547,7 @@ _RESTRICTED_INTERVAL_PROPERTY_NAMES = ('start', 'end')
 _TIME_INTERVAL_PROPERTY_NAMES = ('start_time', 'end_time', 'duration')
 _DATE_INTERVAL_PROPERTY_NAMES = ('start_date', 'end_date')
 
-_ONE_DAY = datetime.timedelta(days=1)
+_ONE_DAY = TimeDelta(days=1)
 
 
 def _compile_schedule(spec, location):
@@ -620,7 +624,7 @@ def _count_non_nones(*args):
     
 def _compile_date_time(dt, location, dt_name):
     
-    if isinstance(dt, datetime.datetime):
+    if isinstance(dt, DateTime):
         return _naive_to_utc(dt, location, dt_name)
     
     elif isinstance(dt, str):
@@ -631,7 +635,7 @@ def _compile_date_time(dt, location, dt_name):
         if dt is None:
             raise ValueError('Bad interval {} "{}".'.format(dt_name, dt_text))
         
-        if isinstance(dt, datetime.datetime):
+        if isinstance(dt, DateTime):
             return _naive_to_utc(dt, location, dt_name, dt_text)
             
         else:
@@ -791,7 +795,7 @@ def _get_dates(interval):
         
         
 def _compile_date(date, name):
-    if isinstance(date, datetime.date):
+    if isinstance(date, Date):
         return date
     else:
         if isinstance(date, str):
@@ -906,9 +910,9 @@ def _compile_daily_intervals_aux(dates, time_intervals, location):
             
 def _combine_date_and_time(date, time, location, name):
     
-    if isinstance(time, datetime.time):
+    if isinstance(time, Time):
         _check_location_attribute(location.time_zone, 'time zone', name)
-        naive_dt = datetime.datetime.combine(date, time)
+        naive_dt = DateTime.combine(date, time)
         localized_dt = location.time_zone.localize(naive_dt)
         return localized_dt.astimezone(pytz.utc)
         
@@ -981,8 +985,8 @@ _HH = re.compile(r'(\d?\d)')
 _AM_PM = frozenset(('am', 'pm', 'AM', 'PM'))
 
 _NAMED_TIMES = {
-    'noon': datetime.time(12),
-    'midnight': datetime.time(0)
+    'noon': Time(12),
+    'midnight': Time(0)
 }
 
 _TWILIGHT_EVENT_NAMES = frozenset((
@@ -1024,7 +1028,7 @@ def _parse_time_24(s):
     except Exception:
         return None
     
-    return datetime.time(hour, minute, second)
+    return Time(hour, minute, second)
     
     
 def _check_int_range(i, min_, max_):
@@ -1050,7 +1054,7 @@ def _parse_am_pm_time(s):
     if parts[1].lower() == 'pm':
         hh += 12
         
-    return datetime.time(hh, mm, ss) 
+    return Time(hh, mm, ss) 
     
     
 def _parse_time_12(s):
@@ -1088,7 +1092,7 @@ def _parse_time_name(s):
 def _parse_event_name(s):
     if s in _TWILIGHT_EVENT_NAMES:
         name = _capitalize(s)
-        return _TwilightEventTime(name, datetime.timedelta())
+        return _TwilightEventTime(name, TimeDelta())
     else:
         return None
         
@@ -1192,7 +1196,7 @@ def _parse_hhmmss_duration(hhmmss):
     
     seconds = hh * 3600 + mm * 60 + ss
     
-    return datetime.timedelta(seconds=seconds)
+    return TimeDelta(seconds=seconds)
     
     
 def _parse_units_duration(number, units):
@@ -1209,7 +1213,7 @@ def _parse_units_duration(number, units):
     
     seconds = number * factor
     
-    return datetime.timedelta(seconds=seconds)
+    return TimeDelta(seconds=seconds)
 
 
 def _parse_number(s):
@@ -1246,8 +1250,8 @@ def _parse_date_time(s):
     if time is None:
         return None
     
-    if isinstance(time, datetime.time):
-        return datetime.datetime.combine(date, time)
+    if isinstance(time, Time):
+        return DateTime.combine(date, time)
     else:
         return _TwilightEventDateTime(date, time.event_name, time.offset)
 
@@ -1262,7 +1266,7 @@ def _parse_date(s):
     year, month, day = [int(i) for i in m.groups()]
     
     try:
-        return datetime.date(year, month, day)
+        return Date(year, month, day)
     except ValueError:
         return None
 
@@ -1275,7 +1279,7 @@ class _TwilightEventTime:
         self.event_name = event_name
          
         if offset is None:
-            self.offset = datetime.timedelta()
+            self.offset = TimeDelta()
         else:
             self.offset = offset
          
@@ -1293,7 +1297,7 @@ class _TwilightEventDateTime:
         self.event_name = event_name
          
         if offset is None:
-            self.offset = datetime.timedelta()
+            self.offset = TimeDelta()
         else:
             self.offset = offset
          
