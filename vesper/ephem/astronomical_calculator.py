@@ -14,7 +14,6 @@ from vesper.util.lru_cache import LruCache
 
 
 # TODO: Make time zone optional. When absent, use UTC-offset time zone.
-# TODO: Clarify which ends of sunlight periods are closed and open.
 # TODO: Reconsider "time" versus "datetime".
 
 
@@ -127,6 +126,12 @@ Astronomical Twilight: -18 <= altitude < -12
 Nautical Twilight: -12 <= altitude < -6
 Civil Twilight: -6 <= altitude < -.833333
 Day: altitude >= -8.33333
+
+I have more or less arbitrarily chosen which ends of the intervals
+are open and closed above. I don't know of any "official" (e.g. from
+the US Naval Observatory) definitions that include that level of
+detail. The boundary altitudes of -18, -12, -6, and -8.3_ (i.e 8
+and one third) degrees are standard, however.
 '''
 
 

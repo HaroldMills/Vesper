@@ -447,6 +447,20 @@ class AstronomicalCalculatorTests(TestCase):
                 self._assert_raises(ValueError, *case)
     
     
+    def test_sunlight_period_bounds(self):
+        
+        c = AstronomicalCalculator(
+            TEST_LAT, TEST_LON, TEST_TIME_ZONE, result_times_local=True)
+        
+        date = datetime.date.today()
+        
+        events = c.get_day_twilight_events(date)
+        
+        for event in events:
+            position = c.get_solar_position(event.time)
+            print(event.name, event.time, position.altitude)
+    
+    
 class AstronomicalCalculatorTests2(AstronomicalCalculatorTests):
      
     """
