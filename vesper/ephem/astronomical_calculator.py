@@ -13,17 +13,8 @@ from skyfield.api import Topos, load, load_file
 from vesper.util.lru_cache import LruCache
 
 
-'''
-RESUME:
-
-* Run all relevant unit tests and scripts.
-* Exercise clip album, clip metadata CSV file export
-'''
-
-
 # TODO: Make time zone optional. When absent, use UTC-offset time zone.
 # TODO: Clarify which ends of sunlight periods are closed and open.
-# TODO: Use the terms "twilight event" and "sunlight period"?
 # TODO: Reconsider "time" versus "datetime".
 
 
