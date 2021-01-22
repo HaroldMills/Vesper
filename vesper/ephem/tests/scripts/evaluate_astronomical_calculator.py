@@ -1,12 +1,12 @@
 """
 Script that evaluates the `AstronomicalCalculator` class.
 
-For one location, this script computes solar event times for all of
+For one location, this script computes twilight event times for all of
 the nights of one year by three methods:
 
-    1. with one call to get_solar_events
-    2. with one call per day to get_night_solar_events
-    3. with one call per event to get_night_solar_event_time
+    1. with one call to get_twilight_events
+    2. with one call per day to get_night_twilight_events
+    3. with one call per event to get_night_twilight_event_time
 
 For each method, the script reports how long it takes to get the
 event times. It also checks that the three methods yield the same
@@ -35,7 +35,7 @@ MISSOULA = Location(46.8721, -113.9940, 'US/Mountain', 'Missoula')
 
 YEAR = 2020
 
-SOLAR_EVENT_NAMES = (
+TWILIGHT_EVENT_NAMES = (
     'Astronomical Dawn',
     'Nautical Dawn',
     'Civil Dawn',
@@ -75,7 +75,7 @@ def get_events_for_location(location_name, calculator):
         
         get_events_for_location_aux(location_name, calculator, day, False)
         
-        # We include this to test event caching. Getting solar events
+        # We include this to test event caching. Getting twilight events
         # for one day or night should be much faster the second time
         # around.
         get_events_for_location_aux(location_name, calculator, day, True)
@@ -131,47 +131,47 @@ def get_events_by_year(calculator, day):
     hour = 0 if day else 12
     start_dt = time_zone.localize(datetime.datetime(YEAR, 1, 1, hour))
     end_dt = time_zone.localize(datetime.datetime(YEAR + 1, 1, 1, hour))
-    return calculator.get_solar_events(start_dt, end_dt)
+    return calculator.get_twilight_events(start_dt, end_dt)
 
 
 def get_events_by_date(calculator, day):
     start_date = datetime.date(YEAR, 1, 1)
     end_date = datetime.date(YEAR + 1, 1, 1)
     event_lists = [
-        get_date_solar_events(calculator, date, day)
+        get_date_twilight_events(calculator, date, day)
         for date in DateRange(start_date, end_date)]
     return list(itertools.chain.from_iterable(event_lists))
 
 
-def get_date_solar_events(calculator, date, day):
+def get_date_twilight_events(calculator, date, day):
     if day:
-        return calculator.get_day_solar_events(date)
+        return calculator.get_day_twilight_events(date)
     else:
-        return calculator.get_night_solar_events(date)
+        return calculator.get_night_twilight_events(date)
 
 
 def get_events_by_name(calculator, day):
     start_date = datetime.date(YEAR, 1, 1)
     end_date = datetime.date(YEAR + 1, 1, 1)
     event_lists = [
-        get_date_solar_events_by_name(calculator, date, day)
+        get_date_twilight_events_by_name(calculator, date, day)
         for date in DateRange(start_date, end_date)]
     return list(itertools.chain.from_iterable(event_lists))
 
 
-def get_date_solar_events_by_name(calculator, date, day):
+def get_date_twilight_events_by_name(calculator, date, day):
     events = [
-        get_date_solar_event(calculator, date, name, day)
-        for name in SOLAR_EVENT_NAMES]
+        get_date_twilight_event(calculator, date, name, day)
+        for name in TWILIGHT_EVENT_NAMES]
     return sorted(e for e in events if e is not None)
 
 
-def get_date_solar_event(calculator, date, event_name, day):
+def get_date_twilight_event(calculator, date, event_name, day):
     
     if day:
-        time = calculator.get_day_solar_event_time(date, event_name)
+        time = calculator.get_day_twilight_event_time(date, event_name)
     else:
-        time = calculator.get_night_solar_event_time(date, event_name)
+        time = calculator.get_night_twilight_event_time(date, event_name)
     
     if time is None:
         return None

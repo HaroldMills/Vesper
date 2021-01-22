@@ -1216,7 +1216,7 @@ class ScheduleParsingTests(TestCase):
              
         for event_name in _EVENT_NAMES:
             actual = schedule._parse_time(event_name)
-            self._assert_solar_time(actual, event_name, 0)
+            self._assert_twilight_event_time(actual, event_name, 0)
              
              
     def test_parse_time_2(self):
@@ -1230,11 +1230,11 @@ class ScheduleParsingTests(TestCase):
                     time = '{} {} {}'.format(offset, preposition, event_name)
                     actual = schedule._parse_time(time)
                      
-                    self._assert_solar_time(
+                    self._assert_twilight_event_time(
                         actual, event_name, factor * seconds)
              
              
-    def _assert_solar_time(self, time, event_name, offset):
+    def _assert_twilight_event_time(self, time, event_name, offset):
         self.assertEqual(time.event_name, _capitalize(event_name))
         offset = datetime.timedelta(seconds=offset)
         self.assertEqual(time.offset, offset)
@@ -1255,7 +1255,7 @@ class ScheduleParsingTests(TestCase):
  
         for event_name in _EVENT_NAMES:
             actual = schedule._parse_time(event_name)
-            self._assert_solar_time(actual, event_name, 0)
+            self._assert_twilight_event_time(actual, event_name, 0)
              
  
     def test_parse_date_time_2(self):
@@ -1267,7 +1267,7 @@ class ScheduleParsingTests(TestCase):
         for event_name in _EVENT_NAMES:
              
             actual = parse(date_string + ' ' + event_name)
-            self._assert_solar_date_time(actual, date, event_name, 0)
+            self._assert_twilight_event_date_time(actual, date, event_name, 0)
              
             for offset, seconds in _OFFSETS:
                  
@@ -1277,7 +1277,7 @@ class ScheduleParsingTests(TestCase):
                         date_string, offset, preposition, event_name)
                     actual = parse(dt)
                      
-                    self._assert_solar_date_time(
+                    self._assert_twilight_event_date_time(
                         actual, date, event_name, factor * seconds)
  
  
@@ -1315,7 +1315,7 @@ class ScheduleParsingTests(TestCase):
             self.assertIsNone(actual)
  
          
-    def _assert_solar_date_time(self, dt, date, event_name, offset):
+    def _assert_twilight_event_date_time(self, dt, date, event_name, offset):
         self.assertEqual(dt.date, date)
         self.assertEqual(dt.event_name, _capitalize(event_name))
         offset = datetime.timedelta(seconds=offset)

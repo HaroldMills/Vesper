@@ -30,14 +30,15 @@ class OutsideClassifier(Annotator):
     
     def annotate(self, clip):
         
-        clip_start_time = clip.start_time
         station = clip.station
-        night = station.get_night(clip_start_time)
         calculator = self._astronomical_calculators.get_calculator(
             station.latitude, station.longitude, station.tz)
-        
+        get_event_time = calculator.get_night_twilight_event_time
+        clip_start_time = clip.start_time
+        night = station.get_night(clip_start_time)
+
         # Check if clip start time precedes analysis period.
-        sunset_time = calculator.get_night_solar_event_time(night, 'Sunset')
+        sunset_time = get_event_time(night, 'Sunset')
         if sunset_time is not None:
             start_time = sunset_time + _START_OFFSET
             if clip_start_time < start_time:
@@ -45,7 +46,7 @@ class OutsideClassifier(Annotator):
                 return True
         
         # Check if clip start time follows analysis period.
-        sunrise_time = calculator.get_night_solar_event_time(night, 'Sunrise')
+        sunrise_time = get_event_time(night, 'Sunrise')
         if sunrise_time is not None:
             end_time = sunrise_time + _END_OFFSET
             if clip_start_time > end_time:

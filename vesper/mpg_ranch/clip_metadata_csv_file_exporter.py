@@ -50,21 +50,22 @@ Measurement names:
     Recording Start Time
     Solar Altitude
     Solar Azimuth
-    Solar Period Name
     Start Time
     Station Name
+    Sunlight Period Name
     Sunrise Time
     Sunset Time
 
 Some comments and questions:
 
-* We may want day solar event times or night solar event times, depending
-  on the project. The setting events are the same in the two cases, but
-  the rising events differ. How to specify which you want? One possibility
-  would be that we replace each rising event measurement with two
-  measurements, e.g. replace "Sunrise Time" with "Day Sunrise Time" and
-  "Night Sunrise Time". Another possibility would be to add a "diurnal"
-  table setting that affects the behavior of the rising event measurements.
+* We may want day twilight event times or night twilight event times,
+  depending on the project. The evening twilight events are the same in
+  the two cases, but the morning twilight events differ. How to specify
+  which you want? One possibility would be that we replace each morning
+  event measurement with two measurements, e.g. replace "Sunrise Time"
+  with "Day Sunrise Time" and "Night Sunrise Time". Another possibility
+  would be to add a "diurnal" table setting that affects the behavior
+  of the morning event measurements.
 '''
 
 
@@ -236,38 +237,39 @@ columns:
           name: Percent
           settings:
               detail: ".1"
-
-    - name: twilight
-      measurement: Solar Period Name
-      format:
-          name: Mapping
-          settings:
-              items:
-                  Day: day
-                  Evening Civil Twilight: civil_twilight
-                  Evening Nautical Twilight: nautical_twilight
-                  Evening Astronomical Twilight: astronomical_twilight
-                  Night: night
-                  Morning Astronomical Twilight: astronomical_twilight
-                  Morning Nautical Twilight: nautical_twilight
-                  Morning Civil Twilight: civil_twilight
-         
-    - name: dusk_dawn
-      measurement: Solar Period Name
-      format:
-          name: Mapping
-          settings:
-              items:
-                  Day: day
-                  Evening Civil Twilight: dusk
-                  Evening Nautical Twilight: dusk
-                  Evening Astronomical Twilight: dusk
-                  Night: night
-                  Morning Astronomical Twilight: dawn
-                  Morning Nautical Twilight: dawn
-                  Morning Civil Twilight: dawn
-         
 ''')
+
+#     - name: twilight
+#       measurement: Sunlight Period Name
+#       format:
+#           name: Mapping
+#           settings:
+#               items:
+#                   Day: day
+#                   Evening Civil Twilight: civil_twilight
+#                   Evening Nautical Twilight: nautical_twilight
+#                   Evening Astronomical Twilight: astronomical_twilight
+#                   Night: night
+#                   Morning Astronomical Twilight: astronomical_twilight
+#                   Morning Nautical Twilight: nautical_twilight
+#                   Morning Civil Twilight: civil_twilight
+#          
+#     - name: dusk_dawn
+#       measurement: Sunlight Period Name
+#       format:
+#           name: Mapping
+#           settings:
+#               items:
+#                   Day: day
+#                   Evening Civil Twilight: dusk
+#                   Evening Nautical Twilight: dusk
+#                   Evening Astronomical Twilight: dusk
+#                   Night: night
+#                   Morning Astronomical Twilight: dawn
+#                   Morning Nautical Twilight: dawn
+#                   Morning Civil Twilight: dawn
+#          
+# ''')
 
 
 _ASTRONOMICAL_CALCULATORS = AstronomicalCalculatorCache()
@@ -501,7 +503,7 @@ class AnnotationValueMeasurement:
             clip, self._annotation_info)
         
 
-class _SolarEventTimeMeasurement:
+class _TwilightEventTimeMeasurement:
     
     def measure(self, clip):
         station = clip.station
@@ -509,22 +511,22 @@ class _SolarEventTimeMeasurement:
             station.latitude, station.longitude, station.tz)
         night = station.get_night(clip.start_time)
         event_name = self.name[:-5]
-        return calculator.get_night_solar_event_time(night, event_name)
+        return calculator.get_night_twilight_event_time(night, event_name)
 
 
-class AstronomicalDawnTimeMeasurement(_SolarEventTimeMeasurement):
+class AstronomicalDawnTimeMeasurement(_TwilightEventTimeMeasurement):
     name = 'Astronomical Dawn Time'
 
 
-class AstronomicalDuskTimeMeasurement(_SolarEventTimeMeasurement):
+class AstronomicalDuskTimeMeasurement(_TwilightEventTimeMeasurement):
     name = 'Astronomical Dusk Time'
 
 
-class CivilDawnTimeMeasurement(_SolarEventTimeMeasurement):
+class CivilDawnTimeMeasurement(_TwilightEventTimeMeasurement):
     name = 'Civil Dawn Time'
 
 
-class CivilDuskTimeMeasurement(_SolarEventTimeMeasurement):
+class CivilDuskTimeMeasurement(_TwilightEventTimeMeasurement):
     name = 'Civil Dusk Time'
 
 
@@ -662,11 +664,11 @@ class LunarIlluminationMeasurement:
         return calculator.get_lunar_illumination(clip.start_time)
     
     
-class NauticalDawnTimeMeasurement(_SolarEventTimeMeasurement):
+class NauticalDawnTimeMeasurement(_TwilightEventTimeMeasurement):
     name = 'Nautical Dawn Time'
 
 
-class NauticalDuskTimeMeasurement(_SolarEventTimeMeasurement):
+class NauticalDuskTimeMeasurement(_TwilightEventTimeMeasurement):
     name = 'Nautical Dusk Time'
 
 
@@ -723,15 +725,6 @@ class SolarAzimuthMeasurement:
         return _get_solar_position(clip).azimuth
     
     
-class SolarPeriodNameMeasurement:
-    
-    name = 'Solar Period Name'
-    
-    def measure(self, clip):
-        calculator = _get_astronomical_calculator(clip)
-        return calculator.get_solar_period_name(clip.start_time)
-
-
 class StartTimeMeasurement:
     
     name = 'Start Time'
@@ -748,11 +741,20 @@ class StationNameMeasurement:
         return clip.station.name
     
     
-class SunriseTimeMeasurement(_SolarEventTimeMeasurement):
+class SunlightPeriodNameMeasurement:
+    
+    name = 'Sunlight Period Name'
+    
+    def measure(self, clip):
+        calculator = _get_astronomical_calculator(clip)
+        return calculator.get_sunlight_period_name(clip.start_time)
+
+
+class SunriseTimeMeasurement(_TwilightEventTimeMeasurement):
     name = 'Sunrise Time'
     
     
-class SunsetTimeMeasurement(_SolarEventTimeMeasurement):
+class SunsetTimeMeasurement(_TwilightEventTimeMeasurement):
     name = 'Sunset Time'
     
     
@@ -777,9 +779,9 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     RecordingStartTimeMeasurement,
     SolarAltitudeMeasurement,
     SolarAzimuthMeasurement,
-    SolarPeriodNameMeasurement,
     StartTimeMeasurement,
     StationNameMeasurement,
+    SunlightPeriodNameMeasurement,
     SunriseTimeMeasurement,
     SunsetTimeMeasurement
 ])

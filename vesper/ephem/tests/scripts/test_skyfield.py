@@ -19,9 +19,10 @@ USNO_TABLES_DIR_PATH = DATA_DIR_PATH / 'USNO Tables'
 
 RESULTS_DIR_PATH = DATA_DIR_PATH / 'Skyfield Test Results'
 
-DIFF_COUNT_FILE_PATH = RESULTS_DIR_PATH / 'Solar Event Difference Counts.csv'
+DIFF_COUNT_FILE_PATH = \
+    RESULTS_DIR_PATH / 'Twilight Event Difference Counts.csv'
 
-UNMATCHED_EVENTS_FILE_PATH = RESULTS_DIR_PATH / 'Unmatched Solar Events.csv'
+UNMATCHED_EVENTS_FILE_PATH = RESULTS_DIR_PATH / 'Unmatched Twilight Events.csv'
 
 SOLAR_TABLE_TYPES = frozenset((
     'Astronomical Twilight',
@@ -156,7 +157,7 @@ def get_skyfield_event_times(lat, lon, year, event_name, utc_offset):
         c = AstronomicalCalculator(lat, lon, time_zone)
         start_time = datetime.datetime(year, 1, 1, tzinfo=time_zone)
         end_time = datetime.datetime(year + 1, 1, 1, tzinfo=time_zone)
-        events = c.get_solar_events(start_time, end_time)
+        events = c.get_twilight_events(start_time, end_time)
         
         skyfield_event_cache[(lat, lon, year)] = events
     

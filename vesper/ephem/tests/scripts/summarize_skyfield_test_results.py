@@ -9,9 +9,10 @@ import pandas as pd
 RESULTS_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Astronomy/Skyfield Test Results')
 
-DIFF_COUNT_FILE_PATH = RESULTS_DIR_PATH / 'Solar Event Difference Counts.csv'
+DIFF_COUNT_FILE_PATH = \
+    RESULTS_DIR_PATH / 'Twilight Event Difference Counts.csv'
 
-UNMATCHED_EVENTS_FILE_PATH = RESULTS_DIR_PATH / 'Unmatched Solar Events.csv'
+UNMATCHED_EVENTS_FILE_PATH = RESULTS_DIR_PATH / 'Unmatched Twilight Events.csv'
 
 DIFF_COLUMN_NAMES = ['-2 Diffs', '-1 Diffs', '0 Diffs', '1 Diffs', '2 Diffs']
 
@@ -20,16 +21,16 @@ def main():
     
     df = pd.read_csv(DIFF_COUNT_FILE_PATH)
     
-    summarize_matched_events(df, 'all solar')
+    summarize_matched_events(df, 'all twilight')
     
     grid_df = get_grid_data(df)
-    summarize_events(grid_df, 'lat/lon grid solar')
+    summarize_events(grid_df, 'lat/lon grid twilight')
     
     ithaca_df = get_ithaca_data(df)
-    summarize_events(ithaca_df, 'Ithaca solar')
+    summarize_events(ithaca_df, 'Ithaca twilight')
     
     mpg_ranch_df = get_mpg_ranch_data(df)
-    summarize_events(mpg_ranch_df, 'MPG Ranch solar')
+    summarize_events(mpg_ranch_df, 'MPG Ranch twilight')
     
     
 def get_grid_data(df):
@@ -38,7 +39,7 @@ def get_grid_data(df):
     Prunes dataframe to rows whose longitudes are multiples of 60
     degrees and whose years are multiples of 10. This includes only
     lat/lon grid locations for which we have USNO data for all eight
-    types of solar events.
+    types of twilight events.
     """
     
     bools = (df['Longitude'] % 60 == 0) & (df['Year'] % 10 == 0)

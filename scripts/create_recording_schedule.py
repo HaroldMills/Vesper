@@ -88,7 +88,7 @@ def main():
 
 
 def _get_time(calculator, night, event_name, offset):
-    time = calculator.get_night_solar_event_time(night, event_name)
+    time = calculator.get_night_twilight_event_time(night, event_name)
     time += offset
     time = time_utils.round_datetime(time, 60)
     return time.strftime('%Y-%m-%d %H:%M')

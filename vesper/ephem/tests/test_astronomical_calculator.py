@@ -26,7 +26,7 @@ from vesper.ephem.astronomical_calculator import AstronomicalCalculator
 # Python wrapper for NOVAS available from PyPI.
 
 # TODO: Test vector arguments to `get_solar_position`,
-# `get_solar_period_name`, `get_lunar_position`, and
+# `get_sunlight_period_name`, `get_lunar_position`, and
 # `get_lunar_illumination`.
 
 
@@ -110,10 +110,10 @@ SOLAR_MIDNIGHTS = [
     (_date(2030, 11, 1), _time(2030, 11, 2, 0, 49)),
     (_date(2031, 12, 1), _time(2031, 12, 1, 23, 55)),
 ]
-"""Solar noon test data, obtained from timeanddate.com on 2021-01-04."""
+"""Solar midnight test data, obtained from timeanddate.com on 2021-01-04."""
 
 
-DAY_SOLAR_EVENTS = [
+DAY_TWILIGHT_EVENTS = [
     (_time(2020, 10, 1, 5, 30), 'Astronomical Dawn'),
     (_time(2020, 10, 1, 6, 3), 'Nautical Dawn'),
     (_time(2020, 10, 1, 6, 36), 'Civil Dawn'),
@@ -123,9 +123,9 @@ DAY_SOLAR_EVENTS = [
     (_time(2020, 10, 1, 19, 47), 'Nautical Dusk'),
     (_time(2020, 10, 1, 20, 20), 'Astronomical Dusk'),
 ]
-"""Solar event data for one day, obtained from USNO tables."""
+"""Twilight event data for one day, obtained from USNO tables."""
 
-NIGHT_SOLAR_EVENTS = [
+NIGHT_TWILIGHT_EVENTS = [
     (_time(2020, 10, 1, 18, 47), 'Sunset'),
     (_time(2020, 10, 1, 19, 15), 'Civil Dusk'),
     (_time(2020, 10, 1, 19, 47), 'Nautical Dusk'),
@@ -135,9 +135,9 @@ NIGHT_SOLAR_EVENTS = [
     (_time(2020, 10, 2, 6, 37), 'Civil Dawn'),
     (_time(2020, 10, 2, 7, 5), 'Sunrise'),
 ]
-"""Solar event data for one night, obtained from USNO tables."""
+"""Twilight event data for one night, obtained from USNO tables."""
 
-SOLAR_PERIODS = [
+SUNLIGHT_PERIODS = [
     (_time(2020, 10, 1, 5, 25), 'Night'),
     (_time(2020, 10, 1, 5, 35), 'Morning Astronomical Twilight'),
     (_time(2020, 10, 1, 5, 58), 'Morning Astronomical Twilight'),
@@ -155,7 +155,7 @@ SOLAR_PERIODS = [
     (_time(2020, 10, 1, 20, 15), 'Evening Astronomical Twilight'),
     (_time(2020, 10, 1, 20, 25), 'Night'),
 ]
-"""Solar period data, derived from the event data above."""
+"""Sunlight period data, derived from the event data above."""
 
 LUNAR_DATA = [
     (_time(2020, 1, 1, 15, 46), (36.45, 151.09, 404551, .377)),
@@ -293,12 +293,12 @@ class AstronomicalCalculatorTests(TestCase):
             SOLAR_MIDNIGHTS, self.calculator.get_solar_midnight)
     
     
-    def test_get_solar_events(self):
+    def test_get_twilight_events(self):
         d = TEST_DATE
         start_time = _get_localized_time(d.year, d.month, d.day)
         end_time = start_time + datetime.timedelta(days=1)
-        events = self.calculator.get_solar_events(start_time, end_time)
-        self._check_events(events, DAY_SOLAR_EVENTS)
+        events = self.calculator.get_twilight_events(start_time, end_time)
+        self._check_events(events, DAY_TWILIGHT_EVENTS)
     
     
     def _check_events(self, actual_events, expected_events):
@@ -324,41 +324,41 @@ class AstronomicalCalculatorTests(TestCase):
         self.assertLessEqual(delta, TIME_DIFFERENCE_ERROR_THRESHOLD)
     
     
-    def _show_solar_events(self, events, heading):
+    def _show_twilight_events(self, events, heading):
         print(heading + ':')
         for time, name in events:
             print(time, name)
     
     
-    def test_get_day_solar_events(self):
-        events = self.calculator.get_day_solar_events(TEST_DATE)
-        self._check_events(events, DAY_SOLAR_EVENTS)
+    def test_get_day_twilight_events(self):
+        events = self.calculator.get_day_twilight_events(TEST_DATE)
+        self._check_events(events, DAY_TWILIGHT_EVENTS)
     
     
-    def test_get_night_solar_events(self):
-        events = self.calculator.get_night_solar_events(TEST_DATE)
-        self._check_events(events, NIGHT_SOLAR_EVENTS)
+    def test_get_night_twilight_events(self):
+        events = self.calculator.get_night_twilight_events(TEST_DATE)
+        self._check_events(events, NIGHT_TWILIGHT_EVENTS)
     
     
-    def test_get_day_solar_event_time(self):
-        method = self.calculator.get_day_solar_event_time
-        self._test_get_date_solar_event_time(method, DAY_SOLAR_EVENTS)
+    def test_get_day_twilight_event_time(self):
+        method = self.calculator.get_day_twilight_event_time
+        self._test_get_date_twilight_event_time(method, DAY_TWILIGHT_EVENTS)
     
     
-    def _test_get_date_solar_event_time(self, method, events):
+    def _test_get_date_twilight_event_time(self, method, events):
         for expected_time, event_name in events:
             actual_time = method(TEST_DATE, event_name)
             self._assert_datetimes_nearly_equal(actual_time, expected_time)
     
     
-    def test_get_night_solar_event_time(self):
-        method = self.calculator.get_night_solar_event_time
-        self._test_get_date_solar_event_time(method, NIGHT_SOLAR_EVENTS)
+    def test_get_night_twilight_event_time(self):
+        method = self.calculator.get_night_twilight_event_time
+        self._test_get_date_twilight_event_time(method, NIGHT_TWILIGHT_EVENTS)
     
     
-    def test_get_solar_period_name(self):
-        for time, expected in SOLAR_PERIODS:
-            actual = self.calculator.get_solar_period_name(time)
+    def test_get_sunlight_period_name(self):
+        for time, expected in SUNLIGHT_PERIODS:
+            actual = self.calculator.get_sunlight_period_name(time)
             self.assertEqual(actual, expected)
     
     
@@ -385,19 +385,19 @@ class AstronomicalCalculatorTests(TestCase):
         # Methods that accept a single `datetime` argument.
         time = datetime.datetime(2020, 10, 1)
         self._assert_raises(ValueError, c.get_solar_position, time)
-        self._assert_raises(ValueError, c.get_solar_period_name, time)
+        self._assert_raises(ValueError, c.get_sunlight_period_name, time)
         self._assert_raises(ValueError, c.get_lunar_position, time)
         self._assert_raises(ValueError, c.get_lunar_illumination, time)
          
-        # `get_solar_events` with first `datetime` naive.
+        # `get_twilight_events` with first `datetime` naive.
         time1 = datetime.datetime(2020, 10, 1)
         time2 = _get_localized_time(2020, 10, 2)
-        self._assert_raises(ValueError, c.get_solar_events, time1, time2)
+        self._assert_raises(ValueError, c.get_twilight_events, time1, time2)
          
-        # `get_solar_events` with second `datetime` naive.
+        # `get_twilight_events` with second `datetime` naive.
         time1 = _get_localized_time(2020, 10, 1)
         time2 = datetime.datetime(2020, 10, 2)
-        self._assert_raises(ValueError, c.get_solar_events, time1, time2)
+        self._assert_raises(ValueError, c.get_twilight_events, time1, time2)
     
     
     def test_that_some_polar_functions_do_not_raise_exceptions(self):
@@ -412,7 +412,7 @@ class AstronomicalCalculatorTests(TestCase):
             
             cases = (
                 (c.get_solar_position, time_1),
-                (c.get_solar_events, time_1, time_2),
+                (c.get_twilight_events, time_1, time_2),
                 (c.get_lunar_position, time_1),
                 (c.get_lunar_illumination, time_1)
             )
@@ -436,11 +436,11 @@ class AstronomicalCalculatorTests(TestCase):
             cases = (
                 (c.get_solar_noon, date),
                 (c.get_solar_midnight, date),
-                (c.get_day_solar_events, date),
-                (c.get_night_solar_events, date),
-                (c.get_day_solar_event_time, date, 'Sunrise'),
-                (c.get_night_solar_event_time, date, 'Sunrise'),
-                (c.get_solar_period_name, time),
+                (c.get_day_twilight_events, date),
+                (c.get_night_twilight_events, date),
+                (c.get_day_twilight_event_time, date, 'Sunrise'),
+                (c.get_night_twilight_event_time, date, 'Sunrise'),
+                (c.get_sunlight_period_name, time),
             )
         
             for case in cases:

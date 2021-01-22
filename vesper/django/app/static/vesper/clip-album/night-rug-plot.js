@@ -15,7 +15,7 @@ const _TICK_FONT_SIZE = 12.5;        // client pixels
 const _RES_FACTOR = 2;               // canvas pixels per client pixel
 const _PAGE_DISTANCE_THRESHOLD = 5;  // client pixels
 
-const _SOLAR_EVENT_NAMES = [
+const _TWILIGHT_EVENT_NAMES = [
     'sunset', 'civilDusk', 'nauticalDusk', 'astronomicalDusk',
     'astronomicalDawn', 'nauticalDawn', 'civilDawn', 'sunrise'
 ];
@@ -41,14 +41,14 @@ const _UNDERLAY_SPEC = [
 export class NightRugPlot {
 
 
-	constructor(parent, div, clips, recordings, solarEventTimes) {
+	constructor(parent, div, clips, recordings, twilightEventTimes) {
 
 		this._parent = parent;
 		this._div = div;
 		this._clips = clips;
 		this._recordings = recordings;
-		this._solarEventTimeStrings = solarEventTimes;
-		// this._solarEventTimeStrings = null;    // for testing
+		this._twilightEventTimeStrings = twilightEventTimes;
+		// this._twilightEventTimeStrings = null;    // for testing
 
 		this._rugCanvas = this._createRugCanvas();
 		this._axisCanvas = this._createAxisCanvas();
@@ -56,8 +56,8 @@ export class NightRugPlot {
 
 		this._clipTimes = this._clips.map(_getClipTime);
 		this._recordingIntervals = this._recordings.map(_getRecordingInterval);
-		this._solarEventTimes =
-			_getSolarEventTimes(this._solarEventTimeStrings);
+		this._twilightEventTimes =
+			_getTwilightEventTimes(this._twilightEventTimeStrings);
 
 		[this._startTime, this._endTime] = this._getPlotLimits();
 
@@ -115,9 +115,9 @@ export class NightRugPlot {
 //			const endTime = intervals[intervals.length - 1].endTime + padding;
 //			return [startTime, endTime];
 //
-//		} else if (this._solarEventTimes !== null) {}
+//		} else if (this._twilightEventTimes !== null) {}
 
-	    const times = this._solarEventTimes;
+	    const times = this._twilightEventTimes;
 
 		if (times !== null && times['sunset'] !== null &&
 				times['sunrise'] !== null) {
@@ -182,15 +182,15 @@ export class NightRugPlot {
 		const context = this._rugCanvas.getContext('2d');
 		const height = _RUG_HEIGHT * _RES_FACTOR;
 
-		if (this._solarEventTimes !== null) {
+		if (this._twilightEventTimes !== null) {
 
 			context.fillStyle = _DAY_COLOR;
 			context.fillRect(0, 0, this._canvasWidth, height);
 
 			for (const [startName, endName, color] of _UNDERLAY_SPEC) {
 
-			    const startTime = this._solarEventTimes[startName];
-			    const endTime = this._solarEventTimes[endName];
+			    const startTime = this._twilightEventTimes[startName];
+			    const endTime = this._twilightEventTimes[endName];
 
 			    if (startTime !== null && endTime !== null)
 			    	// start and end event times are defined
@@ -636,14 +636,14 @@ function _getRecordingInterval(recording) {
 }
 
 
-function _getSolarEventTimes(solarEventTimeStrings) {
+function _getTwilightEventTimes(twilightEventTimeStrings) {
 
-	if (solarEventTimeStrings !== null) {
+	if (twilightEventTimeStrings !== null) {
 
 		const times = {};
 
-		for (const eventName of _SOLAR_EVENT_NAMES) {
-			const timeString = solarEventTimeStrings[eventName];
+		for (const eventName of _TWILIGHT_EVENT_NAMES) {
+			const timeString = twilightEventTimeStrings[eventName];
 			if (timeString === null)
 				times[eventName] = null;
 			else

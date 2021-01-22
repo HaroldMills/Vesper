@@ -30,11 +30,11 @@ class LighthouseOutsideClassifier(Annotator):
         if classification is None:
             # clip is not classified
             
-            clip_start_time = clip.start_time
             station = clip.station
             calculator = self._astronomical_calculators.get_calculator(
                 station.latitude, station.longitude, station.tz)
-            get_event_time = calculator.get_night_solar_event_time
+            get_event_time = calculator.get_night_twilight_event_time
+            clip_start_time = clip.start_time
             night = station.get_night(clip_start_time)
             
             # Check if clip start time precedes analysis period.

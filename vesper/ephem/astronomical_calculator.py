@@ -13,8 +13,16 @@ from skyfield.api import Topos, load, load_file
 from vesper.util.lru_cache import LruCache
 
 
+'''
+RESUME:
+
+* Run all relevant unit tests and scripts.
+* Exercise clip album, clip metadata CSV file export
+'''
+
+
 # TODO: Make time zone optional. When absent, use UTC-offset time zone.
-# TODO: Clarify which ends of solar periods are closed and open, and document.
+# TODO: Clarify which ends of sunlight periods are closed and open.
 # TODO: Use the terms "twilight event" and "sunlight period"?
 # TODO: Reconsider "time" versus "datetime".
 
@@ -30,7 +38,7 @@ See https://pypi.org/project/jplephem/ for instructions on excerpting
 SPK files. This might be a good idea to reduce the SPK file size.
 """
 
-_SOLAR_EVENT_NAMES = {
+_TWILIGHT_EVENT_NAMES = {
     (0, 1): 'Astronomical Dawn',
     (1, 2): 'Nautical Dawn',
     (2, 3): 'Civil Dawn',
@@ -41,21 +49,21 @@ _SOLAR_EVENT_NAMES = {
     (1, 0): 'Astronomical Dusk'
 }
 
-_RISING_EVENT_NAMES = frozenset((
+_MORNING_TWILIGHT_EVENT_NAMES = frozenset((
     'Astronomical Dawn',
     'Nautical Dawn',
     'Civil Dawn',
     'Sunrise'
 ))
 
-_SETTING_EVENT_NAMES = frozenset((
+_EVENING_TWILIGHT_EVENT_NAMES = frozenset((
     'Sunset',
     'Civil Dusk',
     'Nautical Dusk',
     'Astronomical Dusk'
 ))
 
-_SOLAR_PERIOD_NAMES = {
+_SUNLIGHT_PERIOD_NAMES = {
     0: 'Night',
     1: 'Astronomical Twilight',
     2: 'Nautical Twilight',
@@ -90,17 +98,17 @@ def get_solar_noon(self, date)
 
 def get_solar_midnight(self, date)
 
-def get_solar_events(self, start_time, end_time, event_names=None)
+def get_twilight_events(self, start_time, end_time, event_names=None)
 
-def get_day_solar_events(self, date, event_names=None)
+def get_day_twilight_events(self, date, event_names=None)
 
-def get_day_solar_event_time(self, date, event_name)
+def get_day_twilight_event_time(self, date, event_name)
 
-def get_night_solar_events(self, date, event_names=None)
+def get_night_twilight_events(self, date, event_names=None)
 
-def get_night_solar_event_time(self, date, event_name)
+def get_night_twilight_event_time(self, date, event_name)
 
-def get_solar_period_name(self, time)
+def get_sunlight_period_name(self, time)
     
 def get_lunar_position(self, time)
     
@@ -114,14 +122,14 @@ of the moon to the earth and the eccentricity of the moon's orbit.
 These make the angle subtended by the moon more variable than the
 angle subtended by the sun.
 
-def get_lunar_events(self, start_time, end_time, name_filter=None)
+def get_lunar_rise_set_events(self, start_time, end_time, name_filter=None)
 
 def is_moon_up(self, time)
 '''
 
 
 '''
-Solar period definitions, with numbers in degrees:
+Sunlight period definitions, with numbers in degrees:
 
 Night: altitude < -18
 Astronomical Twilight: -18 <= altitude < -12
@@ -159,9 +167,9 @@ class AstronomicalCalculator:
     An `AstronomicalCalculator` calculates various quantities
     related to the observation of the sun and the moon from a
     particular location on the earth. The quantities include the
-    positions of the sun and moon in the sky, the times of events
-    (like sunrise and sunset) defined in terms of the altitude of
-    the sun, and the illuminated fraction of the moon.
+    positions of the sun and moon in the sky, the times of twilight
+    events (like sunrise and sunset) defined in terms of the altitude
+    of the sun, and the illuminated fraction of the moon.
     
     An `AstronomicalCalculator` performs all computations for an
     observer at sea level, since quantities computed at other
@@ -216,10 +224,10 @@ class AstronomicalCalculator:
         * get_solar_position
         * get_solar_noon
         * get_solar_midnight
-        * get_day_solar_events
-        * get_night_solar_events
-        * get_day_solar_event_time
-        * get_night_solar_event_time
+        * get_day_twilight_events
+        * get_night_twilight_events
+        * get_day_twilight_event_time
+        * get_night_twilight_event_time
         * get_lunar_position
     """
     
@@ -267,7 +275,7 @@ class AstronomicalCalculator:
         self._solar_transit_function = \
             almanac.meridian_transits(self._ephemeris, self._sun, self._topos)
         
-        self._solar_period_function = \
+        self._sunlight_period_function = \
             almanac.dark_twilight_day(self._ephemeris, self._topos)
     
     
@@ -391,15 +399,15 @@ class AstronomicalCalculator:
         return self._get_solar_noon_or_midnight(date, False)
            
     
-    def get_solar_events(self, start_time, end_time, name_filter=None):
+    def get_twilight_events(self, start_time, end_time, name_filter=None):
         
         # Get start and end times as Skyfield `Time` objects.
         start_time = self._get_scalar_skyfield_time(start_time)
         end_time = self._get_scalar_skyfield_time(end_time)
         
-        # Get solar event times and codes.
+        # Get twilight event times and codes.
         times, codes = almanac.find_discrete(
-            start_time, end_time, self._solar_period_function)
+            start_time, end_time, self._sunlight_period_function)
         
         # Get event times as UTC `datetime` objects.
         times = [t.utc_datetime() for t in times]
@@ -410,7 +418,7 @@ class AstronomicalCalculator:
             times = [time.astimezone(time_zone) for time in times]
 
         # Get event names.
-        names = self._get_solar_event_names(times, codes)
+        names = self._get_twilight_event_names(times, codes)
         
         # Create event named tuples.
         events = [Event(time, name) for time, name in zip(times, names)]
@@ -421,7 +429,7 @@ class AstronomicalCalculator:
         return events
     
     
-    def _get_solar_event_names(self, times, codes):
+    def _get_twilight_event_names(self, times, codes):
         
         event_count = len(codes)
         
@@ -432,16 +440,16 @@ class AstronomicalCalculator:
             # have at least one event
             
             first_event_name = \
-                self._get_first_solar_event_name(times[0], codes[0])
+                self._get_first_twilight_event_name(times[0], codes[0])
             
             other_event_names = [
-                _get_solar_event_name(codes[i], codes[i + 1])
+                _get_twilight_event_name(codes[i], codes[i + 1])
                 for i in range(event_count - 1)]
             
             return [first_event_name] + other_event_names
             
             
-    def _get_first_solar_event_name(self, time, code):
+    def _get_first_twilight_event_name(self, time, code):
         
         if code == 0:
             # event is at start of night
@@ -500,40 +508,40 @@ class AstronomicalCalculator:
                     return 'Sunset'
             
             
-    def get_day_solar_events(self, date, name_filter=None):
-        self._check_for_polar_location('get day solar events')
-        events = self._get_day_solar_events(date)
+    def get_day_twilight_events(self, date, name_filter=None):
+        self._check_for_polar_location('get day twilight events')
+        events = self._get_day_twilight_events(date)
         return _filter_events(events, name_filter)
     
     
     @lru_cache(_MAX_CACHE_SIZE)
-    def _get_day_solar_events(self, date):
-        return self._get_date_solar_events(date, True)
+    def _get_day_twilight_events(self, date):
+        return self._get_date_twilight_events(date, True)
     
     
-    def _get_date_solar_events(self, date, day):
+    def _get_date_twilight_events(self, date, day):
         
         """
-        Gets solar events for the specified day or night.
+        Gets twilight events for the specified day or night.
         
-        The `_get_day_solar_events` and `_get_night_solar_events` methods
-        both call this one, the `_get_day_solar_events` method to get
-        solar rise/set events that occur between one solar midnight and
-        the next, and the `_get_night_solar_events` method to get events
+        The `_get_day_twilight_events` and `_get_night_twilight_events`
+        methods both call this one, the `_get_day_twilight_events` method
+        to get twilight events that occur between one solar midnight and
+        the next, and the `_get_night_twilight_events` method to get events
         that occur between one solar noon and the next. In both cases,
         there is at most one event of each event type during the relevant
         time interval. Some or all events do not occur at higher latitudes
         for some days, e.g. during the summer and winter.
         
-        We rely on Skyfield to find solar event times. It can tell us
+        We rely on Skyfield to find twilight event times. It can tell us
         the times and types of events that occur during any specified
         time interval. In order to avoid losing events due to edge
-        effects, when searching for day solar events we do not simply
+        effects, when searching for day twilight events we do not simply
         search for the events from one solar midnight to the next,
         but rather for the events in an expanded time interval that
         extends from about an hour before the first solar midnight to
-        about an hour after the second one. When searching for the
-        night solar events, we expand the search interval analogously,
+        about an hour after the second one. When searching for night
+        twilight events, we expand the search interval analogously,
         to about one hour before one solar noon to about one hour after
         the next. While this guarantees that we will not lose any of
         the desired events to edge effects, it sometimes yields extra
@@ -557,7 +565,7 @@ class AstronomicalCalculator:
         end_time = transit_time + _THIRTEEN_HOURS
         
         # Get events in time interval.
-        events = self.get_solar_events(start_time, end_time)
+        events = self.get_twilight_events(start_time, end_time)
         
         # Discard extra events (see docstring for this method for more).
         events = _discard_extra_events(events, day, transit_time)
@@ -565,53 +573,53 @@ class AstronomicalCalculator:
         return events
     
     
-    def get_night_solar_events(self, date, name_filter=None):
-        self._check_for_polar_location('get night solar events')
-        events = self._get_night_solar_events(date)
+    def get_night_twilight_events(self, date, name_filter=None):
+        self._check_for_polar_location('get night twilight events')
+        events = self._get_night_twilight_events(date)
         return _filter_events(events, name_filter)
     
     
     @lru_cache(_MAX_CACHE_SIZE)
-    def _get_night_solar_events(self, date):
-        return self._get_date_solar_events(date, False)
+    def _get_night_twilight_events(self, date):
+        return self._get_date_twilight_events(date, False)
     
     
-    def get_day_solar_event_time(self, date, event_name):
-        self._check_for_polar_location('get day solar event time')
-        events = self._get_day_solar_event_dict(date)
+    def get_day_twilight_event_time(self, date, event_name):
+        self._check_for_polar_location('get day twilight event time')
+        events = self._get_day_twilight_event_dict(date)
         return events.get(event_name)
     
     
     @lru_cache(_MAX_CACHE_SIZE)
-    def _get_day_solar_event_dict(self, date):
-        return self._get_date_solar_event_dict(date, True)
+    def _get_day_twilight_event_dict(self, date):
+        return self._get_date_twilight_event_dict(date, True)
     
     
-    def _get_date_solar_event_dict(self, date, day):
+    def _get_date_twilight_event_dict(self, date, day):
         
         if day:
-            events = self.get_day_solar_events(date)
+            events = self.get_day_twilight_events(date)
         else:
-            events = self.get_night_solar_events(date)
+            events = self.get_night_twilight_events(date)
             
         return dict((e.name, e.time) for e in events)
     
         
-    def get_night_solar_event_time(self, date, event_name):
-        self._check_for_polar_location('get night solar event time')
-        events = self._get_night_solar_event_dict(date)
+    def get_night_twilight_event_time(self, date, event_name):
+        self._check_for_polar_location('get night twilight event time')
+        events = self._get_night_twilight_event_dict(date)
         return events.get(event_name)
     
     
     @lru_cache(_MAX_CACHE_SIZE)
-    def _get_night_solar_event_dict(self, date):
-        return self._get_date_solar_event_dict(date, False)
+    def _get_night_twilight_event_dict(self, date):
+        return self._get_date_twilight_event_dict(date, False)
     
     
-    def get_solar_period_name(self, time):
+    def get_sunlight_period_name(self, time):
         
         """
-        Gets the name of the solar period that includes the specified time.
+        Gets the name of the sunlight period that includes the specified time.
         
         The possible return values are:
         
@@ -638,27 +646,29 @@ class AstronomicalCalculator:
         solar midnight.
         """
         
-        self._check_for_polar_location('get solar period name')
+        self._check_for_polar_location('get sunlight period name')
 
         arg = self._get_skyfield_time(time)
-        period_codes = self._solar_period_function(arg)
+        period_codes = self._sunlight_period_function(arg)
         
         if len(period_codes.shape) == 0:
             # getting period name for single time
             
-            return self._get_solar_period_name(period_codes, time)
+            return self._get_sunlight_period_name(period_codes, time)
         
         else:
             # getting period names for list of times
             
-            return [self._get_solar_period_name(c, time) for c in period_codes]
+            return [
+                self._get_sunlight_period_name(c, time)
+                for c in period_codes]
     
     
-    def _get_solar_period_name(self, code, time):
+    def _get_sunlight_period_name(self, code, time):
         
         code = float(code)
         
-        name = _SOLAR_PERIOD_NAMES[code]
+        name = _SUNLIGHT_PERIOD_NAMES[code]
         
         if name == 'Day' or name == 'Night':
             return name
@@ -765,8 +775,8 @@ def _filter_events(events, name_filter):
         return [e for e in events if e.name in name_filter]
 
 
-def _get_solar_event_name(code_0, code_1):
-    return _SOLAR_EVENT_NAMES[(code_0, code_1)]
+def _get_twilight_event_name(code_0, code_1):
+    return _TWILIGHT_EVENT_NAMES[(code_0, code_1)]
 
 
 def _discard_extra_events(events, day, transit_time):
@@ -780,21 +790,21 @@ def _retain_event(event, day, transit_time):
     
     if day:
         return not (
-            _is_setting_event(name) and time < transit_time or
-            _is_rising_event(name) and time > transit_time)
+            _is_evening_event(name) and time < transit_time or
+            _is_morning_event(name) and time > transit_time)
     
     else:
         return not (
-            _is_rising_event(name) and time < transit_time or
-            _is_setting_event(name) and time > transit_time)
+            _is_morning_event(name) and time < transit_time or
+            _is_evening_event(name) and time > transit_time)
 
 
-def _is_rising_event(name):
-    return name in _RISING_EVENT_NAMES
+def _is_morning_event(name):
+    return name in _MORNING_TWILIGHT_EVENT_NAMES
 
 
-def _is_setting_event(name):
-    return name in _SETTING_EVENT_NAMES
+def _is_evening_event(name):
+    return name in _EVENING_TWILIGHT_EVENT_NAMES
 
 
 class AstronomicalCalculatorCache:

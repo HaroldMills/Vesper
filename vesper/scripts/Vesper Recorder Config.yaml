@@ -8,7 +8,7 @@
 station: Vesper
 
 # The location of your monitoring station. The location is used to
-# determine the times of solar events (for example, sunrise and sunset)
+# determine the times of twilight events (for example, sunrise and sunset)
 # specified in your recording schedule. The latitude should be in degrees
 # north and the longitude in degrees east.
 latitude: 42.5000

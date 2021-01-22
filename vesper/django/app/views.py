@@ -1612,7 +1612,7 @@ def night(request):
     date_string = params['date']
     date = time_utils.parse_date(*date_string.split('-'))
 
-    solar_event_times_json = _get_solar_event_times_json(station, date)
+    twilight_event_times_json = _get_twilight_event_times_json(station, date)
 
     time_interval = station.get_night_interval_utc(date)
     recordings = model_utils.get_recordings(station, mic_output, time_interval)
@@ -1647,7 +1647,7 @@ def night(request):
         tags=tag_specs,
         tag=tag_spec,
         date=date_string,
-        solar_event_times_json=solar_event_times_json,
+        twilight_event_times_json=twilight_event_times_json,
         recordings_json=recordings_json,
         clips_json=clips_json,
         settings_presets_json=settings_presets_json,
@@ -1659,19 +1659,7 @@ def night(request):
     return render(request, 'vesper/night.html', context)
 
 
-_SOLAR_EVENT_NAMES = (
-    'Sunset',
-    'Civil Dusk',
-    'Nautical Dusk',
-    'Astronomical Dusk',
-    'Astronomical Dawn',
-    'Nautical Dawn',
-    'Civil Dawn',
-    'Sunrise',
-)
-
-
-def _get_solar_event_times_json(station, night):
+def _get_twilight_event_times_json(station, night):
 
     # See note near the top of this file about why we send local
     # instead of UTC times to clients.
@@ -1680,18 +1668,18 @@ def _get_solar_event_times_json(station, night):
         station.latitude, station.longitude, station.tz,
         result_times_local=True)
     
-    events = calculator.get_night_solar_events(night)
+    events = calculator.get_night_twilight_events(night)
     
     times = dict(
-        (_get_solar_event_variable_name(e.name), _format_time(e.time))
+        (_get_twilight_event_variable_name(e.name), _format_time(e.time))
         for e in events)
     
     return json.dumps(times)
 
 
-def _get_solar_event_variable_name(event_name):
+def _get_twilight_event_variable_name(event_name):
     
-    """Creates a JavaScript variable name from a solar altitude event name."""
+    """Creates a JavaScript variable name from a twilight event name."""
     
     return (event_name[0].lower() + event_name[1:]).replace(' ', '')
 
@@ -1819,7 +1807,7 @@ def clip_album(request):
         classification=d.annotation_ui_value_spec,
         tags=d.tag_specs,
         tag=d.tag_spec,
-        solar_event_times_json='null',
+        twilight_event_times_json='null',
         recordings_json='[]',
         clips_json=clips_json,
         settings_presets_json=settings_presets_json,

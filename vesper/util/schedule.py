@@ -50,7 +50,7 @@ class Schedule:
     # `compile_yaml` and `compile_dict` are separate rather than
     # collected into an object since for many purposes (namely,
     # those that involve schedules that specify local times but
-    # no solar events like sunrise or sunset) the time zone is
+    # no twilight events like sunrise or sunset) the time zone is
     # needed but not the latitude and longitude.
     
     
@@ -356,18 +356,18 @@ date ::= yyyy-mm-dd
 
 time ::= nonoffset_time | offset_time
 
-nonoffset_time ::= time_24 | am_pm_time | time_name | solar_event_name
+nonoffset_time ::= time_24 | am_pm_time | time_name | twilight_event_name
 
 time_24 ::= h?h:mm:ss (with hour in [0, 23])
 am_pm_time ::=  time_12 am_pm
 time_12 ::= h?h:mm:ss | h?h:mm | h?h (with hour in [1, 12])
 am_pm ::= 'am' | 'pm'
 time_name ::= 'noon' | 'midnight'
-solar_event_name = 'sunrise' | 'sunset' | 'civil dawn' | 'civil dusk' |
+twilight_event_name = 'sunrise' | 'sunset' | 'civil dawn' | 'civil dusk' |
     'nautical dawn' | 'nautical dusk' | 'astronomical dawn' |
     'astronomical dusk'
     
-offset_time ::= offset preposition solar_event_name
+offset_time ::= offset preposition twilight_event_name
 offset ::= hhmmss_offset | units_offset
 hhmmss_offset ::= h?h:mm:ss
 units_offset ::= number units (with number 1 if units singular)
@@ -915,7 +915,7 @@ def _combine_date_and_time(date, time, location, name):
     else:
         _check_location_attribute(location.latitude, 'latitude', name)
         _check_location_attribute(location.longitude, 'longitude', name)
-        dt = _SolarEventDateTime(date, time.event_name, time.offset)
+        dt = _TwilightEventDateTime(date, time.event_name, time.offset)
         return dt.resolve(location)
 
 
@@ -985,7 +985,7 @@ _NAMED_TIMES = {
     'midnight': datetime.time(0)
 }
 
-_SOLAR_EVENT_NAMES = frozenset((
+_TWILIGHT_EVENT_NAMES = frozenset((
     'sunrise', 'sunset', 'civil dawn', 'civil dusk', 'nautical dawn',
     'nautical dusk', 'astronomical dawn', 'astronomical dusk'))
 
@@ -1086,9 +1086,9 @@ def _parse_time_name(s):
 
 
 def _parse_event_name(s):
-    if s in _SOLAR_EVENT_NAMES:
+    if s in _TWILIGHT_EVENT_NAMES:
         name = _capitalize(s)
-        return _SolarEventTime(name, datetime.timedelta())
+        return _TwilightEventTime(name, datetime.timedelta())
     else:
         return None
         
@@ -1129,7 +1129,7 @@ def _parse_offset_time(s):
     except Exception:
         return None
     
-    return _SolarEventTime(event_name, offset)
+    return _TwilightEventTime(event_name, offset)
     
     
 def _parse_preposition(parts):
@@ -1150,7 +1150,7 @@ def _assemble_event_name(parts):
     
     event_name = ' '.join(parts)
     
-    if event_name not in _SOLAR_EVENT_NAMES:
+    if event_name not in _TWILIGHT_EVENT_NAMES:
         raise ValueError()
     
     return _capitalize(event_name)
@@ -1249,7 +1249,7 @@ def _parse_date_time(s):
     if isinstance(time, datetime.time):
         return datetime.datetime.combine(date, time)
     else:
-        return _SolarEventDateTime(date, time.event_name, time.offset)
+        return _TwilightEventDateTime(date, time.event_name, time.offset)
 
     
 def _parse_date(s):
@@ -1267,7 +1267,7 @@ def _parse_date(s):
         return None
 
 
-class _SolarEventTime:
+class _TwilightEventTime:
      
      
     def __init__(self, event_name, offset=None):
@@ -1284,7 +1284,7 @@ class _SolarEventTime:
         return _resolve(date, self.event_name, location, self.offset)
          
          
-class _SolarEventDateTime:
+class _TwilightEventDateTime:
      
      
     def __init__(self, date, event_name, offset=None):
@@ -1306,7 +1306,7 @@ def _resolve(date, event_name, location, offset):
     
     calculator = AstronomicalCalculator(
         location.latitude, location.longitude, location.time_zone)
-    dt = calculator.get_day_solar_event_time(date, event_name)
+    dt = calculator.get_day_twilight_event_time(date, event_name)
      
     if dt is None:
         return None
