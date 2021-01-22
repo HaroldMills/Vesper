@@ -447,18 +447,24 @@ class AstronomicalCalculatorTests(TestCase):
                 self._assert_raises(ValueError, *case)
     
     
-    def test_sunlight_period_bounds(self):
+    def test_twilight_event_time_altitudes(self):
+        
+        expected_altitudes = {
+            'Ast': -18,
+            'Nau': -12,
+            'Civ': -6,
+            'Sun': -.8333,
+        }
         
         c = AstronomicalCalculator(
             TEST_LAT, TEST_LON, TEST_TIME_ZONE, result_times_local=True)
         
-        date = datetime.date.today()
-        
-        events = c.get_day_twilight_events(date)
+        events = c.get_day_twilight_events(TEST_DATE)
         
         for event in events:
-            position = c.get_solar_position(event.time)
-            print(event.name, event.time, position.altitude)
+            actual = c.get_solar_position(event.time).altitude
+            expected = expected_altitudes[event.name[:3]]
+            self.assertAlmostEqual(actual, expected, places=3)
     
     
 class AstronomicalCalculatorTests2(AstronomicalCalculatorTests):
