@@ -17,11 +17,11 @@ def main():
     
     for file_path in file_paths:
         move_file(file_path, station_name)
-        
-        
+
+
 def move_file(file_path, station_name):
     
-    recorder_name = file_path.parent.name
+    recorder_name = file_path.parent.parent.name
     file_name = file_path.name
     
     start_time = parse_file_name(file_name)
