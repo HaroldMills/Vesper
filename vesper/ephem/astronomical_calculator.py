@@ -18,6 +18,22 @@ from vesper.util.lru_cache import LruCache
 
 # TODO: Make time zone optional. When absent, use UTC-offset time zone.
 
+# TODO: Use this module to generate solar altitude and twilight event
+# data over a year (with altitude sampled every minute, say) for
+# regularly spaced latitudes (every quarter degree, say) along the
+# prime meridian and and create some interactive plots to help people
+# visualize the altitude of the sun and the various sunlight periods.
+# If altitude were sampled every minute and tenth degree of longitude,
+# the resulting data would include about 365 * 24 * 60 * 180 * 4 or
+# 378,432,000 altitudes. The altitudes and twilight events could be
+# presented in a variety of ways. For example, two plots I would
+# like to see are:
+#
+#    1. Altitude vs. time for one day line plot, with sliders for
+#       latitude and day of year.
+#    2. Altitude vs. day of year vs. time of day image, with slider
+#       for latitude.
+
 
 _EPHEMERIS_FILE_PATH = Path(__file__).parent / 'data' / 'de421.bsp'
 """
