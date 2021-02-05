@@ -9,7 +9,7 @@ classification otherwise.
 
 
 from vesper.command.annotator import Annotator
-from vesper.ephem.astronomical_calculator import AstronomicalCalculatorCache
+from vesper.ephem.sun_moon import SunMoonCache
 
 
 class LighthouseOutsideClassifier(Annotator):
@@ -20,7 +20,7 @@ class LighthouseOutsideClassifier(Annotator):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._astronomical_calculators = AstronomicalCalculatorCache()
+        self._sun_moons = SunMoonCache()
     
     
     def annotate(self, clip):
@@ -31,20 +31,23 @@ class LighthouseOutsideClassifier(Annotator):
             # clip is not classified
             
             station = clip.station
-            calculator = self._astronomical_calculators.get_calculator(
+            sun_moon = self._sun_moons.get_sun_moon(
                 station.latitude, station.longitude, station.tz)
-            get_event_time = calculator.get_night_twilight_event_time
             clip_start_time = clip.start_time
             night = station.get_night(clip_start_time)
             
+            def get_event_time(event_name):
+                return sun_moon.get_solar_event_time(
+                    night, event_name, day=False)
+
             # Check if clip start time precedes analysis period.
-            start_time = get_event_time(night, 'Nautical Dusk')
+            start_time = get_event_time('Nautical Dusk')
             if start_time is not None and clip_start_time < start_time:
                 self._annotate(clip, 'Outside')
                 return True
             
             # Check if clip start time follows analysis period.
-            end_time = get_event_time(night, 'Nautical Dawn')
+            end_time = get_event_time('Nautical Dawn')
             if end_time is not None and clip_start_time > end_time:
                 self._annotate(clip, 'Outside')
                 return True

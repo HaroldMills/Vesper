@@ -9,7 +9,7 @@ from pathlib import Path
 import csv
 import datetime
 
-from vesper.ephem.astronomical_calculator import AstronomicalCalculator
+from vesper.ephem.sun_moon import SunMoon
 from vesper.ephem.usno_rise_set_table import UsnoRiseSetTable
 
 
@@ -154,10 +154,10 @@ def get_skyfield_event_times(lat, lon, year, event_name, utc_offset):
         
         # Get all Skyfield events for the specified lat, lon, and year.
         time_zone = datetime.timezone(utc_offset)
-        c = AstronomicalCalculator(lat, lon, time_zone)
+        sm = SunMoon(lat, lon, time_zone)
         start_time = datetime.datetime(year, 1, 1, tzinfo=time_zone)
         end_time = datetime.datetime(year + 1, 1, 1, tzinfo=time_zone)
-        events = c.get_twilight_events(start_time, end_time)
+        events = sm.get_solar_events_in_interval(start_time, end_time)
         
         skyfield_event_cache[(lat, lon, year)] = events
     

@@ -14,7 +14,7 @@ import re
 import jsonschema
 import pytz
 
-from vesper.ephem.astronomical_calculator import AstronomicalCalculator
+from vesper.ephem.sun_moon import SunMoon
 from vesper.util.notifier import Notifier
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
@@ -1308,9 +1308,9 @@ class _TwilightEventDateTime:
  
 def _resolve(date, event_name, location, offset):
     
-    calculator = AstronomicalCalculator(
+    sun_moon = SunMoon(
         location.latitude, location.longitude, location.time_zone)
-    dt = calculator.get_day_twilight_event_time(date, event_name)
+    dt = sun_moon.get_solar_event_time(date, event_name)
      
     if dt is None:
         return None

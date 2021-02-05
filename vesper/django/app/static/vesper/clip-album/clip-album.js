@@ -523,7 +523,7 @@ export class ClipAlbum {
             
             return new NightRugPlot(
                 this, rugPlotDiv, this.clips, state.recordings,
-                state.twilightEventTimes);
+                state.solarEventTimes);
                 
         } else {
             

@@ -1,12 +1,12 @@
 """
-Script that evaluates the `AstronomicalCalculator` class.
+Script that evaluates the `SunMoon` class.
 
-For one location, this script computes twilight event times for all of
+For one location, this script computes solar event times for all of
 the nights of one year by three methods:
 
-    1. with one call to get_twilight_events
-    2. with one call per day to get_night_twilight_events
-    3. with one call per event to get_night_twilight_event_time
+    1. with one call to get_solar_events_in_interval
+    2. with one call per day to get_solar_events
+    3. with one call per event to get_solar_event_time
 
 For each method, the script reports how long it takes to get the
 event times. It also checks that the three methods yield the same
@@ -20,8 +20,7 @@ import datetime
 import itertools
 import time
 
-from vesper.ephem.astronomical_calculator import (
-    AstronomicalCalculatorCache, Event)
+from vesper.ephem.sun_moon import SunMoonCache, Event
 from vesper.util.date_range import DateRange
 
 
@@ -35,11 +34,13 @@ MISSOULA = Location(46.8721, -113.9940, 'US/Mountain', 'Missoula')
 
 YEAR = 2020
 
-TWILIGHT_EVENT_NAMES = (
+SOLAR_EVENT_NAMES = (
+    'Solar Midnight',
     'Astronomical Dawn',
     'Nautical Dawn',
     'Civil Dawn',
     'Sunrise',
+    'Solar Noon',
     'Sunset',
     'Civil Dusk',
     'Nautical Dusk',
@@ -51,12 +52,14 @@ TIME_EQUALITY_THRESHOLD = .001
 
 def main():
     
-    cache = AstronomicalCalculatorCache()
+    cache = SunMoonCache()
     
     print('Getting events for two locations...')
     print()
     get_events_for_two_locations(cache)
     
+    # We include this to test event caching. Getting solar events
+    # should be fast here, since we computed all of them above.
     print('Getting events for two locations again...')
     print()
     get_events_for_two_locations(cache)
@@ -64,24 +67,23 @@ def main():
 
 def get_events_for_two_locations(cache):
     for location in (ITHACA, MISSOULA):
-        calculator = cache.get_calculator(
+        sun_moon = cache.get_sun_moon(
             location.latitude, location.longitude, location.time_zone)
-        get_events_for_location(location.name, calculator)
+        get_events_for_location(location.name, sun_moon)
 
 
-def get_events_for_location(location_name, calculator):
+def get_events_for_location(location_name, sun_moon):
     
     for day in (True, False):
         
-        get_events_for_location_aux(location_name, calculator, day, False)
+        get_events_for_location_aux(location_name, sun_moon, day, False)
         
-        # We include this to test event caching. Getting twilight events
-        # for one day or night should be much faster the second time
-        # around.
-        get_events_for_location_aux(location_name, calculator, day, True)
+        # We include this to test event caching. Getting solar events
+        # should be fast here, since we computed all of them above.
+        get_events_for_location_aux(location_name, sun_moon, day, True)
 
 
-def get_events_for_location_aux(location_name, calculator, day, again):
+def get_events_for_location_aux(location_name, sun_moon, day, again):
         
         day_or_night = 'day' if day else 'night'
         again = ' again' if again else ''
@@ -89,13 +91,13 @@ def get_events_for_location_aux(location_name, calculator, day, again):
         print(f'Getting {day_or_night} events for {location_name}{again}...')
         
         by_year_events, by_year_time = \
-            get_events(get_events_by_year, calculator, day, 'year')
+            get_events(get_events_by_year, sun_moon, day, 'year')
         
         by_date_events, by_date_time = \
-            get_events(get_events_by_date, calculator, day, day_or_night)
+            get_events(get_events_by_date, sun_moon, day, day_or_night)
         
         by_name_events, by_name_time = \
-            get_events(get_events_by_name, calculator, day, 'name')
+            get_events(get_events_by_name, sun_moon, day, 'name')
         
         show_elapsed_time('year', by_year_time)
         show_elapsed_time(day_or_night, by_date_time)
@@ -107,72 +109,60 @@ def get_events_for_location_aux(location_name, calculator, day, again):
         print()
 
 
-def get_events(function, calculator, day, method):
+def get_events(function, sun_moon, day, method):
     
     print(f'Getting events by {method}...')
     
     start_time = time.time()
     
     if PROFILING_ENABLED:
-        runner = Runner(function, calculator, day)
+        runner = Runner(function, sun_moon, day)
         cProfile.runctx('runner.run()', globals(), locals())
         events = runner.result
     
     else:
-        events = function(calculator, day)
+        events = function(sun_moon, day)
     
     elapsed_time = time.time() - start_time
     
     return events, elapsed_time
 
 
-def get_events_by_year(calculator, day):
-    time_zone = calculator.time_zone
+def get_events_by_year(sun_moon, day):
+    time_zone = sun_moon.time_zone
     hour = 0 if day else 12
     start_dt = time_zone.localize(datetime.datetime(YEAR, 1, 1, hour))
     end_dt = time_zone.localize(datetime.datetime(YEAR + 1, 1, 1, hour))
-    return calculator.get_twilight_events(start_dt, end_dt)
+    return sun_moon.get_solar_events_in_interval(start_dt, end_dt)
 
 
-def get_events_by_date(calculator, day):
+def get_events_by_date(sun_moon, day):
     start_date = datetime.date(YEAR, 1, 1)
     end_date = datetime.date(YEAR + 1, 1, 1)
     event_lists = [
-        get_date_twilight_events(calculator, date, day)
+        sun_moon.get_solar_events(date, day=day)
         for date in DateRange(start_date, end_date)]
     return list(itertools.chain.from_iterable(event_lists))
 
 
-def get_date_twilight_events(calculator, date, day):
-    if day:
-        return calculator.get_day_twilight_events(date)
-    else:
-        return calculator.get_night_twilight_events(date)
-
-
-def get_events_by_name(calculator, day):
+def get_events_by_name(sun_moon, day):
     start_date = datetime.date(YEAR, 1, 1)
     end_date = datetime.date(YEAR + 1, 1, 1)
     event_lists = [
-        get_date_twilight_events_by_name(calculator, date, day)
+        get_solar_events_by_name(sun_moon, date, day)
         for date in DateRange(start_date, end_date)]
     return list(itertools.chain.from_iterable(event_lists))
 
 
-def get_date_twilight_events_by_name(calculator, date, day):
+def get_solar_events_by_name(sun_moon, date, day):
     events = [
-        get_date_twilight_event(calculator, date, name, day)
-        for name in TWILIGHT_EVENT_NAMES]
+        get_solar_event(sun_moon, date, name, day)
+        for name in SOLAR_EVENT_NAMES]
     return sorted(e for e in events if e is not None)
 
 
-def get_date_twilight_event(calculator, date, event_name, day):
-    
-    if day:
-        time = calculator.get_day_twilight_event_time(date, event_name)
-    else:
-        time = calculator.get_night_twilight_event_time(date, event_name)
-    
+def get_solar_event(sun_moon, date, event_name, day):
+    time = sun_moon.get_solar_event_time(date, event_name, day=day)
     if time is None:
         return None
     else:

@@ -3,7 +3,7 @@ Script that compares two clip metadata CSV files.
 
 This script was written to check that the clip metadata CSV files output
 after the switch from PyEphem to Skyfield were almost equal to those output
-before. Twilight event time columns are allowed to differ by up to one second,
+before. Solar event time columns are allowed to differ by up to one second,
 and the lunar altitude and illumination columns are allowed to differ by
 up to .1 degrees or percent.
 """
@@ -94,11 +94,11 @@ def compare_row_cell_values(row_num, col_num, value_a, value_b):
         time_b = parse_datetime(value_b)
         diff = abs((time_a - time_b).total_seconds())
         
-        # We allow twilight event times to differ by one second for the
+        # We allow solar event times to differ by one second for the
         # switch from PyEphem to Skyfield.
         if diff >= 2:
             print(
-                f'Twilight event times differ at row {row_num}, '
+                f'Solar event times differ at row {row_num}, '
                 f'column {col_num}.')
             print(f'File "{str(FILE_PATH_A)}" value is {value_a}.')
             print(f'File "{str(FILE_PATH_B)}" value is {value_b}.')

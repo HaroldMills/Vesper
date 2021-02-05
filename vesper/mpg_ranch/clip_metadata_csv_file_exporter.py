@@ -11,7 +11,7 @@ import tempfile
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
-from vesper.ephem.astronomical_calculator import AstronomicalCalculatorCache
+from vesper.ephem.sun_moon import SunMoonCache
 from vesper.singletons import clip_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
@@ -28,6 +28,8 @@ import vesper.util.yaml_utils as yaml_utils
 # only specification keys we use are "name" and "settings".
 
 # TODO: Implement table format presets.
+
+# TODO: Give dawn time measurements a "day" argument.
 
 
 '''
@@ -55,7 +57,7 @@ Measurement names:
     Solar Azimuth
     Start Time
     Station Name
-    Sunlight Period Name
+    Solar Period Name
     Sunrise Time
     Sunset Time
 
@@ -242,7 +244,7 @@ columns:
               detail: ".1"
     
     - name: twilight
-      measurement: Sunlight Period Name
+      measurement: Solar Period Name
       format:
           name: Mapping
           settings:
@@ -255,9 +257,9 @@ columns:
                   Morning Astronomical Twilight: astronomical_twilight
                   Morning Nautical Twilight: nautical_twilight
                   Morning Civil Twilight: civil_twilight
-          
+        
     - name: dusk_dawn
-      measurement: Sunlight Period Name
+      measurement: Solar Period Name
       format:
           name: Mapping
           settings:
@@ -270,11 +272,11 @@ columns:
                   Morning Astronomical Twilight: dawn
                   Morning Nautical Twilight: dawn
                   Morning Civil Twilight: dawn
-          
+        
 ''')
 
 
-_ASTRONOMICAL_CALCULATORS = AstronomicalCalculatorCache()
+_SUN_MOONS = SunMoonCache()
 
 
 class ClipMetadataCsvFileExporter:
@@ -509,11 +511,11 @@ class _TwilightEventTimeMeasurement:
     
     def measure(self, clip):
         station = clip.station
-        calculator = _ASTRONOMICAL_CALCULATORS.get_calculator(
+        sun_moon = _SUN_MOONS.get_sun_moon(
             station.latitude, station.longitude, station.tz)
         night = station.get_night(clip.start_time)
         event_name = self.name[:-5]
-        return calculator.get_night_twilight_event_time(night, event_name)
+        return sun_moon.get_solar_event_time(night, event_name, day=False)
 
 
 class AstronomicalDawnTimeMeasurement(_TwilightEventTimeMeasurement):
@@ -639,13 +641,13 @@ class LunarAltitudeMeasurement:
     
     
 def _get_lunar_position(clip):
-    calculator = _get_astronomical_calculator(clip)
-    return calculator.get_lunar_position(clip.start_time)
+    sun_moon = _get_sun_moon(clip)
+    return sun_moon.get_lunar_position(clip.start_time)
     
     
-def _get_astronomical_calculator(clip):
+def _get_sun_moon(clip):
     station = clip.station
-    return _ASTRONOMICAL_CALCULATORS.get_calculator(
+    return _SUN_MOONS.get_sun_moon(
         station.latitude, station.longitude, station.tz)
 
 
@@ -662,8 +664,8 @@ class LunarIlluminationMeasurement:
     name = 'Lunar Illumination'
     
     def measure(self, clip):
-        calculator = _get_astronomical_calculator(clip)
-        return calculator.get_lunar_illumination(clip.start_time)
+        sun_moon = _get_sun_moon(clip)
+        return sun_moon.get_lunar_illumination(clip.start_time)
     
     
 class NauticalDawnTimeMeasurement(_TwilightEventTimeMeasurement):
@@ -715,8 +717,8 @@ class SolarAltitudeMeasurement:
     
     
 def _get_solar_position(clip):
-    calculator = _get_astronomical_calculator(clip)
-    return calculator.get_solar_position(clip.start_time)
+    sun_moon = _get_sun_moon(clip)
+    return sun_moon.get_solar_position(clip.start_time)
     
     
 class SolarAzimuthMeasurement:
@@ -743,13 +745,13 @@ class StationNameMeasurement:
         return clip.station.name
     
     
-class SunlightPeriodNameMeasurement:
+class SolarPeriodNameMeasurement:
     
-    name = 'Sunlight Period Name'
+    name = 'Solar Period Name'
     
     def measure(self, clip):
-        calculator = _get_astronomical_calculator(clip)
-        return calculator.get_sunlight_period_name(clip.start_time)
+        sun_moon = _get_sun_moon(clip)
+        return sun_moon.get_solar_period_name(clip.start_time)
 
 
 class SunriseTimeMeasurement(_TwilightEventTimeMeasurement):
@@ -783,7 +785,7 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     SolarAzimuthMeasurement,
     StartTimeMeasurement,
     StationNameMeasurement,
-    SunlightPeriodNameMeasurement,
+    SolarPeriodNameMeasurement,
     SunriseTimeMeasurement,
     SunsetTimeMeasurement
 ])

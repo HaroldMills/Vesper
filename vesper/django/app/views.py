@@ -41,7 +41,7 @@ from vesper.django.app.transfer_call_classifications_form import \
     TransferCallClassificationsForm
 from vesper.django.app.refresh_recording_audio_file_paths_form import \
     RefreshRecordingAudioFilePathsForm
-from vesper.ephem.astronomical_calculator import AstronomicalCalculator
+from vesper.ephem.sun_moon import SunMoon
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm as OldBirdExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
@@ -1612,7 +1612,7 @@ def night(request):
     date_string = params['date']
     date = time_utils.parse_date(*date_string.split('-'))
 
-    twilight_event_times_json = _get_twilight_event_times_json(station, date)
+    solar_event_times_json = _get_solar_event_times_json(station, date)
 
     time_interval = station.get_night_interval_utc(date)
     recordings = model_utils.get_recordings(station, mic_output, time_interval)
@@ -1647,7 +1647,7 @@ def night(request):
         tags=tag_specs,
         tag=tag_spec,
         date=date_string,
-        twilight_event_times_json=twilight_event_times_json,
+        solar_event_times_json=solar_event_times_json,
         recordings_json=recordings_json,
         clips_json=clips_json,
         settings_presets_json=settings_presets_json,
@@ -1659,27 +1659,27 @@ def night(request):
     return render(request, 'vesper/night.html', context)
 
 
-def _get_twilight_event_times_json(station, night):
+def _get_solar_event_times_json(station, night):
 
     # See note near the top of this file about why we send local
     # instead of UTC times to clients.
 
-    calculator = AstronomicalCalculator(
+    sun_moon = SunMoon(
         station.latitude, station.longitude, station.tz,
         result_times_local=True)
     
-    events = calculator.get_night_twilight_events(night)
+    events = sun_moon.get_solar_events(night, day=False)
     
     times = dict(
-        (_get_twilight_event_variable_name(e.name), _format_time(e.time))
+        (_get_solar_event_variable_name(e.name), _format_time(e.time))
         for e in events)
     
     return json.dumps(times)
 
 
-def _get_twilight_event_variable_name(event_name):
+def _get_solar_event_variable_name(event_name):
     
-    """Creates a JavaScript variable name from a twilight event name."""
+    """Creates a JavaScript variable name from a solar event name."""
     
     return (event_name[0].lower() + event_name[1:]).replace(' ', '')
 
@@ -1807,7 +1807,7 @@ def clip_album(request):
         classification=d.annotation_ui_value_spec,
         tags=d.tag_specs,
         tag=d.tag_spec,
-        twilight_event_times_json='null',
+        solar_event_times_json='null',
         recordings_json='[]',
         clips_json=clips_json,
         settings_presets_json=settings_presets_json,

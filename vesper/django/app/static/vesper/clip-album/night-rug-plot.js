@@ -41,14 +41,12 @@ const _UNDERLAY_SPEC = [
 export class NightRugPlot {
 
 
-	constructor(parent, div, clips, recordings, twilightEventTimes) {
+	constructor(parent, div, clips, recordings, solarEventTimes) {
 
 		this._parent = parent;
 		this._div = div;
 		this._clips = clips;
 		this._recordings = recordings;
-		this._twilightEventTimeStrings = twilightEventTimes;
-		// this._twilightEventTimeStrings = null;    // for testing
 
 		this._rugCanvas = this._createRugCanvas();
 		this._axisCanvas = this._createAxisCanvas();
@@ -56,8 +54,7 @@ export class NightRugPlot {
 
 		this._clipTimes = this._clips.map(_getClipTime);
 		this._recordingIntervals = this._recordings.map(_getRecordingInterval);
-		this._twilightEventTimes =
-			_getTwilightEventTimes(this._twilightEventTimeStrings);
+		this._twilightEventTimes = _getTwilightEventTimes(solarEventTimes);
 
 		[this._startTime, this._endTime] = this._getPlotLimits();
 
@@ -636,14 +633,14 @@ function _getRecordingInterval(recording) {
 }
 
 
-function _getTwilightEventTimes(twilightEventTimeStrings) {
+function _getTwilightEventTimes(solarEventTimeStrings) {
 
-	if (twilightEventTimeStrings !== null) {
+	if (solarEventTimeStrings !== null) {
 
 		const times = {};
 
 		for (const eventName of _TWILIGHT_EVENT_NAMES) {
-			const timeString = twilightEventTimeStrings[eventName];
+			const timeString = solarEventTimeStrings[eventName];
 			if (timeString === null)
 				times[eventName] = null;
 			else

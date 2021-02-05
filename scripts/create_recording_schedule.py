@@ -20,7 +20,7 @@ import datetime
 
 import pytz
 
-from vesper.ephem.astronomical_calculator import AstronomicalCalculator
+from vesper.ephem.sun_moon import SunMoon
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 
@@ -64,8 +64,7 @@ ONE_DAY = datetime.timedelta(days=1)
 
 def main():
     
-    calculator = AstronomicalCalculator(
-        LAT, LON, TIME_ZONE, result_times_local=True)
+    sun_moon = SunMoon(LAT, LON, TIME_ZONE, result_times_local=True)
     
     night = START_NIGHT
     sunset_offset = datetime.timedelta(minutes=SUNSET_OFFSET)
@@ -75,8 +74,8 @@ def main():
     
     while night <= END_NIGHT:
         
-        start_time = _get_time(calculator, night, 'Sunset', sunset_offset)
-        end_time = _get_time(calculator, night, 'Sunrise', sunrise_offset)
+        start_time = _get_time(sun_moon, night, 'Sunset', sunset_offset)
+        end_time = _get_time(sun_moon, night, 'Sunrise', sunrise_offset)
                 
         line = f'{str(night)},{start_time},{end_time}'
         lines.append(line)
@@ -87,8 +86,8 @@ def main():
     os_utils.write_file(OUTPUT_FILE_PATH, text)
 
 
-def _get_time(calculator, night, event_name, offset):
-    time = calculator.get_night_twilight_event_time(night, event_name)
+def _get_time(sun_moon, night, event_name, offset):
+    time = sun_moon.get_solar_event_time(night, event_name, day=False)
     time += offset
     time = time_utils.round_datetime(time, 60)
     return time.strftime('%Y-%m-%d %H:%M')
