@@ -365,54 +365,59 @@ class SunMoon:
     
     
     def get_solar_position(self, time):
+        return self._get_position(self._solar_positions, self._sun, time)
+    
+    
+    def _get_position(self, cache, body, time):
+        if isinstance(time, DateTime):
+            return self._get_scalar_position(cache, body, time)
+        else:
+            return self._get_vector_position(body, time)
+    
+    
+    def _get_scalar_position(self, cache, body, time):
         
         try:
-            return self._solar_positions[time]
+            return cache[time]
  
         except KeyError:
             # cache miss
             
-            position = self._get_position(self._sun, time)
-            self._solar_positions[time] = position
+            time = self._get_scalar_skyfield_time(time)
+            position = self._loc.at(time).observe(body).apparent().altaz()
+            position = _get_sun_moon_position(position)
+            
+            cache[time] = position
+            
             return position
-    
-    
-    def _get_position(self, body, time):
-        
-        # Get Skyfield position.
-        time = self._get_skyfield_time(time)
-        position = self._loc.at(time).observe(body).apparent().altaz()
-        
-        # Get position attributes with desired units.
-        altitude = position[0].degrees
-        azimuth = position[1].degrees
-        distance = position[2].km
-        
-        return Position(altitude, azimuth, distance)
-    
-    
-    def _get_skyfield_time(self, arg):
-        
-        if isinstance(arg, DateTime):
-            return self._get_scalar_skyfield_time(arg)
-            
-        else:
-            # assume `arg` is iterable of `datetime` objects
-            
-            # We create a list from the iterable since the documentation
-            # for the Skyfield `Timescale.from_datetimes` method specifies
-            # that its argument should be a list of `datetime` objects.
-            times = list(arg)
-            
-            for time in times:
-                _check_time_zone_awareness(time)
-            
-            return self._timescale.from_datetimes(times)
     
     
     def _get_scalar_skyfield_time(self, time):
         _check_time_zone_awareness(time)
         return self._timescale.from_datetime(time)
+    
+    
+    def _get_vector_position(self, body, times):
+        
+        # Note that unlike in the scalar case, we do not cache results
+        # when getting a vector of positions.
+        
+        times = self._get_vector_skyfield_time(times)
+        position = self._loc.at(times).observe(body).apparent().altaz()
+        return _get_sun_moon_position(position)
+    
+    
+    def _get_vector_skyfield_time(self, times):
+        
+        # Create `list` from iterable `times` since the documentation
+        # for the Skyfield `Timescale.from_datetimes` method specifies
+        # that its argument should be a list of `DateTime` objects.
+        times = list(times)
+        
+        for time in times:
+            _check_time_zone_awareness(time)
+        
+        return self._timescale.from_datetimes(times)
     
     
     def _check_for_polar_location(self, action):
@@ -782,11 +787,24 @@ class SunMoon:
             return self._get_solar_period_name(period_codes, time)
         
         else:
-            # getting period names for list of times
+            # getting period names for iterable of times
             
             return [
-                self._get_solar_period_name(c, time)
-                for c in period_codes]
+                self._get_solar_period_name(c, t)
+                for c, t in zip(period_codes, time)]
+    
+    
+    def _get_skyfield_time(self, arg):
+        
+        if isinstance(arg, DateTime):
+            return self._get_scalar_skyfield_time(arg)
+            
+        else:
+            # `arg` is not a `DateTime`.
+            
+            # Assume `arg` is iterable of `DateTime` objects.
+            
+            return self._get_vector_skyfield_time(arg)
     
     
     def _get_solar_period_name(self, code, time):
@@ -834,16 +852,7 @@ class SunMoon:
     
     
     def get_lunar_position(self, time):
-    
-        try:
-            return self._lunar_positions[time]
-        
-        except KeyError:
-            # cache miss
-            
-            position = self._get_position(self._moon, time)
-            self._lunar_positions[time] = position
-            return position
+        return self._get_position(self._lunar_positions, self._moon, time)
     
     
     def get_lunar_illumination(self, time):
@@ -866,6 +875,18 @@ def _get_time_zone(time_zone):
         raise TypeError(
             f'Unrecognized time zone type "{time_zone.__class__.__name__}".'
             f'Time zone must be string, tzinfo, or None.')
+
+
+def _get_sun_moon_position(position):
+    
+    """Converts a Skyfield position object to a `Position`."""
+    
+    # Get position attributes with desired units.
+    altitude = position[0].degrees
+    azimuth = position[1].degrees
+    distance = position[2].km
+    
+    return Position(altitude, azimuth, distance)
 
 
 def _check_time_zone_awareness(time):

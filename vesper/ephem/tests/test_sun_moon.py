@@ -16,7 +16,7 @@ from datetime import (
 import pytz
 
 from vesper.tests.test_case import TestCase
-from vesper.ephem.sun_moon import Event, SunMoon, SunMoonCache
+from vesper.ephem.sun_moon import Event, Position, SunMoon, SunMoonCache
 
 
 # TODO: When the USNO web site is up again (as of 2020-12 it has been
@@ -27,10 +27,6 @@ from vesper.ephem.sun_moon import Event, SunMoon, SunMoonCache
 # TODO: Should we be using the USNO's NOVAS software for anything,
 # for example for generating test data? There is a pip-installable
 # Python wrapper for NOVAS available from PyPI.
-
-# TODO: Test vector arguments to `get_solar_position`,
-# `get_solar_period_name`, `get_lunar_position`, and
-# `get_lunar_illumination`.
 
 
 # Ithaca, NY location and time zone.
@@ -248,18 +244,30 @@ class SunMoonTests(TestCase):
         self.assertEqual(sun_moon.result_times_local, result_times_local)
     
     
-    def test_get_solar_position(self):
+    def test_get_scalar_solar_position(self):
+        
         # Get positions twice to test caching to some extent.
-        self._test_get_solar_position()
-        self._test_get_solar_position()
+        self._test_get_scalar_solar_position()
+        self._test_get_scalar_solar_position()
     
     
-    def _test_get_solar_position(self):
-        for time, expected_pos in SOLAR_POSITIONS:
-            pos = self.sun_moon.get_solar_position(time)
+    def _test_get_scalar_solar_position(self):
+        return self._test_get_scalar_position(
+            self.sun_moon.get_solar_position, SOLAR_POSITIONS,
+            SOLAR_ALT_AZ_ERROR_THRESHOLD, SOLAR_DISTANCE_ERROR_THRESHOLD)
+    
+    
+    def _test_get_scalar_position(
+            self, method, expected_positions, alt_az_error_threshold,
+            distance_error_threshold):
+        
+        for time, expected_pos in expected_positions:
+            
+            pos = method(time)
+            
             self._check_pos(
-                pos, expected_pos, SOLAR_ALT_AZ_ERROR_THRESHOLD,
-                SOLAR_DISTANCE_ERROR_THRESHOLD)
+                pos, expected_pos, alt_az_error_threshold,
+                distance_error_threshold)
     
     
     def _check_pos(
@@ -284,6 +292,27 @@ class SunMoonTests(TestCase):
         error = abs((a - b) / b)
         # print(f'{name} {a} {b} {error}')
         self.assertLess(error, error_threshold)
+    
+    
+    def test_get_vector_solar_position(self):
+        self._test_get_vector_position(
+            self.sun_moon.get_solar_position, SOLAR_POSITIONS,
+            SOLAR_ALT_AZ_ERROR_THRESHOLD, SOLAR_DISTANCE_ERROR_THRESHOLD)
+    
+    
+    def _test_get_vector_position(
+            self, method, expected_positions, alt_az_error_threshold,
+            distance_error_threshold):
+        
+        times, expected_positions = list(zip(*expected_positions))
+        
+        p = method(times)
+ 
+        for i, expected in enumerate(expected_positions):
+            actual = Position(p.altitude[i], p.azimuth[i], p.distance[i])
+            self._check_pos(
+                actual, expected, alt_az_error_threshold,
+                distance_error_threshold)
     
     
     def test_get_solar_events_in_interval(self):
@@ -408,7 +437,6 @@ class SunMoonTests(TestCase):
         for date, expected in cases:
             time = self.sun_moon.get_solar_event_time(date, event_name)
             actual = _round_time_to_nearest_minute(time)
-            print(f'{str(actual)} {str(expected)}')
             self._assert_datetimes_nearly_equal(actual, expected)
     
     
@@ -417,33 +445,61 @@ class SunMoonTests(TestCase):
             SOLAR_MIDNIGHTS, 'Solar Midnight')
     
     
-    def test_get_solar_period_name(self):
+    def test_get_scalar_solar_period_name(self):
         for time, expected in SOLAR_PERIODS:
             actual = self.sun_moon.get_solar_period_name(time)
-            print(time, actual, expected)
             self.assertEqual(actual, expected)
     
     
+    def test_get_vector_solar_period_name(self):
+        times, expected_names = list(zip(*SOLAR_PERIODS))
+        actual_names = self.sun_moon.get_solar_period_name(times)
+        self.assertEqual(len(actual_names), len(expected_names))
+        for actual, expected in zip(actual_names, expected_names):
+            self.assertEqual(actual, expected)
+        
+        
     def test_get_lunar_position(self):
+        
         # Get positions twice to test caching to some extent.
-        self._test_get_lunar_position()
-        self._test_get_lunar_position()
+        self._test_get_scalar_lunar_position()
+        self._test_get_scalar_lunar_position()
     
     
-    def _test_get_lunar_position(self):
-        for time, expected_pos in LUNAR_POSITIONS:
-            pos = self.sun_moon.get_lunar_position(time)
-            self._check_pos(
-                pos, expected_pos, LUNAR_ALT_AZ_ERROR_THRESHOLD,
-                LUNAR_DISTANCE_ERROR_THRESHOLD)
+    def _test_get_scalar_lunar_position(self):
+        return self._test_get_scalar_position(
+            self.sun_moon.get_lunar_position, LUNAR_POSITIONS,
+            LUNAR_ALT_AZ_ERROR_THRESHOLD, LUNAR_DISTANCE_ERROR_THRESHOLD)
     
     
-    def test_get_lunar_illumination(self):
+    def test_get_vector_lunar_position(self):
+        self._test_get_vector_position(
+            self.sun_moon.get_lunar_position, LUNAR_POSITIONS,
+            LUNAR_ALT_AZ_ERROR_THRESHOLD, LUNAR_DISTANCE_ERROR_THRESHOLD)
+    
+    
+    def test_get_scalar_lunar_illumination(self):
         for time, expected_illumination in LUNAR_ILLUMINATIONS:
             illumination = self.sun_moon.get_lunar_illumination(time)
             self._check_relative_error(
                 illumination, expected_illumination,
                 LUNAR_ILLUMINATION_ERROR_THRESHOLD)
+    
+    
+    def test_get_vector_lunar_illumination(self):
+        
+        times, expected_illuminations = list(zip(*LUNAR_ILLUMINATIONS))
+        
+        actual_illuminations = self.sun_moon.get_lunar_illumination(times)
+        
+        self.assertEqual(
+            len(actual_illuminations), len(expected_illuminations))
+        
+        for actual, expected in \
+                zip(actual_illuminations, expected_illuminations):
+            
+            self._check_relative_error(
+                actual, expected, LUNAR_ILLUMINATION_ERROR_THRESHOLD)
     
     
     def test_naive_datetime_errors(self):
