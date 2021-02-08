@@ -819,36 +819,153 @@ class SunMoon:
         else:
             # some kind of twilight
             
-            # Get date of local time.
-            time = time.astimezone(self.time_zone)
-            date = time.date()
+            prefix = self._get_morning_or_evening(time)
             
-            # Get start solar midnight, solar noon, and end solar midnight
-            # for date.
-            start_midnight, noon, end_midnight = \
-                self._get_solar_transit_events(date, True)
+            return f'{prefix} {name}'
+    
+    
+    def _get_morning_or_evening(self, time):
+        
+        """
+        Return whether it's morning or evening at the specified time.
+        
+        At any non-polar location (i.e. any location at which the
+        notion of a solar day makes sense), we define *morning* as the
+        portion of a solar day during which the sun is either rising or
+        at its minimum altitude at the start of the dayg. We define
+        evening as the rest of the day, i.e. the portion of the day
+        during which the sun is either falling or at its maximum
+        altitude.
+        
+        At any time at which there is not a solar altitude extremum,
+        in any sufficiently small neighborhood of the time the sun's
+        altitude will strictly increase or decrease according to
+        whether the time is in the morning or the evening, respectively.
+        We use this fact as the basis of the algorithm of this method.
+        
+        The method starts by comparing the sun's altitude at the
+        specified time to its altitude one second before and after.
+        If those three altitudes are strictly increasing or decreasing,
+        the method concludes that it is morning or evening at the time,
+        respectively. Otherwise it zooms in to a smaller neighborhood
+        and repeats the test. It zooms in and repeats the test up to
+        six times, after which it concludes that the time is very close
+        to a solar extremum and assigns it to morning or evening
+        according to the sun's altitude a second after.
+        """
+        
+        
+        # TODO: This method can yield an incorrect answer, for example
+        # if `time` is less than a microsecond from an altitude extremum.
+        # Characterize better the conditions under which this happens and
+        # how large errors can be, for example as a function of latitude.
+        # Improve the algorithm if needed, and perhaps raise an exception
+        # in certain dangerous territories, e.g. at very high latitudes.
+        
+        altitude = self.get_solar_position(time).altitude
+        
+        delta = 1
+        
+        for _ in range(7):
             
-            # Get twilight name prefix according to whether time is
-            # in a morning interval between a solar midnight and a
-            # solar noon or an evening interval between a solar noon
-            # and a solar midnight.
-            #
-            # We assume here that transits and altitude extrema coincide.
-            # See TODO towards the top of this module regarding this
-            # assumption.
-            if time < start_midnight.time:
-                prefix = 'Evening'
+            td = TimeDelta(seconds=delta)
+            
+            altitude_before = self.get_solar_position(time - td).altitude
+            delta_before = altitude - altitude_before
+            
+            altitude_after = self.get_solar_position(time + td).altitude
+            delta_after = altitude_after - altitude
+            
+            if delta_before > 0 and delta_after > 0:
+                # altitude increasing at `time`
                 
-            elif time < noon.time:
-                prefix = 'Morning'
+                return 'Morning'
             
-            elif time < end_midnight.time:
-                prefix = 'Evening'
+            elif delta_before < 0 and delta_after < 0:
+                # altitude decreasing at `time`
+                
+                return 'Evening'
             
             else:
-                prefix = 'Morning'
-                        
-            return f'{prefix} {name}'
+                
+                # Zoom in.
+                delta *= .1
+        
+        # If we get here, altitude is not strictly increasing or
+        # decreasing from about one microsecond before `time` to
+        # about one microsecond after. We are very close in time
+        # to an altitude extremum.
+        
+        td = TimeDelta(seconds=1)
+        altitude_after = self.get_solar_position(time + td).altitude
+        delta_after = altitude_after - altitude
+        
+        if delta_after > 0:
+            # sun rises from `time` to one second after
+            
+            # Note that `time` may actually be a little before an
+            # altitude maximum here, in which case we return an
+            # incorrect answer.
+            return 'Morning'
+        
+        else:
+            # sun falls from `time` to one second after
+            
+            # Note that `time` may actually be a little after an
+            # altitude minimum here, in which case we return an
+            # incorrect answer.
+            return 'Evening'
+    
+    
+    # The following is an older version of the `_get_solar_period_name`
+    # method. It assumes that solar noons and midnights coincide with
+    # altitude maxima and minima, which is nearly but not exactly true.
+    # See https://rhodesmill.org/skyfield/almanac.html#transits for more
+    # about that issue. (By how much do they differ? It would be
+    # informative to plot a distribution of differences over a year for
+    # a given latitude.)
+#     def _get_solar_period_name(self, code, time):
+#         
+#         code = float(code)
+#         
+#         name = _SOLAR_PERIOD_NAMES[code]
+#         
+#         if name == 'Day' or name == 'Night':
+#             return name
+#         
+#         else:
+#             # some kind of twilight
+#             
+#             # Get date of local time.
+#             time = time.astimezone(self.time_zone)
+#             date = time.date()
+#             
+#             # Get start solar midnight, solar noon, and end solar midnight
+#             # for date.
+#             start_midnight, noon, end_midnight = \
+#                 self._get_solar_transit_events(date, True)
+#             
+#             # Get twilight name prefix according to whether time is
+#             # in a morning interval between a solar midnight and a
+#             # solar noon or an evening interval between a solar noon
+#             # and a solar midnight.
+#             #
+#             # We assume here that transits and altitude extrema coincide.
+#             # See TODO towards the top of this module regarding this
+#             # assumption.
+#             if time < start_midnight.time:
+#                 prefix = 'Evening'
+#                 
+#             elif time < noon.time:
+#                 prefix = 'Morning'
+#             
+#             elif time < end_midnight.time:
+#                 prefix = 'Evening'
+#             
+#             else:
+#                 prefix = 'Morning'
+#                         
+#             return f'{prefix} {name}'
     
     
     def get_lunar_position(self, time):
