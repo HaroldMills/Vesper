@@ -16,14 +16,6 @@ import pytz
 from vesper.util.lru_cache import LruCache
 
 
-# TODO: Modify `_get_solar_period_name` method of the `SunMoon` class
-# to not assume that solar transits and solar altitude extrema coincide
-# (they nearly do, but not exactly: see
-# https://rhodesmill.org/skyfield/almanac.html#transits). I think we
-# can do this reasonably efficiently by looking at solar altitudes
-# at and on both sides of the specified time to see whether the
-# altitude is increasing or decreasing at that time.
-
 # TODO: Make time zone optional. When absent, return only UTC times
 # from methods, raising an exception if local result times are
 # indicated to the initializer, and use a UTC-offset time zone
@@ -33,21 +25,6 @@ from vesper.util.lru_cache import LruCache
 # locations on the earth, except those where the actual date differs
 # from what it would be if the 180th meridian were the international
 # date line.
-
-# TODO: Use this module to generate solar altitude and event data over
-# a year (with altitude sampled every minute, say) for regularly spaced
-# latitudes (every quarter degree, say) along the prime meridian and
-# and create some interactive plots to help people visualize the
-# altitude of the sun and the various solar periods. If altitude were
-# sampled every minute and tenth degree of longitude, the resulting
-# data would include about 365 * 24 * 60 * 180 * 4 or 378,432,000
-# altitudes. The altitudes and events could be presented in a variety
-# of ways. For example, two plots I would like to see are:
-#
-#    1. Altitude vs. time for one day line plot, with sliders for
-#       latitude and day of year.
-#    2. Altitude vs. day of year vs. time of day image, with slider
-#       for latitude.
 
 
 _EPHEMERIS_FILE_PATH = Path(__file__).parent / 'data' / 'de421.bsp'
@@ -856,11 +833,13 @@ class SunMoon:
         
         
         # TODO: This method can yield an incorrect answer, for example
-        # if `time` is less than a microsecond from an altitude extremum.
-        # Characterize better the conditions under which this happens and
-        # how large errors can be, for example as a function of latitude.
-        # Improve the algorithm if needed, and perhaps raise an exception
-        # in certain dangerous territories, e.g. at very high latitudes.
+        # in some cases where `time` is less than a microsecond from an
+        # altitude extremum, and perhaps also where the altitude function
+        # is relatively flat, e.g. at higher latitudes. Characterize better
+        # the conditions under which this happens and how large errors can
+        # be, for example as a function of latitude. Improve the algorithm
+        # if needed, and perhaps raise an exception in certain dangerous
+        # territories, e.g. at very high latitudes.
         
         altitude = self.get_solar_position(time).altitude
         
@@ -1015,7 +994,7 @@ def _check_time_zone_awareness(time):
 # TODO: Move this function to a utility module and use it more widely,
 # as part of an effort to eventually eliminate the use of `pytz` in
 # Vesper. `pytz` should not be needed for Python versions 3.9 and above,
-# after the introduction of the `zoneinfo` standard library package.
+# which include the `zoneinfo` standard library package.
 def _create_aware_datetime(time_zone, *args):
     
     if hasattr(time_zone, 'localize'):
