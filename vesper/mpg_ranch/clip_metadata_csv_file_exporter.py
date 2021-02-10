@@ -29,8 +29,6 @@ import vesper.util.yaml_utils as yaml_utils
 
 # TODO: Implement table format presets.
 
-# TODO: Give dawn time measurements a "day" argument.
-
 
 '''
 Measurement names:
@@ -55,22 +53,13 @@ Measurement names:
     Recording Start Time
     Solar Altitude
     Solar Azimuth
+    Solar Midnight Time
+    Solar Noon Time
     Start Time
     Station Name
     Solar Period Name
     Sunrise Time
     Sunset Time
-
-Some comments and questions:
-
-* We may want day twilight event times or night twilight event times,
-  depending on the project. The evening twilight events are the same in
-  the two cases, but the morning twilight events differ. How to specify
-  which you want? One possibility would be that we replace each morning
-  event measurement with two measurements, e.g. replace "Sunrise Time"
-  with "Day Sunrise Time" and "Night Sunrise Time". Another possibility
-  would be to add a "diurnal" table setting that affects the behavior
-  of the morning event measurements.
 '''
 
 
@@ -174,56 +163,80 @@ columns:
                     'False': 'no'
     
     - name: sunset
-      measurement: Sunset Time
+      measurement:
+          name: Sunset Time
+          settings:
+              day: False
       format:
           name: Local Time
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: civil_dusk
-      measurement: Civil Dusk Time
+      measurement:
+          name: Civil Dusk Time
+          settings:
+              day: False
       format:
           name: Local Time
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: nautical_dusk
-      measurement: Nautical Dusk Time
+      measurement:
+          name: Nautical Dusk Time
+          settings:
+              day: False
       format:
           name: Local Time
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: astronomical_dusk
-      measurement: Astronomical Dusk Time
+      measurement:
+          name: Astronomical Dusk Time
+          settings:
+              day: False
       format:
           name: Local Time
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: astronomical_dawn
-      measurement: Astronomical Dawn Time
+      measurement:
+          name: Astronomical Dawn Time
+          settings:
+              day: False
       format:
           name: Local Time
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: nautical_dawn
-      measurement: Nautical Dawn Time
+      measurement:
+          name: Nautical Dawn Time
+          settings:
+              day: False
       format:
           name: Local Time
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: civil_dawn
-      measurement: Civil Dawn Time
+      measurement:
+          name: Civil Dawn Time
+          settings:
+              day: False
       format:
           name: Local Time
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: sunrise
-      measurement: Sunrise Time
+      measurement:
+          name: Sunrise Time
+          settings:
+              day: False
       format:
           name: Local Time
           settings:
@@ -507,30 +520,40 @@ class AnnotationValueMeasurement:
             clip, self._annotation_info)
         
 
-class _TwilightEventTimeMeasurement:
+class _SolarEventTimeMeasurement:
     
+    def __init__(self, settings):
+        
+        # TODO: Consider having some sort of larger-scope setting
+        # indicating whether a table is day-oriented or night-oriented
+        # and using That setting to determine a default value for the
+        # `day` setting.
+        
+        self._day = settings.get('day')
+        if self._day is None:
+            raise ValueError('Measurement settings lack required "day" item.')
+        
     def measure(self, clip):
-        station = clip.station
-        sun_moon = _SUN_MOONS.get_sun_moon(
-            station.latitude, station.longitude, station.tz)
-        night = station.get_night(clip.start_time)
+        sun_moon = _get_sun_moon(clip)
+        date = sun_moon.get_solar_date(clip.start_time, self._day)
         event_name = self.name[:-5]
-        return sun_moon.get_solar_event_time(night, event_name, day=False)
+        event_time = sun_moon.get_solar_event_time(date, event_name, self._day)
+        return event_time
 
 
-class AstronomicalDawnTimeMeasurement(_TwilightEventTimeMeasurement):
+class AstronomicalDawnTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Astronomical Dawn Time'
 
 
-class AstronomicalDuskTimeMeasurement(_TwilightEventTimeMeasurement):
+class AstronomicalDuskTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Astronomical Dusk Time'
 
 
-class CivilDawnTimeMeasurement(_TwilightEventTimeMeasurement):
+class CivilDawnTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Civil Dawn Time'
 
 
-class CivilDuskTimeMeasurement(_TwilightEventTimeMeasurement):
+class CivilDuskTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Civil Dusk Time'
 
 
@@ -668,11 +691,11 @@ class LunarIlluminationMeasurement:
         return sun_moon.get_lunar_illumination(clip.start_time)
     
     
-class NauticalDawnTimeMeasurement(_TwilightEventTimeMeasurement):
+class NauticalDawnTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Nautical Dawn Time'
 
 
-class NauticalDuskTimeMeasurement(_TwilightEventTimeMeasurement):
+class NauticalDuskTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Nautical Dusk Time'
 
 
@@ -729,6 +752,14 @@ class SolarAzimuthMeasurement:
         return _get_solar_position(clip).azimuth
     
     
+class SolarMidnightTimeMeasurement(_SolarEventTimeMeasurement):
+    name = 'Solar Midnight Time'
+    
+    
+class SolarNoonTimeMeasurement(_SolarEventTimeMeasurement):
+    name = 'Solar Noon Time'
+    
+    
 class StartTimeMeasurement:
     
     name = 'Start Time'
@@ -754,11 +785,11 @@ class SolarPeriodNameMeasurement:
         return sun_moon.get_solar_period_name(clip.start_time)
 
 
-class SunriseTimeMeasurement(_TwilightEventTimeMeasurement):
+class SunriseTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Sunrise Time'
     
     
-class SunsetTimeMeasurement(_TwilightEventTimeMeasurement):
+class SunsetTimeMeasurement(_SolarEventTimeMeasurement):
     name = 'Sunset Time'
     
     
@@ -783,6 +814,8 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     RecordingStartTimeMeasurement,
     SolarAltitudeMeasurement,
     SolarAzimuthMeasurement,
+    SolarMidnightTimeMeasurement,
+    SolarNoonTimeMeasurement,
     StartTimeMeasurement,
     StationNameMeasurement,
     SolarPeriodNameMeasurement,
