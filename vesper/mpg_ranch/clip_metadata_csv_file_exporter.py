@@ -29,9 +29,14 @@ import vesper.util.yaml_utils as yaml_utils
 
 # TODO: Implement table format presets.
 
+# TODO: Make each archive either day-oriented or night-oriented, with
+# orientation specified in "Archive Settings.yaml". Make `day` setting
+# optional for solar event measurements and use day/night orientation
+# to determine default value.
+
 
 '''
-Measurement names:
+Measurements by name:
 
     Annotation Value
     Astronomical Dawn Time
@@ -55,11 +60,63 @@ Measurement names:
     Solar Azimuth
     Solar Midnight Time
     Solar Noon Time
+    Solar Period Name
     Start Time
     Station Name
-    Solar Period Name
     Sunrise Time
     Sunset Time
+'''
+
+
+'''
+Measurements by category, with some additions:
+
+Clip:
+    Station Name
+    + Microphone Name
+    Detector Name
+    Detector Type
+    File Name
+
+Time:
+    + Date
+    + Relative Start Time
+    + Relative End Time
+    - Elapsed Start Time
+    - Night
+    Recording Start Time
+    + Recording End Time
+    Recording Duration
+    Start Time
+    + End Time
+    + Duration
+
+Annotations:
+    Annotation Value
+
+Calling:
+    Duplicate Call
+    + Calling Rate
+
+Sun:
+    Astronomical Dawn
+    Astronomical Dusk
+    Civil Dawn
+    Civil Dusk
+    Nautical Dawn
+    Nautical Dusk
+    Solar Altitude
+    Solar Azimuth
+    Solar Midnight
+    Solar Noon
+    Solar Period Name
+    Sunrise
+    Sunset
+
+Moon:
+    Lunar Altitude
+    Lunar Azimuth
+    Lunar Illumination
 '''
 
 
@@ -523,12 +580,6 @@ class AnnotationValueMeasurement:
 class _SolarEventTimeMeasurement:
     
     def __init__(self, settings):
-        
-        # TODO: Consider having some sort of larger-scope setting
-        # indicating whether a table is day-oriented or night-oriented
-        # and using That setting to determine a default value for the
-        # `day` setting.
-        
         self._day = settings.get('day')
         if self._day is None:
             raise ValueError('Measurement settings lack required "day" item.')
