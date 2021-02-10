@@ -124,18 +124,18 @@ SOLAR_NOONS = [
 """Solar noon test data, obtained from timeanddate.com on 2021-01-04."""
 
 SOLAR_MIDNIGHTS = [
-    (Date(2020, 1, 1), _utc(2020, 1, 2, 0, 9)),
-    (Date(2021, 2, 1), _utc(2021, 2, 2, 0, 19)),
-    (Date(2022, 3, 1), _utc(2022, 3, 2, 0, 18)),
-    (Date(2023, 4, 1), _utc(2023, 4, 2, 1, 9)),
-    (Date(2024, 5, 1), _utc(2024, 5, 2, 1, 2)),
-    (Date(2025, 6, 1), _utc(2025, 6, 2, 1, 4)),
-    (Date(2026, 7, 1), _utc(2026, 7, 2, 1, 10)),
-    (Date(2027, 8, 1), _utc(2027, 8, 2, 1, 12)),
-    (Date(2028, 9, 1), _utc(2028, 9, 2, 1, 5)),
-    (Date(2029, 10, 1), _utc(2029, 10, 2, 0, 55)),
-    (Date(2030, 11, 1), _utc(2030, 11, 2, 0, 49)),
-    (Date(2031, 12, 1), _utc(2031, 12, 1, 23, 55)),
+    (Date(2020, 1, 2), _utc(2020, 1, 2, 0, 9)),
+    (Date(2021, 2, 2), _utc(2021, 2, 2, 0, 19)),
+    (Date(2022, 3, 2), _utc(2022, 3, 2, 0, 18)),
+    (Date(2023, 4, 2), _utc(2023, 4, 2, 1, 9)),
+    (Date(2024, 5, 2), _utc(2024, 5, 2, 1, 2)),
+    (Date(2025, 6, 2), _utc(2025, 6, 2, 1, 4)),
+    (Date(2026, 7, 2), _utc(2026, 7, 2, 1, 10)),
+    (Date(2027, 8, 2), _utc(2027, 8, 2, 1, 12)),
+    (Date(2028, 9, 2), _utc(2028, 9, 2, 1, 5)),
+    (Date(2029, 10, 2), _utc(2029, 10, 2, 0, 55)),
+    (Date(2030, 11, 2), _utc(2030, 11, 2, 0, 49)),
+    (Date(2031, 12, 2), _utc(2031, 12, 1, 23, 55)),
 ]
 """Solar midnight test data, obtained from timeanddate.com on 2021-01-04."""
 
@@ -194,6 +194,8 @@ LUNAR_DISTANCE_ERROR_THRESHOLD = .015
 LUNAR_ILLUMINATION_ERROR_THRESHOLD = .070
 
 TIME_DIFFERENCE_ERROR_THRESHOLD = 60   # seconds
+
+ONE_DAY = TimeDelta(days=1)
 
 
 class SunMoonTests(TestCase):
@@ -373,10 +375,90 @@ class SunMoonTests(TestCase):
     
     
     def _assert_datetimes_nearly_equal(self, a, b):
-        delta = (a - b).total_seconds()
+        delta = abs((a - b).total_seconds())
         self.assertLessEqual(delta, TIME_DIFFERENCE_ERROR_THRESHOLD)
     
     
+    def test_get_solar_date(self):
+        
+        # Epsilon must be larger than we might like since test data
+        # are rounded to nearest minute.
+        epsilon = TimeDelta(minutes=2)
+        
+        test = self._test_get_scalar_solar_date
+        
+        for date, midnight in SOLAR_MIDNIGHTS:
+            
+            # A little before midnight is on previous day and night.
+            test(midnight, -epsilon, date, -1, -1)
+            
+            # A little after midnight is on current day but previous night.
+            test(midnight, epsilon, date, 0, -1)
+        
+        for date, noon in SOLAR_NOONS:
+            
+            # A little before noon is on current day but previous night.
+            test(noon, -epsilon, date, 0, -1)
+            
+            # A little after noon is on current day and night.
+            test(noon, epsilon, date, 0, 0)
+        
+        # Vector versions of above scalar tests
+        test = self._test_get_vector_solar_date
+        test(SOLAR_MIDNIGHTS, -epsilon, -1, -1)
+        test(SOLAR_MIDNIGHTS, epsilon, 0, -1)
+        test(SOLAR_NOONS, -epsilon, 0, -1)
+        test(SOLAR_NOONS, epsilon, 0, 0)
+    
+    
+    def _test_get_scalar_solar_date(
+            self, time, time_delta, date, day_delta, night_delta):
+        
+        get_solar_date = self.sun_moon.get_solar_date
+        assert_equal = self.assertEqual
+        
+        time = time + time_delta
+        day_date = date + TimeDelta(days=day_delta)
+        night_date = date + TimeDelta(days=night_delta)
+        
+        # day with implicit `day` argument
+        date = get_solar_date(time)
+        assert_equal(date, day_date)
+        
+        # day wth explicit `day` argument
+        date = get_solar_date(time, day=True)
+        assert_equal(date, day_date)
+        
+        # night
+        date = get_solar_date(time, day=False)
+        assert_equal(date, night_date)
+    
+    
+    def _test_get_vector_solar_date(
+            self, data, time_delta, day_delta, night_delta):
+        
+        get_solar_date = self.sun_moon.get_solar_date
+        assert_equal = self.assertEqual
+
+        dates, times = list(zip(*data))
+        
+        times = [time + time_delta for time in times]
+        day_dates = [date + TimeDelta(days=day_delta) for date in dates]
+        night_dates = [date + TimeDelta(days=night_delta) for date in dates]
+        
+        # day with implicit `day` argument
+        dates = get_solar_date(times)
+        assert_equal(dates, day_dates)
+        
+        # day wth explicit `day` argument
+        dates = get_solar_date(times, day=True)
+        assert_equal(dates, day_dates)
+        
+        # night
+        dates = get_solar_date(times, day=False)
+        assert_equal(dates, night_dates)
+ 
+       
     def test_get_solar_events(self):
         
         cases = (

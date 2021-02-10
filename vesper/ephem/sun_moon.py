@@ -16,6 +16,18 @@ import pytz
 from vesper.util.lru_cache import LruCache
 
 
+# TODO: Consider how much of a problem it is to define solar noon and
+# midnight in terms of meridian and antimeridian transits instead of
+# altitude extrema. The two are close (how close?) but not identical
+# (see https://rhodesmill.org/skyfield/almanac.html#transits for more).
+# Defining solar noon and midnight in terms of transits can cause
+# certain problems in rare (how rare?) circumstances, such as an
+# astronomical dawn for a day that slightly precedes the midnight that
+# starts that day. We could avoid such problems by defining solar noon
+# and midnight in terms of altitude extrema instead of transits. That
+# would be more expensive (how much?) computationally, however. Is it
+# worth the expense to avoid rare oddities?
+
 # TODO: Make time zone optional. When absent, return only UTC times
 # from methods, raising an exception if local result times are
 # indicated to the initializer, and use a UTC-offset time zone
@@ -85,6 +97,7 @@ _SOLAR_PERIOD_NAMES = {
 }
 
 _ONE_HOUR = TimeDelta(hours=1)
+_ONE_DAY = TimeDelta(days=1)
 
 
 '''
@@ -107,6 +120,8 @@ def result_times_local(self)
 def get_solar_position(self, time)
 
 def get_solar_events_in_interval(self, start_time, end_time, event_names=None)
+
+def get_solar_date(self, time, day=True)
 
 def get_solar_events(self, date, event_names=None, day=True)
 
@@ -555,6 +570,45 @@ class SunMoon:
                     # sun descended from day into civil twilight
                     
                     return 'Sunset'
+    
+    
+    def get_solar_date(self, time, day=True):
+        
+        self._check_for_polar_location('get solar date')
+        
+        if isinstance(time, DateTime):
+            return self._get_solar_date(time, day)
+ 
+        else:
+            # `time` is not a `DateTime`
+            
+            # Asume `time` is a `DateTime` iterable.
+            
+            return [self._get_solar_date(t, day) for t in time]
+    
+    
+    def _get_solar_date(self, time, day):
+        
+        # Get calendar date of `time`.
+        date = time.date()
+        
+        # Get start and end transit events for the solar day or night
+        # of `date`.
+        start, _, end = self._get_solar_transit_events(date, day)
+        
+        if time < start.time:
+            # `time` precedes solar day or night of `date`.
+            
+            return date - _ONE_DAY
+        
+        elif time < end.time:
+            # `time` is during solar day or night of `date`.
+            return date
+        
+        else:
+            # `time` follows solar day or night of `date`.
+            
+            return date + _ONE_DAY
     
     
     def get_solar_events(self, date, name_filter=None, day=True):
