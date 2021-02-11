@@ -19,6 +19,22 @@ import vesper.django.app.model_utils as model_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
+# Add `relative_to` and `negate` settings for `RelativeStartTime` measurement.
+
+# Replace `Night` measurement with `Date` measurement.
+
+# Add "Microphone Name", "Relative End Time", "Recording End Time",
+# "End Time", and "Duration" measurements.
+
+# Add "Calling Rate" measurement.
+
+# TODO: Make each archive either day-oriented or night-oriented, with
+# orientation specified in "Archive Settings.yaml". Make `day` setting
+# optional for solar event measurements and use day/night orientation
+# to determine default value.
+
+# TODO: Implement table format presets.
+
 # TODO: Use `jsonschema` package to check table format specification.
 
 # TODO: Consider moving measurement and format settings up one level
@@ -27,44 +43,37 @@ import vesper.util.yaml_utils as yaml_utils
 # setting names and specification item keys. Currently, though, the
 # only specification keys we use are "name" and "settings".
 
-# TODO: Implement table format presets.
-
-# TODO: Make each archive either day-oriented or night-oriented, with
-# orientation specified in "Archive Settings.yaml". Make `day` setting
-# optional for solar event measurements and use day/night orientation
-# to determine default value.
-
 
 '''
 Measurements by name:
 
     Annotation Value
-    Astronomical Dawn Time
-    Astronomical Dusk Time
-    Civil Dawn Time
-    Civil Dusk Time
+    Astronomical Dawn
+    Astronomical Dusk
+    Civil Dawn
+    Civil Dusk
     Detector Name
     Detector Type
-    Duplicate Call
-    Elapsed Start Time
     File Name
     Lunar Altitude
     Lunar Azimuth
     Lunar Illumination
-    Nautical Dawn Time
-    Nautical Dusk Time
+    Nautical Dawn
+    Nautical Dusk
     Night
+    Possible Repeated Call
     Recording Duration
     Recording Start Time
+    Relative Start Time
     Solar Altitude
     Solar Azimuth
-    Solar Midnight Time
-    Solar Noon Time
-    Solar Period Name
+    Solar Midnight
+    Solar Noon
+    Solar Period
     Start Time
     Station Name
-    Sunrise Time
-    Sunset Time
+    Sunrise
+    Sunset
 '''
 
 
@@ -80,9 +89,8 @@ Clip:
 
 Time:
     + Date
-    + Relative Start Time
+    Relative Start Time
     + Relative End Time
-    - Elapsed Start Time
     - Night
     Recording Start Time
     + Recording End Time
@@ -95,8 +103,8 @@ Annotations:
     Annotation Value
 
 Calling:
-    Duplicate Call
     + Calling Rate
+    Possible Repeated Call
 
 Sun:
     Astronomical Dawn
@@ -109,7 +117,7 @@ Sun:
     Solar Azimuth
     Solar Midnight
     Solar Noon
-    Solar Period Name
+    Solar Period
     Sunrise
     Sunset
 
@@ -181,7 +189,7 @@ columns:
       format: Duration
               
     - name: detection_time
-      measurement: Elapsed Start Time
+      measurement: Relative Start Time
       format: Duration
       
     - name: real_detection_time
@@ -207,7 +215,7 @@ columns:
       
     - name: duplicate
       measurement:
-          name: Duplicate Call
+          name: Possible Repeated Call
           settings:
               min_intercall_interval: 60
               ignored_classifications: [Other, Unknown, Weak]
@@ -221,7 +229,7 @@ columns:
     
     - name: sunset
       measurement:
-          name: Sunset Time
+          name: Sunset
           settings:
               day: False
       format:
@@ -231,7 +239,7 @@ columns:
       
     - name: civil_dusk
       measurement:
-          name: Civil Dusk Time
+          name: Civil Dusk
           settings:
               day: False
       format:
@@ -241,7 +249,7 @@ columns:
       
     - name: nautical_dusk
       measurement:
-          name: Nautical Dusk Time
+          name: Nautical Dusk
           settings:
               day: False
       format:
@@ -251,7 +259,7 @@ columns:
       
     - name: astronomical_dusk
       measurement:
-          name: Astronomical Dusk Time
+          name: Astronomical Dusk
           settings:
               day: False
       format:
@@ -261,7 +269,7 @@ columns:
       
     - name: astronomical_dawn
       measurement:
-          name: Astronomical Dawn Time
+          name: Astronomical Dawn
           settings:
               day: False
       format:
@@ -271,7 +279,7 @@ columns:
       
     - name: nautical_dawn
       measurement:
-          name: Nautical Dawn Time
+          name: Nautical Dawn
           settings:
               day: False
       format:
@@ -281,7 +289,7 @@ columns:
       
     - name: civil_dawn
       measurement:
-          name: Civil Dawn Time
+          name: Civil Dawn
           settings:
               day: False
       format:
@@ -291,7 +299,7 @@ columns:
       
     - name: sunrise
       measurement:
-          name: Sunrise Time
+          name: Sunrise
           settings:
               day: False
       format:
@@ -312,38 +320,39 @@ columns:
           name: Percent
           settings:
               detail: ".1"
-    
-    - name: twilight
-      measurement: Solar Period Name
-      format:
-          name: Mapping
-          settings:
-              items:
-                  Day: day
-                  Evening Civil Twilight: civil_twilight
-                  Evening Nautical Twilight: nautical_twilight
-                  Evening Astronomical Twilight: astronomical_twilight
-                  Night: night
-                  Morning Astronomical Twilight: astronomical_twilight
-                  Morning Nautical Twilight: nautical_twilight
-                  Morning Civil Twilight: civil_twilight
-        
-    - name: dusk_dawn
-      measurement: Solar Period Name
-      format:
-          name: Mapping
-          settings:
-              items:
-                  Day: day
-                  Evening Civil Twilight: dusk
-                  Evening Nautical Twilight: dusk
-                  Evening Astronomical Twilight: dusk
-                  Night: night
-                  Morning Astronomical Twilight: dawn
-                  Morning Nautical Twilight: dawn
-                  Morning Civil Twilight: dawn
-        
 ''')
+    
+#     - name: twilight
+#       measurement: Solar Period
+#       format:
+#           name: Mapping
+#           settings:
+#               items:
+#                   Day: day
+#                   Evening Civil Twilight: civil_twilight
+#                   Evening Nautical Twilight: nautical_twilight
+#                   Evening Astronomical Twilight: astronomical_twilight
+#                   Night: night
+#                   Morning Astronomical Twilight: astronomical_twilight
+#                   Morning Nautical Twilight: nautical_twilight
+#                   Morning Civil Twilight: civil_twilight
+#         
+#     - name: dusk_dawn
+#       measurement: Solar Period
+#       format:
+#           name: Mapping
+#           settings:
+#               items:
+#                   Day: day
+#                   Evening Civil Twilight: dusk
+#                   Evening Nautical Twilight: dusk
+#                   Evening Astronomical Twilight: dusk
+#                   Night: night
+#                   Morning Astronomical Twilight: dawn
+#                   Morning Nautical Twilight: dawn
+#                   Morning Civil Twilight: dawn
+#         
+# ''')
 
 
 _SUN_MOONS = SunMoonCache()
@@ -587,25 +596,24 @@ class _SolarEventTimeMeasurement:
     def measure(self, clip):
         sun_moon = _get_sun_moon(clip)
         date = sun_moon.get_solar_date(clip.start_time, self._day)
-        event_name = self.name[:-5]
-        event_time = sun_moon.get_solar_event_time(date, event_name, self._day)
+        event_time = sun_moon.get_solar_event_time(date, self.name, self._day)
         return event_time
 
 
-class AstronomicalDawnTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Astronomical Dawn Time'
+class AstronomicalDawnMeasurement(_SolarEventTimeMeasurement):
+    name = 'Astronomical Dawn'
 
 
-class AstronomicalDuskTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Astronomical Dusk Time'
+class AstronomicalDuskMeasurement(_SolarEventTimeMeasurement):
+    name = 'Astronomical Dusk'
 
 
-class CivilDawnTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Civil Dawn Time'
+class CivilDawnMeasurement(_SolarEventTimeMeasurement):
+    name = 'Civil Dawn'
 
 
-class CivilDuskTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Civil Dusk Time'
+class CivilDuskMeasurement(_SolarEventTimeMeasurement):
+    name = 'Civil Dusk'
 
 
 class DetectorNameMeasurement:
@@ -624,12 +632,76 @@ class DetectorTypeMeasurement:
         return model_utils.get_clip_type(clip)
     
     
-class DuplicateCallMeasurement:
+class FileNameMeasurement:
+    
+    name = 'File Name'
+    
+    def measure(self, clip):
+        audio_file_path = Path(clip_manager.instance.get_audio_file_path(clip))
+        if audio_file_path is None:
+            return None
+        else:
+            return audio_file_path.name
+    
+    
+class LunarAltitudeMeasurement:
+    
+    name = 'Lunar Altitude'
+    
+    def measure(self, clip):
+        return _get_lunar_position(clip).altitude
+    
+    
+def _get_lunar_position(clip):
+    sun_moon = _get_sun_moon(clip)
+    return sun_moon.get_lunar_position(clip.start_time)
+    
+    
+def _get_sun_moon(clip):
+    station = clip.station
+    return _SUN_MOONS.get_sun_moon(
+        station.latitude, station.longitude, station.tz)
+
+
+class LunarAzimuthMeasurement:
+    
+    name = 'Lunar Azimuth'
+    
+    def measure(self, clip):
+        return _get_lunar_position(clip).azimuth
+    
+    
+class LunarIlluminationMeasurement:
+    
+    name = 'Lunar Illumination'
+    
+    def measure(self, clip):
+        sun_moon = _get_sun_moon(clip)
+        return sun_moon.get_lunar_illumination(clip.start_time)
+    
+    
+class NauticalDawnMeasurement(_SolarEventTimeMeasurement):
+    name = 'Nautical Dawn'
+
+
+class NauticalDuskMeasurement(_SolarEventTimeMeasurement):
+    name = 'Nautical Dusk'
+
+
+class NightMeasurement:
+    
+    name = 'Night'
+    
+    def measure(self, clip):
+        return clip.date
+    
+    
+class PossibleRepeatedCallMeasurement:
     
     # This measurement assumes that clips of a given station, detector,
     # and classification are visited in order of increasing start time.
     
-    name = 'Duplicate Call'
+    name = 'Possible Repeated Call'
     
     def __init__(self, settings=None):
         
@@ -682,82 +754,6 @@ class DuplicateCallMeasurement:
                     return time - last_time < self._min_intercall_interval
     
     
-class ElapsedStartTimeMeasurement:
-    
-    name = 'Elapsed Start Time'
-    
-    def measure(self, clip):
-        recording = clip.recording
-        if recording is None:
-            return None
-        else:
-            return clip.start_time - recording.start_time
-        
-            
-class FileNameMeasurement:
-    
-    name = 'File Name'
-    
-    def measure(self, clip):
-        audio_file_path = Path(clip_manager.instance.get_audio_file_path(clip))
-        if audio_file_path is None:
-            return None
-        else:
-            return audio_file_path.name
-    
-    
-class LunarAltitudeMeasurement:
-    
-    name = 'Lunar Altitude'
-    
-    def measure(self, clip):
-        return _get_lunar_position(clip).altitude
-    
-    
-def _get_lunar_position(clip):
-    sun_moon = _get_sun_moon(clip)
-    return sun_moon.get_lunar_position(clip.start_time)
-    
-    
-def _get_sun_moon(clip):
-    station = clip.station
-    return _SUN_MOONS.get_sun_moon(
-        station.latitude, station.longitude, station.tz)
-
-
-class LunarAzimuthMeasurement:
-    
-    name = 'Lunar Azimuth'
-    
-    def measure(self, clip):
-        return _get_lunar_position(clip).azimuth
-    
-    
-class LunarIlluminationMeasurement:
-    
-    name = 'Lunar Illumination'
-    
-    def measure(self, clip):
-        sun_moon = _get_sun_moon(clip)
-        return sun_moon.get_lunar_illumination(clip.start_time)
-    
-    
-class NauticalDawnTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Nautical Dawn Time'
-
-
-class NauticalDuskTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Nautical Dusk Time'
-
-
-class NightMeasurement:
-    
-    name = 'Night'
-    
-    def measure(self, clip):
-        return clip.date
-    
-    
 class RecordingDurationMeasurement:
     
     name = 'Recording Duration'
@@ -782,6 +778,18 @@ class RecordingStartTimeMeasurement:
             return recording.start_time
     
     
+class RelativeStartTimeMeasurement:
+    
+    name = 'Relative Start Time'
+    
+    def measure(self, clip):
+        recording = clip.recording
+        if recording is None:
+            return None
+        else:
+            return clip.start_time - recording.start_time
+        
+            
 class SolarAltitudeMeasurement:
     
     name = 'Solar Altitude'
@@ -803,12 +811,12 @@ class SolarAzimuthMeasurement:
         return _get_solar_position(clip).azimuth
     
     
-class SolarMidnightTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Solar Midnight Time'
+class SolarMidnightMeasurement(_SolarEventTimeMeasurement):
+    name = 'Solar Midnight'
     
     
-class SolarNoonTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Solar Noon Time'
+class SolarNoonMeasurement(_SolarEventTimeMeasurement):
+    name = 'Solar Noon'
     
     
 class StartTimeMeasurement:
@@ -827,51 +835,51 @@ class StationNameMeasurement:
         return clip.station.name
     
     
-class SolarPeriodNameMeasurement:
+class SolarPeriodMeasurement:
     
-    name = 'Solar Period Name'
+    name = 'Solar Period'
     
     def measure(self, clip):
         sun_moon = _get_sun_moon(clip)
         return sun_moon.get_solar_period_name(clip.start_time)
 
 
-class SunriseTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Sunrise Time'
+class SunriseMeasurement(_SolarEventTimeMeasurement):
+    name = 'Sunrise'
     
     
-class SunsetTimeMeasurement(_SolarEventTimeMeasurement):
-    name = 'Sunset Time'
+class SunsetMeasurement(_SolarEventTimeMeasurement):
+    name = 'Sunset'
     
     
 _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     AnnotationValueMeasurement,
-    AstronomicalDawnTimeMeasurement,
-    AstronomicalDuskTimeMeasurement,
-    CivilDawnTimeMeasurement,
-    CivilDuskTimeMeasurement,
+    AstronomicalDawnMeasurement,
+    AstronomicalDuskMeasurement,
+    CivilDawnMeasurement,
+    CivilDuskMeasurement,
     DetectorNameMeasurement,
     DetectorTypeMeasurement,
-    DuplicateCallMeasurement,
-    ElapsedStartTimeMeasurement,
     FileNameMeasurement,
     LunarAltitudeMeasurement,
     LunarAzimuthMeasurement,
     LunarIlluminationMeasurement,
-    NauticalDawnTimeMeasurement,
-    NauticalDuskTimeMeasurement,
+    NauticalDawnMeasurement,
+    NauticalDuskMeasurement,
     NightMeasurement,
+    PossibleRepeatedCallMeasurement,
     RecordingDurationMeasurement,
     RecordingStartTimeMeasurement,
+    RelativeStartTimeMeasurement,
     SolarAltitudeMeasurement,
     SolarAzimuthMeasurement,
-    SolarMidnightTimeMeasurement,
-    SolarNoonTimeMeasurement,
+    SolarMidnightMeasurement,
+    SolarNoonMeasurement,
     StartTimeMeasurement,
     StationNameMeasurement,
-    SolarPeriodNameMeasurement,
-    SunriseTimeMeasurement,
-    SunsetTimeMeasurement
+    SolarPeriodMeasurement,
+    SunriseMeasurement,
+    SunsetMeasurement
 ])
 
 
