@@ -11,15 +11,13 @@ import tempfile
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
-from vesper.ephem.sun_moon import SunMoonCache
+from vesper.ephem.sun_moon import SunMoon, SunMoonCache
 from vesper.singletons import clip_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.yaml_utils as yaml_utils
 
-
-# Add `relative_to` and `negate` settings for `RelativeStartTime` measurement.
 
 # Replace `Night` measurement with `Date` measurement.
 
@@ -89,15 +87,18 @@ Clip:
 
 Time:
     + Date
-    Relative Start Time
-    + Relative End Time
     - Night
     Recording Start Time
     + Recording End Time
     Recording Duration
+    Start Index
+    End Index
+    Length
+    Relative Start Time
+    + Relative End Time
+    + Duration
     Start Time
     + End Time
-    + Duration
 
 Annotations:
     Annotation Value
@@ -355,6 +356,36 @@ columns:
 # ''')
 
 
+'''
+Example relative start time column specs:
+
+    - name: Time Before Recording End
+      measurement:
+          name: Relative Start Time
+          settings:
+              reference_time: Recording End Time
+              negate: True
+      format: Duration
+    
+    - name: Time After Sunset
+      measurement:
+          name: Relative Start Time
+          settings:
+              reference_time: Sunset
+              day: False
+      format: Duration
+
+    - name: Time Before Sunrise
+      measurement:
+          name: Relative Start Time
+          settings:
+              reference_time: Sunrise
+              day: False
+              negate: True
+      format: Duration
+'''
+
+
 _SUN_MOONS = SunMoonCache()
 
 
@@ -594,10 +625,13 @@ class _SolarEventTimeMeasurement:
             raise ValueError('Measurement settings lack required "day" item.')
         
     def measure(self, clip):
-        sun_moon = _get_sun_moon(clip)
-        date = sun_moon.get_solar_date(clip.start_time, self._day)
-        event_time = sun_moon.get_solar_event_time(date, self.name, self._day)
-        return event_time
+        return _get_solar_event_time(clip, self.name, self._day)
+
+
+def _get_solar_event_time(clip, event_name, day):
+    sun_moon = _get_sun_moon(clip)
+    date = sun_moon.get_solar_date(clip.start_time, day)
+    return sun_moon.get_solar_event_time(date, event_name, day)
 
 
 class AstronomicalDawnMeasurement(_SolarEventTimeMeasurement):
@@ -778,18 +812,59 @@ class RecordingStartTimeMeasurement:
             return recording.start_time
     
     
+_SOLAR_EVENT_NAMES = frozenset(SunMoon.SOLAR_EVENT_NAMES)
+
+
 class RelativeStartTimeMeasurement:
     
     name = 'Relative Start Time'
     
-    def measure(self, clip):
-        recording = clip.recording
-        if recording is None:
-            return None
-        else:
-            return clip.start_time - recording.start_time
+    def __init__(self, settings=None):
         
+        if settings is None:
+            settings = {}
             
+        self._reference_name = settings.get(
+            'reference_time', 'Recording Start Time')
+        
+        self._negate = settings.get('negate', False)
+        
+        if self._reference_name in _SOLAR_EVENT_NAMES:
+            self._day = settings.get('day')
+            if self._day is None:
+                raise ValueError(
+                    'Measurement settings lack required "day" item.')
+    
+    def measure(self, clip):
+        
+        reference_time = self._get_reference_time(clip)
+        
+        if reference_time is None:
+            return None
+        
+        else:
+            
+            delta = clip.start_time - reference_time
+            
+            if self._negate:
+                delta = -delta
+                
+            return delta
+    
+    def _get_reference_time(self, clip):
+        
+        reference_name = self._reference_name
+        
+        if reference_name == 'Recording Start Time':
+            return clip.recording.start_time
+        
+        elif reference_name == 'Recording End Time':
+            return clip.recording.end_time
+        
+        else:
+            return _get_solar_event_time(clip, reference_name, self._day)
+    
+    
 class SolarAltitudeMeasurement:
     
     name = 'Solar Altitude'
@@ -957,6 +1032,12 @@ class DurationFormat:
             
             seconds = duration.total_seconds()
             
+            if seconds < 0:
+                seconds = -seconds
+                prefix = '-'
+            else:
+                prefix = ''
+            
             hours = int(seconds // 3600)
             seconds -= hours * 3600
             
@@ -965,8 +1046,8 @@ class DurationFormat:
             
             seconds = int(round(seconds))
             
-            return self._format.format(hours, minutes, seconds)
-            
+            return prefix + self._format.format(hours, minutes, seconds)
+
 
 class _TimeFormat:
     
