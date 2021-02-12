@@ -19,12 +19,30 @@ import vesper.django.app.model_utils as model_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# Replace `Night` measurement with `Date` measurement.
+# TODO: Modify `_create_table_column` to accept string column spec
+# (a measurement name), and to make `name` key optional when spec is
+# a dictionary. When spec is a dictionary, only the `measurement`
+# key is required.
 
-# Add "Microphone Name", "Relative End Time", "Recording End Time",
-# "End Time", and "Duration" measurements.
+# TODO: Consider renaming "Station Name", "Microphone Output Name", and
+# "Detector Name" measurements to "Station", "Microphone Output", and
+# "Detector".
 
-# Add "Calling Rate" measurement.
+# TODO: Consider eliminating "Detector Type" measurement.
+
+# TODO: Consider eliminating "File Name" measurement.
+
+# TODO: Add "Relative End Time" measurement.
+
+# TODO: Replace "Night" measurement with "Date" measurement.
+
+# TODO: Add "Calling Rate" measurement.
+
+# TODO: Consider changing default DateTime format.
+
+# TODO: Add `fractional_digits` time and duration setting.
+
+# TODO: Support time and duration rounding.
 
 # TODO: Make each archive either day-oriented or night-oriented, with
 # orientation specified in "Archive Settings.yaml". Make `day` setting
@@ -52,15 +70,20 @@ Measurements by name:
     Civil Dusk
     Detector Name
     Detector Type
+    Duration
+    End Time
     File Name
     Lunar Altitude
     Lunar Azimuth
     Lunar Illumination
+    Microphone Output Name
     Nautical Dawn
     Nautical Dusk
     Night
     Possible Repeated Call
     Recording Duration
+    Recording End Time
+    Recording Length
     Recording Start Time
     Relative Start Time
     Solar Altitude
@@ -78,27 +101,32 @@ Measurements by name:
 '''
 Measurements by category, with some additions:
 
+Recording:
+    Recording Start Time
+    Recording End Time
+    Recording Duration
+    Recording Length
+    Recording Channel Number
+
 Clip:
+    ID
     Station Name
-    + Microphone Name
+    Microphone Name
     Detector Name
     Detector Type
-    File Name
 
 Time:
     + Date
     - Night
-    Recording Start Time
-    + Recording End Time
-    Recording Duration
+    Start Time
+    End Time
+    Relative Start Time
+    + Relative End Time
+    Duration
     Start Index
     End Index
     Length
-    Relative Start Time
-    + Relative End Time
-    + Duration
-    Start Time
-    + End Time
+    Sample Rate
 
 Annotations:
     Annotation Value
@@ -184,7 +212,7 @@ columns:
     - name: recording_start
       measurement: Recording Start Time
       format: Local Time
-              
+      
     - name: recording_length
       measurement: Recording Duration
       format: Duration
@@ -353,6 +381,52 @@ columns:
 #                   Morning Nautical Twilight: dawn
 #                   Morning Civil Twilight: dawn
 #         
+# ''')
+
+
+# _TABLE_FORMAT = yaml_utils.load('''
+# 
+# columns:
+# 
+#     - name: Recording Start Time
+#       measurement: Recording Start Time
+#       
+#     - name: Recording End Time
+#       measurement: Recording End Time
+#     
+#     - name: Recording Duration
+#       measurement: Recording Duration
+#     
+#     - name: Recording Length
+#       measurement: Recording Length
+#     
+#     - name: Recording Channel Number
+#       measurement: Recording Channel Number
+#     
+#     - name: ID
+#       measurement: ID
+#     
+#     - name: Start Time
+#       measurement: Start Time
+#     
+#     - name: End Time
+#       measurement: End Time
+#     
+#     - name: Duration
+#       measurement: Duration
+#     
+#     - name: Start Index
+#       measurement: Start Index
+#     
+#     - name: End Index
+#       measurement: End Index
+#     
+#     - name: Length
+#       measurement: Length
+#     
+#     - name: Sample Rate
+#       measurement: Sample Rate
+#     
 # ''')
 
 
@@ -666,6 +740,30 @@ class DetectorTypeMeasurement:
         return model_utils.get_clip_type(clip)
     
     
+class DurationMeasurement:
+    
+    name = 'Duration'
+    
+    def measure(self, clip):
+        return clip.duration
+    
+    
+class EndIndexMeasurement:
+    
+    name = 'End Index'
+    
+    def measure(self, clip):
+        return clip.end_index
+    
+    
+class EndTimeMeasurement:
+    
+    name = 'End Time'
+    
+    def measure(self, clip):
+        return clip.end_time
+    
+    
 class FileNameMeasurement:
     
     name = 'File Name'
@@ -676,6 +774,22 @@ class FileNameMeasurement:
             return None
         else:
             return audio_file_path.name
+    
+    
+class IdMeasurement:
+    
+    name = 'ID'
+    
+    def measure(self, clip):
+        return clip.id
+    
+    
+class LengthMeasurement:
+    
+    name = 'Length'
+    
+    def measure(self, clip):
+        return clip.length
     
     
 class LunarAltitudeMeasurement:
@@ -712,6 +826,14 @@ class LunarIlluminationMeasurement:
     def measure(self, clip):
         sun_moon = _get_sun_moon(clip)
         return sun_moon.get_lunar_illumination(clip.start_time)
+    
+    
+class MicrophoneOutputNameMeasurement:
+    
+    name = 'Microphone Output Name'
+    
+    def measure(self, clip):
+        return clip.mic_output.name
     
     
 class NauticalDawnMeasurement(_SolarEventTimeMeasurement):
@@ -788,28 +910,45 @@ class PossibleRepeatedCallMeasurement:
                     return time - last_time < self._min_intercall_interval
     
     
+class RecordingChannelNumberMeasurement:
+    
+    name = 'Recording Channel Number'
+    
+    def measure(self, clip):
+        return clip.channel_num
+
+
 class RecordingDurationMeasurement:
     
     name = 'Recording Duration'
     
     def measure(self, clip):
-        recording = clip.recording
-        if recording is None:
-            return None
-        else:
-            return TimeDelta(seconds=recording.duration)
+        return TimeDelta(seconds=clip.recording.duration)
         
         
+class RecordingEndTimeMeasurement:
+    
+    name = 'Recording End Time'
+    
+    def measure(self, clip):
+        return clip.recording.end_time
+    
+    
+class RecordingLengthMeasurement:
+    
+    name = 'Recording Length'
+    
+    def measure(self, clip):
+        return clip.recording.length
+    
+    
+
 class RecordingStartTimeMeasurement:
     
     name = 'Recording Start Time'
     
     def measure(self, clip):
-        recording = clip.recording
-        if recording is None:
-            return None
-        else:
-            return recording.start_time
+        return clip.recording.start_time
     
     
 _SOLAR_EVENT_NAMES = frozenset(SunMoon.SOLAR_EVENT_NAMES)
@@ -865,6 +1004,14 @@ class RelativeStartTimeMeasurement:
             return _get_solar_event_time(clip, reference_name, self._day)
     
     
+class SampleRateMeasurement:
+    
+    name = 'Sample Rate'
+    
+    def measure(self, clip):
+        return clip.sample_rate
+    
+    
 class SolarAltitudeMeasurement:
     
     name = 'Solar Altitude'
@@ -892,6 +1039,14 @@ class SolarMidnightMeasurement(_SolarEventTimeMeasurement):
     
 class SolarNoonMeasurement(_SolarEventTimeMeasurement):
     name = 'Solar Noon'
+    
+    
+class StartIndexMeasurement:
+    
+    name = 'Start Index'
+    
+    def measure(self, clip):
+        return clip.start_index
     
     
 class StartTimeMeasurement:
@@ -935,21 +1090,32 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     CivilDuskMeasurement,
     DetectorNameMeasurement,
     DetectorTypeMeasurement,
+    DurationMeasurement,
+    EndIndexMeasurement,
+    EndTimeMeasurement,
     FileNameMeasurement,
+    IdMeasurement,
+    LengthMeasurement,
     LunarAltitudeMeasurement,
     LunarAzimuthMeasurement,
     LunarIlluminationMeasurement,
+    MicrophoneOutputNameMeasurement,
     NauticalDawnMeasurement,
     NauticalDuskMeasurement,
     NightMeasurement,
     PossibleRepeatedCallMeasurement,
+    RecordingChannelNumberMeasurement,
     RecordingDurationMeasurement,
+    RecordingEndTimeMeasurement,
+    RecordingLengthMeasurement,
     RecordingStartTimeMeasurement,
     RelativeStartTimeMeasurement,
+    SampleRateMeasurement,
     SolarAltitudeMeasurement,
     SolarAzimuthMeasurement,
     SolarMidnightMeasurement,
     SolarNoonMeasurement,
+    StartIndexMeasurement,
     StartTimeMeasurement,
     StationNameMeasurement,
     SolarPeriodMeasurement,
