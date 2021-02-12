@@ -12,20 +12,11 @@ import tempfile
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
-from vesper.singletons import clip_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.yaml_utils as yaml_utils
 
-
-# TODO: Consider renaming "Station Name", "Microphone Output Name", and
-# "Detector Name" measurements to "Station", "Microphone Output", and
-# "Detector".
-
-# TODO: Consider eliminating "Detector Type" measurement.
-
-# TODO: Consider eliminating "File Name" measurement.
 
 # TODO: Add "Relative End Time" measurement.
 
@@ -106,7 +97,7 @@ Recording:
 Clip:
     ID
     Station Name
-    Microphone Name
+    Microphone Output Name
     Detector Name
     Detector Type
 
@@ -823,18 +814,6 @@ class EndTimeMeasurement:
         return clip.end_time
     
     
-class FileNameMeasurement:
-    
-    name = 'File Name'
-    
-    def measure(self, clip):
-        audio_file_path = Path(clip_manager.instance.get_audio_file_path(clip))
-        if audio_file_path is None:
-            return None
-        else:
-            return audio_file_path.name
-    
-    
 class IdMeasurement:
     
     name = 'ID'
@@ -1152,7 +1131,6 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     DurationMeasurement,
     EndIndexMeasurement,
     EndTimeMeasurement,
-    FileNameMeasurement,
     IdMeasurement,
     LengthMeasurement,
     LunarAltitudeMeasurement,
