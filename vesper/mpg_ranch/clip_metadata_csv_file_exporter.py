@@ -19,11 +19,6 @@ import vesper.django.app.model_utils as model_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Modify `_create_table_column` to accept string column spec
-# (a measurement name), and to make `name` key optional when spec is
-# a dictionary. When spec is a dictionary, only the `measurement`
-# key is required.
-
 # TODO: Consider renaming "Station Name", "Microphone Output Name", and
 # "Detector Name" measurements to "Station", "Microphone Output", and
 # "Detector".
@@ -350,7 +345,8 @@ columns:
           settings:
               detail: ".1"
 ''')
-    
+
+
 #     - name: twilight
 #       measurement: Solar Period
 #       format:
@@ -385,48 +381,48 @@ columns:
 
 
 # _TABLE_FORMAT = yaml_utils.load('''
-# 
+#  
 # columns:
-# 
-#     - name: Recording Start Time
-#       measurement: Recording Start Time
-#       
-#     - name: Recording End Time
-#       measurement: Recording End Time
-#     
-#     - name: Recording Duration
-#       measurement: Recording Duration
-#     
-#     - name: Recording Length
-#       measurement: Recording Length
-#     
-#     - name: Recording Channel Number
-#       measurement: Recording Channel Number
-#     
-#     - name: ID
-#       measurement: ID
-#     
-#     - name: Start Time
-#       measurement: Start Time
-#     
-#     - name: End Time
-#       measurement: End Time
-#     
-#     - name: Duration
-#       measurement: Duration
-#     
-#     - name: Start Index
-#       measurement: Start Index
-#     
-#     - name: End Index
-#       measurement: End Index
-#     
+#  
+#     - Recording Start Time
+#     - Recording End Time
+#     - Recording Duration
+#     - Recording Length
+#     - Recording Channel Number
+#     - ID
+#     - Start Time
+#     - End Time
+#     - Duration
+#      
+#     - measurement: Start Index
+#      
+#     - measurement:
+#           name: End Index
+#      
 #     - name: Length
-#       measurement: Length
-#     
+#      
 #     - name: Sample Rate
-#       measurement: Sample Rate
-#     
+#       format:
+#           name: Decimal
+#           settings:
+#               detail: ".0"
+#      
+#     # Uncomment any one of the following to elicit an error:
+#      
+#     # no name or measurement
+#     # - {}
+#      
+#     # unrecognized measurement name
+#     # - Bobo
+#      
+#     # unrecognized format name
+#     # - name: Sample Rate
+#     #   format: Bobo
+#      
+#     # missing format name
+#     # - name: Sample Rate
+#     #   format: {}
+#  
 # ''')
 
 
@@ -550,75 +546,133 @@ class ClipMetadataCsvFileExporter:
     
     
 def _create_table_columns(table_format):
-    columns = table_format['columns']
-    return [_create_table_column(c) for c in columns]
-
-
-def _create_table_column(column):
-    
-    name = _get_column_name(column)
     
     try:
-        measurement = _get_column_measurement(column)
-    except Exception as e:
+        columns = table_format['columns']
+    except KeyError:
         raise CommandExecutionError(
-            f'Error creating measurement for clip metadata column '
-            f'"{name}": {str(e)}')
-    
-    try:
-        format_ = _get_column_format(column)
-    except Exception as e:
-        raise CommandExecutionError(
-            f'Error creating format for clip metadata column '
-            f'"{name}": {str(e)}')
+            'Clip table format lacks required "columns" item.')
         
+    return [_create_table_column(c, i + 1) for i, c in enumerate(columns)]
+
+
+def _create_table_column(column, column_num):
+    
+    try:
+        return _create_table_column_aux(column, column_num)
+    except Exception as e:
+        raise CommandExecutionError(
+            f'Error parsing clip table format: {str(e)}')
+
+
+def _create_table_column_aux(column, column_num):
+    
+    if isinstance(column, str):
+        # `column` is string
+        
+        # `column` both column name and measurement name.
+        
+        name = column
+        measurement = _get_measurement_from_name(name)
+        format_ = None
+    
+    else:
+        # `column` is not string
+        
+        # We assume that `column` is a `dict`.
+        
+        name, measurement = \
+            _get_column_name_and_measurement(column, column_num)
+        format_ = _get_column_format(column, name)
+    
     return Bunch(name=name, measurement=measurement, format=format_)
+
+
+def _get_measurement_from_name(name):
+    cls = _get_measurement_class(name)
+    return cls()
     
+
+def _get_measurement_class(name):
+    try:
+        return _MEASUREMENT_CLASSES[name]
+    except KeyError:
+        raise CommandExecutionError(
+            f'Unrecognized measurement name "{name}".')
+
+
+def _get_column_name_and_measurement(column, column_num):
     
-def _get_column_name(column):
-    return column['name']
+    measurement = column.get('measurement')
     
-    
-def _get_column_measurement(column):
-    
-    # We assume that `column` has key `measurement`.
-    measurement = column['measurement']
-    
-    if isinstance(measurement, str):
-        # `measurement` is string measurement name
+    if measurement is None:
+        # measurement not specified
         
-        cls = _MEASUREMENT_CLASSES[measurement]
-        return cls()
+        try:
+            name = column['name']
+        except KeyError:
+            raise CommandExecutionError(
+                f'Neither name nor measurement is specified for '
+                f'column {column_num}. Either name or measurement must '
+                f'be specified for every column.')
+        
+        measurement = _get_measurement_from_name(name)
     
     else:
+        # measurement specified
         
-        # We assume that `measurement` is a `dict`
+        if isinstance(measurement, str):
+            # `measurement` is string measurement name
+            
+            measurement = _get_measurement_from_name(measurement)
         
-        name = measurement['name']
-        cls = _MEASUREMENT_CLASSES[name]
-        settings = measurement.get('settings')
-        if settings is None:
-            return cls()
         else:
-            return cls(settings)
-    
-    
-def _get_column_format(column):
-    
-    format_ = column.get('format')
-    
-    if format_ is None:
-        return None
-    
-    elif isinstance(format_, (list, tuple)):
-        # sequence of format specifications
+            
+            # We assume that `measurement` is a `dict`
+            
+            name = _get_measurement_name(measurement, column_num)
+            cls = _get_measurement_class(name)
+            settings = measurement.get('settings')
+            if settings is None:
+                measurement = cls()
+            else:
+                measurement = cls(settings)
         
-        return [_get_format(f) for f in format_]
+        name = column.get('name', measurement.name)
     
-    else:
-        # single format specification
+    return name, measurement
+
+
+def _get_measurement_name(measurement, column_num):
+    try:
+        return measurement['name']
+    except KeyError:
+        raise CommandExecutionError(
+            f'Measurement specification for column {column_num} is '
+            f'missing required "name" item.')
+
+
+def _get_column_format(column, name):
+    
+    try:
         
-        return _get_format(format_)
+        format_ = column.get('format')
+        
+        if format_ is None:
+            return None
+        
+        elif isinstance(format_, (list, tuple)):
+            # sequence of format specifications
+            
+            return [_get_format(f) for f in format_]
+        
+        else:
+            # single format specification
+            
+            return _get_format(format_)
+    
+    except Exception as e:
+        raise CommandExecutionError(f'For column "{name}": {str(e)}')
 
 
 def _get_format(format_):
@@ -626,14 +680,14 @@ def _get_format(format_):
     if isinstance(format_, str):
         # string format name
         
-        cls = _FORMAT_CLASSES[format_]
+        cls = _get_format_class(format_)
         return cls()
         
     else:
         # `dict` format specification
         
-        name = format_['name']
-        cls = _FORMAT_CLASSES[name]
+        name = _get_format_name(format_)
+        cls = _get_format_class(name)
         settings = format_.get('settings')
         if settings is None:
             return cls()
@@ -641,6 +695,22 @@ def _get_format(format_):
             return cls(settings)
     
     
+def _get_format_class(name):
+    try:
+        return _FORMAT_CLASSES[name]
+    except KeyError:
+        raise CommandExecutionError(
+            f'Unrecognized format name "{name}".')
+
+
+def _get_format_name(format_):
+    try:
+        return format_['name']
+    except KeyError:
+        raise CommandExecutionError(
+            'Format specification is missing required "name" item.')
+
+
 def _get_column_value(column, clip):
     
     value = column.measurement.measure(clip)
@@ -663,17 +733,6 @@ def _get_column_value(column, clip):
         return format_.format(value, clip)
     
     
-def _create_measurements(table_format):
-    columns = table_format['columns']
-    return [_create_measurement(c) for c in columns]
-
-
-def _create_measurement(column):
-    name = column['measurement']
-    cls = _MEASUREMENT_CLASSES[name]
-    return cls()
-
-
 class AnnotationValueMeasurement:
     
     name = 'Annotation Value'
