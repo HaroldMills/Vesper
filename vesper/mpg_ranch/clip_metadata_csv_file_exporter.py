@@ -18,8 +18,6 @@ import vesper.django.app.model_utils as model_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Add "Relative End Time" measurement.
-
 # TODO: Replace "Night" measurement with "Date" measurement.
 
 # TODO: Add "Calling Rate" measurement.
@@ -107,7 +105,7 @@ Time:
     Start Time
     End Time
     Relative Start Time
-    + Relative End Time
+    Relative End Time
     Duration
     Start Index
     End Index
@@ -992,9 +990,7 @@ class RecordingStartTimeMeasurement:
 _SOLAR_EVENT_NAMES = frozenset(SunMoon.SOLAR_EVENT_NAMES)
 
 
-class RelativeStartTimeMeasurement:
-    
-    name = 'Relative Start Time'
+class _RelativeClipTimeMeasurement:
     
     def __init__(self, settings=None):
         
@@ -1021,7 +1017,7 @@ class RelativeStartTimeMeasurement:
         
         else:
             
-            delta = clip.start_time - reference_time
+            delta = self._get_clip_time(clip) - reference_time
             
             if self._negate:
                 delta = -delta
@@ -1040,6 +1036,22 @@ class RelativeStartTimeMeasurement:
         
         else:
             return _get_solar_event_time(clip, reference_name, self._day)
+    
+    
+class RelativeEndTimeMeasurement(_RelativeClipTimeMeasurement):
+    
+    name = 'Relative End Time'
+    
+    def _get_clip_time(self, clip):
+        return clip.end_time
+    
+    
+class RelativeStartTimeMeasurement(_RelativeClipTimeMeasurement):
+    
+    name = 'Relative Start Time'
+    
+    def _get_clip_time(self, clip):
+        return clip.start_time
     
     
 class SampleRateMeasurement:
@@ -1146,6 +1158,7 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     RecordingEndTimeMeasurement,
     RecordingLengthMeasurement,
     RecordingStartTimeMeasurement,
+    RelativeEndTimeMeasurement,
     RelativeStartTimeMeasurement,
     SampleRateMeasurement,
     SolarAltitudeMeasurement,
