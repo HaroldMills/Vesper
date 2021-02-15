@@ -18,13 +18,25 @@ import vesper.django.app.model_utils as model_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Add "Calling Rate" measurement.
+# TODO: Support default format specification in measurement classes.
+
+# TODO: Consider supporting user-defined formats. These would appear in
+# a YAML `formats` associated array that accompanies the `columns` array.
+# The `formats` array would map user-defined format names to format
+# specifications.
+
+# TODO: Consider supporting user-defined default value formats. These
+# would appear in a YAML `default_formats` associative array that
+# accompanies the `columns` array. The `default_formats` array would
+# map column value type names to format specifications.
 
 # TODO: Consider changing default DateTime format.
 
 # TODO: Add `fractional_digits` time and duration setting.
 
 # TODO: Support time and duration rounding.
+
+# TODO: Add "Calling Rate" measurement.
 
 # TODO: Make each archive either day-oriented or night-oriented, with
 # orientation specified in "Archive Settings.yaml". Make `day` setting
@@ -192,7 +204,10 @@ columns:
               
     - name: recording_start
       measurement: Recording Start Time
-      format: Local Time
+      format:
+          name: Local Time
+          settings:
+              format: "%H:%M:%S"
       
     - name: recording_length
       measurement: Recording Duration
@@ -221,6 +236,7 @@ columns:
       format:
           name: Local Time
           settings:
+              format: "%H:%M:%S"
               rounding_increment: 1800
       
     - name: duplicate
@@ -1164,7 +1180,11 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
 
 _NO_VALUE_STRING = ''
 
-_TEST_DATETIME = DateTime(2020, 1, 1)
+_DEFAULT_DATE_FORMAT = '%Y-%m-%d'
+_DEFAULT_TIME_FORMAT = '%H:%M:%S'
+_DEFAULT_DATE_TIME_FORMAT = _DEFAULT_DATE_FORMAT + ' ' + _DEFAULT_TIME_FORMAT
+
+_TEST_DATE_TIME = DateTime(2020, 1, 1)
 
 
 class BooleanFormat:
@@ -1253,7 +1273,7 @@ class DurationFormat:
             return prefix + self._format.format(hours, minutes, seconds)
 
 
-class _TimeFormat:
+class _DateTimeFormat:
     
     def __init__(self, local, settings=None):
         
@@ -1270,15 +1290,15 @@ class _TimeFormat:
         format_ = settings.get('format')
         
         if format_ is None:
-            return '%H:%M:%S'
+            return _DEFAULT_DATE_TIME_FORMAT
         
         else:
             # format string provided
             
-            # Try format string on test `datetime` and raise an exception
+            # Try format string on test `DateTime` and raise an exception
             # if there's a problems.
             try:
-                _TEST_DATETIME.strftime(format_)
+                _TEST_DATE_TIME.strftime(format_)
             except Exception as e:
                 raise ValueError(
                     f'Could not format test time with "{format_}". '
@@ -1328,7 +1348,7 @@ def _round_time(time, increment):
         return time + delta
 
 
-class LocalTimeFormat(_TimeFormat):
+class LocalTimeFormat(_DateTimeFormat):
     
     name = 'Local Time'
     
@@ -1392,7 +1412,7 @@ class SolarDateFormat:
         self._day = settings.get('day')
         if self._day is None:
             raise ValueError('Measurement settings lack required "day" item.')
-        self._format = settings.get('format', '%Y-%m-%d')
+        self._format = settings.get('format', _DEFAULT_DATE_FORMAT)
     
     def format(self, time, clip):
         
@@ -1409,7 +1429,7 @@ class SolarDateFormat:
             return date.strftime(self._format)
 
 
-class UtcTimeFormat(_TimeFormat):
+class UtcTimeFormat(_DateTimeFormat):
     
     name = 'UTC Time'
     
