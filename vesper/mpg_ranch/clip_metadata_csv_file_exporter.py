@@ -18,8 +18,6 @@ import vesper.django.app.model_utils as model_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Replace "Night" measurement with "Date" measurement.
-
 # TODO: Add "Calling Rate" measurement.
 
 # TODO: Consider changing default DateTime format.
@@ -63,7 +61,6 @@ Measurements by name:
     Microphone Output Name
     Nautical Dawn
     Nautical Dusk
-    Night
     Possible Repeated Call
     Recording Duration
     Recording End Time
@@ -100,8 +97,6 @@ Clip:
     Detector Type
 
 Time:
-    + Date
-    - Night
     Start Time
     End Time
     Relative Start Time
@@ -152,8 +147,9 @@ columns:
     - name: year
       measurement: Start Time
       format:
-          name: Night
+          name: Solar Date
           settings:
+              day: False
               format: "%Y"
 
     - name: detector
@@ -189,8 +185,9 @@ columns:
     - name: date
       measurement: Start Time
       format:
-          name: Night
+          name: Solar Date
           settings:
+              day: False
               format: "%m/%d/%y"
               
     - name: recording_start
@@ -880,14 +877,6 @@ class NauticalDuskMeasurement(_SolarEventTimeMeasurement):
     name = 'Nautical Dusk'
 
 
-class NightMeasurement:
-    
-    name = 'Night'
-    
-    def measure(self, clip):
-        return clip.date
-    
-    
 class PossibleRepeatedCallMeasurement:
     
     # This measurement assumes that clips of a given station, detector,
@@ -1151,7 +1140,6 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     MicrophoneOutputNameMeasurement,
     NauticalDawnMeasurement,
     NauticalDuskMeasurement,
-    NightMeasurement,
     PossibleRepeatedCallMeasurement,
     RecordingChannelNumberMeasurement,
     RecordingDurationMeasurement,
@@ -1376,29 +1364,6 @@ class MappingFormat:
             return self._mapping.get(value, value)
     
     
-class NightFormat:
-    
-    name = 'Night'
-    
-    def __init__(self, settings=None):
-        if settings is None:
-            settings = {}
-        self._format = settings.get('format', '%H:%M:%S')
-    
-    def format(self, time, clip):
-        
-        if time is None:
-            return _NO_VALUE_STRING
-        
-        else:
-            
-            # Get local night.
-            night = clip.station.get_night(time)
-            
-            # Get night string.
-            return night.strftime(self._format)
-
-
 class NocturnalBirdMigrationSeasonFormat:
     
     name = 'Nocturnal Bird Migration Season'
@@ -1419,6 +1384,31 @@ class PercentFormat(DecimalFormat):
         return self._format.format(100 * x)
 
 
+class SolarDateFormat:
+    
+    name = 'Solar Date'
+    
+    def __init__(self, settings):
+        self._day = settings.get('day')
+        if self._day is None:
+            raise ValueError('Measurement settings lack required "day" item.')
+        self._format = settings.get('format', '%Y-%m-%d')
+    
+    def format(self, time, clip):
+        
+        if time is None:
+            return _NO_VALUE_STRING
+        
+        else:
+            
+            # Get solar day or night.
+            sun_moon = _get_sun_moon(clip)
+            date = sun_moon.get_solar_date(time, self._day)
+            
+            # Format date.
+            return date.strftime(self._format)
+
+
 class UtcTimeFormat(_TimeFormat):
     
     name = 'UTC Time'
@@ -1435,8 +1425,8 @@ _FORMAT_CLASSES = dict((c.name, c) for c in [
     LocalTimeFormat,
     LowerCaseFormat,
     MappingFormat,
-    NightFormat,
     NocturnalBirdMigrationSeasonFormat,
     PercentFormat,
+    SolarDateFormat,
     UtcTimeFormat,
 ])
