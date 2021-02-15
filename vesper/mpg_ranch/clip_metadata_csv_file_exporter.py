@@ -964,7 +964,7 @@ class RecordingDurationMeasurement:
     name = 'Recording Duration'
     
     def measure(self, clip):
-        return TimeDelta(seconds=clip.recording.duration)
+        return clip.recording.duration
         
         
 class RecordingEndTimeMeasurement:
@@ -1027,7 +1027,7 @@ class _RelativeClipTimeMeasurement:
             if self._negate:
                 delta = -delta
                 
-            return delta
+            return delta.total_seconds()
     
     def _get_reference_time(self, clip):
         
@@ -1254,7 +1254,7 @@ class DurationFormat:
         
         else:
             
-            seconds = duration.total_seconds()
+            seconds = duration
             
             if seconds < 0:
                 seconds = -seconds
