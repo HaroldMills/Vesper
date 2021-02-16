@@ -15,6 +15,7 @@ from vesper.ephem.sun_moon import SunMoon, SunMoonCache
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
+import vesper.util.text_utils as text_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
@@ -28,11 +29,12 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Consider supporting user-defined default value formats. These
 # would appear in a YAML `default_formats` associative array that
 # accompanies the `columns` array. The `default_formats` array would
-# map column value type names to format specifications.
+# map column value type names to format specifications. Vesper would
+# define a limited number of value types, e.g. String, Integer, Float,
+# and DateTime. Would measurements be able to define their own types?
+# Maybe not initially, at least.
 
-# TODO: Consider changing default DateTime format.
-
-# TODO: Add `fractional_digits` time and duration setting.
+# TODO: Add `fractional_digits` time format setting.
 
 # TODO: Support time and duration rounding.
 
@@ -215,7 +217,7 @@ columns:
               
     - name: detection_time
       measurement: Relative Start Time
-      format: Duration
+      format: Time Difference
       
     - name: real_detection_time
       measurement: Start Time
@@ -437,7 +439,7 @@ Example relative start time column specs:
           settings:
               reference_time: Recording End Time
               negate: True
-      format: Duration
+      format: Time Difference
     
     - name: Time After Sunset
       measurement:
@@ -445,7 +447,7 @@ Example relative start time column specs:
           settings:
               reference_time: Sunset
               day: False
-      format: Duration
+      format: Time Difference
 
     - name: Time Before Sunrise
       measurement:
@@ -454,7 +456,7 @@ Example relative start time column specs:
               reference_time: Sunrise
               day: False
               negate: True
-      format: Duration
+      format: Time Difference
 '''
 
 
@@ -1231,46 +1233,17 @@ class DurationFormat:
     name = 'Duration'
     
     def __init__(self, settings=None):
-        
         if settings is None:
-            self._format = '{:d}:{:02d}:{:02d}'
- 
-        else:
-            
-            sep = settings.get('separator', ':')
-            num_hours_digits = settings.get('num_hours_digits')
-            
-            if num_hours_digits is None:
-                hours_format = '{:d}'
-            else:
-                hours_format = '{:0' + str(num_hours_digits) + '}'
-                
-            self._format = hours_format + sep + '{:02d}' + sep + '{:02d}'
-        
+            settings = {}
+        self._hours_digit_count = settings.get('hours_digits')
+        self._fraction_digit_count = settings.get('fraction_digits', 0)
+    
     def format(self, duration, clip):
-        
         if duration is None:
             return _NO_VALUE_STRING
-        
         else:
-            
-            seconds = duration
-            
-            if seconds < 0:
-                seconds = -seconds
-                prefix = '-'
-            else:
-                prefix = ''
-            
-            hours = int(seconds // 3600)
-            seconds -= hours * 3600
-            
-            minutes = int(seconds // 60)
-            seconds -= minutes * 60
-            
-            seconds = int(round(seconds))
-            
-            return prefix + self._format.format(hours, minutes, seconds)
+            return text_utils.format_time_difference(
+                duration, self._hours_digit_count, self._fraction_digit_count)
 
 
 class _DateTimeFormat:
@@ -1429,6 +1402,10 @@ class SolarDateFormat:
             return date.strftime(self._format)
 
 
+class TimeDifferenceFormat(DurationFormat):
+    name = 'Time Difference'
+
+
 class UtcTimeFormat(_DateTimeFormat):
     
     name = 'UTC Time'
@@ -1448,5 +1425,6 @@ _FORMAT_CLASSES = dict((c.name, c) for c in [
     NocturnalBirdMigrationSeasonFormat,
     PercentFormat,
     SolarDateFormat,
+    TimeDifferenceFormat,
     UtcTimeFormat,
 ])
