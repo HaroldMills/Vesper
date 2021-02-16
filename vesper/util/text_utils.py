@@ -64,6 +64,54 @@ def format_number(x):
             return str(i)
 
 
+def format_time_difference(
+        seconds, hours_digit_count=None, fraction_digit_count=0):
+    
+    # Get format for hours and minutes part of time difference.
+    if hours_digit_count is None:
+        hours_format = '{:d}'
+    else:
+        hours_format = '{:0' + str(hours_digit_count) + '}'
+    hours_minutes_format = hours_format + ':{:02d}'
+    
+    # Get format for seconds part of time difference, including
+    # fraction (if present).
+    seconds_format = f'{{:.{fraction_digit_count}f}}'
+    
+    # Get sign prefix.
+    if seconds < 0:
+        seconds = -seconds
+        prefix = '-'
+    else:
+        prefix = ''
+    
+    # Format hours and minutes.
+    hours = int(seconds // 3600)
+    seconds -= hours * 3600
+    minutes = int(seconds // 60)
+    seconds -= minutes * 60
+    hours_minutes = hours_minutes_format.format(hours, minutes)
+    
+    # Format integer and fractional parts of seconds together to
+    # get appropriate rounding.
+    seconds = seconds_format.format(seconds)
+    
+    # Split integer part and fractional part (if present) to handle
+    # separately below.
+    parts = seconds.split('.')
+    
+    # Pad seconds with zero on left if needed.
+    seconds = parts[0].rjust(2, '0')
+    
+    # Get fraction (if present).
+    if len(parts) == 1:
+        fraction = ''
+    else:
+        fraction = '.' + parts[1]
+    
+    return f'{prefix}{hours_minutes}:{seconds}{fraction}'
+
+
 def create_count_text(count, singular_units_text, plural_units_text=None):
     units = create_units_text(count, singular_units_text, plural_units_text)
     return '{} {}'.format(count, units)

@@ -52,3 +52,83 @@ class TextUtilsTests(TestCase):
         for x, expected in cases:
             result = text_utils.format_number(x)
             self.assertEqual(result, expected)
+    
+    
+    def test_format_time_difference(self):
+        
+        format_time_difference = text_utils.format_time_difference
+        
+        d12345 = 3600 + 23 * 60 + 45
+        d123456 = 12 * 3600 + 34 * 60 + 56
+        d1233456 = 123 * 3600 + 34 * 60 + 56
+        d12345p4 = d12345 + .4
+        d12345p6 = d12345 + .6
+        d12345p678 = d12345 + .678
+        d12345p9999 = d12345 + .9999
+        
+        # default format cases
+        cases = (
+            
+            # Default format, zero.
+            (0, '0:00:00'),
+            
+            # Default format, positive.
+            (1, '0:00:01'),
+            (d12345, '1:23:45'),
+            (d123456, '12:34:56'),
+            (d1233456, '123:34:56'),
+            (d12345p4, '1:23:45'),
+            (d12345p6, '1:23:46'),
+            
+            # Default format, negative.
+            # Default format, positive.
+            (-1, '-0:00:01'),
+            (-d12345, '-1:23:45'),
+            (-d123456, '-12:34:56'),
+            (-d1233456, '-123:34:56'),
+            (-d12345p4, '-1:23:45'),
+            (-d12345p6, '-1:23:46'),
+        
+        )
+        
+        for seconds, expected in cases:
+            actual = format_time_difference(seconds)
+            self.assertEqual(actual, expected)
+        
+        # non-default format with positional arguments
+        cases = (
+            
+            (0, (None, 3), '0:00:00.000'),
+            (0, (2,), '00:00:00'),
+            (0, (2, 3), '00:00:00.000'),
+            
+            (d12345p678, (None, 3), '1:23:45.678'),
+            (d12345p678, (2,), '01:23:46'),
+            (d12345p678, (2, 3), '01:23:45.678'),
+            
+            # more digits in hours than specified via `hours_digit_count`
+            (d1233456, (2,), '123:34:56'),
+        
+        )
+        
+        for seconds, args, expected in cases:
+            actual = format_time_difference(seconds, *args)
+            self.assertEqual(actual, expected)
+        
+        # non-default format with positional and keyword arguments
+        cases = (
+            
+            (d12345p678, (), {'fraction_digit_count': 1}, '1:23:45.7'),
+            (d12345p678, (2,), {'fraction_digit_count': 1}, '01:23:45.7'),
+            (d12345p678, (3,), {'fraction_digit_count': 2}, '001:23:45.68'),
+            
+            # rounding affects multiple digits
+            (d12345p9999, (),
+             {'hours_digit_count': 2, 'fraction_digit_count': 3},
+             '01:23:46.000')
+        
+        )
+        
+        for seconds, args, kwargs, expected in cases:
+            actual = format_time_difference(seconds, *args, **kwargs)
+            self.assertEqual(actual, expected)
