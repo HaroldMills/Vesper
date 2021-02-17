@@ -2,6 +2,7 @@
 
 
 from datetime import timedelta as TimeDelta
+import itertools
 import math
 import re
 
@@ -69,80 +70,82 @@ def format_number(x):
             return str(i)
 
 
-_FRACTION_RE = re.compile('\.(\d{6})')
+_FRACTION_CODE_RE = re.compile('%([1-6])f')
+_FRACTION_PLACEHOLDER = '<~!@#$^&*>'
 
 
-def format_datetime(dt, format_, fraction_digit_count=None):
+def format_datetime(dt, format_):
     
-    formatted_dt = dt.strftime(format_)
+    # Adjust format for use by `datetime.strftime`, replacing
+    # modified fraction codes with placeholders and retaining digit
+    # counts separately.
+    format_, digit_counts = _adjust_datetime_format(format_)
     
-    if fraction_digit_count is not None and fraction_digit_count < 6:
-        # fractional digit count specifies different number of digits
-        # than provided by "%f" format code
-        
-        # The "%f" format code of the `strftime` function (see
-        # https://docs.python.org/3/library/datetime.html#
-        # strftime-and-strptime-format-codes) yields six fractional
-        # second digits, i.e. microsecond precision. When
-        # `fraction_digit_count` is specified and less than six, we
-        # reduce that precision accordingly.
-        
-        # Find all occurrences of a decimal point followed by six
-        # digits in the formatted time.
-        matches = list(_FRACTION_RE.finditer(formatted_dt))
-        
-        if len(matches) != 0:
-            # found decimal point followed by six digits
-            
-            # We assume here that if the formatted time includes any
-            # occurrences of a decimal point followed by six digits,
-            # the last one is the fractional part of the time. That
-            # seems like it should be a fairly safe assumption in
-            # practice, though in principle it is easy to construct
-            # cases in which it is false. It might be desirable to
-            # use a custom formatting language eventually that we
-            # parse ourselves, so that we control the number of
-            # formatted fractional digits from the start, but that's
-            # a lot more work.
-            match = matches[-1]
-            
-            extra_digit_count = 6 - fraction_digit_count
-            extra_digit_power = 10 ** extra_digit_count
-            
-            # Get fraction in microseconds.
-            microseconds = int(match.group(1))
-            
-            # Scale to units of last fractional digit to retain.
-            units = microseconds / extra_digit_power
-            
-            rounded_units = round(units)
-            floored_units = math.floor(units)
-            
-            if rounded_units != floored_units:
-                # rounding will be up to nearest unit instead of down
-                
-                # Get time floored to nearest unit.
-                floored_microseconds = floored_units * extra_digit_power
-                dt = dt.replace(microsecond=floored_microseconds)
-                
-                # Add one unit.
-                unit = 10 ** -fraction_digit_count
-                dt = dt + TimeDelta(seconds=unit)
-                
-                # Reformat altered time.
-                formatted_dt = dt.strftime(format_)
-            
-            # Get formatted time minus extra trailing fractional digits.
-            if fraction_digit_count == 0:
-                point_offset = 0
-            else:
-                point_offset = 1
-            start_index = match.start() + fraction_digit_count + point_offset
-            end_index = start_index + extra_digit_count + 1 - point_offset
-            formatted_dt = \
-                formatted_dt[:start_index] + formatted_dt[end_index:]
+    # Format with `datetime.strftime`.
+    formatted_datetime = dt.strftime(format_)
     
-    return formatted_dt
+    # Replace sentinels with fractional seconds.
+    return _add_fractional_seconds(formatted_datetime, digit_counts, dt)
+
+
+def _adjust_datetime_format(format_):
+    
+    # Split format at double percents. This yields the segments of
+    # the format we need to search for modified fraction codes. It's
+    # important to get rid of the double percents at the start so
+    # they don't interfere with the search for modified fraction codes.
+    # Consider the format "%%3f", for example, which does not
+    # indicate a fractional second but rather the string "%3f".
+    format_segments = format_.split('%%')
+    
+    # Replace modified fraction codes with placeholders, retaining
+    # digit counts separately.
+    pairs = [_adjust_datetime_format_aux(s) for s in format_segments]
+    
+    # Zip pairs into format segments and digit counts.
+    format_segments, digit_count_lists = zip(*pairs)
+    
+    # Join format segments with double percents.
+    format_ = '%%'.join(format_segments)
+    
+    # Flatten digit count lists.
+    digit_counts = list(itertools.chain.from_iterable(digit_count_lists))
+    
+    return format_, digit_counts
+
+
+def _adjust_datetime_format_aux(format_segment):
+    
+    # Split format segment at modified fraction codes.
+    parts = _FRACTION_CODE_RE.split(format_segment)
+    
+    # Deinterleave format subsegments and digit counts.
+    format_subsegments = parts[::2]
+    digit_counts = [int(d) for d in parts[1::2]]
+    
+    # Rejoin format subsegments with fraction placeholder.
+    format_segment = _FRACTION_PLACEHOLDER.join(format_subsegments)
+    
+    return format_segment, digit_counts
+
+
+def _add_fractional_seconds(formatted_datetime, digit_counts, dt):
+    
+    # Split formatted `datetime` at fraction placeholder.
+    other_segments = formatted_datetime.split(_FRACTION_PLACEHOLDER)
+    
+    # Create fraction segments to substitute for placeholders.
+    microsecond = f'{dt.microsecond:06d}'
+    fraction_segments = [microsecond[:c] for c in digit_counts]
+    
+    # Append empty string to fraction segments to have same number
+    # of those as other segments.
+    fraction_segments.append('')
+    
+    # Interleave two types of segments and join.
+    pairs = zip(other_segments, fraction_segments)
+    segments = itertools.chain.from_iterable(pairs)
+    return ''.join(segments)
 
 
 def format_time_difference(

@@ -40,6 +40,8 @@ import vesper.util.yaml_utils as yaml_utils
 #
 # Time difference (i.e. number of seconds) codes:
 #
+#     %g - "-" if negative, "" if not
+#     %G - "-" if negative, "+" if not
 #     %d - number of whole days
 #     %H - two-digit number of whole hours modulo 24
 #     %h - number of whole hours
@@ -53,45 +55,13 @@ import vesper.util.yaml_utils as yaml_utils
 # 
 # Notes:
 #
-#     * Small-letter codes stand for whole numbers of units, without
-#       regard for larger units. For example, for a time difference
-#       of 3667.1 seconds, `%h` will yield 1, `%d` will yield 61, and
-#       `%s` will yield 3667. Except for the fractional second (if
-#       present), typically only the first of a combination of
-#       directives will be one of the small-letter directives `%d`,
-#       `%h`, `%m`, and `%s`, and the remaining directives will be
-#       capital-letter directives. For example:
-#
-#           * %d:%H:%M:%S.%3f
-#           * %h:%M:%S.%3f
-#           * %m:%S.%3f
-#           * %s.%3f
-#
-#     * A minus sign is automatically added to the beginning of a
-#       formatted time difference when the difference is negative.
-
-# TODO: Consider augmenting Python's `%f` strftime code, adding an
-# optional digit in the range [1, 6] in the middle, indicating the
-# number of fractional digits. We would write our own version of
-# strftime that would handle the new code. Our strftime would wrap
-# the Python version to provide the new functionality. In particular,
-# it would:
-#
-#     1. Detect the new code.
-#     2. Call Python's strftime with an altered format and time.
-#     3. Remove a portion of the returned Python-formatted time to
-#        yield the desired result.
-#
-# Step 2 would alter the time to be passed to Python's strftime by
-# rounding it to the desired number of fractional digits. It would
-# also alter the format by removing the number of digits from the
-# `%f` code, and adding a string of sentinel characters immediately
-# after that code that does not contain any format codes and will
-# almost certainly not occur otherwise in the formatted string.
-# That will allow step 3 to easily and reliably locate the six
-# fractional second digits in that string, so that it can remove
-# any unwanted trailing fractional digits (zeros) as well as the 
-# sentinel.
+#     * Note that the format codes are processed completely
+#       independently of one another: the user must be careful to
+#       compose a format that makes sense. So, for example, for
+#       a time difference of 3667 seconds, the format "%h:%m:%s"
+#       will yield the rather odd and probably unintended result
+#       "1:61:3667", while "%h:%M:%S" will yield the more
+#       conventional "1:01:07".
 
 # TODO: Support time and duration rounding.
 
@@ -441,18 +411,35 @@ columns:
 # ''')
 
 
-# _TABLE_FORMAT = yaml_utils.load('''
-#  
+_TABLE_FORMAT = yaml_utils.load('''
+  
 # columns:
 #  
 #     - Recording Start Time
-#     - Recording End Time
+#     
+#     - measurement: Recording End Time
+#       format:
+#           name: Local Time
+#           settings:
+#               format: "%Y-%m-%d %H:%M:%S.%3f"
+#     
 #     - Recording Duration
 #     - Recording Length
 #     - Recording Channel Number
 #     - ID
-#     - Start Time
-#     - End Time
+#     
+#     - measurement: Start Time
+#       format:
+#           name: Local Time
+#           settings:
+#               format: "%Y-%m-%d %H:%M:%S.%4f"
+#     
+#     - measurement: End Time
+#       format:
+#           name: UTC Time
+#           settings:
+#               format: "%Y-%m-%d %H:%M:%S.%3f"
+# 
 #     - Duration
 #      
 #     - measurement: Start Index
@@ -1314,7 +1301,6 @@ class _DateTimeFormat:
         
         self._format = self._get_format(settings)
         self._rounding_increment = settings.get('rounding_increment', None)
-        self._fraction_digit_count = settings.get('fraction_digits', None)
     
     def _get_format(self, settings):
         
@@ -1354,8 +1340,7 @@ class _DateTimeFormat:
                 time = time.astimezone(time_zone)
             
             # Get time string.
-            return text_utils.format_datetime(
-                time, self._format, self._fraction_digit_count)
+            return text_utils.format_datetime(time, self._format)
 
 
 # TODO: Use `time_utils.round_datetime` and `time_utils.round_time`
