@@ -1,3 +1,5 @@
+from datetime import datetime as DateTime
+
 from vesper.tests.test_case import TestCase
 import vesper.util.text_utils as text_utils
 
@@ -52,6 +54,38 @@ class TextUtilsTests(TestCase):
         for x, expected in cases:
             result = text_utils.format_number(x)
             self.assertEqual(result, expected)
+    
+    
+    def test_format_datetime(self):
+        
+        format_datetime = text_utils.format_datetime
+        
+        a = DateTime(2020, 1, 1, 12, 34, 59, 123456)
+        b = DateTime(2020, 1, 1, 12, 34, 59, 999999)
+        
+        cases = (
+            
+            (a, ('%Y-%m-%d %H:%M:%S.%f',), '2020-01-01 12:34:59.123456'),
+            (a, ('%Y-%m-%d %H:%M:%S.%f', 5), '2020-01-01 12:34:59.12346'),
+            (a, ('%Y-%m-%d %H:%M:%S.%f', 4), '2020-01-01 12:34:59.1235'),
+            (a, ('%Y-%m-%d %H:%M:%S.%f', 3), '2020-01-01 12:34:59.123'),
+            (a, ('%Y-%m-%d %H:%M:%S.%f', 2), '2020-01-01 12:34:59.12'),
+            (a, ('%Y-%m-%d %H:%M:%S.%f', 1), '2020-01-01 12:34:59.1'),
+            (a, ('%Y-%m-%d %H:%M:%S.%f', 0), '2020-01-01 12:34:59'),
+            
+            (b, ('%Y-%m-%d %H:%M:%S.%f',), '2020-01-01 12:34:59.999999'),
+            (b, ('%Y-%m-%d %H:%M:%S.%f', 5), '2020-01-01 12:35:00.00000'),
+            (b, ('%Y-%m-%d %H:%M:%S.%f', 4), '2020-01-01 12:35:00.0000'),
+            (b, ('%Y-%m-%d %H:%M:%S.%f', 3), '2020-01-01 12:35:00.000'),
+            (b, ('%Y-%m-%d %H:%M:%S.%f', 2), '2020-01-01 12:35:00.00'),
+            (b, ('%Y-%m-%d %H:%M:%S.%f', 1), '2020-01-01 12:35:00.0'),
+            (b, ('%Y-%m-%d %H:%M:%S.%f', 0), '2020-01-01 12:35:00'),
+ 
+        )
+        
+        for dt, args, expected in cases:
+            actual = format_datetime(dt, *args)
+            self.assertEqual(actual, expected)
     
     
     def test_format_time_difference(self):

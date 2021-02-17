@@ -1,6 +1,11 @@
 """Utility functions pertaining to text."""
 
 
+from datetime import timedelta as TimeDelta
+import math
+import re
+
+
 def create_string_item_list(items):
     
     """
@@ -62,6 +67,82 @@ def format_number(x):
     
         else:
             return str(i)
+
+
+_FRACTION_RE = re.compile('\.(\d{6})')
+
+
+def format_datetime(dt, format_, fraction_digit_count=None):
+    
+    formatted_dt = dt.strftime(format_)
+    
+    if fraction_digit_count is not None and fraction_digit_count < 6:
+        # fractional digit count specifies different number of digits
+        # than provided by "%f" format code
+        
+        # The "%f" format code of the `strftime` function (see
+        # https://docs.python.org/3/library/datetime.html#
+        # strftime-and-strptime-format-codes) yields six fractional
+        # second digits, i.e. microsecond precision. When
+        # `fraction_digit_count` is specified and less than six, we
+        # reduce that precision accordingly.
+        
+        # Find all occurrences of a decimal point followed by six
+        # digits in the formatted time.
+        matches = list(_FRACTION_RE.finditer(formatted_dt))
+        
+        if len(matches) != 0:
+            # found decimal point followed by six digits
+            
+            # We assume here that if the formatted time includes any
+            # occurrences of a decimal point followed by six digits,
+            # the last one is the fractional part of the time. That
+            # seems like it should be a fairly safe assumption in
+            # practice, though in principle it is easy to construct
+            # cases in which it is false. It might be desirable to
+            # use a custom formatting language eventually that we
+            # parse ourselves, so that we control the number of
+            # formatted fractional digits from the start, but that's
+            # a lot more work.
+            match = matches[-1]
+            
+            extra_digit_count = 6 - fraction_digit_count
+            extra_digit_power = 10 ** extra_digit_count
+            
+            # Get fraction in microseconds.
+            microseconds = int(match.group(1))
+            
+            # Scale to units of last fractional digit to retain.
+            units = microseconds / extra_digit_power
+            
+            rounded_units = round(units)
+            floored_units = math.floor(units)
+            
+            if rounded_units != floored_units:
+                # rounding will be up to nearest unit instead of down
+                
+                # Get time floored to nearest unit.
+                floored_microseconds = floored_units * extra_digit_power
+                dt = dt.replace(microsecond=floored_microseconds)
+                
+                # Add one unit.
+                unit = 10 ** -fraction_digit_count
+                dt = dt + TimeDelta(seconds=unit)
+                
+                # Reformat altered time.
+                formatted_dt = dt.strftime(format_)
+            
+            # Get formatted time minus extra trailing fractional digits.
+            if fraction_digit_count == 0:
+                point_offset = 0
+            else:
+                point_offset = 1
+            start_index = match.start() + fraction_digit_count + point_offset
+            end_index = start_index + extra_digit_count + 1 - point_offset
+            formatted_dt = \
+                formatted_dt[:start_index] + formatted_dt[end_index:]
+    
+    return formatted_dt
 
 
 def format_time_difference(
