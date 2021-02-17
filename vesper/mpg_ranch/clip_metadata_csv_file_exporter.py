@@ -34,7 +34,64 @@ import vesper.util.yaml_utils as yaml_utils
 # and DateTime. Would measurements be able to define their own types?
 # Maybe not initially, at least.
 
-# TODO: Add `fractional_digits` time format setting.
+# TODO: Consider supporting our own set of time difference formatting
+# codes. The codes should be similar to and as consistent as possible
+# with those used by Python's strftime.
+#
+# Time difference (i.e. number of seconds) codes:
+#
+#     %d - number of whole days
+#     %H - two-digit number of whole hours modulo 24
+#     %h - number of whole hours
+#     %M - two-digit number of whole minutes modulo 60
+#     %m - number of whole minutes
+#     %S - two-digit number of whole seconds modulo 60
+#     %s - number of whole seconds
+#     %f - six-digit fractional second
+#     %<n>f - n-digit fractional second, with 1 <= n <= 6
+#     %% - percent
+# 
+# Notes:
+#
+#     * Small-letter codes stand for whole numbers of units, without
+#       regard for larger units. For example, for a time difference
+#       of 3667.1 seconds, `%h` will yield 1, `%d` will yield 61, and
+#       `%s` will yield 3667. Except for the fractional second (if
+#       present), typically only the first of a combination of
+#       directives will be one of the small-letter directives `%d`,
+#       `%h`, `%m`, and `%s`, and the remaining directives will be
+#       capital-letter directives. For example:
+#
+#           * %d:%H:%M:%S.%3f
+#           * %h:%M:%S.%3f
+#           * %m:%S.%3f
+#           * %s.%3f
+#
+#     * A minus sign is automatically added to the beginning of a
+#       formatted time difference when the difference is negative.
+
+# TODO: Consider augmenting Python's `%f` strftime code, adding an
+# optional digit in the range [1, 6] in the middle, indicating the
+# number of fractional digits. We would write our own version of
+# strftime that would handle the new code. Our strftime would wrap
+# the Python version to provide the new functionality. In particular,
+# it would:
+#
+#     1. Detect the new code.
+#     2. Call Python's strftime with an altered format and time.
+#     3. Remove a portion of the returned Python-formatted time to
+#        yield the desired result.
+#
+# Step 2 would alter the time to be passed to Python's strftime by
+# rounding it to the desired number of fractional digits. It would
+# also alter the format by removing the number of digits from the
+# `%f` code, and adding a string of sentinel characters immediately
+# after that code that does not contain any format codes and will
+# almost certainly not occur otherwise in the formatted string.
+# That will allow step 3 to easily and reliably locate the six
+# fractional second digits in that string, so that it can remove
+# any unwanted trailing fractional digits (zeros) as well as the 
+# sentinel.
 
 # TODO: Support time and duration rounding.
 
@@ -1257,6 +1314,7 @@ class _DateTimeFormat:
         
         self._format = self._get_format(settings)
         self._rounding_increment = settings.get('rounding_increment', None)
+        self._fraction_digit_count = settings.get('fraction_digits', None)
     
     def _get_format(self, settings):
         
@@ -1296,8 +1354,9 @@ class _DateTimeFormat:
                 time = time.astimezone(time_zone)
             
             # Get time string.
-            return time.strftime(self._format)
-           
+            return text_utils.format_datetime(
+                time, self._format, self._fraction_digit_count)
+
 
 # TODO: Use `time_utils.round_datetime` and `time_utils.round_time`
 # here to allow rounding increments larger than one hour. Note that
