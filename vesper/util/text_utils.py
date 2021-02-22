@@ -1,7 +1,6 @@
 """Utility functions pertaining to text."""
 
 
-from datetime import timedelta as TimeDelta
 import itertools
 import math
 import re
@@ -148,52 +147,130 @@ def _add_fractional_seconds(formatted_datetime, digit_counts, dt):
     return ''.join(segments)
 
 
-def format_time_difference(
-        seconds, hours_digit_count=None, fraction_digit_count=0):
+class _DifferenceFormatter:
     
-    # Get format for hours and minutes part of time difference.
-    if hours_digit_count is None:
-        hours_format = '{:d}'
-    else:
-        hours_format = '{:0' + str(hours_digit_count) + '}'
-    hours_minutes_format = hours_format + ':{:02d}'
     
-    # Get format for seconds part of time difference, including
-    # fraction (if present).
-    seconds_format = f'{{:.{fraction_digit_count}f}}'
+    _METHOD_NAMES = {
+        '%': '_format_percent'
+    }
     
-    # Get sign prefix.
-    if seconds < 0:
-        seconds = -seconds
-        prefix = '-'
-    else:
-        prefix = ''
     
-    # Format hours and minutes.
-    hours = int(seconds // 3600)
-    seconds -= hours * 3600
-    minutes = int(seconds // 60)
-    seconds -= minutes * 60
-    hours_minutes = hours_minutes_format.format(hours, minutes)
+    def format(self, difference, format_code):
+        
+        char = format_code[-1]
+        method_name = self._METHOD_NAMES.get(char, f'_format_{char}')
+        method = getattr(self, method_name)
+        
+        # This yields the empty list for format codes that have no
+        # arguments, or a length-one list containing a digit for an
+        # "f" format code with an argument.
+        args = list(format_code)[:-1]
+        
+        return method(difference, *args)
     
-    # Format integer and fractional parts of seconds together to
-    # get appropriate rounding.
-    seconds = seconds_format.format(seconds)
     
-    # Split integer part and fractional part (if present) to handle
-    # separately below.
-    parts = seconds.split('.')
+    def _format_G(self, d):
+        if d > 0:
+            return '+'
+        elif d < 0:
+            return '-'
+        else:
+            return ''
     
-    # Pad seconds with zero on left if needed.
-    seconds = parts[0].rjust(2, '0')
     
-    # Get fraction (if present).
-    if len(parts) == 1:
-        fraction = ''
-    else:
-        fraction = '.' + parts[1]
+    def _format_g(self, d):
+        if d < 0:
+            return '-'
+        else:
+            return ''
     
-    return f'{prefix}{hours_minutes}:{seconds}{fraction}'
+    
+    def _format_d(self, d):
+        days = math.floor(abs(d) // (24 * 3600))
+        return str(days)
+    
+    
+    def _format_H(self, d):
+        hours = math.floor((abs(d) // 3600) % 24)
+        return f'{hours:02d}'
+    
+    
+    def _format_h(self, d):
+        hours = math.floor(abs(d) // 3600)
+        return str(hours)
+    
+    
+    def _format_M(self, d):
+        minutes = math.floor((abs(d) // 60) % 60)
+        return f'{minutes:02d}'
+    
+    
+    def _format_m(self, d):
+        minutes = math.floor(abs(d) // 60)
+        return str(minutes)
+    
+    
+    def _format_S(self, d):
+        seconds = math.floor(abs(d)) % 60
+        return f'{seconds:02d}'
+    
+    
+    def _format_s(self, d):
+        seconds = math.floor(abs(d))
+        return str(seconds)
+    
+    
+    def _format_f(self, d, digit_count='6'):
+        
+        # Get microseconds as string of six digits.
+        d = abs(d)
+        fraction = d - math.floor(d)
+        microseconds = int(fraction * 1e6)
+        digits = str(microseconds)
+        
+        # Truncate to specified number of digits.
+        digit_count = int(digit_count)
+        return digits[:digit_count]
+    
+    
+    def _format_percent(self, d):
+        return '%'
+
+
+#     %G - sign, "-" if negative, "+" if not
+#     %g - sign, "-" if negative, "" if not
+#     %d - number of whole days
+#     %H - two-digit number of whole hours modulo 24
+#     %h - number of whole hours
+#     %M - two-digit number of whole minutes modulo 60
+#     %m - number of whole minutes
+#     %S - two-digit number of whole seconds modulo 60
+#     %s - number of whole seconds
+#     %f - six-digit fractional second
+#     %<n>f - n-digit fractional second, with 1 <= n <= 6
+#     %% - percent
+
+
+_DIFFERENCE_FORMATTER = _DifferenceFormatter()
+
+_FORMAT_CODE_RE = re.compile('%([GgdHhMmSsf%]|[1-6]f)')
+
+
+def format_time_difference(difference, format_):
+    
+    parts = _FORMAT_CODE_RE.split(format_)
+    
+    literal_segments = parts[::2]
+    format_codes = parts[1::2]
+    
+    formatted_segments = [
+        _DIFFERENCE_FORMATTER.format(difference, c) for c in format_codes]
+    
+    formatted_segments.append('')
+    
+    segment_pairs = zip(literal_segments, formatted_segments)
+    segments = itertools.chain.from_iterable(segment_pairs)
+    return ''.join(segments)
 
 
 def create_count_text(count, singular_units_text, plural_units_text=None):
