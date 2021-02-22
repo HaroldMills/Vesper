@@ -13,18 +13,12 @@ from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
 from vesper.util.bunch import Bunch
+from vesper.util.datetime_formatter import DateTimeFormatter
+from vesper.util.time_difference_formatter import TimeDifferenceFormatter
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
-import vesper.util.text_utils as text_utils
 import vesper.util.yaml_utils as yaml_utils
 
-
-# TODO: Modify `_DateTimeFormat` and `DurationFormat` classes so
-# each instance creates a formatter object in its initializer and
-# reuses the formatter across invocations of the `format` method.
-# The `format` method currently calls a `text_utils` formatting
-# function each time it's called, which re-parses the format
-# specification.
 
 # TODO: Support time and duration rounding. Consider implementing
 # automatic rounding as part of formatting, which chooses a rounding
@@ -1210,9 +1204,10 @@ _NO_VALUE_STRING = ''
 
 _DEFAULT_DATE_FORMAT = '%Y-%m-%d'
 _DEFAULT_TIME_FORMAT = '%H:%M:%S'
-_DEFAULT_DATE_TIME_FORMAT = _DEFAULT_DATE_FORMAT + ' ' + _DEFAULT_TIME_FORMAT
-_DEFAULT_DURATION_FORMAT = '%h:%M:%S'
-_DEFAULT_TIME_DIFFERENCE_FORMAT = '%g%h:%M:%S'
+_DEFAULT_DATE_TIME_FORMATTER = DateTimeFormatter(
+    _DEFAULT_DATE_FORMAT + ' ' + _DEFAULT_TIME_FORMAT)
+_DEFAULT_DURATION_FORMATTER = TimeDifferenceFormatter('%h:%M:%S')
+_DEFAULT_TIME_DIFFERENCE_FORMATTER = TimeDifferenceFormatter('%g%h:%M:%S')
 
 _TEST_DATE_TIME = DateTime(2020, 1, 1)
 
@@ -1263,15 +1258,22 @@ class DurationFormat:
     def __init__(self, settings=None):
         if settings is None:
             settings = {}
-        self._format = settings.get('format', _DEFAULT_DURATION_FORMAT)
+        self._formatter = self._get_formatter(settings)
     
+    def _get_formatter(self, settings):
+        _format = settings.get('format')
+        if _format is None:
+            return _DEFAULT_DURATION_FORMATTER
+        else:
+            return TimeDifferenceFormatter(_format)
+        
     def format(self, duration, clip):
         if duration is None:
             return _NO_VALUE_STRING
         else:
             # TODO: Don't round like this! Give user control of rounding.
             duration = round(duration)
-            return text_utils.format_time_difference(duration, self._format)
+            return self._formatter.format(duration)
 
 
 class _DateTimeFormat:
@@ -1283,15 +1285,15 @@ class _DateTimeFormat:
         if settings is None:
             settings = {}
         
-        self._format = self._get_format(settings)
+        self._formatter = self._get_formatter(settings)
         self._rounding_increment = settings.get('rounding_increment', None)
     
-    def _get_format(self, settings):
+    def _get_formatter(self, settings):
         
         format_ = settings.get('format')
         
         if format_ is None:
-            return _DEFAULT_DATE_TIME_FORMAT
+            return _DEFAULT_DATE_TIME_FORMATTER
         
         else:
             # format string provided
@@ -1305,26 +1307,26 @@ class _DateTimeFormat:
                     f'Could not format test time with "{format_}". '
                     f'Error message was: {str(e)}')
             
-            return format_
+            return DateTimeFormatter(format_)
     
-    def format(self, time, clip):
+    def format(self, dt, clip):
         
-        if time is None:
+        if dt is None:
             return _NO_VALUE_STRING
         
         else:
             
             # Round time if needed.
             if self._rounding_increment is not None:
-                time = _round_time(time, self._rounding_increment)
+                dt = _round_time(dt, self._rounding_increment)
                 
             # Get local time if needed.
             if self._local:
                 time_zone = clip.station.tz
-                time = time.astimezone(time_zone)
+                dt = dt.astimezone(time_zone)
             
             # Get time string.
-            return text_utils.format_datetime(time, self._format)
+            return self._formatter.format(dt)
 
 
 # TODO: Use `time_utils.round_datetime` and `time_utils.round_time`
@@ -1437,7 +1439,14 @@ class TimeDifferenceFormat(DurationFormat):
     def __init__(self, settings=None):
         if settings is None:
             settings = {}
-        self._format = settings.get('format', _DEFAULT_TIME_DIFFERENCE_FORMAT)
+        self._formatter = self._get_formatter(settings)
+    
+    def _get_formatter(self, settings):
+        _format = settings.get('format')
+        if _format is None:
+            return _DEFAULT_TIME_DIFFERENCE_FORMATTER
+        else:
+            return TimeDifferenceFormatter(_format)
 
 
 class UtcTimeFormat(_DateTimeFormat):
