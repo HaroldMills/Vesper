@@ -19,7 +19,24 @@ import vesper.util.text_utils as text_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
+# TODO: Modify `_DateTimeFormat` and `DurationFormat` classes so
+# each instance creates a formatter object in its initializer and
+# reuses the formatter across invocations of the `format` method.
+# The `format` method currently calls a `text_utils` formatting
+# function each time it's called, which re-parses the format
+# specification.
+
+# TODO: Support time and duration rounding. Consider implementing
+# automatic rounding as part of formatting, which chooses a rounding
+# increment for the specific format. This would involve parsing the
+# format for all of its codes, the increment corresponding to each
+# of those, and then the smallest increment.
+
+# TODO: Add "Calling Rate" measurement.
+
 # TODO: Support default format specification in measurement classes.
+
+# TODO: Implement table format presets.
 
 # TODO: Consider supporting user-defined formats. These would appear in
 # a YAML `formats` associated array that accompanies the `columns` array.
@@ -34,45 +51,10 @@ import vesper.util.yaml_utils as yaml_utils
 # and DateTime. Would measurements be able to define their own types?
 # Maybe not initially, at least.
 
-# TODO: Consider supporting our own set of time difference formatting
-# codes. The codes should be similar to and as consistent as possible
-# with those used by Python's strftime.
-#
-# Time difference (i.e. number of seconds) codes:
-#
-#     %g - "-" if negative, "" if not
-#     %G - "-" if negative, "+" if not
-#     %d - number of whole days
-#     %H - two-digit number of whole hours modulo 24
-#     %h - number of whole hours
-#     %M - two-digit number of whole minutes modulo 60
-#     %m - number of whole minutes
-#     %S - two-digit number of whole seconds modulo 60
-#     %s - number of whole seconds
-#     %f - six-digit fractional second
-#     %<n>f - n-digit fractional second, with 1 <= n <= 6
-#     %% - percent
-# 
-# Notes:
-#
-#     * Note that the format codes are processed completely
-#       independently of one another: the user must be careful to
-#       compose a format that makes sense. So, for example, for
-#       a time difference of 3667 seconds, the format "%h:%m:%s"
-#       will yield the rather odd and probably unintended result
-#       "1:61:3667", while "%h:%M:%S" will yield the more
-#       conventional "1:01:07".
-
-# TODO: Support time and duration rounding.
-
-# TODO: Add "Calling Rate" measurement.
-
 # TODO: Make each archive either day-oriented or night-oriented, with
 # orientation specified in "Archive Settings.yaml". Make `day` setting
 # optional for solar event measurements and use day/night orientation
 # to determine default value.
-
-# TODO: Implement table format presets.
 
 # TODO: Use `jsonschema` package to check table format specification.
 
@@ -411,8 +393,8 @@ columns:
 # ''')
 
 
-_TABLE_FORMAT = yaml_utils.load('''
-  
+# _TABLE_FORMAT = yaml_utils.load('''
+#   
 # columns:
 #  
 #     - Recording Start Time
@@ -1229,6 +1211,8 @@ _NO_VALUE_STRING = ''
 _DEFAULT_DATE_FORMAT = '%Y-%m-%d'
 _DEFAULT_TIME_FORMAT = '%H:%M:%S'
 _DEFAULT_DATE_TIME_FORMAT = _DEFAULT_DATE_FORMAT + ' ' + _DEFAULT_TIME_FORMAT
+_DEFAULT_DURATION_FORMAT = '%h:%M:%S'
+_DEFAULT_TIME_DIFFERENCE_FORMAT = '%g%h:%M:%S'
 
 _TEST_DATE_TIME = DateTime(2020, 1, 1)
 
@@ -1279,15 +1263,15 @@ class DurationFormat:
     def __init__(self, settings=None):
         if settings is None:
             settings = {}
-        self._hours_digit_count = settings.get('hours_digits')
-        self._fraction_digit_count = settings.get('fraction_digits', 0)
+        self._format = settings.get('format', _DEFAULT_DURATION_FORMAT)
     
     def format(self, duration, clip):
         if duration is None:
             return _NO_VALUE_STRING
         else:
-            return text_utils.format_time_difference(
-                duration, self._hours_digit_count, self._fraction_digit_count)
+            # TODO: Don't round like this! Give user control of rounding.
+            duration = round(duration)
+            return text_utils.format_time_difference(duration, self._format)
 
 
 class _DateTimeFormat:
@@ -1447,7 +1431,13 @@ class SolarDateFormat:
 
 
 class TimeDifferenceFormat(DurationFormat):
+    
     name = 'Time Difference'
+    
+    def __init__(self, settings=None):
+        if settings is None:
+            settings = {}
+        self._format = settings.get('format', _DEFAULT_TIME_DIFFERENCE_FORMAT)
 
 
 class UtcTimeFormat(_DateTimeFormat):
