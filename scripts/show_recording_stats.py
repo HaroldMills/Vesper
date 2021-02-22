@@ -62,22 +62,208 @@ TEST_MODE_INTERVAL_COUNT_LIMIT = 50
 #     
 # )
 
-RECORDING_DIR_PATH = \
-    Path('/Volumes/MPG Ranch 2018 Part 2/09/MPG Floodplain')
-    
-RECORDING_FILE_NAMES = (
-    ('FLOOD-21C_20180901_194500.wav',),
-    ('FLOOD-21C_20180902_194400.wav',),
-    ('FLOOD-21C_20180903_194200.wav',),
-    ('FLOOD-21C_20180904_194000.wav',),
-    ('FLOOD-21C_20180905_193800.wav',),
-    ('FLOOD-21C_20180906_193600.wav',),
-    ('FLOOD-21C_20180907_193400.wav',),
-    ('FLOOD-21C_20180908_193200.wav',),
-    ('FLOOD-21C_20180909_193000.wav',),
-    ('FLOOD-21C_20180910_192800.wav',),
-)
+# RECORDING_DIR_PATH = \
+#     Path('/Volumes/MPG Ranch 2018 Part 2/09/MPG Floodplain')
+#     
+# RECORDING_FILE_NAMES = (
+#     ('FLOOD-21C_20180901_194500.wav',),
+#     ('FLOOD-21C_20180902_194400.wav',),
+#     ('FLOOD-21C_20180903_194200.wav',),
+#     ('FLOOD-21C_20180904_194000.wav',),
+#     ('FLOOD-21C_20180905_193800.wav',),
+#     ('FLOOD-21C_20180906_193600.wav',),
+#     ('FLOOD-21C_20180907_193400.wav',),
+#     ('FLOOD-21C_20180908_193200.wav',),
+#     ('FLOOD-21C_20180909_193000.wav',),
+#     ('FLOOD-21C_20180910_192800.wav',),
+# )
 
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-05-06')
+#     
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-05-07_00.30.00_Z.wav',
+#      'usny000_2000-05-07_01.30.01_Z.wav',
+#      'usny000_2000-05-07_02.30.01_Z.wav',
+#      'usny000_2000-05-07_03.30.01_Z.wav',
+#      'usny000_2000-05-07_04.30.01_Z.wav',
+#      'usny000_2000-05-07_05.30.01_Z.wav',
+#      'usny000_2000-05-07_06.30.01_Z.wav',
+#      'usny000_2000-05-07_07.30.01_Z.wav',),
+# )
+
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-05-07')
+#      
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-05-08_00.30.00_Z.wav',
+#      'usny000_2000-05-08_01.30.01_Z.wav',
+#      'usny000_2000-05-08_02.30.01_Z.wav',
+#      'usny000_2000-05-08_03.30.01_Z.wav',
+#      'usny000_2000-05-08_04.30.01_Z.wav',
+#      'usny000_2000-05-08_05.30.01_Z.wav',
+#      'usny000_2000-05-08_06.30.01_Z.wav',
+#      'usny000_2000-05-08_07.30.01_Z.wav',),
+# )
+
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-05-08')
+#      
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-05-09_00.30.00_Z.wav',
+#      'usny000_2000-05-09_01.30.00_Z.wav',
+#      'usny000_2000-05-09_02.30.00_Z.wav',
+#      'usny000_2000-05-09_03.30.00_Z.wav',
+#      'usny000_2000-05-09_04.30.00_Z.wav',
+#      'usny000_2000-05-09_05.30.00_Z.wav',
+#      'usny000_2000-05-09_06.30.00_Z.wav',
+#      'usny000_2000-05-09_07.30.00_Z.wav',),
+# )
+
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-05-10')
+#      
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-05-11_00.30.00_Z.wav',
+#      'usny000_2000-05-11_01.30.01_Z.wav',
+#      'usny000_2000-05-11_02.30.01_Z.wav',
+#      'usny000_2000-05-11_03.30.01_Z.wav',
+#      'usny000_2000-05-11_04.30.01_Z.wav',
+#      'usny000_2000-05-11_05.30.01_Z.wav',
+#      'usny000_2000-05-11_06.30.01_Z.wav',
+#      'usny000_2000-05-11_07.30.01_Z.wav',),
+# )
+
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-05-11')
+#      
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-05-12_00.30.00_Z.wav',
+#      'usny000_2000-05-12_01.30.01_Z.wav',
+#      'usny000_2000-05-12_02.30.01_Z.wav',
+#      'usny000_2000-05-12_03.30.01_Z.wav',
+#      'usny000_2000-05-12_04.30.01_Z.wav',
+#      'usny000_2000-05-12_05.30.01_Z.wav',
+#      'usny000_2000-05-12_06.30.01_Z.wav',
+#      'usny000_2000-05-12_07.30.01_Z.wav',),
+# )
+
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-05-12')
+#      
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-05-13_00.30.00_Z.wav',
+#      'usny000_2000-05-13_01.30.01_Z.wav',
+#      'usny000_2000-05-13_02.30.01_Z.wav',
+#      'usny000_2000-05-13_03.30.01_Z.wav',
+#      'usny000_2000-05-13_04.30.01_Z.wav',
+#      'usny000_2000-05-13_05.30.01_Z.wav',
+#      'usny000_2000-05-13_06.30.01_Z.wav',
+#      'usny000_2000-05-13_07.30.01_Z.wav',
+#      'usny000_2000-05-13_08.30.01_Z.wav',
+#      'usny000_2000-05-13_09.30.01_Z.wav',),
+# )
+
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-09-22')
+#      
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-09-23_01.30.00_Z.wav',
+#      'usny000_2000-09-23_02.30.01_Z.wav',
+#      'usny000_2000-09-23_03.30.01_Z.wav',
+#      'usny000_2000-09-23_04.30.01_Z.wav',
+#      'usny000_2000-09-23_05.30.01_Z.wav',
+#      'usny000_2000-09-23_06.30.01_Z.wav',
+#      'usny000_2000-09-23_07.30.01_Z.wav',
+#      'usny000_2000-09-23_08.30.01_Z.wav',
+#      'usny000_2000-09-23_09.30.01_Z.wav',),
+# )
+ 
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-09-23')
+#      
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-09-24_01.30.00_Z.wav',
+#      'usny000_2000-09-24_02.30.01_Z.wav',
+#      'usny000_2000-09-24_03.30.01_Z.wav',
+#      'usny000_2000-09-24_04.30.01_Z.wav',
+#      'usny000_2000-09-24_05.30.01_Z.wav',
+#      'usny000_2000-09-24_06.30.01_Z.wav',
+#      'usny000_2000-09-24_07.30.01_Z.wav',
+#      'usny000_2000-09-24_08.30.01_Z.wav',
+#      'usny000_2000-09-24_09.30.01_Z.wav',
+#      'usny000_2000-09-24_10.30.01_Z.wav',),
+# )
+
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-09-25')
+#       
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-09-26_01.30.00_Z.wav',
+#      'usny000_2000-09-26_02.30.01_Z.wav',
+#      'usny000_2000-09-26_03.30.01_Z.wav',
+#      'usny000_2000-09-26_04.30.01_Z.wav',
+#      'usny000_2000-09-26_05.30.01_Z.wav',
+#      'usny000_2000-09-26_06.30.01_Z.wav',
+#      'usny000_2000-09-26_07.30.01_Z.wav',
+#      'usny000_2000-09-26_08.30.01_Z.wav',
+#      'usny000_2000-09-26_09.30.01_Z.wav',
+#      'usny000_2000-09-26_10.30.01_Z.wav',),
+# )
+
+# RECORDING_DIR_PATH = \
+#     Path(
+#         '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+#         '2000-09-26')
+#       
+# RECORDING_FILE_NAMES = (
+#     ('usny000_2000-09-27_01.30.00_Z.wav',
+#      'usny000_2000-09-27_02.30.01_Z.wav',
+#      'usny000_2000-09-27_03.30.01_Z.wav',
+#      'usny000_2000-09-27_04.30.01_Z.wav',
+#      'usny000_2000-09-27_05.30.01_Z.wav',
+#      'usny000_2000-09-27_06.30.01_Z.wav',
+#      'usny000_2000-09-27_07.30.01_Z.wav',
+#      'usny000_2000-09-27_08.30.01_Z.wav',
+#      'usny000_2000-09-27_09.30.01_Z.wav',
+#      'usny000_2000-09-27_10.30.01_Z.wav',),
+# )
+
+RECORDING_DIR_PATH = \
+    Path(
+        '/Volumes/Recordings2/Nocturnal Bird Migration/BirdCast 2000/'
+        '2000-09-27')
+      
+RECORDING_FILE_NAMES = (
+    ('usny000_2000-09-28_01.30.00_Z.wav',
+     'usny000_2000-09-28_02.30.01_Z.wav',
+     'usny000_2000-09-28_03.30.01_Z.wav',
+     'usny000_2000-09-28_04.30.01_Z.wav',
+     'usny000_2000-09-28_05.30.01_Z.wav',
+     'usny000_2000-09-28_06.30.01_Z.wav',
+     'usny000_2000-09-28_07.30.01_Z.wav',
+     'usny000_2000-09-28_08.30.01_Z.wav',
+     'usny000_2000-09-28_09.30.01_Z.wav',
+     'usny000_2000-09-28_10.30.01_Z.wav',),
+)
 
 OUTPUT_DIR_PATH = Path('/Users/harold/Desktop/Recording Stats')
 AMPLIGRAM_PLOT_FILE_NAME_FORMAT = '{} Ampligram.pdf'
