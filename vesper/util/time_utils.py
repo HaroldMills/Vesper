@@ -64,8 +64,7 @@ def create_utc_datetime(
             try:
                 time_zone = pytz.timezone(time_zone)
             except pytz.UnknownTimeZoneError:
-                raise ValueError(
-                    'Unrecognized time zone "{:s}".'.format(time_zone))
+                raise ValueError(f'Unrecognized time zone "{time_zone}".')
         
         # Note that contrary to what one might think we should not do the
         # following:
@@ -95,9 +94,8 @@ def create_utc_datetime(
 
 
 def _raise_dst_value_error(fragment, dt, time_zone):
-    raise ValueError((
-        'Local time {:s} {:s} for time zone "{:s}" '
-        'due to DST.').format(str(dt), fragment, str(time_zone)))
+    raise ValueError(
+        f'Local time {dt} {fragment} for time zone "{time_zone}" due to DST.')
 
 
 # The parsing functions of this module (`parse_date_time`, `parse_date`,
@@ -186,19 +184,19 @@ def _check(name, s, function, *args):
     try:
         function(*args)
     except ValueError:
-        raise ValueError('Bad {:s} "{:s}".'.format(name, s))
+        raise ValueError(f'Bad {name} "{s}".')
     
     
 def check_year(year):
     # We do not reject all future years since we can think of legitimate
     # uses for some, for example in tables of DST start and end times.
     if year < _MIN_YEAR or year > _MAX_YEAR:
-        raise ValueError('Bad year {:d}.'.format(year))
+        raise ValueError(f'Bad year {year}.')
 
 
 def _check_range(val, min_val, max_val, name):
     if val < min_val or val > max_val:
-        raise ValueError('Bad {:s} {:d}.'.format(name, val))
+        raise ValueError(f'Bad {name} {val}.')
     
     
 def check_month(month):
@@ -265,18 +263,18 @@ def _round_time(time, unit_size):
     
     if unit_size <= 0:
         raise ValueError(
-            ('Time rounding unit size of {:g} seconds is not '
-             'positive.').format(unit_size))
+            f'Time rounding unit size of {unit_size:g} seconds is not '
+            f'positive.')
     
     elif unit_size % 1 != 0:
         raise ValueError(
-            ('Time rounding unit size of {:g} seconds is not an '
-             'integral number of seconds.').format(unit_size))
+            f'Time rounding unit size of {unit_size:g} seconds is not an '
+            f'integral number of seconds.')
     
     elif _ONE_DAY % unit_size != 0:
         raise ValueError(
-            ('Time rounding unit size of {:d} seconds does not evenly '
-             'divide one day.').format(int(unit_size)))
+            f'Time rounding unit size of {unit_size:d} seconds does not '
+            f'evenly divide one day.')
         
     # Convert time to number of seconds.
     delta = TimeDelta(
