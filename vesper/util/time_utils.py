@@ -7,6 +7,7 @@ from datetime import (
     time as Time,
     timedelta as TimeDelta)
 import calendar
+import math
 
 import pytz
 
@@ -228,78 +229,193 @@ def check_seconds(seconds):
     _check_range(seconds, 0, 59, 'seconds')
 
 
-def round_datetime(dt, unit_size):
+def round_timedelta(td, increment, mode='nearest'):
     
     """
-    Rounds a `datetime` according to the specified unit size.
+    Rounds a `timedelta` according to the specified rounding increment.
     
-    The unit size is specified in seconds.
+    Parameters
+    ----------
+    td : timedelta
+        the `timedelta` to be rounded.
+        
+    increment : int or float
+        the rounding increment in seconds.
+        
+        If the rounding increment is less than one second, it must evenly
+        divide one second. Otherwise it must evenly divide one day.
+        
+    mode: str
+        the rounding mode, one of `"nearest"`, `"down"`, or `"up"`.
+    
+    Returns
+    -------
+    a rounded version of the specified `timedelta`.
+    """
+
+    
+    # Decompose `td` into an integral number of days and a nonnegative
+    # `TimeDelta` that is less than one day.
+    days = TimeDelta(days=td.days)
+    td = TimeDelta(seconds=td.seconds, microseconds=td.microseconds)
+    
+    rounded_td = _round_timedelta(td, increment, mode)
+    
+    return days + rounded_td
+
+
+def _round_timedelta(td, increment, mode):
+    
+    _check_rounding_increment(increment)
+    rounding_function = _get_rounding_function(mode)
+    
+    seconds = td.total_seconds()
+    
+    if increment >= 1:
+        
+        increment_count = rounding_function(seconds / increment)
+        rounded_seconds = increment_count * increment
+    
+    else:
+        # increment less than one second
+        
+        # Rounding the seconds fraction instead of the seconds when
+        # the increment is less than a second reduces the maximum
+        # possible size disparity between the value to be rounded
+        # and the increment, perhaps reducing the possibility of
+        # numerical issues. That might not be needed, but it won't
+        # hurt.
+        seconds_floor = math.floor(seconds)
+        fraction = seconds - seconds_floor
+        increment_count = rounding_function(fraction / increment)
+        rounded_fraction = increment_count * increment
+        rounded_seconds = seconds_floor + rounded_fraction
+    
+    return TimeDelta(seconds=rounded_seconds)
+
+
+def _check_rounding_increment(increment):
+    
+    if increment <= 0:
+        raise ValueError(
+            f'Time rounding increment of {increment:g} seconds is not '
+            f'positive.')
+    
+    elif increment >= 1:
+        
+        if _ONE_DAY % increment != 0:
+            raise ValueError(
+                f'Time rounding increment of {increment:d} seconds does not '
+                f'evenly divide one day.')
+    
+    else:
+        # unit size less than one second
+        
+        # Find how close to one second we can get with an integral
+        # multiple of the increment, as a fraction of the increment.
+        units_per_second = 1 / increment
+        fraction = abs(units_per_second - round(units_per_second))
+        
+        if fraction > 1e-6:
+            raise ValueError(
+                f'Time rounding increment of {increment:g} seconds does '
+                f'not evenly divide one second.')
+
+
+def _get_rounding_function(mode):
+    try:
+        return _ROUNDING_FUNCTIONS[mode]
+    except KeyError:
+        raise ValueError(f'Unrecognized time rounding mode "{mode}".')
+
+
+def round_datetime(dt, increment, mode='nearest'):
+    
+    """
+    Rounds a `datetime` according to the specified rounding increment.
+    
+    Parameters
+    ----------
+    dt : datetime
+        the `datetime` to be rounded.
+        
+    increment : int or float
+        the rounding increment in seconds.
+        
+        If the rounding increment is less than one second, it must evenly
+        divide one second. Otherwise it must evenly divide one day.
+        
+    mode: str
+        the rounding mode, one of `"nearest"`, `"down"`, or `"up"`.
+    
+    Returns
+    -------
+    a rounded version of the specified `datetime`.
     """
     
-    seconds = _round_time(dt.time(), unit_size)
-    delta = TimeDelta(seconds=seconds)
-    return DateTime(dt.year, dt.month, dt.day, tzinfo=dt.tzinfo) + delta
+    
+    td = TimeDelta(
+        hours=dt.hour, minutes=dt.minute, seconds=dt.second,
+        microseconds=dt.microsecond)
+    
+    rounded_td = _round_timedelta(td, increment, mode)
+    
+    # Note that this keeps the time zone intact, if any.
+    midnight = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    return midnight + rounded_td
 
 
 _ONE_DAY = 24 * 3600
 
+_ROUNDING_FUNCTIONS = {
+    'nearest': round,
+    'down': math.floor,
+    'up': math.ceil
+}
 
-def _round_time(time, unit_size):
+
+def round_time(time, increment, mode='nearest'):
     
     """
-    Rounds a `time` to the specified unit size.
+    Rounds a `time` according to the specified rounding increment.
     
-    The unit size is specified in seconds.
-    
-    This function returns a number of seconds rather than a `time`
-    since in the return value we must be able to distinguish between
-    the beginning and the end of a day.
-    """
-    
-    # TODO: Allow subsecond unit sizes. This is a little tricky because of
-    # floating point precision issues. We might require that the size be
-    # at least one microsecond and that it divide one if it is smaller
-    # than a second.
-    
-    if unit_size <= 0:
-        raise ValueError(
-            f'Time rounding unit size of {unit_size:g} seconds is not '
-            f'positive.')
-    
-    elif unit_size % 1 != 0:
-        raise ValueError(
-            f'Time rounding unit size of {unit_size:g} seconds is not an '
-            f'integral number of seconds.')
-    
-    elif _ONE_DAY % unit_size != 0:
-        raise ValueError(
-            f'Time rounding unit size of {unit_size:d} seconds does not '
-            f'evenly divide one day.')
+    Parameters
+    ----------
+    time : time
+        the `time` to be rounded.
         
-    # Convert time to number of seconds.
-    delta = TimeDelta(
+    increment : int or float
+        the rounding increment in seconds.
+        
+        If the rounding increment is less than one second, it must evenly
+        divide one second. Otherwise it must evenly divide one day.
+        
+    mode: str
+        the rounding mode, one of `"nearest"`, `"down"`, or `"up"`.
+    
+    Returns
+    -------
+    a rounded version of the specified `time`.
+    """
+    
+    
+    td = TimeDelta(
         hours=time.hour, minutes=time.minute, seconds=time.second,
         microseconds=time.microsecond)
-    seconds = delta.total_seconds()
     
-    # Round number of seconds to nearest multiple of unit size.
-    units = round(seconds / float(unit_size))
-    return int(units * unit_size)
+    rounded_td = _round_timedelta(td, increment, mode)
     
-
-def round_time(time, unit_size):
+    # Get time delta in seconds, wrapping 24 hours back to zero.
+    seconds = rounded_td.total_seconds() % _ONE_DAY
     
-    """
-    Rounds a `time` according to the specified unit size.
-    
-    The unit size is specified in seconds.
-    """
-    
-    seconds = _round_time(time, unit_size) % _ONE_DAY
-    
-    hour = seconds // 3600
+    hour = int(seconds // 3600)
     seconds -= hour * 3600
-    minute = seconds // 60
-    second = seconds % 60
+    minute = int(seconds // 60)
+    seconds -= minute * 60
+    second = int(seconds)
+    seconds -= second
+    microsecond = int(1000000 * seconds)
 
-    return Time(hour=hour, minute=minute, second=second)
+    return Time(
+        hour=hour, minute=minute, second=second, microsecond=microsecond)

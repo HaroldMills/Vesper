@@ -28,23 +28,46 @@ def _create_utc_datetime(y, M, d, h, m, s, u, delta):
     return dt + TimeDelta(hours=delta)
 
 
-_TIME_ROUNDING_CASES = [
-    ((0, 0, 0, 0, 1), (0, 0, 0)),
-    ((0, 0, 0, 1, 1), (0, 0, 0)),
-    ((0, 0, 0, 999999, 1), (0, 0, 1)),
-    ((0, 0, 59, 999999, 60), (0, 1, 0)),
-    ((0, 1, 2, 3, 60), (0, 1, 0)),
-    ((0, 59, 59, 999999, 3600), (1, 0, 0)),
-    ((1, 2, 3, 4, 3600), (1, 0, 0)),
-    ((0, 4, 59, 999999, 300), (0, 5, 0)),
-    ((0, 5, 1, 2, 300), (0, 5, 0)),
-    ((12, 23, 45, 0, 30), (12, 24, 0)),
-    ((12, 23, 45, 0, 1200), (12, 20, 0)),
-    ((13, 34, 56, 0, 7200), (14, 0, 0))
-]
+_TIME_ROUNDING_CASES = (
+    
+    # (h, m, s, u), (increment, mode), (d, h, m, s, u))
+    
+    # Implicit rounding to nearest.
+    ((0, 0, 0, 0), 1, (1, 0, 0, 0, 0)),
+    ((0, 0, 0, 500000), 1, (1, 0, 0, 0, 0)),
+    ((0, 0, 0, 500001), 1, (1, 0, 0, 1, 0)),
+    ((0, 0, 0, 500), 1e-3, (1, 0, 0, 0, 0)),
+    ((0, 0, 0, 501), 1e-3, (1, 0, 0, 0, 1000)),
+    ((0, 0, 30, 0), 60, (1, 0, 0, 0, 0)),
+    ((0, 0, 30, 1), 60, (1, 0, 1, 0, 0)),
+    ((0, 1, 30, 0), 60, (1, 0, 2, 0, 0)),
+    ((0, 14, 59, 999999), 600, (1, 0, 10, 0, 0)),
+    ((0, 15, 0, 0), 600, (1, 0, 20, 0, 0)),
+    ((0, 30, 0, 0), 3600, (1, 0, 0, 0, 0)),
+    ((0, 30, 0, 1), 3600, (1, 1, 0, 0, 0)),
+    ((23, 29, 59, 999999), 3600, (1, 23, 0, 0, 0)),
+    ((23, 30, 0, 0), 3600, (2, 0, 0, 0, 0)),
+    
+    # Explicit rounding to nearest.
+    ((23, 29, 59, 999999), (3600, 'nearest'), (1, 23, 0, 0, 0)),
+    ((23, 30, 0, 0), (3600, 'nearest'), (2, 0, 0, 0, 0)),
+    
+    # Rounding down.
+    ((23, 59, 59, 0), (3600, 'down'), (1, 23, 0, 0, 0)),
+    ((23, 59, 30, 0), (3600, 'down'), (1, 23, 0, 0, 0)),
+    ((23, 59, 1, 0), (3600, 'down'), (1, 23, 0, 0, 0)),
+    ((23, 59, 0, 0), (3600, 'down'), (1, 23, 0, 0, 0)),
+    
+    # Rounding up.
+    ((23, 0, 0, 0), (3600, 'up'), (1, 23, 0, 0, 0)),
+    ((23, 0, 1, 0), (3600, 'up'), (2, 0, 0, 0, 0)),
+    ((23, 0, 30, 0), (3600, 'up'), (2, 0, 0, 0, 0)),
+    ((23, 0, 59, 0), (3600, 'up'), (2, 0, 0, 0, 0)),
+    
+)
+"""Test cases for both `time` and `datetime` rounding."""
 
-
-_BAD_TIME_ROUNDING_UNIT_SIZES = [-1, 0, .5, 7]
+_BAD_TIME_ROUNDING_INCREMENTS = [-1, 0, .15, 7, 3601]
 
 
 class TimeUtilsTests(TestCase):
@@ -449,58 +472,127 @@ class TimeUtilsTests(TestCase):
         
     def test_check_seconds(self):
         self._test_ms(time_utils.check_seconds)
-
-
+    
+    
+    def test_round_timedelta(self):
+        
+        cases = (
+            
+            # (d, h, m, s, u), (increment, mode), (d, h, m, s, u))
+            
+            # Implicit rounding to nearest.
+            ((0, 0, 0, 0, 0), 1, (0, 0, 0, 0, 0)),
+            ((0, 0, 0, 0, .5), 1e-6, (0, 0, 0, 0, 0)),
+            ((0, 0, 0, 0, .6), 1e-6, (0, 0, 0, 0, 1)),
+            ((1, 23, 59, 59, 999499), 1e-3, (1, 23, 59, 59, 999000)),
+            ((1, 23, 59, 59, 999500), 1e-3, (2, 0, 0, 0, 0)),
+            ((1, 23, 59, 59, 499999), 1, (1, 23, 59, 59, 0)),
+            ((1, 23, 59, 59, 500000), 1, (2, 0, 0, 0, 0)),
+            ((1, 23, 59, 29, 0), 60, (1, 23, 59, 0, 0)),
+            ((1, 23, 59, 30, 0), 60, (1, 24, 0, 0, 0)),
+            ((-1, 12, 30, 0, 0), 3600, (-1, 12, 0, 0, 0)),
+            ((-1, 12, 31, 0, 0), 3600, (-1, 13, 0, 0, 0)),
+                       
+            # Explicit rounding to nearest.
+            ((1, 23, 59, 29, 0), (60, 'nearest'), (1, 23, 59, 0, 0)),
+            ((1, 23, 59, 30, 0), (60, 'nearest'), (1, 24, 0, 0, 0)),
+            
+            # Rounding down.
+            ((1, 23, 46, 0, 0), (60, 'down'), (1, 23, 46, 0, 0)),
+            ((1, 23, 45, 59, 0), (60, 'down'), (1, 23, 45, 0, 0)),
+            ((1, 23, 45, 30, 0), (60, 'down'), (1, 23, 45, 0, 0)),
+            ((1, 23, 45, 1, 0), (60, 'down'), (1, 23, 45, 0, 0)),
+            ((-1, 12, 45, 59, 0), (60, 'down'), (-1, 12, 45, 0, 0)),
+            
+            # Rounding up.
+            ((1, 23, 45, 1, 0), (60, 'up'), (1, 23, 46, 0, 0)),
+            ((1, 23, 45, 30, 0), (60, 'up'), (1, 23, 46, 0, 0)),
+            ((1, 23, 45, 59, 0), (60, 'up'), (1, 23, 46, 0, 0)),
+            ((1, 23, 46, 0, 0), (60, 'up'), (1, 23, 46, 0, 0)),
+            ((-1, 12, 45, 1, 0), (60, 'up'), (-1, 12, 46, 0, 0)),
+        
+        )
+        
+        for td_args, rounding_args, e_args in cases:
+            
+            td = self._create_timedelta(*td_args)
+            
+            if isinstance(rounding_args, (int, float)):
+                rounding_args = (rounding_args,)
+            
+            actual = time_utils.round_timedelta(td, *rounding_args)
+            
+            expected = self._create_timedelta(*e_args)
+            
+            self.assertEqual(actual, expected)
+    
+    
+    def _create_timedelta(self, d, h, m, s, u):
+        return TimeDelta(days=d, hours=h, minutes=m, seconds=s, microseconds=u)
+    
+    
+    def test_round_timedelta_errors(self):
+        function = time_utils.round_timedelta
+        self._test_time_rounding_errors(function, TimeDelta())
+    
+    
     def test_round_datetime(self):
         
-        for (h, m, s, u, unit_size), (eh, em, es) in _TIME_ROUNDING_CASES:
-            dt = DateTime(2015, 8, 14, h, m, s, u)
-            r = time_utils.round_datetime(dt, unit_size)
-            edt = DateTime(2015, 8, 14, eh, em, es)
-            self.assertEqual(r, edt)
+        for dt_args, rounding_args, e_args in _TIME_ROUNDING_CASES:
             
-        # case that rounds to the beginning of the next day
-        dt = DateTime(2015, 8, 31, 23, 59)
-        r = time_utils.round_datetime(dt, 900)
-        edt = DateTime(2015, 9, 1)
-        self.assertEqual(r, edt)
+            dt = DateTime(2020, 1, 1, *dt_args)
+            
+            if isinstance(rounding_args, (int, float)):
+                rounding_args = (rounding_args,)
+                
+            actual = time_utils.round_datetime(dt, *rounding_args)
+            
+            expected = DateTime(2020, 1, *e_args)
+            
+            self.assertEqual(actual, expected)
         
-        # case with an aware `datetime`
-        localize = pytz.utc.localize
-        dt = localize(DateTime(2015, 8, 14, 1, 1))
-        r = time_utils.round_datetime(dt, 3600)
-        edt = localize(DateTime(2015, 8, 14, 1))
-        self.assertEqual(r, edt)
-        
-        
+        # round up to next year
+        dt = DateTime(2020, 12, 31, 23, 30, 0)
+        actual = time_utils.round_datetime(dt, 3600)
+        expected = DateTime(2021, 1, 1)
+        self.assertEqual(actual, expected)
+    
+    
     def test_round_datetime_errors(self):
-        for unit_size in _BAD_TIME_ROUNDING_UNIT_SIZES:
-            dt = DateTime(2015, 8, 14)
-            self._assert_raises(
-                ValueError, time_utils.round_datetime, dt, unit_size)
-        
-        
+        function = time_utils.round_datetime
+        self._test_time_rounding_errors(function, DateTime(2020, 1, 1))
+    
+    
     def test_round_time(self):
         
-        for (h, m, s, u, unit_size), (eh, em, es) in _TIME_ROUNDING_CASES:
-            time = Time(h, m, s, u)
-            result = time_utils.round_time(time, unit_size)
-            expected = Time(eh, em, es)
-            self.assertEqual(result, expected)
+        for t_args, rounding_args, e_args in _TIME_ROUNDING_CASES:
             
-        # case that rounds up to midnight
-        time = Time(23, 59)
-        result = time_utils.round_time(time, 900)
-        expected = Time()
-        self.assertEqual(result, expected)
-        
-        
+            time = Time(*t_args)
+            
+            if isinstance(rounding_args, (int, float)):
+                rounding_args = (rounding_args,)
+                
+            actual = time_utils.round_time(time, *rounding_args)
+            
+            expected = Time(*e_args[1:])
+            
+            self.assertEqual(actual, expected)
+    
+    
     def test_round_time_errors(self):
-        for unit_size in _BAD_TIME_ROUNDING_UNIT_SIZES:
-            time = Time()
-            self._assert_raises(
-                ValueError, time_utils.round_time, time, unit_size)
+        function = time_utils.round_time
+        self._test_time_rounding_errors(function, Time())
+    
+    
+    def _test_time_rounding_errors(self, function, arg):
         
+        # bad increment
+        for increment in _BAD_TIME_ROUNDING_INCREMENTS:
+            self._assert_raises(ValueError, function, arg, increment)
         
+        # bad mode
+        self._assert_raises(ValueError, function, arg, 1, 'bobo')
+
+
 def _tuplize(x):
     return x if isinstance(x, tuple) else (x,)
