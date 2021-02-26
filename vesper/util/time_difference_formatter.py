@@ -9,7 +9,30 @@ import re
 _FORMAT_CODE_RE = re.compile('%([GgdHhMmSsf%]|[1-6]f)')
 """Regular expression for all format codes."""
 
-_METHOD_NAMES = {
+_FORMAT_CODE_TIME_INCREMENTS = {
+    'G': None,
+    'g': None,
+    'd': 24 * 3600,
+    'H': 3600,
+    'h': 3600,
+    'M': 60,
+    'm': 60,
+    'S': 1,
+    's': 1,
+    'f': .000001,
+    '1f': .1,
+    '2f': .01,
+    '3f': .001,
+    '4f': .0001,
+    '5f': .00001,
+    '6f': .000001,
+    '%': None
+}
+"""
+Mapping from format codes to minimum formatted time increments in seconds .
+"""
+
+_FORMATTING_METHOD_NAMES = {
     '%': '_format_percent'
 }
 """Mapping from format characters to corresponding formatter method names."""
@@ -18,6 +41,30 @@ _METHOD_NAMES = {
 class TimeDifferenceFormatter:
     
     """Formats time differences according to a format string."""
+    
+    
+    @staticmethod
+    def get_min_time_increment(format_string):
+        
+        """
+        Gets the minimum nonzero increment between two time
+        differences as formatted with the specified format string.
+        """
+        
+        
+        # Get format codes of format string.
+        _, format_codes = _parse_format_string(format_string)
+        
+        # Get format code time increments.
+        increments = [_FORMAT_CODE_TIME_INCREMENTS[c] for c in format_codes]
+        
+        # Exclude `None` time increments.
+        increments = [i for i in increments if i is not None]
+        
+        if len(increments) == 0:
+            return None
+        else:
+            return min(increments)
     
     
     def __init__(self, format_string):
@@ -56,23 +103,26 @@ class TimeDifferenceFormatter:
             
         """
         
+        
         self._format_string = format_string
         
         self._literal_segments, self._parsed_format_codes = \
             self._parse_format_string(format_string)
+        
+        self._min_time_increment = self.get_min_time_increment(format_string)
     
     
     def _parse_format_string(self, format_string):
-        parts = _FORMAT_CODE_RE.split(format_string)
-        literal_segments = parts[::2]
-        parsed_format_codes = [self._parse_format_code(c) for c in parts[1::2]]
+        literal_segments, format_codes = _parse_format_string(format_string)
+        parsed_format_codes = [
+            self._parse_format_code(c) for c in format_codes]
         return literal_segments, parsed_format_codes
     
     
     def _parse_format_code(self, format_code):
         
         char = format_code[-1]
-        method_name = _METHOD_NAMES.get(char, f'_format_{char}')
+        method_name = _FORMATTING_METHOD_NAMES.get(char, f'_format_{char}')
         method = getattr(self, method_name)
         
         # This yields the empty list for format codes with no arguments,
@@ -86,6 +136,11 @@ class TimeDifferenceFormatter:
     @property
     def format_string(self):
         return self._format_string
+    
+    
+    @property
+    def min_time_increment(self):
+        return self._min_time_increment
     
     
     def format(self, difference):
@@ -103,6 +158,7 @@ class TimeDifferenceFormatter:
         str
             the formatted time difference.
         """
+        
         
         formatted_segments = [
             method(difference, *args)
@@ -185,3 +241,10 @@ class TimeDifferenceFormatter:
     
     def _format_percent(self, _):
         return '%'
+
+
+def _parse_format_string(format_string):
+    parts = _FORMAT_CODE_RE.split(format_string)
+    literal_segments = parts[::2]
+    format_codes = parts[1::2]
+    return literal_segments, format_codes

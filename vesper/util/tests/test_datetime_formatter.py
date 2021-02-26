@@ -7,6 +7,45 @@ from vesper.util.datetime_formatter import DateTimeFormatter
 class DateTimeFormatterTests(TestCase):
     
     
+    def test_get_min_time_increment(self):
+        
+        get_increment = DateTimeFormatter.get_min_time_increment
+        
+        cases = (
+            ('', None),
+            ('Hello, world!', None),
+            ('Hello, %% %%H %a %w %Y world!', None),
+            ('%d', None),
+            ('%H', 3600),
+            ('%h', 3600),
+            ('%I', 3600),
+            ('%M', 60),
+            ('%m', 60),
+            ('%S', 1),
+            ('%s', 1),
+            ('%f', .000001),
+            ('%1f', .1),
+            ('%2f', .01),
+            ('%3f', .001),
+            ('%4f', .0001),
+            ('%5f', .00001),
+            ('%6f', .000001),
+            ('Hello, %Y-%m-%d %H:%M:%S.%3f world!', .001),
+            ('Hello, %d %% %G %3f world! %% %H %f', .000001),
+        )
+        
+        for format_string, expected in cases:
+            
+            # via static method
+            actual = get_increment(format_string)
+            self.assertEqual(actual, expected)
+            
+            # via property
+            formatter = DateTimeFormatter(format_string)
+            actual = formatter.min_time_increment
+            self.assertEqual(actual, expected)
+    
+    
     def test_format_datetime(self):
         
         dt = DateTime(2020, 1, 1, 12, 34, 59, 123456)

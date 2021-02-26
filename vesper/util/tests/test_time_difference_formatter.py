@@ -7,6 +7,45 @@ from vesper.util.time_difference_formatter import TimeDifferenceFormatter
 class TimeDifferenceFormatterTests(TestCase):
     
     
+    def test_get_min_time_increment(self):
+        
+        get_increment = TimeDifferenceFormatter.get_min_time_increment
+        
+        cases = (
+            ('%G', None),
+            ('%g', None),
+            ('%%', None),
+            ('Hello, %G %% world! %g', None),
+            ('%d', 24 * 3600),
+            ('%H', 3600),
+            ('%h', 3600),
+            ('%M', 60),
+            ('%m', 60),
+            ('%S', 1),
+            ('%s', 1),
+            ('%f', .000001),
+            ('%1f', .1),
+            ('%2f', .01),
+            ('%3f', .001),
+            ('%4f', .0001),
+            ('%5f', .00001),
+            ('%6f', .000001),
+            ('Hello, %d:%H:%M:%S.%3f world!', .001),
+            ('Hello, %d %% %G %3f world, %H %f', .000001),
+        )
+        
+        for format_string, expected in cases:
+            
+            # via static method
+            actual = get_increment(format_string)
+            self.assertEqual(actual, expected)
+            
+            # via property
+            formatter = TimeDifferenceFormatter(format_string)
+            actual = formatter.min_time_increment
+            self.assertEqual(actual, expected)
+    
+    
     def test_format_time_difference_g(self):
         
         cases = {

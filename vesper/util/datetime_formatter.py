@@ -16,10 +16,65 @@ We replace modified fraction codes with this placeholder to make their
 locations easy to find in the output of `datetime.strftime`.
 """
 
+_FORMAT_CODE_RE = re.compile('%([HhIMmSsf%]|[1-6]f)')
+"""
+Regular expression for all format codes relevant to getting the minimum
+time increment for a format string.
+"""
+
+_FORMAT_CODE_TIME_INCREMENTS = {
+    'H': 3600,
+    'h': 3600,
+    'I': 3600,
+    'M': 60,
+    'm': 60,
+    'S': 1,
+    's': 1,
+    'f': .000001,
+    '1f': .1,
+    '2f': .01,
+    '3f': .001,
+    '4f': .0001,
+    '5f': .00001,
+    '6f': .000001,
+}
+"""
+Mapping from format codes to minimum formatted time increments in seconds.
+"""
+
 
 class DateTimeFormatter:
     
     """Formats `datetime` objects according to a format string."""
+    
+    
+    @staticmethod
+    def get_min_time_increment(format_string):
+        
+        """
+        Gets the minimum nonzero increment between two `datetime`
+        objects as formatted with the specified format string.
+        """
+        
+        
+        # Split format string at double percents. This yields the
+        # segments of the format string we need to search for format
+        # codes. It's important to get rid of the double percents
+        # so they don't interfere with the search for format codes.
+        # Consider the format string "%%H", for example, which does
+        # not indicate an hour but rather the string "%H".
+        format_segments = format_string.split('%%')
+        
+        # Get minimum time increment for each format segment.
+        increments = [_get_min_time_increment(s) for s in format_segments]
+        
+        # Exclude `None` time increments.
+        increments = [i for i in increments if i is not None]
+        
+        if len(increments) == 0:
+            return None
+        else:
+            return min(increments)
     
     
     def __init__(self, format_string):
@@ -48,11 +103,14 @@ class DateTimeFormatter:
             
         """
         
+        
         self._format_string = format_string
         
         self._strftime_format_string, self._digit_counts = \
             self._parse_format_string(format_string)
-           
+        
+        self._min_time_increment = self.get_min_time_increment(format_string)
+    
     
     def _parse_format_string(self, format_string):
         
@@ -60,8 +118,8 @@ class DateTimeFormatter:
         # segments of the format string we need to search for modified
         # fraction codes. It's important to get rid of the double percents
         # so they don't interfere with the search for modified fraction
-        # codes. Consider the format "%%3f", for example, which does not
-        # indicate a fractional second but rather the string "%3f".
+        # codes. Consider the format string "%%3f", for example, which
+        # does not indicate a fractional second but rather the string "%3f".
         format_segments = format_string.split('%%')
         
         # Replace modified fraction codes with placeholders, retaining
@@ -101,6 +159,11 @@ class DateTimeFormatter:
         return self._format_string
     
     
+    @property
+    def min_time_increment(self):
+        return self._min_time_increment
+    
+    
     def format(self, dt):
         
         """
@@ -116,6 +179,7 @@ class DateTimeFormatter:
         str
             the formatted `datetime`.
         """
+        
         
         # Format with `datetime.strftime`.
         formatted_datetime = dt.strftime(self._strftime_format_string)
@@ -143,3 +207,18 @@ class DateTimeFormatter:
         segments = itertools.chain.from_iterable(pairs)
         
         return ''.join(segments)
+
+
+def _get_min_time_increment(format_segment):
+    
+    # Get format codes of format segment.
+    parts = _FORMAT_CODE_RE.split(format_segment)
+    format_codes = parts[1::2]
+    
+    # Get format code increments.
+    increments = [_FORMAT_CODE_TIME_INCREMENTS[c] for c in format_codes]
+    
+    if len(increments) == 0:
+        return None
+    else:
+        return min(increments)

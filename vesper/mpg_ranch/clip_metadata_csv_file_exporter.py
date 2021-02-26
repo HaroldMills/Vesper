@@ -1,10 +1,7 @@
 """Module containing class `ClipMetadataCsvFileExporter`."""
 
 
-from datetime import (
-    datetime as DateTime,
-    time as Time,
-    timedelta as TimeDelta)
+from datetime import datetime as DateTime, timedelta as TimeDelta
 from pathlib import Path
 import csv
 import tempfile
@@ -17,20 +14,30 @@ from vesper.util.datetime_formatter import DateTimeFormatter
 from vesper.util.time_difference_formatter import TimeDifferenceFormatter
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
+import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Support time and duration rounding. Consider implementing
-# automatic rounding as part of formatting, which chooses a rounding
-# increment for the specific format. This would involve parsing the
-# format for all of its codes, the increment corresponding to each
-# of those, and then the smallest increment.
+'''
+A *measurement* produces a value from a clip.
+A *format* transforms a value for display.
+'''
+
+
+# TODO: Change name of "items" setting for mapping format to "mapping"?
 
 # TODO: Add "Calling Rate" measurement.
 
-# TODO: Support default format specification in measurement classes.
-
 # TODO: Implement table format presets.
+
+# TODO: Make each archive either day-oriented or night-oriented, with
+# orientation specified in "Archive Settings.yaml". Make `day` setting
+# optional for solar event measurements and use day/night orientation
+# to determine default value.
+
+# TODO: Use `jsonschema` package to check table format specification.
+
+# TODO: Support default format specification in measurement classes.
 
 # TODO: Consider supporting user-defined formats. These would appear in
 # a YAML `formats` associated array that accompanies the `columns` array.
@@ -44,13 +51,6 @@ import vesper.util.yaml_utils as yaml_utils
 # define a limited number of value types, e.g. String, Integer, Float,
 # and DateTime. Would measurements be able to define their own types?
 # Maybe not initially, at least.
-
-# TODO: Make each archive either day-oriented or night-oriented, with
-# orientation specified in "Archive Settings.yaml". Make `day` setting
-# optional for solar event measurements and use day/night orientation
-# to determine default value.
-
-# TODO: Use `jsonschema` package to check table format specification.
 
 # TODO: Consider moving measurement and format settings up one level
 # in specification dictionaries, i.e. eliminating "settings"  key.
@@ -216,7 +216,7 @@ columns:
       
     - name: recording_length
       measurement: Recording Duration
-      format: Duration
+      format: Time Difference
               
     - name: detection_time
       measurement: Relative Start Time
@@ -1204,10 +1204,9 @@ _NO_VALUE_STRING = ''
 
 _DEFAULT_DATE_FORMAT = '%Y-%m-%d'
 _DEFAULT_TIME_FORMAT = '%H:%M:%S'
-_DEFAULT_DATE_TIME_FORMATTER = DateTimeFormatter(
-    _DEFAULT_DATE_FORMAT + ' ' + _DEFAULT_TIME_FORMAT)
-_DEFAULT_DURATION_FORMATTER = TimeDifferenceFormatter('%h:%M:%S')
-_DEFAULT_TIME_DIFFERENCE_FORMATTER = TimeDifferenceFormatter('%g%h:%M:%S')
+_DEFAULT_DATE_TIME_FORMAT = _DEFAULT_DATE_FORMAT + ' ' + _DEFAULT_TIME_FORMAT
+_DEFAULT_DURATION_FORMAT = '%h:%M:%S'
+_DEFAULT_TIME_DIFFERENCE_FORMAT = '%g%h:%M:%S'
 
 _TEST_DATE_TIME = DateTime(2020, 1, 1)
 
@@ -1251,31 +1250,6 @@ class DecimalFormat:
         return self._format.format(x)
 
 
-class DurationFormat:
-
-    name = 'Duration'
-    
-    def __init__(self, settings=None):
-        if settings is None:
-            settings = {}
-        self._formatter = self._get_formatter(settings)
-    
-    def _get_formatter(self, settings):
-        _format = settings.get('format')
-        if _format is None:
-            return _DEFAULT_DURATION_FORMATTER
-        else:
-            return TimeDifferenceFormatter(_format)
-        
-    def format(self, duration, clip):
-        if duration is None:
-            return _NO_VALUE_STRING
-        else:
-            # TODO: Don't round like this! Give user control of rounding.
-            duration = round(duration)
-            return self._formatter.format(duration)
-
-
 class _DateTimeFormat:
     
     def __init__(self, local, settings=None):
@@ -1286,28 +1260,23 @@ class _DateTimeFormat:
             settings = {}
         
         self._formatter = self._get_formatter(settings)
-        self._rounding_increment = settings.get('rounding_increment', None)
+        self._round, self._rounding_increment, self._rounding_mode = \
+            _get_rounding(settings, False, self._formatter.min_time_increment)
     
     def _get_formatter(self, settings):
         
-        format_ = settings.get('format')
+        format_ = settings.get('format', _DEFAULT_DATE_TIME_FORMAT)
         
-        if format_ is None:
-            return _DEFAULT_DATE_TIME_FORMATTER
+        # Try format string on test `DateTime` and raise an exception
+        # if there's a problem.
+        try:
+            _TEST_DATE_TIME.strftime(format_)
+        except Exception as e:
+            raise ValueError(
+                f'Could not format test time with "{format_}". '
+                f'Error message was: {str(e)}')
         
-        else:
-            # format string provided
-            
-            # Try format string on test `DateTime` and raise an exception
-            # if there's a problems.
-            try:
-                _TEST_DATE_TIME.strftime(format_)
-            except Exception as e:
-                raise ValueError(
-                    f'Could not format test time with "{format_}". '
-                    f'Error message was: {str(e)}')
-            
-            return DateTimeFormatter(format_)
+        return DateTimeFormatter(format_)
     
     def format(self, dt, clip):
         
@@ -1317,8 +1286,9 @@ class _DateTimeFormat:
         else:
             
             # Round time if needed.
-            if self._rounding_increment is not None:
-                dt = _round_time(dt, self._rounding_increment)
+            if self._round:
+                dt = time_utils.round_datetime(
+                    dt, self._rounding_increment, self._rounding_mode)
                 
             # Get local time if needed.
             if self._local:
@@ -1329,26 +1299,26 @@ class _DateTimeFormat:
             return self._formatter.format(dt)
 
 
-# TODO: Use `time_utils.round_datetime` and `time_utils.round_time`
-# here to allow rounding increments larger than one hour. Note that
-# some times in the middles of increments might round differently
-# afterward. Would that be a problem?
-# TODO: Perhaps require that rounding increment evenly divide 24 hours?
-# TODO: Add support for different rounding modes, so that, for
-# example, one could round down or up to nearest hour as well as to
-# nearest hour.
-def _round_time(time, increment):
+def _get_rounding(settings, default_round, default_increment):
     
-    if isinstance(time, (DateTime, Time)):
-                  
-        seconds_after_the_hour = time.minute * 60 + time.second
+    round_ = settings.get('round')
+    increment = settings.get('rounding_increment')
+    mode = settings.get('rounding_mode')
+
+    if round_ is None:
+        round_ = default_round or increment is not None or mode is not None
         
-        time = time.replace(minute=0, second=0, microsecond=0)
+    if round_:
         
-        increments = int(round(seconds_after_the_hour / increment))
-        delta = TimeDelta(seconds=increments * increment)
-        
-        return time + delta
+        if increment is None:
+            increment = default_increment
+            if increment is None:
+                increment = 1e-6
+                
+        if mode is None:
+            mode = 'nearest'
+    
+    return round_, increment, mode
 
 
 class LocalTimeFormat(_DateTimeFormat):
@@ -1432,21 +1402,41 @@ class SolarDateFormat:
             return date.strftime(self._format)
 
 
-class TimeDifferenceFormat(DurationFormat):
-    
+class TimeDifferenceFormat:
+
     name = 'Time Difference'
     
     def __init__(self, settings=None):
         if settings is None:
             settings = {}
+        self._negate = settings.get('negate', False)
         self._formatter = self._get_formatter(settings)
+        self._round, self._rounding_increment, self._rounding_mode = \
+            _get_rounding(settings, True, self._formatter.min_time_increment)
     
     def _get_formatter(self, settings):
-        _format = settings.get('format')
-        if _format is None:
-            return _DEFAULT_TIME_DIFFERENCE_FORMATTER
+        _format = settings.get('format', _DEFAULT_TIME_DIFFERENCE_FORMAT)
+        return TimeDifferenceFormatter(_format)
+    
+    def format(self, difference, clip):
+        
+        if difference is None:
+            return _NO_VALUE_STRING
+        
         else:
-            return TimeDifferenceFormatter(_format)
+            
+            # Negate difference if needed.
+            if self._negate:
+                difference = -difference
+                
+            # Round difference if needed.
+            if self._round:
+                td = TimeDelta(seconds=difference)
+                rounded_td = time_utils.round_timedelta(
+                    td, self._rounding_increment, self._rounding_mode)
+                difference = rounded_td.total_seconds()
+                
+            return self._formatter.format(difference)
 
 
 class UtcTimeFormat(_DateTimeFormat):
@@ -1461,7 +1451,6 @@ _FORMAT_CLASSES = dict((c.name, c) for c in [
     BooleanFormat,
     CallSpeciesFormat,
     DecimalFormat,
-    DurationFormat,
     LocalTimeFormat,
     LowerCaseFormat,
     MappingFormat,
