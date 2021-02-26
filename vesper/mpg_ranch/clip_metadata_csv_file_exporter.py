@@ -24,8 +24,6 @@ A *format* transforms a value for display.
 '''
 
 
-# TODO: Change name of "items" setting for mapping format to "mapping"?
-
 # TODO: Add "Calling Rate" measurement.
 
 # TODO: Implement table format presets.
@@ -182,7 +180,7 @@ columns:
           - Call Species
           - name: Mapping
             settings:
-                items:
+                mapping:
                     DoubleUp: dbup
                     Other: othe
                     Unknown: unkn
@@ -193,7 +191,7 @@ columns:
       format:
           name: Mapping
           settings:
-              items:
+              mapping:
                   Baldy: baldy
                   Floodplain: flood
                   Ridge: ridge
@@ -254,7 +252,7 @@ columns:
           - Boolean
           - name: Mapping
             settings:
-                items:
+                mapping:
                     'True': 'yes'
                     'False': 'no'
     
@@ -359,7 +357,7 @@ columns:
 #       format:
 #           name: Mapping
 #           settings:
-#               items:
+#               mapping:
 #                   Day: day
 #                   Evening Civil Twilight: civil_twilight
 #                   Evening Nautical Twilight: nautical_twilight
@@ -374,7 +372,7 @@ columns:
 #       format:
 #           name: Mapping
 #           settings:
-#               items:
+#               mapping:
 #                   Day: day
 #                   Evening Civil Twilight: dusk
 #                   Evening Nautical Twilight: dusk
@@ -1348,7 +1346,7 @@ class MappingFormat:
         if settings is None:
             self._mapping = {}
         else:
-            self._mapping = settings.get('items', {})
+            self._mapping = settings.get('mapping', {})
             
     def format(self, value, clip):
         if value is None:
