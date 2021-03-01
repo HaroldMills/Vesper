@@ -33,64 +33,99 @@ Recent Clip Count measurement settings:
     lumped_classifications - list of lists, default []
 
 Expression Evaluator operators:
-    +
-    -
-    *
-    /
-    //
-    %
-    ^
-    negate
-    log
-    log10
+
+    null
+    true
+    false
+    <number>
+    x
+    
+    add
+    sub
+    mul
+    div
+    idiv
+    mod
+    
+    pow
     exp
-    swap
-    sign
-    compare
-    >
-    >=
-    <
-    <=
-    floor
+    ln
+    log10
+    
+    abs
+    neg
     ceiling
+    floor
     round
+    truncate
+    
     int
     float
+    
+    gt
+    ge
+    lt
+    le
+    eq
+    ne
+    
+    not
+    and
+    or
+    xor
+
 
 columns:
 
     - name: Time Before Sunrise
       measurement:
           name: Relative Start Time
-          settings: {reference_time: Sunrise}
-      formatter:
-          - name: Expression Evaluator
-            settings: {postfix_expression: "x negate"}
-          - Time Difference Formatter
+          settings: {reference_time: Sunrise, negate: true}
+      formatter: Time Difference Formatter
 
 
 Formatter classes:
     +ExpressionEvaluator (Number -> Number)
     -BooleanFormatter, (Boolean -> String)
     CallSpeciesFormatter, (String -> String)
-    +DateFormatter, (Date -> String)
     DecimalFormatter, (Number -> String)
     LocalTimeFormatter, (DateTime -> String)
     LowerCaseFormatter, (String -> String)
     ValueMapper, (Any -> Any)
     -NocturnalBirdMigrationSeasonFormatter, (DateTime -> String)
-    +NumberFormatter, (Number -> String)
-    +FloatParser, (String -> Float)
-    +IntegerParser, (String -> Integer)
     PercentFormatter, (Number -> String)
-    +SolarDateFinder, (DateTime -> Date)
     TimeDifferenceFormatter, (Number -> String)
     +UpperCaseFormatter, (String -> String)
     UtcTimeFormatter, (DateTime -> String)
+    
+All formatters but `ValueMapper` automatically map `None` to `None`,
+and this behavior cannot be modified.
+
+By default, `ValueMapper` maps keys for which values are not specified
+to themselves, so it maps `None` to `None`. A different value for `None`
+can be specified explicitly just as for any other key.
+
+`ValueMapper` has a `default` setting that allows specification of a
+default mapping value. When this setting is present, keys for which
+values are not specified in the `mapping` setting are mapped to the
+default.
 '''
 
 
-# TODO: Add "Calling Rate" measurement.
+# TODO: Eliminate `BooleanFormatter`.
+
+# TODO: Add `ExpressionEvaluator`.
+
+# Reimplement some column formatters using new classes, eliminating
+# `NocturnalBirdMigrationSeasonFormatter`.
+
+# TODO: Generalize `CallSpeciesFormatter` to strip prefix if present
+# and otherwise return empty string? Maybe `SubclassificationFormatter`?
+
+# TODO: Add "Recent Clip Count" measurement. Reimplement "duplicate"
+# column in terms of it.
+
+# TODO: Add `UpperCaseFormatter`.
 
 # TODO: Implement table format presets.
 
@@ -227,11 +262,10 @@ columns:
       formatter:
           - name: Local Time Formatter
             settings: {format: "%m"}
-          - name: Integer Parser
           - name: Expression Evaluator
-            settings: {postfix_expression: "x 6 >"}
+            settings: {expression: "x int 6 gt"}
           - name: Value Mapper
-            settings: {mapping: {0: Spring, 1: Fall}}
+            settings: {mapping: {false: Spring, true: Fall}}
   
     - name: year
       measurement: Start Time
@@ -320,9 +354,9 @@ columns:
               excluded_classifications: [Other, Unknown, Weak]
       formatter:
           - name: Expression Evaluator
-            settings: {postfix_expression: "x 1 >"}
+            settings: {expression: "x 1 gt"}
           - name: Value Mapper
-            settings: {0: "no", 1: "yes"}
+            settings: {false: "no", true: "yes"}
     
     - name: sunset
       measurement:
