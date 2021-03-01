@@ -11,7 +11,8 @@ from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
 from vesper.util.bunch import Bunch
 from vesper.util.datetime_formatter import DateTimeFormatter
-from vesper.util.time_difference_formatter import TimeDifferenceFormatter
+from vesper.util.time_difference_formatter import (
+    TimeDifferenceFormatter as TimeDifferenceFormatter_)
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.time_utils as time_utils
@@ -21,6 +22,71 @@ import vesper.util.yaml_utils as yaml_utils
 '''
 A *measurement* produces a value from a clip.
 A *format* transforms a value for display.
+'''
+
+
+'''
+Recent Clip Count measurement settings:
+    count_interval_size (seconds, default 3600)
+    included_classifications - list, default [*]
+    excluded_classifications - list, default []
+    lumped_classifications - list of lists, default []
+
+Expression Evaluator operators:
+    +
+    -
+    *
+    /
+    //
+    %
+    ^
+    negate
+    log
+    log10
+    exp
+    swap
+    sign
+    compare
+    >
+    >=
+    <
+    <=
+    floor
+    ceiling
+    round
+    int
+    float
+
+columns:
+
+    - name: Time Before Sunrise
+      measurement:
+          name: Relative Start Time
+          settings: {reference_time: Sunrise}
+      formatter:
+          - name: Expression Evaluator
+            settings: {postfix_expression: "x negate"}
+          - Time Difference Formatter
+
+
+Formatter classes:
+    +ExpressionEvaluator (Number -> Number)
+    -BooleanFormatter, (Boolean -> String)
+    CallSpeciesFormatter, (String -> String)
+    +DateFormatter, (Date -> String)
+    DecimalFormatter, (Number -> String)
+    LocalTimeFormatter, (DateTime -> String)
+    LowerCaseFormatter, (String -> String)
+    ValueMapper, (Any -> Any)
+    -NocturnalBirdMigrationSeasonFormatter, (DateTime -> String)
+    +NumberFormatter, (Number -> String)
+    +FloatParser, (String -> Float)
+    +IntegerParser, (String -> Integer)
+    PercentFormatter, (Number -> String)
+    +SolarDateFinder, (DateTime -> Date)
+    TimeDifferenceFormatter, (Number -> String)
+    +UpperCaseFormatter, (String -> String)
+    UtcTimeFormatter, (DateTime -> String)
 '''
 
 
@@ -151,45 +217,52 @@ Moon:
 '''
 
 
-_TABLE_FORMAT = yaml_utils.load('''
+"""
+_TABLE_FORMAT_NEW = yaml_utils.load('''
 
 columns:
 
-    - name: season
+    - name: Migration Season
       measurement: Start Time
-      format: Nocturnal Bird Migration Season
+      formatter:
+          - name: Local Time Formatter
+            settings: {format: "%m"}
+          - name: Integer Parser
+          - name: Expression Evaluator
+            settings: {postfix_expression: "x 6 >"}
+          - name: Value Mapper
+            settings: {mapping: {0: Spring, 1: Fall}}
   
     - name: year
       measurement: Start Time
-      format:
-          name: Solar Date
-          settings:
-              day: False
-              format: "%Y"
+      formatter:
+          - name: Solar Date Finder
+            settings: {day: false}
+          - name: Date Formatter
+            settings: {format: "%Y"}
 
     - name: detector
       measurement: Detector Type
-      format: Lower Case
+      formatter: Lower Case Formatter
 
     - name: species
       measurement:
           name: Annotation Value
-          settings:
-              annotation_name: Classification
-      format:
-          - Call Species
-          - name: Mapping
+          settings: {annotation_name: Classification}
+      formatter:
+          - Call Species Formatter
+          - name: Value Mapper
             settings:
                 mapping:
                     DoubleUp: dbup
                     Other: othe
                     Unknown: unkn
-          - Lower Case
+          - Lower Case Formatter
       
     - name: site
       measurement: Station Name
-      format:
-          name: Mapping
+      formatter:
+          name: Value Mapper
           settings:
               mapping:
                   Baldy: baldy
@@ -199,45 +272,224 @@ columns:
       
     - name: date
       measurement: Start Time
-      format:
-          name: Solar Date
+      formatter:
+          - name: Solar Date Finder
+            settings: {day: False}
+          - name: Date Formatter
+            settings: {format: "%m/%d/%y"}
+              
+    - name: recording_start
+      measurement: Recording Start Time
+      formatter:
+          - name: Local Time Formatter
+            settings: {format: "%H:%M:%S"}
+      
+    - name: recording_length
+      measurement: Recording Duration
+      formatter: Time Difference Formatter
+              
+    - name: detection_time
+      measurement: Relative Start Time
+      formatter: Time Difference Formatter
+      
+    - name: real_detection_time
+      measurement: Start Time
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%H:%M:%S"}
+              
+    - name: real_detection_time
+      measurement: Start Time
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+              
+    - name: rounded_to_half_hour
+      measurement: Start Time
+      formatter:
+          - name: Time Rounder
+            settings: {increment: 1800}
+          - name: Local Time Formatter
+            settings: {format: "%H:%M:%S"}
+      
+    - name: duplicate
+      measurement:
+          name: Recent Call Count
+          settings:
+              count_interval_size: 60
+              excluded_classifications: [Other, Unknown, Weak]
+      formatter:
+          - name: Expression Evaluator
+            settings: {postfix_expression: "x 1 >"}
+          - name: Value Mapper
+            settings: {0: "no", 1: "yes"}
+    
+    - name: sunset
+      measurement:
+          name: Sunset
+          settings: {day: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+      
+    - name: civil_dusk
+      measurement:
+          name: Civil Dusk
+          settings: {day: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+      
+    - name: nautical_dusk
+      measurement:
+          name: Nautical Dusk
+          settings: {day: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+      
+    - name: astronomical_dusk
+      measurement:
+          name: Astronomical Dusk
+          settings: {day: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+      
+    - name: astronomical_dawn
+      measurement:
+          name: Astronomical Dawn
+          settings: {day: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+      
+    - name: nautical_dawn
+      measurement:
+          name: Nautical Dawn
+          settings: {day: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+      
+    - name: civil_dawn
+      measurement:
+          name: Civil Dawn
+          settings: {day: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+      
+    - name: sunrise
+      measurement:
+          name: Sunrise
+          settings: {day: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+      
+    - name: moon_altitude
+      measurement: Lunar Altitude
+      formatter:
+          name: Decimal Formatter
+          settings: {detail: ".1"}
+
+    - name: moon_illumination
+      measurement: Lunar Illumination
+      formatter:
+          name: Percent Formatter
+          settings: {detail: ".1"}
+''')
+"""
+
+
+_TABLE_FORMAT = yaml_utils.load('''
+
+columns:
+
+    - name: season
+      measurement: Start Time
+      formatter: Nocturnal Bird Migration Season Formatter
+  
+    - name: year
+      measurement: Start Time
+      formatter:
+          name: Solar Date Formatter
+          settings:
+              day: False
+              format: "%Y"
+
+    - name: detector
+      measurement: Detector Type
+      formatter: Lower Case Formatter
+
+    - name: species
+      measurement:
+          name: Annotation Value
+          settings:
+              annotation_name: Classification
+      formatter:
+          - Call Species Formatter
+          - name: Value Mapper
+            settings:
+                mapping:
+                    DoubleUp: dbup
+                    Other: othe
+                    Unknown: unkn
+          - Lower Case Formatter
+      
+    - name: site
+      measurement: Station Name
+      formatter:
+          name: Value Mapper
+          settings:
+              mapping:
+                  Baldy: baldy
+                  Floodplain: flood
+                  Ridge: ridge
+                  Sheep Camp: sheep
+      
+    - name: date
+      measurement: Start Time
+      formatter:
+          name: Solar Date Formatter
           settings:
               day: False
               format: "%m/%d/%y"
               
     - name: recording_start
       measurement: Recording Start Time
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%H:%M:%S"
       
     - name: recording_length
       measurement: Recording Duration
-      format: Time Difference
+      formatter: Time Difference Formatter
               
     - name: detection_time
       measurement: Relative Start Time
-      format: Time Difference
+      formatter: Time Difference Formatter
       
     - name: real_detection_time
       measurement: Start Time
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%H:%M:%S"
               
     - name: real_detection_time
       measurement: Start Time
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%m/%d/%y %H:%M:%S"
               
     - name: rounded_to_half_hour
       measurement: Start Time
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%H:%M:%S"
               rounding_increment: 1800
@@ -248,9 +500,9 @@ columns:
           settings:
               min_intercall_interval: 60
               ignored_classifications: [Other, Unknown, Weak]
-      format:
-          - Boolean
-          - name: Mapping
+      formatter:
+          - Boolean Formatter
+          - name: Value Mapper
             settings:
                 mapping:
                     'True': 'yes'
@@ -261,8 +513,8 @@ columns:
           name: Sunset
           settings:
               day: False
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
@@ -271,8 +523,8 @@ columns:
           name: Civil Dusk
           settings:
               day: False
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
@@ -281,8 +533,8 @@ columns:
           name: Nautical Dusk
           settings:
               day: False
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
@@ -291,8 +543,8 @@ columns:
           name: Astronomical Dusk
           settings:
               day: False
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
@@ -301,8 +553,8 @@ columns:
           name: Astronomical Dawn
           settings:
               day: False
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
@@ -311,8 +563,8 @@ columns:
           name: Nautical Dawn
           settings:
               day: False
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
@@ -321,8 +573,8 @@ columns:
           name: Civil Dawn
           settings:
               day: False
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
@@ -331,22 +583,22 @@ columns:
           name: Sunrise
           settings:
               day: False
-      format:
-          name: Local Time
+      formatter:
+          name: Local Time Formatter
           settings:
               format: "%m/%d/%y %H:%M:%S"
       
     - name: moon_altitude
       measurement: Lunar Altitude
-      format:
-          name: Decimal
+      formatter:
+          name: Decimal Formatter
           settings:
               detail: ".1"
 
     - name: moon_illumination
       measurement: Lunar Illumination
-      format:
-          name: Percent
+      formatter:
+          name: Percent Formatter
           settings:
               detail: ".1"
 ''')
@@ -354,8 +606,8 @@ columns:
 
 #     - name: twilight
 #       measurement: Solar Period
-#       format:
-#           name: Mapping
+#       formatter:
+#           name: Value Mapper
 #           settings:
 #               mapping:
 #                   Day: day
@@ -369,8 +621,8 @@ columns:
 #         
 #     - name: dusk_dawn
 #       measurement: Solar Period
-#       format:
-#           name: Mapping
+#       formatter:
+#           name: Value Mapper
 #           settings:
 #               mapping:
 #                   Day: day
@@ -456,15 +708,15 @@ Example relative start time column specs:
           name: Relative Start Time
           settings:
               reference_time: Recording End Time
-              negate: True
-      format: Time Difference
+              negate: true
+      formatter: Time Difference Formatter
     
     - name: Time After Sunset
       measurement:
           name: Relative Start Time
           settings:
               reference_time: Sunset
-              day: False
+              day: false
       format: Time Difference
 
     - name: Time Before Sunrise
@@ -472,9 +724,9 @@ Example relative start time column specs:
           name: Relative Start Time
           settings:
               reference_time: Sunrise
-              day: False
-              negate: True
-      format: Time Difference
+              day: false
+              negate: true
+      format: Time Difference Formatter
 '''
 
 
@@ -596,7 +848,7 @@ def _create_table_column_aux(column, column_num):
         
         name = column
         measurement = _get_measurement_from_name(name)
-        format_ = None
+        formatter = None
     
     else:
         # `column` is not string
@@ -605,9 +857,9 @@ def _create_table_column_aux(column, column_num):
         
         name, measurement = \
             _get_column_name_and_measurement(column, column_num)
-        format_ = _get_column_format(column, name)
+        formatter = _get_column_formatter(column, name)
     
-    return Bunch(name=name, measurement=measurement, format=format_)
+    return Bunch(name=name, measurement=measurement, formatter=formatter)
 
 
 def _get_measurement_from_name(name):
@@ -674,85 +926,85 @@ def _get_measurement_name(measurement, column_num):
             f'missing required "name" item.')
 
 
-def _get_column_format(column, name):
+def _get_column_formatter(column, name):
     
     try:
         
-        format_ = column.get('format')
+        formatter = column.get('formatter')
         
-        if format_ is None:
+        if formatter is None:
             return None
         
-        elif isinstance(format_, (list, tuple)):
-            # sequence of format specifications
+        elif isinstance(formatter, (list, tuple)):
+            # sequence of formatter specifications
             
-            return [_get_format(f) for f in format_]
+            return [_get_formatter(f) for f in formatter]
         
         else:
-            # single format specification
+            # single formatter specification
             
-            return _get_format(format_)
+            return _get_formatter(formatter)
     
     except Exception as e:
         raise CommandExecutionError(f'For column "{name}": {str(e)}')
 
 
-def _get_format(format_):
+def _get_formatter(formatter):
     
-    if isinstance(format_, str):
-        # string format name
+    if isinstance(formatter, str):
+        # string formatter name
         
-        cls = _get_format_class(format_)
+        cls = _get_formatter_class(formatter)
         return cls()
         
     else:
-        # `dict` format specification
+        # `dict` formatter specification
         
-        name = _get_format_name(format_)
-        cls = _get_format_class(name)
-        settings = format_.get('settings')
+        name = _get_formatter_name(formatter)
+        cls = _get_formatter_class(name)
+        settings = formatter.get('settings')
         if settings is None:
             return cls()
         else:
             return cls(settings)
     
     
-def _get_format_class(name):
+def _get_formatter_class(name):
     try:
-        return _FORMAT_CLASSES[name]
+        return _FORMATTER_CLASSES[name]
     except KeyError:
         raise CommandExecutionError(
-            f'Unrecognized format name "{name}".')
+            f'Unrecognized formatter name "{name}".')
 
 
-def _get_format_name(format_):
+def _get_formatter_name(formatter):
     try:
-        return format_['name']
+        return formatter['name']
     except KeyError:
         raise CommandExecutionError(
-            'Format specification is missing required "name" item.')
+            'Formatter specification is missing required "name" item.')
 
 
 def _get_column_value(column, clip):
     
     value = column.measurement.measure(clip)
     
-    format_ = column.format
+    formatter = column.formatter
     
-    if format_ is None:
+    if formatter is None:
         return str(value)
     
-    elif isinstance(format_, (list, tuple)):
-        # sequence of formats
+    elif isinstance(formatter, (list, tuple)):
+        # sequence of formatters
         
-        for f in format_:
+        for f in formatter:
             value = f.format(value, clip)
         return value
             
     else:
-        # single format
+        # single formatter
         
-        return format_.format(value, clip)
+        return formatter.format(value, clip)
     
     
 class AnnotationValueMeasurement:
@@ -1209,9 +1461,9 @@ _DEFAULT_TIME_DIFFERENCE_FORMAT = '%g%h:%M:%S'
 _TEST_DATE_TIME = DateTime(2020, 1, 1)
 
 
-class BooleanFormat:
+class BooleanFormatter:
     
-    name = 'Boolean'
+    name = 'Boolean Formatter'
     
     def format(self, value, clip):
         if value is None:
@@ -1222,9 +1474,9 @@ class BooleanFormat:
             return 'False'
     
     
-class CallSpeciesFormat:
+class CallSpeciesFormatter:
     
-    name = 'Call Species'
+    name = 'Call Species Formatter'
     
     def format(self, classification, clip):
         prefix = 'Call.'
@@ -1234,9 +1486,9 @@ class CallSpeciesFormat:
             return classification[len(prefix):]
         
            
-class DecimalFormat:
+class DecimalFormatter:
     
-    name = 'Decimal'
+    name = 'Decimal Formatter'
     
     def __init__(self, settings=None):
         if settings is None:
@@ -1248,7 +1500,7 @@ class DecimalFormat:
         return self._format.format(x)
 
 
-class _DateTimeFormat:
+class _DateTimeFormatter:
     
     def __init__(self, local, settings=None):
         
@@ -1319,17 +1571,17 @@ def _get_rounding(settings, default_round, default_increment):
     return round_, increment, mode
 
 
-class LocalTimeFormat(_DateTimeFormat):
+class LocalTimeFormatter(_DateTimeFormatter):
     
-    name = 'Local Time'
+    name = 'Local Time Formatter'
     
     def __init__(self, settings=None):
         super().__init__(True, settings)
     
     
-class LowerCaseFormat:
+class LowerCaseFormatter:
     
-    name = 'Lower Case'
+    name = 'Lower Case Formatter'
     
     def format(self, value, clip):
         if value is None:
@@ -1338,9 +1590,9 @@ class LowerCaseFormat:
             return value.lower()
     
     
-class MappingFormat:
+class ValueMapper:
     
-    name = 'Mapping'
+    name = 'Value Mapper'
     
     def __init__(self, settings=None):
         if settings is None:
@@ -1355,9 +1607,9 @@ class MappingFormat:
             return self._mapping.get(value, value)
     
     
-class NocturnalBirdMigrationSeasonFormat:
+class NocturnalBirdMigrationSeasonFormatter:
     
-    name = 'Nocturnal Bird Migration Season'
+    name = 'Nocturnal Bird Migration Season Formatter'
         
     def format(self, time, clip):
         if time is None:
@@ -1367,17 +1619,17 @@ class NocturnalBirdMigrationSeasonFormat:
             return 'Fall' if night.month >= 7 else 'Spring'
     
     
-class PercentFormat(DecimalFormat):
+class PercentFormatter(DecimalFormatter):
     
-    name = 'Percent'
+    name = 'Percent Formatter'
     
     def format(self, x, clip):
         return self._format.format(100 * x)
 
 
-class SolarDateFormat:
+class SolarDateFormatter:
     
-    name = 'Solar Date'
+    name = 'Solar Date Formatter'
     
     def __init__(self, settings):
         self._day = settings.get('day')
@@ -1400,9 +1652,9 @@ class SolarDateFormat:
             return date.strftime(self._format)
 
 
-class TimeDifferenceFormat:
+class TimeDifferenceFormatter:
 
-    name = 'Time Difference'
+    name = 'Time Difference Formatter'
     
     def __init__(self, settings=None):
         if settings is None:
@@ -1414,7 +1666,7 @@ class TimeDifferenceFormat:
     
     def _get_formatter(self, settings):
         _format = settings.get('format', _DEFAULT_TIME_DIFFERENCE_FORMAT)
-        return TimeDifferenceFormatter(_format)
+        return TimeDifferenceFormatter_(_format)
     
     def format(self, difference, clip):
         
@@ -1437,24 +1689,24 @@ class TimeDifferenceFormat:
             return self._formatter.format(difference)
 
 
-class UtcTimeFormat(_DateTimeFormat):
+class UtcTimeFormatter(_DateTimeFormatter):
     
-    name = 'UTC Time'
+    name = 'UTC Time Formatter'
     
     def __init__(self, settings=None):
         super().__init__(False, settings)
             
     
-_FORMAT_CLASSES = dict((c.name, c) for c in [
-    BooleanFormat,
-    CallSpeciesFormat,
-    DecimalFormat,
-    LocalTimeFormat,
-    LowerCaseFormat,
-    MappingFormat,
-    NocturnalBirdMigrationSeasonFormat,
-    PercentFormat,
-    SolarDateFormat,
-    TimeDifferenceFormat,
-    UtcTimeFormat,
+_FORMATTER_CLASSES = dict((c.name, c) for c in [
+    BooleanFormatter,
+    CallSpeciesFormatter,
+    DecimalFormatter,
+    LocalTimeFormatter,
+    LowerCaseFormatter,
+    ValueMapper,
+    NocturnalBirdMigrationSeasonFormatter,
+    PercentFormatter,
+    SolarDateFormatter,
+    TimeDifferenceFormatter,
+    UtcTimeFormatter,
 ])
