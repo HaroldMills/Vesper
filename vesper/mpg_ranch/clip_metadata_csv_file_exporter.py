@@ -1020,25 +1020,33 @@ def _get_formatter_name(formatter):
 
 
 def _get_column_value(column, clip):
-    
     value = column.measurement.measure(clip)
+    return _format_value(value, clip, column.formatter)
+
+
+def _format_value(value, clip, formatter):
     
-    formatter = column.formatter
+    if formatter is not None:
     
-    if formatter is None:
+        if isinstance(formatter, (list, tuple)):
+            # sequence of formatters
+            
+            for f in formatter:
+                value = f.format(value, clip)
+                
+        else:
+            # single formatter
+            
+            value = formatter.format(value, clip)
+    
+    if value is None:
+        return _NO_VALUE_STRING
+    
+    elif not isinstance(value, str):
         return str(value)
     
-    elif isinstance(formatter, (list, tuple)):
-        # sequence of formatters
-        
-        for f in formatter:
-            value = f.format(value, clip)
-        return value
-            
     else:
-        # single formatter
-        
-        return formatter.format(value, clip)
+        return value
     
     
 class AnnotationValueMeasurement:
@@ -1495,46 +1503,57 @@ _DEFAULT_TIME_DIFFERENCE_FORMAT = '%g%h:%M:%S'
 _TEST_DATE_TIME = DateTime(2020, 1, 1)
 
 
-class BooleanFormatter:
-    
-    name = 'Boolean Formatter'
+class Formatter:
     
     def format(self, value, clip):
         if value is None:
-            return _NO_VALUE_STRING
-        elif value:
+            return None
+        else:
+            return self._format(value, clip)
+        
+        
+class BooleanFormatter(Formatter):
+    
+    name = 'Boolean Formatter'
+    
+    def _format(self, value, clip):
+        if value is False:
+            return 'False'
+        elif value is True:
             return 'True'
         else:
-            return 'False'
+            raise ValueError(
+                f'Unexpected measurement value "{value}": value is '
+                f'supposed to be boolean.')
     
     
-class CallSpeciesFormatter:
+class CallSpeciesFormatter(Formatter):
     
     name = 'Call Species Formatter'
     
-    def format(self, classification, clip):
+    def _format(self, classification, clip):
         prefix = 'Call.'
-        if classification is None or not classification.startswith(prefix):
-            return _NO_VALUE_STRING
+        if not classification.startswith(prefix):
+            return None
         else:
             return classification[len(prefix):]
         
            
-class DecimalFormatter:
+class DecimalFormatter(Formatter):
     
     name = 'Decimal Formatter'
     
     def __init__(self, settings=None):
         if settings is None:
-            self._format = '{:f}'
+            self._format_string = '{:f}'
         else:
-            self._format = '{:' + settings.get('detail', '') + 'f}'
+            self._format_string = '{:' + settings.get('detail', '') + 'f}'
             
-    def format(self, x, clip):
-        return self._format.format(x)
+    def _format(self, x, clip):
+        return self._format_string.format(x)
 
 
-class _DateTimeFormatter:
+class _DateTimeFormatter(Formatter):
     
     def __init__(self, local, settings=None):
         
@@ -1562,25 +1581,20 @@ class _DateTimeFormatter:
         
         return DateTimeFormatter(format_)
     
-    def format(self, dt, clip):
+    def _format(self, dt, clip):
         
-        if dt is None:
-            return _NO_VALUE_STRING
+        # Round time if needed.
+        if self._round:
+            dt = time_utils.round_datetime(
+                dt, self._rounding_increment, self._rounding_mode)
         
-        else:
-            
-            # Round time if needed.
-            if self._round:
-                dt = time_utils.round_datetime(
-                    dt, self._rounding_increment, self._rounding_mode)
-                
-            # Get local time if needed.
-            if self._local:
-                time_zone = clip.station.tz
-                dt = dt.astimezone(time_zone)
-            
-            # Get time string.
-            return self._formatter.format(dt)
+        # Get local time if needed.
+        if self._local:
+            time_zone = clip.station.tz
+            dt = dt.astimezone(time_zone)
+        
+        # Get time string.
+        return self._formatter.format(dt)
 
 
 def _get_rounding(settings, default_round, default_increment):
@@ -1613,18 +1627,15 @@ class LocalTimeFormatter(_DateTimeFormatter):
         super().__init__(True, settings)
     
     
-class LowerCaseFormatter:
+class LowerCaseFormatter(Formatter):
     
     name = 'Lower Case Formatter'
     
-    def format(self, value, clip):
-        if value is None:
-            return _NO_VALUE_STRING
-        else:
-            return value.lower()
+    def _format(self, value, clip):
+        return value.lower()
     
     
-class ValueMapper:
+class ValueMapper(Formatter):
     
     name = 'Value Mapper'
     
@@ -1634,34 +1645,28 @@ class ValueMapper:
         else:
             self._mapping = settings.get('mapping', {})
             
-    def format(self, value, clip):
-        if value is None:
-            return _NO_VALUE_STRING
-        else:
-            return self._mapping.get(value, value)
+    def _format(self, value, clip):
+        return self._mapping.get(value, value)
     
     
-class NocturnalBirdMigrationSeasonFormatter:
+class NocturnalBirdMigrationSeasonFormatter(Formatter):
     
     name = 'Nocturnal Bird Migration Season Formatter'
         
-    def format(self, time, clip):
-        if time is None:
-            return _NO_VALUE_STRING
-        else:
-            night = clip.station.get_night(time)
-            return 'Fall' if night.month >= 7 else 'Spring'
+    def _format(self, time, clip):
+        night = clip.station.get_night(time)
+        return 'Fall' if night.month >= 7 else 'Spring'
     
     
 class PercentFormatter(DecimalFormatter):
     
     name = 'Percent Formatter'
     
-    def format(self, x, clip):
-        return self._format.format(100 * x)
+    def _format(self, x, clip):
+        return super()._format(100 * x, clip)
 
 
-class SolarDateFormatter:
+class SolarDateFormatter(Formatter):
     
     name = 'Solar Date Formatter'
     
@@ -1669,24 +1674,19 @@ class SolarDateFormatter:
         self._day = settings.get('day')
         if self._day is None:
             raise ValueError('Measurement settings lack required "day" item.')
-        self._format = settings.get('format', _DEFAULT_DATE_FORMAT)
+        self._format_string = settings.get('format', _DEFAULT_DATE_FORMAT)
     
-    def format(self, time, clip):
+    def _format(self, time, clip):
         
-        if time is None:
-            return _NO_VALUE_STRING
+        # Get solar day or night.
+        sun_moon = _get_sun_moon(clip)
+        date = sun_moon.get_solar_date(time, self._day)
         
-        else:
-            
-            # Get solar day or night.
-            sun_moon = _get_sun_moon(clip)
-            date = sun_moon.get_solar_date(time, self._day)
-            
-            # Format date.
-            return date.strftime(self._format)
+        # Format date.
+        return date.strftime(self._format_string)
 
 
-class TimeDifferenceFormatter:
+class TimeDifferenceFormatter(Formatter):
 
     name = 'Time Difference Formatter'
     
@@ -1699,28 +1699,23 @@ class TimeDifferenceFormatter:
             _get_rounding(settings, True, self._formatter.min_time_increment)
     
     def _get_formatter(self, settings):
-        _format = settings.get('format', _DEFAULT_TIME_DIFFERENCE_FORMAT)
-        return TimeDifferenceFormatter_(_format)
+        format_ = settings.get('format', _DEFAULT_TIME_DIFFERENCE_FORMAT)
+        return TimeDifferenceFormatter_(format_)
     
-    def format(self, difference, clip):
+    def _format(self, difference, clip):
         
-        if difference is None:
-            return _NO_VALUE_STRING
+        # Negate difference if needed.
+        if self._negate:
+            difference = -difference
         
-        else:
+        # Round difference if needed.
+        if self._round:
+            td = TimeDelta(seconds=difference)
+            rounded_td = time_utils.round_timedelta(
+                td, self._rounding_increment, self._rounding_mode)
+            difference = rounded_td.total_seconds()
             
-            # Negate difference if needed.
-            if self._negate:
-                difference = -difference
-                
-            # Round difference if needed.
-            if self._round:
-                td = TimeDelta(seconds=difference)
-                rounded_td = time_utils.round_timedelta(
-                    td, self._rounding_increment, self._rounding_mode)
-                difference = rounded_td.total_seconds()
-                
-            return self._formatter.format(difference)
+        return self._formatter.format(difference)
 
 
 class UtcTimeFormatter(_DateTimeFormatter):
