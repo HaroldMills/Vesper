@@ -86,7 +86,6 @@ columns:
 
 Formatter classes:
     +ExpressionEvaluator (Number -> Number)
-    -BooleanFormatter, (Boolean -> String)
     CallSpeciesFormatter, (String -> String)
     DecimalFormatter, (Number -> String)
     LocalTimeFormatter, (DateTime -> String)
@@ -111,8 +110,6 @@ values are not specified in the `mapping` setting are mapped to the
 default.
 '''
 
-
-# TODO: Eliminate `BooleanFormatter`.
 
 # TODO: Add `ExpressionEvaluator`.
 
@@ -535,12 +532,8 @@ columns:
               min_intercall_interval: 60
               ignored_classifications: [Other, Unknown, Weak]
       formatter:
-          - Boolean Formatter
           - name: Value Mapper
-            settings:
-                mapping:
-                    'True': 'yes'
-                    'False': 'no'
+            settings: {mapping: {false: "no", true: "yes"}}
     
     - name: sunset
       measurement:
@@ -1512,21 +1505,6 @@ class Formatter:
             return self._format(value, clip)
         
         
-class BooleanFormatter(Formatter):
-    
-    name = 'Boolean Formatter'
-    
-    def _format(self, value, clip):
-        if value is False:
-            return 'False'
-        elif value is True:
-            return 'True'
-        else:
-            raise ValueError(
-                f'Unexpected measurement value "{value}": value is '
-                f'supposed to be boolean.')
-    
-    
 class CallSpeciesFormatter(Formatter):
     
     name = 'Call Species Formatter'
@@ -1727,7 +1705,6 @@ class UtcTimeFormatter(_DateTimeFormatter):
             
     
 _FORMATTER_CLASSES = dict((c.name, c) for c in [
-    BooleanFormatter,
     CallSpeciesFormatter,
     DecimalFormatter,
     LocalTimeFormatter,
