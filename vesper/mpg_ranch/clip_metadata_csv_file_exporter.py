@@ -45,13 +45,13 @@ columns:
 
 Formatter classes:
     Calculator (Any -> Number)
-    CallSpeciesFormatter, (String -> String)
     DecimalFormatter, (Number -> String)
     LocalTimeFormatter, (DateTime -> String)
     LowerCaseFormatter, (String -> String)
     ValueMapper, (Any -> Any)
     -NocturnalBirdMigrationSeasonFormatter, (DateTime -> String)
     PercentFormatter, (Number -> String)
+    PrefixRemover, (String -> String)
     TimeDifferenceFormatter, (Number -> String)
     UpperCaseFormatter, (String -> String)
     UtcTimeFormatter, (DateTime -> String)
@@ -69,9 +69,6 @@ values are not specified in the `mapping` setting are mapped to the
 default.
 '''
 
-
-# TODO: Generalize `CallSpeciesFormatter` to strip prefix if present
-# and otherwise return empty string? Maybe `SubclassificationFormatter`?
 
 # TODO: Add "Recent Clip Count" measurement. Reimplement "duplicate"
 # column in terms of it. Eliminate "Possible Repeated Call" measurement.
@@ -233,7 +230,8 @@ columns:
           name: Annotation Value
           settings: {annotation_name: Classification}
       formatter:
-          - Call Species Formatter
+          - name: Prefix Remover
+            settings: {prefix: "Call."}
           - name: Value Mapper
             settings:
                 mapping:
@@ -418,7 +416,8 @@ columns:
           settings:
               annotation_name: Classification
       formatter:
-          - Call Species Formatter
+          - name: Prefix Remover
+            settings: {prefix: "Call."}
           - name: Value Mapper
             settings:
                 mapping:
@@ -1498,18 +1497,6 @@ class CalculatorFormatter(Formatter):
                 f'failed. Calculator error message was: {str(e)}')
     
     
-class CallSpeciesFormatter(Formatter):
-    
-    name = 'Call Species Formatter'
-    
-    def _format(self, classification, clip):
-        prefix = 'Call.'
-        if not classification.startswith(prefix):
-            return None
-        else:
-            return classification[len(prefix):]
-        
-           
 class DecimalFormatter(Formatter):
     
     name = 'Decimal Formatter'
@@ -1628,6 +1615,21 @@ class PercentFormatter(DecimalFormatter):
         return super()._format(100 * x, clip)
 
 
+class PrefixRemover(Formatter):
+    
+    name = 'Prefix Remover'
+    
+    def __init__(self, settings):
+        self._prefix = self._get_required_setting(settings, 'prefix')
+        self._prefix_length = len(self._prefix)
+        
+    def _format(self, value, clip):
+        if not value.startswith(self._prefix):
+            return None
+        else:
+            return value[self._prefix_length:]
+
+
 class SolarDateFormatter(Formatter):
     
     name = 'Solar Date Formatter'
@@ -1696,12 +1698,12 @@ class UtcTimeFormatter(_DateTimeFormatter):
     
 _FORMATTER_CLASSES = dict((c.name, c) for c in [
     CalculatorFormatter,
-    CallSpeciesFormatter,
     DecimalFormatter,
     LocalTimeFormatter,
     LowerCaseFormatter,
     ValueMapper,
     PercentFormatter,
+    PrefixRemover,
     SolarDateFormatter,
     TimeDifferenceFormatter,
     UpperCaseFormatter,
