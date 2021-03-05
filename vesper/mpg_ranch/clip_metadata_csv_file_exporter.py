@@ -214,7 +214,7 @@ columns:
           - name: Local Time Formatter
             settings: {format: "%m"}
           - name: Calculator
-            settings: {postfix_expression: "x int 6 gt"}
+            settings: {postfix_expression: "x integer 6 gt"}
           - name: Value Mapper
             settings: {mapping: {false: Spring, true: Fall}}
   
@@ -1489,10 +1489,15 @@ class CalculatorFormatter(Formatter):
     
     def _format(self, value, clip):
         c = self._calculator
-        c.clear()
-        c.dict_stack.put('x', value)
-        c.execute(self._expression)
-        return c.operand_stack.pop()
+        try:
+            c.clear()
+            c.dict_stack.put('x', value)
+            c.execute(self._expression)
+            return c.operand_stack.pop()
+        except Exception as e:
+            raise CommandExecutionError(
+                f'Execution of calculator expression "{self._expression}" '
+                f'failed. Calculator error message was: {str(e)}')
     
     
 class CallSpeciesFormatter(Formatter):
