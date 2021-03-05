@@ -70,8 +70,6 @@ default.
 '''
 
 
-# TODO: Add `_get_required_setting` function.
-
 # TODO: Generalize `CallSpeciesFormatter` to strip prefix if present
 # and otherwise return empty string? Maybe `SubclassificationFormatter`?
 
@@ -1004,15 +1002,26 @@ def _format_value(value, clip, formatter):
         return value
     
     
-class AnnotationValueMeasurement:
+class Measurement:
+    
+    def _get_required_setting(self, settings, name):
+        try:
+            return settings[name]
+        except KeyError:
+            raise CommandExecutionError(
+                f'Measurement settings lack required "{name}" item.')
+    
+    def measure(self, clip):
+        raise NotImplementedError()
+
+
+class AnnotationValueMeasurement(Measurement):
     
     name = 'Annotation Value'
     
     def __init__(self, settings):
-        annotation_name = settings.get('annotation_name')
-        if annotation_name is None:
-            raise ValueError(
-                'Measurement settings lack required "annotation_name" item.')
+        annotation_name = \
+            self._get_required_setting(settings, 'annotation_name')
         self._annotation_info = \
             AnnotationInfo.objects.get(name=annotation_name)
     
@@ -1021,12 +1030,10 @@ class AnnotationValueMeasurement:
             clip, self._annotation_info)
         
 
-class _SolarEventTimeMeasurement:
+class _SolarEventTimeMeasurement(Measurement):
     
     def __init__(self, settings):
-        self._day = settings.get('day')
-        if self._day is None:
-            raise ValueError('Measurement settings lack required "day" item.')
+        self._day = self._get_required_setting(settings, 'day')
         
     def measure(self, clip):
         return _get_solar_event_time(clip, self.name, self._day)
@@ -1054,7 +1061,7 @@ class CivilDuskMeasurement(_SolarEventTimeMeasurement):
     name = 'Civil Dusk'
 
 
-class DetectorNameMeasurement:
+class DetectorNameMeasurement(Measurement):
     
     name = 'Detector Name'
     
@@ -1062,7 +1069,7 @@ class DetectorNameMeasurement:
         return model_utils.get_clip_detector_name(clip)
     
     
-class DetectorTypeMeasurement:
+class DetectorTypeMeasurement(Measurement):
      
     name = 'Detector Type'
      
@@ -1070,7 +1077,7 @@ class DetectorTypeMeasurement:
         return model_utils.get_clip_type(clip)
     
     
-class DurationMeasurement:
+class DurationMeasurement(Measurement):
     
     name = 'Duration'
     
@@ -1078,7 +1085,7 @@ class DurationMeasurement:
         return clip.duration
     
     
-class EndIndexMeasurement:
+class EndIndexMeasurement(Measurement):
     
     name = 'End Index'
     
@@ -1086,7 +1093,7 @@ class EndIndexMeasurement:
         return clip.end_index
     
     
-class EndTimeMeasurement:
+class EndTimeMeasurement(Measurement):
     
     name = 'End Time'
     
@@ -1094,7 +1101,7 @@ class EndTimeMeasurement:
         return clip.end_time
     
     
-class IdMeasurement:
+class IdMeasurement(Measurement):
     
     name = 'ID'
     
@@ -1102,7 +1109,7 @@ class IdMeasurement:
         return clip.id
     
     
-class LengthMeasurement:
+class LengthMeasurement(Measurement):
     
     name = 'Length'
     
@@ -1110,7 +1117,7 @@ class LengthMeasurement:
         return clip.length
     
     
-class LunarAltitudeMeasurement:
+class LunarAltitudeMeasurement(Measurement):
     
     name = 'Lunar Altitude'
     
@@ -1129,7 +1136,7 @@ def _get_sun_moon(clip):
         station.latitude, station.longitude, station.tz)
 
 
-class LunarAzimuthMeasurement:
+class LunarAzimuthMeasurement(Measurement):
     
     name = 'Lunar Azimuth'
     
@@ -1137,7 +1144,7 @@ class LunarAzimuthMeasurement:
         return _get_lunar_position(clip).azimuth
     
     
-class LunarIlluminationMeasurement:
+class LunarIlluminationMeasurement(Measurement):
     
     name = 'Lunar Illumination'
     
@@ -1146,7 +1153,7 @@ class LunarIlluminationMeasurement:
         return sun_moon.get_lunar_illumination(clip.start_time)
     
     
-class MicrophoneOutputNameMeasurement:
+class MicrophoneOutputNameMeasurement(Measurement):
     
     name = 'Microphone Output Name'
     
@@ -1162,7 +1169,7 @@ class NauticalDuskMeasurement(_SolarEventTimeMeasurement):
     name = 'Nautical Dusk'
 
 
-class PossibleRepeatedCallMeasurement:
+class PossibleRepeatedCallMeasurement(Measurement):
     
     # This measurement assumes that clips of a given station, detector,
     # and classification are visited in order of increasing start time.
@@ -1220,7 +1227,7 @@ class PossibleRepeatedCallMeasurement:
                     return time - last_time < self._min_intercall_interval
     
     
-class RecordingChannelNumberMeasurement:
+class RecordingChannelNumberMeasurement(Measurement):
     
     name = 'Recording Channel Number'
     
@@ -1228,7 +1235,7 @@ class RecordingChannelNumberMeasurement:
         return clip.channel_num
 
 
-class RecordingDurationMeasurement:
+class RecordingDurationMeasurement(Measurement):
     
     name = 'Recording Duration'
     
@@ -1236,7 +1243,7 @@ class RecordingDurationMeasurement:
         return clip.recording.duration
         
         
-class RecordingEndTimeMeasurement:
+class RecordingEndTimeMeasurement(Measurement):
     
     name = 'Recording End Time'
     
@@ -1244,7 +1251,7 @@ class RecordingEndTimeMeasurement:
         return clip.recording.end_time
     
     
-class RecordingLengthMeasurement:
+class RecordingLengthMeasurement(Measurement):
     
     name = 'Recording Length'
     
@@ -1253,7 +1260,7 @@ class RecordingLengthMeasurement:
     
     
 
-class RecordingStartTimeMeasurement:
+class RecordingStartTimeMeasurement(Measurement):
     
     name = 'Recording Start Time'
     
@@ -1264,7 +1271,7 @@ class RecordingStartTimeMeasurement:
 _SOLAR_EVENT_NAMES = frozenset(SunMoon.SOLAR_EVENT_NAMES)
 
 
-class _RelativeClipTimeMeasurement:
+class _RelativeClipTimeMeasurement(Measurement):
     
     def __init__(self, settings=None):
         
@@ -1277,10 +1284,7 @@ class _RelativeClipTimeMeasurement:
         self._negate = settings.get('negate', False)
         
         if self._reference_name in _SOLAR_EVENT_NAMES:
-            self._day = settings.get('day')
-            if self._day is None:
-                raise ValueError(
-                    'Measurement settings lack required "day" item.')
+            self._get_required_setting(settings, 'day')
     
     def measure(self, clip):
         
@@ -1328,7 +1332,7 @@ class RelativeStartTimeMeasurement(_RelativeClipTimeMeasurement):
         return clip.start_time
     
     
-class SampleRateMeasurement:
+class SampleRateMeasurement(Measurement):
     
     name = 'Sample Rate'
     
@@ -1336,7 +1340,7 @@ class SampleRateMeasurement:
         return clip.sample_rate
     
     
-class SolarAltitudeMeasurement:
+class SolarAltitudeMeasurement(Measurement):
     
     name = 'Solar Altitude'
     
@@ -1349,7 +1353,7 @@ def _get_solar_position(clip):
     return sun_moon.get_solar_position(clip.start_time)
     
     
-class SolarAzimuthMeasurement:
+class SolarAzimuthMeasurement(Measurement):
     
     name = 'Solar Azimuth'
     
@@ -1365,7 +1369,7 @@ class SolarNoonMeasurement(_SolarEventTimeMeasurement):
     name = 'Solar Noon'
     
     
-class StartIndexMeasurement:
+class StartIndexMeasurement(Measurement):
     
     name = 'Start Index'
     
@@ -1373,7 +1377,7 @@ class StartIndexMeasurement:
         return clip.start_index
     
     
-class StartTimeMeasurement:
+class StartTimeMeasurement(Measurement):
     
     name = 'Start Time'
     
@@ -1381,7 +1385,7 @@ class StartTimeMeasurement:
         return clip.start_time
     
     
-class StationNameMeasurement:
+class StationNameMeasurement(Measurement):
     
     name = 'Station Name'
     
@@ -1389,7 +1393,7 @@ class StationNameMeasurement:
         return clip.station.name
     
     
-class SolarPeriodMeasurement:
+class SolarPeriodMeasurement(Measurement):
     
     name = 'Solar Period'
     
@@ -1460,6 +1464,13 @@ _TEST_DATE_TIME = DateTime(2020, 1, 1)
 
 class Formatter:
     
+    def _get_required_setting(self, settings, name):
+        try:
+            return settings[name]
+        except KeyError:
+            raise CommandExecutionError(
+                f'Formatter settings lack required "{name}" item.')
+    
     def format(self, value, clip):
         if value is None:
             return None
@@ -1472,10 +1483,8 @@ class CalculatorFormatter(Formatter):
     name = 'Calculator'
     
     def __init__(self, settings):
-        self._expression = settings.get('postfix_expression')
-        if self._expression is None:
-            raise ValueError(
-                'Formatter settings lack required "postfix_expression" item.')
+        self._expression = \
+            self._get_required_setting(settings, 'postfix_expression')
         self._calculator = Calculator()
     
     def _format(self, value, clip):
@@ -1621,9 +1630,7 @@ class SolarDateFormatter(Formatter):
     name = 'Solar Date Formatter'
     
     def __init__(self, settings):
-        self._day = settings.get('day')
-        if self._day is None:
-            raise ValueError('Formatter settings lack required "day" item.')
+        self._day = self._get_required_setting(settings, 'day')
         self._format_string = settings.get('format', _DEFAULT_DATE_FORMAT)
     
     def _format(self, time, clip):
