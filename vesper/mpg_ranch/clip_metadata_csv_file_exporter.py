@@ -10,6 +10,7 @@ from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
 from vesper.util.bunch import Bunch
+from vesper.util.calculator import Calculator
 from vesper.util.datetime_formatter import DateTimeFormatter
 from vesper.util.time_difference_formatter import (
     TimeDifferenceFormatter as TimeDifferenceFormatter_)
@@ -32,48 +33,6 @@ Recent Clip Count measurement settings:
     excluded_classifications - list, default []
     lumped_classifications - list of lists, default []
 
-Expression Evaluator operators:
-
-    null
-    true
-    false
-    <number>
-    x
-    
-    add
-    sub
-    mul
-    div
-    idiv
-    mod
-    
-    pow
-    exp
-    ln
-    log10
-    
-    abs
-    neg
-    ceiling
-    floor
-    round
-    truncate
-    
-    int
-    float
-    
-    gt
-    ge
-    lt
-    le
-    eq
-    ne
-    
-    not
-    and
-    or
-    xor
-
 
 columns:
 
@@ -85,7 +44,7 @@ columns:
 
 
 Formatter classes:
-    +ExpressionEvaluator (Number -> Number)
+    Calculator (Any -> Number)
     CallSpeciesFormatter, (String -> String)
     DecimalFormatter, (Number -> String)
     LocalTimeFormatter, (DateTime -> String)
@@ -111,16 +70,13 @@ default.
 '''
 
 
-# TODO: Add `ExpressionEvaluator`.
-
-# Reimplement some column formatters using new classes, eliminating
-# `NocturnalBirdMigrationSeasonFormatter`.
+# TODO: Add `_get_required_setting` function.
 
 # TODO: Generalize `CallSpeciesFormatter` to strip prefix if present
 # and otherwise return empty string? Maybe `SubclassificationFormatter`?
 
 # TODO: Add "Recent Clip Count" measurement. Reimplement "duplicate"
-# column in terms of it.
+# column in terms of it. Eliminate "Possible Repeated Call" measurement.
 
 # TODO: Add `UpperCaseFormatter`.
 
@@ -259,8 +215,8 @@ columns:
       formatter:
           - name: Local Time Formatter
             settings: {format: "%m"}
-          - name: Expression Evaluator
-            settings: {expression: "x int 6 gt"}
+          - name: Calculator
+            settings: {postfix_expression: "x int 6 gt"}
           - name: Value Mapper
             settings: {mapping: {false: Spring, true: Fall}}
   
@@ -350,8 +306,8 @@ columns:
               count_interval_size: 60
               excluded_classifications: [Other, Unknown, Weak]
       formatter:
-          - name: Expression Evaluator
-            settings: {expression: "x 1 gt"}
+          - name: Calculator
+            settings: {postfix_expression: "x 1 gt"}
           - name: Value Mapper
             settings: {false: "no", true: "yes"}
     
@@ -440,8 +396,14 @@ columns:
 
     - name: season
       measurement: Start Time
-      formatter: Nocturnal Bird Migration Season Formatter
-  
+      formatter:
+          - name: Local Time Formatter
+            settings: {format: "%m"}
+          - name: Calculator
+            settings: {postfix_expression: "x integer 6 gt"}
+          - name: Value Mapper
+            settings: {mapping: {false: Spring, true: Fall}}
+    
     - name: year
       measurement: Start Time
       formatter:
@@ -1505,6 +1467,25 @@ class Formatter:
             return self._format(value, clip)
         
         
+class CalculatorFormatter(Formatter):
+    
+    name = 'Calculator'
+    
+    def __init__(self, settings):
+        self._expression = settings.get('postfix_expression')
+        if self._expression is None:
+            raise ValueError(
+                'Formatter settings lack required "postfix_expression" item.')
+        self._calculator = Calculator()
+    
+    def _format(self, value, clip):
+        c = self._calculator
+        c.clear()
+        c.dict_stack.put('x', value)
+        c.execute(self._expression)
+        return c.operand_stack.pop()
+    
+    
 class CallSpeciesFormatter(Formatter):
     
     name = 'Call Species Formatter'
@@ -1627,15 +1608,6 @@ class ValueMapper(Formatter):
         return self._mapping.get(value, value)
     
     
-class NocturnalBirdMigrationSeasonFormatter(Formatter):
-    
-    name = 'Nocturnal Bird Migration Season Formatter'
-        
-    def _format(self, time, clip):
-        night = clip.station.get_night(time)
-        return 'Fall' if night.month >= 7 else 'Spring'
-    
-    
 class PercentFormatter(DecimalFormatter):
     
     name = 'Percent Formatter'
@@ -1651,7 +1623,7 @@ class SolarDateFormatter(Formatter):
     def __init__(self, settings):
         self._day = settings.get('day')
         if self._day is None:
-            raise ValueError('Measurement settings lack required "day" item.')
+            raise ValueError('Formatter settings lack required "day" item.')
         self._format_string = settings.get('format', _DEFAULT_DATE_FORMAT)
     
     def _format(self, time, clip):
@@ -1705,12 +1677,12 @@ class UtcTimeFormatter(_DateTimeFormatter):
             
     
 _FORMATTER_CLASSES = dict((c.name, c) for c in [
+    CalculatorFormatter,
     CallSpeciesFormatter,
     DecimalFormatter,
     LocalTimeFormatter,
     LowerCaseFormatter,
     ValueMapper,
-    NocturnalBirdMigrationSeasonFormatter,
     PercentFormatter,
     SolarDateFormatter,
     TimeDifferenceFormatter,
