@@ -198,7 +198,6 @@ class _UnionType(_Type):
 
 
 # Interpreter value types.
-_Null = _SimpleType('null', type(None))
 _Boolean = _SimpleType('boolean', bool)
 _Integer = _SimpleType('integer', int, bool)
 _Float = _SimpleType('float', float)
@@ -278,9 +277,7 @@ class _Operator:
 
 
 def _get_value_text(x):
-    if x is None:
-        return 'null'
-    elif x is True:
+    if x is True:
         return 'true'
     elif x is False:
         return 'false'
@@ -564,7 +561,6 @@ class _UnaryLogicalOperator(_UnaryOperator):
 _OPERATORS = (
     
     # constants
-    _ConstantOperator('null', None),
     _ConstantOperator('true', True),
     _ConstantOperator('false', False),
     

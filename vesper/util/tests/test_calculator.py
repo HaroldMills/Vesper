@@ -18,10 +18,6 @@ class CalculatorTests(TestCase):
             
             # constants
             
-            'null': (
-                ([], None),
-            ),
-            
             'true': (
                 ([], True),
             ),
@@ -35,7 +31,7 @@ class CalculatorTests(TestCase):
             
             'dup': (
                 ([1], [1, 1]),
-                ([None], [None, None]),
+                ([True], [True, True]),
                 ([1, 2], [1, 2, 2]),
             ),
             
@@ -223,16 +219,6 @@ class CalculatorTests(TestCase):
             
             ('eq', 'ne'): (
             
-                # None
-                ([None, None], True),
-                
-                # None and other
-                ([None, True], False),
-                ([None, False], False),
-                ([None, 0], False),
-                ([None, 0.], False),
-                ([None, ''], False),
-                
                 # booleans
                 ([False, False], True),
                 ([False, True], False),
@@ -351,7 +337,6 @@ class CalculatorTests(TestCase):
         binary_arithmetic_stacks = (
             [],
             [0],
-            [None, 0],
             [True, 0.],
             [False, 0],
             [0, '0'],
@@ -360,7 +345,6 @@ class CalculatorTests(TestCase):
         
         unary_arithmetic_stacks = (
             [],
-            [None],
             [True],
             [False],
             ['0'],
@@ -368,7 +352,6 @@ class CalculatorTests(TestCase):
         
         coercion_stacks = (
             [],
-            [None],
             [True],
             [False],
         )
@@ -376,7 +359,6 @@ class CalculatorTests(TestCase):
         binary_logical_stacks = (
             [],
             [True],
-            [None, True],
             [0, True],
             [False, 0.],
             [False, 'True'],
@@ -424,7 +406,6 @@ class CalculatorTests(TestCase):
             
             'not': (
                 [],
-                [None],
                 [0],
                 [0.],
                 ['False'],
