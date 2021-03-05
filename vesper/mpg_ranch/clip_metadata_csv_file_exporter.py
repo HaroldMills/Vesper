@@ -53,7 +53,7 @@ Formatter classes:
     -NocturnalBirdMigrationSeasonFormatter, (DateTime -> String)
     PercentFormatter, (Number -> String)
     TimeDifferenceFormatter, (Number -> String)
-    +UpperCaseFormatter, (String -> String)
+    UpperCaseFormatter, (String -> String)
     UtcTimeFormatter, (DateTime -> String)
     
 All formatters but `ValueMapper` automatically map `None` to `None`,
@@ -75,8 +75,6 @@ default.
 
 # TODO: Add "Recent Clip Count" measurement. Reimplement "duplicate"
 # column in terms of it. Eliminate "Possible Repeated Call" measurement.
-
-# TODO: Add `UpperCaseFormatter`.
 
 # TODO: Implement table format presets.
 
@@ -1680,6 +1678,14 @@ class TimeDifferenceFormatter(Formatter):
         return self._formatter.format(difference)
 
 
+class UpperCaseFormatter(Formatter):
+    
+    name = 'Upper Case Formatter'
+    
+    def _format(self, value, clip):
+        return value.upper()
+    
+    
 class UtcTimeFormatter(_DateTimeFormatter):
     
     name = 'UTC Time Formatter'
@@ -1698,5 +1704,6 @@ _FORMATTER_CLASSES = dict((c.name, c) for c in [
     PercentFormatter,
     SolarDateFormatter,
     TimeDifferenceFormatter,
+    UpperCaseFormatter,
     UtcTimeFormatter,
 ])
