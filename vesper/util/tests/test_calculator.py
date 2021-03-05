@@ -174,6 +174,11 @@ class CalculatorTests(TestCase):
             
             # coercion
             
+            'boolean': (
+                ('true', True),
+                ('false', False),
+            ),
+            
             'integer': (
                 (0, 0),
                 (1, 1),
@@ -397,6 +402,7 @@ class CalculatorTests(TestCase):
             'log2': unary_arithmetic_stacks,
             'log10': unary_arithmetic_stacks,
             
+            'boolean': coercion_stacks,
             'integer': coercion_stacks,
             'float': coercion_stacks,
             
@@ -440,8 +446,9 @@ class CalculatorTests(TestCase):
             'log2': log_domain_error_stacks,
             'log10': log_domain_error_stacks,
             
-            'integer': (['0.', 'bobo'],),
-            'float': (['bobo']),
+            'boolean': (['0'], ['0.'], ['bobo']),
+            'integer': (['0.'], ['bobo']),
+            'float': (['bobo'],),
         
         }
         

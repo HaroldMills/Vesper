@@ -454,6 +454,16 @@ class _CoercionOperator(_UnaryOperator):
         super().__init__(name, operand_types, function)
 
 
+def _boolean(x):
+    if x == 'true':
+        return True
+    elif x == 'false':
+        return False
+    else:
+        x = _get_value_text(x)
+        raise CalculatorError(f'cannot coerce {x}.')
+
+
 def _integer(x):
     return _coerce(x, int)
 
@@ -590,6 +600,7 @@ _OPERATORS = (
     _UnaryArithmeticOperator('log10', math.log10),
      
     # coercion
+    _CoercionOperator('boolean', _boolean),
     _CoercionOperator('integer', _integer),
     _CoercionOperator('float', _float),
      
