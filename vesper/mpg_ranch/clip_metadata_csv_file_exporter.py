@@ -199,7 +199,7 @@ columns:
           - name: Local Time Formatter
             settings: {format: "%m"}
           - name: Calculator
-            settings: {postfix_expression: "x integer 6 gt"}
+            settings: {code: "x integer 6 gt"}
           - name: Value Mapper
             settings: {mapping: {false: Spring, true: Fall}}
     
@@ -296,7 +296,7 @@ columns:
               excluded_classifications: [Call.Other, Call.Unknown, Call.Weak]
       formatter:
           - name: Calculator
-            settings: {postfix_expression: "x 1 gt"}
+            settings: {code: "x 1 gt"}
           - name: Value Mapper
             settings: {mapping: {false: "no", true: "yes"}}
     
@@ -1328,8 +1328,7 @@ class CalculatorFormatter(Formatter):
     name = 'Calculator'
     
     def __init__(self, settings):
-        self._expression = \
-            self._get_required_setting(settings, 'postfix_expression')
+        self._code = self._get_required_setting(settings, 'code')
         self._calculator = Calculator()
     
     def _format(self, value, clip):
@@ -1337,12 +1336,12 @@ class CalculatorFormatter(Formatter):
         try:
             c.clear()
             c.dict_stack.put('x', value)
-            c.execute(self._expression)
+            c.execute(self._code)
             return c.operand_stack.pop()
         except Exception as e:
             raise CommandExecutionError(
-                f'Execution of calculator expression "{self._expression}" '
-                f'failed. Calculator error message was: {str(e)}')
+                f'Execution of calculator code "{self._code}" failed. '
+                f'Calculator error message was: {str(e)}')
     
     
 class DecimalFormatter(Formatter):
