@@ -21,48 +21,6 @@ import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-'''
-A *measurement* produces a value from a clip.
-A *formatter* transforms a value for display.
-'''
-
-
-'''
-columns:
-
-    - name: Time Before Sunrise
-      measurement:
-          name: Relative Start Time
-          settings: {reference_time: Sunrise, negate: true}
-      formatter: Time Difference Formatter
-
-
-Formatter classes:
-    Calculator (Any -> Number)
-    DecimalFormatter (Number -> String)
-    LocalTimeFormatter (DateTime -> String)
-    LowerCaseFormatter (String -> String)
-    ValueMapper (Any -> Any)
-    PercentFormatter (Number -> String)
-    PrefixRemover (String -> String)
-    SolarDateFormatter (DateTime -> String)
-    TimeDifferenceFormatter (Number -> String)
-    UpperCaseFormatter (String -> String)
-    UtcTimeFormatter (DateTime -> String)
-    
-All formatters but `ValueMapper` automatically map `None` to `None`.
-
-By default, `ValueMapper` maps keys for which values are not specified
-to themselves, so it maps `None` to `None`. A different value for `None`
-can be specified explicitly just as for any other key.
-
-`ValueMapper` has a `default` setting that allows specification of a
-default mapping value. When this setting is present, keys for which
-values are not specified in the `mapping` setting are mapped to the
-default.
-'''
-
-
 # TODO: Implement table format presets.
 
 # TODO: Use `jsonschema` package to check table format specification.
@@ -84,15 +42,25 @@ default.
 
 # TODO: Consider supporting "Python Expression Evaluator" and
 # "Python Function Executor" formatters. The expression evaluator
-# would evaluate a provided Python expression that could refer to
-# an input "x". The "Python Function Executor" formatter would
-# execute a provided Python function that takes a single argument
-# and returns a value. The provided expressions and functions would
-# have access to the `math` module and the Python builtin functions
-# without importing anything themselves. Functions could also import
-# additional modules. This would be very convenient, but it could also
-# be dangerous and not recommended for public archives, because of the
-# risk of code injection attacks.
+# would evaluate a Python expression provided as a text setting.
+# The expression would refer to the value for be formatted as the
+# variable "x". The value of the expression would be the formatter's
+# result. The "Python Function Executor" formatter would execute a
+# Python function provided as a text setting. The function would
+# take a single argument, a value to be formatted, and return the
+# formatted result. For both formatters, the provided Python code
+# would have access to the `math` module and the Python builtin
+# functions without importing anything themselves. Functions could
+# also import additional modules. This would be very convenient, but
+# note that it could also be dangerous in public archives, because
+# of the risk of code injection attacks. Perhaps these would be
+# plugins that would be omitted when serving public archives.
+
+
+'''
+A *measurement* produces a value from a clip.
+A *formatter* transforms a value for display.
+'''
 
 
 '''
@@ -106,25 +74,31 @@ Measurements by name:
     Detector Name
     Detector Type
     Duration
+    End Index
     End Time
-    File Name
+    ID
+    Length
     Lunar Altitude
     Lunar Azimuth
     Lunar Illumination
     Microphone Output Name
     Nautical Dawn
     Nautical Dusk
-    Possible Repeated Call
+    Recent Clip Count
+    Recording Channel Number
     Recording Duration
     Recording End Time
     Recording Length
     Recording Start Time
+    Relative End Time
     Relative Start Time
+    Sample Rate
     Solar Altitude
     Solar Azimuth
     Solar Midnight
     Solar Noon
     Solar Period
+    Start Index
     Start Time
     Station Name
     Sunrise
@@ -162,10 +136,7 @@ Time:
 
 Annotations:
     Annotation Value
-
-Calling:
-    + Calling Rate
-    Possible Repeated Call
+    Recent Clip Count
 
 Sun:
     Astronomical Dawn
@@ -186,6 +157,33 @@ Moon:
     Lunar Altitude
     Lunar Azimuth
     Lunar Illumination
+'''
+
+
+'''
+Formatter classes:
+    Calculator (Any -> Number)
+    DecimalFormatter (Number -> String)
+    LocalTimeFormatter (DateTime -> String)
+    LowerCaseFormatter (String -> String)
+    ValueMapper (Any -> Any)
+    PercentFormatter (Number -> String)
+    PrefixRemover (String -> String)
+    SolarDateFormatter (DateTime -> String)
+    TimeDifferenceFormatter (Number -> String)
+    UpperCaseFormatter (String -> String)
+    UtcTimeFormatter (DateTime -> String)
+    
+All formatters but `ValueMapper` automatically map `None` to `None`.
+
+By default, `ValueMapper` maps keys for which values are not specified
+to themselves, so it maps `None` to `None`. A different value for `None`
+can be specified explicitly just as for any other key.
+
+`ValueMapper` has a `default` setting that allows specification of a
+default mapping value. When this setting is present, keys for which
+values are not specified in the `mapping` setting are mapped to the
+default.
 '''
 
 
@@ -396,37 +394,46 @@ columns:
 ''')
 
 
-#     - name: twilight
-#       measurement: Solar Period
-#       formatter:
-#           name: Value Mapper
-#           settings:
-#               mapping:
-#                   Day: day
-#                   Evening Civil Twilight: civil_twilight
-#                   Evening Nautical Twilight: nautical_twilight
-#                   Evening Astronomical Twilight: astronomical_twilight
-#                   Night: night
-#                   Morning Astronomical Twilight: astronomical_twilight
-#                   Morning Nautical Twilight: nautical_twilight
-#                   Morning Civil Twilight: civil_twilight
-#         
-#     - name: dusk_dawn
-#       measurement: Solar Period
-#       formatter:
-#           name: Value Mapper
-#           settings:
-#               mapping:
-#                   Day: day
-#                   Evening Civil Twilight: dusk
-#                   Evening Nautical Twilight: dusk
-#                   Evening Astronomical Twilight: dusk
-#                   Night: night
-#                   Morning Astronomical Twilight: dawn
-#                   Morning Nautical Twilight: dawn
-#                   Morning Civil Twilight: dawn
-#         
-# ''')
+'''
+    - name: Time Before Sunrise
+      measurement:
+          name: Relative Start Time
+          settings:
+              reference_time: Sunrise
+              day: false
+              negate: true
+      formatter: Time Difference Formatter
+    
+    - name: twilight
+      measurement: Solar Period
+      formatter:
+          name: Value Mapper
+          settings:
+              mapping:
+                  Day: day
+                  Evening Civil Twilight: civil_twilight
+                  Evening Nautical Twilight: nautical_twilight
+                  Evening Astronomical Twilight: astronomical_twilight
+                  Night: night
+                  Morning Astronomical Twilight: astronomical_twilight
+                  Morning Nautical Twilight: nautical_twilight
+                  Morning Civil Twilight: civil_twilight
+    
+    - name: dusk_dawn
+      measurement: Solar Period
+      formatter:
+          name: Value Mapper
+          settings:
+              mapping:
+                  Day: day
+                  Evening Civil Twilight: dusk
+                  Evening Nautical Twilight: dusk
+                  Evening Astronomical Twilight: dusk
+                  Night: night
+                  Morning Astronomical Twilight: dawn
+                  Morning Nautical Twilight: dawn
+                  Morning Civil Twilight: dawn
+'''
 
 
 # _TABLE_FORMAT = yaml_utils.load('''
@@ -490,36 +497,6 @@ columns:
 #     #   format: {}
 #  
 # ''')
-
-
-'''
-Example relative start time column specs:
-
-    - name: Time Before Recording End
-      measurement:
-          name: Relative Start Time
-          settings:
-              reference_time: Recording End Time
-              negate: true
-      formatter: Time Difference Formatter
-    
-    - name: Time After Sunset
-      measurement:
-          name: Relative Start Time
-          settings:
-              reference_time: Sunset
-              day: false
-      format: Time Difference
-
-    - name: Time Before Sunrise
-      measurement:
-          name: Relative Start Time
-          settings:
-              reference_time: Sunrise
-              day: false
-              negate: true
-      format: Time Difference Formatter
-'''
 
 
 _SUN_MOONS = SunMoonCache()
@@ -1214,6 +1191,15 @@ class SolarNoonMeasurement(_SolarEventTimeMeasurement):
     name = 'Solar Noon'
     
     
+class SolarPeriodMeasurement(Measurement):
+    
+    name = 'Solar Period'
+    
+    def measure(self, clip):
+        sun_moon = _get_sun_moon(clip)
+        return sun_moon.get_solar_period_name(clip.start_time)
+
+
 class StartIndexMeasurement(Measurement):
     
     name = 'Start Index'
@@ -1238,15 +1224,6 @@ class StationNameMeasurement(Measurement):
         return clip.station.name
     
     
-class SolarPeriodMeasurement(Measurement):
-    
-    name = 'Solar Period'
-    
-    def measure(self, clip):
-        sun_moon = _get_sun_moon(clip)
-        return sun_moon.get_solar_period_name(clip.start_time)
-
-
 class SunriseMeasurement(_SolarEventTimeMeasurement):
     name = 'Sunrise'
     
@@ -1287,10 +1264,10 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     SolarAzimuthMeasurement,
     SolarMidnightMeasurement,
     SolarNoonMeasurement,
+    SolarPeriodMeasurement,
     StartIndexMeasurement,
     StartTimeMeasurement,
     StationNameMeasurement,
-    SolarPeriodMeasurement,
     SunriseMeasurement,
     SunsetMeasurement
 ])
