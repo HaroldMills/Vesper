@@ -1,6 +1,7 @@
 """Module containing class `ClipMetadataCsvFileExporter`."""
 
 
+from collections import defaultdict, deque
 from datetime import datetime as DateTime, timedelta as TimeDelta
 from pathlib import Path
 import csv
@@ -22,18 +23,11 @@ import vesper.util.yaml_utils as yaml_utils
 
 '''
 A *measurement* produces a value from a clip.
-A *format* transforms a value for display.
+A *formatter* transforms a value for display.
 '''
 
 
 '''
-Recent Clip Count measurement settings:
-    count_interval_size (seconds, default 3600)
-    included_classifications - list, default [*]
-    excluded_classifications - list, default []
-    lumped_classifications - list of lists, default []
-
-
 columns:
 
     - name: Time Before Sunrise
@@ -45,19 +39,18 @@ columns:
 
 Formatter classes:
     Calculator (Any -> Number)
-    DecimalFormatter, (Number -> String)
-    LocalTimeFormatter, (DateTime -> String)
-    LowerCaseFormatter, (String -> String)
-    ValueMapper, (Any -> Any)
-    -NocturnalBirdMigrationSeasonFormatter, (DateTime -> String)
-    PercentFormatter, (Number -> String)
-    PrefixRemover, (String -> String)
-    TimeDifferenceFormatter, (Number -> String)
-    UpperCaseFormatter, (String -> String)
-    UtcTimeFormatter, (DateTime -> String)
+    DecimalFormatter (Number -> String)
+    LocalTimeFormatter (DateTime -> String)
+    LowerCaseFormatter (String -> String)
+    ValueMapper (Any -> Any)
+    PercentFormatter (Number -> String)
+    PrefixRemover (String -> String)
+    SolarDateFormatter (DateTime -> String)
+    TimeDifferenceFormatter (Number -> String)
+    UpperCaseFormatter (String -> String)
+    UtcTimeFormatter (DateTime -> String)
     
-All formatters but `ValueMapper` automatically map `None` to `None`,
-and this behavior cannot be modified.
+All formatters but `ValueMapper` automatically map `None` to `None`.
 
 By default, `ValueMapper` maps keys for which values are not specified
 to themselves, so it maps `None` to `None`. A different value for `None`
@@ -70,38 +63,36 @@ default.
 '''
 
 
-# TODO: Add "Recent Clip Count" measurement. Reimplement "duplicate"
-# column in terms of it. Eliminate "Possible Repeated Call" measurement.
-
 # TODO: Implement table format presets.
-
-# TODO: Make each archive either day-oriented or night-oriented, with
-# orientation specified in "Archive Settings.yaml". Make `day` setting
-# optional for solar event measurements and use day/night orientation
-# to determine default value.
 
 # TODO: Use `jsonschema` package to check table format specification.
 
 # TODO: Support default format specification in measurement classes.
 
-# TODO: Consider supporting user-defined formats. These would appear in
-# a YAML `formats` associated array that accompanies the `columns` array.
-# The `formats` array would map user-defined format names to format
-# specifications.
+# TODO: Consider supporting user-defined formatters. These would appear
+# in a YAML `formatters` associated array that accompanies the `columns`
+# array. The `formatters` array would map user-defined formatter names
+# to formatter specifications.
 
-# TODO: Consider supporting user-defined default value formats. These
-# would appear in a YAML `default_formats` associative array that
-# accompanies the `columns` array. The `default_formats` array would
-# map column value type names to format specifications. Vesper would
-# define a limited number of value types, e.g. String, Integer, Float,
-# and DateTime. Would measurements be able to define their own types?
-# Maybe not initially, at least.
+# TODO: Consider supporting user-defined default value formatters.
+# These would appear in a YAML `default_formatters` associative array
+# that accompanies the `columns` array. The `default_formatters` array
+# would map column value type names to formatter specifications. Vesper
+# would define a limited number of value types, e.g. String, Integer,
+# Float, and DateTime. Would measurements be able to define their own
+# types? Maybe not initially, at least.
 
-# TODO: Consider moving measurement and format settings up one level
-# in specification dictionaries, i.e. eliminating "settings"  key.
-# The disadvantage of this is the possibility of collisions between
-# setting names and specification item keys. Currently, though, the
-# only specification keys we use are "name" and "settings".
+# TODO: Consider supporting "Python Expression Evaluator" and
+# "Python Function Executor" formatters. The expression evaluator
+# would evaluate a provided Python expression that could refer to
+# an input "x". The "Python Function Executor" formatter would
+# execute a provided Python function that takes a single argument
+# and returns a value. The provided expressions and functions would
+# have access to the `math` module and the Python builtin functions
+# without importing anything themselves. Functions could also import
+# additional modules. This would be very convenient, but it could also
+# be dangerous and not recommended for public archives, because of the
+# risk of code injection attacks.
 
 
 '''
@@ -196,192 +187,6 @@ Moon:
     Lunar Azimuth
     Lunar Illumination
 '''
-
-
-"""
-_TABLE_FORMAT_NEW = yaml_utils.load('''
-
-columns:
-
-    - name: Migration Season
-      measurement: Start Time
-      formatter:
-          - name: Local Time Formatter
-            settings: {format: "%m"}
-          - name: Calculator
-            settings: {postfix_expression: "x integer 6 gt"}
-          - name: Value Mapper
-            settings: {mapping: {false: Spring, true: Fall}}
-  
-    - name: year
-      measurement: Start Time
-      formatter:
-          - name: Solar Date Finder
-            settings: {day: false}
-          - name: Date Formatter
-            settings: {format: "%Y"}
-
-    - name: detector
-      measurement: Detector Type
-      formatter: Lower Case Formatter
-
-    - name: species
-      measurement:
-          name: Annotation Value
-          settings: {annotation_name: Classification}
-      formatter:
-          - name: Prefix Remover
-            settings: {prefix: "Call."}
-          - name: Value Mapper
-            settings:
-                mapping:
-                    DoubleUp: dbup
-                    Other: othe
-                    Unknown: unkn
-          - Lower Case Formatter
-      
-    - name: site
-      measurement: Station Name
-      formatter:
-          name: Value Mapper
-          settings:
-              mapping:
-                  Baldy: baldy
-                  Floodplain: flood
-                  Ridge: ridge
-                  Sheep Camp: sheep
-      
-    - name: date
-      measurement: Start Time
-      formatter:
-          - name: Solar Date Finder
-            settings: {day: False}
-          - name: Date Formatter
-            settings: {format: "%m/%d/%y"}
-              
-    - name: recording_start
-      measurement: Recording Start Time
-      formatter:
-          - name: Local Time Formatter
-            settings: {format: "%H:%M:%S"}
-      
-    - name: recording_length
-      measurement: Recording Duration
-      formatter: Time Difference Formatter
-              
-    - name: detection_time
-      measurement: Relative Start Time
-      formatter: Time Difference Formatter
-      
-    - name: real_detection_time
-      measurement: Start Time
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%H:%M:%S"}
-              
-    - name: real_detection_time
-      measurement: Start Time
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%m/%d/%y %H:%M:%S"}
-              
-    - name: rounded_to_half_hour
-      measurement: Start Time
-      formatter:
-          - name: Time Rounder
-            settings: {increment: 1800}
-          - name: Local Time Formatter
-            settings: {format: "%H:%M:%S"}
-      
-    - name: duplicate
-      measurement:
-          name: Recent Call Count
-          settings:
-              count_interval_size: 60
-              excluded_classifications: [Other, Unknown, Weak]
-      formatter:
-          - name: Calculator
-            settings: {postfix_expression: "x 1 gt"}
-          - name: Value Mapper
-            settings: {false: "no", true: "yes"}
-    
-    - name: sunset
-      measurement:
-          name: Sunset
-          settings: {day: false}
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%m/%d/%y %H:%M:%S"}
-      
-    - name: civil_dusk
-      measurement:
-          name: Civil Dusk
-          settings: {day: false}
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%m/%d/%y %H:%M:%S"}
-      
-    - name: nautical_dusk
-      measurement:
-          name: Nautical Dusk
-          settings: {day: false}
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%m/%d/%y %H:%M:%S"}
-      
-    - name: astronomical_dusk
-      measurement:
-          name: Astronomical Dusk
-          settings: {day: false}
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%m/%d/%y %H:%M:%S"}
-      
-    - name: astronomical_dawn
-      measurement:
-          name: Astronomical Dawn
-          settings: {day: false}
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%m/%d/%y %H:%M:%S"}
-      
-    - name: nautical_dawn
-      measurement:
-          name: Nautical Dawn
-          settings: {day: false}
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%m/%d/%y %H:%M:%S"}
-      
-    - name: civil_dawn
-      measurement:
-          name: Civil Dawn
-          settings: {day: false}
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%m/%d/%y %H:%M:%S"}
-      
-    - name: sunrise
-      measurement:
-          name: Sunrise
-          settings: {day: false}
-      formatter:
-          name: Local Time Formatter
-          settings: {format: "%m/%d/%y %H:%M:%S"}
-      
-    - name: moon_altitude
-      measurement: Lunar Altitude
-      formatter:
-          name: Decimal Formatter
-          settings: {detail: ".1"}
-
-    - name: moon_illumination
-      measurement: Lunar Illumination
-      formatter:
-          name: Percent Formatter
-          settings: {detail: ".1"}
-''')
-"""
 
 
 _TABLE_FORMAT = yaml_utils.load('''
@@ -484,11 +289,14 @@ columns:
       
     - name: duplicate
       measurement:
-          name: Possible Repeated Call
+          name: Recent Clip Count
           settings:
-              min_intercall_interval: 60
-              ignored_classifications: [Other, Unknown, Weak]
+              count_window_size: 60
+              included_classifications: ["Call.*"]
+              excluded_classifications: [Call.Other, Call.Unknown, Call.Weak]
       formatter:
+          - name: Calculator
+            settings: {postfix_expression: "x 1 gt"}
           - name: Value Mapper
             settings: {mapping: {false: "no", true: "yes"}}
     
@@ -1166,64 +974,104 @@ class NauticalDuskMeasurement(_SolarEventTimeMeasurement):
     name = 'Nautical Dusk'
 
 
-class PossibleRepeatedCallMeasurement(Measurement):
+class RecentClipCountMeasurement(Measurement):
     
-    # This measurement assumes that clips of a given station, detector,
-    # and classification are visited in order of increasing start time.
+    # This measurement assumes that clips of a given station and
+    # detector are visited in order of increasing start time.
     
-    name = 'Possible Repeated Call'
+    name = 'Recent Clip Count'
     
     def __init__(self, settings=None):
         
         if settings is None:
             settings = {}
             
-        interval = settings.get('min_intercall_interval', 60)
-        self._min_intercall_interval = TimeDelta(seconds=interval)
+        annotation_name = settings.get('annotation_name', 'Classification')
         
-        names = settings.get('ignored_classifications', [])
-        self._ignored_classifications = frozenset('Call.' + n for n in names)
+        self._count_window_size = self._get_count_window_size(settings)
         
-        self._last_call_times = {}
+        self._included_classifications = \
+            settings.get('included_classifications')
+        
+        self._excluded_classifications = \
+            settings.get('excluded_classifications')
+        
+        self._lumped_classifications = \
+            settings.get('lumped_classifications')
+        
+        self._clip_start_times = defaultdict(deque)
         
         self._annotation_info = \
-            AnnotationInfo.objects.get(name='Classification')
+            AnnotationInfo.objects.get(name=annotation_name)
     
+    def _get_count_window_size(self, settings):
+        window_size = settings.get('count_window_size', 60)
+        return TimeDelta(seconds=window_size)
+
     def measure(self, clip):
         
         classification = \
             model_utils.get_clip_annotation_value(clip, self._annotation_info)
         
-        if classification is None or not classification.startswith('Call.'):
+        classification_key = self._get_classification_key(classification)
+        
+        if classification_key is None:
+            # clips of this classification not counted
+            
             return None
         
         else:
-            # clip is a call
+            # clips of this classification counted
             
-            if classification in self._ignored_classifications:
+            # Get saved clip times.
+            detector_name = model_utils.get_clip_detector_name(clip)
+            key = (clip.station.name, detector_name, classification_key)
+            clip_times = self._clip_start_times[key]
+            
+            # Discard saved clip times that precede count window.
+            window_start_time = clip.start_time - self._count_window_size
+            while len(clip_times) != 0 and clip_times[0] < window_start_time:
+                clip_times.popleft()
+            
+            # Save current clip time.
+            clip_times.append(clip.start_time)
+            
+            return len(clip_times)
+    
+    def _get_classification_key(self, classification):
+        
+        if self._included_classifications is not None:
+            if not _matches(classification, self._included_classifications):
                 return None
-            
-            else:
-                # classification should not be ignored
-                
-                detector_name = model_utils.get_clip_detector_name(clip)
-                key = (clip.station.name, detector_name, classification)
-                last_time = self._last_call_times.get(key)
-                
-                time = clip.start_time
-                self._last_call_times[key] = time
-                
-                if last_time is None:
-                    # first clip with this classification
-                    
-                    return False
-                
-                else:
-                    # not first clip with this classification
-                    
-                    return time - last_time < self._min_intercall_interval
+        
+        if self._excluded_classifications is not None:
+            if _matches(classification, self._excluded_classifications):
+                return None
+        
+        if self._lumped_classifications is not None:
+            for classifications in self._lumped_classifications:
+                if _matches(classification, classifications):
+                    return classifications[0]
+        
+        # If we get here, the classification is included but not lumped.
+        return classification
+
+
+def _matches(classification, classifications):
     
+    for c in classifications:
+        
+        if c.endswith('*') and classification.startswith(c[:-1]):
+            return True
+        
+        elif classification == c:
+            return True
     
+    # If we get here, `classification` did not match any of the
+    # classifications in `classifications`.
+    return False
+
+
 class RecordingChannelNumberMeasurement(Measurement):
     
     name = 'Recording Channel Number'
@@ -1426,7 +1274,7 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     MicrophoneOutputNameMeasurement,
     NauticalDawnMeasurement,
     NauticalDuskMeasurement,
-    PossibleRepeatedCallMeasurement,
+    RecentClipCountMeasurement,
     RecordingChannelNumberMeasurement,
     RecordingDurationMeasurement,
     RecordingEndTimeMeasurement,
