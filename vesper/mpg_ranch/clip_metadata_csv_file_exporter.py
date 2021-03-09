@@ -572,10 +572,16 @@ class _SolarEventTimeMeasurement(Measurement):
         return _get_solar_event_time(clip, self.name, self._diurnal)
 
 
-def _get_solar_event_time(clip, event_name, diurnal):
+def _get_solar_event_time(clip, event_name, day):
     sun_moon = _get_sun_moon(clip)
-    date = sun_moon.get_solar_date(clip.start_time, diurnal)
-    return sun_moon.get_solar_event_time(date, event_name, diurnal)
+    date = sun_moon.get_solar_date(clip.start_time, day)
+    return sun_moon.get_solar_event_time(date, event_name, day)
+
+
+def _get_sun_moon(clip):
+    station = clip.station
+    return _SUN_MOONS.get_sun_moon(
+        station.latitude, station.longitude, station.tz)
 
 
 class AstronomicalDawnMeasurement(_SolarEventTimeMeasurement):
@@ -663,12 +669,6 @@ def _get_lunar_position(clip):
     return sun_moon.get_lunar_position(clip.start_time)
     
     
-def _get_sun_moon(clip):
-    station = clip.station
-    return _SUN_MOONS.get_sun_moon(
-        station.latitude, station.longitude, station.tz)
-
-
 class LunarAzimuthMeasurement(Measurement):
     
     name = 'Lunar Azimuth'
