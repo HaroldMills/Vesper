@@ -527,6 +527,7 @@ def _create_export_clip_metadata_to_csv_file_command_spec(form):
             'exporter': {
                 'name': 'Clip Metadata CSV File Exporter',
                 'arguments': {
+                    'table_format': data['table_format'],
                     'output_file_path': data['output_file_path'],
                 }
             }

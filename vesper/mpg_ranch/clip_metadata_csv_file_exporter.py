@@ -10,6 +10,7 @@ import tempfile
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
+from vesper.singletons import preset_manager
 from vesper.util.bunch import Bunch
 from vesper.util.calculator import Calculator
 from vesper.util.datetime_formatter import DateTimeFormatter
@@ -21,24 +22,46 @@ import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Implement table format presets.
+# TODO: Document decisions regarding measurement and formatter naming
+# conventions.
+
+# TODO: Add "Duration Formatter" formatter, an alias for
+# "Time Difference Formatter"
+
+# TODO: Add "Sensor" measurement that combines station name and
+# mic output name?
+
+# TODO: Change name of command to "Export clip table".
+
+# TODO: Consider changing name of "day" measurement and formatter
+# setting, perhaps to "urnality"?
+
+# TODO: Figure out some way to be able to specify globally that
+# measurements and formatters should be diurnal or nocturnal.
+# A `default settings` list might be good, with each item an
+# associative array with `scope` and `settings` items. The `scope`
+# item could be one of "All" (for all measurements and formatters),
+# "Measurements" (for all measurements), "Formatters" (for all
+# formatters), or a list of measurement and/or formatter names.
+# The order of arrays in the list would determine precedence.
 
 # TODO: Use `jsonschema` package to check table format specification.
 
-# TODO: Support default format specification in measurement classes.
+# TODO: Consider supporting default format specification in measurement
+# classes.
 
 # TODO: Consider supporting user-defined formatters. These would appear
 # in a YAML `formatters` associated array that accompanies the `columns`
 # array. The `formatters` array would map user-defined formatter names
 # to formatter specifications.
 
-# TODO: Consider supporting user-defined default value formatters.
-# These would appear in a YAML `default_formatters` associative array
-# that accompanies the `columns` array. The `default_formatters` array
-# would map column value type names to formatter specifications. Vesper
-# would define a limited number of value types, e.g. String, Integer,
-# Float, and DateTime. Would measurements be able to define their own
-# types? Maybe not initially, at least.
+# TODO: Consider supporting specification of default formatters by
+# value type. This might take the form of a YAML `default_formatters`
+# associative array that accompanies the `columns` array. The
+# `default_formatters` array would map value type names to formatter
+# specifications. Vesper would define a limited number of value types,
+# e.g. String, Integer, Float, and DateTime. Would measurements be
+# able to define their own types? Maybe not initially, at least.
 
 # TODO: Consider supporting "Python Expression Evaluator" and
 # "Python Function Executor" formatters. The expression evaluator
@@ -187,316 +210,36 @@ default.
 '''
 
 
-_TABLE_FORMAT = yaml_utils.load('''
+_FALLBACK_TABLE_FORMAT = yaml_utils.load('''
 
 columns:
-
-    - name: season
-      measurement: Start Time
-      formatter:
-          - name: Local Time Formatter
-            settings: {format: "%m"}
-          - name: Calculator
-            settings: {code: "x integer 6 gt"}
-          - name: Value Mapper
-            settings: {mapping: {false: Spring, true: Fall}}
     
-    - name: year
-      measurement: Start Time
+    - name: Station
+      measurement: Station Name
+    
+    - name: Mic Output
+      measurement: Microphone Output Name
+    
+    - name: Detector
+      measurement: Detector Name
+    
+    - measurement: Start Time
       formatter:
-          name: Solar Date Formatter
-          settings:
-              day: False
-              format: "%Y"
-
-    - name: detector
-      measurement: Detector Type
-      formatter: Lower Case Formatter
-
-    - name: species
+          name: Local Time Formatter
+          settings: {format: "%Y-%m-%d %H:%M:%S.%3f"}
+    
+    - measurement: Duration
+      formatter:
+          name: Time Difference Formatter
+          settings: {format: "%s.%3f"}
+    
+    - name: Classification
       measurement:
           name: Annotation Value
-          settings:
-              annotation_name: Classification
-      formatter:
-          - name: Prefix Remover
-            settings: {prefix: "Call."}
-          - name: Value Mapper
-            settings:
-                mapping:
-                    DoubleUp: dbup
-                    Other: othe
-                    Unknown: unkn
-          - Lower Case Formatter
-      
-    - name: site
-      measurement: Station Name
-      formatter:
-          name: Value Mapper
-          settings:
-              mapping:
-                  Baldy: baldy
-                  Floodplain: flood
-                  Ridge: ridge
-                  Sheep Camp: sheep
-      
-    - name: date
-      measurement: Start Time
-      formatter:
-          name: Solar Date Formatter
-          settings:
-              day: False
-              format: "%m/%d/%y"
-              
-    - name: recording_start
-      measurement: Recording Start Time
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%H:%M:%S"
-      
-    - name: recording_length
-      measurement: Recording Duration
-      formatter: Time Difference Formatter
-              
-    - name: detection_time
-      measurement: Relative Start Time
-      formatter: Time Difference Formatter
-      
-    - name: real_detection_time
-      measurement: Start Time
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%H:%M:%S"
-              
-    - name: real_detection_time
-      measurement: Start Time
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%m/%d/%y %H:%M:%S"
-              
-    - name: rounded_to_half_hour
-      measurement: Start Time
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%H:%M:%S"
-              rounding_increment: 1800
-      
-    - name: duplicate
-      measurement:
-          name: Recent Clip Count
-          settings:
-              count_window_size: 60
-              included_classifications: ["Call.*"]
-              excluded_classifications: [Call.Other, Call.Unknown, Call.Weak]
-      formatter:
-          - name: Calculator
-            settings: {code: "x 1 gt"}
-          - name: Value Mapper
-            settings: {mapping: {false: "no", true: "yes"}}
-    
-    - name: sunset
-      measurement:
-          name: Sunset
-          settings:
-              day: False
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%m/%d/%y %H:%M:%S"
-      
-    - name: civil_dusk
-      measurement:
-          name: Civil Dusk
-          settings:
-              day: False
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%m/%d/%y %H:%M:%S"
-      
-    - name: nautical_dusk
-      measurement:
-          name: Nautical Dusk
-          settings:
-              day: False
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%m/%d/%y %H:%M:%S"
-      
-    - name: astronomical_dusk
-      measurement:
-          name: Astronomical Dusk
-          settings:
-              day: False
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%m/%d/%y %H:%M:%S"
-      
-    - name: astronomical_dawn
-      measurement:
-          name: Astronomical Dawn
-          settings:
-              day: False
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%m/%d/%y %H:%M:%S"
-      
-    - name: nautical_dawn
-      measurement:
-          name: Nautical Dawn
-          settings:
-              day: False
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%m/%d/%y %H:%M:%S"
-      
-    - name: civil_dawn
-      measurement:
-          name: Civil Dawn
-          settings:
-              day: False
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%m/%d/%y %H:%M:%S"
-      
-    - name: sunrise
-      measurement:
-          name: Sunrise
-          settings:
-              day: False
-      formatter:
-          name: Local Time Formatter
-          settings:
-              format: "%m/%d/%y %H:%M:%S"
-      
-    - name: moon_altitude
-      measurement: Lunar Altitude
-      formatter:
-          name: Decimal Formatter
-          settings:
-              detail: ".1"
+          settings: {annotation_name: Classification}
 
-    - name: moon_illumination
-      measurement: Lunar Illumination
-      formatter:
-          name: Percent Formatter
-          settings:
-              detail: ".1"
 ''')
-
-
-'''
-    - name: Time Before Sunrise
-      measurement:
-          name: Relative Start Time
-          settings:
-              reference_time: Sunrise
-              day: false
-              negate: true
-      formatter: Time Difference Formatter
-    
-    - name: twilight
-      measurement: Solar Period
-      formatter:
-          name: Value Mapper
-          settings:
-              mapping:
-                  Day: day
-                  Evening Civil Twilight: civil_twilight
-                  Evening Nautical Twilight: nautical_twilight
-                  Evening Astronomical Twilight: astronomical_twilight
-                  Night: night
-                  Morning Astronomical Twilight: astronomical_twilight
-                  Morning Nautical Twilight: nautical_twilight
-                  Morning Civil Twilight: civil_twilight
-    
-    - name: dusk_dawn
-      measurement: Solar Period
-      formatter:
-          name: Value Mapper
-          settings:
-              mapping:
-                  Day: day
-                  Evening Civil Twilight: dusk
-                  Evening Nautical Twilight: dusk
-                  Evening Astronomical Twilight: dusk
-                  Night: night
-                  Morning Astronomical Twilight: dawn
-                  Morning Nautical Twilight: dawn
-                  Morning Civil Twilight: dawn
-'''
-
-
-# _TABLE_FORMAT = yaml_utils.load('''
-#   
-# columns:
-#  
-#     - Recording Start Time
-#     
-#     - measurement: Recording End Time
-#       format:
-#           name: Local Time
-#           settings:
-#               format: "%Y-%m-%d %H:%M:%S.%3f"
-#     
-#     - Recording Duration
-#     - Recording Length
-#     - Recording Channel Number
-#     - ID
-#     
-#     - measurement: Start Time
-#       format:
-#           name: Local Time
-#           settings:
-#               format: "%Y-%m-%d %H:%M:%S.%4f"
-#     
-#     - measurement: End Time
-#       format:
-#           name: UTC Time
-#           settings:
-#               format: "%Y-%m-%d %H:%M:%S.%3f"
-# 
-#     - Duration
-#      
-#     - measurement: Start Index
-#      
-#     - measurement:
-#           name: End Index
-#      
-#     - name: Length
-#      
-#     - name: Sample Rate
-#       format:
-#           name: Decimal
-#           settings:
-#               detail: ".0"
-#      
-#     # Uncomment any one of the following to elicit an error:
-#      
-#     # no name or measurement
-#     # - {}
-#      
-#     # unrecognized measurement name
-#     # - Bobo
-#      
-#     # unrecognized format name
-#     # - name: Sample Rate
-#     #   format: Bobo
-#      
-#     # missing format name
-#     # - name: Sample Rate
-#     #   format: {}
-#  
-# ''')
+"""Table format used when presets are not available."""
 
 
 _SUN_MOONS = SunMoonCache()
@@ -511,9 +254,13 @@ class ClipMetadataCsvFileExporter:
     
     
     def __init__(self, args):
+        
         get = command_utils.get_required_arg
+        self._table_format_name = get('table_format', args)
         self._output_file_path = get('output_file_path', args)
-        self._columns = _create_table_columns(_TABLE_FORMAT)
+        
+        self._table_format = _get_table_format(self._table_format_name)
+        self._columns = _create_table_columns(self._table_format)
         self._rows = []
     
     
@@ -588,6 +335,19 @@ class ClipMetadataCsvFileExporter:
             self._handle_output_error('Could not rename output file.', e)
     
     
+def _get_table_format(table_format_name):
+    
+    if table_format_name == '':
+        return _FALLBACK_TABLE_FORMAT
+    
+    else:
+        
+        preset = preset_manager.instance.get_preset(
+            'Clip Table Format', table_format_name)
+        
+        return preset.data
+
+
 def _create_table_columns(table_format):
     
     try:

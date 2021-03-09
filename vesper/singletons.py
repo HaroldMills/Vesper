@@ -184,6 +184,7 @@ Importer:
     - vesper.old_bird.clip_importer.ClipImporter
 
 Preset:
+    - vesper.command.clip_table_format_preset.ClipTableFormatPreset
     - vesper.command.detection_schedule_preset.DetectionSchedulePreset
     - vesper.command.station_name_aliases_preset.StationNameAliasesPreset
     - vesper.django.app.clip_album_commands_preset.ClipAlbumCommandsPreset
