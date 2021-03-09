@@ -25,12 +25,6 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Document decisions regarding measurement and formatter naming
 # conventions.
 
-# TODO: Add "Duration Formatter" formatter, an alias for
-# "Time Difference Formatter"
-
-# TODO: Add "Sensor" measurement that combines station name and
-# mic output name?
-
 # TODO: Change name of command to "Export clip table".
 
 # TODO: Figure out some way to be able to specify globally that
@@ -210,13 +204,10 @@ default.
 _FALLBACK_TABLE_FORMAT = yaml_utils.load('''
 
 columns:
-    
-    - name: Station
-      measurement: Station Name
-    
-    - name: Mic Output
-      measurement: Microphone Output Name
-    
+
+    - name: Sensor
+      measurement: Sensor Name
+
     - name: Detector
       measurement: Detector Name
     
@@ -922,6 +913,16 @@ class SampleRateMeasurement(Measurement):
         return clip.sample_rate
     
     
+class SensorNameMeasurement(Measurement):
+    
+    name = 'Sensor Name'
+    
+    def measure(self, clip):
+        station_name = clip.station.name
+        mic_name = clip.mic_output.device.name
+        return f'{station_name} {mic_name}'
+
+
 class SolarAltitudeMeasurement(Measurement):
     
     name = 'Solar Altitude'
@@ -1020,6 +1021,7 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     RelativeEndTimeMeasurement,
     RelativeStartTimeMeasurement,
     SampleRateMeasurement,
+    SensorNameMeasurement,
     SolarAltitudeMeasurement,
     SolarAzimuthMeasurement,
     SolarMidnightMeasurement,
