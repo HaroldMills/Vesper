@@ -335,9 +335,12 @@ class ClipMetadataCsvFileExporter:
 def _get_table_format(table_format_name):
     
     if table_format_name == '':
+        # no table format name
+        
         return _FALLBACK_TABLE_FORMAT
     
     else:
+        # have table format name
         
         preset = preset_manager.instance.get_preset(
             'Clip Table Format', table_format_name)
@@ -860,7 +863,7 @@ class _RelativeClipTimeMeasurement(Measurement):
         self._reference_name = settings.get(
             'reference_time', 'Recording Start Time')
         
-        self._negate = settings.get('negate', False)
+        self._negation_enabled = settings.get('negation_enabled', False)
         
         if self._reference_name in _SOLAR_EVENT_NAMES:
             self._get_required_setting(settings, 'diurnal')
@@ -876,7 +879,7 @@ class _RelativeClipTimeMeasurement(Measurement):
             
             delta = self._get_clip_time(clip) - reference_time
             
-            if self._negate:
+            if self._negation_enabled:
                 delta = -delta
                 
             return delta.total_seconds()
@@ -1102,8 +1105,10 @@ class _DateTimeFormatter(Formatter):
             settings = {}
         
         self._formatter = self._get_formatter(settings)
-        self._round, self._rounding_increment, self._rounding_mode = \
-            _get_rounding(settings, False, self._formatter.min_time_increment)
+        
+        (self._rounding_enabled, self._rounding_increment,
+            self._rounding_mode) = _get_rounding(
+                settings, False, self._formatter.min_time_increment)
     
     def _get_formatter(self, settings):
         
@@ -1123,7 +1128,7 @@ class _DateTimeFormatter(Formatter):
     def _format(self, dt, clip):
         
         # Round time if needed.
-        if self._round:
+        if self._rounding_enabled:
             dt = time_utils.round_datetime(
                 dt, self._rounding_increment, self._rounding_mode)
         
@@ -1136,16 +1141,16 @@ class _DateTimeFormatter(Formatter):
         return self._formatter.format(dt)
 
 
-def _get_rounding(settings, default_round, default_increment):
+def _get_rounding(settings, default_enabled, default_increment):
     
-    round_ = settings.get('round')
+    enabled = settings.get('rounding_enabled')
     increment = settings.get('rounding_increment')
     mode = settings.get('rounding_mode')
 
-    if round_ is None:
-        round_ = default_round or increment is not None or mode is not None
+    if enabled is None:
+        enabled = default_enabled or increment is not None or mode is not None
         
-    if round_:
+    if enabled:
         
         if increment is None:
             increment = default_increment
@@ -1155,7 +1160,7 @@ def _get_rounding(settings, default_round, default_increment):
         if mode is None:
             mode = 'nearest'
     
-    return round_, increment, mode
+    return enabled, increment, mode
 
 
 class LocalTimeFormatter(_DateTimeFormatter):
@@ -1234,12 +1239,16 @@ class TimeDifferenceFormatter(Formatter):
     name = 'Time Difference Formatter'
     
     def __init__(self, settings=None):
+        
         if settings is None:
             settings = {}
-        self._negate = settings.get('negate', False)
+            
+        self._negation_enabled = settings.get('negation_enabled', False)
         self._formatter = self._get_formatter(settings)
-        self._round, self._rounding_increment, self._rounding_mode = \
-            _get_rounding(settings, True, self._formatter.min_time_increment)
+        
+        (self._rounding_enabled, self._rounding_increment,
+            self._rounding_mode) = _get_rounding(
+                settings, True, self._formatter.min_time_increment)
     
     def _get_formatter(self, settings):
         format_ = settings.get('format', _DEFAULT_TIME_DIFFERENCE_FORMAT)
@@ -1248,11 +1257,11 @@ class TimeDifferenceFormatter(Formatter):
     def _format(self, difference, clip):
         
         # Negate difference if needed.
-        if self._negate:
+        if self._negation_enabled:
             difference = -difference
         
         # Round difference if needed.
-        if self._round:
+        if self._rounding_enabled:
             td = TimeDelta(seconds=difference)
             rounded_td = time_utils.round_timedelta(
                 td, self._rounding_increment, self._rounding_mode)
