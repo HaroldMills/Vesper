@@ -33,9 +33,6 @@ import vesper.util.yaml_utils as yaml_utils
 
 # TODO: Change name of command to "Export clip table".
 
-# TODO: Consider changing name of "day" measurement and formatter
-# setting, perhaps to "urnality"?
-
 # TODO: Figure out some way to be able to specify globally that
 # measurements and formatters should be diurnal or nocturnal.
 # A `default settings` list might be good, with each item an
@@ -575,16 +572,16 @@ class AnnotationValueMeasurement(Measurement):
 class _SolarEventTimeMeasurement(Measurement):
     
     def __init__(self, settings):
-        self._day = self._get_required_setting(settings, 'day')
+        self._diurnal = self._get_required_setting(settings, 'diurnal')
         
     def measure(self, clip):
-        return _get_solar_event_time(clip, self.name, self._day)
+        return _get_solar_event_time(clip, self.name, self._diurnal)
 
 
-def _get_solar_event_time(clip, event_name, day):
+def _get_solar_event_time(clip, event_name, diurnal):
     sun_moon = _get_sun_moon(clip)
-    date = sun_moon.get_solar_date(clip.start_time, day)
-    return sun_moon.get_solar_event_time(date, event_name, day)
+    date = sun_moon.get_solar_date(clip.start_time, diurnal)
+    return sun_moon.get_solar_event_time(date, event_name, diurnal)
 
 
 class AstronomicalDawnMeasurement(_SolarEventTimeMeasurement):
@@ -866,7 +863,7 @@ class _RelativeClipTimeMeasurement(Measurement):
         self._negate = settings.get('negate', False)
         
         if self._reference_name in _SOLAR_EVENT_NAMES:
-            self._get_required_setting(settings, 'day')
+            self._get_required_setting(settings, 'diurnal')
     
     def measure(self, clip):
         
@@ -895,7 +892,7 @@ class _RelativeClipTimeMeasurement(Measurement):
             return clip.recording.end_time
         
         else:
-            return _get_solar_event_time(clip, reference_name, self._day)
+            return _get_solar_event_time(clip, reference_name, self._diurnal)
     
     
 class RelativeEndTimeMeasurement(_RelativeClipTimeMeasurement):
@@ -1219,14 +1216,14 @@ class SolarDateFormatter(Formatter):
     name = 'Solar Date Formatter'
     
     def __init__(self, settings):
-        self._day = self._get_required_setting(settings, 'day')
+        self._diurnal = self._get_required_setting(settings, 'diurnal')
         self._format_string = settings.get('format', _DEFAULT_DATE_FORMAT)
     
     def _format(self, time, clip):
         
         # Get solar day or night.
         sun_moon = _get_sun_moon(clip)
-        date = sun_moon.get_solar_date(time, self._day)
+        date = sun_moon.get_solar_date(time, self._diurnal)
         
         # Format date.
         return date.strftime(self._format_string)
