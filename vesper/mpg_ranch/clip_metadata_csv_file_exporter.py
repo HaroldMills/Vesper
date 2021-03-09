@@ -227,8 +227,8 @@ columns:
     
     - measurement: Duration
       formatter:
-          name: Time Difference Formatter
-          settings: {format: "%s.%3f"}
+          name: Decimal Formatter
+          settings: {detail: 3}
     
     - name: Classification
       measurement:
@@ -1163,6 +1163,37 @@ def _get_rounding(settings, default_enabled, default_increment):
     return enabled, increment, mode
 
 
+class DurationFormatter(Formatter):
+
+    name = 'Duration Formatter'
+    
+    def __init__(self, settings=None):
+        
+        if settings is None:
+            settings = {}
+            
+        self._formatter = self._get_formatter(settings)
+        
+        (self._rounding_enabled, self._rounding_increment,
+            self._rounding_mode) = _get_rounding(
+                settings, True, self._formatter.min_time_increment)
+    
+    def _get_formatter(self, settings):
+        format_ = settings.get('format', _DEFAULT_DURATION_FORMAT)
+        return TimeDifferenceFormatter_(format_)
+    
+    def _format(self, duration, clip):
+        
+        # Round duration if needed.
+        if self._rounding_enabled:
+            td = TimeDelta(seconds=duration)
+            rounded_td = time_utils.round_timedelta(
+                td, self._rounding_increment, self._rounding_mode)
+            duration = rounded_td.total_seconds()
+            
+        return self._formatter.format(duration)
+
+
 class LocalTimeFormatter(_DateTimeFormatter):
     
     name = 'Local Time Formatter'
@@ -1289,6 +1320,7 @@ class UtcTimeFormatter(_DateTimeFormatter):
 _FORMATTER_CLASSES = dict((c.name, c) for c in [
     CalculatorFormatter,
     DecimalFormatter,
+    DurationFormatter,
     LocalTimeFormatter,
     LowerCaseFormatter,
     ValueMapper,
