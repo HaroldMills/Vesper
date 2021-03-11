@@ -176,7 +176,7 @@ Detector:
 Exporter:
     - vesper.command.clip_audio_files_exporter.ClipAudioFilesExporter
     - vesper.command.clips_hdf5_file_exporter.ClipsHdf5FileExporter
-    - vesper.mpg_ranch.clip_metadata_csv_file_exporter.ClipMetadataCsvFileExporter
+    - vesper.command.clip_metadata_csv_file_exporter.ClipMetadataCsvFileExporter
     
 Importer:
     - vesper.command.metadata_importer.MetadataImporter
