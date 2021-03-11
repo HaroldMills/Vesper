@@ -174,7 +174,7 @@ Detector:
     - vesper.old_bird.old_bird_detector_redux_1_1.TseepDetector
     
 Exporter:
-    - vesper.command.clip_audio_files_exporter.ClipAudioFilesExporter
+    - vesper.command.clip_audio_file_exporter.ClipAudioFilesExporter
     - vesper.command.clips_hdf5_file_exporter.ClipsHdf5FileExporter
     - vesper.command.clip_metadata_csv_file_exporter.ClipMetadataCsvFileExporter
     
@@ -194,7 +194,7 @@ Recording File Parser:
     - vesper.mpg_ranch.recording_file_parser.RecordingFileParser
     
 Clip File Name Formatter:
-    - vesper.command.clip_audio_files_exporter.SimpleClipFileNameFormatter
+    - vesper.command.clip_audio_file_exporter.SimpleClipFileNameFormatter
     
 '''
 
