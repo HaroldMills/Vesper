@@ -12,7 +12,7 @@ from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
 from vesper.singletons import preset_manager
 from vesper.util.bunch import Bunch
-from vesper.util.calculator import Calculator
+from vesper.util.calculator import Calculator as Calculator_
 from vesper.util.datetime_formatter import DateTimeFormatter
 from vesper.util.time_difference_formatter import (
     TimeDifferenceFormatter as TimeDifferenceFormatter_)
@@ -21,9 +21,6 @@ import vesper.django.app.model_utils as model_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
-
-# TODO: Document decisions regarding measurement and formatter naming
-# conventions.
 
 # TODO: Change name of command to "Export clip table".
 
@@ -72,8 +69,58 @@ import vesper.util.yaml_utils as yaml_utils
 
 
 '''
-A *measurement* produces a value from a clip.
-A *formatter* transforms a value for display.
+A *measurement* produces a value from a clip. The value may be computed
+from the samples of the clip, or it may not. Currently, all implemented
+measurements make no use of clip samples.
+
+The name of a measurement describes the property of a clip that the
+measurement computes. Words in the name are capitalized and separated
+by spaces. The basic idea is that measurement names should look good
+in a list presented to a user. The class name of a measurement is
+formed by concatenating the words of the measurement's name, lowering
+the case of any letters that are not word-initial (e.g. "ID" becomes
+"Id") and appending "Measurement".
+
+Some examples of (class name, measurement name) pairs:
+
+    (AnnotationValueMeasurement, Annotation Value)
+    (AstronomicalDawnMeasurement, Astronomical Dawn)
+    (IdMeasurement, ID)
+    (LengthMeasurement, Length)
+    (StartIndexMeasurement, Start Index)
+
+A *formatter* transforms a value computed by a measurement or another
+formatter, for example for inclusion in a clip table. Most formatters
+produce string values, but some do not. Unlike measurements, formatters
+can be composed in sequence, to transform a measurement value in more
+than one step.
+
+The name of a formatter describes the "occupation" of the formatter,
+for example "Local Time Formatter" or "Calculator". The name follows
+the same capitalization and spacing conventions as the name of a
+measurement. Many formatters format values as strings, and most
+such formatters have names of the form "<value type> Formatter",
+where <value type> is either the type of input value (e.g.
+"Duration Formatter" and "Time Difference Formatter") or the way
+in which the output presents the input value (e.g.
+"Decimal Formatter", "Local Time Formatter", or
+"Lower Case Formatter"). However, the occupations of some
+formatters are best described in other terms, and so have names
+that do not end in "Formatter". Examples of such names include
+"Calculator", "Prefix Remover", and "Value Mapper". The class
+name of a formatter is formed by concatenating the words of the
+measurement's name and lowering the case of any letters that are
+not word-initial.
+
+The inconsistency in the naming conventions for measurements
+(whose names never end in "Measurement") and formatters (whose
+names most often end in "Formatter") is undesirable, but seemed
+the least undesirable of the various alternatives considered. For
+example, including "Measurement" in all measurement names would
+make lists of those names look awkward, while omitting "Formatter"
+from formatter names would introduce inconsistencies in what the
+names denote, making formatter specifications awkward and
+confusing.
 '''
 
 
@@ -1062,13 +1109,13 @@ class Formatter:
             return self._format(value, clip)
         
         
-class CalculatorFormatter(Formatter):
+class Calculator(Formatter):
     
     name = 'Calculator'
     
     def __init__(self, settings):
         self._code = self._get_required_setting(settings, 'code')
-        self._calculator = Calculator()
+        self._calculator = Calculator_()
     
     def _format(self, value, clip):
         c = self._calculator
@@ -1320,7 +1367,7 @@ class UtcTimeFormatter(_DateTimeFormatter):
             
     
 _FORMATTER_CLASSES = dict((c.name, c) for c in [
-    CalculatorFormatter,
+    Calculator,
     DecimalFormatter,
     DurationFormatter,
     LocalTimeFormatter,
