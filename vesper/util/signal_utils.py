@@ -1,6 +1,7 @@
 """Utility functions pertaining to signals."""
 
 
+import bisect
 import datetime
 
 import numpy as np
@@ -78,6 +79,163 @@ def get_end_time(start_time, num_samples, sample_rate):
     
     span = get_span(num_samples, sample_rate)
     return start_time + datetime.timedelta(seconds=span)
+
+
+def get_concatenated_signal_read_data(segment_bounds, start_index, end_index):
+    
+    """
+    Gets read interval index data for a concatenated signal.
+    
+    Given an index range for a concatenated signal, this function
+    returns the corresponding start and end (segment_num, segment_index)
+    pairs.
+    
+    Parameters
+    ----------
+    
+    segment_bounds : int sequence
+        concatenated signal indices of segment boundaries.
+        
+        The length of this sequence must be one more than the number of
+        segments in the concatenated signal. The ith element of the
+        sequence must be the sum of the lengths of segments zero through i.
+    
+    start_index : int
+        read interval start index in concatenated signal
+        
+        This parameter can be less than zero or greater than the
+        concatenated signal length.
+    
+    end_index : int
+        read interval end index in concatenated signal
+        
+        This parameter can be less than zero or greater than the
+        concatenated signal length.
+    
+    Returns
+    -------
+    
+    start_segment_num : int
+        the number of the signal segment that includes the start of
+        the read interval.
+        
+        If the read interval is empty, this return value is zero.
+        Otherwise, it is -1 if the read interval start index is
+        negative, or the number of signal segments if the read
+        interval start index is greater than the concatenated
+        signal length.
+    
+    start_segment_index : int
+        the index within segment `start_segment_num` of the start of
+        the read interval.
+        
+        If the read interval is empty, this return value is zero.
+        Otherwise, it will be negative if `start_segment_num` is -1,
+        indicating a number of sample frames prior to the start of
+        the signal, or nonnegative if `start_segment_num` is
+        nonnegative.
+    
+    end_segment_num : int
+        the number of the signal segment that includes the end of
+        the read interval.
+        
+        If the read interval is empty, this return value is zero.
+        Otherwise, it is -1 if the read interval end index is
+        negative, or the number of signal segments if the read
+        interval end index is greater than the concatenated
+        signal length.
+    
+    end_segment_index : int
+        the index within segment `end_segment_num` of the end of
+        the read interval.
+        
+        If the read interval is empty, this return value is zero.
+        Otherwise, it will be negative if `end_segment_num` is -1,
+        indicating a number of sample frames prior to the start of
+        the signal, or nonnegative if `end_segment_num` is
+        nonnegative.
+    """
+    
+    if start_index >= end_index:
+        # read interval empty
+        
+        return 0, 0, 0, 0
+    
+    else:
+        # read interval not empty
+        
+        start_segment_num, start_index = \
+            get_concatenated_signal_index_data(segment_bounds, start_index)
+        
+        end_segment_num, end_index = \
+            get_concatenated_signal_index_data(segment_bounds, end_index)
+        
+        if end_index == 0 and end_segment_num > 0:
+            # last sample to be read is the last sample of an actual segment
+            
+            # Replace end segment number and end index with equivalents
+            # for preceding segment.
+            end_segment_num -= 1
+            i = end_segment_num
+            end_index = segment_bounds[i + 1] - segment_bounds[i]
+        
+        return start_segment_num, start_index, end_segment_num, end_index
+
+
+def get_concatenated_signal_index_data(segment_bounds, index):
+    
+    """
+    Gets time index data for a concatenated signal.
+    
+    Given an index in the concatenated signal, this function returns
+    the corresponding segment number and segment index.
+    
+    Parameters
+    ----------
+    
+    segment_bounds : int sequence
+        concatenated signal indices of segment boundaries.
+        
+        The length of this sequence must be one more than the number of
+        segments in the concatenated signal. The ith element of the
+        sequence must be the sum of the lengths of segments zero through i.
+    
+    index : int
+        concatenated signal index.
+        
+        This parameter can be less than zero or greater than the
+        concatenated signal length.
+    
+    Returns
+    -------
+    
+    segment_num : int
+        the number of the signal segment that includes the specified signal
+        index.
+        
+        This return value will be -1 if the specified index is negative,
+        or the number of signal segments if the specified index is greater
+        than the concatenated signal length.
+    
+    segment_index : int
+        the index within segment `segment_num` of the specified signal index.
+        
+        This return value will be negative if `segment_num` is -1,
+        indicating a number of sample frames prior to the start of the
+        signal. Otherwise it will be nonnegative.
+    """
+    
+    if index < 0:
+        # index prior to signal start
+        
+        return -1, index
+    
+    else:
+        # index not prior to signal start
+        
+        segment_num = bisect.bisect_right(segment_bounds, index) - 1
+        segment_index = index - segment_bounds[segment_num]
+        return segment_num, segment_index
 
 
 def find_samples(x, y, tolerance=0):

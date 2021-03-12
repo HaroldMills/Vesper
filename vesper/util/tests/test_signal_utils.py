@@ -7,6 +7,121 @@ import vesper.util.signal_utils as signal_utils
 class SignalUtilsTests(TestCase):
     
     
+    def test_get_concatenated_signal_read_data(self):
+        
+        
+        # empty concatenated signal
+        
+        bounds = [0]
+        
+        cases = [
+            
+            # empty read interval
+            ((-100, -100), (0, 0, 0, 0)),
+            ((0, 0), (0, 0, 0, 0)),
+            ((100, 100), (0, 0, 0, 0)),
+            ((100, 0), (0, 0, 0, 0)),
+            
+            # nonempty read interval
+            ((-100, 100), (-1, -100, 0, 100)),
+            ((-100, 0), (-1, -100, 0, 0)),
+            ((0, 100), (0, 0, 0, 100)),
+            ((100, 200), (0, 100, 0, 200)),
+        
+        ]
+        
+        self._test_get_concatenated_signal_read_data_aux(bounds, cases)
+        
+        
+        # nonempty concatenated signal
+        
+        bounds = [0, 10, 30]
+        
+        cases = [
+            
+            # empty read interval
+            ((-100, -100), (0, 0, 0, 0)),
+            ((0, 0), (0, 0, 0, 0)),
+            ((100, 100), (0, 0, 0, 0)),
+            ((100, 0), (0, 0, 0, 0)),
+            
+            # nonempty read interval
+            ((-100, 100), (-1, -100, 2, 70)),
+            ((-100, 5), (-1, -100, 0, 5)),
+            ((0, 5), (0, 0, 0, 5)),
+            ((0, 10), (0, 0, 0, 10)),
+            ((0, 11), (0, 0, 1, 1)),
+            ((0, 20), (0, 0, 1, 10)),
+            ((0, 30), (0, 0, 1, 20)),
+            ((0, 31), (0, 0, 2, 1)),
+            ((10, 15), (1, 0, 1, 5)),
+            ((10, 30), (1, 0, 1, 20)),
+            ((10, 31), (1, 0, 2, 1)),
+            ((15, 40), (1, 5, 2, 10)),
+            
+        ]
+        
+        self._test_get_concatenated_signal_read_data_aux(bounds, cases)
+    
+    
+    def _test_get_concatenated_signal_read_data_aux(self, bounds, cases):
+        get_read_data = signal_utils.get_concatenated_signal_read_data
+        for (start_index, end_index), expected in cases:
+            actual = get_read_data(bounds, start_index, end_index)
+            self.assertEqual(actual, expected)
+    
+    
+    def test_get_concatenated_signal_index_data(self):
+        
+        
+        # empty concatenated signal
+        
+        bounds = [0]
+        
+        cases = [
+            (-100, (-1, -100)),
+            (-2, (-1, -2)),
+            (-1, (-1, -1)),
+            (0, (0, 0)),
+            (1, (0, 1)),
+            (2, (0, 2)),
+            (100, (0, 100)),
+        ]
+        
+        self._test_get_concatenated_signal_index_data_aux(bounds, cases)
+        
+        
+        # nonempty concatenated signal
+        
+        bounds = [0, 10, 30]
+        
+        cases = [
+            (-100, (-1, -100)),
+            (-2, (-1, -2)),
+            (-1, (-1, -1)),
+            (0, (0, 0)),
+            (1, (0, 1)),
+            (5, (0, 5)),
+            (9, (0, 9)),
+            (10, (1, 0)),
+            (11, (1, 1)),
+            (20, (1, 10)),
+            (29, (1, 19)),
+            (30, (2, 0)),
+            (31, (2, 1)),
+            (100, (2, 70)),
+        ]
+        
+        self._test_get_concatenated_signal_index_data_aux(bounds, cases)
+    
+    
+    def _test_get_concatenated_signal_index_data_aux(self, bounds, cases):
+        get_index_data = signal_utils.get_concatenated_signal_index_data
+        for index, expected in cases:
+            actual = get_index_data(bounds, index)
+            self.assertEqual(actual, expected)
+    
+    
     def test_find_samples(self):
         
         y = [2, 0, 1, 0, 1, 0, 2]

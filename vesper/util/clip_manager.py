@@ -5,12 +5,15 @@ from io import BytesIO
 from threading import Lock
 import os.path
 
+import numpy as np
+
 from vesper.archive_paths import archive_paths
 from vesper.signal.wave_audio_file import WaveAudioFileReader
 from vesper.singletons import recording_manager
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
+import vesper.util.signal_utils as signal_utils
 
 
 class ClipManagerError(Exception):
@@ -24,7 +27,8 @@ class ClipManager:
     
     def __init__(self):
         self._rm = recording_manager.instance
-        self._file_reader_cache = {}
+        self._recording_file_cache = {}
+        self._recording_file_reader_cache = {}
         self._read_lock = Lock()
         
         
@@ -81,8 +85,6 @@ class ClipManager:
             If some other error occurs, for example a file I/O error.
         """
         
-        # TODO: Add unit tests for this method.
-        
         start_offset, length = \
             _complete_clip_segment_spec(clip, start_offset, length)
 
@@ -115,57 +117,116 @@ class ClipManager:
     def _get_samples_from_recording(
             self, clip, start_offset=None, length=None):
         
+        if clip.start_index is None:
+            # have no clip start index
+            
+            self._handle_get_samples_error('Clip start index is not known.')
+        
+        else:
+            # have clip start index
+            
+            try:
+                recording_files, start_index, end_index = \
+                    self._get_recording_file_data(clip, start_offset, length)
+            except ClipManagerError as e:
+                self._handle_get_samples_error(str(e))
+            
+            samples = self._get_samples_from_recording_files(
+                recording_files, clip.channel_num, start_index, end_index)
+            
+            return samples
+    
+    
+    def _handle_get_samples_error(self, message):
+        raise ClipManagerError(
+            f'Could not get clip samples from recording audio files. '
+            f'{message}')
+    
+    
+    def _get_recording_file_data(self, clip, start_offset=None, length=None):
+        
         start_offset, length = \
             _complete_clip_segment_spec(clip, start_offset, length)
-
-        if clip.start_index is None:
-            # clip start index unknown
-            
-            self._handle_get_samples_error(clip, 'clip has no start index')
         
-        # TODO: Make search for a file's clip more efficient.
-        # The following code is O(n), where n is the number of
-        # recording files, but we could make it O(log(n)) by
-        # using a more efficient search algorithm. This will
-        # require cacheing lists of recording files for recordings,
-        # which is fine.
-        
-        # Get start and end indices of samples in recording.
         start_index = clip.start_index + start_offset
         end_index = start_index + length
         
-        for file_ in clip.recording.files.all():
+        files, file_bounds = self._get_recording_files(clip)
+        
+        if len(files) == 0:
+            raise ClipManagerError('Recording has no audio files.')
+        
+        start_file_num, start_index, end_file_num, end_index = \
+            signal_utils.get_concatenated_signal_read_data(
+                file_bounds, start_index, end_index)
+        
+        if start_file_num == -1:
+            raise ClipManagerError(
+                'Requested clip samples start before recording.')
+        
+        elif end_file_num == len(files):
+            raise ClipManagerError(
+                'Requested clip samples end after recording.')
             
-            if start_index >= file_.start_index and \
-                    start_index < file_.end_index:
-                # samples start in this file.
-                
-                if end_index < file_.end_index:
-                    # samples end in this file.
-                
-                    # Get start index of samples in file.
-                    start_index -= file_.start_index
-                    
-                    return self._get_samples_from_recording_file(
-                        file_, clip.channel_num, start_index, length)
-                        
-                else:
-                    # clip extends past end of file
-                    
-                    # TODO: Handle clips that cross file boundaries.
-                    self._handle_get_samples_error(
-                        clip, 'clip crosses a file boundary')
-                
-        # If we get here, the clip was not found in a recording file.
-        self._handle_get_samples_error(clip, 'clip is outside of recording')
+        files = files[start_file_num:end_file_num + 1]
+        
+        return files, start_index, end_index
     
     
-    def _handle_get_samples_error(self, clip, reason):
-        raise ClipManagerError((
-            'Could not get clip samples from recording file '
-            'since {}.').format(reason))
+    def _get_recording_files(self, clip):
         
+        recording = clip.recording_channel.recording
         
+        try:
+            return self._recording_file_cache[recording.id]
+        
+        except KeyError:
+            files = list(clip.recording.files.all())
+            bounds = [f.start_index for f in files]
+            if len(files) != 0:
+                bounds.append(bounds[-1] + files[-1].length)
+            result = (files, bounds)
+            self._recording_file_cache[recording.id] = result
+            return result
+    
+    
+    def _get_samples_from_recording_files(
+            self, files, channel_num, start_index, end_index):
+        
+        file_count = len(files)
+        
+        if file_count == 1:
+            # reading from one file
+             
+            length = end_index - start_index
+            return self._get_samples_from_recording_file(
+                files[0], channel_num, start_index, length)
+         
+        else:
+            # reading from more than one file
+         
+            file_samples = []
+            
+            for i, file_ in enumerate(files):
+                
+                # Get start and end indices for read from this file.
+                start = start_index if i == 0 else 0
+                end = end_index if i == file_count - 1 else file_.length
+                
+                # Read samples.
+                length = end - start
+                samples = self._get_samples_from_recording_file(
+                    file_, channel_num, start, length)
+                
+                # Save samples.
+                file_samples.append(samples)
+            
+            # Concatenate samples.
+            samples = np.concatenate(file_samples)
+            
+            return samples
+    
+    
     def _get_samples_from_recording_file(
             self, file_, channel_num, start_index, length):
         
@@ -217,16 +278,16 @@ class ClipManager:
         # was closed in step 2.
         
         with self._read_lock:
-            reader = self._get_audio_file_reader(path)
+            reader = self._get_recording_file_reader(path)
             samples = reader.read(start_index, length)
         
         return samples[channel_num]
     
     
-    def _get_audio_file_reader(self, path):
+    def _get_recording_file_reader(self, path):
         
         try:
-            reader = self._file_reader_cache[path]
+            reader = self._recording_file_reader_cache[path]
         
         except KeyError:
             # cache miss
@@ -234,23 +295,23 @@ class ClipManager:
             # Clear cache. We cache just one reader at a time, which
             # goes a long way since in typical use our accesses don't
             # switch files very often.
-            self._clear_file_reader_cache()
+            self._clear_recording_file_reader_cache()
             
             # Create new reader.
             reader = WaveAudioFileReader(str(path))
             
             # Cache new reader.
-            self._file_reader_cache[path] = reader
+            self._recording_file_reader_cache[path] = reader
             
         return reader
     
     
-    def _clear_file_reader_cache(self):
+    def _clear_recording_file_reader_cache(self):
         
-        for reader in self._file_reader_cache.values():
+        for reader in self._recording_file_reader_cache.values():
             reader.close()
             
-        self._file_reader_cache = {}
+        self._recording_file_reader_cache = {}
     
     
     def get_audio_file_contents(self, clip, media_type):
