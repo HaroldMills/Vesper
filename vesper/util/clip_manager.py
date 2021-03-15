@@ -27,7 +27,7 @@ class ClipManager:
     
     def __init__(self):
         self._rm = recording_manager.instance
-        self._recording_file_cache = {}
+        self._recording_file_info_cache = {}
         self._recording_file_reader_cache = {}
         self._read_lock = Lock()
         
@@ -127,7 +127,7 @@ class ClipManager:
             
             try:
                 recording_files, start_index, end_index = \
-                    self._get_recording_file_data(clip, start_offset, length)
+                    self.get_recording_file_info(clip, start_offset, length)
             except ClipManagerError as e:
                 self._handle_get_samples_error(str(e))
             
@@ -143,7 +143,7 @@ class ClipManager:
             f'{message}')
     
     
-    def _get_recording_file_data(self, clip, start_offset=None, length=None):
+    def get_recording_file_info(self, clip, start_offset=None, length=None):
         
         start_offset, length = \
             _complete_clip_segment_spec(clip, start_offset, length)
@@ -151,7 +151,7 @@ class ClipManager:
         start_index = clip.start_index + start_offset
         end_index = start_index + length
         
-        files, file_bounds = self._get_recording_files(clip)
+        files, file_bounds = self._get_recording_file_info_aux(clip)
         
         if len(files) == 0:
             raise ClipManagerError('Recording has no audio files.')
@@ -161,24 +161,22 @@ class ClipManager:
                 file_bounds, start_index, end_index)
         
         if start_file_num == -1:
-            raise ClipManagerError(
-                'Requested clip samples start before recording.')
+            raise ClipManagerError('Clip starts before recording.')
         
         elif end_file_num == len(files):
-            raise ClipManagerError(
-                'Requested clip samples end after recording.')
+            raise ClipManagerError('Clip ends after recording.')
             
         files = files[start_file_num:end_file_num + 1]
         
         return files, start_index, end_index
     
     
-    def _get_recording_files(self, clip):
+    def _get_recording_file_info_aux(self, clip):
         
         recording = clip.recording_channel.recording
         
         try:
-            return self._recording_file_cache[recording.id]
+            return self._recording_file_info_cache[recording.id]
         
         except KeyError:
             files = list(clip.recording.files.all())
@@ -186,7 +184,7 @@ class ClipManager:
             if len(files) != 0:
                 bounds.append(bounds[-1] + files[-1].length)
             result = (files, bounds)
-            self._recording_file_cache[recording.id] = result
+            self._recording_file_info_cache[recording.id] = result
             return result
     
     

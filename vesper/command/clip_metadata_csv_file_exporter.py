@@ -10,7 +10,7 @@ import tempfile
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
-from vesper.singletons import preset_manager
+from vesper.singletons import clip_manager, preset_manager
 from vesper.util.bunch import Bunch
 from vesper.util.calculator import Calculator as Calculator_
 from vesper.util.datetime_formatter import DateTimeFormatter
@@ -22,15 +22,26 @@ import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Add "Recording File Start Time" and "Recording File End Time"
-# reference times to "Relative Start Time" and "Relative End Time"
-# measurements.
+# TODO: Consider changing "Time Difference Formatter" to
+# "Relative Time Formatter".
 
 # TODO: Add "reference_index" setting to "Start Index" and "End Index"
-# measurements. Valid values are "Recording Start Index" and
-# "Recording File Start Index", with default "Recording Start Index".
+# measurements. Valid values for "Start Index" are:
+#
+#     Recording Start Index
+#     Recording End Index
+#     First Recording File Start Index
+#     First Recording file End Index
+#
+# Valid values for "End Index" are:
+#
+#     Recording Start Index
+#     Recording End Index
+#     Last Recording File Start Index
+#     Last Recording File End Index
 
-# TODO: Add recording file measurements:
+# TODO: Add "First" and "Last" versions of each of the following
+# recording file measurements:
 #
 #     Recording File Path (`absolute` setting)
 #     Recording File Name
@@ -932,7 +943,8 @@ class _RelativeClipTimeMeasurement(Measurement):
             return None
         
         else:
-            delta = self._get_clip_time(clip) - reference_time
+            clip_time = self._get_clip_time(clip)
+            delta = clip_time - reference_time
             return delta.total_seconds()
     
     def _get_reference_time(self, clip):
@@ -945,13 +957,35 @@ class _RelativeClipTimeMeasurement(Measurement):
         elif reference_name == 'Recording End Time':
             return clip.recording.end_time
         
+        elif reference_name == self._recording_file_start_time_reference_name:
+            info = clip_manager.instance.get_recording_file_info(clip)
+            if info is None:
+                return None
+            else:
+                return info[0][self._recording_file_index].start_time
+        
+        elif reference_name == self._recording_file_end_time_reference_name:
+            info = clip_manager.instance.get_recording_file_info(clip)
+            if info is None:
+                return None
+            else:
+                return info[0][self._recording_file_index].end_time
+            
         else:
             return _get_solar_event_time(clip, reference_name, self._diurnal)
-    
-    
+
+
 class RelativeEndTimeMeasurement(_RelativeClipTimeMeasurement):
     
     name = 'Relative End Time'
+    
+    _recording_file_start_time_reference_name = \
+        'Last Recording File Start Time'
+    
+    _recording_file_end_time_reference_name = \
+        'Last Recording File End Time'
+    
+    _recording_file_index = -1
     
     def _get_clip_time(self, clip):
         return clip.end_time
@@ -960,6 +994,14 @@ class RelativeEndTimeMeasurement(_RelativeClipTimeMeasurement):
 class RelativeStartTimeMeasurement(_RelativeClipTimeMeasurement):
     
     name = 'Relative Start Time'
+    
+    _recording_file_start_time_reference_name = \
+        'First Recording File Start Time'
+    
+    _recording_file_end_time_reference_name = \
+        'First Recording File End Time'
+    
+    _recording_file_index = 0
     
     def _get_clip_time(self, clip):
         return clip.start_time
