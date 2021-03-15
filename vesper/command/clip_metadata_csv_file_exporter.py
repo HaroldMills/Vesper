@@ -22,9 +22,6 @@ import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Remove `negation_enabled` setting from relative clip time
-# measurement. Negation should always happen in formatter.
-
 # TODO: Add "Recording File Start Time" and "Recording File End Time"
 # reference times to "Relative Start Time" and "Relative End Time"
 # measurements.
@@ -924,8 +921,6 @@ class _RelativeClipTimeMeasurement(Measurement):
         self._reference_name = settings.get(
             'reference_time', 'Recording Start Time')
         
-        self._negation_enabled = settings.get('negation_enabled', False)
-        
         if self._reference_name in _SOLAR_EVENT_NAMES:
             self._get_required_setting(settings, 'diurnal')
     
@@ -937,12 +932,7 @@ class _RelativeClipTimeMeasurement(Measurement):
             return None
         
         else:
-            
             delta = self._get_clip_time(clip) - reference_time
-            
-            if self._negation_enabled:
-                delta = -delta
-                
             return delta.total_seconds()
     
     def _get_reference_time(self, clip):
