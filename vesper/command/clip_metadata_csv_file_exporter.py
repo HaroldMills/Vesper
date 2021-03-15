@@ -22,7 +22,30 @@ import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Change name of command to "Export clip table".
+# TODO: Remove `negation_enabled` setting from relative clip time
+# measurement. Negation should always happen in formatter.
+
+# TODO: Add "Recording File Start Time" and "Recording File End Time"
+# reference times to "Relative Start Time" and "Relative End Time"
+# measurements.
+
+# TODO: Add "reference_index" setting to "Start Index" and "End Index"
+# measurements. Valid values are "Recording Start Index" and
+# "Recording File Start Index", with default "Recording Start Index".
+
+# TODO: Add recording file measurements:
+#
+#     Recording File Path (`absolute` setting)
+#     Recording File Name
+#
+#     Recording File Start Time
+#     Recording File Start Index
+#
+#     Recording File End Time
+#     Recording File End Index
+#
+#     Recording File Duration
+#     Recording File Length
 
 # TODO: Figure out some way to be able to specify globally that
 # measurements and formatters should be diurnal or nocturnal.
