@@ -5,12 +5,13 @@ from collections import defaultdict, deque
 from datetime import datetime as DateTime, timedelta as TimeDelta
 from pathlib import Path
 import csv
+import logging
 import tempfile
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
-from vesper.singletons import clip_manager, preset_manager
+from vesper.singletons import clip_manager, preset_manager, recording_manager
 from vesper.util.bunch import Bunch
 from vesper.util.calculator import Calculator as Calculator_
 from vesper.util.datetime_formatter import DateTimeFormatter
@@ -24,9 +25,6 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Add "First" and "Last" versions of each of the following
 # recording file measurements:
 #
-#     Recording File Path (`absolute` setting)
-#     Recording File Name
-#
 #     Recording File Number
 #
 #     Recording File Start Time
@@ -37,6 +35,10 @@ import vesper.util.yaml_utils as yaml_utils
 #
 #     Recording File Duration
 #     Recording File Length
+
+# TODO: Consider logging a warning for some errors during export, for
+# example if a recording file path cannot be made absolute, or if a clip
+# extends past the end of its recording.
 
 # TODO: Figure out some way to be able to specify globally that
 # measurements and formatters should be diurnal or nocturnal.
@@ -761,6 +763,72 @@ class EndTimeMeasurement(Measurement):
         return clip.end_time
     
     
+class _RecordingFilePath(Measurement):
+    
+    def __init__(self, settings=None):
+        if settings is None:
+            settings = {}
+        self._absolute = settings.get('absolute', True)
+    
+    def measure(self, clip):
+        
+        info = clip_manager.instance.get_recording_file_info(clip)
+        
+        if info is None:
+            return None
+        
+        else:
+            
+            recording_file = info[0][self._file_index]
+            relative_path = recording_file.path
+            
+            if relative_path is None:
+                
+                # TODO: Can this really happen? Why would we have a file
+                # without a path?
+                return None
+            
+            elif self._absolute:
+                
+                rm = recording_manager.instance
+                
+                try:
+                    return rm.get_absolute_recording_file_path(relative_path)
+                
+                except Exception as e:
+                    message = (
+                        f'Could not get absolute path for recording file '
+                        f'"{relative_path}". Error message was: {str(e)}')
+                    logging.warn(message)
+                    return None
+            
+            else:
+                return relative_path
+
+
+class _RecordingFileName(_RecordingFilePath):
+    
+    def __init__(self):
+        super().__init__({'absolute': False})
+    
+    def measure(self, clip):
+        relative_path = super().measure(clip)
+        if relative_path is None:
+            return None
+        else:
+            return Path(relative_path).name
+
+
+class FirstRecordingFileName(_RecordingFileName):
+    name = 'First Recording File Name'
+    _file_index = 0
+
+
+class FirstRecordingFilePath(_RecordingFilePath):
+    name = 'First Recording File Path'
+    _file_index = 0
+
+
 class IdMeasurement(Measurement):
     
     name = 'ID'
@@ -769,6 +837,16 @@ class IdMeasurement(Measurement):
         return clip.id
     
     
+class LastRecordingFileName(_RecordingFileName):
+    name = 'Last Recording File Name'
+    _file_index = -1
+
+
+class LastRecordingFilePath(_RecordingFilePath):
+    name = 'Last Recording File Path'
+    _file_index = -1
+
+
 class LengthMeasurement(Measurement):
     
     name = 'Length'
@@ -1159,7 +1237,11 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     DurationMeasurement,
     EndIndexMeasurement,
     EndTimeMeasurement,
+    FirstRecordingFileName,
+    FirstRecordingFilePath,
     IdMeasurement,
+    LastRecordingFileName,
+    LastRecordingFilePath,
     LengthMeasurement,
     LunarAltitudeMeasurement,
     LunarAzimuthMeasurement,
