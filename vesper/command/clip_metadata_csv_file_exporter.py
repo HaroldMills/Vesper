@@ -14,16 +14,12 @@ from vesper.singletons import clip_manager, preset_manager
 from vesper.util.bunch import Bunch
 from vesper.util.calculator import Calculator as Calculator_
 from vesper.util.datetime_formatter import DateTimeFormatter
-from vesper.util.time_difference_formatter import (
-    TimeDifferenceFormatter as TimeDifferenceFormatter_)
+from vesper.util.time_difference_formatter import TimeDifferenceFormatter
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
-
-# TODO: Consider changing "Time Difference Formatter" to
-# "Relative Time Formatter".
 
 # TODO: Add "reference_index" setting to "Start Index" and "End Index"
 # measurements. Valid values for "Start Index" are:
@@ -132,7 +128,7 @@ the same capitalization and spacing conventions as the name of a
 measurement. Many formatters format values as strings, and most
 such formatters have names of the form "<value type> Formatter",
 where <value type> is either the type of input value (e.g.
-"Duration Formatter" and "Time Difference Formatter") or the way
+"Duration Formatter" and "Relative Time Formatter") or the way
 in which the output presents the input value (e.g.
 "Decimal Formatter", "Local Time Formatter", or
 "Lower Case Formatter"). However, the occupations of some
@@ -256,16 +252,17 @@ Moon:
 Formatter classes:
     Calculator (Any -> Number)
     DecimalFormatter (Number -> String)
+    DurationFormatter (Number -> String)
     LocalTimeFormatter (DateTime -> String)
     LowerCaseFormatter (String -> String)
-    ValueMapper (Any -> Any)
     PercentFormatter (Number -> String)
     PrefixRemover (String -> String)
+    RelativeTimeFormatter (Number -> String)
     SolarDateFormatter (DateTime -> String)
-    TimeDifferenceFormatter (Number -> String)
     UpperCaseFormatter (String -> String)
     UtcTimeFormatter (DateTime -> String)
-    
+    ValueMapper (Any -> Any)
+
 All formatters but `ValueMapper` automatically map `None` to `None`.
 
 By default, `ValueMapper` maps keys for which values are not specified
@@ -1143,7 +1140,7 @@ _DEFAULT_DATE_FORMAT = '%Y-%m-%d'
 _DEFAULT_TIME_FORMAT = '%H:%M:%S'
 _DEFAULT_DATE_TIME_FORMAT = _DEFAULT_DATE_FORMAT + ' ' + _DEFAULT_TIME_FORMAT
 _DEFAULT_DURATION_FORMAT = '%h:%M:%S'
-_DEFAULT_TIME_DIFFERENCE_FORMAT = '%g%h:%M:%S'
+_DEFAULT_RELATIVE_TIME_FORMAT = '%g%h:%M:%S'
 
 _TEST_DATE_TIME = DateTime(2020, 1, 1)
 
@@ -1284,7 +1281,7 @@ class DurationFormatter(Formatter):
     
     def _get_formatter(self, settings):
         format_ = settings.get('format', _DEFAULT_DURATION_FORMAT)
-        return TimeDifferenceFormatter_(format_)
+        return TimeDifferenceFormatter(format_)
     
     def _format(self, duration, clip):
         
@@ -1314,20 +1311,6 @@ class LowerCaseFormatter(Formatter):
         return value.lower()
     
     
-class ValueMapper(Formatter):
-    
-    name = 'Value Mapper'
-    
-    def __init__(self, settings=None):
-        if settings is None:
-            self._mapping = {}
-        else:
-            self._mapping = settings.get('mapping', {})
-            
-    def _format(self, value, clip):
-        return self._mapping.get(value, value)
-    
-    
 class PercentFormatter(DecimalFormatter):
     
     name = 'Percent Formatter'
@@ -1351,6 +1334,42 @@ class PrefixRemover(Formatter):
             return value[self._prefix_length:]
 
 
+class RelativeTimeFormatter(Formatter):
+
+    name = 'Relative Time Formatter'
+    
+    def __init__(self, settings=None):
+        
+        if settings is None:
+            settings = {}
+            
+        self._negation_enabled = settings.get('negation_enabled', False)
+        self._formatter = self._get_formatter(settings)
+        
+        (self._rounding_enabled, self._rounding_increment,
+            self._rounding_mode) = _get_rounding(
+                settings, True, self._formatter.min_time_increment)
+    
+    def _get_formatter(self, settings):
+        format_ = settings.get('format', _DEFAULT_RELATIVE_TIME_FORMAT)
+        return TimeDifferenceFormatter(format_)
+    
+    def _format(self, relative_time, clip):
+        
+        # Negate relative time if needed.
+        if self._negation_enabled:
+            relative_time = -relative_time
+        
+        # Round relative time if needed.
+        if self._rounding_enabled:
+            td = TimeDelta(seconds=relative_time)
+            rounded_td = time_utils.round_timedelta(
+                td, self._rounding_increment, self._rounding_mode)
+            relative_time = rounded_td.total_seconds()
+            
+        return self._formatter.format(relative_time)
+
+
 class SolarDateFormatter(Formatter):
     
     name = 'Solar Date Formatter'
@@ -1369,42 +1388,6 @@ class SolarDateFormatter(Formatter):
         return date.strftime(self._format_string)
 
 
-class TimeDifferenceFormatter(Formatter):
-
-    name = 'Time Difference Formatter'
-    
-    def __init__(self, settings=None):
-        
-        if settings is None:
-            settings = {}
-            
-        self._negation_enabled = settings.get('negation_enabled', False)
-        self._formatter = self._get_formatter(settings)
-        
-        (self._rounding_enabled, self._rounding_increment,
-            self._rounding_mode) = _get_rounding(
-                settings, True, self._formatter.min_time_increment)
-    
-    def _get_formatter(self, settings):
-        format_ = settings.get('format', _DEFAULT_TIME_DIFFERENCE_FORMAT)
-        return TimeDifferenceFormatter_(format_)
-    
-    def _format(self, difference, clip):
-        
-        # Negate difference if needed.
-        if self._negation_enabled:
-            difference = -difference
-        
-        # Round difference if needed.
-        if self._rounding_enabled:
-            td = TimeDelta(seconds=difference)
-            rounded_td = time_utils.round_timedelta(
-                td, self._rounding_increment, self._rounding_mode)
-            difference = rounded_td.total_seconds()
-            
-        return self._formatter.format(difference)
-
-
 class UpperCaseFormatter(Formatter):
     
     name = 'Upper Case Formatter'
@@ -1421,17 +1404,31 @@ class UtcTimeFormatter(_DateTimeFormatter):
         super().__init__(False, settings)
             
     
+class ValueMapper(Formatter):
+    
+    name = 'Value Mapper'
+    
+    def __init__(self, settings=None):
+        if settings is None:
+            self._mapping = {}
+        else:
+            self._mapping = settings.get('mapping', {})
+            
+    def _format(self, value, clip):
+        return self._mapping.get(value, value)
+    
+    
 _FORMATTER_CLASSES = dict((c.name, c) for c in [
     Calculator,
     DecimalFormatter,
     DurationFormatter,
     LocalTimeFormatter,
     LowerCaseFormatter,
-    ValueMapper,
     PercentFormatter,
     PrefixRemover,
+    RelativeTimeFormatter,
     SolarDateFormatter,
-    TimeDifferenceFormatter,
     UpperCaseFormatter,
     UtcTimeFormatter,
+    ValueMapper,
 ])
