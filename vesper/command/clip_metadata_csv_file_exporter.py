@@ -763,7 +763,7 @@ class EndTimeMeasurement(Measurement):
         return clip.end_time
     
     
-class _RecordingFilePath(Measurement):
+class _RecordingFilePathMeasurement(Measurement):
     
     def __init__(self, settings=None):
         if settings is None:
@@ -806,7 +806,7 @@ class _RecordingFilePath(Measurement):
                 return relative_path
 
 
-class _RecordingFileName(_RecordingFilePath):
+class _RecordingFileNameMeasurement(_RecordingFilePathMeasurement):
     
     def __init__(self):
         super().__init__({'absolute': False})
@@ -819,12 +819,12 @@ class _RecordingFileName(_RecordingFilePath):
             return Path(relative_path).name
 
 
-class FirstRecordingFileName(_RecordingFileName):
+class FirstRecordingFileNameMeasurement(_RecordingFileNameMeasurement):
     name = 'First Recording File Name'
     _file_index = 0
 
 
-class FirstRecordingFilePath(_RecordingFilePath):
+class FirstRecordingFilePathMeasurement(_RecordingFilePathMeasurement):
     name = 'First Recording File Path'
     _file_index = 0
 
@@ -837,12 +837,12 @@ class IdMeasurement(Measurement):
         return clip.id
     
     
-class LastRecordingFileName(_RecordingFileName):
+class LastRecordingFileNameMeasurement(_RecordingFileNameMeasurement):
     name = 'Last Recording File Name'
     _file_index = -1
 
 
-class LastRecordingFilePath(_RecordingFilePath):
+class LastRecordingFilePathMeasurement(_RecordingFilePathMeasurement):
     name = 'Last Recording File Path'
     _file_index = -1
 
@@ -1237,11 +1237,11 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     DurationMeasurement,
     EndIndexMeasurement,
     EndTimeMeasurement,
-    FirstRecordingFileName,
-    FirstRecordingFilePath,
+    FirstRecordingFileNameMeasurement,
+    FirstRecordingFilePathMeasurement,
     IdMeasurement,
-    LastRecordingFileName,
-    LastRecordingFilePath,
+    LastRecordingFileNameMeasurement,
+    LastRecordingFilePathMeasurement,
     LengthMeasurement,
     LunarAltitudeMeasurement,
     LunarAzimuthMeasurement,
