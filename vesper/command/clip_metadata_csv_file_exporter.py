@@ -22,24 +22,6 @@ import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Add "First" and "Last" versions of each of the following
-# recording file measurements:
-#
-#     Recording File Number
-#
-#     Recording File Start Time
-#     Recording File Start Index
-#
-#     Recording File End Time
-#     Recording File End Index
-#
-#     Recording File Duration
-#     Recording File Length
-
-# TODO: Consider logging a warning for some errors during export, for
-# example if a recording file path cannot be made absolute, or if a clip
-# extends past the end of its recording.
-
 # TODO: Figure out some way to be able to specify globally that
 # measurements and formatters should be diurnal or nocturnal.
 # A `default settings` list might be good, with each item an
@@ -153,7 +135,25 @@ Measurements by name:
     Duration
     End Index
     End Time
+    First Recording File Duration Measurement
+    First Recording File End Index Measurement
+    First Recording File End Time Measurement
+    First Recording File Length Measurement
+    First Recording File Name Measurement
+    First Recording File Number Measurement
+    First Recording File Path Measurement
+    First Recording File Start Index Measurement
+    First Recording File Start Time Measurement
     ID
+    Last Recording File Duration Measurement
+    Last Recording File End Index Measurement
+    Last Recording File End Time Measurement
+    Last Recording File Length Measurement
+    Last Recording File Name Measurement
+    Last Recording File Number Measurement
+    Last Recording File Path Measurement
+    Last Recording File Start Index Measurement
+    Last Recording File Start Time Measurement
     Length
     Lunar Altitude
     Lunar Azimuth
@@ -170,6 +170,7 @@ Measurements by name:
     Relative End Time
     Relative Start Time
     Sample Rate
+    Sensor Name
     Solar Altitude
     Solar Azimuth
     Solar Midnight
@@ -193,10 +194,31 @@ Recording:
     Recording Length
     Recording Channel Number
 
+Recording Files:
+    First Recording File Duration Measurement
+    First Recording File End Index Measurement
+    First Recording File End Time Measurement
+    First Recording File Length Measurement
+    First Recording File Name Measurement
+    First Recording File Number Measurement
+    First Recording File Path Measurement
+    First Recording File Start Index Measurement
+    First Recording File Start Time Measurement
+    Last Recording File Duration Measurement
+    Last Recording File End Index Measurement
+    Last Recording File End Time Measurement
+    Last Recording File Length Measurement
+    Last Recording File Name Measurement
+    Last Recording File Number Measurement
+    Last Recording File Path Measurement
+    Last Recording File Start Index Measurement
+    Last Recording File Start Time Measurement
+
 Clip:
     ID
     Station Name
     Microphone Output Name
+    Sensor Name
     Detector Name
     Detector Type
 
@@ -729,13 +751,27 @@ class _IndexMeasurement(Measurement):
             return self._get_recording_file_reference_index(clip, 'end')
     
     def _get_recording_file_reference_index(self, clip, name):
-        info = clip_manager.instance.get_recording_file_info(clip)
+        info = _get_recording_file_info(clip)
         if info is None:
             return None
         else:
             recording_file = info[0][self._recording_file_index]
             return getattr(recording_file, name + '_index')
-            
+
+
+def _get_recording_file_info(clip):
+    
+    try:
+        return clip_manager.instance.get_recording_file_info(clip)
+    
+    except Exception as e:
+        
+        logging.warning(
+            f'Could not get recording file information for clip '
+            f'{str(clip)}. Error message was: {str(e)}')
+        
+        return None
+
 
 class EndIndexMeasurement(_IndexMeasurement):
     
@@ -763,70 +799,147 @@ class EndTimeMeasurement(Measurement):
         return clip.end_time
     
     
-class _RecordingFilePathMeasurement(Measurement):
+class _RecordingFileMeasurement(Measurement):
+    
+    def measure(self, clip):
+        info = _get_recording_file_info(clip)
+        if info is None:
+            return None
+        else:
+            recording_file = info[0][self._file_index]
+            return self._measure(recording_file)
+    
+    def _measure(self, recording_file):
+        raise NotImplementedError()
+
+
+class _RecordingFileDurationMeasurement(_RecordingFileMeasurement):
+    def _measure(self, recording_file):
+        return recording_file.duration
+
+
+class _RecordingFileEndIndexMeasurement(_RecordingFileMeasurement):
+    def _measure(self, recording_file):
+        return recording_file.end_index
+
+
+class _RecordingFileEndTimeMeasurement(_RecordingFileMeasurement):
+    def _measure(self, recording_file):
+        return recording_file.end_time
+
+
+class _RecordingFileLengthMeasurement(_RecordingFileMeasurement):
+    def _measure(self, recording_file):
+        return recording_file.length
+
+
+class _RecordingFileNameMeasurement(_RecordingFileMeasurement):
+    
+    def _measure(self, recording_file):
+        path = recording_file.path
+        if path is None:
+            return None
+        else:
+            return Path(path).name
+
+
+class _RecordingFileNumberMeasurement(_RecordingFileMeasurement):
+    def _measure(self, recording_file):
+        return recording_file.file_num
+
+
+class _RecordingFilePathMeasurement(_RecordingFileMeasurement):
     
     def __init__(self, settings=None):
         if settings is None:
             settings = {}
         self._absolute = settings.get('absolute', True)
     
-    def measure(self, clip):
+    def _measure(self, recording_file):
         
-        info = clip_manager.instance.get_recording_file_info(clip)
+        relative_path = recording_file.path
         
-        if info is None:
-            return None
-        
-        else:
-            
-            recording_file = info[0][self._file_index]
-            relative_path = recording_file.path
-            
-            if relative_path is None:
-                
-                # TODO: Can this really happen? Why would we have a file
-                # without a path?
-                return None
-            
-            elif self._absolute:
-                
-                rm = recording_manager.instance
-                
-                try:
-                    return rm.get_absolute_recording_file_path(relative_path)
-                
-                except Exception as e:
-                    message = (
-                        f'Could not get absolute path for recording file '
-                        f'"{relative_path}". Error message was: {str(e)}')
-                    logging.warn(message)
-                    return None
-            
-            else:
-                return relative_path
-
-
-class _RecordingFileNameMeasurement(_RecordingFilePathMeasurement):
-    
-    def __init__(self):
-        super().__init__({'absolute': False})
-    
-    def measure(self, clip):
-        relative_path = super().measure(clip)
         if relative_path is None:
+            
+            # TODO: Can this really happen? Why would we have a file
+            # without a path?
             return None
+        
+        elif self._absolute:
+            
+            rm = recording_manager.instance
+            
+            try:
+                return rm.get_absolute_recording_file_path(relative_path)
+            
+            except Exception as e:
+                logging.warning(
+                    f'Could not get absolute path for recording file '
+                    f'"{relative_path}". Error message was: {str(e)}')
+                return None
+        
         else:
-            return Path(relative_path).name
+            return relative_path
 
 
-class FirstRecordingFileNameMeasurement(_RecordingFileNameMeasurement):
+class _RecordingFileStartIndexMeasurement(_RecordingFileMeasurement):
+    def _measure(self, recording_file):
+        return recording_file.start_index
+
+
+class _RecordingFileStartTimeMeasurement(_RecordingFileMeasurement):
+    def _measure(self, recording_file):
+        return recording_file.start_time
+
+
+class _First:
+    """Provides file index to first recording file measurements."""
+    _file_index = 0
+
+
+class FirstRecordingFileDurationMeasurement(
+        _RecordingFileDurationMeasurement, _First):
+    name = 'First Recording File Duration'
+
+
+class FirstRecordingFileEndIndexMeasurement(
+        _RecordingFileEndIndexMeasurement, _First):
+    name = 'First Recording File End Index'
+
+
+class FirstRecordingFileEndTimeMeasurement(
+        _RecordingFileEndTimeMeasurement, _First):
+    name = 'First Recording File End Time'
+
+
+class FirstRecordingFileLengthMeasurement(
+        _RecordingFileLengthMeasurement, _First):
+    name = 'First Recording File Length'
+
+
+class FirstRecordingFileNameMeasurement(
+        _RecordingFileNameMeasurement, _First):
     name = 'First Recording File Name'
-    _file_index = 0
 
 
-class FirstRecordingFilePathMeasurement(_RecordingFilePathMeasurement):
+class FirstRecordingFileNumberMeasurement(
+        _RecordingFileNumberMeasurement, _First):
+    name = 'First Recording File Number'
+    
+    
+class FirstRecordingFilePathMeasurement(
+        _RecordingFilePathMeasurement, _First):
     name = 'First Recording File Path'
-    _file_index = 0
+
+
+class FirstRecordingFileStartIndexMeasurement(
+        _RecordingFileStartIndexMeasurement, _First):
+    name = 'First Recording File Start Index'
+
+
+class FirstRecordingFileStartTimeMeasurement(
+        _RecordingFileStartTimeMeasurement, _First):
+    name = 'First Recording File Start Time'
 
 
 class IdMeasurement(Measurement):
@@ -837,14 +950,54 @@ class IdMeasurement(Measurement):
         return clip.id
     
     
-class LastRecordingFileNameMeasurement(_RecordingFileNameMeasurement):
+class _Last:
+    """Provides file index to last recording file measurements."""
+    _file_index = -1
+    
+    
+class LastRecordingFileDurationMeasurement(
+        _RecordingFileDurationMeasurement, _Last):
+    name = 'Last Recording File Duration'
+
+
+class LastRecordingFileEndIndexMeasurement(
+        _RecordingFileEndIndexMeasurement, _Last):
+    name = 'Last Recording File End Index'
+
+
+class LastRecordingFileEndTimeMeasurement(
+        _RecordingFileEndTimeMeasurement, _Last):
+    name = 'Last Recording File End Time'
+
+
+class LastRecordingFileLengthMeasurement(
+        _RecordingFileLengthMeasurement, _Last):
+    name = 'Last Recording File Length'
+
+
+class LastRecordingFileNameMeasurement(
+        _RecordingFileNameMeasurement, _Last):
     name = 'Last Recording File Name'
-    _file_index = -1
 
 
-class LastRecordingFilePathMeasurement(_RecordingFilePathMeasurement):
+class LastRecordingFileNumberMeasurement(
+        _RecordingFileNumberMeasurement, _Last):
+    name = 'Last Recording File Number'
+    
+    
+class LastRecordingFilePathMeasurement(
+        _RecordingFilePathMeasurement, _Last):
     name = 'Last Recording File Path'
-    _file_index = -1
+
+
+class LastRecordingFileStartIndexMeasurement(
+        _RecordingFileStartIndexMeasurement, _Last):
+    name = 'Last Recording File Start Index'
+
+
+class LastRecordingFileStartTimeMeasurement(
+        _RecordingFileStartTimeMeasurement, _Last):
+    name = 'Last Recording File Start Time'
 
 
 class LengthMeasurement(Measurement):
@@ -1088,7 +1241,7 @@ class _RelativeTimeMeasurement(Measurement):
             return _get_solar_event_time(clip, reference_name, self._diurnal)
     
     def _get_recording_file_reference_time(self, clip, name):
-        info = clip_manager.instance.get_recording_file_info(clip)
+        info = _get_recording_file_info(clip)
         if info is None:
             return None
         else:
@@ -1224,8 +1377,8 @@ class SunriseMeasurement(_SolarEventTimeMeasurement):
     
 class SunsetMeasurement(_SolarEventTimeMeasurement):
     name = 'Sunset'
-    
-    
+
+
 _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     AnnotationValueMeasurement,
     AstronomicalDawnMeasurement,
@@ -1237,11 +1390,25 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     DurationMeasurement,
     EndIndexMeasurement,
     EndTimeMeasurement,
+    FirstRecordingFileDurationMeasurement,
+    FirstRecordingFileEndIndexMeasurement,
+    FirstRecordingFileEndTimeMeasurement,
+    FirstRecordingFileLengthMeasurement,
     FirstRecordingFileNameMeasurement,
+    FirstRecordingFileNumberMeasurement,
     FirstRecordingFilePathMeasurement,
+    FirstRecordingFileStartIndexMeasurement,
+    FirstRecordingFileStartTimeMeasurement,
     IdMeasurement,
+    LastRecordingFileDurationMeasurement,
+    LastRecordingFileEndIndexMeasurement,
+    LastRecordingFileEndTimeMeasurement,
+    LastRecordingFileLengthMeasurement,
     LastRecordingFileNameMeasurement,
+    LastRecordingFileNumberMeasurement,
     LastRecordingFilePathMeasurement,
+    LastRecordingFileStartIndexMeasurement,
+    LastRecordingFileStartTimeMeasurement,
     LengthMeasurement,
     LunarAltitudeMeasurement,
     LunarAzimuthMeasurement,
