@@ -21,26 +21,13 @@ import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Add "reference_index" setting to "Start Index" and "End Index"
-# measurements. Valid values for "Start Index" are:
-#
-#     Recording Start Index
-#     Recording End Index
-#     First Recording File Start Index
-#     First Recording file End Index
-#
-# Valid values for "End Index" are:
-#
-#     Recording Start Index
-#     Recording End Index
-#     Last Recording File Start Index
-#     Last Recording File End Index
-
 # TODO: Add "First" and "Last" versions of each of the following
 # recording file measurements:
 #
 #     Recording File Path (`absolute` setting)
 #     Recording File Name
+#
+#     Recording File Number
 #
 #     Recording File Start Time
 #     Recording File Start Index
@@ -699,14 +686,73 @@ class DurationMeasurement(Measurement):
         return clip.duration
     
     
-class EndIndexMeasurement(Measurement):
+class _IndexMeasurement(Measurement):
+    
+    def __init__(self, settings=None):
+        if settings is None:
+            settings = {}
+        self._reference_name = \
+            settings.get('reference_index', self._default_reference_index_name)
+    
+    def measure(self, clip):
+        
+        clip_index = self._get_index(clip)
+        
+        if clip_index is None:
+            return None
+        
+        reference_index = self._get_reference_index(clip)
+        
+        if reference_index is None:
+            return None
+        
+        # If we get here, we have both a clip index and a reference index.
+        
+        return clip_index - reference_index
+    
+    def _get_reference_index(self, clip):
+        
+        reference_name = self._reference_name
+        
+        if reference_name == 'Recording Start Index':
+            return 0
+        
+        elif reference_name == 'Recording End Index':
+            return clip.recording.length
+        
+        elif reference_name == self._recording_file_start_index_reference_name:
+            return self._get_recording_file_reference_index(clip, 'start')
+        
+        else:
+            return self._get_recording_file_reference_index(clip, 'end')
+    
+    def _get_recording_file_reference_index(self, clip, name):
+        info = clip_manager.instance.get_recording_file_info(clip)
+        if info is None:
+            return None
+        else:
+            recording_file = info[0][self._recording_file_index]
+            return getattr(recording_file, name + '_index')
+            
+
+class EndIndexMeasurement(_IndexMeasurement):
     
     name = 'End Index'
     
-    def measure(self, clip):
+    _default_reference_index_name = 'Recording Start Index'
+    
+    _recording_file_start_index_reference_name = \
+        'Last Recording File Start Index'
+    
+    _recording_file_end_index_reference_name = \
+        'Last Recording File End Index'
+    
+    _recording_file_index = -1
+    
+    def _get_index(self, clip):
         return clip.end_index
-    
-    
+
+
 class EndTimeMeasurement(Measurement):
     
     name = 'End Time'
@@ -919,7 +965,7 @@ class RecordingStartTimeMeasurement(Measurement):
 _SOLAR_EVENT_NAMES = frozenset(SunMoon.SOLAR_EVENT_NAMES)
 
 
-class _RelativeClipTimeMeasurement(Measurement):
+class _RelativeTimeMeasurement(Measurement):
     
     def __init__(self, settings=None):
         
@@ -955,24 +1001,24 @@ class _RelativeClipTimeMeasurement(Measurement):
             return clip.recording.end_time
         
         elif reference_name == self._recording_file_start_time_reference_name:
-            info = clip_manager.instance.get_recording_file_info(clip)
-            if info is None:
-                return None
-            else:
-                return info[0][self._recording_file_index].start_time
-        
-        elif reference_name == self._recording_file_end_time_reference_name:
-            info = clip_manager.instance.get_recording_file_info(clip)
-            if info is None:
-                return None
-            else:
-                return info[0][self._recording_file_index].end_time
+            return self._get_recording_file_reference_time(clip, 'start')
             
+        elif reference_name == self._recording_file_end_time_reference_name:
+            return self._get_recording_file_reference_time(clip, 'end')
+        
         else:
             return _get_solar_event_time(clip, reference_name, self._diurnal)
+    
+    def _get_recording_file_reference_time(self, clip, name):
+        info = clip_manager.instance.get_recording_file_info(clip)
+        if info is None:
+            return None
+        else:
+            recording_file = info[0][self._recording_file_index]
+            return getattr(recording_file, name + '_time')
 
 
-class RelativeEndTimeMeasurement(_RelativeClipTimeMeasurement):
+class RelativeEndTimeMeasurement(_RelativeTimeMeasurement):
     
     name = 'Relative End Time'
     
@@ -988,7 +1034,7 @@ class RelativeEndTimeMeasurement(_RelativeClipTimeMeasurement):
         return clip.end_time
     
     
-class RelativeStartTimeMeasurement(_RelativeClipTimeMeasurement):
+class RelativeStartTimeMeasurement(_RelativeTimeMeasurement):
     
     name = 'Relative Start Time'
     
@@ -1060,11 +1106,21 @@ class SolarPeriodMeasurement(Measurement):
         return sun_moon.get_solar_period_name(clip.start_time)
 
 
-class StartIndexMeasurement(Measurement):
+class StartIndexMeasurement(_IndexMeasurement):
     
     name = 'Start Index'
     
-    def measure(self, clip):
+    _default_reference_index_name = 'Recording Start Index'
+    
+    _recording_file_start_index_reference_name = \
+        'First Recording File Start Index'
+    
+    _recording_file_end_index_reference_name = \
+        'First Recording File End Index'
+    
+    _recording_file_index = 0
+    
+    def _get_index(self, clip):
         return clip.start_index
     
     
