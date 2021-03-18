@@ -18,15 +18,15 @@ To upload the Vesper package to the  real Python package index:
     
 To create a conda environment using a local Vesper package:
 
-    conda create -n test python=3.6
+    conda create -n test python=3.8
     conda activate test
     pip install dist/vesper-<version>.tar.gz
     
 To create a conda environment using a Vesper package from the test PyPI:
 
-    conda create -n test python=3.6
+    conda create -n test python=3.8
     conda activate test
-    pip install birdvoxdetect django jsonschema pyephem resampy ruamel_yaml scipy
+    pip install django jsonschema resampy ruamel_yaml skyfield tensorflow
     pip install --extra-index-url https://test.pypi.org/simple/ vesper==<version>
     
 The first pip command in the above is to ensure that Vesper's dependencies
@@ -35,20 +35,14 @@ contain incompatible pre-release versions.
     
 To create a conda environment using a Vesper package from the real PyPI:
 
-    conda create -n test python=3.6
+    conda create -n test python=3.x
     conda activate test
     pip install vesper==<version>
-    
-To create a conda environment for Vesper development with Tensorflow 1.x:
-
-    conda create -n vesper-dev python=3.6
-    conda activate vesper-dev
-    pip install birdvoxdetect bokeh django jsonschema matplotlib pyephem ruamel_yaml sphinx sphinx_rtd_theme
     
 To create a conda environment for Vesper development with TensorFlow 2.x:
     conda create -n vesper-dev-tf2 python=3.8
     conda activate vesper-dev-tf2
-    pip install bokeh django jsonschema matplotlib pyephem resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow
+    pip install bokeh django jsonschema matplotlib resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow
     
 Whenever you modify plugin entry points, you must run:
 
@@ -121,13 +115,12 @@ setup(
     ],
     
     install_requires=[
-        'birdvoxdetect',
         'django',
         'jsonschema',
-        'pyephem',
         'resampy',
         'ruamel_yaml',
-        'scipy'
+        'skyfield',
+        'tensorflow',
     ],
       
     entry_points={
@@ -135,7 +128,7 @@ setup(
             'vesper_admin=vesper.django.manage:main',
             'vesper_recorder=vesper.scripts.vesper_recorder:_main',
             'vesper_play_recorder_test_signal=vesper.scripts.play_recorder_test_signal:_main',
-            'vesper_show_audio_input_devices=vesper.scripts.show_audio_input_devices:_main'
+            'vesper_show_audio_input_devices=vesper.scripts.show_audio_input_devices:_main',
         ]
     },
       
