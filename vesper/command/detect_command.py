@@ -944,18 +944,32 @@ class _DetectorListener:
             
             except AnnotationInfo.DoesNotExist:
                 
-                # For now, at least, we require that there already be an
-                # `AnnotationInfo` in the archive database for any
-                # annotation that a detector wants to create.
-                raise ValueError((
-                    'Annotation "{}" not found in archive database: '
-                    'please add it and try again.').format(name))
+                detector_name = self._detector_model.name
                 
-            else:
-                self._annotation_info_cache[name] = info
-                return info
-
-        
+                self._logger.info(
+                    f'        Adding annotation "{name}" to archive for '
+                    f'detector "{detector_name}"...')
+                
+                description = (
+                    f'Created automatically for detector "{detector_name}".')
+                
+                type_ = 'String'
+                creation_time = time_utils.get_utc_now()
+                creating_user = None
+                creating_job = self._job
+                
+                info = AnnotationInfo.objects.create(
+                    name=name,
+                    description=description,
+                    type=type_,
+                    creation_time=creation_time,
+                    creating_user=creating_user,
+                    creating_job=creating_job)
+            
+            self._annotation_info_cache[name] = info
+            return info
+    
+    
     def complete_processing(self, threshold=None):
         
         # Create remaining clips.

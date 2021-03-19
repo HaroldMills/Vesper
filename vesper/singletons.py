@@ -124,6 +124,16 @@ _TF2_CLASSIFIERS = '''
 
 
 _TF2_DETECTORS = '''
+
+    # BirdVoxDetect 0.5.x with adaptive thresholds
+    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT10
+    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT20
+    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT30
+    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT40
+    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT50
+    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT60
+    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT70
+
 '''
 
 
