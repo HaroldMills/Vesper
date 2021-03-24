@@ -39,6 +39,11 @@ To create a conda environment using a Vesper package from the real PyPI:
     conda activate test
     pip install vesper==<version>
     
+To create a conda environment for Vesper development with TensorFlow 1.15.x:
+    conda create -n vesper-dev-tf2 python=3.6
+    conda activate vesper-dev-tf2
+    pip install bokeh django librosa jsonschema matplotlib resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow~=1.15.3
+    
 To create a conda environment for Vesper development with TensorFlow 2.x:
     conda create -n vesper-dev-tf2 python=3.8
     conda activate vesper-dev-tf2
