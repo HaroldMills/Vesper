@@ -1,22 +1,6 @@
 """Module containing class `Singleton`."""
 
 
-# TODO: Get rid of this module and the `Singletons` module by putting
-# singletons in the modules that define their classes. Allow programmers
-# to use singletons, for example the plugin manager, by writing things
-# like:
-#
-#     from vesper.plugin.plugin_manager import plugin_manager
-#
-#     detectors = plugin_manager.get_plugins('Detector')
-#
-# rather than:
-#
-#     from vesper.singletons import plugin_manager
-#
-#     detectors = plugin_manager.instance.get_plugins('Detector')
-
-
 class Singleton:
     
     """

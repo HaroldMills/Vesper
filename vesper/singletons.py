@@ -12,6 +12,22 @@ from vesper.util.singleton import Singleton
 import tensorflow as tf
 
 
+# TODO: Get rid of this module and the `Singleton` module by moving
+# singletons to the modules that define their classes. This will allow
+# programmers to use singletons, for example the plugin manager, by
+# writing things like:
+#
+#     from vesper.plugin.plugin_manager import plugin_manager
+#
+#     detectors = plugin_manager.get_plugins('Detector')
+#
+# rather than:
+#
+#     from vesper.singletons import plugin_manager
+#
+#     detectors = plugin_manager.instance.get_plugins('Detector')
+
+
 _TF_VERSION = int(tf.__version__.split('.')[0])
 
 
