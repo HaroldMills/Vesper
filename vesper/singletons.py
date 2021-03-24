@@ -24,38 +24,38 @@ _TF1_CLASSIFIERS = '''
 
 _TF1_DETECTORS = '''
 
-    # BirdVoxDetect 0.1.a0 with adaptive thresholds
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT02
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT05
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT10
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT20
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT30
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT40
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT50
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT60
-    - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT70
-     
-    # BirdVoxDetect 0.2.x with adaptive thresholds
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT10
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT20
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT30
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT40
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT50
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT60
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT70
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT80
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT90
-     
-    # BirdVoxDetect 0.2.x with fixed thresholds
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT10
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT20
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT30
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT40
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT50
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT60
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT70
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT80
-    - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT90
+#     # BirdVoxDetect 0.1.a0 with adaptive thresholds
+#     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT02
+#     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT05
+#     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT10
+#     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT20
+#     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT30
+#     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT40
+#     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT50
+#     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT60
+#     - vesper.birdvox.birdvoxdetect_0_1_a0.detector.DetectorAT70
+#      
+#     # BirdVoxDetect 0.2.x with adaptive thresholds
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT10
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT20
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT30
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT40
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT50
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT60
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT70
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT80
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorAT90
+#      
+#     # BirdVoxDetect 0.2.x with fixed thresholds
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT10
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT20
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT30
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT40
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT50
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT60
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT70
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT80
+#     - vesper.birdvox.birdvoxdetect_0_2.detector.DetectorFT90
      
     # MPG Ranch Thrush Detector 0.0
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector
@@ -124,16 +124,6 @@ _TF2_CLASSIFIERS = '''
 
 
 _TF2_DETECTORS = '''
-
-    # BirdVoxDetect 0.5.x with adaptive thresholds
-    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT10
-    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT20
-    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT30
-    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT40
-    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT50
-    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT60
-    - vesper.birdvox.birdvoxdetect_0_5.detector.DetectorAT70
-
 '''
 
 
@@ -214,6 +204,12 @@ def _create_extension_manager():
 
 
 extension_manager = Singleton(_create_extension_manager)
+
+
+# Import BirdVox detectors module to create BirdVox detector classes
+# and add to extension manager. This is a temporary kludge that will
+# not be needed in Vesper 0.5.0.
+import vesper.birdvox.detectors
 
 
 def _create_preset_manager():

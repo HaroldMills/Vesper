@@ -1,8 +1,13 @@
 """
-Module containing Vesper wrapper for BirdVoxDetect 0.5.x NFC detector.
+Module supporting BirdVoxDetect NFC detectors.
 
-BirdVoxDetect (https://github.com/BirdVox/birdvoxdetect) is an NFC detector
-created by the BirdVox project (https://wp.nyu.edu/birdvox/).
+When this module is imported, it dynamically creates a detector class
+(a subclass of the `_Detector` class of this module) for each BirdVoxDetect
+detector in the archive database and adds it to the detector extensions of
+this Vesper server.
+
+BirdVoxDetect (https://github.com/BirdVox/birdvoxdetect) is an NFC
+detector created by the BirdVox project (https://wp.nyu.edu/birdvox/).
 """
 
 
@@ -14,30 +19,14 @@ import wave
 
 import numpy as np
 
+from vesper.django.app.models import Processor
+from vesper.singletons import extension_manager
 from vesper.util.settings import Settings
 import vesper.util.conda_utils as conda_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.signal_utils as signal_utils
 
 
-# TODO: Modify detector infrastructure so Vesper can support new versions
-# of BirdVoxDetect as they appear, without modification, as long as the
-# BirdVoxDetect checklist file format does not change.
-
-# TODO: Consider auto-generating classes for various BVD versions and
-# adding them to the extension manager on startup according to the
-# BirdVoxDetect processors in the archive database. We could require
-# that BirdVoxDetect processor names be in a particular format, e.g.
-# BirdVoxDetect 0.5.0 AT 30, and parse the names to determine the
-# classes to create.
-
-# TODO: Include optional map from BVD version numbers to Conda environment
-# names in preferences?
-
-
-_DETECTOR_VERSIONS = ('0.5.0',)
-
-# TODO: Could clip duration be a preference?
 _CLIP_DURATION = .6
 
 
@@ -101,30 +90,6 @@ class _Detector:
         return self._listener
     
     
-#     def _check_bvd_version(self):
-#         
-#         version = birdvoxdetect.__version__
-#         
-#         # Get major and minor version numbers.
-#         parts = version.split('.')
-#         try:
-#             major = int(parts[0])
-#             minor = int(parts[1])
-#         except Exception:
-#             self._handle_incompatible_bvd_version(version)
-#             
-#         if not (major == 0 and minor == 2):
-#             self._handle_incompatible_bvd_version(version)
-#     
-#     
-#     def _handle_incompatible_bvd_version(self, version):
-#         raise ValueError(
-#             f'Installed BirdVoxDetect version {version} is not '
-#             'compatible with this detector wrapper. The wrapper '
-#             'only works with BirdVoxDetect versions in the 0.2.x '
-#             'family.')
-    
-    
     def detect(self, samples):
         self._audio_file_writer.write(samples)
     
@@ -162,7 +127,7 @@ class _Detector:
             
             except Exception as e:
                 raise DetectorError(
-                    f'Could not run birdvoxdetect in Conda environment '
+                    f'Could not run BirdVoxDetect in Conda environment '
                     f'"{environment_name}". Error message was: {str(e)}')
             
             self._log_bvd_process_results(results)
@@ -193,11 +158,10 @@ class _Detector:
             
             logging.info(
                 f'        BirdVoxDetect process {stream_name} was empty.')
-            
+        
         else:
             
-            logging.info(
-                f'        BirdVoxDetect process {stream_name} was:')
+            logging.info(f'        BirdVoxDetect process {stream_name} was:')
             
             lines = stream_text.strip().splitlines()
             for line in lines:
@@ -225,14 +189,14 @@ class _Detector:
             column_count = len(header)
             
             if column_count == 3:
-                self._process_checklist_file_0(reader)
+                self._process_three_column_checklist_file(reader)
             if column_count == 5:
-                self._process_checklist_file_1(reader)
+                self._process_five_column_checklist_file(reader)
             else:
-                self._process_checklist_file_2(reader)
+                self._process_eight_column_checklist_file(reader)
     
     
-    def _process_checklist_file_0(self, reader):
+    def _process_three_column_checklist_file(self, reader):
         
         """Processes a three-column BirdVoxDetect checklist file."""
         
@@ -269,7 +233,7 @@ class _Detector:
         return hours * 3600 + minutes * 60 + seconds
     
     
-    def _process_checklist_file_1(self, reader):
+    def _process_five_column_checklist_file(self, reader):
         
         """Processes a five-column BirdVoxDetect checklist file."""
         
@@ -298,7 +262,7 @@ class _Detector:
                 start_index, self._clip_length, annotations=annotations)
 
 
-    def _process_checklist_file_2(self, reader):
+    def _process_eight_column_checklist_file(self, reader):
         
         """Processes an eight-column BirdVoxDetect checklist file."""
         
@@ -341,7 +305,8 @@ class _Detector:
 
 
 _ORDER_NAME_CORRECTIONS = {
-    'Passeriforme': 'Passeriformes'
+    'Passeriforme': 'Passeriformes',
+    'Pelicaniforme': 'Pelicaniformes',
 }
 
 
@@ -366,11 +331,44 @@ def _get_classification(
         return None, None
 
 
-def _create_detector_class(detector_version, threshold_type, threshold):
+def _create_detector_classes():
+    
+    """
+    Creates a `_Detector` subclass for each BirdVoxDetect detector in the
+    archive database, and adds it to the detector extensions of this
+    Vesper server.
+    """
+    
+    detectors = Processor.objects.filter(type='Detector')
+    bvd_detectors = detectors.filter(name__startswith='BirdVoxDetect')
+    
+    for detector in bvd_detectors:
+        
+        try:
+            cls = _create_detector_class(detector)
+            
+        except Exception as e:
+            logging.warning(
+                f'Could not create detector "{detector.name}". '
+                f'Error message was: {str(e)}')
+        
+        else:
+            extension_manager.instance.add_extension('Detector', cls)
+
+
+def _create_detector_class(processor):
+    
+    detector_version, threshold_type, threshold = \
+        _parse_detector_name(processor.name)
+    
+    # Get detector version with an underscore instead of a string,
+    # but keep the original version since we'll need that, too.
+    detector_version_ = detector_version.replace('.', '_')
     
     threshold_string = f'{threshold:02d}'
     
-    class_name = f'Detector{threshold_type}{threshold_string}'
+    class_name = \
+        f'Detector_{detector_version_}_{threshold_type}_{threshold_string}'
     
     extension_name = \
         f'BirdVoxDetect {detector_version} {threshold_type} {threshold_string}'
@@ -378,39 +376,42 @@ def _create_detector_class(detector_version, threshold_type, threshold):
     settings = Settings(
         detector_version=detector_version,
         threshold=threshold)
-     
+    
     class_dict = {
         'extension_name': extension_name,
         '_settings': settings
     }
     
-    cls = type(class_name, (_Detector,), class_dict)
+    return type(class_name, (_Detector,), class_dict)
+
+
+def _parse_detector_name(name):
     
-    globals()[class_name] = cls
-
-
-def _create_detector_classes():
-    for detector_version in _DETECTOR_VERSIONS:
-        for threshold_type in ('AT',):
-            for threshold in [10, 20, 30, 40, 50, 60, 70, 80, 90]:
-                _create_detector_class(
-                    detector_version, threshold_type, threshold)
+    parts = name.split()
+    
+    if len(parts) != 4:
+        raise ValueError(
+            f'Name must be of the form "BirdVoxDetect <version> <type> '
+            f'<threshold>", for example "BirdVoxDetect 0.5.0 FT 50".')
+    
+    detector_version = parts[1]
+    
+    threshold_type = parts[2]
+    
+    if threshold_type != 'FT':
+        raise ValueError(
+            f'Bad threshold type "{threshold_type}". Only the fixed '
+            f'threshold type "FT" is supported at this time.')
+    
+    try:
+        threshold = int(parts[3])
+    except Exception:
+        raise ValueError(f'Bad threshold "{parts[3]}".')
+    
+    return detector_version, threshold_type, threshold
 
 
 _create_detector_classes()
-
-
-def _show_detector_classes():
-    print('BirdVoxDetect detector classes:')
-    items = sorted(globals().items(), key=lambda i: i[0])
-    for key, value in items:
-        if key.startswith('Detector') and key != 'DetectorError':
-            extension_name = value.extension_name
-            settings = value._settings.__dict__
-            print(f"    {key} '{extension_name}' {settings}")
-
-
-# _show_detector_classes()
 
 
 class WaveFileWriter:

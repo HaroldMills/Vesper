@@ -47,9 +47,18 @@ def run_python_script(module_name, args=None, environment_name=None):
         
         # Run the child process and wait to it to exit.
         results = subprocess.run(
+            
             command,
-            text=True,
-            capture_output=True,
+            
+            # Use these for Python <3.7.
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            
+            # Use these for Python >=3.7.
+            # text=True,
+            # capture_output=True,
+            
             env=env_vars)
     
     except Exception as e:

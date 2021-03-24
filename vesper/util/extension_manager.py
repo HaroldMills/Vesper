@@ -1,6 +1,7 @@
 """Provides access to the extensions of a program."""
 
 
+from collections import defaultdict
 import importlib
 
 import vesper.util.yaml_utils as yaml_utils
@@ -48,21 +49,30 @@ class ExtensionManager:
     
     def __init__(self, extensions_spec):
         self._extensions_spec = extensions_spec
-        self._extensions = None
-        
-        
+        self._extensions_loaded = False
+        self._extensions = defaultdict(list)
+    
+    
     def get_extensions(self, extension_point_name):
         self._load_extensions_if_needed()
         extensions = self._extensions.get(extension_point_name, ())
         return dict((e.extension_name, e) for e in extensions)
-            
-            
+    
+    
     def _load_extensions_if_needed(self):
-        if self._extensions is None:
+        if not self._extensions_loaded:
             spec = yaml_utils.load(self._extensions_spec)
-            self._extensions = dict(
-                (type_name, _load_extension_classes(module_class_names))
-                for type_name, module_class_names in spec.items())
+            for extension_point_name, module_class_names in spec.items():
+                classes = _load_extension_classes(module_class_names)
+                self._extensions[extension_point_name] += classes
+            self._extensions_loaded = True
+            print('ExtensionManager loaded extensions.')
+            for cls in self._extensions['Detector']:
+                print(f'    {cls.extension_name}')
+    
+    
+    def add_extension(self, extension_point_name, cls):
+        self._extensions[extension_point_name].append(cls)
     
     
 def _load_extension_classes(module_class_names):
