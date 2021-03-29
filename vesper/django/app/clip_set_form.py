@@ -23,7 +23,7 @@ class ClipSetForm(forms.Form):
     end_date = forms.DateField(label='End date')
     detectors = forms.MultipleChoiceField(label='Detectors')
     classification = forms.ChoiceField(label='Classification')
-    tag = forms.ChoiceField(label='Tag')
+    # tag = forms.ChoiceField(label='Tag')
     
     
     def __init__(self, *args, **kwargs):
@@ -44,4 +44,4 @@ class ClipSetForm(forms.Form):
             form_utils.get_string_annotation_value_choices('Classification')
             
         # Populate tag field.
-        self.fields['tag'].choices = form_utils.get_tag_choices()
+        # self.fields['tag'].choices = form_utils.get_tag_choices()

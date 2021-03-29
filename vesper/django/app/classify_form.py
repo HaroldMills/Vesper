@@ -12,7 +12,7 @@ class ClassifyForm(forms.Form):
     start_date = forms.DateField(label='Start date')
     end_date = forms.DateField(label='End date')
     detectors = forms.MultipleChoiceField(label='Detectors')
-    tag = forms.ChoiceField(label='Tag')
+    # tag = forms.ChoiceField(label='Tag')
     
     
     def __init__(self, *args, **kwargs):
@@ -33,4 +33,4 @@ class ClassifyForm(forms.Form):
             form_utils.get_processor_choices('Detector')
         
         # Populate tag field.
-        self.fields['tag'].choices = form_utils.get_tag_choices()
+        # self.fields['tag'].choices = form_utils.get_tag_choices()
