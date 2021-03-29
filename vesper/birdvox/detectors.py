@@ -28,6 +28,7 @@ import vesper.util.signal_utils as signal_utils
 
 
 _CLIP_DURATION = .6
+_THRESHOLD_TYPES = ('FT', 'AT')
 
 
 class DetectorError(Exception):
@@ -109,7 +110,7 @@ class _Detector:
             
             settings = self.settings
             
-            module_name = 'birdvoxdetect'
+            module_name = 'vesper_birdvox.run_birdvoxdetect'
             
             # Build list of command line arguments.
             threshold = str(settings.threshold)
@@ -118,6 +119,8 @@ class _Detector:
                 '--threshold', threshold,
                 '--output-dir', output_dir_path,
                 audio_file_path)
+            if settings.threshold_adaptive:
+                args = ('--threshold-adaptive',) + args
             
             environment_name = f'birdvoxdetect-{settings.detector_version}'
             
@@ -132,10 +135,10 @@ class _Detector:
             
             self._log_bvd_process_results(results)
             
-            checklist_file_path = self._get_checklist_file_path(
+            detection_file_path = self._get_detection_file_path(
                 output_dir_path, audio_file_path)
             
-            self._process_checklist_file(checklist_file_path)
+            self._process_detection_file(detection_file_path)
         
         os_utils.delete_file(audio_file_path)
         
@@ -145,8 +148,8 @@ class _Detector:
     def _log_bvd_process_results(self, results):
         
         logging.info(
-            f'        BirdVoxDetect process completed with return code '
-            f'{results.returncode}.')
+            f'        {self.extension_name} process completed with return '
+            f'code {results.returncode}.')
         
         self._log_bvd_output_stream(results.stdout, 'standard output')
         self._log_bvd_output_stream(results.stderr, 'standard error')
@@ -157,180 +160,58 @@ class _Detector:
         if len(stream_text) == 0:
             
             logging.info(
-                f'        BirdVoxDetect process {stream_name} was empty.')
+                f'        {self.extension_name} process {stream_name} '
+                f'was empty.')
         
         else:
             
-            logging.info(f'        BirdVoxDetect process {stream_name} was:')
+            logging.info(
+                f'        {self.extension_name} process {stream_name} was:')
             
             lines = stream_text.strip().splitlines()
             for line in lines:
                 logging.info(f'            {line}')
-
-
-    def _get_checklist_file_path(self, output_dir_path, audio_file_path):
+    
+    
+    def _get_detection_file_path(self, output_dir_path, audio_file_path):
         
         audio_file_name_base = \
             os.path.splitext(os.path.basename(audio_file_path))[0]
             
-        checklist_file_name = f'{audio_file_name_base}_checklist.csv'
+        detection_file_name = \
+            f'{audio_file_name_base}_detections_for_vesper.csv'
         
-        return os.path.join(output_dir_path, checklist_file_name)
+        return os.path.join(output_dir_path, detection_file_name)
     
     
-    def _process_checklist_file(self, checklist_file_path):
+    def _process_detection_file(self, detection_file_path):
         
-        with open(checklist_file_path) as checklist_file:
+        with open(detection_file_path) as detection_file:
                 
-            reader = csv.reader(checklist_file)
+            reader = csv.reader(detection_file)
             
             # Skip header.
             header = next(reader)
             column_count = len(header)
             
-            if column_count == 3:
-                self._process_three_column_checklist_file(reader)
-            if column_count == 5:
-                self._process_five_column_checklist_file(reader)
-            else:
-                self._process_eight_column_checklist_file(reader)
+            for row in reader:
+                
+                start_index = self._get_clip_start_index(row[0])
+                
+                annotations = dict(
+                    (header[i], row[i]) for i in range(1, column_count))
+                
+                self._listener.process_clip(
+                    start_index, self._clip_length, annotations=annotations)
     
     
-    def _process_three_column_checklist_file(self, reader):
-        
-        """Processes a three-column BirdVoxDetect checklist file."""
-        
-        for row in reader:
-            
-            # Get clip start index from peak time.
-            start_index = self._get_clip_start_index(row[0])
-            classification = row[1]
-            detector_score = float(row[2])
-            
-            annotations = {}
-            
-            if classification != 'OTHE':
-                annotations['Classification'] = 'Call.' + classification
-            
-            annotations['Detector Score'] = detector_score
-            
-            self._listener.process_clip(
-                start_index, self._clip_length, annotations=annotations)
+    def _get_clip_start_index(self, center_time):
+        center_time = float(center_time)
+        center_index = signal_utils.seconds_to_frames(
+            center_time, self._input_sample_rate)
+        return center_index - self._clip_length // 2
     
     
-    def _get_clip_start_index(self, peak_time_string):
-        peak_time = self._parse_time(peak_time_string)
-        peak_index = signal_utils.seconds_to_frames(
-            peak_time, self._input_sample_rate)
-        return peak_index - self._clip_length // 2
-    
-    
-    def _parse_time(self, time):
-        parts = time.split(':')
-        hours = int(parts[0])
-        minutes = int(parts[1])
-        seconds = float(parts[2])
-        return hours * 3600 + minutes * 60 + seconds
-    
-    
-    def _process_five_column_checklist_file(self, reader):
-        
-        """Processes a five-column BirdVoxDetect checklist file."""
-        
-        for row in reader:
-            
-            start_index = self._get_clip_start_index(row[0])
-            species_code = row[1]
-            family_name = row[2]
-            order_name = _get_order_name(row[3])
-            detector_score = float(row[4])
-
-            annotations = {}
-            
-            annotations['BirdVoxClassify Species'] = species_code
-            annotations['BirdVoxClassify Family'] = family_name
-            annotations['BirdVoxClassify Order'] = order_name
-            
-            classification, _ = \
-                _get_classification(species_code, family_name, order_name)
-            if classification is not None:
-                annotations['Classification'] = classification
-            
-            annotations['Detector Score'] = detector_score
-            
-            self._listener.process_clip(
-                start_index, self._clip_length, annotations=annotations)
-
-
-    def _process_eight_column_checklist_file(self, reader):
-        
-        """Processes an eight-column BirdVoxDetect checklist file."""
-        
-        for row in reader:
-            
-            start_index = self._get_clip_start_index(row[0])
-            detector_score = float(row[1])
-            order_name = _get_order_name(row[2])
-            order_score = float(row[3])
-            family_name = row[4]
-            family_score = float(row[5])
-            species_code = row[6]
-            species_score = float(row[7])
-            
-            annotations = {}
-            
-            # In the following, we use the term "Confidence" in the
-            # annotation names since that is what BirdVoxDetect uses.
-            # Vesper uses the term "Score" instead, for example in its
-            # "Detector Score" and "Classification Score" annotation names.
-            annotations['BirdVoxClassify Order'] = order_name
-            annotations['BirdVoxClassify Order Confidence'] = order_score
-            annotations['BirdVoxClassify Family'] = family_name
-            annotations['BirdVoxClassify Family Confidence'] = family_score
-            annotations['BirdVoxClassify Species'] = species_code
-            annotations['BirdVoxClassify Species Confidence'] = species_score
-            
-            classification, classification_score = \
-                _get_classification(
-                    species_code, family_name, order_name,
-                    species_score, family_score, order_score)
-            if classification is not None:
-                annotations['Classification'] = classification
-                annotations['Classification Score'] = classification_score
-            
-            annotations['Detector Score'] = detector_score
-            
-            self._listener.process_clip(
-                start_index, self._clip_length, annotations=annotations)
-
-
-_ORDER_NAME_CORRECTIONS = {
-    'Passeriforme': 'Passeriformes',
-    'Pelicaniforme': 'Pelicaniformes',
-}
-
-
-def _get_order_name(order_name):
-    return _ORDER_NAME_CORRECTIONS.get(order_name, order_name)
-
-
-_CLASSIFICATION_PREFIX = 'Call.'
-
-
-def _get_classification(
-        species_code, family_name, order_name,
-        species_score=None, family_score=None, order_score=None):
-    
-    if species_code != 'OTHE':
-        return _CLASSIFICATION_PREFIX + species_code, species_score
-    elif family_name != 'other':
-        return _CLASSIFICATION_PREFIX + family_name, family_score
-    elif order_name != 'other':
-        return _CLASSIFICATION_PREFIX + order_name, order_score
-    else:
-        return None, None
-
-
 def _create_detector_classes():
     
     """
@@ -346,7 +227,7 @@ def _create_detector_classes():
         
         try:
             cls = _create_detector_class(detector)
-            
+        
         except Exception as e:
             logging.warning(
                 f'Could not create detector "{detector.name}". '
@@ -365,6 +246,8 @@ def _create_detector_class(processor):
     # but keep the original version since we'll need that, too.
     detector_version_ = detector_version.replace('.', '_')
     
+    threshold_adaptive = threshold_type == 'AT'
+    
     threshold_string = f'{threshold:02d}'
     
     class_name = \
@@ -375,6 +258,7 @@ def _create_detector_class(processor):
     
     settings = Settings(
         detector_version=detector_version,
+        threshold_adaptive=threshold_adaptive,
         threshold=threshold)
     
     class_dict = {
@@ -392,21 +276,23 @@ def _parse_detector_name(name):
     if len(parts) != 4:
         raise ValueError(
             f'Name must be of the form "BirdVoxDetect <version> <type> '
-            f'<threshold>", for example "BirdVoxDetect 0.5.0 FT 50".')
+            f'<threshold>", for example "BirdVoxDetect 0.5.0 FT 30".')
     
     detector_version = parts[1]
     
     threshold_type = parts[2]
     
-    if threshold_type != 'FT':
+    if threshold_type not in _THRESHOLD_TYPES:
         raise ValueError(
-            f'Bad threshold type "{threshold_type}". Only the fixed '
-            f'threshold type "FT" is supported at this time.')
+            f'Unrecognized detection threshold type "{threshold_type}". '
+            f'The threshold type must be either "FT" or "AT".')
     
     try:
         threshold = int(parts[3])
     except Exception:
-        raise ValueError(f'Bad threshold "{parts[3]}".')
+        raise ValueError(
+            f'Bad detection threshold "{parts[3]}". The threshold must '
+            f'be a number in the range [0, 100].')
     
     return detector_version, threshold_type, threshold
 
