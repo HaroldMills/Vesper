@@ -59,9 +59,7 @@ _CALL_START_WINDOWS = {
     'MPG Ranch Tseep Detector 1.0': (.070, .280),
     
     # Other detectors.
-    'BirdVoxDetect 0.1.0 AT': (.280, .420),
-    'BirdVoxDetect 0.1.a0 AT': (.280, .420),
-    'BirdVoxDetect 0.2.0a2': (.280, .420),
+    'BirdVoxDetect': (.280, .420),
     
 }
 """
