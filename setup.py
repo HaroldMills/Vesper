@@ -71,7 +71,7 @@ def load_version_module(package_name):
     return loader.load_module()
 
 
-version = load_version_module('vesper_birdvox')
+version = load_version_module('vesper')
 
 
 setup(
