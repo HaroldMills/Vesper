@@ -59,27 +59,25 @@ entry points that no longer exist.
 """
 
 
+from importlib.machinery import SourceFileLoader
 from pathlib import Path
-from setuptools import find_namespace_packages, setup
-import importlib
-import sys
+from setuptools import find_packages, setup
 
 
-# Load `vesper.version` module as `version_module`. This code is modeled
-# after the "Importing a source file directly" section of
-# https://docs.python.org/3/library/importlib.html#module-importlib.
-module_name = 'vesper.version'
-module_path = Path('vesper/version.py')
-spec = importlib.util.spec_from_file_location(module_name, module_path)
-version_module = importlib.util.module_from_spec(spec)
-sys.modules[module_name] = version_module
-spec.loader.exec_module(version_module)
+def load_version_module(package_name):
+    module_name = f'{package_name}.version'
+    file_path = Path(f'{package_name}/version.py')
+    loader = SourceFileLoader(module_name, str(file_path))
+    return loader.load_module()
+
+
+version = load_version_module('vesper_birdvox')
 
 
 setup(
       
     name='vesper',
-    version=version_module.full_version,
+    version=version.full_version,
     description=(
         'Software for acoustical monitoring of nocturnal bird migration.'),
     url='https://github.com/HaroldMills/Vesper',
@@ -87,30 +85,33 @@ setup(
     author_email='harold.mills@gmail.com',
     license='MIT',
     
-    # The `vesper` Python package is a *namespace package* (and more
-    # specifically a *native* namespace package): it is split across
-    # multiple, separate distribution packages to allow optional ones
-    # (e.g. ones containing optional plugins) to be omitted from an
+    # TODO: Consider making the `vesper` Python package a native
+    # namespace package, allowing it to be split across multiple,
+    # separate distribution packages to allow optional ones (e.g.
+    # ones containing optional plugins) to be omitted from an
     # installation. See
     # https://packaging.python.org/guides/packaging-namespace-packages/
-    # for a discussion of namespace packages. Two important points of
-    # that discussion are that:
+    # for a discussion of namespace packages.
     #
-    # 1. Every distribution package that is part of the `vesper` package
-    #    must omit `__init__.py` from its `vesper` package directory.
+    # Two important points from that discussion are that:
+    #
+    # 1. Every distribution package that is part of a `vesper`
+    #    namespace package must omit `__init__.py` from its `vesper`
+    #    package directory. Note that this will affect where the
+    #    `__version__` package attribute is defined, pushing it down
+    #    one level of the package hierarchy, into the `__init__.py`
+    #    of each subpackage. See PEP 396 for more about `__version__`
+    #    for namespace packages.
     #
     # 2. The `setup.py` file of every distribution package must use
     #    `setuptools.find_namespace_packages` rather than
-    #    `setuptools.find_packages` to find its packages, as in the
-    #    following
-    packages=find_namespace_packages(
-        
-        include=['vesper.*'],
+    #    `setuptools.find_packages` to find its packages.
+    packages=find_packages(
         
         # We exclude the unit test packages since some of them contain a
         # lot of data, for example large audio files.
         exclude=['tests', 'tests.*', '*.tests.*', '*.tests']
-        
+    
     ),
     
     classifiers=[
