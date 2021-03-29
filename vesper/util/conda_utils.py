@@ -17,9 +17,6 @@ Example PYTHONPATH:
 '''
 
 
-# TODO: Test this on Windows 10 and Ubuntu 20-04.
-
-
 class CondaUtilsError(Exception):
     pass
 
