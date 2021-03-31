@@ -4,6 +4,7 @@
 from collections import defaultdict
 import importlib
 
+import vesper.birdvox.detectors as birdvox_detectors
 import vesper.util.yaml_utils as yaml_utils
 
 
@@ -60,12 +61,28 @@ class ExtensionManager:
     
     
     def _load_extensions_if_needed(self):
+        
         if not self._extensions_loaded:
+            
+            # Load extensions indicated by YAML extensions specification.
             spec = yaml_utils.load(self._extensions_spec)
             for extension_point_name, module_class_names in spec.items():
                 classes = _load_extension_classes(module_class_names)
                 self._extensions[extension_point_name] += classes
+            
+            # Load BirdVoxDetect detector extensions. These classes
+            # are created dynamically according to the detectors
+            # listed in the archive database, and thus cannot be
+            # specified via YAML. Note that when Vesper's new plugin
+            # infrastructure is complete, the extension manager will
+            # need no special knowledge to get BirdVox detectors, but
+            # rather will discover them at load time just like all
+            # other plugins.
+            bvd_detector_classes = birdvox_detectors.get_detector_classes()
+            self._extensions['Detector'] += bvd_detector_classes
+
             self._extensions_loaded = True
+            
             print('ExtensionManager loaded extensions.')
             for cls in self._extensions['Detector']:
                 print(f'    {cls.extension_name}')

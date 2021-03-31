@@ -20,7 +20,6 @@ import wave
 import numpy as np
 
 from vesper.django.app.models import Processor
-from vesper.singletons import extension_manager
 from vesper.util.settings import Settings
 import vesper.util.conda_utils as conda_utils
 import vesper.util.os_utils as os_utils
@@ -210,18 +209,35 @@ class _Detector:
         center_index = signal_utils.seconds_to_frames(
             center_time, self._input_sample_rate)
         return center_index - self._clip_length // 2
+
+
+_detector_classes = None
+
+
+def get_detector_classes():
     
+    """
+    Gets the BirdVoxDetector detector classes for this archive.
     
+    The classes are created the first time this method is called, with
+    one class for each BirdVoxDetect detector in the archive database.
+    """
+    
+    global _detector_classes
+    
+    if _detector_classes is None:
+        # have not yet created detector classes
+        
+        _detector_classes = _create_detector_classes()
+    
+    return _detector_classes
+
+
 def _create_detector_classes():
-    
-    """
-    Creates a `_Detector` subclass for each BirdVoxDetect detector in the
-    archive database, and adds it to the detector extensions of this
-    Vesper server.
-    """
     
     detectors = Processor.objects.filter(type='Detector')
     bvd_detectors = detectors.filter(name__startswith='BirdVoxDetect')
+    detector_classes = []
     
     for detector in bvd_detectors:
         
@@ -234,7 +250,9 @@ def _create_detector_classes():
                 f'Error message was: {str(e)}')
         
         else:
-            extension_manager.instance.add_extension('Detector', cls)
+            detector_classes.append(cls)
+    
+    return detector_classes
 
 
 def _create_detector_class(processor):
@@ -295,9 +313,6 @@ def _parse_detector_name(name):
             f'be a number in the range [0, 100].')
     
     return detector_version, threshold_type, threshold
-
-
-_create_detector_classes()
 
 
 class WaveFileWriter:

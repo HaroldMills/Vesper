@@ -189,12 +189,6 @@ def _create_extension_manager():
 extension_manager = Singleton(_create_extension_manager)
 
 
-# Import BirdVox detectors module to create BirdVox detector classes
-# and add to extension manager. This is a temporary kludge that will
-# not be needed in Vesper 0.5.0.
-import vesper.birdvox.detectors
-
-
 def _create_preset_manager():
     preset_types = extension_manager.instance.get_extensions('Preset')
     preset_types = list(preset_types.values())
