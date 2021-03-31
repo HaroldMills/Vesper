@@ -109,7 +109,7 @@ def _get_detector_name(clip):
 def _format_start_time(clip):
     time = clip.start_time
     ms = int(round(time.microsecond / 1000.))
-    return time.strftime('%Y-%m-%d_%H.%M.%S') + '.{:03d}'.format(ms) + '_Z'
+    return time.strftime('%Y-%m-%d_%H.%M.%S') + f'.{ms:03d}_Z'
 
 
 def _get_classification(clip):
