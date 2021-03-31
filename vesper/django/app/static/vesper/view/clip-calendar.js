@@ -200,6 +200,8 @@ function addMonthDay(day, daysDiv) {
         params.set('classification', state.classification);
         // params.set('tag', state.tag);
         params.set('date', formatDate(day.date));
+        params.set('settings', state.settingsPresetPath);
+        params.set('commands', state.keyBindingsPresetPath);
         
         
 		// Add day number.

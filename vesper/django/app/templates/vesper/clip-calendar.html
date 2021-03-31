@@ -17,7 +17,9 @@
                 'detectorName': '{{detector_name|default_if_none:''|escapejs}}',
                 'classification': '{{classification|escapejs}}',
                 // 'tag': '{{tag|escapejs}}',
-                'periods': {{periods_json|safe}}
+                'periods': {{periods_json|safe}},
+                'settingsPresetPath': "{{settings_preset_path|default:''}}",
+                'keyBindingsPresetPath': "{{commands_preset_path|default:''}}"
             });
         </script>
     {% endif %}

@@ -1394,6 +1394,9 @@ def clip_calendar(request):
         
         return _render_clip_calendar(request, context)
 
+    settings_preset_path, commands_preset_path = \
+        _get_preset_paths(params, preferences)
+    
     d = _get_clip_filter_data(params, preferences)
 
     periods_json = _get_periods_json(
@@ -1410,7 +1413,9 @@ def clip_calendar(request):
         classification=d.annotation_ui_value_spec,
         # tags=d.tag_specs,
         # tag=d.tag_spec,
-        periods_json=periods_json)
+        periods_json=periods_json,
+        settings_preset_path=settings_preset_path,
+        commands_preset_path=commands_preset_path)
 
     return _render_clip_calendar(request, context)
 
@@ -1631,12 +1636,10 @@ def night(request):
 
     settings_presets_json = _get_presets_json('Clip Album Settings')
     commands_presets_json = _get_presets_json('Clip Album Commands')
-
-    settings_preset_path = \
-        preferences.get('default_presets.Clip Album Settings')
-    commands_preset_path = \
-        preferences.get('default_presets.Clip Album Commands')
-
+    
+    settings_preset_path, commands_preset_path = \
+        _get_preset_paths(params, preferences)
+    
     context = _create_template_context(
         request, 'View',
         station_mic_names=sm_pair_ui_names,
@@ -1745,13 +1748,23 @@ def _format_time(time):
     return prefix + millis + ' ' + time_zone
 
 
-def _limit_index(index, min_index, max_index):
-    if index < min_index:
-        return min_index
-    elif index > max_index:
-        return max_index
-    else:
-        return index
+def _get_preset_paths(params, preferences):
+    
+    settings_path = _get_preset_path(
+        'settings', params, 'Clip Album Settings', preferences)
+    
+    commands_path = _get_preset_path(
+        'commands', params, 'Clip Album Commands', preferences)
+    
+    return settings_path, commands_path
+
+
+def _get_preset_path(param_name, params, preset_type_name, preferences):
+    try:
+        return params[param_name]
+    except KeyError:
+        preset_name = 'default_presets.' + preset_type_name
+        return preferences.get(preset_name)
 
 
 def clip_album(request):
@@ -1793,10 +1806,8 @@ def clip_album(request):
     settings_presets_json = _get_presets_json('Clip Album Settings')
     commands_presets_json = _get_presets_json('Clip Album Commands')
 
-    settings_preset_path = \
-        preferences.get('default_presets.Clip Album Settings')
-    commands_preset_path = \
-        preferences.get('default_presets.Clip Album Commands')
+    settings_preset_path, commands_preset_path = \
+        _get_preset_paths(params, preferences)
 
     context = _create_template_context(
         request, 'View',

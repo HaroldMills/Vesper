@@ -324,13 +324,14 @@ export class ClipAlbum {
     _onChoosePresetsModalOkButtonClick() {
 
         if (this.settingsPresets.length > 0)
-            this.settings = _getSelectedPreset(
+            [this.settings, this._settingsPresetPath] = _getSelectedPreset(
                 'choose-presets-modal-settings-select', this.settingsPresets);
 
         if (this.keyBindingsPresets.length > 0)
-            this.keyBindings = _getSelectedPreset(
-                'choose-presets-modal-key-bindings-select',
-                this.keyBindingsPresets);
+            [this.keyBindings, this._keyBindingsPresetPath] =
+                _getSelectedPreset(
+                    'choose-presets-modal-key-bindings-select',
+                    this.keyBindingsPresets);
 
     }
 
@@ -440,9 +441,14 @@ export class ClipAlbum {
         
         // Get URL of this clip album.
         const url = new URL(window.location.href);
+        const params = url.searchParams;
+        
+        // Set preset paths in URL in case they have changed.
+        params.set('settings', this.settingsPresetPath)
+        params.set('commands', this.keyBindingsPresetPath)
         
         // Get date of this clip album.
-        const dateString = url.searchParams.get('date');
+        const dateString = params.get('date');
         const date = _parseDate(dateString);
         
         // Get next date.
@@ -450,7 +456,7 @@ export class ClipAlbum {
         const nextDateString = _formatDate(nextDate);
         
         // Update date in URL.
-        url.searchParams.set('date', nextDateString);
+        params.set('date', nextDateString);
         
         // Go to new URL.
         window.location.href = url.href;
@@ -486,6 +492,8 @@ export class ClipAlbum {
         calendarParams.set('detector', albumParams.get('detector'));
         calendarParams.set(
             'classification', albumParams.get('classification'));
+        calendarParams.set('settings', this.settingsPresetPath);
+        calendarParams.set('commands', this.keyBindingsPresetPath);
         
        // Go to new URL.
         window.location.href = calendarUrl.href;
@@ -1641,7 +1649,9 @@ function _populatePresetSelect(select, presetInfos, presetPath) {
 
 function _getSelectedPreset(selectId, presets) {
     const select = document.getElementById(selectId);
-    return presets[select.selectedIndex][1];
+    const preset = presets[select.selectedIndex][1];
+    const presetPath = select.value;
+    return [preset, presetPath];
 }
 
 
