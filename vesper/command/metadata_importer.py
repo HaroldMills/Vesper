@@ -378,10 +378,6 @@ class MetadataImporter:
         
         name = _get_required(connection, port_type, 'device connection')
         
-        print(f'Getting port "{name}".')
-        print(sorted(shorthand_ports.keys()))
-        print(sorted(ports.keys()))
-        
         port = shorthand_ports.get(name)
         
         if port is None:
