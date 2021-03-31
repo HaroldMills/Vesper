@@ -34,8 +34,9 @@ class ClipSetCommand(Command):
             model_utils.get_clip_query_annotation_data(
                 'Classification', classification)
             
-        tag = get('tag', args)
-        self._tag_name = model_utils.get_clip_query_tag_name(tag)
+        # tag = get('tag', args)
+        # self._tag_name = model_utils.get_clip_query_tag_name(tag)
+        self._tag_name = None
             
         
     def _create_clip_query_values_iterator(self):

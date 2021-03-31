@@ -32,7 +32,7 @@ class ClassifyCommand(Command):
         self._start_date = get('start_date', args)
         self._end_date = get('end_date', args)
         self._detector_names = get('detectors', args)
-        self._tag_name = get('tag', args)
+        # self._tag_name = get('tag', args)
         
 
     def execute(self, job_info):
@@ -43,7 +43,8 @@ class ClassifyCommand(Command):
     
         value_tuples = self._create_clip_query_values_iterator()
         
-        tag_name = model_utils.get_clip_query_tag_name(self._tag_name)
+        # tag_name = model_utils.get_clip_query_tag_name(self._tag_name)
+        tag_name = None
         
         for station, mic_output, date, detector in value_tuples:
             
