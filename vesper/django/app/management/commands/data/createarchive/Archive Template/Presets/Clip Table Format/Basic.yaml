@@ -1,0 +1,47 @@
+# Basic clip table format.
+#
+# This format provides several columns of basic information about clips.
+
+columns:
+
+    - name: Sensor
+      measurement: Sensor Name
+
+    - name: Detector
+      measurement: Detector Name
+
+    - measurement: Start Time
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%Y-%m-%d %H:%M:%S.%3f"}
+
+    - measurement: Duration
+      formatter:
+          name: Decimal Formatter
+          settings: {detail: ".3"}
+
+    - name: Classification
+      measurement:
+          name: Annotation Value
+          settings: {annotation_name: Classification}
+
+    - name: Recording File Name
+      measurement: First Recording File Name
+
+    - name: Recording Channel
+      measurement: Recording Channel Number
+
+    - name: Start Time in Recording File
+      measurement:
+          name: Relative Start Time
+          settings: {reference_time: First Recording File Start Time}
+      formatter:
+          name: Relative Time Formatter
+          settings: {format: "%h:%M:%S.%3f"}
+
+    - name: Start Index in Recording File
+      measurement:
+          name: Start Index
+          settings: {reference_index: First Recording File Start Index}
+
+    - measurement: Length

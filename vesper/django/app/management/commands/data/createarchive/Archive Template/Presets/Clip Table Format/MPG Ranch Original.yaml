@@ -1,0 +1,180 @@
+# Original MPG Ranch clip table format.
+#
+# This is the original clip table format that was developed for MPG Ranch
+# and hard-coded into all Vesper versions prior to 0.4.9.
+
+columns:
+
+    - name: season
+      measurement: Start Time
+      formatter:
+          - name: Local Time Formatter
+            settings: {format: "%m"}
+          - name: Calculator
+            settings: {code: "x integer 6 gt"}
+          - name: Value Mapper
+            settings: {mapping: {false: Spring, true: Fall}}
+
+    - name: year
+      measurement: Start Time
+      formatter:
+          name: Solar Date Formatter
+          settings: {diurnal: true, format: "%Y"}
+
+    - name: detector
+      measurement: Detector Type
+      formatter: Lower Case Formatter
+
+    - name: species
+      measurement:
+          name: Annotation Value
+          settings:
+              annotation_name: Classification
+      formatter:
+          - name: Prefix Remover
+            settings: {prefix: "Call."}
+          - name: Value Mapper
+            settings:
+                mapping:
+                    DoubleUp: dbup
+                    Other: othe
+                    Unknown: unkn
+          - Lower Case Formatter
+
+    - name: site
+      measurement: Station Name
+      formatter:
+          name: Value Mapper
+          settings:
+              mapping:
+                  Baldy: baldy
+                  Floodplain: flood
+                  Ridge: ridge
+                  Sheep Camp: sheep
+
+    - name: date
+      measurement: Start Time
+      formatter:
+          name: Solar Date Formatter
+          settings: {diurnal: false, format: "%m/%d/%y"}
+
+    - name: recording_start
+      measurement: Recording Start Time
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%H:%M:%S"}
+
+    - name: recording_length
+      measurement: Recording Duration
+      formatter: Duration Formatter
+
+    - name: detection_time
+      measurement: Relative Start Time
+      formatter: Relative Time Formatter
+
+    - name: real_detection_time
+      measurement: Start Time
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%H:%M:%S"}
+
+    - name: real_detection_time
+      measurement: Start Time
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+
+    - name: rounded_to_half_hour
+      measurement: Start Time
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%H:%M:%S", rounding_increment: 1800}
+
+    - name: duplicate
+      measurement:
+          name: Recent Clip Count
+          settings:
+              count_window_size: 60
+              included_classifications: ["Call.*"]
+              excluded_classifications: [Call.Other, Call.Unknown, Call.Weak]
+      formatter:
+          - name: Calculator
+            settings: {code: "x 1 gt"}
+          - name: Value Mapper
+            settings: {mapping: {false: "no", true: "yes"}}
+
+    - name: sunset
+      measurement:
+          name: Sunset
+          settings: {diurnal: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+
+    - name: civil_dusk
+      measurement:
+          name: Civil Dusk
+          settings: {diurnal: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+
+    - name: nautical_dusk
+      measurement:
+          name: Nautical Dusk
+          settings: {diurnal: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+
+    - name: astronomical_dusk
+      measurement:
+          name: Astronomical Dusk
+          settings: {diurnal: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+
+    - name: astronomical_dawn
+      measurement:
+          name: Astronomical Dawn
+          settings: {diurnal: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+
+    - name: nautical_dawn
+      measurement:
+          name: Nautical Dawn
+          settings: {diurnal: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+
+    - name: civil_dawn
+      measurement:
+          name: Civil Dawn
+          settings: {diurnal: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+
+    - name: sunrise
+      measurement:
+          name: Sunrise
+          settings: {diurnal: false}
+      formatter:
+          name: Local Time Formatter
+          settings: {format: "%m/%d/%y %H:%M:%S"}
+
+    - name: moon_altitude
+      measurement: Lunar Altitude
+      formatter:
+          name: Decimal Formatter
+          settings: {detail: ".1"}
+
+    - name: moon_illumination
+      measurement: Lunar Illumination
+      formatter:
+          name: Percent Formatter
+          settings: {detail: ".1"}
