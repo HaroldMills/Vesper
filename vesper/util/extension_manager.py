@@ -4,6 +4,8 @@
 from collections import defaultdict
 import importlib
 
+import tensorflow as tf
+
 import vesper.birdvox.detectors as birdvox_detectors
 import vesper.util.yaml_utils as yaml_utils
 
@@ -45,10 +47,164 @@ import vesper.util.yaml_utils as yaml_utils
 # extensions?
 
 
+_TF_VERSION = int(tf.__version__.split('.')[0])
+
+
+_TF1_CLASSIFIERS = '''
+    - vesper.mpg_ranch.nfc_coarse_classifier_2_1.classifier.Classifier
+    - vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier.Classifier
+    - vesper.mpg_ranch.nfc_coarse_classifier_4_0.classifier.Classifier
+'''
+
+
+_TF1_DETECTORS = '''
+
+    # MPG Ranch Thrush Detector 0.0
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector40
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector50
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector60
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector70
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector80
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector90
+     
+    # MPG Ranch Tseep Detector 0.0
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector40
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector50
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector60
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector70
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector80
+    - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector90
+     
+    # MPG Ranch Thrush Detector 0.1
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector40
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector50
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector60
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector70
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector80
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector90
+     
+    # MPG Ranch Tseep Detector 0.1
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector40
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector50
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector60
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector70
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector80
+    - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector90
+     
+    # MPG Ranch Thrush Detector 1.0
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector20
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector30
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector40
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector50
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector60
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector70
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector80
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector90
+     
+    # MPG Ranch Tseep Detector 1.0
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector20
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector30
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector40
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector50
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector60
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector70
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector80
+    - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector90
+
+'''
+
+
+_TF2_CLASSIFIERS = '''
+    - vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.annotator.Annotator
+'''
+
+
+_TF2_DETECTORS = '''
+'''
+
+
+if _TF_VERSION == 1:
+    _TF_CLASSIFIERS = _TF1_CLASSIFIERS
+    _TF_DETECTORS = _TF1_DETECTORS
+else:
+    _TF_CLASSIFIERS = _TF2_CLASSIFIERS
+    _TF_DETECTORS = _TF2_DETECTORS
+
+
+_EXTENSIONS_SPEC = f'''
+
+Classifier:
+
+{_TF_CLASSIFIERS}
+
+    - vesper.mpg_ranch.nfc_detector_low_score_classifier_1_0.classifier.Classifier
+    - vesper.mpg_ranch.outside_classifier.OutsideClassifier
+    - vesper.old_bird.lighthouse_outside_classifier.LighthouseOutsideClassifier
+    
+Command:
+    - vesper.command.add_recording_audio_files_command.AddRecordingAudioFilesCommand
+    - vesper.command.classify_command.ClassifyCommand
+    - vesper.command.create_clip_audio_files_command.CreateClipAudioFilesCommand
+    - vesper.command.delete_clip_audio_files_command.DeleteClipAudioFilesCommand
+    - vesper.command.delete_clips_command.DeleteClipsCommand
+    - vesper.command.delete_recordings_command.DeleteRecordingsCommand
+    - vesper.command.detect_command.DetectCommand
+    - vesper.command.execute_deferred_actions_command.ExecuteDeferredActionsCommand
+    - vesper.command.export_command.ExportCommand
+    - vesper.command.import_command.ImportCommand
+    - vesper.command.test_command.TestCommand
+    - vesper.command.transfer_call_classifications_command.TransferCallClassificationsCommand
+    - vesper.command.refresh_recording_audio_file_paths_command.RefreshRecordingAudioFilePathsCommand
+    - vesper.old_bird.add_old_bird_clip_start_indices_command.AddOldBirdClipStartIndicesCommand
+    
+Detector:
+
+{_TF_DETECTORS}
+
+    # Old Bird redux detectors 1.0
+    - vesper.old_bird.old_bird_detector_redux_1_0.ThrushDetector
+    - vesper.old_bird.old_bird_detector_redux_1_0.TseepDetector
+    
+    # Old Bird redux detectors 1.1
+    - vesper.old_bird.old_bird_detector_redux_1_1.ThrushDetector
+    - vesper.old_bird.old_bird_detector_redux_1_1.TseepDetector
+    
+Exporter:
+    - vesper.command.clip_audio_file_exporter.ClipAudioFilesExporter
+    - vesper.command.clips_hdf5_file_exporter.ClipsHdf5FileExporter
+    - vesper.command.clip_metadata_csv_file_exporter.ClipMetadataCsvFileExporter
+    
+Importer:
+    - vesper.command.metadata_importer.MetadataImporter
+    - vesper.command.recording_importer.RecordingImporter
+    - vesper.old_bird.clip_importer.ClipImporter
+
+Preset:
+    - vesper.command.clip_table_format_preset.ClipTableFormatPreset
+    - vesper.command.detection_schedule_preset.DetectionSchedulePreset
+    - vesper.command.station_name_aliases_preset.StationNameAliasesPreset
+    - vesper.django.app.clip_album_commands_preset.ClipAlbumCommandsPreset
+    - vesper.django.app.clip_album_settings_preset.ClipAlbumSettingsPreset
+    
+Recording File Parser:
+    - vesper.mpg_ranch.recording_file_parser.RecordingFileParser
+    
+Clip File Name Formatter:
+    - vesper.command.clip_audio_file_exporter.SimpleClipFileNameFormatter
+    
+'''
+
+
 class ExtensionManager:
     
     
-    def __init__(self, extensions_spec):
+    def __init__(self, extensions_spec=_EXTENSIONS_SPEC):
         self._extensions_spec = extensions_spec
         self._extensions_loaded = False
         self._extensions = defaultdict(list)
