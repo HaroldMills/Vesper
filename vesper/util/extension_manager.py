@@ -239,9 +239,9 @@ class ExtensionManager:
 
             self._extensions_loaded = True
             
-            print('ExtensionManager loaded extensions.')
-            for cls in self._extensions['Detector']:
-                print(f'    {cls.extension_name}')
+            # print('ExtensionManager loaded extensions.')
+            # for cls in self._extensions['Detector']:
+            #     print(f'    {cls.extension_name}')
     
     
     def add_extension(self, extension_point_name, cls):
