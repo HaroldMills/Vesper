@@ -794,7 +794,7 @@ export class ClipAlbum {
 		if (settings.clipViewType !== this.settings.clipViewType) {
 			// clip view type will change
 
-			this._clipViews = _createClipViews(settings);
+			this._clipViews = this._createClipViews(settings);
 
 		} else {
 			// clip view type will not change
