@@ -7,6 +7,7 @@ import os.path
 from vesper.command.command import CommandExecutionError
 from vesper.singletons import clip_manager, extension_manager
 import vesper.command.command_utils as command_utils
+import vesper.django.app.model_utils as model_utils
 import vesper.util.os_utils as os_utils
 
 
@@ -81,9 +82,11 @@ class SimpleClipFileNameFormatter:
         mic_output_name = _get_mic_output_name(clip)
         detector_name = _get_detector_name(clip)
         start_time = _format_start_time(clip)
+        classification = _get_classification(clip)
         
-        return '{}_{}_{}_{}.wav'.format(
-            station_name, mic_output_name, detector_name, start_time)
+        return (
+            f'{station_name}_{mic_output_name}_{detector_name}_'
+            f'{start_time}_{classification}.wav')
 
 
 _SUFFIX = ' Output'
@@ -107,3 +110,8 @@ def _format_start_time(clip):
     time = clip.start_time
     ms = int(round(time.microsecond / 1000.))
     return time.strftime('%Y-%m-%d_%H.%M.%S') + '.{:03d}'.format(ms) + '_Z'
+
+
+def _get_classification(clip):
+    annotations = model_utils.get_clip_annotations(clip)
+    return annotations.get('Classification', 'Unclassified')
