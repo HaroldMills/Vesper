@@ -7,48 +7,48 @@ this file.
 To build the Vesper package:
 
     python setup.py sdist bdist_wheel
-    
+
 To upload the Vesper package to the test Python package index:
 
     python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-    
+
 To upload the Vesper package to the  real Python package index:
 
     python -m twine upload dist/*
-    
+
 To create a conda environment using a local Vesper package:
 
-    conda create -n test python=3.8
+    conda create -n test python=3.6
     conda activate test
     pip install dist/vesper-<version>.tar.gz
     
 To create a conda environment using a Vesper package from the test PyPI:
 
-    conda create -n test python=3.8
+    conda create -n test python=3.6
     conda activate test
-    pip install django jsonschema resampy ruamel_yaml skyfield tensorflow
-    pip install --extra-index-url https://test.pypi.org/simple/ vesper==<version>
-    
+    pip install django jsonschema resampy ruamel_yaml skyfield tensorflow~=1.15.0
+    pip install --extra-index-url https://test.pypi.org/simple/ vesper
+
 The first pip command in the above is to ensure that Vesper's dependencies
 are installed from the real PyPI rather than the test one, which can
 contain incompatible pre-release versions.
-    
+
 To create a conda environment using a Vesper package from the real PyPI:
 
-    conda create -n test python=3.x
+    conda create -n test python=3.6
     conda activate test
     pip install vesper==<version>
-    
+
 To create a conda environment for Vesper development with TensorFlow 1.15.x:
-    conda create -n vesper-dev-tf2 python=3.6
-    conda activate vesper-dev-tf2
-    pip install bokeh django librosa jsonschema matplotlib resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow~=1.15.3
-    
+    conda create -n vesper-dev-tf1 python=3.6
+    conda activate vesper-dev-tf1
+    pip install bokeh django jsonschema matplotlib resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow~=1.15.0
+
 To create a conda environment for Vesper development with TensorFlow 2.x:
     conda create -n vesper-dev-tf2 python=3.8
     conda activate vesper-dev-tf2
     pip install bokeh django jsonschema matplotlib resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow
-    
+
 Whenever you modify plugin entry points, you must run:
 
     python setup.py develop
@@ -126,7 +126,7 @@ setup(
         'resampy',
         'ruamel_yaml',
         'skyfield',
-        'tensorflow',
+        'tensorflow~=1.15.0',
     ],
       
     entry_points={
