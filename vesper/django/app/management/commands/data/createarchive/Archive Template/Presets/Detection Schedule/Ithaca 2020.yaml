@@ -1,5 +1,5 @@
 daily:
-    start_date: 2019-01-01
-    end_date: 2019-12-31
+    start_date: 2020-01-01
+    end_date: 2020-12-31
     start_time: 1 hour after sunset
     end_time: 30 minutes before sunrise
