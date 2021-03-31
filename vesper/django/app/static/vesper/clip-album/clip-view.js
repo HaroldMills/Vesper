@@ -42,6 +42,7 @@ export class ClipView {
 		if (this._div !== null) {
 			this._styleLabel();
 			this._stylePlayButton();
+            this._updateCanvas();
 			this.render();
 		}
 
@@ -482,11 +483,15 @@ export class ClipView {
      * and when they are unloaded.
      */
     onClipSamplesChanged() {
-        throw new Error(
-            'ClipView.onClipSamplesChanged method not implemented.');
+        this._updateCanvas()
     }
 
 
+    _updateCanvas() {
+        throw new Error('ClipView._updateCanvas method not implemented.');
+    }
+    
+    
     onClipAnnotationsChanged() {
         this._resizeOverlayCanvasIfNeeded();
         this._renderOverlays();

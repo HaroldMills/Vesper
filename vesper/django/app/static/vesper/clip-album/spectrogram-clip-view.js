@@ -91,8 +91,8 @@ export class SpectrogramClipView extends ClipView {
 	}
 
 
-    onClipSamplesChanged() {
-
+    _updateCanvas() {
+        
         const clip = this.clip;
 
         if (clip.samples !== null) {
