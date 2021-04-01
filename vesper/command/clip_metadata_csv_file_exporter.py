@@ -2,7 +2,7 @@
 
 
 from collections import defaultdict, deque
-from datetime import datetime as DateTime, timedelta as TimeDelta
+from datetime import timedelta as TimeDelta
 from pathlib import Path
 import csv
 import logging
@@ -18,6 +18,7 @@ from vesper.util.datetime_formatter import DateTimeFormatter
 from vesper.util.time_difference_formatter import TimeDifferenceFormatter
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
+import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
 
@@ -404,7 +405,7 @@ class ClipMetadataCsvFileExporter:
         # Move output file from temporary file directory to specified
         # location.
         try:
-            temp_file_path.rename(self._output_file_path)
+            os_utils.copy_file(temp_file_path, self._output_file_path)
         except Exception as e:
             self._handle_output_error('Could not rename output file.', e)
     
@@ -1093,6 +1094,9 @@ class RecentClipCountMeasurement(Measurement):
         classification = \
             model_utils.get_clip_annotation_value(clip, self._annotation_info)
         
+        if classification is None:
+            return None
+        
         classification_key = self._get_classification_key(classification)
         
         if classification_key is None:
@@ -1447,8 +1451,6 @@ _DEFAULT_DATE_TIME_FORMAT = _DEFAULT_DATE_FORMAT + ' ' + _DEFAULT_TIME_FORMAT
 _DEFAULT_DURATION_FORMAT = '%h:%M:%S'
 _DEFAULT_RELATIVE_TIME_FORMAT = '%g%h:%M:%S'
 
-_TEST_DATE_TIME = DateTime(2020, 1, 1)
-
 
 class Formatter:
     
@@ -1522,12 +1524,20 @@ class _DateTimeFormatter(Formatter):
         
         # Try format string on test `DateTime` and raise an exception
         # if there's a problem.
-        try:
-            _TEST_DATE_TIME.strftime(format_)
-        except Exception as e:
-            raise ValueError(
-                f'Could not format test time with "{format_}". '
-                f'Error message was: {str(e)}')
+        #
+        # Commented the following out 2021-04-01 since it doesn't work
+        # on Windows for extended format strings that include a specific
+        # number of fractional digits, e.g. '%Y-%m-%d %H:%M:%S.%3f'.
+        # Passing this string to `datetime.strftime` on macOS yields a
+        # formatted date/time with ".%df" at the end, but raises a
+        # `ValueError` exception on Windows.
+        #
+        # try:
+        #     _TEST_DATE_TIME.strftime(format_)
+        # except Exception as e:
+        #     raise ValueError(
+        #         f'Could not format test time with "{format_}". '
+        #         f'Error message was: {str(e)}')
         
         return DateTimeFormatter(format_)
     
