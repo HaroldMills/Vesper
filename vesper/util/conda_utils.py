@@ -1,4 +1,4 @@
-"""Script that runs BirdVoxDetect in its own environment."""
+"""Utility functions relating to Conda environments."""
 
 
 from pathlib import Path
@@ -7,38 +7,21 @@ import subprocess
 import sys
 
 
-'''
-Example PYTHONPATH:
-
-/Users/harold/Documents/Code/Python/Vesper Auxiliary Server Test
-/Users/harold/miniconda3/envs/vesper-dev/lib/python3.8
-/Users/harold/miniconda3/envs/vesper-dev/lib/python3.8/lib-dynload
-/Users/harold/miniconda3/envs/vesper-dev/lib/python3.8/site-packages
-'''
-
-
 class CondaUtilsError(Exception):
     pass
 
 
 def run_python_script(module_name, args=None, environment_name=None):
     
-    """Runs a Python module in a Conda environment."""
+    """Runs a Python script in a Conda environment."""
     
     if args is None:
         args = []
-        
-    # Get path of Conda environment in which to run module.
-    env_dir_path = _get_env_dir_path(environment_name)
     
-    # Get path of Python interpreter in Conda environment.
-    interpreter_path = _get_python_interpreter_path(env_dir_path)
+    interpreter_path, env_vars = _get_run_info(environment_name)
     
     # Get command to run.
-    command = [interpreter_path, '-m', module_name] + list(args)
-    
-    # Get environment variables for child process.
-    env_vars = _get_env_vars(env_dir_path)
+    command = [str(interpreter_path), '-m', module_name] + list(args)
     
     try:
         
@@ -66,39 +49,75 @@ def run_python_script(module_name, args=None, environment_name=None):
     return results
 
 
-def _get_env_dir_path(env_name):
+def _get_run_info(env_name):
     
-    current_env_dir_path = _get_current_env_dir_path()
+    current_interpreter_path = Path(sys.executable)
+    envs_dir_path, current_env_name, relative_interpreter_path = \
+        _split_interpreter_path(current_interpreter_path)
     
-    if env_name is None:
-        # want current environment dir path
-        return current_env_dir_path
+    interpreter_path = envs_dir_path / env_name / relative_interpreter_path
     
+    env_vars = _get_env_vars(env_name, current_env_name, envs_dir_path)
+    
+    return interpreter_path, env_vars
+
+
+def _split_interpreter_path(path):
+    
+    parts = path.parts
+    
+    # Get index in path parts of environment directory name, assuming
+    # directory is child of Miniconda or Anaconda "envs" directory.
+    i = len(parts)
+    while i > 0 and parts[i - 1] != 'envs':
+        i -= 1
+    
+    if i == 0:
+        raise ValueError(
+            f'Python interpreter path "{path}" does not include expected '
+            f'Miniconda or Anaconda "envs" directory.')
+    
+    # Make sure Python interpreter executable name contains no version number.
+    executable_name = _generify_interpreter_executable_name(parts[-1])
+    parts = parts[:-1] + (executable_name,)
+    
+    envs_dir_path = Path(*parts[:i])
+    env_name = parts[i]
+    relative_interpreter_path = Path(*parts[i + 1:])
+    
+    return envs_dir_path, env_name, relative_interpreter_path
+
+
+def _generify_interpreter_executable_name(file_name):
+    
+    """
+    Generifies the file name of a Python interpreter executable.
+    
+    The name of the Python interpreter executable that we get from
+    `sys.executable` sometimes includes version information, e.g.
+    "python3.9". This function returns a corresponding generic
+    interpreter executable name that includes no version information,
+    so that it can be used to invoke the Python interpreter of any
+    Conda environment, regardless of version.
+    """
+    
+    if file_name.endswith('.exe'):
+        return 'python.exe'
     else:
-        # want other environment dir path
+        return 'python'
+
+
+def _get_env_vars(env_name, current_env_name, envs_dir_path):
+    
+    if env_name == current_env_name:
+        # Conda environment is current one, so no environment
+        # variable changes are needed
         
-        envs_dir_path = current_env_dir_path.parent
-        return envs_dir_path / env_name
-
-
-def _get_current_env_dir_path():
-    interpreter_path = Path(sys.executable)
-    return interpreter_path.parent.parent
-
-
-def _get_python_interpreter_path(env_path):
-    return env_path / 'bin' / 'python'
-
-
-def _get_env_vars(new_env_dir_path):
-    
-    current_env_dir_path = _get_current_env_dir_path()
-    
-    if new_env_dir_path == current_env_dir_path:
         return None
     
     else:
-        # new Conda environment will differ from current one
+        # Conda environment is not current one, so if PYTHONPATH
+        # environment variable is present it must change
         
         env_vars = dict(os.environ)
         
@@ -111,10 +130,22 @@ def _get_env_vars(new_env_dir_path):
             # have PYTHONPATH environment variable
             
             # Change PYTHONPATH for new Conda environment.
+            current_env_dir_path = envs_dir_path / current_env_name
+            new_env_dir_path = envs_dir_path / env_name
             env_vars['PYTHONPATH'] = _alter_pythonpath(
                 pythonpath, current_env_dir_path, new_env_dir_path)
                 
             return env_vars
+
+
+'''
+Example PYTHONPATH:
+
+/Users/harold/Documents/Code/Python/Vesper Auxiliary Server Test
+/Users/harold/miniconda3/envs/vesper-dev/lib/python3.8
+/Users/harold/miniconda3/envs/vesper-dev/lib/python3.8/lib-dynload
+/Users/harold/miniconda3/envs/vesper-dev/lib/python3.8/site-packages
+'''
 
 
 def _alter_pythonpath(pythonpath, old_env_dir_path, new_env_dir_path):
@@ -122,9 +153,6 @@ def _alter_pythonpath(pythonpath, old_env_dir_path, new_env_dir_path):
     """Alters the PYTHONPATH of one Conda environment for another."""
     
     paths = pythonpath.split(':')
-    
-    # for path in paths:
-    #     print(path)
     
     paths = [
         _alter_pythonpath_aux(p, old_env_dir_path, new_env_dir_path)
