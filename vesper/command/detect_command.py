@@ -391,7 +391,10 @@ class DetectCommand(Command):
             except KeyError:
                 # schedule cache miss
                 
-                # Create schedule for this station.
+                # Compile schedule for this station.
+                self._logger.info(
+                    f'        Compiling detection schedule for station '
+                    f'"{station.name}"...')
                 schedule = Schedule.compile_dict(
                     self._schedule, station.latitude, station.longitude,
                     station.time_zone)
