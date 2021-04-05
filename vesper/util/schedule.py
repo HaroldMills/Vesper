@@ -1308,8 +1308,7 @@ class _TwilightEventDateTime:
  
 def _resolve(date, event_name, location, offset):
     
-    sun_moon = SunMoon(
-        location.latitude, location.longitude, location.time_zone)
+    sun_moon = _get_sun_moon(location)
     dt = sun_moon.get_solar_event_time(date, event_name)
      
     if dt is None:
@@ -1317,3 +1316,24 @@ def _resolve(date, event_name, location, offset):
      
     else:
         return dt + offset
+
+
+_sun_moon_cache = {}
+
+
+def _get_sun_moon(location):
+    
+    key = (location.latitude, location.longitude, location.time_zone)
+    
+    try:
+        return _sun_moon_cache[key]
+    
+    except KeyError:
+        # cache miss
+        
+        sun_moon = SunMoon(
+            location.latitude, location.longitude, location.time_zone)
+        
+        _sun_moon_cache[key] = sun_moon
+        
+        return sun_moon
