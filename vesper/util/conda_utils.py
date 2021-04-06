@@ -55,6 +55,11 @@ def _get_run_info(env_name):
     envs_dir_path, current_env_name, relative_interpreter_path = \
         _split_interpreter_path(current_interpreter_path)
     
+    if env_name is not None:
+        _check_for_environment(envs_dir_path, env_name)
+    else:
+        env_name = current_env_name
+    
     interpreter_path = envs_dir_path / env_name / relative_interpreter_path
     
     env_vars = _get_env_vars(env_name, current_env_name, envs_dir_path)
@@ -105,6 +110,12 @@ def _generify_interpreter_executable_name(file_name):
         return 'python.exe'
     else:
         return 'python'
+
+
+def _check_for_environment(envs_dir_path, env_name):
+    env_dir_path = envs_dir_path / env_name
+    if not env_dir_path.exists():
+        raise CondaUtilsError(f'Conda environment "{env_name}" not found.')
 
 
 def _get_env_vars(env_name, current_env_name, envs_dir_path):
