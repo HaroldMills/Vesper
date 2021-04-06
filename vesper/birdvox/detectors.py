@@ -11,6 +11,7 @@ detector created by the BirdVox project (https://wp.nyu.edu/birdvox/).
 """
 
 
+from contextlib import AbstractContextManager
 import csv
 import logging
 import os.path
@@ -62,7 +63,7 @@ class _Detector:
         self._clip_length = signal_utils.seconds_to_frames(
             _CLIP_DURATION, self._input_sample_rate)
         
-        # Create and open temporary wave file. Do not delete
+        # Create and open temporary audio file. Do not delete
         # automatically on close. We will close the file after we
         # finish writing it, and then BirdVoxDetect will open it
         # again for reading. We delete the file ourselves after
@@ -70,7 +71,7 @@ class _Detector:
         self._audio_file = tempfile.NamedTemporaryFile(
             suffix='.wav', delete=False)
         
-        # Create wave file writer, with which we will write to the wave file.
+        # Create audio file writer.
         self._audio_file_writer = WaveFileWriter(
             self._audio_file, 1, self._input_sample_rate)
     
@@ -101,11 +102,14 @@ class _Detector:
         for all input.
         """
         
-        # Close wave writer and wave file.
+        # Close audio file writer and audio file.
         self._audio_file_writer.close()
         self._audio_file.close()
         
-        with tempfile.TemporaryDirectory() as output_dir_path:
+        audio_file_path = self._audio_file.name
+        
+        with tempfile.TemporaryDirectory() as output_dir_path, \
+                FileDeleter(audio_file_path):
             
             settings = self.settings
             
@@ -129,26 +133,42 @@ class _Detector:
             
             except Exception as e:
                 raise DetectorError(
-                    f'Could not run BirdVoxDetect in Conda environment '
-                    f'"{environment_name}". Error message was: {str(e)}')
+                    f'Could not run {self.extension_name} in Conda '
+                    f'environment "{environment_name}". Error message '
+                    f'was: {str(e)}')
             
-            self._log_bvd_process_results(results)
+            self._log_bvd_results(results)
             
-            detection_file_path = self._get_detection_file_path(
-                output_dir_path, audio_file_path)
+            if results.returncode != 0:
+                # BVD process completed abnormally
+                
+                raise DetectorError(
+                    f'{self.extension_name} process completed abnormally. '
+                    f'See above log messages for details.')
             
-            self._process_detection_file(detection_file_path)
-        
-        os_utils.delete_file(audio_file_path)
-        
-        self._listener.complete_processing()
+            else:
+                # BVD process completed normally
+                
+                detection_file_path = self._get_detection_file_path(
+                    output_dir_path, audio_file_path)
+                self._process_detection_file(detection_file_path)
     
     
-    def _log_bvd_process_results(self, results):
+    def _log_bvd_results(self, results):
         
-        logging.info(
-            f'        {self.extension_name} process completed with return '
-            f'code {results.returncode}.')
+        if results.returncode != 0:
+            # BVD process completed abnormally.
+            
+            logging.info(
+                f'        {self.extension_name} process completed '
+                f'abnormally with return code {results.returncode}. '
+                f'No clips will be created.')
+        
+        else:
+            # BVD process completed normally
+            
+            logging.info(
+                f'        {self.extension_name} process completed normally.')
         
         self._log_bvd_output_stream(results.stdout, 'standard output')
         self._log_bvd_output_stream(results.stderr, 'standard error')
@@ -202,6 +222,8 @@ class _Detector:
                 
                 self._listener.process_clip(
                     start_index, self._clip_length, annotations=annotations)
+        
+        self._listener.complete_processing()
     
     
     def _get_clip_start_index(self, center_time):
@@ -209,6 +231,15 @@ class _Detector:
         center_index = signal_utils.seconds_to_frames(
             center_time, self._input_sample_rate)
         return center_index - self._clip_length // 2
+
+
+class FileDeleter(AbstractContextManager):
+    
+    def __init__(self, file_path):
+        self._file_path = file_path
+    
+    def __exit__(self, exception_type, exception_value, traceback):
+        os_utils.delete_file(self._file_path)
 
 
 _detector_classes = None
