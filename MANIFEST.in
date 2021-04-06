@@ -1,5 +1,5 @@
 recursive-include vesper *.css *.html *.js
-recursive-include vesper *.h5 *.pb *.pkl variables.*
+recursive-include vesper *.h5 *.pb *.pkl *.bsp variables.*
 recursive-include vesper *.ini *.spec *.txt *.yaml *.sqlite LICENSE
 prune scripts
 prune vesper/django/app/static/demos
