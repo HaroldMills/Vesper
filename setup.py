@@ -121,11 +121,11 @@ setup(
     ],
     
     install_requires=[
-        'django',
-        'jsonschema',
+        'django~=3.1.0',
+        'jsonschema~=3.2',
         'resampy',
         'ruamel_yaml',
-        'skyfield',
+        'skyfield~=1.38',
         'tensorflow~=1.15.0',
     ],
       
