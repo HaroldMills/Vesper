@@ -103,9 +103,9 @@ def row_cell_values_differ(row_num, col_num, value_a, value_b):
         time_b = parse_datetime(value_b)
         diff = abs((time_a - time_b).total_seconds())
         
-        # We allow solar event times to differ by one second for the
-        # switch from PyEphem to Skyfield.
-        if diff >= 2:
+        # We allow solar event times to differ by up to two seconds for
+        # the switch from PyEphem to Skyfield.
+        if diff > 2:
             print(
                 f'Solar event times differ at row {row_num}, '
                 f'column {col_num}.')
