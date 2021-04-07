@@ -217,8 +217,12 @@ class _Detector:
                 
                 start_index = self._get_clip_start_index(row[0])
                 
+                # Create dictionary of annotations for this clip,
+                # ignoring missing values.
                 annotations = dict(
-                    (header[i], row[i]) for i in range(1, column_count))
+                    (header[i], row[i])
+                    for i in range(1, column_count)
+                    if row[i] != '')
                 
                 self._listener.process_clip(
                     start_index, self._clip_length, annotations=annotations)
