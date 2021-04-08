@@ -36,42 +36,94 @@ Installing Vesper
 
 .. Important::
    We strongly recommend installing each version of Vesper that you
-   use into its own conda environment (see the `Conda environments`_
-   section below for an introduction to conda environments). This has
+   use into its own Conda environment (see the `Conda environments`_
+   section below for an introduction to Conda environments). This has
    several advantages, including allowing you to easily revert to a
    previously installed Vesper version if you encounter problems with
    a new one.
 
-To install the most recent version of Vesper in a new conda environment:
+To install the most recent version of Vesper in a new Conda environment:
 
-1. If you don't have one of them already, download and install either
-   the `Miniconda <http://conda.pydata.org/miniconda.html>`_ or the
+1. If you don't have either the
+   `Miniconda <http://conda.pydata.org/miniconda.html>`_ or the
    `Anaconda <https://www.anaconda.com/distribution/>`_ Python
-   distribution.
+   distribution already, download and install one of them.
 
 2. Open a Windows Anaconda Prompt or Unix terminal.
 
-3. Create a new conda environment for Vesper and install a Python
+3. Create a new Conda environment for Vesper and install a Python
    interpreter in it by issuing the command::
 
-        conda create -n vesper-0.4.8 python=3.6
+        conda create -n vesper-0.4.9 python=3.6
 
    Conda will display a list of packages that it proposes to install,
    including Python and some others. Press the ``Return`` key to accept.
 
 4. Activate the environment you just created with::
 
-        conda activate vesper-0.4.8
+        conda activate vesper-0.4.9
 
 5. Install Vesper and various dependencies into the environment with::
 
-       pip install vesper==0.4.8 birdvoxdetect==0.2.5 birdvoxclassify==0.1.0b3
+       pip install vesper==0.4.9
        
-   Here you must use pip rather than conda since Vesper is distributed
+   Here you must use pip rather than Conda since Vesper is distributed
    as a pip package. In addition to the Vesper package, pip will install
    several other packages on which Vesper depends, including, for example,
    ones for Django and SciPy.
-   
+
+Installing BirdVoxDetect (optional)
+===================================
+
+`BirdVoxDetect <https://github.com/BirdVox/birdvoxdetect>`_ is a
+nocturnal flight call detector developed by the
+`BirdVox <https://wp.nyu.edu/birdvox/>`_ project. While Vesper and
+BirdVox are separate software development efforts, you can use
+BirdVoxDetect from within Vesper just like any other supported
+detector. For example, you can use Vesper to run BirdVoxDetect on
+your recordings, view the resulting clips in clip albums, annotate
+them with species classifications, etc.
+
+If you would like to use BirdVoxDetect with Vesper, you will need to
+install BirdVoxDetect separately in its own Conda environment. The
+environment must have a name of the form:
+
+        birdvoxdetect-<version number>
+
+where ``<version number>`` is the number of the BirdVoxDetect version
+installed in the environment, for example ``0.5.0``. The environment
+must also include the ``vesper-birdvox`` package.
+
+To create a Conda environment for, say, BirdVoxDetect version 0.5.0
+for use with Vesper, you can:
+
+1. Open a Windows Anaconda Prompt or Unix terminal.
+
+2. Create a new Conda environment and install a Python interpreter in
+   it by issuing the command::
+
+        conda create -n birdvoxdetect-0.5.0 python=3.7
+
+   Conda will display a list of packages that it proposes to install,
+   including Python and some others. Press the ``Return`` key to accept.
+
+4. Activate the environment you just created with::
+
+        conda activate birdvoxdetect-0.5.0
+
+5. Install the ``vesper-birdvox`` and ``birdvoxdetect`` packages and
+   their dependencies into the environment with::
+
+       pip install vesper-birdvox birdvoxdetect==0.5.0
+       
+To install a version of BirdVoxDetect other than 0.5.0, just
+substitute the appropriate version number for 0.5.0 in the above
+instructions, and be sure to specify a Python version compatible with
+your BirdVoxDetect version in step 2. See the
+`BirdVoxDetect installation instructions
+<https://github.com/BirdVox/birdvoxdetect#installation>`_ for a list
+of compatible Python versions.
+
 Conda environments
 ==================
 
