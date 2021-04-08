@@ -84,8 +84,8 @@ detector. For example, you can use Vesper to run BirdVoxDetect on
 your recordings, view the resulting clips in clip albums, annotate
 them with species classifications, etc.
 
-If you would like to use BirdVoxDetect with Vesper, you will need to
-install BirdVoxDetect separately in its own Conda environment. The
+If you would like to use BirdVoxDetect with Vesper, install
+BirdVoxDetect separately in its own Conda environment. The
 environment must have a name of the form:
 
         birdvoxdetect-<version number>
@@ -94,8 +94,8 @@ where ``<version number>`` is the number of the BirdVoxDetect version
 installed in the environment, for example ``0.5.0``. The environment
 must also include the ``vesper-birdvox`` package.
 
-To create a Conda environment for, say, BirdVoxDetect version 0.5.0
-for use with Vesper, you can:
+To create a Conda environment to use, say, BirdVoxDetect version 0.5.0
+with Vesper:
 
 1. Open a Windows Anaconda Prompt or Unix terminal.
 
@@ -116,12 +116,11 @@ for use with Vesper, you can:
 
        pip install vesper-birdvox birdvoxdetect==0.5.0
        
-To install a version of BirdVoxDetect other than 0.5.0, just
-substitute the appropriate version number for 0.5.0 in the above
-instructions, and be sure to specify a Python version compatible with
-your BirdVoxDetect version in step 2. See the
-`BirdVoxDetect installation instructions
-<https://github.com/BirdVox/birdvoxdetect#installation>`_ for a list
+To install a version of BirdVoxDetect other than 0.5.0, substitute
+the appropriate version number for 0.5.0 in the instructions above,
+and be sure to specify a Python version compatible with your
+BirdVoxDetect version in step 2. See the installation instructions
+for the specific BirdVoxDetect version you are installing for a list
 of compatible Python versions.
 
 Conda environments
