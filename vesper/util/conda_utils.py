@@ -52,19 +52,27 @@ def run_python_script(module_name, args=None, environment_name=None):
 def _get_run_info(env_name):
     
     current_interpreter_path = Path(sys.executable)
+    
     envs_dir_path, current_env_name, relative_interpreter_path = \
         _split_interpreter_path(current_interpreter_path)
     
-    if env_name is not None:
-        _check_for_environment(envs_dir_path, env_name)
+    if env_name is None or env_name == current_env_name:
+        # will run in current Conda environment
+        
+        return current_interpreter_path, None
+    
     else:
-        env_name = current_env_name
-    
-    interpreter_path = envs_dir_path / env_name / relative_interpreter_path
-    
-    env_vars = _get_env_vars(env_name, current_env_name, envs_dir_path)
-    
-    return interpreter_path, env_vars
+        # will run in Conda environment other than current one
+        
+        _check_env_dir(envs_dir_path, env_name)
+        
+        # Get path of Python interpreter to run.
+        interpreter_path = envs_dir_path / env_name / relative_interpreter_path
+        
+        # Get environment variables for run.
+        env_vars = _get_env_vars(env_name, current_env_name, envs_dir_path)
+        
+        return interpreter_path, env_vars
 
 
 def _split_interpreter_path(path):
@@ -112,7 +120,7 @@ def _generify_interpreter_executable_name(file_name):
         return 'python'
 
 
-def _check_for_environment(envs_dir_path, env_name):
+def _check_env_dir(envs_dir_path, env_name):
     env_dir_path = envs_dir_path / env_name
     if not env_dir_path.exists():
         raise CondaUtilsError(f'Conda environment "{env_name}" not found.')
@@ -120,33 +128,26 @@ def _check_for_environment(envs_dir_path, env_name):
 
 def _get_env_vars(env_name, current_env_name, envs_dir_path):
     
-    if env_name == current_env_name:
-        # Conda environment is current one, so no environment
-        # variable changes are needed
+    env_vars = dict(os.environ)
+    
+    pythonpath = env_vars.get('PYTHONPATH')
+    
+    if pythonpath is None:
+        # no PYTHONPATH environment variable
         
+        # Use existing environment variables.
         return None
     
     else:
-        # Conda environment is not current one, so if PYTHONPATH
-        # environment variable is present it must change
+        # have PYTHONPATH environment variable
         
-        env_vars = dict(os.environ)
+        # Change PYTHONPATH for new Conda environment.
+        current_env_dir_path = envs_dir_path / current_env_name
+        new_env_dir_path = envs_dir_path / env_name
+        env_vars['PYTHONPATH'] = _alter_pythonpath(
+            pythonpath, current_env_dir_path, new_env_dir_path)
         
-        pythonpath = env_vars.get('PYTHONPATH')
-        
-        if pythonpath is None:
-            return None
-        
-        else:
-            # have PYTHONPATH environment variable
-            
-            # Change PYTHONPATH for new Conda environment.
-            current_env_dir_path = envs_dir_path / current_env_name
-            new_env_dir_path = envs_dir_path / env_name
-            env_vars['PYTHONPATH'] = _alter_pythonpath(
-                pythonpath, current_env_dir_path, new_env_dir_path)
-                
-            return env_vars
+        return env_vars
 
 
 '''
