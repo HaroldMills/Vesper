@@ -205,8 +205,8 @@ class _Detector:
     
     def _process_detection_file(self, detection_file_path):
         
-        with open(detection_file_path) as detection_file:
-                
+        with open(detection_file_path, newline='') as detection_file:
+            
             reader = csv.reader(detection_file)
             
             # Skip header.
