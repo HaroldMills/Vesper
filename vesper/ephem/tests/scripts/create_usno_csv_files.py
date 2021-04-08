@@ -52,7 +52,7 @@ def _main():
 
     
 def _open_csv_file(file_path, column_names):
-    file_ = open(file_path, 'wb')
+    file_ = open(file_path, 'w', newline='')
     writer = csv.writer(file_)
     writer.writerow(column_names)
     return (file_, writer)

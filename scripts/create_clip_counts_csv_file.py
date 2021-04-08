@@ -150,7 +150,7 @@ def write_csv_file(archive_dir_path, rows):
     
     csv_file_path = archive_dir_path / CLIP_COUNTS_FILE_NAME
     
-    with open(csv_file_path, 'w') as csv_file:
+    with open(csv_file_path, 'w', newline='') as csv_file:
         
         writer = csv.writer(csv_file, delimiter=',', quotechar=None)
         

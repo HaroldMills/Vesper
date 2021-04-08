@@ -350,7 +350,8 @@ class ClipMetadataCsvFileExporter:
         # Create output file in temporary file directory.
         try:
             self._output_file = tempfile.NamedTemporaryFile(
-                'wt', prefix='vesper-', suffix='.csv', delete=False)
+                'wt', newline='', prefix='vesper-', suffix='.csv',
+                delete=False)
         except Exception as e:
             self._handle_output_error('Could not open output file.', e)
         

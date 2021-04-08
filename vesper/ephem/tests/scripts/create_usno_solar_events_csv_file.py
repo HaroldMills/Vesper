@@ -45,7 +45,7 @@ ONE_DAY = datetime.timedelta(days=1)
 
 def main():
     
-    with open(OUTPUT_FILE_PATH, 'w') as output_file:
+    with open(OUTPUT_FILE_PATH, 'w', newline='') as output_file:
         
         writer = csv.writer(output_file)
         

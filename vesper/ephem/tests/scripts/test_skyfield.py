@@ -224,7 +224,7 @@ def record_unmatched_event(source, key, time):
 
 def write_diff_count_file(file_path):
     
-    with open(file_path, 'w') as csv_file:
+    with open(file_path, 'w', newline='') as csv_file:
         
         writer = csv.writer(csv_file)
         
@@ -248,7 +248,7 @@ def write_diff_count_file(file_path):
             
 def write_unmatched_events_file(file_path):
     
-    with open(file_path, 'w') as csv_file:
+    with open(file_path, 'w', newline='') as csv_file:
         
         writer = csv.writer(csv_file)
         

@@ -239,7 +239,7 @@ class AddRecordingAudioFilesCommand(Command):
         
         result = {}
         
-        with open(csv_file_path) as file_:
+        with open(csv_file_path, newline='') as file_:
             
             reader = csv.reader(file_)
             
