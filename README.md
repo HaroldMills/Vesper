@@ -28,16 +28,6 @@ there are preliminary
 Vesper is provided under the
 [MIT License](https://github.com/HaroldMills/Vesper/blob/master/LICENSE).
 
-[BirdVoxDetect](https://github.com/BirdVox/birdvoxdetect) is provided by the
-[BirdVox](https://wp.nyu.edu/birdvox/) project under the
-[MIT License](https://github.com/BirdVox/birdvoxdetect/blob/master/LICENSE).
-
-BirdVoxDetect is described in:
-
-**[Robust Sound Event Detection in Bioacoustic Sensor Networks](https://journals.plos.org/plosone/article/file?id=10.1371/journal.pone.0214168&type=printable)**<br/>
-Vincent Lostanlen, Justin Salamon, Andrew Farnsworth, Steve Kelling, and Juan Pablo Bello<br/>
-PLoS ONE 14(10): e0214168, 2019. DOI: https://doi.org/10.1371/journal.pone.0214168
-
 Many thanks to [MPG Ranch](http://mpgranch.com), Project Night Flight, [Old Bird](http://oldbird.org), and anonymous donors for financial support of the Vesper project.
 
 ![Image of Zenodo DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.1020572.svg)
