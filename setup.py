@@ -26,12 +26,7 @@ To create a conda environment using a Vesper package from the test PyPI:
 
     conda create -n test python=3.6
     conda activate test
-    pip install django jsonschema resampy ruamel_yaml skyfield tensorflow~=1.15.0
     pip install --extra-index-url https://test.pypi.org/simple/ vesper
-
-The first pip command in the above is to ensure that Vesper's dependencies
-are installed from the real PyPI rather than the test one, which can
-contain incompatible pre-release versions.
 
 To create a conda environment using a Vesper package from the real PyPI:
 
