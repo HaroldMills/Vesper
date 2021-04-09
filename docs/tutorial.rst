@@ -90,7 +90,7 @@ Create a new Vesper archive
 ---------------------------
 
 #. Download the `Vesper archive template
-   <https://www.dropbox.com/s/uwckqtqwvo9fsti/Archive%20Template.zip?dl=1>`_
+   <https://www.dropbox.com/s/f7pus8saz5m1mck/Archive%20Template.zip?dl=1>`_
    to your computer.
 
 #. Unzip the downloaded file. This should create an archive directory
@@ -568,7 +568,7 @@ your own archive you can import your own recordings into it.
 
 To import a recording into your archive:
 
-#. Download the `recording file <https://www.dropbox.com/s/pi4n8dl85n9ksev/Ithaca_2019-10-03_06.00.00_Z.wav?dl=1>`_
+#. Download the `recording file <https://www.dropbox.com/s/1smkyadxuttya6t/Ithaca_2020-10-03_06.00.00_Z.wav?dl=1>`_
    for this tutorial and put it in the ``Recordings`` subdirectory of
    your archive.
    
