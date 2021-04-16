@@ -116,12 +116,12 @@ setup(
     ],
     
     install_requires=[
-        'django~=3.1.0',
+        'django~=3.2.0',
         'jsonschema~=3.2',
         'resampy',
         'ruamel_yaml',
         'skyfield~=1.38',
-        'tensorflow~=1.15.0',
+        'tensorflow==2.5.0rc1',
     ],
       
     entry_points={
