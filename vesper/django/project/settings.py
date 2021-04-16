@@ -99,6 +99,13 @@ WSGI_APPLICATION = 'vesper.django.project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
+# TODO: Switch to BigAutoField when Vesper database tables will change
+# for some other reason. We don't want to force users to migrate their
+# databases just for this. There's no hurry, since it is unlikely that
+# any archive database table will exhaust 2**32 IDs anytime soon.
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+
 def _create_databases_setting_value():
     
     db = archive_settings.database
