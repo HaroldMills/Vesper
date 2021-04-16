@@ -36,7 +36,7 @@ from vesper.django.app.export_clips_to_hdf5_file_form import \
 from vesper.django.app.import_metadata_form import ImportMetadataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
-    AnnotationInfo, Clip, Job, Station, StringAnnotation)
+    AnnotationInfo, Clip, Job, RecordingFile, Station, StringAnnotation)
 from vesper.django.app.transfer_call_classifications_form import \
     TransferCallClassificationsForm
 from vesper.django.app.refresh_recording_audio_file_paths_form import \
@@ -45,8 +45,11 @@ from vesper.ephem.sun_moon import SunMoon
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm as OldBirdExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
+from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 from vesper.singletons import (
-    archive, clip_manager, job_manager, preference_manager, preset_manager)
+    archive, clip_manager, job_manager, preference_manager, preset_manager,
+    recording_manager)
 from vesper.util.bunch import Bunch
 from vesper.util.byte_buffer import ByteBuffer
 import vesper.django.app.model_utils as model_utils
@@ -2283,3 +2286,55 @@ def _parse_recordings_post_data(data):
 def show_recording_capabilities(request):
     context = {}
     return render(request, 'vesper/show-recording-capabilities.html', context)
+
+
+from threading import Lock
+
+_recording_file_reader_cache = {}
+_read_lock = Lock()
+
+
+def _clear_recording_file_reader_cache():
+    
+    global _recording_file_reader_cache
+    
+    for reader in _recording_file_reader_cache.values():
+        reader.close()
+        
+    _recording_file_reader_cache = {}
+
+
+def _get_recording_file_reader(path):
+    
+    global _recording_file_reader_cache
+    
+    try:
+        
+        return _recording_file_reader_cache[path]
+        
+    except KeyError:
+    
+        # Create new reader.
+        reader = WaveAudioFileReader(str(path))
+        
+        # Cache new reader.
+        _recording_file_reader_cache[path] = reader
+        
+        return reader
+
+
+def recording_audio(request, recording_id):
+    
+    params = request.GET
+    start_index = int(params['start_index'])
+    length = int(params['length'])
+    # print(f'start index {start_index} length {length}')
+    
+    file = RecordingFile.objects.get(recording__id=recording_id)
+    path = recording_manager.instance.get_absolute_recording_file_path(
+        file.path)
+    with _read_lock:
+        reader = _get_recording_file_reader(path)
+        samples = reader.read(start_index, length)
+    content = samples.tobytes()
+    return HttpResponse(content, content_type='application/octet-stream')

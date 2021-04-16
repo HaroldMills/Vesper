@@ -40,6 +40,8 @@ if not settings.ARCHIVE_READ_ONLY:
     
         path('record/', views.record, name='record'),
         path('recordings/', views.recordings, name='recordings'),
+        path('recordings/<int:recording_id>/audio', views.recording_audio,
+             name='recording-audio'),
         path(
             'show-recording-capabilities/', views.show_recording_capabilities,
             name='show-recording-capabilities'),
