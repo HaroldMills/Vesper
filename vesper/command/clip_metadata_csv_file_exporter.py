@@ -306,7 +306,7 @@ columns:
     - measurement: Duration
       formatter:
           name: Decimal Formatter
-          settings: {detail: 3}
+          settings: {detail: ".3"}
     
     - name: Classification
       measurement:
