@@ -122,10 +122,35 @@ _TF1_DETECTORS = '''
 
 _TF2_CLASSIFIERS = '''
     - vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.annotator.Annotator
+    - vesper.mpg_ranch.nfc_coarse_classifier_3_1.classifier.Classifier
+    - vesper.mpg_ranch.nfc_coarse_classifier_4_1.classifier.Classifier
 '''
 
 
 _TF2_DETECTORS = '''
+
+    # MPG Ranch Thrush Detector 1.1
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector20
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector30
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector40
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector50
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector60
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector70
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector80
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector90
+     
+    # MPG Ranch Tseep Detector 1.1
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector20
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector30
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector40
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector50
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector60
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector70
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector80
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector90
+
 '''
 
 

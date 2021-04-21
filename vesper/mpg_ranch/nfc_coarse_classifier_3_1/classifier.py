@@ -1,5 +1,8 @@
 """
-Module containing MPG Ranch NFC coarse classifier, version 4.0.
+Module containing MPG Ranch NFC coarse classifier, version 3.1.
+
+This classifier uses the same model as version 3.0, but is updated for
+TensorFlow 2.
 
 An NFC coarse classifier classifies an unclassified clip as a `'Call'`
 if it appears to be a nocturnal flight call, or as a `'Noise'` otherwise.
@@ -8,7 +11,7 @@ manually or automatically.
 
 This classifier was trained on clips created by the Old Bird Tseep
 and Thrush Redux 1.1 detectors from MPG Ranch recordings collected in
-the fall of 2017 and the fall of 2018.
+the fall of 2017.
 """
 
 
@@ -24,9 +27,9 @@ from vesper.django.app.models import AnnotationInfo
 from vesper.singletons import clip_manager
 from vesper.util.settings import Settings
 import vesper.django.app.model_utils as model_utils
-import vesper.mpg_ranch.nfc_coarse_classifier_4_0.classifier_utils as \
+import vesper.mpg_ranch.nfc_coarse_classifier_3_1.classifier_utils as \
     classifier_utils
-import vesper.mpg_ranch.nfc_coarse_classifier_4_0.dataset_utils as \
+import vesper.mpg_ranch.nfc_coarse_classifier_3_1.dataset_utils as \
     dataset_utils
 import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.signal_utils as signal_utils
@@ -34,26 +37,6 @@ import vesper.util.yaml_utils as yaml_utils
 
 
 _EVALUATION_MODE_ENABLED = False
-
-_FN_THRESHOLD = .20
-"""
-Evaluation mode false negative score threshold.
-
-The value of this attribute should be either a score value in [0, 1] or
-`None`. If a score value, "Call*" clips whose scores do not exceed the
-threshold will be reclassified as "FN*". If `None`, no clips will be
-reclassified as "FN*".
-"""
-
-_FP_THRESHOLD = None
-"""
-Evaluation mode false positive score threshold.
-
-The value of this attribute should be either a score value in [0, 1] or
-`None`. If a score value, "Noise" clips whose scores are at least the
-threshold will be reclassified as "FP". If `None`, no clips will be
-reclassified as "FP".
-"""
 
 
 '''
@@ -88,7 +71,7 @@ excluded call negatives) can subsequently be viewed in clip albums.
 class Classifier(Annotator):
     
     
-    extension_name = 'MPG Ranch NFC Coarse Classifier 4.0'
+    extension_name = 'MPG Ranch NFC Coarse Classifier 3.1'
 
     
     def __init__(self, *args, **kwargs):
@@ -98,14 +81,14 @@ class Classifier(Annotator):
         open_mp_utils.work_around_multiple_copies_issue()
         
         # Suppress TensorFlow INFO and DEBUG log messages.
-        tf.logging.set_verbosity(tf.logging.WARN)
+        logging.getLogger('tensorflow').setLevel(logging.WARN)
         
         self._classifiers = dict(
             (t, _Classifier(t)) for t in ('Tseep', 'Thrush'))
         
         if _EVALUATION_MODE_ENABLED:
             self._score_annotation_info = \
-                AnnotationInfo.objects.get(name='Detector Score')
+                AnnotationInfo.objects.get(name='Score')
         
         
     def annotate_clips(self, clips):
@@ -169,7 +152,7 @@ class Classifier(Annotator):
                     old_classification = self._get_annotation_value(clip)
                 
                     new_classification = self._get_new_classification(
-                        old_classification, auto_classification, score)
+                        old_classification, auto_classification)
                     
                     if new_classification is not None:
                         self._annotate(clip, new_classification)
@@ -186,8 +169,7 @@ class Classifier(Annotator):
         return num_clips_classified
 
         
-    def _get_new_classification(
-            self, old_classification, auto_classification, score):
+    def _get_new_classification(self, old_classification, auto_classification):
         
         old = old_classification
         auto = auto_classification
@@ -196,30 +178,24 @@ class Classifier(Annotator):
             return None
         
         elif old.startswith('Call') and auto == 'Noise':
-            # false negative
-            
-            if _FN_THRESHOLD is not None and score <= _FN_THRESHOLD:
-                return 'FN' + old[len('Call'):]
-            
-            else:
-                return None
+            return 'FN' + old[len('Call'):]
             
         elif old == 'Noise' and auto == 'Call':
-            # false positive
+            return 'FP'
             
-            if _FP_THRESHOLD is not None and score >= _FP_THRESHOLD:
-                return 'FP'
-            
-            else:
-                return None
-           
+        elif old.startswith('XCall') and auto == 'Noise':
+            return 'XCallN' + old_classification[len('XCall'):]
+        
+        elif old.startswith('XCall') and auto == 'Call':
+            return 'XCallP' + old_classification[len('XCall'):]
+        
         else:
             return None
 
 
     def _set_clip_score(self, clip, score):
         
-        value = '{:.3f}'.format(100 * score)
+        value = '{:.3f}'.format(score)
                     
         model_utils.annotate_clip(
             clip, self._score_annotation_info, value,
@@ -294,7 +270,7 @@ class _Classifier:
         
         self.clip_type = clip_type
         
-        self._estimator = self._create_estimator()
+        self._model = self._load_model()
         self._settings = self._load_settings()
         
         # Configure waveform slicing.
@@ -312,17 +288,15 @@ class _Classifier:
         self._clip_manager = clip_manager.instance
     
     
-    def _create_estimator(self):
-        path = classifier_utils.get_tensorflow_model_dir_path(self.clip_type)
-        logging.info((
-            'Creating TensorFlow estimator from saved model in directory '
-            '"{}"...').format(path))
-        return tf.contrib.estimator.SavedModelEstimator(str(path))
+    def _load_model(self):
+        path = classifier_utils.get_keras_model_file_path(self.clip_type)
+        logging.info(f'Loading classifier model from "{path}"...')
+        return tf.keras.models.load_model(path)
 
     
     def _load_settings(self):
         path = classifier_utils.get_settings_file_path(self.clip_type)
-        logging.info('Loading classifier settings from "{}"...'.format(path))
+        logging.info(f'Loading classifier settings from "{path}"...')
         text = path.read_text()
         d = yaml_utils.load(text)
         return Settings.create_from_dict(d)
@@ -345,8 +319,13 @@ class _Classifier:
         
             # logging.info('Scoring clip waveforms...')
             
-            scores = classifier_utils.score_dataset_examples(
-                self._estimator, self._create_dataset)
+            dataset = \
+                dataset_utils.create_spectrogram_dataset_from_waveforms_array(
+                    self._waveforms, dataset_utils.DATASET_MODE_INFERENCE,
+                    self._settings, batch_size=64,
+                    feature_name=self._settings.model_input_name)
+
+            scores = self._model.predict(dataset).flatten()
             
             # logging.info('Classifying clips...')
             
@@ -423,17 +402,7 @@ class _Classifier:
         return samples
 
         
-    def _create_dataset(self):
-        
-        return dataset_utils.create_spectrogram_dataset_from_waveforms_array(
-            self._waveforms, dataset_utils.DATASET_MODE_INFERENCE,
-            self._settings, batch_size=64,
-            feature_name=self._settings.model_input_name)
-    
-    
     def _classify_clip(self, index, score, clips):
-        
-        # print(score, self._classification_threshold)
         
         if score >= self._classification_threshold:
             classification = 'Call'

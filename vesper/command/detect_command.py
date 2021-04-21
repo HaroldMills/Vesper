@@ -457,7 +457,7 @@ class DetectCommand(Command):
             # Convert time interval to index interval.
             index_interval = _get_index_interval(
                 time_interval, file_.start_time, file_.sample_rate)
-                 
+            
             # Create detectors.
             detectors = self._create_detectors(
                 detector_models, file_.recording, file_reader,

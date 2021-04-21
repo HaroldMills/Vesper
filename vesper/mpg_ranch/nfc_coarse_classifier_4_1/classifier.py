@@ -1,5 +1,8 @@
 """
-Module containing MPG Ranch NFC coarse classifier, version 4.0.
+Module containing MPG Ranch NFC coarse classifier, version 4.1.
+
+This classifier uses the same model as version 4.0, but is updated for
+TensorFlow 2.
 
 An NFC coarse classifier classifies an unclassified clip as a `'Call'`
 if it appears to be a nocturnal flight call, or as a `'Noise'` otherwise.
@@ -24,9 +27,9 @@ from vesper.django.app.models import AnnotationInfo
 from vesper.singletons import clip_manager
 from vesper.util.settings import Settings
 import vesper.django.app.model_utils as model_utils
-import vesper.mpg_ranch.nfc_coarse_classifier_4_0.classifier_utils as \
+import vesper.mpg_ranch.nfc_coarse_classifier_4_1.classifier_utils as \
     classifier_utils
-import vesper.mpg_ranch.nfc_coarse_classifier_4_0.dataset_utils as \
+import vesper.mpg_ranch.nfc_coarse_classifier_4_1.dataset_utils as \
     dataset_utils
 import vesper.util.open_mp_utils as open_mp_utils
 import vesper.util.signal_utils as signal_utils
@@ -88,7 +91,7 @@ excluded call negatives) can subsequently be viewed in clip albums.
 class Classifier(Annotator):
     
     
-    extension_name = 'MPG Ranch NFC Coarse Classifier 4.0'
+    extension_name = 'MPG Ranch NFC Coarse Classifier 4.1'
 
     
     def __init__(self, *args, **kwargs):
@@ -98,7 +101,7 @@ class Classifier(Annotator):
         open_mp_utils.work_around_multiple_copies_issue()
         
         # Suppress TensorFlow INFO and DEBUG log messages.
-        tf.logging.set_verbosity(tf.logging.WARN)
+        logging.getLogger('tensorflow').setLevel(logging.WARN)
         
         self._classifiers = dict(
             (t, _Classifier(t)) for t in ('Tseep', 'Thrush'))
@@ -294,7 +297,7 @@ class _Classifier:
         
         self.clip_type = clip_type
         
-        self._estimator = self._create_estimator()
+        self._model = self._load_model()
         self._settings = self._load_settings()
         
         # Configure waveform slicing.
@@ -312,17 +315,15 @@ class _Classifier:
         self._clip_manager = clip_manager.instance
     
     
-    def _create_estimator(self):
-        path = classifier_utils.get_tensorflow_model_dir_path(self.clip_type)
-        logging.info((
-            'Creating TensorFlow estimator from saved model in directory '
-            '"{}"...').format(path))
-        return tf.contrib.estimator.SavedModelEstimator(str(path))
+    def _load_model(self):
+        path = classifier_utils.get_keras_model_file_path(self.clip_type)
+        logging.info(f'Loading classifier model from "{path}"...')
+        return tf.keras.models.load_model(path)
 
     
     def _load_settings(self):
         path = classifier_utils.get_settings_file_path(self.clip_type)
-        logging.info('Loading classifier settings from "{}"...'.format(path))
+        logging.info(f'Loading classifier settings from "{path}"...')
         text = path.read_text()
         d = yaml_utils.load(text)
         return Settings.create_from_dict(d)
@@ -345,8 +346,13 @@ class _Classifier:
         
             # logging.info('Scoring clip waveforms...')
             
-            scores = classifier_utils.score_dataset_examples(
-                self._estimator, self._create_dataset)
+            dataset = \
+                dataset_utils.create_spectrogram_dataset_from_waveforms_array(
+                    self._waveforms, dataset_utils.DATASET_MODE_INFERENCE,
+                    self._settings, batch_size=64,
+                    feature_name=self._settings.model_input_name)
+
+            scores = self._model.predict(dataset).flatten()
             
             # logging.info('Classifying clips...')
             
@@ -423,14 +429,6 @@ class _Classifier:
         return samples
 
         
-    def _create_dataset(self):
-        
-        return dataset_utils.create_spectrogram_dataset_from_waveforms_array(
-            self._waveforms, dataset_utils.DATASET_MODE_INFERENCE,
-            self._settings, batch_size=64,
-            feature_name=self._settings.model_input_name)
-    
-    
     def _classify_clip(self, index, score, clips):
         
         # print(score, self._classification_threshold)
