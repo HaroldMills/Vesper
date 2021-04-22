@@ -1,17 +1,21 @@
 """
 Module containing MPG Ranch NFC coarse classifier, version 3.1.
 
-This classifier uses the same model as version 3.0, but is updated for
-TensorFlow 2.
-
 An NFC coarse classifier classifies an unclassified clip as a `'Call'`
 if it appears to be a nocturnal flight call, or as a `'Noise'` otherwise.
 It does not classify a clip that has already been classified, whether
 manually or automatically.
 
-This classifier was trained on clips created by the Old Bird Tseep
-and Thrush Redux 1.1 detectors from MPG Ranch recordings collected in
-the fall of 2017.
+This classifier uses the same model as version 3.0, which was developed
+for TensorFlow 1, but updated for TensorFlow 2.
+
+The two classifiers were compared by running both on 16429 clips created
+by the Old Bird Thrush Detector Redux 1.1 and 22505 clips created by the
+Old Bird Tseep Detector Redux 1.1 from 17 nights of recordings made in
+Ithaca, NY from 2021-04-03 through 2021-04-19. The two classifiers
+labeled the clips exactly the same. 1711 thrush clips were labeled as
+calls and the others as noises, and 2636 tseep clips were labeled as
+calls and the others as noises.
 """
 
 
