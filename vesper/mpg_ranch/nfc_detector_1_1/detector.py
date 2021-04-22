@@ -18,12 +18,13 @@ do not.
 When run on 17 nights of recordings made in Ithaca, NY from 2021-04-03
 through 2021-04-19 the detectors of this module produced the same
 clips as those produced by the corresponding detectors of the
-`vesper.mpg_ranch.nfc_detector_1_0` module. Each of the thrush
-detectors produced 12094 clips and each of the tseep detectors
-produced 5476 clips. The clips produced by corrseponding detectors
-had exactly the same start indices and lengths, and the scores (on
-a scale of 0 to 100) of the clips of each matching pair differed by
-less than .001.
+`vesper.mpg_ranch.nfc_detector_1_0` module. The detectors of this
+module were run with TensorFlow 2.5.0rc1 and the detectors of the
+other module with TensorFlow 1.15.5. Each of the thrush detectors
+produced 12094 clips and each of the tseep detectors produced 5476
+clips. The clips produced by corrseponding detectors had exactly the
+same start indices and lengths, and the scores (on a scale of 0 to 100)
+of the clips of each matching pair differed by less than .001.
 """
 
 

@@ -12,10 +12,11 @@ for TensorFlow 1, but updated for TensorFlow 2.
 The two classifiers were compared by running both on 16429 clips created
 by the Old Bird Thrush Detector Redux 1.1 and 22505 clips created by the
 Old Bird Tseep Detector Redux 1.1 from 17 nights of recordings made in
-Ithaca, NY from 2021-04-03 through 2021-04-19. The two classifiers
-labeled the clips exactly the same. 977 thrush clips were labeled as
-calls and the others as noises, and 1126 tseep clips were labeled as
-calls and the others as noises.
+Ithaca, NY from 2021-04-03 through 2021-04-19. The older classifier ran
+with TensorFlow 1.15.5 and the newer one with TensorFlow 2.5.0rc1. The
+two classifiers labeled the clips exactly the same. 977 thrush clips
+were labeled as calls and the others as noises, and 1126 tseep clips
+were labeled as calls and the others as noises.
 """
 
 
