@@ -607,14 +607,12 @@ export class ClipAlbum {
             f.classification === NOT_APPLICABLE
             ? '' : ` / ${f.classification}`;
             
-/*        const tagText =
+        const tagText =
             f.tag === NOT_APPLICABLE
             ? '' : ` / ${f.tag}`;
             
         const title = `${f.stationMicName}${dateText} / ${f.detectorName}` +
-            `${classificationText}${tagText}`;*/
-        const title = `${f.stationMicName}${dateText} / ${f.detectorName}` +
-            `${classificationText}`;
+            `${classificationText}${tagText}`;
 
 		const titleHeading = document.getElementById('title')
         const pageText = this._getTitlePageText();

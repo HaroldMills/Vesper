@@ -39,17 +39,13 @@ function setTitle() {
         state.classification === NOT_APPLICABLE
         ? '' : ` / ${state.classification}`;
         
-/*    const tagText =
+    const tagText =
         state.tag === NOT_APPLICABLE
         ? '' : ` / ${state.tag}`;
         
 	const title =
 		`${state.stationMicName} / ${state.detectorName}` +
         `${classificationText}${tagText}`;
-*/
-    const title =
-        `${state.stationMicName} / ${state.detectorName}` +
-        `${classificationText}`;
 
 	const titleElement = document.getElementById('title');
 	titleElement.textContent = `${title} Clips`;
@@ -198,7 +194,7 @@ function addMonthDay(day, daysDiv) {
         params.set('station_mic', state.stationMicName);
         params.set('detector', state.detectorName);
         params.set('classification', state.classification);
-        // params.set('tag', state.tag);
+        params.set('tag', state.tag);
         params.set('date', formatDate(day.date));
         params.set('settings', state.settingsPresetPath);
         params.set('commands', state.keyBindingsPresetPath);
