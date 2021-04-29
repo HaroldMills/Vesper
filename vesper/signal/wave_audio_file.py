@@ -206,7 +206,7 @@ class WaveAudioFileType:
     
     # writer_class = WaveAudioFileWriter
     
-    file_name_extensions = frozenset(['.wav'])
+    file_name_extensions = frozenset(['.wav', '.WAV'])
     
     @staticmethod
     def is_supported_file(file_path):
