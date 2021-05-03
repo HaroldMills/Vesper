@@ -12,9 +12,6 @@ _YAML_FILE_NAME_EXTENSION = '.yaml'
 # singleton, we make it a class rather than a module to facilitate testing.
 
 
-# TODO: Load presets only of requested types. See extension manager.
-
-
 class PresetManager:
     
     """Preset manager that loads and provides access to presets."""
@@ -192,14 +189,13 @@ def _get_preset_types(preset_types):
 def _load_presets(preset_dir_path, preset_types):
     
     if not os.path.exists(preset_dir_path):
-        message = 'Preset directory "{}" does not exist.'.format(
-            preset_dir_path)
+        message = f'Preset directory "{preset_dir_path}" does not exist.'
         logging.error(message)
         raise ValueError(message)
     
     elif not os.path.isdir(preset_dir_path):
-        message = 'Path "{}" exists but is not a preset directory.'.format(
-            preset_dir_path)
+        message = \
+            f'Path "{preset_dir_path}" exists but is not a preset directory.'
         logging.error(message)
         raise ValueError(message)
         
@@ -219,10 +215,10 @@ def _load_presets(preset_dir_path, preset_types):
                     preset_type = preset_types[dir_name]
                     
                 except KeyError:
-                    logging.warning((
-                        'Preset manager encountered directory for '
-                        'unrecognized preset type "{}" at "{}".').format(
-                            dir_name, dir_path))
+                    logging.warning(
+                        f'Preset manager encountered directory for '
+                        f'unrecognized preset type "{dir_name}" at '
+                        f'"{dir_path}".')
                 
                 else:
                     preset_data[dir_name] = \
@@ -281,14 +277,14 @@ def _parse_preset(file_path, preset_name, preset_type):
         file_ = open(file_path, 'rU')
     except:
         logging.error(
-            'Preset manager could not open preset file "{}".'.format(file_path))
+            f'Preset manager could not open preset file "{file_path}".')
         return
     
     try:
         data = file_.read()
     except:
         logging.error(
-            'Preset manager could not read preset file "{}".'.format(file_path))
+            f'Preset manager could not read preset file "{file_path}".')
         return
     finally:
         file_.close()
@@ -296,9 +292,9 @@ def _parse_preset(file_path, preset_name, preset_type):
     try:
         return preset_type(preset_name, data)
     except ValueError as e:
-        logging.error((
-            'Preset manager could not parse preset file "{}". '
-            'Error message was: {}').format(file_path, str(e)))
+        logging.error(
+            f'Preset manager could not parse preset file "{file_path}". '
+            f'Error message was: {str(e)}')
 
 
 def _copy_preset_data(data):
