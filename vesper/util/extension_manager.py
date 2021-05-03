@@ -12,35 +12,21 @@ import vesper.util.yaml_utils as yaml_utils
 # Note that even though the `ExtensionManager` class is typically used as a
 # singleton, we make it a class rather than a module to facilitate testing.
 #
-# Note also that rather than loading extensions in the `__init__` method,
-# we defer the loading until the first call to the `get_extensions` method.
-# Otherwise importing the `extension_manager` module would cause an import
-# cycle, since the `extension_manager` would attempt to import extension
-# modules before its import had completed, some of which would in turn
-# attempt to import the `extension_manager` module. Deferring the extension
-# module imports allows the import of the `extension_manager` module to
-# complete before they begin.
+# Note also that rather than loading extensions eagerly in the `__init__`
+# method, an `ExtensionManager` instead loads them lazily in its
+# `get_extensions` method. Loading extensions in the `__init__` method
+# would not work since we want to allow extension modules to use the
+# extension manager on import, but it is not available until after its
+# `__init__` method executes.
+#
+# The `get_extensions` method also loads extensions only of the requested
+# type. This avoids loading extensions of types that are never used.
 
-
-# TODO: Discover extension points and extensions in plugins rather than
-# specifying them in a YAML extensions specification. Note, however, that
-# it might still be desirable to be able to specify different subsets of
-# installed extensions to work with at different times, say for different
-# analysis projects.
-
-# TODO: Actually, it might be best to stick with an explicit extensions
-# configuration. The extension manager can be initialized much more quickly
-# if you know up front what and where all of the extensions are, and this
-# has become newly important since we are running Vesper commands in their
-# own processes. A new extension manager is created in each of these
-# processes, and it is desirable that that creation be fast.
-
-# TODO: In order to make starting the execution of Vesper commands faster,
-# it would be helpful to be able to get a single extension by its
-# extension point name and extension name, importing *exactly the modules
-# needed by that extension* and no others. This need could be addressed
-# by a new extension manager method `get_extension` that gets a single
-# extension.
+# TODO: Would it be possible to load extension modules and their
+# dependencies only when they are actually used? This might be
+# accomplished by separating extension metadata from code modules and
+# only loading the code modules when they are actually needed. This
+# would help avoid unnecessary and undesirable imports in some cases.
 
 # TODO: Use a hierarchical name space for plugins, extension points, and
 # extensions?
