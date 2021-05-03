@@ -1,7 +1,8 @@
 """Utility functions pertaining to Django forms."""
 
 
-from vesper.singletons import archive, preference_manager
+from vesper.singleton.archive import archive
+from vesper.singleton.preference_manager import preference_manager
 
 
 _DEFAULTS_PREFERENCE_NAME = 'form_defaults'
@@ -13,7 +14,7 @@ _DEFAULTS_PREFERENCE_NAME = 'form_defaults'
 
 def get_field_default(form_title, field_label, default):
     
-    preferences = preference_manager.instance.preferences
+    preferences = preference_manager.preferences
     form_defaults = preferences.get(_DEFAULTS_PREFERENCE_NAME)
     
     if isinstance(form_defaults, dict):
@@ -27,20 +28,17 @@ def get_field_default(form_title, field_label, default):
 
 
 def get_processor_choices(processor_type):
-    archive_ = archive.instance
-    detectors = archive_.get_visible_processors_of_type(processor_type)
-    names = [archive_.get_processor_ui_name(d) for d in detectors]
+    detectors = archive.get_visible_processors_of_type(processor_type)
+    names = [archive.get_processor_ui_name(d) for d in detectors]
     return [(n, n) for n in names]
 
 
 def get_string_annotation_value_choices(annotation_name):
-    archive_ = archive.instance
-    specs = archive_.get_visible_string_annotation_ui_value_specs(
+    specs = archive.get_visible_string_annotation_ui_value_specs(
         annotation_name)
     return [(s, s) for s in specs]
 
 
 def get_tag_choices():
-    archive_ = archive.instance
-    specs = archive_.get_tag_specs()
+    specs = archive.get_tag_specs()
     return [(s, s) for s in specs]

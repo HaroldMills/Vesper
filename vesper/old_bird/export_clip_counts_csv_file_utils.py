@@ -4,7 +4,7 @@
 import csv
 import datetime
 
-from vesper.singletons import archive
+from vesper.singleton.archive import archive
 import vesper.django.app.model_utils as model_utils
 import vesper.old_bird.clip_count_utils as clip_count_utils
 
@@ -143,7 +143,7 @@ def get_clip_counts_csv_file_name(
 def write_clip_counts_csv_file(
         file_, detector_name, station_mic_ui_name, start_date, end_date):
     
-    detector = archive.instance.get_processor(detector_name)
+    detector = archive.get_processor(detector_name)
     
     sm_pairs_dict = model_utils.get_station_mic_output_pairs_dict()
     station, mic_output = sm_pairs_dict[station_mic_ui_name]

@@ -13,7 +13,7 @@ from django.db import transaction
 
 from vesper.django.app.models import Clip, Job, RecordingChannel
 from vesper.signal.wave_audio_file import WaveAudioFileReader
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 from vesper.util.logging_utils import append_stack_trace
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
@@ -273,8 +273,6 @@ class _DetectorMonitor(Thread):
         file_path = model_utils.get_absolute_recording_file_path(
             recording_file)
         self._recording_file_reader = WaveAudioFileReader(str(file_path))
-        
-        self._clip_manager = clip_manager.instance
         
         
     @property
@@ -564,7 +562,7 @@ class _DetectorMonitor(Thread):
                     # transaction to ensure that the clip row and
                     # audio file are created atomically.
                     if self._create_clip_files:
-                        self._clip_manager.create_audio_file(clip, samples)
+                        clip_manager.create_audio_file(clip, samples)
                                     
         except Exception as e:
             self._logger.error((

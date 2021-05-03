@@ -1,7 +1,6 @@
 """Provides access to the extensions of a program."""
 
 
-from collections import defaultdict
 import importlib
 
 import tensorflow as tf
@@ -162,7 +161,7 @@ else:
     _TF_DETECTORS = _TF2_DETECTORS
 
 
-_EXTENSIONS_SPEC = f'''
+_EXTENSION_SPEC = f'''
 
 Classifier:
 
@@ -229,27 +228,41 @@ Clip File Name Formatter:
 class ExtensionManager:
     
     
-    def __init__(self, extensions_spec=_EXTENSIONS_SPEC):
-        self._extensions_spec = extensions_spec
-        self._extensions_loaded = False
-        self._extensions = defaultdict(list)
-    
-    
+    def __init__(self, extension_spec=_EXTENSION_SPEC):
+        
+        self._extension_spec = yaml_utils.load(extension_spec)
+        
+        # Create extension dictionary that includes an item for each
+        # extension point name, but don't attempt to load any extensions.
+        # Loading doesn't happen until extensions are actually requested.
+        extension_point_names = sorted(self._extension_spec.keys())
+        self._extensions = dict((name, None) for name in extension_point_names)
+        
+        
     def get_extensions(self, extension_point_name):
-        self._load_extensions_if_needed()
-        extensions = self._extensions.get(extension_point_name, ())
+        
+        try:
+            extensions = self._extensions[extension_point_name]
+        except KeyError:
+            raise ValueError(
+                f'Unrecognized extension point name "{extension_point_name}".')
+            
+        if extensions is None:
+            # extensions for this extension point not yet loaded
+            
+            extensions = self._load_extensions(extension_point_name)
+            self._extensions[extension_point_name] = extensions
+            # self._show_loaded_extensions(extension_point_name)
+            
         return dict((e.extension_name, e) for e in extensions)
     
     
-    def _load_extensions_if_needed(self):
+    def _load_extensions(self, extension_point_name):
         
-        if not self._extensions_loaded:
-            
-            # Load extensions indicated by YAML extensions specification.
-            spec = yaml_utils.load(self._extensions_spec)
-            for extension_point_name, module_class_names in spec.items():
-                classes = _load_extension_classes(module_class_names)
-                self._extensions[extension_point_name] += classes
+        module_class_names = self._extension_spec[extension_point_name]
+        extensions = [_load_extension(name) for name in module_class_names]
+        
+        if extension_point_name == 'Detector':
             
             # Load BirdVoxDetect detector extensions. These classes
             # are created dynamically according to the detectors
@@ -259,25 +272,20 @@ class ExtensionManager:
             # need no special knowledge to get BirdVox detectors, but
             # rather will discover them at load time just like all
             # other plugins.
-            bvd_detector_classes = birdvox_detectors.get_detector_classes()
-            self._extensions['Detector'] += bvd_detector_classes
-
-            self._extensions_loaded = True
+            extensions += birdvox_detectors.get_detector_classes()
             
-            # print('ExtensionManager loaded extensions.')
-            # for cls in self._extensions['Detector']:
-            #     print(f'    {cls.extension_name}')
+        return extensions
     
     
-    def add_extension(self, extension_point_name, cls):
-        self._extensions[extension_point_name].append(cls)
+    def _show_loaded_extensions(self, extension_point_name):
+        print(f'Loaded "{extension_point_name}" extensions:')
+        extensions = self._extensions[extension_point_name]
+        names = sorted(e.extension_name for e in extensions)
+        for name in names:
+            print(f'    {name}')
+                
     
-    
-def _load_extension_classes(module_class_names):
-    return [_load_extension_class(name) for name in module_class_names]
-
-
-def _load_extension_class(module_class_name):
+def _load_extension(module_class_name):
     module_name, class_name = module_class_name.rsplit('.', 1)
     module = importlib.import_module(module_name)
     return getattr(module, class_name)

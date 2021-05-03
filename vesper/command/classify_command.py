@@ -6,7 +6,7 @@ import time
 
 from vesper.command.command import Command
 from vesper.django.app.models import AnnotationInfo, Job, Processor
-from vesper.singletons import extension_manager
+from vesper.singleton.extension_manager import extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.text_utils as text_utils
@@ -129,7 +129,7 @@ def _get_processor(name):
 # about this.
 def _create_classifier(name, annotation_info, job, processor):
     
-    classes = extension_manager.instance.get_extensions('Classifier')
+    classes = extension_manager.get_extensions('Classifier')
     
     try:
         cls = classes[name]

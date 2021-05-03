@@ -13,7 +13,7 @@ from django.db import transaction
 from vesper.archive_paths import archive_paths
 from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import Recording, RecordingFile
-from vesper.singletons import recording_manager
+from vesper.singleton.recording_manager import recording_manager
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
 
@@ -681,14 +681,14 @@ class AddRecordingAudioFilesCommand(Command):
             
     def _get_relative_path(self, abs_path):
         
-        manager = recording_manager.instance
+        rm = recording_manager
         
         try:
-            _, rel_path = manager.get_relative_recording_file_path(abs_path)
+            _, rel_path = rm.get_relative_recording_file_path(abs_path)
             
         except ValueError:
             
-            dir_paths = manager.recording_dir_paths
+            dir_paths = rm.recording_dir_paths
             
             if len(dir_paths) == 1:
                 s = f'the recording directory "{dir_paths[0]}"'

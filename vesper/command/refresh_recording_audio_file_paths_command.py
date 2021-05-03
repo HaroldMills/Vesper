@@ -8,7 +8,7 @@ import time
 
 from vesper.command.command import Command
 from vesper.django.app.models import RecordingFile
-from vesper.singletons import recording_manager
+from vesper.singleton.recording_manager import recording_manager
 import vesper.command.command_utils as command_utils
 import vesper.util.text_utils as text_utils
 
@@ -36,8 +36,7 @@ class RefreshRecordingAudioFilePathsCommand(Command):
     
     def _get_recording_file_paths(self):
         
-        rm = recording_manager.instance
-        recording_dir_paths = rm.recording_dir_paths
+        recording_dir_paths = recording_manager.recording_dir_paths
         
         self._logger.info('Recording directories are:')
         for path in recording_dir_paths:

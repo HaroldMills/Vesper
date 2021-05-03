@@ -18,7 +18,7 @@ from vesper.command.annotator import Annotator as AnnotatorBase
 from vesper.django.app.models import AnnotationInfo
 from vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.inferrer \
     import Inferrer
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 import vesper.django.app.model_utils as model_utils
 import vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.dataset_utils \
     as dataset_utils
@@ -70,8 +70,6 @@ class Annotator(AnnotatorBase):
         # Suppress TensorFlow INFO and DEBUG log messages.
         logging.getLogger('tensorflow').setLevel(logging.WARN)
         
-        self._clip_manager = clip_manager.instance
-
         self._inferrers = dict(
             (t, _create_inferrer(t))
             for t in ('Tseep',))
@@ -160,7 +158,7 @@ class Annotator(AnnotatorBase):
     def _get_clip_samples(self, clip, inference_sample_rate):
          
         # Get clip samples.
-        samples = self._clip_manager.get_samples(clip)
+        samples = clip_manager.get_samples(clip)
             
         if clip.sample_rate != inference_sample_rate:
             # need to resample

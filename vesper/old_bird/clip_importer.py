@@ -15,7 +15,7 @@ from django.db import transaction
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, Processor, Recording, RecordingChannel, Station,
     StationDevice)
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
@@ -599,6 +599,6 @@ def _assert_recording_contains_clip(recording, clip_start_time, clip_end_time):
     
     
 def _copy_clip_audio_file(from_path, clip):
-    to_path = clip_manager.instance.get_audio_file_path(clip)
+    to_path = clip_manager.get_audio_file_path(clip)
     os_utils.create_parent_directory(to_path)
     os_utils.copy_file(from_path, to_path)

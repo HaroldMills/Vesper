@@ -47,9 +47,12 @@ from vesper.old_bird.export_clip_counts_csv_file_form import \
 from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.signal.wave_audio_file import WaveAudioFileReader
 from vesper.signal.wave_file_signal import WaveFileSignal
-from vesper.singletons import (
-    archive, clip_manager, job_manager, preference_manager, preset_manager,
-    recording_manager)
+from vesper.singleton.archive import archive
+from vesper.singleton.clip_manager import clip_manager
+from vesper.singleton.job_manager import job_manager
+from vesper.singleton.preference_manager import preference_manager
+from vesper.singleton.preset_manager import preset_manager
+from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
 from vesper.util.byte_buffer import ByteBuffer
 import vesper.django.app.model_utils as model_utils
@@ -167,11 +170,11 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       # - name: Add Old Bird clip start indices
       #   url_name: add-old-bird-clip-start-indices
         
-      # - name: Create clip audio files
-      #   url_name: create-clip-audio-files
+      - name: Create clip audio files
+        url_name: create-clip-audio-files
         
-      # - name: Delete clip audio files
-      #   url_name: delete-clip-audio-files
+      - name: Delete clip audio files
+        url_name: delete-clip-audio-files
    
 - name: Help
   dropdown:
@@ -210,9 +213,8 @@ _DEFAULT_NAVBAR_DATA_READ_ONLY = yaml_utils.load(f'''
 
 
 def _create_navbar_items():
-    preferences = preference_manager.instance.preferences
     default_data = _get_default_navbar_data()
-    data = preferences.get('navbar', default_data)
+    data = preference_manager.preferences.get('navbar', default_data)
     return _create_navbar_items_aux(data)
 
 
@@ -359,7 +361,7 @@ def _create_detect_command_spec(form):
 
 
 def _start_job(command_spec, user):
-    job_id = job_manager.instance.start_job(command_spec, user)
+    job_id = job_manager.start_job(command_spec, user)
     url = urls.reverse('job', args=[job_id])
     return HttpResponseRedirect(url)
 
@@ -941,8 +943,7 @@ def clip_wav(request, clip_id):
     content_type = 'audio/wav'
     
     try:
-        content = clip_manager.instance.get_audio_file_contents(
-            clip, content_type)
+        content = clip_manager.get_audio_file_contents(clip, content_type)
         
     except Exception as e:
         logger = logging.getLogger('django.server')
@@ -961,7 +962,7 @@ def clip_wav(request, clip_id):
 
 def presets_json(request, preset_type_name):
 
-    preset_manager.instance.reload_presets()
+    preset_manager.reload_presets()
 
     if request.method in _GET_AND_HEAD:
         content = _get_presets_json(preset_type_name)
@@ -981,7 +982,7 @@ def _get_presets_json(preset_type_name):
     for the preset type.
     """
 
-    presets = preset_manager.instance.get_flattened_presets(preset_type_name)
+    presets = preset_manager.get_flattened_presets(preset_type_name)
     presets = [(path, preset.camel_case_data) for path, preset in presets]
     return json.dumps(presets)
 
@@ -1195,7 +1196,7 @@ def batch_read_clip_audios(request):
         for clip in clips:
             
             try:
-                audio = clip_manager.instance.get_audio_file_contents(
+                audio = clip_manager.get_audio_file_contents(
                     clip, content_type)
                 
             except Exception as e:
@@ -1384,8 +1385,8 @@ def clip_calendar(request):
         
     params = request.GET
     
-    preference_manager.instance.reload_preferences()
-    preferences = preference_manager.instance.preferences
+    preference_manager.reload_preferences()
+    preferences = preference_manager.preferences
 
     message = _check_for_stations_detectors_and_classification_annotation(
         'clip calendar')
@@ -1433,7 +1434,7 @@ def _check_for_stations_detectors_and_classification_annotation(view_name):
         return _create_missing_entities_text(
             view_name, 'station/microphone pairs')
         
-    detectors = archive.instance.get_processors_of_type('Detector')
+    detectors = archive.get_processors_of_type('Detector')
     
     if len(detectors) == 0:
         # archive contains no detectors
@@ -1504,27 +1505,23 @@ def _get_calendar_query_field_value(field_name, params, preferences):
 def _get_string_annotation_ui_value_spec(
         annotation_ui_value_specs, params, preferences):
 
-    archive_ = archive.instance
-    
     spec = _get_calendar_query_field_value(
         'classification', params, preferences)
     
-    spec = archive_.get_string_annotation_ui_value('Classification', spec)
+    spec = archive.get_string_annotation_ui_value('Classification', spec)
 
     if spec is None or spec not in annotation_ui_value_specs:
-        spec = archive_.NOT_APPLICABLE
+        spec = archive.NOT_APPLICABLE
 
     return spec
 
 
 def _get_string_annotation_info(annotation_name, annotation_ui_value_spec):
 
-    archive_ = archive.instance
-    
-    value_spec = archive_.get_string_annotation_archive_value(
+    value_spec = archive.get_string_annotation_archive_value(
         annotation_name, annotation_ui_value_spec)
     
-    if value_spec == archive_.NOT_APPLICABLE:
+    if value_spec == archive.NOT_APPLICABLE:
         
         # We return an `annotation_name` of `None` to denote all clips.
         annotation_name = None
@@ -1532,7 +1529,7 @@ def _get_string_annotation_info(annotation_name, annotation_ui_value_spec):
 
     else:
 
-        if value_spec == archive_.STRING_ANNOTATION_VALUE_NONE:
+        if value_spec == archive.STRING_ANNOTATION_VALUE_NONE:
             annotation_value = None
         else:
             annotation_value = value_spec
@@ -1545,13 +1542,13 @@ def _get_tag_spec(tag_specs, params, preferences):
     spec = _get_calendar_query_field_value('tag', params, preferences)
     
     if spec is None or spec not in tag_specs:
-        spec = archive.instance.NOT_APPLICABLE
+        spec = archive.NOT_APPLICABLE
         
     return spec
     
     
 def _get_tag_name(tag_spec):
-    if tag_spec == archive.instance.NOT_APPLICABLE:
+    if tag_spec == archive.NOT_APPLICABLE:
         return None
     else:
         return tag_spec
@@ -1585,14 +1582,12 @@ def night(request):
     # TODO: Check URL query items.
     params = request.GET
     
-    archive_ = archive.instance
-
     # Reload presets and preferences to make sure we have the latest.
     # TODO: For efficiency's sake, be more selective about what we reload.
     # We might reload only presets of specified types, for example.
-    preset_manager.instance.reload_presets()
-    preference_manager.instance.reload_preferences()
-    preferences = preference_manager.instance.preferences
+    preset_manager.reload_presets()
+    preference_manager.reload_preferences()
+    preferences = preference_manager.preferences
 
     sm_pair_ui_name = params['station_mic']
     sm_pairs = model_utils.get_station_mic_output_pairs_dict()
@@ -1602,19 +1597,19 @@ def night(request):
     sm_pair_ui_names = [get_ui_name(p) for p in sm_pairs]
     
     detector_name = params['detector']
-    detector = archive_.get_processor(detector_name)
-    detector_ui_name = archive_.get_processor_ui_name(detector)
-    detectors = archive_.get_visible_processors_of_type('Detector')
-    detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
+    detector = archive.get_processor(detector_name)
+    detector_ui_name = archive.get_processor_ui_name(detector)
+    detectors = archive.get_visible_processors_of_type('Detector')
+    detector_ui_names = [archive.get_processor_ui_name(d) for d in detectors]
     
     annotation_name = 'Classification'
     annotation_ui_value_specs = \
-        archive_.get_visible_string_annotation_ui_value_specs(annotation_name)
+        archive.get_visible_string_annotation_ui_value_specs(annotation_name)
     annotation_value_spec = params['classification']
     annotation_name, annotation_value = \
         _get_string_annotation_info(annotation_name, annotation_value_spec)
 
-    tag_specs = archive_.get_tag_specs()
+    tag_specs = archive.get_tag_specs()
     tag_spec = _get_tag_spec(tag_specs, params, preferences)
     tag_name = _get_tag_name(tag_spec)
 
@@ -1780,9 +1775,9 @@ def clip_album(request):
     # Reload presets and preferences to make sure we have the latest.
     # TODO: For efficiency's sake, be more selective about what we reload.
     # We might reload only presets of specified types, for example.
-    preset_manager.instance.reload_presets()
-    preference_manager.instance.reload_preferences()
-    preferences = preference_manager.instance.preferences
+    preset_manager.reload_presets()
+    preference_manager.reload_preferences()
+    preferences = preference_manager.preferences
 
     message = _check_for_stations_detectors_and_classification_annotation(
         'clip album')
@@ -1836,8 +1831,6 @@ def clip_album(request):
 
 def _get_clip_filter_data(params, preferences):
     
-    archive_ = archive.instance
-
     # TODO: Figure out how to handle wildcard station mic here.
     sm_pairs = model_utils.get_station_mic_output_pairs_list()
     get_ui_name = model_utils.get_station_mic_output_pair_ui_name
@@ -1848,20 +1841,20 @@ def _get_clip_filter_data(params, preferences):
 
     detector_name = _get_calendar_query_field_value(
         'detector', params, preferences)
-    detector = archive_.get_processor(detector_name)
-    detectors = archive_.get_visible_processors_of_type('Detector')
-    detector_ui_names = [archive_.get_processor_ui_name(d) for d in detectors]
-    detector_ui_name = archive_.get_processor_ui_name(detector)
+    detector = archive.get_processor(detector_name)
+    detectors = archive.get_visible_processors_of_type('Detector')
+    detector_ui_names = [archive.get_processor_ui_name(d) for d in detectors]
+    detector_ui_name = archive.get_processor_ui_name(detector)
     
     annotation_name = 'Classification'
     annotation_ui_value_specs = \
-        archive_.get_visible_string_annotation_ui_value_specs(annotation_name)
+        archive.get_visible_string_annotation_ui_value_specs(annotation_name)
     annotation_ui_value_spec = _get_string_annotation_ui_value_spec(
         annotation_ui_value_specs, params, preferences)
     annotation_name, annotation_value = \
         _get_string_annotation_info(annotation_name, annotation_ui_value_spec)
         
-    tag_specs = archive_.get_tag_specs()
+    tag_specs = archive.get_tag_specs()
     tag_spec = _get_tag_spec(tag_specs, params, preferences)
     tag_name = _get_tag_name(tag_spec)
         
@@ -2331,8 +2324,7 @@ def recording_audio(request, recording_id):
     # print(f'start index {start_index} length {length}')
     
     file = RecordingFile.objects.get(recording__id=recording_id)
-    path = recording_manager.instance.get_absolute_recording_file_path(
-        file.path)
+    path = recording_manager.get_absolute_recording_file_path(file.path)
     with _read_lock:
         reader = _get_recording_file_reader(path)
         samples = reader.read(start_index, length)

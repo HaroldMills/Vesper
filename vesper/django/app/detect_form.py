@@ -1,7 +1,7 @@
 from django import forms
 
 from vesper.django.app.models import Station
-from vesper.singletons import preset_manager
+from vesper.singleton.preset_manager import preset_manager
 import vesper.django.app.form_utils as form_utils
 
 
@@ -47,8 +47,7 @@ class DetectForm(forms.Form):
         self.fields['stations'].choices = [(n, n) for n in station_names]
         
         # Populate schedule field.
-        presets = preset_manager.instance.get_flattened_presets(
-            'Detection Schedule')
+        presets = preset_manager.get_flattened_presets('Detection Schedule')
         preset_names = ['/'.join(p[0]) for p in presets]
         choices = [(None, 'None')] + [(n, n) for n in preset_names]
         self.fields['schedule'].choices = choices

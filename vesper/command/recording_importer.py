@@ -11,7 +11,7 @@ from django.db import transaction
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import (
     DeviceConnection, Job, Recording, RecordingChannel, RecordingFile)
-from vesper.singletons import recording_manager
+from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
@@ -160,14 +160,14 @@ class RecordingImporter:
     
     def _get_relative_path_info(self, file_path):
         
-        manager = recording_manager.instance
+        rm = recording_manager
         
         try:
-            abs_path = manager.get_absolute_recording_file_path(file_path)
+            abs_path = rm.get_absolute_recording_file_path(file_path)
             
         except ValueError:
             self._handle_bad_recording_file_path(
-                file_path, 'could not be found in', manager)
+                file_path, 'could not be found in', rm)
             
         return Bunch(absolute_path=abs_path, relative_path=file_path)
     
@@ -188,14 +188,13 @@ class RecordingImporter:
     
     def _get_absolute_path_info(self, file_path):
         
-        manager = recording_manager.instance
+        rm = recording_manager
         
         try:
-            _, rel_path = manager.get_relative_recording_file_path(file_path)
+            _, rel_path = rm.get_relative_recording_file_path(file_path)
             
         except ValueError:
-            self._handle_bad_recording_file_path(
-                file_path, 'is not in', manager)
+            self._handle_bad_recording_file_path(file_path, 'is not in', rm)
             
         return Bunch(absolute_path=file_path, relative_path=rel_path)
     

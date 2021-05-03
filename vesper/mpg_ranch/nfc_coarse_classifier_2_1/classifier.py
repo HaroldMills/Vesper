@@ -20,7 +20,7 @@ import resampy
 from vesper.command.annotator import Annotator
 from vesper.mpg_ranch.nfc_coarse_classifier_2_1.feature_computer import \
     FeatureComputer
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 from vesper.util.settings import Settings
 import vesper.django.app.model_utils as model_utils
 import vesper.mpg_ranch.nfc_coarse_classifier_2_1.classifier_utils as \
@@ -79,7 +79,6 @@ class _Classifier:
         self._model = self._load_model()
         self._settings = self._load_settings()
         self._feature_computer = FeatureComputer(self._settings)
-        self._clip_manager = clip_manager.instance
     
     
     def _load_model(self):
@@ -129,7 +128,7 @@ class _Classifier:
         
     def _get_waveform(self, clip):
         
-        samples = self._clip_manager.get_samples(clip)
+        samples = clip_manager.get_samples(clip)
         sample_rate = clip.sample_rate
         
         classifier_sample_rate = self._settings.waveform_sample_rate

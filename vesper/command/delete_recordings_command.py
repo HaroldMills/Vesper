@@ -8,7 +8,7 @@ from django.db import transaction
 
 from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import Clip, Recording, Station
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.util.archive_lock as archive_lock
 
@@ -31,7 +31,6 @@ class DeleteRecordingsCommand(Command):
         
         self._job_info = job_info
         self._logger = logging.getLogger()
-        self._clip_manager = clip_manager.instance
 
         recordings = self._get_recordings()  
         self._delete_recordings(recordings)
@@ -116,6 +115,6 @@ class DeleteRecordingsCommand(Command):
                 
                 # Delete clip files.
                 for clip in clips:
-                    self._clip_manager.delete_audio_file(clip)
+                    clip_manager.delete_audio_file(clip)
                 
                 recording.delete()

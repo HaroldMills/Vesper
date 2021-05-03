@@ -9,7 +9,7 @@ from django.db import transaction
 
 from vesper.command.clip_set_command import ClipSetCommand
 from vesper.django.app.models import Clip
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
@@ -36,7 +36,6 @@ class DeleteClipsCommand(ClipSetCommand):
     def execute(self, job_info):
         self._job_info = job_info
         retain_indices = self._get_retain_clip_indices()
-        self._clip_manager = clip_manager.instance
         self._delete_clips(retain_indices)
         return True
     
@@ -201,7 +200,7 @@ class DeleteClipsCommand(ClipSetCommand):
         # database and raising an exception, we don't delete any clip
         # files.
         for clip in clips:
-            self._clip_manager.delete_audio_file(clip)
+            clip_manager.delete_audio_file(clip)
 
 
 def _get_batch_text(station, mic_output, date, detector):

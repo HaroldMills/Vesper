@@ -5,6 +5,8 @@ from collections import defaultdict
 
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Processor, TagInfo)
+from vesper.singleton.preference_manager import preference_manager
+        
 import vesper.util.yaml_utils as yaml_utils
 
 
@@ -34,11 +36,7 @@ class Archive:
     
     def __init__(self):
         
-        # This is here instead of at the top of this module to avoid
-        # a circular import.
-        from vesper.singletons import preference_manager
-        
-        preferences = preference_manager.instance.preferences
+        preferences = preference_manager.preferences
         self._ui_names = preferences.get('ui_names', {})
         
         self._hidden_objects = _get_hidden_objects(preferences)

@@ -8,7 +8,7 @@ django.setup()
 from vesper.django.app.archive import Archive
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Processor)
-from vesper.singletons import preference_manager
+from vesper.singleton.preference_manager import preference_manager
 from vesper.tests.test_case import TestCase
 import vesper.util.time_utils as time_utils
 
@@ -37,7 +37,7 @@ class ArchiveTests(TestCase):
     @classmethod
     def setUpClass(cls):
         
-        preference_manager.instance._push_test_module_preferences(__file__)
+        preference_manager._push_test_module_preferences(__file__)
         
         create = Processor.objects.create
         create(name='Tseep Detector', type='Detector')
@@ -72,7 +72,7 @@ class ArchiveTests(TestCase):
         
     @classmethod
     def tearDownClass(cls):
-        preference_manager.instance._pop_test_preferences()
+        preference_manager._pop_test_preferences()
         
 
     def setUp(self):

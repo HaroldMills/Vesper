@@ -15,7 +15,7 @@ django.setup()
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Processor, StringAnnotation)
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 import vesper.django.app.model_utils as model_utils
 
 
@@ -157,15 +157,12 @@ def create_hdf5_file(detector, station, annotation_value, clips):
             
         _ = file_.create_group('/clips')
                 
-        clip_manager_ = clip_manager.instance
-        
         num_unextracted_clips = 0
         
         for clip in clips:
             
             result = extract_samples(
-                clip, extraction_start_offset, extraction_duration,
-                clip_manager_)
+                clip, extraction_start_offset, extraction_duration)
             
             if result is None:
                 # extraction failed
@@ -231,8 +228,7 @@ def create_file_name(detector_name, station_name, annotation_value):
         annotation_value)
     
     
-def extract_samples(
-        clip, extraction_start_offset, extraction_duration, clip_manager_):
+def extract_samples(clip, extraction_start_offset, extraction_duration):
     
     sample_rate = clip.sample_rate
     
@@ -242,8 +238,7 @@ def extract_samples(
     length = seconds_to_samples(extraction_duration, sample_rate)
     
     try:
-        samples = \
-            clip_manager_.get_samples(clip, start_offset, length)
+        samples = clip_manager.get_samples(clip, start_offset, length)
     
     except Exception as e:
         print((

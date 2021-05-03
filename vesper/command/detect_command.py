@@ -17,8 +17,10 @@ from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, Recording, RecordingChannel, Station)
 from vesper.old_bird.old_bird_detector_runner import OldBirdDetectorRunner
 from vesper.signal.wave_audio_file import WaveAudioFileReader
-from vesper.singletons import (
-    archive, clip_manager, extension_manager, preset_manager)
+from vesper.singleton.archive import archive
+from vesper.singleton.clip_manager import clip_manager
+from vesper.singleton.extension_manager import extension_manager
+from vesper.singleton.preset_manager import preset_manager
 from vesper.util.schedule import Interval, Schedule
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
@@ -158,7 +160,7 @@ class DetectCommand(Command):
         
         try:
             return [
-                archive.instance.get_processor(name)
+                archive.get_processor(name)
                 for name in self._detector_names]
         
         except Exception as e:
@@ -595,10 +597,7 @@ def _get_schedule(schedule_name):
         return None
     
     else:
-        
-        preset = preset_manager.instance.get_preset(
-            'Detection Schedule', schedule_name)
-        
+        preset = preset_manager.get_preset('Detection Schedule', schedule_name)
         return preset.data
         
 
@@ -704,7 +703,7 @@ def _create_detector(detector_model, recording, listener):
     
     detector_name = detector_model.name
     
-    classes = extension_manager.instance.get_extensions('Detector')
+    classes = extension_manager.get_extensions('Detector')
     
     try:
         cls = classes[detector_name]
@@ -746,7 +745,6 @@ class _DetectorListener:
         self._job = job
         self._logger = logger
         
-        self._clip_manager = clip_manager.instance
         self._clips = []
         self._deferred_clips = []
         self._num_clips = 0
@@ -917,7 +915,7 @@ class _DetectorListener:
                     for clip in clips:
                         
                         try:
-                            self._clip_manager.create_audio_file(clip)
+                            clip_manager.create_audio_file(clip)
                             
                         except Exception as e:
                             self._num_file_failures += 1

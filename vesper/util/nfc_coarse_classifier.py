@@ -7,7 +7,7 @@ import random
 
 import numpy as np
 
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 from vesper.util.bunch import Bunch
 import vesper.util.nfc_classification_utils as nfc_classification_utils
 import vesper.util.signal_utils as signal_utils
@@ -71,7 +71,7 @@ def extract_clip_segment(
                 offset = random.randrange(source_length - segment_length)
             start_index = source_start_index + offset
             end_index = start_index + segment_length
-            samples = clip_manager.instance.get_samples(clip)
+            samples = clip_manager.get_samples(clip)
             samples = samples[start_index:end_index]
             
             return Bunch(
@@ -131,7 +131,7 @@ class NfcCoarseClassifier(object):
         
         # Our classifiers are designed for clips with a particular sample
         # rate, so resample to that rate if needed.
-        audio = clip_manager.instance.get_audio(clip)
+        audio = clip_manager.get_audio(clip)
         audio = signal_utils.resample(audio, _CLASSIFICATION_SAMPLE_RATE)
         
         c = self._config

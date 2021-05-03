@@ -17,6 +17,7 @@ import traceback
 from vesper.command.command import CommandSyntaxError
 from vesper.command.job_info import JobInfo
 from vesper.command.job_logging_manager import JobLoggingManager
+from vesper.singleton.extension_manager import extension_manager
 import vesper.util.django_utils as django_utils
 import vesper.util.time_utils as time_utils
 
@@ -207,10 +208,7 @@ def _create_command(command_spec):
         raise CommandSyntaxError(
             'Command specification contains no "name" item.')
         
-    # We put this here to avoid a circular import problem.
-    from vesper.singletons import extension_manager
-    
-    command_classes = extension_manager.instance.get_extensions('Command')
+    command_classes = extension_manager.get_extensions('Command')
     
     try:
         command_class = command_classes[command_name]

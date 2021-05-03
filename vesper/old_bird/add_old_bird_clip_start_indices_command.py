@@ -13,7 +13,9 @@ import numpy as np
 from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import Clip, Processor, Recording, Station
 from vesper.old_bird.recording_reader import RecordingReader
-from vesper.singletons import archive, clip_manager, recording_manager
+from vesper.singleton.archive import archive
+from vesper.singleton.clip_manager import clip_manager
+from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.util.archive_lock as archive_lock
@@ -121,7 +123,6 @@ class AddOldBirdClipStartIndicesCommand(Command):
                     'However, it will not actually modify the database.')
                 
             self._gather_recording_info()
-            self._clip_manager = clip_manager.instance
             self._add_clip_start_indices()
             
         return True
@@ -260,14 +261,14 @@ class AddOldBirdClipStartIndicesCommand(Command):
     
     def _get_absolute_file_path(self, rel_path):
         
-        manager = recording_manager.instance
+        rm = recording_manager
         
         try:
-            return manager.get_absolute_recording_file_path(rel_path)
+            return rm.get_absolute_recording_file_path(rel_path)
             
         except ValueError:
             
-            dir_paths = manager.recording_dir_paths
+            dir_paths = rm.recording_dir_paths
             
             if len(dir_paths) == 1:
                 s = f'the recording directory "{dir_paths[0]}"'
@@ -491,14 +492,14 @@ class AddOldBirdClipStartIndicesCommand(Command):
         recording_start_time, recording_length, sample_rate, channel_num, \
             recording_reader = self._get_channel_info(channel)
         
-        if not clip_manager.instance.has_audio_file(clip):
+        if not clip_manager.has_audio_file(clip):
             clip_string = _get_clip_string(clip)
             self._logger.warning(
                 f'    Could not find audio file for clip {clip_string}.')
             return _CLIP_AUDIO_FILE_NOT_FOUND
         
         try:
-            clip_samples = clip_manager.instance.get_samples(clip)
+            clip_samples = clip_manager.get_samples(clip)
         except Exception as e:
             clip_string = _get_clip_string(clip)
             self._logger.warning(
@@ -702,7 +703,7 @@ def _get_detectors():
 
 def _get_detector(name):
     try:
-        return archive.instance.get_processor(name)
+        return archive.get_processor(name)
     except Processor.DoesNotExist:
         return None
 

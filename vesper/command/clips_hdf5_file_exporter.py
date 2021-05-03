@@ -8,7 +8,7 @@ import math
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import StringAnnotation
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 import vesper.command.command_utils as command_utils
 
 
@@ -97,8 +97,6 @@ class ClipsHdf5FileExporter:
         # Always create the "clips" group, even if it will be empty.
         self._file.create_group('/clips')
         
-        self._clip_manager = clip_manager.instance
-        
     
     def export(self, clip):
         
@@ -155,8 +153,7 @@ class ClipsHdf5FileExporter:
             start_offset, length = extent
             
             try:
-                samples = \
-                    self._clip_manager.get_samples(clip, start_offset, length)
+                samples = clip_manager.get_samples(clip, start_offset, length)
             
             except Exception as e:
                 _logger.warning(

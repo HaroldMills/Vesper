@@ -5,7 +5,8 @@ import logging
 import os.path
 
 from vesper.command.command import CommandExecutionError
-from vesper.singletons import clip_manager, extension_manager
+from vesper.singleton.clip_manager import clip_manager
+from vesper.singleton.extension_manager import extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.os_utils as os_utils
@@ -44,14 +45,12 @@ class ClipAudioFilesExporter:
             os_utils.create_directory(self._output_dir_path)
         except OSError as e:
             raise CommandExecutionError(str(e))
-    
-        self._clip_manager = clip_manager.instance
-        
+ 
     
     def export(self, clip):
         file_name = self._file_name_formatter.get_file_name(clip)
         file_path = os.path.join(self._output_dir_path, file_name)
-        self._clip_manager.export_audio_file(clip, file_path)
+        clip_manager.export_audio_file(clip, file_path)
         return True
         
         
@@ -60,7 +59,7 @@ class ClipAudioFilesExporter:
             
             
 def _create_file_name_formatter(spec):
-    formatter_classes = extension_manager.instance.get_extensions(
+    formatter_classes = extension_manager.get_extensions(
         'Clip File Name Formatter')
     formatter_class = formatter_classes[spec['name']]
     return formatter_class()

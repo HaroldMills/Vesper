@@ -12,7 +12,8 @@ from django.db.models import Count, F
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Recording, RecordingChannel,
     StationDevice, StringAnnotation, StringAnnotationEdit, TagInfo)
-from vesper.singletons import archive, recording_manager
+from vesper.singleton.archive import archive
+from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
 import vesper.util.archive_lock as archive_lock
@@ -323,8 +324,7 @@ def get_absolute_recording_file_path(file_):
         else:
             # path is relative
         
-            manager = recording_manager.instance
-            return manager.get_absolute_recording_file_path(path)
+            return recording_manager.get_absolute_recording_file_path(path)
 
 
 def get_clip_recording_file(clip):
@@ -480,7 +480,7 @@ def _filter_clips_by_annotation_if_needed(
         else:
             # want only annotated clips
             
-            wildcard = archive.instance.STRING_ANNOTATION_VALUE_WILDCARD
+            wildcard = archive.STRING_ANNOTATION_VALUE_WILDCARD
             
             # Get all annotated clips.
             clips = clips.filter(string_annotation__info=info)
@@ -521,14 +521,12 @@ def create_clip_query_values_iterator(
     # station/mic output pair, date range, or detector name we do so
     # before we start yielding query values.
     
-    archive_ = archive.instance
-    
     sm_pairs_dict = get_station_mic_output_pairs_dict()
     sm_pairs = [sm_pairs_dict[name] for name in sm_pair_ui_names]
     
     dates = list(create_date_iterator(start_date, end_date))
     
-    detectors = [archive_.get_processor(name) for name in detector_names]
+    detectors = [archive.get_processor(name) for name in detector_names]
 
     for station, mic_output in sm_pairs:
         for date in dates:
@@ -685,15 +683,13 @@ def get_clip_type(clip):
 
 def get_clip_query_annotation_data(annotation_name, annotation_value):
     
-    archive_ = archive.instance
-    
-    value = archive_.get_string_annotation_archive_value(
+    value = archive.get_string_annotation_archive_value(
         annotation_name, annotation_value)
     
-    if value == archive_.NOT_APPLICABLE:
+    if value == archive.NOT_APPLICABLE:
         return None, None
     
-    elif value == archive_.STRING_ANNOTATION_VALUE_NONE:
+    elif value == archive.STRING_ANNOTATION_VALUE_NONE:
         return annotation_name, None
     
     else:
@@ -701,7 +697,7 @@ def get_clip_query_annotation_data(annotation_name, annotation_value):
 
 
 def get_clip_query_tag_name(tag_name):
-    if tag_name == archive.instance.NOT_APPLICABLE:
+    if tag_name == archive.NOT_APPLICABLE:
         return None
     else:
         return tag_name

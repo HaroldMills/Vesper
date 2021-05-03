@@ -9,7 +9,7 @@ import numpy as np
 
 from vesper.archive_paths import archive_paths
 from vesper.signal.wave_audio_file import WaveAudioFileReader
-from vesper.singletons import recording_manager
+from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.os_utils as os_utils
@@ -26,7 +26,7 @@ class ClipManager:
     
     
     def __init__(self):
-        self._rm = recording_manager.instance
+        self._rm = recording_manager
         self._recording_file_info_cache = {}
         self._recording_file_reader_cache = {}
         self._read_lock = Lock()

@@ -1,7 +1,7 @@
 from django import forms
 
 from vesper.django.app.clip_set_form import ClipSetForm
-from vesper.singletons import preset_manager
+from vesper.singleton.preset_manager import preset_manager
 import vesper.django.app.form_utils as form_utils
 
 
@@ -30,8 +30,7 @@ class ExportClipMetadataToCsvFileForm(ClipSetForm):
         super().__init__(*args, **kwargs)
         
         # Populate table format field.
-        presets = preset_manager.instance.get_flattened_presets(
-            'Clip Table Format')
+        presets = preset_manager.get_flattened_presets('Clip Table Format')
         preset_names = ['/'.join(p[0]) for p in presets]
         choices = [(n, n) for n in preset_names]
         self.fields['table_format'].choices = choices

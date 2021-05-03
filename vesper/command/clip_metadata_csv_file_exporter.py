@@ -11,7 +11,9 @@ import tempfile
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
-from vesper.singletons import clip_manager, preset_manager, recording_manager
+from vesper.singleton.clip_manager import clip_manager
+from vesper.singleton.preset_manager import preset_manager
+from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
 from vesper.util.calculator import Calculator as Calculator_
 from vesper.util.datetime_formatter import DateTimeFormatter
@@ -421,7 +423,7 @@ def _get_table_format(table_format_name):
     else:
         # have table format name
         
-        preset = preset_manager.instance.get_preset(
+        preset = preset_manager.get_preset(
             'Clip Table Format', table_format_name)
         
         return preset.data
@@ -764,7 +766,7 @@ class _IndexMeasurement(Measurement):
 def _get_recording_file_info(clip):
     
     try:
-        return clip_manager.instance.get_recording_file_info(clip)
+        return clip_manager.get_recording_file_info(clip)
     
     except Exception as e:
         
@@ -869,7 +871,7 @@ class _RecordingFilePathMeasurement(_RecordingFileMeasurement):
         
         elif self._absolute:
             
-            rm = recording_manager.instance
+            rm = recording_manager
             
             try:
                 return rm.get_absolute_recording_file_path(relative_path)

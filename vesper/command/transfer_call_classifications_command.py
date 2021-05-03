@@ -5,7 +5,7 @@ import logging
 
 from vesper.command.command import Command
 from vesper.django.app.models import AnnotationInfo, Job, Processor
-from vesper.singletons import archive
+from vesper.singleton.archive import archive
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.time_utils as time_utils
@@ -270,7 +270,7 @@ class TransferCallClassificationsCommand(Command):
             
 def _get_detector(name):
     try:
-        return archive.instance.get_processor(name)
+        return archive.get_processor(name)
     except Processor.DoesNotExist as e:
         command_utils.log_and_reraise_fatal_exception(
             e, 'Detector lookup', 'The archive was not modified.')

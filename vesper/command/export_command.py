@@ -5,7 +5,7 @@ import logging
 
 from vesper.command.clip_set_command import ClipSetCommand
 from vesper.command.command import CommandSyntaxError
-from vesper.singletons import extension_manager
+from vesper.singleton.extension_manager import extension_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.text_utils as text_utils
@@ -88,7 +88,7 @@ def _parse_exporter_spec(spec):
 
 def _create_exporter(name, arguments):
     
-    classes = extension_manager.instance.get_extensions('Exporter')
+    classes = extension_manager.get_extensions('Exporter')
     
     try:
         cls = classes[name]

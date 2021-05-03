@@ -6,16 +6,16 @@ import logging
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import Station
-from vesper.singletons import extension_manager, preset_manager
 from vesper.util.bunch import Bunch
+from vesper.singleton.extension_manager import extension_manager
+from vesper.singleton.preset_manager import preset_manager
 import vesper.util.signal_utils as signal_utils
 
 
 def create_recording_file_parser(spec):
     
     # Get parser name.
-    classes = extension_manager.instance.get_extensions(
-        'Recording File Parser')
+    classes = extension_manager.get_extensions('Recording File Parser')
     name = spec.get('name')
     if name is None:
         raise CommandExecutionError(
@@ -51,8 +51,7 @@ def _get_station_name_aliases(spec):
     if preset_name is None:
         return {}
     
-    preset = preset_manager.instance.get_preset(
-        'Station Name Aliases', preset_name)
+    preset = preset_manager.get_preset('Station Name Aliases', preset_name)
     
     if preset is None:
         logging.getLogger().warning((

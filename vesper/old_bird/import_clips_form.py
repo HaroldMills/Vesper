@@ -3,10 +3,10 @@ import os.path
 from django import forms
 from django.forms import ValidationError
 
-from vesper.singletons import preference_manager
+from vesper.singleton.preference_manager import preference_manager
 
 
-_preferences = preference_manager.instance.preferences
+_preferences = preference_manager.preferences
 
 
 def _get_default(name, default):

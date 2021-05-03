@@ -5,7 +5,7 @@ import logging
 import time
 
 from vesper.command.clip_set_command import ClipSetCommand
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.text_utils as text_utils
@@ -26,7 +26,6 @@ class CreateClipAudioFilesCommand(ClipSetCommand):
         
     def execute(self, job_info):
         self._job_info = job_info
-        self._clip_manager = clip_manager.instance
         self._create_clip_audio_files()
         return True
     
@@ -82,8 +81,8 @@ class CreateClipAudioFilesCommand(ClipSetCommand):
         
         try:
             
-            if not self._clip_manager.has_audio_file(clip):
-                self._clip_manager.create_audio_file(clip)
+            if not clip_manager.has_audio_file(clip):
+                clip_manager.create_audio_file(clip)
                 return True
             
             else:

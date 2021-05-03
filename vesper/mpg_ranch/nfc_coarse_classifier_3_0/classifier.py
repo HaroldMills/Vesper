@@ -21,7 +21,7 @@ import tensorflow as tf
 
 from vesper.command.annotator import Annotator
 from vesper.django.app.models import AnnotationInfo
-from vesper.singletons import clip_manager
+from vesper.singleton.clip_manager import clip_manager
 from vesper.util.settings import Settings
 import vesper.django.app.model_utils as model_utils
 import vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier_utils as \
@@ -281,8 +281,6 @@ class _Classifier:
         
         self._classification_threshold = \
             self._settings.classification_threshold
-
-        self._clip_manager = clip_manager.instance
     
     
     def _create_estimator(self):
@@ -374,7 +372,7 @@ class _Classifier:
             # to try to ensure that we don't wind up with too few samples
             # after resampling.
             length = s2f(self._waveform_duration + .001, clip_sample_rate)
-            samples = self._clip_manager.get_samples(
+            samples = clip_manager.get_samples(
                 clip, start_offset=start_offset, length=length)
             
             # Resample clip samples to classifier sample rate.
@@ -390,7 +388,7 @@ class _Classifier:
         else:
             # don't need to resample
             
-            samples = self._clip_manager.get_samples(
+            samples = clip_manager.get_samples(
                 clip, start_offset=start_offset, length=self._waveform_length)
              
         return samples

@@ -12,6 +12,9 @@ _YAML_FILE_NAME_EXTENSION = '.yaml'
 # singleton, we make it a class rather than a module to facilitate testing.
 
 
+# TODO: Load presets only of requested types. See extension manager.
+
+
 class PresetManager:
     
     """Preset manager that loads and provides access to presets."""
@@ -40,29 +43,9 @@ class PresetManager:
         
         self._preset_dir_path = preset_dir_path
         
-        self.reload_presets()
+        self._presets_loaded = False
         
         
-    def reload_presets(self):
-        
-        self._preset_data = \
-            _load_presets(self._preset_dir_path, self._preset_types)
-        """Mapping from preset type names to collections of presets."""
-        
-        self._preset_dicts = dict(
-            (type_name, dict(_flatten_presets(preset_data)))
-            for type_name, preset_data in self._preset_data.items())
-        """
-        Mapping from preset type names to mappings from preset paths to
-        presets.
-        """
-        
-
-    @property
-    def preset_dir_path(self):
-        return self._preset_dir_path
-    
-    
     @property
     def preset_types(self):
         
@@ -75,6 +58,11 @@ class PresetManager:
         """
         
         return self._preset_types
+    
+    
+    @property
+    def preset_dir_path(self):
+        return self._preset_dir_path
     
     
     def get_presets(self, type_name):
@@ -102,6 +90,8 @@ class PresetManager:
             Each tuple of presets is sorted by preset name.
         """
         
+        self._load_presets_if_needed()
+        
         try:
             data = self._preset_data[type_name]
             
@@ -111,6 +101,26 @@ class PresetManager:
         else:
             return _copy_preset_data(data)
 
+
+    def _load_presets_if_needed(self):
+        if not self._presets_loaded:
+            self.reload_presets()
+            
+            
+    def reload_presets(self):
+        
+        self._preset_data = \
+            _load_presets(self._preset_dir_path, self._preset_types)
+        """Mapping from preset type names to collections of presets."""
+        
+        self._preset_dicts = dict(
+            (type_name, dict(_flatten_presets(preset_data)))
+            for type_name, preset_data in self._preset_data.items())
+        """
+        Mapping from preset type names to mappings from preset paths to
+        presets.
+        """
+        
 
     def get_flattened_presets(self, type_name):
         
@@ -156,6 +166,8 @@ class PresetManager:
         :Returns:
             the specified preset, or `None` if there is no such preset.
         """
+        
+        self._load_presets_if_needed()
         
         presets = self._preset_dicts.get(type_name)
         
