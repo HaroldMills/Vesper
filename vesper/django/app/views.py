@@ -46,7 +46,6 @@ from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm as OldBirdExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
 from vesper.signal.wave_audio_file import WaveAudioFileReader
-from vesper.signal.wave_file_signal import WaveFileSignal
 from vesper.singleton.archive import archive
 from vesper.singleton.clip_manager import clip_manager
 from vesper.singleton.job_manager import job_manager
