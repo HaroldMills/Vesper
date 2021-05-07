@@ -51,7 +51,8 @@ def _get_station_name_aliases(spec):
     if preset_name is None:
         return {}
     
-    preset = preset_manager.get_preset('Station Name Aliases', preset_name)
+    preset_path = ('Station Name Aliases', preset_name)
+    preset = preset_manager.get_preset(preset_path)
     
     if preset is None:
         logging.getLogger().warning((

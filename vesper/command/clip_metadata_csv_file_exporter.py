@@ -423,9 +423,8 @@ def _get_table_format(table_format_name):
     else:
         # have table format name
         
-        preset = preset_manager.get_preset(
-            'Clip Table Format', table_format_name)
-        
+        preset_path = ('Clip Table Format', table_format_name)
+        preset = preset_manager.get_preset(preset_path)
         return preset.data
 
 

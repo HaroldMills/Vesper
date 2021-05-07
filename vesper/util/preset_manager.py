@@ -1,341 +1,353 @@
 """Module that loads and provides access to presets."""
 
 
+from pathlib import Path
 import logging
-import os
 
 
 _YAML_FILE_NAME_EXTENSION = '.yaml'
+_PRESET_FILE_PATTERN = f'**/*{_YAML_FILE_NAME_EXTENSION}'
 
 
 # Note that even though the `PresetManager` class is typically used as a
 # singleton, we make it a class rather than a module to facilitate testing.
 
 
+# TODO: Consider supporting dynamic registration of preset types.
+# A freshly initialized preset manager probably should not know about
+# any preset types. Each preset type might be associated with a particular
+# plugin that defines it, and it might be added to the preset manager
+# when the plugin is loaded. That way, we don't need to register
+# preset types defined by plugins that are never loaded.
+
+
 class PresetManager:
     
-    """Preset manager that loads and provides access to presets."""
+    """
+    Preset manager that loads and provides access to a collection of presets.
+    
+    The presets are organized in a preset tree as described in the
+    documentation for the `vesper.util.preset.Preset` class. The tree
+    structure is determined by a directory hierarchy rooted by a
+    *preset directory*, with one directory per preset group and one
+    YAML file per preset. The preset directory can have any name.
+    The preset directory must contain a *preset type directory* for
+    for each preset type, with the same name as the type. In general,
+    the names of preset groups are the names of the corresponding
+    directories of the preset directory hierarchy. The name of a
+    preset file must end with the ".yaml" file name extension, and
+    the name of a preset is its file name less that extension.
+    """
     
     
-    def __init__(self, preset_types, preset_dir_path):
+    def __init__(self, preset_dir_path, preset_types):
         
         """
-        Initializes this preset manager for the specified preset types
-        and preset directory.
+        Initializes this preset manager for the specified preset directory
+        and preset types.
+        
+        The preset manager does not load any presets in this method.
+        Presets are loaded subsequently as needed by the `get_presets`
+        and `get_preset` methods.
         
         :Parameters:
         
+            preset_dir_path : path
+                the path of the preset directory.
+                
             preset_types : set or sequence of `Preset` subclasses
                 the types of presets to expect in the preset directory.
-                
-            preset_dir_path : str
-                the path of the preset directory.
                 
         :Raises ValueError:
             if the specified directory does not exist.
         """
         
-        self._preset_types = _get_preset_types(preset_types)
-        """tuple of known preset types."""
+        self._preset_dir_path = _get_preset_dir_path(preset_dir_path)
+        self._initialize_preset_types(preset_types)
+        self._initialize_presets()
+                
         
-        self._preset_dir_path = preset_dir_path
+    def _initialize_preset_types(self, preset_types):
         
-        self._presets_loaded = False
+        # Sort preset types by name.
+        types = sorted(preset_types, key=lambda t: t.extension_name)
+    
+        self._preset_type_tuple = tuple(types)
+        """Tuple of preset types, sorted by name."""
         
+        self._preset_type_dict = dict((t.extension_name, t) for t in types)
+        """Mapping from preset type name to preset type."""
+
+
+    def _initialize_presets(self):
         
+        self._preset_tuples = dict(
+            (t.extension_name, None)
+            for t in self._preset_type_tuple)
+        """
+        Mapping from preset type name to preset tuple.
+    
+        Preset tuple is `None` for preset types for which presets have not
+        yet been loaded. Initially, no presets are loaded.
+        """
+        
+        self._presets = {}
+        """Mapping from preset path to preset for loaded presets."""
+
+    
+    def _create_unloaded_preset_mapping(self):
+        return 
+
+
+    @property
+    def preset_dir_path(self):
+        return self._preset_dir_path
+    
+    
     @property
     def preset_types(self):
         
         """
-        the preset types of this preset manager, as a tuple of `Preset`
+        The preset types of this preset manager, as a tuple of `Preset`
         subclasses.
         
         These are the preset types specified when the manager was initialized,
         sorted by name.
         """
         
-        return self._preset_types
+        return self._preset_type_tuple
     
     
     @property
-    def preset_dir_path(self):
-        return self._preset_dir_path
+    def _loaded_preset_types(self):
+        
+        """
+        The preset types for which presets are currently loaded.
+        
+        This property is protected (i.e. its name starts with an underscore)
+        since it is intended for use only by unit test code.
+        """
+        
+        return tuple(
+            t for t in self.preset_types
+            if self._preset_tuples[t.extension_name] is not None)
+
+
+    @property
+    def _loaded_presets(self):
+        
+        """
+        The presets that are currently loaded.
+        
+        This property is protected (i.e. its name starts with an underscore)
+        since it is intended for use only by unit test code.
+        """
+        
+        return tuple(sorted(self._presets.values(), key=_get_preset_sort_key))
     
     
-    def get_presets(self, type_name):
+    def unload_presets(self, preset_type_name=None):
+
+        """
+        Unloads presets of the specified type, or all presets if the
+        specified type is `None`.
+        
+        Unloading the presets of a preset type forces them to be reloaded
+        the next time they are requested.
+        """
+        
+        if preset_type_name is None:
+            # unloading all presets
+            
+            self._initialize_presets()
+            
+        else:
+            # unloading presets of just one type
+            
+            try:
+                self._preset_tuples[preset_type_name] = None
+            except KeyError:
+                self._handle_unrecognized_preset_type(preset_type_name)
+                
+            # In the following, we must get a list of dictionary keys
+            # and iterate over that instead of iterating directly over
+            # `self._presets.keys()` since the loop modifies the
+            # dictionary.
+            preset_paths = list(self._presets.keys())
+            for preset_path in preset_paths:
+                if preset_path[0] == preset_type_name:
+                    del self._presets[preset_path]
+            
+        
+    def _handle_unrecognized_preset_type(self, preset_type_name):
+        raise ValueError(f'Unrecognized preset type "{preset_type_name}".')
+
+
+    def get_presets(self, preset_type_name):
         
         """
         Gets all presets of the specified type.
         
         :Parameters:
-            type_name : str
+            preset_type_name : str
                 the name of a preset type.
                 
         :Returns:
-            all presets of the specified type.
+            tuple of `Preset` objects.
             
-            The presets are returned in a recursive data structure
-            that reflects the directory hierarchy for the specified
-            preset type. The data structure has the form:
-            
-                <preset data> := ((<preset>), {<subdir_name>: <preset data>})
-                
-            That is, it is a pair comprising a tuple of presets (each
-            an instance of a `Preset` subclass) and a dictionary that
-            maps string subdirectory names to data structures that in
-            turn describe the presets that are in those subdirectories.
-            Each tuple of presets is sorted by preset name.
+            The presets are sorted first by parent group path and then
+            by name.
         """
         
-        self._load_presets_if_needed()
+        self._load_presets_if_needed(preset_type_name)
+        return self._preset_tuples[preset_type_name]
+
+
+    def _load_presets_if_needed(self, preset_type_name):
         
         try:
-            data = self._preset_data[type_name]
-            
+            presets = self._preset_tuples[preset_type_name]
         except KeyError:
-            return ((), {})
+            self._handle_unrecognized_preset_type(preset_type_name)
+            
+        if presets is None:
+            self._load_presets(preset_type_name)
         
+        
+    def _load_presets(self, preset_type_name):
+        
+        preset_type_dir_path = self.preset_dir_path / preset_type_name
+        
+        if not preset_type_dir_path.exists():
+            presets = ()
+
         else:
-            return _copy_preset_data(data)
-
-
-    def _load_presets_if_needed(self):
-        if not self._presets_loaded:
-            self.reload_presets()
+            # preset type directory exists
             
+            preset_type = self._preset_type_dict[preset_type_name]
             
-    def reload_presets(self):
+            preset_file_paths = preset_type_dir_path.glob(_PRESET_FILE_PATTERN)
         
-        self._preset_data = \
-            _load_presets(self._preset_dir_path, self._preset_types)
-        """Mapping from preset type names to collections of presets."""
+            presets = [
+                self._load_preset(p, preset_type)
+                for p in preset_file_paths]
+            
+            # Remove `None` items from failed loads.
+            presets = [p for p in presets if p is not None]
+            
+            # Sort.
+            presets.sort(key=_get_preset_sort_key)
+            
+            # Make immutable.
+            presets = tuple(presets)
+            
+        # Remember preset tuple.
+        self._preset_tuples[preset_type_name] = presets
         
-        self._preset_dicts = dict(
-            (type_name, dict(_flatten_presets(preset_data)))
-            for type_name, preset_data in self._preset_data.items())
-        """
-        Mapping from preset type names to mappings from preset paths to
-        presets.
-        """
-        
+        # Remember presets by path.
+        for p in presets:
+            self._presets[p.path] = p
 
-    def get_flattened_presets(self, type_name):
         
-        """
-        Gets all presets of the specified type in a flattened form.
+    def _load_preset(self, file_path, preset_type):
         
-        :Parameters:
-            type_name : str
-                the name of a preset type.
-                
-        :Returns:
-            all presets of the specified type in a flattened form.
+        preset_path = self._get_preset_path(file_path)
+        
+        try:
+            file_ = open(file_path, 'rU')
+        except:
+            logging.warning(
+                f'Preset manager could not open preset file "{file_path}".')
+            return None
+        
+        try:
+            data = file_.read()
+        except:
+            logging.warning(
+                f'Preset manager could not read preset file "{file_path}".')
+            return None
+        finally:
+            file_.close()
             
-            The presets are returned as a tuple of (<preset path>, <preset>)
-            pairs. Each preset path is a tuple of the path components of
-            the accompanying preset, i.e. the names of the directories
-            between the directory of the specified preset type and the
-            preset itself, followed by the preset name. The presets of
-            a directory precede the presets of subdirectories of that
-            directory in the returned tuple, and presets are otherwise
-            ordered lexicographically by path.
-        """
-        
-        presets = self.get_presets(type_name)
-        return _flatten_presets(presets)
+        try:
+            return preset_type(preset_path, data)
+        except ValueError as e:
+            logging.warning(
+                f'Preset manager could not construct preset from contents '
+                f'of file "{file_path}". Error message was: {str(e)}')
+            return None
     
     
-    def get_preset(self, type_name, preset_path):
+    def _get_preset_path(self, file_path):
+        relative_path = file_path.relative_to(self.preset_dir_path)
+        parts = relative_path.parts
+        group_names = parts[:-1]
+        preset_name = parts[-1][:-len(_YAML_FILE_NAME_EXTENSION)]
+        return group_names + (preset_name,)
+    
+
+    def get_preset(self, preset_path):
         
         """
         Gets the specified preset.
         
         :Parameters:
-            type_name : str
-                the name of the preset type.
-                
-            preset_path : str or str tuple
+        
+            preset_path : str tuple
                the path of the specified preset.
-               
-               If the path has just one component, the component can
-               be supplied as a string, rather than as a tuple.
                
         :Returns:
             the specified preset, or `None` if there is no such preset.
         """
         
-        self._load_presets_if_needed()
-        
-        presets = self._preset_dicts.get(type_name)
-        
-        if presets is None:
-            return None
-        else:
-            if isinstance(preset_path, str):
-                preset_path = (preset_path,)
-            return presets.get(preset_path)
+        preset_type_name = preset_path[0]
+        self._load_presets_if_needed(preset_type_name)
+        return self._presets.get(preset_path)
         
         
-def _get_preset_types(preset_types):
-        
-    # Sort preset types by name.
-    types = list(preset_types)
-    types.sort(key=lambda t: t.extension_name)
-
-    # Keep preset types as a tuple.
-    return tuple(types)
-
-
-def _load_presets(preset_dir_path, preset_types):
+def _get_preset_dir_path(dir_path):
     
-    if not os.path.exists(preset_dir_path):
-        message = f'Preset directory "{preset_dir_path}" does not exist.'
-        logging.error(message)
-        raise ValueError(message)
+    if isinstance(dir_path, str):
+        dir_path = Path(dir_path)
+        
+    _check_preset_dir_path(dir_path)
     
-    elif not os.path.isdir(preset_dir_path):
-        message = \
-            f'Path "{preset_dir_path}" exists but is not a preset directory.'
-        logging.error(message)
-        raise ValueError(message)
-        
-    else:
-        # have preset directory
-        
-        preset_types = dict((t.extension_name, t) for t in preset_types)
-        preset_data = {}
-        
-        for _, dir_names, _ in os.walk(preset_dir_path):
-            
-            for dir_name in dir_names:
-                
-                dir_path = os.path.join(preset_dir_path, dir_name)
-                
-                try:
-                    preset_type = preset_types[dir_name]
-                    
-                except KeyError:
-                    logging.warning(
-                        f'Preset manager encountered directory for '
-                        f'unrecognized preset type "{dir_name}" at '
-                        f'"{dir_path}".')
-                
-                else:
-                    preset_data[dir_name] = \
-                        _load_presets_aux(dir_path, preset_type)
-                    
-            # Stop walk from visiting subdirectories.
-            del dir_names[:]
-                      
-        return preset_data
+    return dir_path
+    
+
+def _check_preset_dir_path(dir_path):
+    
+    if not dir_path.exists():
+        raise ValueError(f'Preset directory "{dir_path}" does not exist.')
+    
+    elif not dir_path.is_dir():
+        raise ValueError(
+            f'Purported preset directory path "{dir_path}" exists but '
+            f'is not a directory.')
         
 
-def _load_presets_aux(dir_path, preset_type):
-    
-    presets = []
-    preset_data = {}
-    
-    for _, subdir_names, file_names in os.walk(dir_path):
-        
-        for file_name in file_names:
-            preset = _load_preset(dir_path, file_name, preset_type)
-            if preset is not None:
-                presets.append(preset)
-                            
-        for subdir_name in subdir_names:
-            subdir_path = os.path.join(dir_path, subdir_name)
-            preset_data[subdir_name] = \
-                _load_presets_aux(subdir_path, preset_type)
-                
-        # Stop walk from visiting subdirectories.
-        del subdir_names[:]
-        
-    presets.sort(key=lambda p: p.name)
-    
-    return (tuple(presets), preset_data)
-        
-        
-def _load_preset(dir_path, file_name, preset_type):
-    file_path = os.path.join(dir_path, file_name)
-    preset_name = _get_preset_name(file_name)
-    if preset_name is None:
-        return None
-    else:
-        return _parse_preset(file_path, preset_name, preset_type)
-            
-
-def _get_preset_name(file_name):
-    if file_name.endswith(_YAML_FILE_NAME_EXTENSION):
-        return file_name[:-len(_YAML_FILE_NAME_EXTENSION)]
-    else:
-        return None
-    
-    
-def _parse_preset(file_path, preset_name, preset_type):
-    
-    try:
-        file_ = open(file_path, 'rU')
-    except:
-        logging.error(
-            f'Preset manager could not open preset file "{file_path}".')
-        return
-    
-    try:
-        data = file_.read()
-    except:
-        logging.error(
-            f'Preset manager could not read preset file "{file_path}".')
-        return
-    finally:
-        file_.close()
-        
-    try:
-        return preset_type(preset_name, data)
-    except ValueError as e:
-        logging.error(
-            f'Preset manager could not parse preset file "{file_path}". '
-            f'Error message was: {str(e)}')
-
-
-def _copy_preset_data(data):
-    presets, subdirs_data = data
-    return (presets, dict((k, _copy_preset_data(v))
-                          for k, v in subdirs_data.items()))
-
-
-def _flatten_presets(preset_data):
+def _get_preset_sort_key(preset):
     
     """
-    Flattens presets returned by the `PresetManager.get_presets` method.
+    Get key for sorting presets.
     
-    :Parameters:
-        preset_data : tuple of length two
-            preset data as returned by the `PresetManager.get_presets` method.
-            
-    :Returns:
-        flattened version of the specified preset data.
+    Sort paths first by parent group path, and then by preset name.
+    
+    Note that this is not the same as sorting by path alone. For
+    example, if we sort paths ('a', 'b') and ('c',) by path alone
+    we get:
+    
+        (('a', 'b'), ('c',))
         
-        The returned value is a tuple of (<preset path>, <preset>)
-        pairs, where each preset path is a tuple of string path
-        components. For example, the preset path for a preset
-        named "P" that is in a subdirectory "D" of the directory
-        for the preset's type is `('D', 'P')`.
+    whereas if we sort them first by parent group path and then by
+    preset name, we get:
+    
+        (('c',), ('a', 'b')).
+        
+    We prefer the chosen order since it always puts presets that
+    are children of a group before children of subgroups of that
+    group.
     """
     
-    return _flatten_presets_aux(preset_data, ())
-    
-    
-def _flatten_presets_aux(preset_data, name_tuple):
-
-    presets, subdirs_data = preset_data
-    
-    # Get top-level (name, preset) pairs.
-    top_pairs = tuple((name_tuple + (p.name,), p) for p in presets)
-    
-    # Get subdirectory (name, preset) pairs
-    keys = sorted(subdirs_data.keys())
-    subdir_pair_tuples = \
-        [_flatten_presets_aux(subdirs_data[k], name_tuple + (k,)) for k in keys]
-    subdir_pairs = sum(subdir_pair_tuples, ())
-    
-    return top_pairs + subdir_pairs
+    parent_group_path = preset.path[:-1]
+    return parent_group_path, preset.name

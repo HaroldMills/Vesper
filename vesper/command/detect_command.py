@@ -597,7 +597,8 @@ def _get_schedule(schedule_name):
         return None
     
     else:
-        preset = preset_manager.get_preset('Detection Schedule', schedule_name)
+        preset_path = ('Detection Schedule', schedule_name)
+        preset = preset_manager.get_preset(preset_path)
         return preset.data
         
 

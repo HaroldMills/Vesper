@@ -961,8 +961,6 @@ def clip_wav(request, clip_id):
 
 def presets_json(request, preset_type_name):
 
-    preset_manager.reload_presets()
-
     if request.method in _GET_AND_HEAD:
         content = _get_presets_json(preset_type_name)
         return HttpResponse(content, content_type='application/json')
@@ -981,8 +979,11 @@ def _get_presets_json(preset_type_name):
     for the preset type.
     """
 
-    presets = preset_manager.get_flattened_presets(preset_type_name)
-    presets = [(path, preset.camel_case_data) for path, preset in presets]
+    # Force reloading of presets to be sure we're working with the latest.
+    preset_manager.unload_presets(preset_type_name)
+
+    presets = preset_manager.get_presets(preset_type_name)
+    presets = [(p.path[1:], p.camel_case_data) for p in presets]
     return json.dumps(presets)
 
 
@@ -1581,10 +1582,9 @@ def night(request):
     # TODO: Check URL query items.
     params = request.GET
     
-    # Reload presets and preferences to make sure we have the latest.
-    # TODO: For efficiency's sake, be more selective about what we reload.
-    # We might reload only presets of specified types, for example.
-    preset_manager.reload_presets()
+    # Unload presets and reload preferences to make sure we work with
+    # the latest of each.
+    preset_manager.unload_presets()
     preference_manager.reload_preferences()
     preferences = preference_manager.preferences
 
@@ -1771,10 +1771,9 @@ def clip_album(request):
     # TODO: Check URL query items.
     params = request.GET
     
-    # Reload presets and preferences to make sure we have the latest.
-    # TODO: For efficiency's sake, be more selective about what we reload.
-    # We might reload only presets of specified types, for example.
-    preset_manager.reload_presets()
+    # Unload presets and reload preferences to make sure we work with
+    # the latest of each.
+    preset_manager.unload_presets()
     preference_manager.reload_preferences()
     preferences = preference_manager.preferences
 

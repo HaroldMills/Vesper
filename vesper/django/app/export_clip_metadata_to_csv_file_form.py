@@ -30,7 +30,7 @@ class ExportClipMetadataToCsvFileForm(ClipSetForm):
         super().__init__(*args, **kwargs)
         
         # Populate table format field.
-        presets = preset_manager.get_flattened_presets('Clip Table Format')
-        preset_names = ['/'.join(p[0]) for p in presets]
-        choices = [(n, n) for n in preset_names]
+        presets = preset_manager.get_presets('Clip Table Format')
+        preset_paths = ['/'.join(p.path[1:]) for p in presets]
+        choices = [(p, p) for p in preset_paths]
         self.fields['table_format'].choices = choices

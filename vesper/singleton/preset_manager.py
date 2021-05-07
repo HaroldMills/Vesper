@@ -7,10 +7,10 @@ from vesper.util.preset_manager import PresetManager
 
 
 def _create_preset_manager():
+    preset_dir_path = str(archive_paths.preset_dir_path)
     preset_types = extension_manager.get_extensions('Preset')
     preset_types = list(preset_types.values())
-    preset_dir_path = str(archive_paths.preset_dir_path)
-    return PresetManager(preset_types, preset_dir_path)
+    return PresetManager(preset_dir_path, preset_types)
     
     
 preset_manager = _create_preset_manager()
