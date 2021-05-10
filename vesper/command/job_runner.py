@@ -17,7 +17,6 @@ import traceback
 from vesper.command.command import CommandSyntaxError
 from vesper.command.job_info import JobInfo
 from vesper.command.job_logging_manager import JobLoggingManager
-from vesper.singleton.extension_manager import extension_manager
 import vesper.util.django_utils as django_utils
 import vesper.util.time_utils as time_utils
 
@@ -91,7 +90,6 @@ def run_job(job_info):
     
     # These imports are here rather than at the top of this module so
     # they will be executed after Django is set up in the main job process.
-    # from django.conf import settings as django_settings
     from vesper.django.app.models import Job
     import vesper.util.archive_lock as archive_lock
     
@@ -208,6 +206,16 @@ def _create_command(command_spec):
         raise CommandSyntaxError(
             'Command specification contains no "name" item.')
         
+    # This import is here rather than at the top of this module so it
+    # will be executed after Django is set up in the main job process.
+    #
+    # The import has to be here for now only because the
+    # `vesper.birdvox.detectors` module creates BirdVoxDetect detector
+    # classes dynamically based on the contents of the `vesper_processor`
+    # archive database table. It may not be need to be here after upcoming
+    # plugin infrastructure revisions.
+    from vesper.singleton.extension_manager import extension_manager
+    
     command_classes = extension_manager.get_extensions('Command')
     
     try:
