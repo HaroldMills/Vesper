@@ -14,11 +14,12 @@ clips that could not be located in their parent recordings.
 """
 
 
-# Set up Django. While the imported module is unused, the import is
-# still useful for its side effect of setting up Django.
-import vesper.django.script_header as script_header
-
 from django.db import transaction
+
+# Set up Django. This must happen before any use of Django, including
+# ORM class imports.
+import vesper.util.django_utils as django_utils
+django_utils.set_up_django()
 
 from vesper.django.app.models import Clip, Processor
 

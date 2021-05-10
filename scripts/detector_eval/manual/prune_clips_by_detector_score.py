@@ -219,10 +219,10 @@ def show_stats(clip_counts, min_scores):
                 
 def prune_clips(archive_dir_path, min_scores):
                 
-    # Set up Django.
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'vesper.django.project.settings'
-    import django
-    django.setup()
+    # Set up Django. This must happen before any use of Django, including
+    # ORM class imports.
+    import vesper.util.django_utils as django_utils
+    django_utils.set_up_django()
 
     from django.db import transaction
     from vesper.django.app.models import Clip

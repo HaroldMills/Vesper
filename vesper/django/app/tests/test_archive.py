@@ -1,9 +1,7 @@
-import os
-
-# Set up Django.
-os.environ['DJANGO_SETTINGS_MODULE'] = 'vesper.django.project.settings'
-import django
-django.setup()
+# Set up Django. This must happen before any use of Django, including
+# ORM class imports.
+import vesper.util.django_utils as django_utils
+django_utils.set_up_django()
 
 from vesper.django.app.archive import Archive
 from vesper.django.app.models import (

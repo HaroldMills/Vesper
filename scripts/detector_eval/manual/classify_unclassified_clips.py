@@ -6,21 +6,17 @@ names are in `DETECTOR_NAMES`.
 """
 
 
-import os
-
-import vesper.util.time_utils as time_utils
-
-
-# Set up Django.
-os.environ['DJANGO_SETTINGS_MODULE'] = 'vesper.django.project.settings'
-import django
-django.setup()
-
 from django.db import transaction
+
+# Set up Django. This must happen before any use of Django, including
+# ORM class imports.
+import vesper.util.django_utils as django_utils
+django_utils.set_up_django()
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Processor, StringAnnotation, StringAnnotationEdit,
     User)
+import vesper.util.time_utils as time_utils
 
 
 DETECTOR_NAMES = frozenset([

@@ -8,13 +8,12 @@ import random
 import sys
 import time
 
-
-# Set up Django.
-os.environ['DJANGO_SETTINGS_MODULE'] = 'vesper.django.project.settings'
-import django
-django.setup()
-
 from django.db import transaction
+
+# Set up Django. This must happen before any use of Django, including
+# ORM class imports.
+import vesper.util.django_utils as django_utils
+django_utils.set_up_django()
 
 from vesper.archive.archive import Archive
 from vesper.archive.recording import Recording as OldRecording

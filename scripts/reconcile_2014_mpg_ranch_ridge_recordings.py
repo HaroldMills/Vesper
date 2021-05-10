@@ -24,7 +24,11 @@ from pathlib import Path
 
 import pytz
 
-import vesper.django.script_header as script_header
+# Set up Django. This must happen before any use of Django, including
+# ORM class imports.
+import vesper.util.django_utils as django_utils
+django_utils.set_up_django()
+
 from vesper.django.app.models import Recording, Station
 from vesper.mpg_ranch.recording_file_parser import RecordingFileParser
 from vesper.signal.wave_audio_file import WaveAudioFileReader

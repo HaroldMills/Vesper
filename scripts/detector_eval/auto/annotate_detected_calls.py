@@ -8,15 +8,12 @@ This script must be run from the archive directory.
 """
 
 
-import os
-
 import pandas as pd
 
-
-# Set up Django.
-os.environ['DJANGO_SETTINGS_MODULE'] = 'vesper.django.project.settings'
-import django
-django.setup()
+# Set up Django. This must happen before any use of Django, including
+# ORM class imports.
+import vesper.util.django_utils as django_utils
+django_utils.set_up_django()
 
 from vesper.django.app.models import AnnotationInfo, Processor, User
 import vesper.django.app.model_utils as model_utils
