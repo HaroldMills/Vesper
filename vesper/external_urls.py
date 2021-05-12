@@ -6,7 +6,7 @@ Functions that return external URLs, for example for the Vesper documentation.
 import vesper.version as vesper_version
 
 
-_USE_LATEST_DOCUMENTATION_VERSION = False
+_USE_LATEST_DOCUMENTATION_VERSION = True
 """Set this `True` during development, `False` for release."""
 
 
