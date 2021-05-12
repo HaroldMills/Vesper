@@ -3,11 +3,12 @@
 <!-- Configure browser viewport. -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- Load Bootstrap (which requires jQuery). -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
-<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+{% load static %}
+
+<!-- Load Bootstrap and its dependency jQuery. -->
+<script src="{% static 'third-party/jquery/2.2.4/jquery.min.js' %}"></script>
+<script src="{% static 'third-party/bootstrap/3.3.6/js/bootstrap.min.js' %}"></script>
+<link rel="stylesheet" type="text/css" href="{% static 'third-party/bootstrap/3.3.6/css/bootstrap.min.css' %}">
 
 <!-- Load Vesper navigation bar CSS. -->
-{% load static %}
 <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/navbar.css' %}">
