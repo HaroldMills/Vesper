@@ -44,19 +44,15 @@ _CALL_START_WINDOWS = {
     
     # Thrush call detectors.
     'Old Bird Thrush Detector': (.130, .220),
-    'Old Bird Thrush Detector Redux 1.1': (.130, .220),
     'PNF 2018 Baseline Thrush Detector 1.0': (.100, .150),
     'PNF Thrush Energy Detector 1.0': (.050, .125),
-    'MPG Ranch Thrush Detector 0.0': (.080, .440),
-    'MPG Ranch Thrush Detector 1.0': (.080, .440),
+    'MPG Ranch Thrush Detector': (.080, .440),
     
     # Tseep call detectors.
     'Old Bird Tseep Detector': (.100, .135),
-    'Old Bird Tseep Detector Redux 1.1': (.100, .135),
     'PNF 2018 Baseline Tseep Detector 1.0': (.070, .105),
     'PNF Tseep Energy Detector 1.0': (.050, .115),
-    'MPG Ranch Tseep Detector 0.0': (.070, .280),
-    'MPG Ranch Tseep Detector 1.0': (.070, .280),
+    'MPG Ranch Tseep Detector': (.070, .280),
     
     # Other detectors.
     'BirdVoxDetect': (.280, .420),
