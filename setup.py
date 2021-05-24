@@ -40,7 +40,7 @@ To create a conda environment for Vesper development with TensorFlow 1.15.x:
     pip install bokeh django jsonschema matplotlib resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow~=1.15.0
 
 To create a conda environment for Vesper development with TensorFlow 2.x:
-    conda create -n vesper-dev-tf2 python=3.8
+    conda create -n vesper-dev-tf2 python=3.9
     conda activate vesper-dev-tf2
     pip install bokeh django jsonschema matplotlib resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow
 
@@ -121,7 +121,7 @@ setup(
         'resampy',
         'ruamel_yaml',
         'skyfield~=1.38',
-        'tensorflow==2.5.0rc1',
+        'tensorflow~=2.5',
     ],
       
     entry_points={
