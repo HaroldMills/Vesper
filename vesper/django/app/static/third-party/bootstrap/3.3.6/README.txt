@@ -4,3 +4,6 @@ by clicking on the "Download Boostrap" button near the top of the
 page. I deleted from the distribution several CSS and JavaScript
 files that were not needed, retaining only the minified ones. I
 retained all of the font files.
+
+I added the boostrap.min.css.map file on 2021-06-22 since Chrome
+was complaining that it was missing.
