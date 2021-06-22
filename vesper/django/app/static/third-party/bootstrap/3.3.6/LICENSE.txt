@@ -1,0 +1,2 @@
+Bootstrap is MIT licensed: see
+https://getbootstrap.com/docs/3.3/getting-started/#license-faqs.
