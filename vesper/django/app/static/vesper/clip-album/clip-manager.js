@@ -652,7 +652,7 @@ class _ClipLoader {
 
         const clipIds = clips.map(clip => clip.id);
 
-        return fetch('/batch/read/clip-audios/', {
+        return fetch('/get-clip-audios/', {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'

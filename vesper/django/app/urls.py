@@ -15,14 +15,12 @@ urlpatterns = [
     path('clip-album/', views.clip_album, name='clip-album'),
     path('night/', views.night, name='night'),
     
-    path('batch/read/clip-audios/',
-         views.batch_read_clip_audios,
-         name='batch-read-clip-audios'),
+    path('get-clip-audios/', views.get_clip_audios, name='get-clip-audios'),
         
-    path('clips/<int:clip_id>/wav/', views.clip_wav, name='clip-wav'),
-    
     path('get-clip-metadata/', views.get_clip_metadata,
          name='get-clip-metadata'),
+    
+    path('clips/<int:clip_id>/audio/', views.clip_audio, name='clip-audio'),
     
     path('clips/<int:clip_id>/metadata/', views.clip_metadata,
          name='clip-metadata'),

@@ -936,7 +936,7 @@ def clip(request, clip_id):
     return render(request, 'vesper/clip.html', context)
 
 
-def clip_wav(request, clip_id):
+def clip_audio(request, clip_id):
     
     clip = get_object_or_404(Clip, pk=clip_id)
     
@@ -947,10 +947,10 @@ def clip_wav(request, clip_id):
         
     except Exception as e:
         logger = logging.getLogger('django.server')
-        logger.error((
-            'Attempt to get audio file contents for clip "{}" failed with '
-            '{} exception. Exception message was: {}').format(
-                str(clip), e.__class__.__name__, str(e)))
+        logger.error(
+            f'Attempt to get audio for clip "{str(clip)}" failed with '
+            f'{e.__class__.__name__} exception. Exception message was: '
+            f'{str(e)}')
         return HttpResponseServerError()
 
     response = HttpResponse()
@@ -1169,7 +1169,7 @@ def _parse_content_type(content_type):
 
 
 @csrf_exempt
-def batch_read_clip_audios(request):
+def get_clip_audios(request):
     
     if request.method == 'POST':
         
@@ -1206,10 +1206,10 @@ def batch_read_clip_audios(request):
                 
             except Exception as e:
                 logger = logging.getLogger('django.server')
-                logger.error((
-                    'Attempt to get audio file contents for clip "{}" failed '
-                    'with {} exception. Exception message was: {}').format(
-                        str(clip), e.__class__.__name__, str(e)))
+                logger.error(
+                    f'Attempt to get audio file contents for clip '
+                    f'"{str(clip)}" failed with {e.__class__.__name__} '
+                    f'exception. Exception message was: {str(e)}')
                 return HttpResponseServerError()
             
             audios.append(audio)

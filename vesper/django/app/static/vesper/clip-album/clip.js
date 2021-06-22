@@ -126,8 +126,8 @@ export class Clip {
 	}
 
 
-	get wavFileUrl() {
-    	return `${this.url}wav/`;
+	get audioUrl() {
+    	return `${this.url}audio/`;
 	}
 
 
