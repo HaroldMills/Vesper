@@ -22,7 +22,8 @@ export class Clip {
 		this._samplesStatus = CLIP_LOAD_STATUS.UNLOADED;
 
 		this._annotations = null;
-		this._annotationsStatus = CLIP_LOAD_STATUS.UNLOADED;
+        this._tags = null;
+		this._metadataStatus = CLIP_LOAD_STATUS.UNLOADED;
 
 	}
 
@@ -100,13 +101,23 @@ export class Clip {
 	}
 
 
-	get annotationsStatus() {
-		return this._annotationsStatus;
+    get tags() {
+        return this._tags;
+    }
+
+
+    set tags(tags) {
+        this._tags = tags;
+    }
+
+
+	get metadataStatus() {
+		return this._metadataStatus;
 	}
 
 
-	set annotationsStatus(status) {
-		this._annotationsStatus = status;
+	set metadataStatus(status) {
+		this._metadataStatus = status;
 	}
 
 
@@ -120,18 +131,8 @@ export class Clip {
 	}
 
 
-	get annotationsUrl() {
-		return `${this.url}annotations/`;
-	}
-
-
-	get annotationsJsonUrl() {
-		return `${this.annotationsUrl}json/`;
-	}
-
-
-	getAnnotationUrl(name) {
-		return `${this.annotationsUrl}${name}/`;
+	get metadataUrl() {
+		return `${this.url}metadata/`;
 	}
 
 

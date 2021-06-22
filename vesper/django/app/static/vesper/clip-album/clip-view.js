@@ -492,7 +492,7 @@ export class ClipView {
     }
     
     
-    onClipAnnotationsChanged() {
+    onClipMetadataChanged() {
         this._resizeOverlayCanvasIfNeeded();
         this._renderOverlays();
      	this._renderLabel();
@@ -589,7 +589,7 @@ export class ClipView {
 
 			if (s.classificationIncluded && clip.annotations !== null) {
 
-				let annotation = clip.annotations['Classification'];
+				let annotation = clip.annotations.get('Classification');
 
 				if (annotation === undefined)
 					annotation = 'Unclassified';
@@ -633,7 +633,7 @@ export class ClipView {
 
             if (s.detectorScoreIncluded && clip.annotations !== null) {
 
-                const annotation = clip.annotations['Detector Score'];
+                const annotation = clip.annotations.get('Detector Score');
 
                 if (annotation !== undefined) {
                     const score =
@@ -643,6 +643,12 @@ export class ClipView {
 
             }
 
+            if (clip.tags !== null && clip.tags.length !== 0) {
+                const tags = Array.from(clip.tags).sort();
+                const tagString = tags.join(', ');
+                labelParts.push(tagString);
+            }
+            
 			this.label.textContent =
 				(labelParts.length !== 0) ? labelParts.join(' ') : ''
 

@@ -11,7 +11,8 @@ from django.db.models import Count, F
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, DeviceConnection, Recording, RecordingChannel,
-    StationDevice, StringAnnotation, StringAnnotationEdit, TagInfo)
+    StationDevice, StringAnnotation, StringAnnotationEdit, Tag, TagEdit,
+    TagInfo)
 from vesper.singleton.archive import archive
 from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
@@ -470,6 +471,11 @@ def _filter_clips_by_annotation_if_needed(
     else:
         # want to filter clips according to annotation
         
+        # TODO: What does SQL for clip queries look like?
+        # Could we use `select_related` or `prefetch_related`
+        # here to accelerate queries that involve annotations
+        # and tags?
+                
         info = AnnotationInfo.objects.get(name=annotation_name)
         
         if annotation_value is None:
@@ -600,7 +606,7 @@ def annotate_clip(
         }
     
         if annotation is None:
-            # annotation does not exist
+            # clip is not annotated
             
             StringAnnotation.objects.create(
                 clip=clip,
@@ -608,7 +614,7 @@ def annotate_clip(
                 **kwargs)
             
         else:
-            # annotation exists but value differs from specified value
+            # clip is annotated but value differs from specified value
             
             StringAnnotation.objects.filter(
                 clip=clip,
@@ -634,9 +640,12 @@ def delete_clip_annotation(
             info=annotation_info)
         
     except StringAnnotation.DoesNotExist:
+        # clip is not annotated
+        
         return
     
     else:
+        # clip is annotated
     
         annotation.delete()
     
@@ -653,6 +662,76 @@ def delete_clip_annotation(
             creating_processor=creating_processor)
 
 
+@archive_lock.atomic
+@transaction.atomic
+def tag_clip(
+        clip, tag_info, creation_time=None, creating_user=None,
+        creating_job=None, creating_processor=None):
+    
+    try:
+        _ = Tag.objects.get(
+            clip=clip,
+            info=tag_info)
+        
+    except Tag.DoesNotExist:
+        # clip is not already tagged
+         
+        if creation_time is None:
+            creation_time = time_utils.get_utc_now()
+        
+        kwargs = {
+            'creation_time': creation_time,
+            'creating_user': creating_user,
+            'creating_job': creating_job,
+            'creating_processor': creating_processor
+        }
+    
+        Tag.objects.create(
+            clip=clip,
+            info=tag_info,
+            **kwargs)
+            
+        TagEdit.objects.create(
+            clip=clip,
+            info=tag_info,
+            action=TagEdit.ACTION_SET,
+            **kwargs)
+    
+    
+@archive_lock.atomic
+@transaction.atomic
+def untag_clip(
+        clip, tag_info, creation_time=None, creating_user=None,
+        creating_job=None, creating_processor=None):
+    
+    try:
+        tag = Tag.objects.get(
+            clip=clip,
+            info=tag_info)
+        
+    except Tag.DoesNotExist:
+        # clip is not tagged
+        
+        return
+    
+    else:
+        # clip is tagged
+    
+        tag.delete()
+    
+        if creation_time is None:
+            creation_time = time_utils.get_utc_now()
+         
+        TagEdit.objects.create(
+            clip=clip,
+            info=tag_info,
+            action=TagEdit.ACTION_DELETE,
+            creation_time=creation_time,
+            creating_user=creating_user,
+            creating_job=creating_job,
+            creating_processor=creating_processor)
+    
+    
 def get_clip_detector_name(clip):
     
     processor = clip.creating_processor

@@ -142,6 +142,16 @@ const _COMMAND_SPECS = [
     ['unannotate_page_clips'],
     ['unannotate_all_clips'],
     
+    ['tag_clips', 'tag_name'],
+    ['tag_selected_clips', 'tag_name'],
+    ['tag_page_clips', 'tag_name'],
+    ['tag_all_clips', 'tag_name'],
+    
+    ['untag_clips', 'tag_name'],
+    ['untag_selected_clips', 'tag_name'],
+    ['untag_page_clips', 'tag_name'],
+    ['untag_all_clips', 'tag_name'],
+    
     ['go_to_next_date'],
     ['go_to_previous_date'],
     ['go_to_clip_calendar'],
@@ -938,7 +948,7 @@ export class ClipAlbum {
 	}
 
 
-	_annotateClips(name, value, clips) {
+    _annotateClips(name, value, clips) {
 
         // TODO: Perhaps allow value to be array of same length as clips?
         // This would allow us to improve the efficiency of commands that
@@ -947,27 +957,29 @@ export class ClipAlbum {
         // different clips) by posting only once to the server rather
         // than once per clip.
  
- 		if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
-		    setCursor('wait');
+        if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
+            setCursor('wait');
 
-		const url = `/annotations/${name}/`;
-		const clip_ids = clips.map(clip => clip.id);
+        const url = `/annotate-clips/`;
+        const clip_ids = clips.map(clip => clip.id);
+        const annotations = {};
+        annotations[name] = value;
 
-		const xhr = new XMLHttpRequest();
-		xhr.onload =
-			() => this._onAnnotationsPostComplete(xhr, name, value, clips);
-		xhr.open('POST', url);
-		xhr.setRequestHeader(
-		    'Content-Type', 'application/json; charset=utf-8');
-		xhr.send(JSON.stringify({
-			value: value,
-			clip_ids: clip_ids
-		}));
+        const xhr = new XMLHttpRequest();
+        xhr.onload =
+            () => this._onAnnotateClipsPostComplete(xhr, name, value, clips);
+        xhr.open('POST', url);
+        xhr.setRequestHeader(
+            'Content-Type', 'application/json; charset=utf-8');
+        xhr.send(JSON.stringify({
+            clip_ids: clip_ids,
+            annotations: annotations
+        }));
 
-	}
+    }
 
 
-	_onAnnotationsPostComplete(xhr, annotationName, annotationValue, clips) {
+	_onAnnotateClipsPostComplete(xhr, annotationName, annotationValue, clips) {
 
 		if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
 		    setCursor('auto');
@@ -982,9 +994,9 @@ export class ClipAlbum {
 					// client has received clip annotations from server
 
 					if (annotationValue === null)
-						delete annotations[annotationName];
+						annotations.delete(annotationName);
 					else
-						annotations[annotationName] = annotationValue;
+						annotations.set(annotationName, annotationValue);
 
 					if (this._isClipOnCurrentPage(clip))
 						clip.view.render();
@@ -992,11 +1004,11 @@ export class ClipAlbum {
 				} else {
                     // client has not yet received clip annotations from server
 
-                   // TODO: Not sure what we should do here. We can't
-                   // update annotations we haven't yet received. Perhaps
-                   // we should decline to post annotation changes until
-                   // we have received the original annotations from the
-                   // server.
+                    // TODO: Not sure what we should do here. We can't
+                    // update annotations we haven't yet received. Perhaps
+                    // we should decline to post annotation changes until
+                    // we have received the original annotations from the
+                    // server.
 
                 }
 
@@ -1035,6 +1047,287 @@ export class ClipAlbum {
 	_annotateAllClips(name, value) {
 		this._annotateClips(name, value, this.clips);
 	}
+
+
+    _unannotateSelectedClips(name) {
+        const clipNums = this._selection.selectedIndices;
+        const clips = clipNums.map(i => this.clips[i]);
+        this._unannotateClips(name, clips);
+    }
+
+
+    _unannotateClips(name, clips) {
+
+        if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
+            setCursor('wait');
+
+        const url = `/unannotate-clips/`;
+        const clip_ids = clips.map(clip => clip.id);
+        const annotation_names = [name];
+
+        const xhr = new XMLHttpRequest();
+        xhr.onload =
+            () => this._onUnannotateClipsPostComplete(xhr, name, clips);
+        xhr.open('POST', url);
+        xhr.setRequestHeader(
+            'Content-Type', 'application/json; charset=utf-8');
+        xhr.send(JSON.stringify({
+            clip_ids: clip_ids,
+            annotation_names: annotation_names
+        }));
+
+    }
+
+
+    _onUnannotateClipsPostComplete(xhr, annotationName, clips) {
+
+        if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
+            setCursor('auto');
+
+        if (xhr.status === 200) {
+
+            for (const clip of clips) {
+
+                const annotations = clip.annotations;
+
+                if (annotations !== null) {
+                    // client has received clip annotations from server
+                    
+                    annotations.delete(annotationName);
+                    
+                    if (this._isClipOnCurrentPage(clip))
+                        clip.view.render();
+
+                } else {
+                    // client has not yet received clip annotations from server
+
+                    // TODO: Not sure what we should do here. We can't
+                    // update annotations we haven't yet received. Perhaps
+                    // we should decline to post annotation changes until
+                    // we have received the original annotations from the
+                    // server.
+
+                }
+
+            }
+
+        } else {
+
+            this._onUnannotationError(xhr);
+
+        }
+
+    }
+
+
+    _isClipOnCurrentPage(clip) {
+        return this._layout.getClipPageNum(clip.num) == this.pageNum;
+    }
+
+
+    _onUnannotationError(xhr) {
+        window.alert(
+            `Unannotation request failed with response ` +
+            `"${xhr.status} ${xhr.statusText}".`);
+    }
+
+
+    _unannotatePageClips(name, value) {
+        const [startClipNum, endClipNum] =
+            this.getPageClipNumRange(this.pageNum);
+        const clipNums = ArrayUtils.rangeArray(startClipNum, endClipNum);
+        const clips = clipNums.map(i => this.clips[i]);
+        this._unannotateClips(name, clips);
+    }
+
+
+    _unannotateAllClips(name) {
+        this._unannotateClips(name, this.clips);
+    }
+
+
+    _tagSelectedClips(name) {
+        const clipNums = this._selection.selectedIndices;
+        const clips = clipNums.map(i => this.clips[i]);
+        this._tagClips(name, clips);
+    }
+
+
+    // TODO: Use fetch rather than XHR.
+    _tagClips(name, clips) {
+
+        if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
+            setCursor('wait');
+
+        const url = `/tag-clips/`;
+        const clip_ids = clips.map(clip => clip.id);
+        const tag_names = [name]
+
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => this._onTagClipsPostComplete(xhr, name, clips);
+        xhr.open('POST', url);
+        xhr.setRequestHeader(
+            'Content-Type', 'application/json; charset=utf-8');
+        xhr.send(JSON.stringify({
+            clip_ids: clip_ids,
+            tag_names: tag_names
+        }));
+
+    }
+
+
+    _onTagClipsPostComplete(xhr, tagName, clips) {
+
+        if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
+            setCursor('auto');
+
+        if (xhr.status === 200) {
+
+            for (const clip of clips) {
+
+                // TODO: Deliver tags with clip from server.
+                const tags = clip.tags;
+
+                if (tags !== undefined) {
+                    // client has received clip tags from server
+
+                    tags.add(tagName)
+
+                    if (this._isClipOnCurrentPage(clip))
+                        clip.view.render();
+
+                } else {
+                    // client has not yet received clip tags from server
+
+                    // TODO: Not sure what we should do here. We can't
+                    // update tags we haven't yet received. Perhaps we
+                    // should decline to post tag changes until we have
+                    // received the original tags from the server.
+                    console.log('_onTagClipsPostComplete: tags undefined')
+
+                }
+
+            }
+
+        } else {
+
+            this._onTagError(xhr);
+
+        }
+
+    }
+
+
+    _onTagError(xhr) {
+        window.alert(
+            `Tag request failed with response ` +
+            `"${xhr.status} ${xhr.statusText}".`);
+    }
+
+
+    _tagPageClips(name, value) {
+        const [startClipNum, endClipNum] =
+            this.getPageClipNumRange(this.pageNum);
+        const clipNums = ArrayUtils.rangeArray(startClipNum, endClipNum);
+        const clips = clipNums.map(i => this.clips[i]);
+        this._tagClips(name, value, clips);
+    }
+
+
+    _tagAllClips(name, value) {
+        this._tagClips(name, value, this.clips);
+    }
+
+
+    _untagSelectedClips(name) {
+        const clipNums = this._selection.selectedIndices;
+        const clips = clipNums.map(i => this.clips[i]);
+        this._untagClips(name, clips);
+    }
+
+
+    // TODO: Use fetch rather than XHR.
+    _untagClips(name, clips) {
+
+        if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
+            setCursor('wait');
+
+        const url = `/untag-clips/`;
+        const clip_ids = clips.map(clip => clip.id);
+        const tag_names = [name];
+
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => this._onUntagClipsPostComplete(xhr, name, clips);
+        xhr.open('POST', url);
+        xhr.setRequestHeader(
+            'Content-Type', 'application/json; charset=utf-8');
+        xhr.send(JSON.stringify({
+            clip_ids: clip_ids,
+            tag_names: tag_names
+        }));
+
+    }
+
+
+    _onUntagClipsPostComplete(xhr, tagName, clips) {
+
+        if (clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD)
+            setCursor('auto');
+
+        if (xhr.status === 200) {
+
+            for (const clip of clips) {
+
+                const tags = clip.tags;
+
+                if (tags !== null) {
+                    // client has received clip tags from server
+
+                    tags.delete(tagName)
+
+                    if (this._isClipOnCurrentPage(clip))
+                        clip.view.render();
+
+                } else {
+                    // client has not yet received clip tags from server
+
+                   // TODO: Not sure what we should do here. We can't
+                   // update tags we haven't yet received. Perhaps we
+                   // should decline to post tag changes until we have
+                   // received the original tags from the server.
+
+                }
+
+            }
+
+        } else {
+
+            this._onUntagError(xhr);
+
+        }
+
+    }
+
+
+    _onUntagError(xhr) {
+        window.alert(
+            `Untag request failed with response ` +
+            `"${xhr.status} ${xhr.statusText}".`);
+    }
+
+
+    _untagPageClips(name) {
+        const [startClipNum, endClipNum] =
+            this.getPageClipNumRange(this.pageNum);
+        const clipNums = ArrayUtils.rangeArray(startClipNum, endClipNum);
+        const clips = clipNums.map(i => this.clips[i]);
+        this._untagClips(name, clips);
+    }
+
+
+    _untagAllClips(name) {
+        this._untagClips(name, this.clips);
+    }
 
 
 	get numPages() {
@@ -1484,7 +1777,7 @@ export class ClipAlbum {
             setCursor('wait');
             
         for (const clip of clips) {
-            const oldValue = clip.annotations[name];
+            const oldValue = clip.annotations.get(name);
             if (typeof oldValue === 'string') {
                const oldParts = oldValue.split('.');
                const newParts = [value, ...oldParts.slice(1)];
@@ -1550,7 +1843,7 @@ export class ClipAlbum {
 	_executeUnannotateSelectedClipsCommand(env) {
 
 		const name = env.getRequired('annotation_name');
-		this._annotateSelectedClips(name, null);
+		this._unannotateSelectedClips(name);
 
 		// TODO: Optionally play selected clip.
 		this._selectNextClip();
@@ -1561,7 +1854,7 @@ export class ClipAlbum {
 	_executeUnannotatePageClipsCommand(env) {
 
 		const name = env.getRequired('annotation_name');
-		this._annotatePageClips(name, null)
+		this._unannotatePageClips(name)
 
 		// TODO: Optionally advance to next page, if there is one,
 		// select the first clip, and optionally play it.
@@ -1571,8 +1864,98 @@ export class ClipAlbum {
 
 	_executeUnannotateAllClipsCommand(env) {
 		const name = env.getRequired('annotation_name');
-		this._annotateAllClips(name, null);
+		this._unannotateAllClips(name);
 	}
+    
+    
+    _executeTagClipsCommand(env) {
+
+        const scope = env.getRequired('annotation_scope');
+
+        switch (scope) {
+
+        case 'Selection':
+            this._executeTagSelectedClipsCommand(env);
+            break;
+
+        case 'Page':
+            this._executeTagPageClipsCommand(env);
+            break;
+
+        case 'All':
+            this._executeTagAllClipsCommand(env);
+            break;
+
+        default:
+            window.alert(`Unrecognized annotation scope "${scope}".`);
+
+        }
+
+    }
+
+
+    _executeTagSelectedClipsCommand(env) {
+        const name = env.getRequired('tag_name');
+        this._tagSelectedClips(name);
+        this._selectNextClip();
+    }
+
+
+    _executeTagPageClipsCommand(env) {
+        const name = env.getRequired('tag_name');
+        this._tagPageClips(name);
+    }
+
+
+    _executeTagAllClipsCommand(env) {
+        const name = env.getRequired('tag_name');
+        this._annotateAllClips(name);
+    }
+
+
+    _executeUntagClipsCommand(env) {
+
+        const scope = env.getRequired('annotation_scope');
+
+        switch (scope) {
+
+        case 'Selection':
+            this._executeUntagSelectedClipsCommand(env);
+            break;
+
+        case 'Page':
+            this._executeUntagPageClipsCommand(env);
+            break;
+
+        case 'All':
+            this._executeUntagAllClipsCommand(env);
+            break;
+
+        default:
+            window.alert(`Unrecognized annotation scope "${scope}".`);
+
+        }
+
+    }
+
+
+    _executeUntagSelectedClipsCommand(env) {
+        const name = env.getRequired('tag_name');
+        this._untagSelectedClips(name);
+        this._selectNextClip();
+    }
+
+
+    _executeUntagPageClipsCommand(env) {
+        const name = env.getRequired('tag_name');
+        this._tagPageClips(name, null)
+    }
+
+
+    _executeUntagAllClipsCommand(env) {
+        const name = env.getRequired('tag_name');
+        this._tagAllClips(name, null);
+    }
     
     
     _executeGoToNextDateCommand(env) {

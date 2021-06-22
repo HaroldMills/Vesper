@@ -7,7 +7,7 @@ import logging
 
 from django import forms, urls
 from django.db import transaction
-from django.db.models import F, Max, Min
+from django.db.models import Max, Min
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import (
@@ -36,7 +36,8 @@ from vesper.django.app.export_clips_to_hdf5_file_form import \
 from vesper.django.app.import_metadata_form import ImportMetadataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
-    AnnotationInfo, Clip, Job, RecordingFile, Station, StringAnnotation)
+    AnnotationInfo, Clip, Job, RecordingFile, Station, StringAnnotation,
+    Tag, TagInfo)
 from vesper.django.app.transfer_call_classifications_form import \
     TransferCallClassificationsForm
 from vesper.django.app.refresh_recording_audio_file_paths_form import \
@@ -1052,17 +1053,20 @@ def _parse_json_request_body(request):
 
 
 def _get_annotations_json(clip_id):
-    annotations = _get_annotations(clip_id)
+    annotations = dict(_get_annotations(clip_id))
     return json.dumps(annotations)
 
 
 def _get_annotations(clip_id):
     
-    annotations = StringAnnotation.objects.filter(
-        clip_id=clip_id
-    ).annotate(name=F('info__name'))
+    annotations = StringAnnotation.objects. \
+        filter(clip_id=clip_id). \
+        select_related('info')
 
-    return dict((a.name, a.value) for a in annotations)
+    # We return a list of (name, value) pairs instead of a dictionary
+    # so that the JSON analog is iterable and ordered (JavaScript
+    # objects are not iterable).
+    return sorted((a.info.name, a.value) for a in annotations)
 
 
 @csrf_exempt
@@ -1123,6 +1127,7 @@ def annotation(request, clip_id, annotation_name):
         return HttpResponseNotAllowed(('GET', 'HEAD', 'PUT', 'DELETE'))
 
 
+# TODO: Rename this `_get_text_request_body`.
 def _get_request_body_as_text(request):
 
     # According to rfc6657, us-ascii is the default charset for the
@@ -1147,7 +1152,7 @@ def _get_request_body(request, content_type_name, default_charset_name):
 
 
 # TODO: Does Django already include functions for parsing HTTP headers?
-# If so, I couldn't find it.
+# If so, I couldn't find them.
 def _parse_content_type(content_type):
 
     parts = [p.strip() for p in content_type.split(';')]
@@ -1229,9 +1234,20 @@ def _get_uint32_bytes(i):
 
 
 @csrf_exempt
-def batch_read_clip_annotations(request):
+def get_clip_metadata(request):
+    
+    # Note that this view uses the HTTP POST method rather than the
+    # GET method to request data from the server. This is because
+    # some information needed by the server to process the request
+    # is included in the request body instead of in the URI.
     
     if request.method == 'POST':
+        
+        # TODO: Put the two `try` statements below into a
+        # `_handle_json_request` auxiliary function that can be called
+        # by any view that processes a request with a JSON body. In
+        # addition to a request, the function will accept a callable
+        # that handles the loaded JSON.
         
         try:
             content = _get_request_body_as_json(request)
@@ -1245,23 +1261,64 @@ def batch_read_clip_annotations(request):
                 reason='Could not decode request JSON')
 
         clip_ids = content['clip_ids']
-        annotations = dict((i, _get_annotations(i)) for i in clip_ids)
-        content = json.dumps(annotations)       
+        metadata = dict((i, _get_clip_metadata(i)) for i in clip_ids)
+        
+        # TODO: Use JsonResponse here (and elsewhere).
+        content = json.dumps(metadata)       
         return HttpResponse(content, content_type='application/json')
-    
+            
     else:
         return HttpResponseNotAllowed(['POST'])        
         
         
+def _get_clip_metadata(clip_id):
+    
+    annotations = _get_annotations(clip_id)
+    tags = _get_tags(clip_id)
+    
+    return {
+        'annotations': annotations,
+        'tags': tags
+    }
+
+
+def _get_tags(clip_id):
+    tags = Tag.objects.filter(clip_id=clip_id).select_related('info')
+    return sorted(t.info.name for t in tags)
+                
+                
 @csrf_exempt
-def annotations(request, annotation_name):
+def annotate_clips(request):
 
     '''
-    This view expects a request body that is UTF-8 encoded JSON like:
-
-        { "value": null, "clip_ids": [1, 2, 3, 4, 5] }
+    This view expects a request body that is a UTF-8 encoded JSON object.
+    The object must have a "clip_ids" property whose value is a list
+    of the IDs of the clips to be annotated, and an "annotations"
+    property whose value is a JSON object mapping annotation names to
+    annotation values. The specified annotations are set on all specified
+    clips.
     '''
 
+    return _edit_clip_metadata(request, _annotate_clips)
+    
+    
+def _edit_clip_metadata(request, edit_function, *args):
+    
+    '''
+    The `edit_function` argument is a function that can be applied to
+    a set of clips to edit them. The edit function has four required
+    positional arguments:
+    
+        clip_ids: iterable of clip IDs.
+        creation_time: the creation time to record for the edits.
+        creating_user: the creating user to record for the edits.
+        content: HTTP request content, a Python dictionary parsed from JSON.
+        
+    The edit function can also take additional, trailing positional
+    arguments, supplied to this function and passed on to the edit
+    function as `*args`.
+    '''
+    
     if request.method == 'POST':
 
         if request.user.is_authenticated:
@@ -1276,11 +1333,11 @@ def annotations(request, annotation_name):
             except json.JSONDecodeError as e:
                 return HttpResponseBadRequest(
                     reason='Could not decode request JSON')
-
-            # TODO: Typecheck JSON?
-            value = content['value']
+                
             clip_ids = content['clip_ids']
-
+            creation_time = time_utils.get_utc_now()
+            creating_user = request.user
+                    
             # We lock the archive just once for all of the clips that
             # we process, rather than once for each clip. This means
             # that we may hold the lock for several seconds, during
@@ -1290,31 +1347,9 @@ def annotations(request, annotation_name):
             # performance is especially important.
             with archive_lock.atomic():
                 with transaction.atomic():
-
-                    info = get_object_or_404(
-                        AnnotationInfo, name=annotation_name)
-
-                    # TODO: Try to speed up the following, which currently
-                    # takes several seconds per thousand clips. Perhaps we
-                    # don't need for Django to create Clip instances for us,
-                    # but instead can use raw SQL to query the
-                    # vesper_string_annotation table just once to get the
-                    # information we need to decide what updates are needed,
-                    # and then a second time to perform the updates.
-
-                    for clip_id in clip_ids:
-
-                        clip = get_object_or_404(Clip, pk=clip_id)
-                        user = request.user
-
-                        if value is None:
-                            model_utils.delete_clip_annotation(
-                                clip, info, creating_user=user)
-
-                        else:
-                            model_utils.annotate_clip(
-                                clip, info, value, creating_user=user)
-
+                    edit_function(
+                        clip_ids, creation_time, creating_user, content, *args)
+                    
             return HttpResponse()
 
         else:
@@ -1325,12 +1360,390 @@ def annotations(request, annotation_name):
         return HttpResponseNotAllowed(['POST'])
 
 
+def _annotate_clips(clip_ids, creation_time, creating_user, content):
+    
+    annotations = content['annotations']
+    
+    for name, value in annotations.items():
+        
+        info = get_object_or_404(AnnotationInfo, name=name)
+
+        for clip_id in clip_ids:
+
+            clip = get_object_or_404(Clip, pk=clip_id)
+
+            model_utils.annotate_clip(
+                clip, info, value, creation_time=creation_time,
+                creating_user=creating_user)
+            
+            
+@csrf_exempt
+def unannotate_clips(request):
+
+    '''
+    This view expects a request body that is a UTF-8 encoded JSON object.
+    The object must have a "clip_ids" property whose value is a list
+    of the IDs of the clips to be unannotated, and an "annotation_names"
+    property whose value is a JSON array of annotation names. The
+    specified annotations are deleted for all specified clips, if they
+    exist.
+    '''
+
+    args = (
+        'annotation_names', AnnotationInfo, model_utils.delete_clip_annotation)
+    
+    return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
+    
+    
+def _edit_clip_metadata_aux(
+        clip_ids, creation_time, creating_user, content, name_key,
+        info_class, edit_function):
+    
+    item_names = content.get(name_key)
+    
+    if item_names is not None:
+    
+        for name in item_names:
+            
+            info = get_object_or_404(info_class, name=name)
+    
+            for clip_id in clip_ids:
+    
+                clip = get_object_or_404(Clip, pk=clip_id)
+    
+                edit_function(
+                    clip, info, creation_time=creation_time,
+                    creating_user=creating_user)
+                
+                
+@csrf_exempt
+def tag_clips(request):
+
+    '''
+    This view expects a request body that is a UTF-8 encoded JSON object.
+    The object must have a "clip_ids" property whose value is a list
+    of the IDs of the clips to be tagged, and a "tag_names"
+    property whose value is a JSON array of tag names. The specified
+    tags are added to all specified clips, when they don't exist already.
+    '''
+
+    args = ('tag_names', TagInfo, model_utils.tag_clip)
+    return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
+    
+    
+@csrf_exempt
+def untag_clips(request):
+
+    '''
+    This view expects a request body that is a UTF-8 encoded JSON object.
+    The object must have a "clip_ids" property whose value is a list
+    of the IDs of the clips to be untagged, and a "tag_names"
+    property whose value is a JSON array of tag names. The specified
+    tags are removed from all specified clips, when they are present.
+    '''
+
+    args = ('tag_names', TagInfo, model_utils.untag_clip)
+    return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
+    
+    
+# @csrf_exempt
+# def edit_clip_metadata(request):
+#
+#     '''
+#     This view expects a request body that is a UTF-8 encoded JSON object.
+#     The object must have a "clip_ids" property whose value is a list
+#     of the IDs of the clips to be edited. Four other properties indicate
+#     the edits to perform and are optional. Examples (in YAML format,
+#     since it's easier to read than JSON, but keep in mind that the
+#     request body must be JSON) are:
+#
+#         annotate: {Classification: Call}
+#         unannotate: [Classification]
+#         tag: [Review]
+#         untag: [Review]
+#
+#     The JSON object and array property values in the above can all contain
+#     any number of items. More than one of the optional properties can
+#     be specified in one request, e.g. to both annotate and tag clips.
+#     All specified operations are performed on all clips.
+#     '''
+#
+#     if request.method == 'POST':
+#
+#         if request.user.is_authenticated:
+#
+#             try:
+#                 content = _get_request_body_as_json(request)
+#             except HttpError as e:
+#                 return e.http_response
+#
+#             try:
+#                 content = json.loads(content)
+#             except json.JSONDecodeError as e:
+#                 return HttpResponseBadRequest(
+#                     reason='Could not decode request JSON')
+#
+#             clip_ids = content['clip_ids']
+#             creation_time = time_utils.get_utc_now()
+#             creating_user = request.user
+#
+#             # We lock the archive just once for all of the clips that
+#             # we process, rather than once for each clip. This means
+#             # that we may hold the lock for several seconds, during
+#             # which no other threads or processes can hold it. This
+#             # method is several times faster this way, and since it
+#             # is typically invoked interactively, the improved
+#             # performance is especially important.
+#             with archive_lock.atomic():
+#                 with transaction.atomic():
+#
+#                     # Annotate.
+#                     _annotate_clips(
+#                         clip_ids, creation_time, creating_user, content)
+#
+#                     # Unannotate.
+#                     _edit_clip_metadata(
+#                         clip_ids, creation_time, creating_user, content,
+#                         'unannotate', AnnotationInfo,
+#                         model_utils.delete_clip_annotation)
+#
+#                     # Tag.
+#                     _edit_clip_metadata(
+#                         clip_ids, creation_time, creating_user, content,
+#                         'tag', TagInfo, model_utils.tag_clip)
+#
+#                     # Untag.
+#                     _edit_clip_metadata(
+#                         clip_ids, creation_time, creating_user, content,
+#                         'untag', TagInfo, model_utils.untag_clip)
+#
+#             return HttpResponse()
+#
+#         else:
+#
+#             return HttpResponseForbidden()
+#
+#     else:
+#         return HttpResponseNotAllowed(['POST'])
+#
+#
+# def _annotate_clips(clip_ids, creation_time, creating_user, content):
+#
+#     annotations = content.get('annotate')
+#
+#     if annotations is not None:
+#
+#         for name, value in annotations:
+#
+#             info = get_object_or_404(AnnotationInfo, name=name)
+#
+#             for clip_id in clip_ids:
+#
+#                 clip = get_object_or_404(Clip, pk=clip_id)
+#
+#                 model_utils.annotate_clip(
+#                     clip, info, value, creation_time=creation_time,
+#                     creating_user=creating_user)
+#
+#
+# def _edit_clip_metadata(
+#         clip_ids, creation_time, creating_user, content, name_key,
+#         info_class, edit_function):
+#
+#     item_names = content.get(name_key)
+#
+#     if item_names is not None:
+#
+#         for name in item_names:
+#
+#             info = get_object_or_404(info_class, name=name)
+#
+#             for clip_id in clip_ids:
+#
+#                 clip = get_object_or_404(Clip, pk=clip_id)
+#
+#                 edit_function(
+#                     clip, info, creation_time=creation_time,
+#                     creating_user=creating_user)
+    
+
+@csrf_exempt
+def clip_metadata(request, clip_id):
+    
+    if request.method in _GET_AND_HEAD:
+        metadata = _get_clip_metadata(clip_id)
+        content = json.dumps(metadata)       
+        return HttpResponse(content, content_type='application/json')
+
+    else:
+        return HttpResponseNotAllowed(_GET_AND_HEAD)
+
+
+# @csrf_exempt
+# def annotations(request, annotation_name):
+#
+#     '''
+#     This view expects a request body that is UTF-8 encoded JSON like:
+#
+#         { "value": null, "clip_ids": [1, 2, 3, 4, 5] }
+#     '''
+#
+#     if request.method == 'POST':
+#
+#         if request.user.is_authenticated:
+#
+#             try:
+#                 content = _get_request_body_as_json(request)
+#             except HttpError as e:
+#                 return e.http_response
+#
+#             try:
+#                 content = json.loads(content)
+#             except json.JSONDecodeError as e:
+#                 return HttpResponseBadRequest(
+#                     reason='Could not decode request JSON')
+#
+#             # TODO: Typecheck JSON?
+#             value = content['value']
+#             clip_ids = content['clip_ids']
+#
+#             # We lock the archive just once for all of the clips that
+#             # we process, rather than once for each clip. This means
+#             # that we may hold the lock for several seconds, during
+#             # which no other threads or processes can hold it. This
+#             # method is several times faster this way, and since it
+#             # is typically invoked interactively, the improved
+#             # performance is especially important.
+#             with archive_lock.atomic():
+#                 with transaction.atomic():
+#
+#                     info = get_object_or_404(
+#                         AnnotationInfo, name=annotation_name)
+#
+#                     # TODO: Try to speed up the following, which currently
+#                     # takes several seconds per thousand clips. Perhaps we
+#                     # don't need for Django to create Clip instances for us,
+#                     # but instead can use raw SQL to query the
+#                     # vesper_string_annotation table just once to get the
+#                     # information we need to decide what updates are needed,
+#                     # and then a second time to perform the updates.
+#
+#                     # TODO: Get current time and user outside of loop and
+#                     # use within loop.
+#
+#                     for clip_id in clip_ids:
+#
+#                         clip = get_object_or_404(Clip, pk=clip_id)
+#                         user = request.user
+#
+#                         if value is None:
+#                             model_utils.delete_clip_annotation(
+#                                 clip, info, creating_user=user)
+#
+#                         else:
+#                             model_utils.annotate_clip(
+#                                 clip, info, value, creating_user=user)
+#
+#             return HttpResponse()
+#
+#         else:
+#
+#             return HttpResponseForbidden()
+#
+#     else:
+#         return HttpResponseNotAllowed(['POST'])
+
+
+# TODO: Rename this `_get_json_request_body`.
 def _get_request_body_as_json(request):
 
     # According to rfc4627, utf-8 is the default charset for the
     # application/json media type.
 
     return _get_request_body(request, 'application/json', 'utf-8')
+
+
+# @csrf_exempt
+# def tag_clips(request):
+#
+#     def tag_clip(clip, info, user):
+#         model_utils.tag_clip(clip, info, creating_user=user)
+#
+#     return _handle_tag_request(request, tag_clip)
+#
+#
+# def _handle_tag_request(request, operate_on_clip):
+#
+#     '''
+#     This function expects a request body that is UTF-8 encoded JSON like:
+#
+#         { "tag_name": "Review", "clip_ids": [1, 2, 3, 4, 5] }
+#     '''
+#
+#     if request.method == 'POST':
+#
+#         if request.user.is_authenticated:
+#
+#             try:
+#                 content = _get_request_body_as_json(request)
+#             except HttpError as e:
+#                 return e.http_response
+#
+#             try:
+#                 content = json.loads(content)
+#             except json.JSONDecodeError as e:
+#                 return HttpResponseBadRequest(
+#                     reason='Could not decode request JSON')
+#
+#             # TODO: Typecheck JSON?
+#             tag_name = content['tag_name']
+#             clip_ids = content['clip_ids']
+#
+#             # We lock the archive just once for all of the clips that
+#             # we process, rather than once for each clip. This means
+#             # that we may hold the lock for several seconds, during
+#             # which no other threads or processes can hold it. This
+#             # method is several times faster this way, and since it
+#             # is typically invoked interactively, the improved
+#             # performance is especially important.
+#             with archive_lock.atomic():
+#                 with transaction.atomic():
+#
+#                     info = get_object_or_404(TagInfo, name=tag_name)
+#
+#                     # TODO: Try to speed up the following, which currently
+#                     # takes several seconds per thousand clips. Perhaps we
+#                     # don't need for Django to create Clip instances for us,
+#                     # but instead can use raw SQL to query the
+#                     # vesper_string_annotation table just once to get the
+#                     # information we need to decide what updates are needed,
+#                     # and then a second time to perform the updates.
+#
+#                     # TODO: Get current time and user outside of loop and
+#                     # specify in `tag_clip` call.
+#
+#                     for clip_id in clip_ids:
+#                         clip = get_object_or_404(Clip, pk=clip_id)
+#                         user = request.user
+#                         operate_on_clip(clip, info, user)
+#
+#             return HttpResponse()
+#
+#         else:
+#
+#             return HttpResponseForbidden()
+#
+#     else:
+#         return HttpResponseNotAllowed(['POST'])
+#
+#
+# @csrf_exempt
+# def untag_clips(request):
+#
+#     def untag_clip(clip, info, user):
+#         model_utils.untag_clip(clip, info, creating_user=user)
+#
+#     _handle_tag_request(request, untag_clip)
 
 
 def clip_calendar(request):
@@ -1766,8 +2179,6 @@ def _get_preset_path(param_name, params, preset_type_name, preferences):
 
 def clip_album(request):
 
-    # TODO: Combine this view with `night` view?
-
     # TODO: Check URL query items.
     params = request.GET
     
@@ -1829,7 +2240,6 @@ def clip_album(request):
 
 def _get_clip_filter_data(params, preferences):
     
-    # TODO: Figure out how to handle wildcard station mic here.
     sm_pairs = model_utils.get_station_mic_output_pairs_list()
     get_ui_name = model_utils.get_station_mic_output_pair_ui_name
     sm_pair = _get_calendar_query_object(

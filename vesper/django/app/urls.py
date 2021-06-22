@@ -19,13 +19,13 @@ urlpatterns = [
          views.batch_read_clip_audios,
          name='batch-read-clip-audios'),
         
-    path('batch/read/clip-annotations/',
-         views.batch_read_clip_annotations,
-         name='batch-read-clip-annotations'),
-        
     path('clips/<int:clip_id>/wav/', views.clip_wav, name='clip-wav'),
-    path('clips/<int:clip_id>/annotations/json/', views.annotations_json,
-         name='annotations'),
+    
+    path('get-clip-metadata/', views.get_clip_metadata,
+         name='get-clip-metadata'),
+    
+    path('clips/<int:clip_id>/metadata/', views.clip_metadata,
+         name='clip-metadata'),
     
     path('about-vesper/', views.about_vesper, name='about-vesper')
     
@@ -95,11 +95,19 @@ if not settings.ARCHIVE_READ_ONLY:
     
         path('clips/', views.clips, name='clips'),
         path('clips/<int:clip_id>/', views.clip, name='clip'),
+        
+        # TODO: Eliminate this.
         path('clips/<int:clip_id>/annotations/<name:annotation_name>/',
              views.annotation, name='annotation'),
         
-        path('annotations/<name:annotation_name>/', views.annotations,
-             name='annotations'),
+        path('annotate-clips/', views.annotate_clips, name='annotate-clips'),
+        
+        path('unannotate-clips/', views.unannotate_clips,
+             name='unannotate-clips'),
+        
+        path('tag-clips/', views.tag_clips, name='tag-clips'),
+
+        path('untag-clips/', views.untag_clips, name='untag-clips'),
 
         path('presets/<name:preset_type_name>/json/', views.presets_json,
              name='presets-json'),

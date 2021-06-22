@@ -27,10 +27,7 @@ describe('Clip', () => {
 
 		expect(clip.url).toBe('/clips/24/');
 		expect(clip.wavFileUrl).toBe('/clips/24/wav/');
-		expect(clip.annotationsUrl).toBe('/clips/24/annotations/');
-		expect(clip.annotationsJsonUrl).toBe('/clips/24/annotations/json/');
-		expect(clip.getAnnotationUrl('bobo')).toBe(
-			'/clips/24/annotations/bobo/');
+		expect(clip.metadataUrl).toBe('/clips/24/metadata/');
 
 		expect(clip.samples).toBe(null);
 		clip.samples = [];

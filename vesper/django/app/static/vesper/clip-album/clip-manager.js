@@ -17,22 +17,22 @@ export const PAGE_LOAD_STATUS = {
 const _BATCH_LOADS_ENABLED = true;
 
 // Note: On 2019-01-26 I experimented with various values of
-// `_MAX_CLIP_SAMPLES_BATCH_SIZE` and `_MAX_CLIP_ANNOTATIONS_BATCH_SIZE`
+// `_MAX_CLIP_SAMPLES_BATCH_SIZE` and `_MAX_CLIP_METADATA_BATCH_SIZE`
 // on macOS, meaasuring how long it took to page through a 13000-clip
 // clip album displaying about 120 clips per page, waiting for all of
 // the clips of the current page to load before proceeding to the next
 // page. The results were as follows:
 //
-//     samples batch size    annos batch size    time
-//     ------------------    ----------------    ----
-//              1                    1           3:23
-//              5                    5           1:52
-//             10                   10           1:46
-//             20                   20           1:44
-//             30                   30           1:54
-//             50                   50           1:54
-//            100                  100           1:46
-//            200                  200           1:48
+//     samples batch size    metadata batch size    time
+//     ------------------    -------------------    ----
+//              1                     1             3:23
+//              5                     5             1:52
+//             10                    10             1:46
+//             20                    20             1:44
+//             30                    30             1:54
+//             50                    50             1:54
+//            100                   100             1:46
+//            200                   200             1:48
 //
 // Except for the first row, the times are all quite similar. In the
 // interest of reducing the number of HTTP requests to the server,
@@ -45,10 +45,11 @@ const _BATCH_LOADS_ENABLED = true;
 // batches of this size, except possibly for the last batch.
 const _MAX_CLIP_SAMPLES_BATCH_SIZE = 200;
 
-// Maximum clip annotations batch size, in clips. When batch loads are
-// enabled, the clip loader loads the annotations of the clips of a clip
-// album page in batches of this size, except possibly for the last batch.
-const _MAX_CLIP_ANNOTATIONS_BATCH_SIZE = 200;
+// Maximum clip metadata batch size, in clips. When batch loads are
+// enabled, the clip loader loads the annotations and tags of the clips
+// of a clip album page in batches of this size, except possibly for the
+// last batch.
+const _MAX_CLIP_METADATA_BATCH_SIZE = 200;
 
 // Set this `true` to randomly simulate load errors for both clip batches
 // and individual clips.
@@ -57,11 +58,11 @@ const _MAX_CLIP_ANNOTATIONS_BATCH_SIZE = 200;
 // `_ClipLoader._throwRandomTestError` below are also uncommented.
 //
 // When both test errors and batch loads are enabled, a simulated load
-// failure for the annotations of any clip of a batch causes no annotations
+// failure for the metadata of any clip of a batch causes no metadata
 // to be loaded for the entire batch. This means that you probably won't
-// see any annotations at all unless you've made the annotations batch
-// size and the test error probability sufficiently small that all
-// annotations load successfully for some batches.
+// see any annotations or tags at all unless you've made the metadata
+// batch size and the test error probability sufficiently small that all
+// metadata load successfully for some batches.
 const _TEST_ERRORS_ENABLED = false;
 
 // The probability that a call to the `_ClipLoader._throwRandomTestError`
@@ -106,7 +107,7 @@ clips from whatever their native rate, though this should be tested.
 */
 
 
-// Loads and unloads clip samples and annotations on behalf of a clip album.
+// Loads and unloads clip samples and metadata on behalf of a clip album.
 //
 // Different clip managers may load clip data according to different policies.
 // For example, one manager may load data for clip pages as they are displayed,
@@ -349,7 +350,7 @@ export class ClipManager {
             
             const clip = this.clips[i];
             const startTime = clip.startTime;
-            const classification = clip.annotations['Classification'];
+            const classification = clip.annotations.get('Classification');
             
             console.log(
                 `- { start_time: ${startTime}, ` +
@@ -534,7 +535,7 @@ class _ClipLoader {
 
             return Promise.all([
                 this._batchLoadClipSamples(clips, start, end),
-                this._batchLoadClipAnnotations(clips, start, end)
+                this._batchLoadClipMetadata(clips, start, end)
             ]);
 
         } else {
@@ -542,7 +543,7 @@ class _ClipLoader {
 
             return Promise.all([
                 this._loadClipSamples(clips, start, end),
-                this._loadClipAnnotations(clips, start, end)
+                this._loadClipMetadata(clips, start, end)
             ]);
 
         }
@@ -822,42 +823,42 @@ class _ClipLoader {
     }
 
 
-    async _batchLoadClipAnnotations(clips, start, end) {
+    async _batchLoadClipMetadata(clips, start, end) {
 
         const batches = this._getClipBatches(
-            clips, start, end, _MAX_CLIP_ANNOTATIONS_BATCH_SIZE);
+            clips, start, end, _MAX_CLIP_METADATA_BATCH_SIZE);
 
         return Promise.all(
-            batches.map(b => this._loadClipBatchAnnotations(b)));
+            batches.map(b => this._loadClipBatchMetadata(b)));
 
     }
 
 
-    async _loadClipBatchAnnotations(clips) {
+    async _loadClipBatchMetadata(clips) {
 
-        // Work only with clips for which annotations are unloaded.
+        // Work only with clips for which metadata are unloaded.
         clips = clips.filter(
-            clip => clip.annotationsStatus === CLIP_LOAD_STATUS.UNLOADED);
+            clip => clip.metadataStatus === CLIP_LOAD_STATUS.UNLOADED);
 
         if (clips.length > 0) {
             // some clips need loading
 
             // Update clip load statuses.
-            this._setClipBatchAnnotationsStatuses(
+            this._setClipBatchMetadataStatuses(
                 clips, CLIP_LOAD_STATUS.LOADING);
 
 
-            // Load annotations.
+            // Load metadata.
 
             try {
 
-                const result = await this._fetchClipBatchAnnotations(clips);
-                const annotations = await result.json();
-                this._setClipBatchAnnotations(clips, annotations);
+                const result = await this._fetchClipBatchMetadata(clips);
+                const metadata = await result.json();
+                this._setClipBatchMetadata(clips, metadata);
 
             } catch (error) {
 
-                this._onClipBatchAnnotationsLoadError(clips, error);
+                this._onClipBatchMetadataLoadError(clips, error);
 
             }
 
@@ -867,29 +868,30 @@ class _ClipLoader {
     }
 
 
-    _setClipBatchAnnotationsStatuses(clips, status) {
+    _setClipBatchMetadataStatuses(clips, status) {
         for (const clip of clips)
-            this._setClipAnnotationsStatus(clip, status);
+            this._setClipMetadataStatus(clip, status);
     }
 
 
-    _setClipAnnotationsStatus(clip, status) {
+    _setClipMetadataStatus(clip, status) {
 
-        if (status !== clip.annotationsStatus) {
+        if (status !== clip.metadataStatus) {
             // status will change
 
-            clip.annotationsStatus = status;
+            clip.metadataStatus = status;
 
             if (status === CLIP_LOAD_STATUS.LOADED) {
 
-                clip.view.onClipAnnotationsChanged();
+                clip.view.onClipMetadataChanged();
 
             } else if (status == CLIP_LOAD_STATUS.UNLOADED) {
 
-                // Forget annotations so we won't prevent garbage collection.
+                // Forget metadata so we won't prevent garbage collection.
                 clip.annotations = null;
+                clip.tags = null;
 
-                clip.view.onClipAnnotationsChanged();
+                clip.view.onClipMetadataChanged();
 
             }
 
@@ -898,11 +900,11 @@ class _ClipLoader {
     }
 
 
-    async _fetchClipBatchAnnotations(clips) {
+    async _fetchClipBatchMetadata(clips) {
 
         const clipIds = clips.map(clip => clip.id);
 
-        return fetch('/batch/read/clip-annotations/', {
+        return fetch('/get-clip-metadata/', {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
@@ -916,38 +918,39 @@ class _ClipLoader {
     }
 
 
-    _setClipBatchAnnotations(clips, annotations) {
+    _setClipBatchMetadata(clips, metadata) {
         for (const clip of clips)
-            this._setClipAnnotations(clip, annotations[clip.id]);
+            this._setClipMetadata(clip, metadata[clip.id]);
     }
 
 
-    _setClipAnnotations(clip, annotations) {
+    _setClipMetadata(clip, metadata) {
 
-        // An annotations load operation can be canceled while in progress
-        // by changing `clip.annotationsStatus` from
+        // A metadata load operation can be canceled while in progress
+        // by changing `clip.metadataStatus` from
         // `CLIP_LOAD_STATUS.LOADING` to `CLIP_LOAD_STATUS_UNLOADED`.
         // In this case we ignore the results of the operation.
 
-        if (clip.annotationsStatus === CLIP_LOAD_STATUS.LOADING) {
+        if (clip.metadataStatus === CLIP_LOAD_STATUS.LOADING) {
 
             //            this._throwRandomTestError(
-            //                'A random test error was thrown from _setClipAnnotations.');
+            //                'A random test error was thrown from _setClipMetadata.');
 
-            clip.annotations = annotations;
+            clip.annotations = new Map(metadata.annotations);
+            clip.tags = new Set(metadata.tags);
 
-            this._setClipAnnotationsStatus(clip, CLIP_LOAD_STATUS.LOADED);
+            this._setClipMetadataStatus(clip, CLIP_LOAD_STATUS.LOADED);
 
         }
 
     }
 
 
-    _onClipBatchAnnotationsLoadError(clips, error) {
+    _onClipBatchMetadataLoadError(clips, error) {
 
-        this._handleError('Batch load of clip annotations failed.', error);
+        this._handleError('Batch load of clip metadata failed.', error);
 
-        this._setClipBatchAnnotationsStatuses(
+        this._setClipBatchMetadataStatuses(
             clips, CLIP_LOAD_STATUS.UNLOADED);
 
     }
@@ -989,57 +992,58 @@ class _ClipLoader {
     }
 
 
-    async _loadClipAnnotations(clips, start, end) {
+    async _loadClipMetadata(clips, start, end) {
 
         clips = clips.slice(start, end);
 
-        // Work only with clips for which annotations are unloaded.
+        // Work only with clips for which metadata are unloaded.
         clips = clips.filter(
-            clip => clip.annotationsStatus === CLIP_LOAD_STATUS.UNLOADED);
+            clip => clip.metadataStatus === CLIP_LOAD_STATUS.UNLOADED);
 
         if (clips.length > 0)
             // some clips need loading
 
             return Promise.all(
-                clips.map(c => this._loadClipAnnotationsAux(c)));
+                clips.map(c => this._loadClipMetadataAux(c)));
 
     }
 
 
-    async _loadClipAnnotationsAux(clip) {
+    async _loadClipMetadataAux(clip) {
 
-        clip.annotationsStatus = CLIP_LOAD_STATUS.LOADING;
+        clip.metadataStatus = CLIP_LOAD_STATUS.LOADING;
 
         try {
 
-            const response = await fetch(clip.annotationsJsonUrl);
-            const annotations = await response.json();
-            this._setClipAnnotations(clip, annotations);
+            const response = await fetch(clip.metadataUrl);
+            const metadata = await response.json();
+            this._setClipMetadata(clip, metadata);
 
         } catch (error) {
 
-            this._onClipAnnotationsLoadError(clip, error);
+            this._onClipMetadataLoadError(clip, error);
 
         }
 
     }
 
 
-    _onClipAnnotationsLoadError(clip, error) {
+    _onClipMetadataLoadError(clip, error) {
 
-        // An annotations load operation can be canceled while in progress
-        // by changing `clip.annotationsStatus` from
+        // A metadata load operation can be canceled while in progress
+        // by changing `clip.metadataStatus` from
         // `CLIP_LOAD_STATUS.LOADING` to `CLIP_LOAD_STATUS_UNLOADED`.
         // In this case we ignore the results of the operation.
 
-        if (clip.annotationsStatus === CLIP_LOAD_STATUS.LOADING) {
+        if (clip.metadataStatus === CLIP_LOAD_STATUS.LOADING) {
 
             this._handleError(
-                `Load of clip ${clip.num} annotations failed.`, error);
+                `Load of clip ${clip.num} metadata failed.`, error);
 
             clip.annotations = null;
+            clip.tags = null;
 
-            this._setClipAnnotationsStatus(clip, CLIP_LOAD_STATUS.UNLOADED);
+            this._setClipMetadataStatus(clip, CLIP_LOAD_STATUS.UNLOADED);
 
         }
 
@@ -1051,7 +1055,7 @@ class _ClipLoader {
         clips = clips.slice(start, end);
         const status = CLIP_LOAD_STATUS.UNLOADED
         this._setClipBatchSamplesStatuses(clips, status);
-        this._setClipBatchAnnotationsStatuses(clips, status);
+        this._setClipBatchMetadataStatuses(clips, status);
     }
 
 
