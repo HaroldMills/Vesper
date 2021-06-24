@@ -12,7 +12,8 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import (
     Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
-    HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseServerError)
+    HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseServerError,
+    JsonResponse)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -1102,6 +1103,11 @@ def get_clip_metadata(request):
     # some information needed by the server to process the request
     # is included in the request body instead of in the URI.
     
+    # TODO: Consider querying database for batches of clips instead
+    # of one clip at a time. This could dramatically reduce the
+    # number of database queries this view performs. The Django
+    # QuerySet `in` field lookup or `in_bulk` method might be useful.
+    
     if request.method == 'POST':
         
         # TODO: Put the two `try` statements below into a
@@ -1123,23 +1129,16 @@ def get_clip_metadata(request):
 
         clip_ids = content['clip_ids']
         metadata = dict((i, _get_clip_metadata(i)) for i in clip_ids)
-        
-        # TODO: Use JsonResponse here (and elsewhere).
-        content = json.dumps(metadata)       
-        return HttpResponse(content, content_type='application/json')
+        return JsonResponse(metadata)
             
     else:
         return HttpResponseNotAllowed(['POST'])        
         
         
 def _get_clip_metadata(clip_id):
-    
-    annotations = _get_annotations(clip_id)
-    tags = _get_tags(clip_id)
-    
     return {
-        'annotations': annotations,
-        'tags': tags
+        'annotations': _get_annotations(clip_id),
+        'tags': _get_tags(clip_id)
     }
 
 
@@ -1323,8 +1322,7 @@ def clip_metadata(request, clip_id):
     
     if request.method in _GET_AND_HEAD:
         metadata = _get_clip_metadata(clip_id)
-        content = json.dumps(metadata)       
-        return HttpResponse(content, content_type='application/json')
+        return JsonResponse(metadata)
 
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
@@ -2164,11 +2162,11 @@ def record(request):
         audio_file_utils.write_empty_wave_file(
             file_path, _CHANNEL_COUNT, _SAMPLE_RATE, _SAMPLE_SIZE)
     
-        content = json.dumps(dict(recordingId=recording_id))
+        content = {'recordingId': recording_id}
         
         _recording_id += 1
         
-        return HttpResponse(content, content_type='application/json')
+        return JsonResponse(content)
  
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
