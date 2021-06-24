@@ -988,88 +988,6 @@ def _get_presets_json(preset_type_name):
     return json.dumps(presets)
 
 
-@csrf_exempt
-def annotation(request, clip_id, annotation_name):
-
-    name = annotation_name
-
-    if request.method in _GET_AND_HEAD:
-        info = get_object_or_404(AnnotationInfo, name=name)
-        annotation = get_object_or_404(
-            StringAnnotation, clip__id=clip_id, info=info)
-        response = HttpResponse()
-        response.write(annotation.value)
-        return response
-
-    elif request.method == 'PUT':
-
-        if request.user.is_authenticated:
-
-            clip = get_object_or_404(Clip, pk=clip_id)
-            info = get_object_or_404(AnnotationInfo, name=name)
-
-            # TODO: If the request body is not plain text, we should
-            # respond with an appropriate HTTP error, not just raise
-            # an exception, which results in an internal server error
-            # (500) response.
-            value = _get_request_body_as_text(request).strip()
-
-            model_utils.annotate_clip(
-                clip, info, value, creating_user=request.user)
-
-            return HttpResponse()
-
-        else:
-            # user not logged in
-
-            return HttpResponseForbidden()
-
-
-    elif request.method == 'DELETE':
-
-        if request.user.is_authenticated:
-
-            clip = get_object_or_404(Clip, pk=clip_id)
-            info = get_object_or_404(AnnotationInfo, name=name)
-
-            model_utils.delete_clip_annotation(
-                clip, info, creating_user=request.user)
-
-            return HttpResponse()
-
-        else:
-            # user not logged in
-
-            return HttpResponseForbidden()
-
-    else:
-        return HttpResponseNotAllowed(('GET', 'HEAD', 'PUT', 'DELETE'))
-
-
-# TODO: Rename this `_get_text_request_body`.
-def _get_request_body_as_text(request):
-
-    # According to rfc6657, us-ascii is the default charset for the
-    # text/plain media type.
-
-    return _get_request_body(request, 'text/plain', 'us-ascii')
-
-
-def _get_request_body(request, content_type_name, default_charset_name):
-
-    content_type = _parse_content_type(request.META['CONTENT_TYPE'])
-
-    # Make sure content type is text/plain.
-    if content_type.name != content_type_name:
-        raise HttpError(
-            status_code=415,
-            reason='Request content type must be {}'.format(content_type_name))
-
-    charset = content_type.params.get('charset', default_charset_name)
-
-    return request.body.decode(charset)
-
-
 # TODO: Does Django already include functions for parsing HTTP headers?
 # If so, I couldn't find them.
 def _parse_content_type(content_type):
@@ -1146,6 +1064,30 @@ def get_clip_audios(request):
     
     else:
         return HttpResponseNotAllowed(['POST'])        
+
+
+# TODO: Rename this `_get_json_request_body`.
+def _get_request_body_as_json(request):
+
+    # According to rfc4627, utf-8 is the default charset for the
+    # application/json media type.
+
+    return _get_request_body(request, 'application/json', 'utf-8')
+
+
+def _get_request_body(request, content_type_name, default_charset_name):
+
+    content_type = _parse_content_type(request.META['CONTENT_TYPE'])
+
+    # Make sure content type is text/plain.
+    if content_type.name != content_type_name:
+        raise HttpError(
+            status_code=415,
+            reason='Request content type must be {}'.format(content_type_name))
+
+    charset = content_type.params.get('charset', default_charset_name)
+
+    return request.body.decode(charset)
 
 
 def _get_uint32_bytes(i):
@@ -1387,15 +1329,6 @@ def clip_metadata(request, clip_id):
 
     else:
         return HttpResponseNotAllowed(_GET_AND_HEAD)
-
-
-# TODO: Rename this `_get_json_request_body`.
-def _get_request_body_as_json(request):
-
-    # According to rfc4627, utf-8 is the default charset for the
-    # application/json media type.
-
-    return _get_request_body(request, 'application/json', 'utf-8')
 
 
 def clip_calendar(request):
