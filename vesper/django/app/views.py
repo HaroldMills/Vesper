@@ -989,87 +989,6 @@ def _get_presets_json(preset_type_name):
 
 
 @csrf_exempt
-def annotations_json(request, clip_id):
-
-    if request.method in _GET_AND_HEAD:
-        content = _get_annotations_json(clip_id)
-        return HttpResponse(content, content_type='application/json')
-
-    elif request.method == 'POST':
-
-        if request.user.is_authenticated:
-
-            try:
-                content = _get_request_body_as_json(request)
-            except HttpError as e:
-                return e.http_response
-
-            try:
-                content = json.loads(content)
-            except json.JSONDecodeError as e:
-                return HttpResponseBadRequest(
-                    reason='Could not decode request JSON')
-
-            # TODO: Typecheck JSON?
-
-            with archive_lock.atomic():
-                with transaction.atomic():
-
-                    clip = get_object_or_404(Clip, pk=clip_id)
-
-                    for name, value in content.items():
-
-                        # We respond with a 404 (Not Found) client error if
-                        # the named `AnnotationInfo` does not already exist.
-                        # This assumes that an `AnnotationInfo` is created
-                        # explicitly by a request at some other URL, not
-                        # implicitly by naming a nonexistent `AnnotationInfo`
-                        # at this URL.
-                        info = get_object_or_404(AnnotationInfo, name=name)
-
-                        user = request.user
-
-                        if value is None:
-                            model_utils.delete_clip_annotation(
-                                clip, info, creating_user=user)
-
-                        else:
-                            model_utils.annotate_clip(
-                                clip, info, value, creating_user=user)
-
-            return HttpResponse()
-
-        else:
-            # user not logged in
-
-            return HttpResponseForbidden()
-
-    else:
-        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
-
-
-def _parse_json_request_body(request):
-    return {}
-
-
-def _get_annotations_json(clip_id):
-    annotations = dict(_get_annotations(clip_id))
-    return json.dumps(annotations)
-
-
-def _get_annotations(clip_id):
-    
-    annotations = StringAnnotation.objects. \
-        filter(clip_id=clip_id). \
-        select_related('info')
-
-    # We return a list of (name, value) pairs instead of a dictionary
-    # so that the JSON analog is iterable and ordered (JavaScript
-    # objects are not iterable).
-    return sorted((a.info.name, a.value) for a in annotations)
-
-
-@csrf_exempt
 def annotation(request, clip_id, annotation_name):
 
     name = annotation_name
@@ -1280,6 +1199,18 @@ def _get_clip_metadata(clip_id):
         'annotations': annotations,
         'tags': tags
     }
+
+
+def _get_annotations(clip_id):
+    
+    annotations = StringAnnotation.objects. \
+        filter(clip_id=clip_id). \
+        select_related('info')
+
+    # We return a list of (name, value) pairs instead of a dictionary
+    # so that the JSON analog is iterable and ordered (JavaScript
+    # objects are not iterable).
+    return sorted((a.info.name, a.value) for a in annotations)
 
 
 def _get_tags(clip_id):
