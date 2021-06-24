@@ -1262,8 +1262,7 @@ def unannotate_clips(request):
     exist.
     '''
 
-    args = (
-        'annotation_names', AnnotationInfo, model_utils.delete_clip_annotation)
+    args = ('annotation_names', AnnotationInfo, model_utils.unannotate_clip)
     
     return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
     

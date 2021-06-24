@@ -124,7 +124,7 @@ def annotate_old_bird_calls():
                 
                 # Clear any existing annotations.
                 for clip in old_bird_clips:
-                    model_utils.delete_clip_annotation(
+                    model_utils.unannotate_clip(
                         clip, classification_annotation_info,
                         creating_user=user)
                     

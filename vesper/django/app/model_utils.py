@@ -630,7 +630,7 @@ def annotate_clip(
     
 @archive_lock.atomic
 @transaction.atomic
-def delete_clip_annotation(
+def unannotate_clip(
         clip, annotation_info, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
     
