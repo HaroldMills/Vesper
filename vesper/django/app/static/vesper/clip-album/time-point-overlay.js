@@ -60,8 +60,8 @@ export class TimePointOverlay extends AnnotatingOverlay {
             
         }
             
-        const annotations = new Object();
-        annotations[this.annotationName] = index;
+        const annotations = new Map();
+        annotations.set(this.annotationName, index);
 
         this._annotateClip(clip.id, annotations);
         
@@ -81,10 +81,9 @@ export class TimePointOverlay extends AnnotatingOverlay {
         //     `TimePointOverlay.render ${annotations} ` +
         //     `${this.annotationName}`);
 
-        if (annotations !== null &&
-                annotations.hasOwnProperty(this.annotationName)) {
+        if (annotations !== null && annotations.has(this.annotationName)) {
 
-            const index = parseInt(annotations[this.annotationName]);
+            const index = parseInt(annotations.get(this.annotationName));
             this._render(index);
 
         }

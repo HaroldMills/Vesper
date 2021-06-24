@@ -34,16 +34,21 @@ export class AnnotatingOverlay {
 
     _annotateClip(clipId, annotations) {
         
-        const url = `/clips/${clipId}/annotations/json/`;
+        const url = '/annotate-clips/'
 
-        this._postJson(url, annotations)
-        .then(r => this._onAnnotationsPostFulfilled(r, annotations))
-        .catch(this._onAnnotationsPostRejected);
+        const content = {
+            'clip_ids': [clipId],
+            'annotations': _createObjectFromMap(annotations)
+        }
+        
+        this._sendAnnotationRequest(url, content)
+        .then(r => this._onAnnotationRequestFulfilled(r, annotations))
+        .catch(this._onAnnotationRequestRejected);
 
     }
 
 
-    _postJson(url, object) {
+    _sendAnnotationRequest(url, object) {
 
         return fetch(url, {
             method: 'POST',
@@ -57,27 +62,19 @@ export class AnnotatingOverlay {
     }
 
 
-    _onAnnotationsPostFulfilled(response, annotations) {
-
+    _onAnnotationRequestFulfilled(response, annotations) {
+        
         if (response.status === 200) {
             // Update clip annotations and re-render.
 
             const clip = this.clipView.clip;
-            const clip_annos = clip.annotations;
+            const annos = clip.annotations;
 
-            if (clip_annos !== null) {
+            if (annos !== null) {
                 // client has received clip annotations from server
 
-                for (const name of Object.getOwnPropertyNames(annotations)) {
-
-                    const value = annotations[name];
-
-                    if (value === null)
-                        delete clip_annos[name]
-                    else
-                        clip_annos[name] = value;
-
-                }
+                for (const [name, value] of annotations.entries())
+                    annos.set(name, value);
 
             } else {
                 // client has not yet received clip annotations from server
@@ -103,11 +100,22 @@ export class AnnotatingOverlay {
     }
 
 
-    _onAnnotationsPostRejected(error) {
+    _onAnnotationRequestRejected(error) {
         window.alert(
-            `Clip annotation request failed with exception: ` +
-            `${error.message}.`);
+            `Clip annotation request failed with message: ${error.message}.`);
     }
 
 
+}
+
+
+function _createObjectFromMap(map) {
+    
+    const object = {};
+    
+    for (const [key, value] of map.entries())
+        object[key] = value;
+        
+    return object;
+    
 }

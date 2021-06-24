@@ -70,10 +70,10 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
             
         }
         
-        const annotations = new Object();
-        annotations[this.timeAnnotationName] = index;
-        annotations[this.frequencyAnnotationName] = frequency;
-
+        const annotations = new Map();
+        annotations.set(this.timeAnnotationName, index);
+        annotations.set(this.frequencyAnnotationName, frequency);
+        
         this._annotateClip(clip.id, annotations);
 
     }
@@ -93,11 +93,12 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
         //     `${this.timeAnnotationName} ${this.frequencyAnnotationName}`);
 
         if (annotations !== null &&
-                annotations.hasOwnProperty(this.timeAnnotationName) &&
-                annotations.hasOwnProperty(this.frequencyAnnotationName)) {
+                annotations.has(this.timeAnnotationName) &&
+                annotations.has(this.frequencyAnnotationName)) {
 
-            const index = parseInt(annotations[this.timeAnnotationName]);
-            const freq = parseFloat(annotations[this.frequencyAnnotationName]);
+            const index = parseInt(annotations.get(this.timeAnnotationName));
+            const freq = 
+                parseFloat(annotations.get(this.frequencyAnnotationName));
 
             this._render(index, freq);
 

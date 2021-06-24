@@ -53,7 +53,7 @@ export class CallsCleanupOverlay extends AnnotatingOverlay {
     _reclassifyCallClip(fromCoarseClass, toCoarseClass) {
         
         const clip = this.clipView.clip;
-        const classification = clip.annotations[this.annotationName];
+        const classification = clip.annotations.get(this.annotationName);
         
         if (classification !== undefined &&
                 classification.startsWith(fromCoarseClass)) {
@@ -61,9 +61,9 @@ export class CallsCleanupOverlay extends AnnotatingOverlay {
             const newClassification =
                 classification.replace(fromCoarseClass, toCoarseClass);
             
-            const annotations = new Object();
-            annotations[this.annotationName] = newClassification;
-            
+            const annotations = new Map();
+            annotations.set(this.annotationName, newClassification);
+                       
             this._annotateClip(clip.id, annotations);
             
         }
@@ -73,39 +73,6 @@ export class CallsCleanupOverlay extends AnnotatingOverlay {
 
     _executeIncludeCallClipCommand(env) {
         this._reclassifyCallClip(this.excludedCallClass, this.callClass);
-    }
-    
-    
-    _setTimeAnnotation(time) {
-        
-        const clip = this.clipView.clip;
-        
-        let index = null;
-        
-        if (time !== null) {
-            
-            const startIndex = clip.startIndex;
-            
-            if (startIndex === null) {
-                // clip start index unknown
-                
-                window.alert(
-                    `Cannot annotate clip because its start index is ` +
-                    `unknown.`);
-                
-                return;
-                
-            }
-                
-            index = startIndex + Math.round(time * clip.sampleRate);
-            
-        }
-            
-        const annotations = new Object();
-        annotations[this.annotationName] = index;
-
-        this._annotateClip(clip.id, annotations);
-        
     }
     
     

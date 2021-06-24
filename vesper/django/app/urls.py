@@ -94,10 +94,6 @@ if not settings.ARCHIVE_READ_ONLY:
         path('clips/', views.clips, name='clips'),
         path('clips/<int:clip_id>/', views.clip, name='clip'),
         
-        # TODO: Eliminate this.
-        path('clips/<int:clip_id>/annotations/<name:annotation_name>/',
-             views.annotation, name='annotation'),
-        
         path('annotate-clips/', views.annotate_clips, name='annotate-clips'),
         
         path('unannotate-clips/', views.unannotate_clips,
@@ -107,6 +103,8 @@ if not settings.ARCHIVE_READ_ONLY:
 
         path('untag-clips/', views.untag_clips, name='untag-clips'),
 
+        # TODO: Either remove JSON from this URL or include formats
+        # in others, e.g. clips/<ID>/audio and clips/<ID>/metadata.
         path('presets/<name:preset_type_name>/json/', views.presets_json,
              name='presets-json'),
     
