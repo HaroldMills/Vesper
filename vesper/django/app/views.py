@@ -1008,67 +1008,29 @@ def _parse_content_type(content_type):
 
 @csrf_exempt
 def get_clip_audios(request):
-    
     if request.method == 'POST':
-        
-        
-        # Parse request content JSON.
-        
-        try:
-            content = _get_request_body_as_json(request)
-        except HttpError as e:
-            return e.http_response
-
-        try:
-            content = json.loads(content)
-        except json.JSONDecodeError as e:
-            return HttpResponseBadRequest(
-                reason='Could not decode request JSON')
-
-
-        # Get requested clip audios.
-        
-        clip_ids = content['clip_ids']
-        
-        clips = [get_object_or_404(Clip, pk=i) for i in clip_ids]
-
-        content_type = 'audio/wav'
-        
-        audios = []
-        
-        for clip in clips:
-            
-            try:
-                audio = clip_manager.get_audio_file_contents(
-                    clip, content_type)
-                
-            except Exception as e:
-                logger = logging.getLogger('django.server')
-                logger.error(
-                    f'Attempt to get audio file contents for clip '
-                    f'"{str(clip)}" failed with {e.__class__.__name__} '
-                    f'exception. Exception message was: {str(e)}')
-                return HttpResponseServerError()
-            
-            audios.append(audio)
-            
-            
-        # Concatenate alternating binary audio sizes and audios to make
-        # response content.
-        audio_sizes = [_get_uint32_bytes(len(a)) for a in audios]
-        pairs = zip(audio_sizes, audios)
-        parts = itertools.chain.from_iterable(pairs)
-        content = b''.join(parts)
-        
-        # Construct response
-        return HttpResponse(content, content_type='application/octet-stream')
-    
+        return _handle_json_post(request, _get_clip_audios_aux)
     else:
-        return HttpResponseNotAllowed(['POST'])        
+        return HttpResponseNotAllowed(['POST'])
+    
+    
+def _handle_json_post(request, content_handler):
+        
+    try:
+        content = _get_json_request_body(request)
+    except HttpError as e:
+        return e.http_response
 
+    try:
+        content = json.loads(content)
+    except json.JSONDecodeError as e:
+        return HttpResponseBadRequest(
+            reason='Could not decode request JSON')
 
-# TODO: Rename this `_get_json_request_body`.
-def _get_request_body_as_json(request):
+    return content_handler(content)
+    
+        
+def _get_json_request_body(request):
 
     # According to rfc4627, utf-8 is the default charset for the
     # application/json media type.
@@ -1091,6 +1053,45 @@ def _get_request_body(request, content_type_name, default_charset_name):
     return request.body.decode(charset)
 
 
+def _get_clip_audios_aux(content):
+    
+    clip_ids = content['clip_ids']
+    
+    clips = [get_object_or_404(Clip, pk=i) for i in clip_ids]
+
+    content_type = 'audio/wav'
+    
+    audios = []
+    
+    for clip in clips:
+        
+        try:
+            audio = clip_manager.get_audio_file_contents(
+                clip, content_type)
+            
+        except Exception as e:
+            logger = logging.getLogger('django.server')
+            logger.error(
+                f'Attempt to get audio file contents for clip '
+                f'"{str(clip)}" failed with {e.__class__.__name__} '
+                f'exception. Exception message was: {str(e)}')
+            return HttpResponseServerError()
+        
+        audios.append(audio)
+        
+        
+    # Concatenate alternating binary audio sizes and audios to make
+    # response content.
+    audio_sizes = [_get_uint32_bytes(len(a)) for a in audios]
+    pairs = zip(audio_sizes, audios)
+    parts = itertools.chain.from_iterable(pairs)
+    content = b''.join(parts)
+    
+    # Construct response
+    return HttpResponse(content, content_type='application/octet-stream')
+    
+
+
 def _get_uint32_bytes(i):
     return np.array([i], dtype=np.dtype('<u4')).tobytes()
 
@@ -1109,32 +1110,17 @@ def get_clip_metadata(request):
     # QuerySet `in` field lookup or `in_bulk` method might be useful.
     
     if request.method == 'POST':
-        
-        # TODO: Put the two `try` statements below into a
-        # `_handle_json_request` auxiliary function that can be called
-        # by any view that processes a request with a JSON body. In
-        # addition to a request, the function will accept a callable
-        # that handles the loaded JSON.
-        
-        try:
-            content = _get_request_body_as_json(request)
-        except HttpError as e:
-            return e.http_response
-
-        try:
-            content = json.loads(content)
-        except json.JSONDecodeError as e:
-            return HttpResponseBadRequest(
-                reason='Could not decode request JSON')
-
-        clip_ids = content['clip_ids']
-        metadata = dict((i, _get_clip_metadata(i)) for i in clip_ids)
-        return JsonResponse(metadata)
-            
+        return _handle_json_post(request, _get_clip_metadata_aux)
     else:
         return HttpResponseNotAllowed(['POST'])        
         
         
+def _get_clip_metadata_aux(content):
+    clip_ids = content['clip_ids']
+    metadata = dict((i, _get_clip_metadata(i)) for i in clip_ids)
+    return JsonResponse(metadata)
+            
+
 def _get_clip_metadata(clip_id):
     return {
         'annotations': _get_annotations(clip_id),
@@ -1191,43 +1177,31 @@ def _edit_clip_metadata(request, edit_function, *args):
     function as `*args`.
     '''
     
-    if request.method == 'POST':
-
-        if request.user.is_authenticated:
-
-            try:
-                content = _get_request_body_as_json(request)
-            except HttpError as e:
-                return e.http_response
-
-            try:
-                content = json.loads(content)
-            except json.JSONDecodeError as e:
-                return HttpResponseBadRequest(
-                    reason='Could not decode request JSON')
+    def handle_content(content):
+        
+        clip_ids = content['clip_ids']
+        creation_time = time_utils.get_utc_now()
+        creating_user = request.user
                 
-            clip_ids = content['clip_ids']
-            creation_time = time_utils.get_utc_now()
-            creating_user = request.user
-                    
-            # We lock the archive just once for all of the clips that
-            # we process, rather than once for each clip. This means
-            # that we may hold the lock for several seconds, during
-            # which no other threads or processes can hold it. This
-            # method is several times faster this way, and since it
-            # is typically invoked interactively, the improved
-            # performance is especially important.
-            with archive_lock.atomic():
-                with transaction.atomic():
-                    edit_function(
-                        clip_ids, creation_time, creating_user, content, *args)
-                    
-            return HttpResponse()
+        # We lock the archive just once for all of the clips that
+        # we process, rather than once for each clip. This means
+        # that we may hold the lock for several seconds, during
+        # which no other threads or processes can hold it. This
+        # method is several times faster this way, and since it
+        # is typically invoked interactively, the improved
+        # performance is especially important.
+        with archive_lock.atomic():
+            with transaction.atomic():
+                edit_function(
+                    clip_ids, creation_time, creating_user, content, *args)
+                
+        return HttpResponse()
 
+    if request.method == 'POST':
+        if request.user.is_authenticated:
+            return _handle_json_post(request, handle_content)
         else:
-
             return HttpResponseForbidden()
-
     else:
         return HttpResponseNotAllowed(['POST'])
 
