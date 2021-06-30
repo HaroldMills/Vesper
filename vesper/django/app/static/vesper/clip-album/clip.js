@@ -6,6 +6,18 @@ export const CLIP_LOAD_STATUS = {
 };
 
 
+// TODO: Consider providing clip samples, annotations, and tags as
+// promises. There might be `getSamples`, `getAnnotations` and `getTags`
+// methods that would return promises, replacing the existing getters.
+// There might also be awaitable functions for getting the samples or
+// metadata of a set of clips. How would we handle setting annotations
+// and tags?
+
+// TODO: Consider how we might allow the server to push annotation
+// and tag changes (and, more generally, archive changes) to clients,
+// e.g. via websockets.
+
+
 export class Clip {
 
 
