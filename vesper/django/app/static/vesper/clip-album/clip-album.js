@@ -102,9 +102,9 @@ const _DEFAULT_KEY_BINDINGS = {
 };
 
 
-// The maximum number of clips that the _annotateClips function will
-// annotate without displaying the wait cursor.
-const _ANNOTATION_WAIT_CURSOR_THRESHOLD = 20
+// The maximum number of clips that the _editClipMetadata function will
+// edit without displaying the wait cursor.
+const _CLIP_EDIT_WAIT_CURSOR_THRESHOLD = 20
 
 
 function setCursor(name) {
@@ -992,7 +992,7 @@ export class ClipAlbum {
             operationName) {
         
         const waitCursorNeeded =
-            clips.length > _ANNOTATION_WAIT_CURSOR_THRESHOLD;
+            clips.length > _CLIP_EDIT_WAIT_CURSOR_THRESHOLD;
              
         this._setCursorIfNeeded(waitCursorNeeded, 'wait');
 
