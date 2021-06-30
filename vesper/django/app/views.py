@@ -1267,12 +1267,12 @@ def tag_clips(request):
     '''
     This view expects a request body that is a UTF-8 encoded JSON object.
     The object must have a "clip_ids" property whose value is a list
-    of the IDs of the clips to be tagged, and a "tag_names"
-    property whose value is a JSON array of tag names. The specified
-    tags are added to all specified clips, when they don't exist already.
+    of the IDs of the clips to be tagged, and a "tags" property whose
+    value is a JSON array of tags. The specified tags are added to all
+    specified clips, when they don't exist already.
     '''
 
-    args = ('tag_names', TagInfo, model_utils.tag_clip)
+    args = ('tags', TagInfo, model_utils.tag_clip)
     return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
     
     
@@ -1282,12 +1282,12 @@ def untag_clips(request):
     '''
     This view expects a request body that is a UTF-8 encoded JSON object.
     The object must have a "clip_ids" property whose value is a list
-    of the IDs of the clips to be untagged, and a "tag_names"
-    property whose value is a JSON array of tag names. The specified
-    tags are removed from all specified clips, when they are present.
+    of the IDs of the clips to be untagged, and a "tags" property whose
+    value is a JSON array of tags. The specified tags are removed from
+    all specified clips, when they are present.
     '''
 
-    args = ('tag_names', TagInfo, model_utils.untag_clip)
+    args = ('tags', TagInfo, model_utils.untag_clip)
     return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
     
     

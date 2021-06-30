@@ -142,15 +142,15 @@ const _COMMAND_SPECS = [
     ['unannotate_page_clips'],
     ['unannotate_all_clips'],
     
-    ['tag_clips', 'tag_name'],
-    ['tag_selected_clips', 'tag_name'],
-    ['tag_page_clips', 'tag_name'],
-    ['tag_all_clips', 'tag_name'],
+    ['tag_clips', 'tag'],
+    ['tag_selected_clips', 'tag'],
+    ['tag_page_clips', 'tag'],
+    ['tag_all_clips', 'tag'],
     
-    ['untag_clips', 'tag_name'],
-    ['untag_selected_clips', 'tag_name'],
-    ['untag_page_clips', 'tag_name'],
-    ['untag_all_clips', 'tag_name'],
+    ['untag_clips', 'tag'],
+    ['untag_selected_clips', 'tag'],
+    ['untag_page_clips', 'tag'],
+    ['untag_all_clips', 'tag'],
     
     ['go_to_next_date'],
     ['go_to_previous_date'],
@@ -1200,7 +1200,7 @@ export class ClipAlbum {
             
             return {
                 clip_ids: clipIds,
-                tag_names: Array.from(tags)
+                tags: Array.from(tags)
             };
             
         }
@@ -1254,7 +1254,7 @@ export class ClipAlbum {
             
             return {
                 clip_ids: clipIds,
-                tag_names: Array.from(tags)
+                tags: Array.from(tags)
             };
             
         }
@@ -1857,20 +1857,20 @@ export class ClipAlbum {
 
 
     _executeTagSelectedClipsCommand(env) {
-        const name = env.getRequired('tag_name');
+        const name = env.getRequired('tag');
         this._tagSelectedClips(name);
         this._selectNextClip();
     }
 
 
     _executeTagPageClipsCommand(env) {
-        const name = env.getRequired('tag_name');
+        const name = env.getRequired('tag');
         this._tagPageClips(name);
     }
 
 
     _executeTagAllClipsCommand(env) {
-        const name = env.getRequired('tag_name');
+        const name = env.getRequired('tag');
         this._tagAllClips(name);
     }
 
@@ -1902,20 +1902,20 @@ export class ClipAlbum {
 
 
     _executeUntagSelectedClipsCommand(env) {
-        const name = env.getRequired('tag_name');
+        const name = env.getRequired('tag');
         this._untagSelectedClips(name);
         this._selectNextClip();
     }
 
 
     _executeUntagPageClipsCommand(env) {
-        const name = env.getRequired('tag_name');
+        const name = env.getRequired('tag');
         this._untagPageClips(name, null)
     }
 
 
     _executeUntagAllClipsCommand(env) {
-        const name = env.getRequired('tag_name');
+        const name = env.getRequired('tag');
         this._untagAllClips(name, null);
     }
     
@@ -2477,15 +2477,15 @@ unannotate_selected_clips()
 unannotate_page_clips()
 unannotate_all_clips()
 
-tag_clips(tag_name)
-tag_selected_clips(tag_name)
-tag_page_clips(tag_name)
-tag_all_clips(tag_name)
+tag_clips(tag)
+tag_selected_clips(tag)
+tag_page_clips(tag)
+tag_all_clips(tag)
 
-untag_clips(tag_name)
-untag_selected_clips(tag_name)
-untag_page_clips(tag_name)
-untag_all_clips(tag_name)
+untag_clips(tag)
+untag_selected_clips(tag)
+untag_page_clips(tag)
+untag_all_clips(tag)
 
 
 globals:
