@@ -481,7 +481,7 @@ def old_bird_export_clip_counts_csv_file(request):
 
             response = HttpResponse(content_type='text/csv')
             response['Content-Disposition'] = \
-                'attachment; filename="{}"'.format(file_name)
+                f'attachment; filename="{file_name}"'
 
             utils.write_clip_counts_csv_file(
                 response, d['detector'], d['station_mic'], d['start_date'],
@@ -1046,7 +1046,7 @@ def _get_request_body(request, content_type_name, default_charset_name):
     if content_type.name != content_type_name:
         raise HttpError(
             status_code=415,
-            reason='Request content type must be {}'.format(content_type_name))
+            reason=f'Request content type must be {content_type_name}')
 
     charset = content_type.params.get('charset', default_charset_name)
 
@@ -1441,7 +1441,7 @@ def _get_calendar_query_object(
         objects, type_name, params, preferences, name_getter=lambda o: o.name):
 
     if len(objects) == 0:
-        raise Http404('Archive contains no {} objects.'.format(type_name))
+        raise Http404(f'Archive contains no {type_name} objects.')
 
     else:
 
@@ -1703,7 +1703,7 @@ def _format_time(time):
     prefix = time.strftime('%Y-%m-%d %H:%M:%S')
 
     millis = int(round(time.microsecond / 1000.))
-    millis = '{:03d}'.format(millis)
+    millis = f'{millis:03d}'
     while len(millis) != 0 and millis[-1] == '0':
         millis = millis[:-1]
     if len(millis) != 0:
