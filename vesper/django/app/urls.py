@@ -103,10 +103,8 @@ if not settings.ARCHIVE_READ_ONLY:
 
         path('untag-clips/', views.untag_clips, name='untag-clips'),
 
-        # TODO: Either remove JSON from this URL or include formats
-        # in others, e.g. clips/<ID>/audio and clips/<ID>/metadata.
-        path('presets/<name:preset_type_name>/json/', views.presets_json,
-             name='presets-json'),
+        path('presets/<name:preset_type_name>/', views.presets,
+             name='presets'),
     
         path('jobs/<int:job_id>/', views.job, name='job'),
     

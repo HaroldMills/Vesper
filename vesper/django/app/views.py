@@ -961,7 +961,7 @@ def clip_audio(request, clip_id):
     return response
 
 
-def presets_json(request, preset_type_name):
+def presets(request, preset_type_name):
 
     if request.method in _GET_AND_HEAD:
         content = _get_presets_json(preset_type_name)
