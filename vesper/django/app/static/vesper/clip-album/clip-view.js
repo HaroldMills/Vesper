@@ -1,11 +1,11 @@
 export class ClipView {
 
 
-	constructor(parent, clip, settings) {
+	constructor(clipAlbum, clip, settings) {
 
 	    settings = _updateSettingsIfNeeded(settings);
 	    
-		this._parent = parent;
+		this._clipAlbum = clipAlbum;
 		this._clip = clip;
 		this._settings = settings;
 
@@ -18,8 +18,8 @@ export class ClipView {
 	}
 
 
-	get parent() {
-		return this._parent;
+	get clipAlbum() {
+		return this._clipAlbum;
 	}
 
 
@@ -178,9 +178,9 @@ export class ClipView {
 
 
     _pushCommandables() {
-        this.parent.pushCommandable(this);
+        this.clipAlbum.pushCommandable(this);
 		for (let i = this.overlays.length - 1; i >= 0; i--)
-		    this.parent.pushCommandable(this.overlays[i]);
+		    this.clipAlbum.pushCommandable(this.overlays[i]);
     }
 
 
@@ -251,7 +251,7 @@ export class ClipView {
     _popCommandables() {
 		const n = 1 + this.overlays.length;
 		for (let i = 0; i < n; i++)
-		    this.parent.popCommandable();
+		    this.clipAlbum.popCommandable();
 	}
 
 
@@ -283,7 +283,7 @@ export class ClipView {
 	    
         // See note in `_createDiv` method about why we install a click
         // listener on the overlay canvas instead of on the containing div.
-	    if (!this.parent.readOnly)
+	    if (!this.clipAlbum.readOnly)
             canvas.addEventListener(
                 'click', e => this._onOverlayCanvasClick(e));
 
@@ -296,15 +296,15 @@ export class ClipView {
 
     _onOverlayCanvasClick(e) {
 
-		const parent = this.parent;
+		const clipAlbum = this.clipAlbum;
 		const clipNum = this.clip.num;
 
 		if (e.shiftKey)
-			parent.extendSelection(clipNum);
+			clipAlbum.extendSelection(clipNum);
 		else if (e.ctrlKey || e.metaKey)
-			parent.toggleClipSelectionState(clipNum);
+			clipAlbum.toggleClipSelectionState(clipNum);
 		else
-			parent.selectClip(clipNum);
+			clipAlbum.selectClip(clipNum);
 
 	}
 
@@ -430,7 +430,7 @@ export class ClipView {
 			// have clip samples
 
             
-            const context = this.parent._audioContext;
+            const context = this.clipAlbum._audioContext;
 			const source = context.createBufferSource();
 			source.buffer = this.clip.audioBuffer;
             
@@ -615,7 +615,7 @@ export class ClipView {
 
                 const [date, time] = clip.startTime.split(' ');
 
-		        if (this.parent.clipFilter.date === null) {
+		        if (this.clipAlbum.clipFilter.date === null) {
 		            // clips may be for more than one night
 
 		            // include date in start time, but not year part

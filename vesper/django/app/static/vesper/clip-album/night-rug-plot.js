@@ -41,9 +41,9 @@ const _UNDERLAY_SPEC = [
 export class NightRugPlot {
 
 
-	constructor(parent, div, clips, recordings, solarEventTimes) {
+	constructor(clipAlbum, div, clips, recordings, solarEventTimes) {
 
-		this._parent = parent;
+		this._clipAlbum = clipAlbum;
 		this._div = div;
 		this._clips = clips;
 		this._recordings = recordings;
@@ -431,7 +431,7 @@ export class NightRugPlot {
     		return null;
 
     	else
-    		return this._parent.getPageClipNumRange(pageNum);
+    		return this._clipAlbum.getPageClipNumRange(pageNum);
 
     }
 
@@ -465,7 +465,7 @@ export class NightRugPlot {
 
 			    	const time = this._clientXToTime(mouseX);
 			    	const clipNum = this._findClosestClipNum(time);
-			    	return this._parent.getClipPageNum(clipNum);
+			    	return this._clipAlbum.getClipPageNum(clipNum);
 
             }
 
@@ -540,7 +540,7 @@ export class NightRugPlot {
     _onClick(e) {
         const pageNum = this._getMousePageNum(e);
         if (pageNum !== null)
-            this._parent.pageNum = pageNum;
+            this._clipAlbum.pageNum = pageNum;
     }
 
 

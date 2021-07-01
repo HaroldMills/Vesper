@@ -32,11 +32,11 @@ export class SpectrogramClipView extends ClipView {
     // TODO: Handle setting changes.
 
 
-    constructor(parent, clip, settings) {
+    constructor(clipAlbum, clip, settings) {
 
         settings = _updateSettingsIfNeeded(settings, clip.sampleRate);
         
-        super(parent, clip, settings);
+        super(clipAlbum, clip, settings);
 
         const overlays = this._createOverlays(settings);
         this._overlays = overlays.concat(this._overlays);
