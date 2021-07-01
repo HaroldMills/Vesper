@@ -936,14 +936,14 @@ export class ClipAlbum {
 	}
 
 
-	_annotateSelectedClips(name, value) {
+	_annotateSelectedClips(annotations) {
 		const clipNums = this._selection.selectedIndices;
 		const clips = clipNums.map(i => this.clips[i]);
-		this._annotateClips(clips, name, value);
+		this._annotateClips(clips, annotations);
 	}
 
 
-    async _annotateClips(clips, name, value) {
+    async _annotateClips(clips, annotations) {
         
         // TODO: Consider allowing value to be array of same length as clips.
         // This would allow us to improve the efficiency of commands that
@@ -952,8 +952,6 @@ export class ClipAlbum {
         // different clips) by posting only once to the server rather
         // than once per clip.
  
-        const annotations = new Map([[name, value]]);
-        
         function getRequestContent() {
             
             const clipIds = clips.map(clip => clip.id);
@@ -1112,28 +1110,28 @@ export class ClipAlbum {
     }
 
 
-	_annotatePageClips(name, value) {
+	_annotatePageClips(annotations) {
 		const [startClipNum, endClipNum] =
 			this.getPageClipNumRange(this.pageNum);
 		const clipNums = ArrayUtils.rangeArray(startClipNum, endClipNum);
 		const clips = clipNums.map(i => this.clips[i]);
-		this._annotateClips(clips, name, value);
+		this._annotateClips(clips, annotations);
 	}
 
 
-	_annotateAllClips(name, value) {
-		this._annotateClips(this.clips, name, value);
+	_annotateAllClips(annotations) {
+		this._annotateClips(this.clips, annotations);
 	}
 
 
-    _unannotateSelectedClips(name) {
+    _unannotateSelectedClips(annotationNames) {
         const clipNums = this._selection.selectedIndices;
         const clips = clipNums.map(i => this.clips[i]);
-        this._unannotateClips(clips, name);
+        this._unannotateClips(clips, annotationNames);
     }
 
 
-    async _unannotateClips(clips, name) {
+    async _unannotateClips(clips, annotationNames) {
         
         function getRequestContent() {
             
@@ -1141,7 +1139,7 @@ export class ClipAlbum {
             
             return {
                 clip_ids: clipIds,
-                annotation_names: [name]
+                annotation_names: Array.from(annotationNames)
             };
             
         }
@@ -1153,7 +1151,8 @@ export class ClipAlbum {
             if (annos !== null)
                 // client has copy of clip annotations
             
-                annos.delete(name);
+                for (const name of annotationNames)
+                    annos.delete(name);
             
         }
                         
@@ -1164,30 +1163,28 @@ export class ClipAlbum {
     }
     
     
-    _unannotatePageClips(name, value) {
+    _unannotatePageClips(annotationNames) {
         const [startClipNum, endClipNum] =
             this.getPageClipNumRange(this.pageNum);
         const clipNums = ArrayUtils.rangeArray(startClipNum, endClipNum);
         const clips = clipNums.map(i => this.clips[i]);
-        this._unannotateClips(clips, name);
+        this._unannotateClips(clips, annotationNames);
     }
 
 
-    _unannotateAllClips(name) {
-        this._unannotateClips(this.clips, name);
+    _unannotateAllClips(annotationNames) {
+        this._unannotateClips(this.clips, annotationNames);
     }
 
 
-    _tagSelectedClips(tag) {
+    _tagSelectedClips(tags) {
         const clipNums = this._selection.selectedIndices;
         const clips = clipNums.map(i => this.clips[i]);
-        this._tagClips(clips, tag);
+        this._tagClips(clips, tags);
     }
 
 
-    async _tagClips(clips, tag) {
-        
-        const tags = new Set([tag]);
+    async _tagClips(clips, tags) {
         
         function getRequestContent() {
             
@@ -1218,30 +1215,28 @@ export class ClipAlbum {
     }
     
     
-    _tagPageClips(tag) {
+    _tagPageClips(tags) {
         const [startClipNum, endClipNum] =
             this.getPageClipNumRange(this.pageNum);
         const clipNums = ArrayUtils.rangeArray(startClipNum, endClipNum);
         const clips = clipNums.map(i => this.clips[i]);
-        this._tagClips(clips, tag);
+        this._tagClips(clips, tags);
     }
 
 
-    _tagAllClips(tag) {
-        this._tagClips(this.clips, tag);
+    _tagAllClips(tags) {
+        this._tagClips(this.clips, tags);
     }
 
 
-    _untagSelectedClips(tag) {
+    _untagSelectedClips(tags) {
         const clipNums = this._selection.selectedIndices;
         const clips = clipNums.map(i => this.clips[i]);
-        this._untagClips(clips, tag);
+        this._untagClips(clips, tags);
     }
 
 
-    async _untagClips(clips, tag) {
-        
-        const tags = new Set([tag]);
+    async _untagClips(clips, tags) {
         
         function getRequestContent() {
             
@@ -1273,17 +1268,17 @@ export class ClipAlbum {
     }
     
     
-    _untagPageClips(tag) {
+    _untagPageClips(tags) {
         const [startClipNum, endClipNum] =
             this.getPageClipNumRange(this.pageNum);
         const clipNums = ArrayUtils.rangeArray(startClipNum, endClipNum);
         const clips = clipNums.map(i => this.clips[i]);
-        this._untagClips(clips, tag);
+        this._untagClips(clips, tags);
     }
 
 
-    _untagAllClips(tag) {
-        this._untagClips(this.clips, tag);
+    _untagAllClips(tags) {
+        this._untagClips(this.clips, tags);
     }
 
 
@@ -1649,9 +1644,8 @@ export class ClipAlbum {
 
     _executeAnnotateSelectedClipsCommand(env) {
 
-		const name = env.getRequired('annotation_name');
-		const value = env.getRequired('annotation_value');
-		this._annotateSelectedClips(name, value);
+        const annotations = this._getAnnotations(env);
+		this._annotateSelectedClips(annotations);
 
 		// TODO: Optionally play selected clip.
 		this._selectNextClip();
@@ -1659,11 +1653,17 @@ export class ClipAlbum {
 	}
 
 
+    _getAnnotations(env) {
+        const name = env.getRequired('annotation_name');
+        const value = env.getRequired('annotation_value');
+        return new Map([[name, value]]);
+    }
+    
+    
 	_executeAnnotatePageClipsCommand(env) {
 
-		const name = env.getRequired('annotation_name');
-		const value = env.getRequired('annotation_value');
-		this._annotatePageClips(name, value);
+        const annotations = this._getAnnotations(env);
+		this._annotatePageClips(annotations);
 
 		// TODO: Optionally advance to next page, if there is one,
 		// select the first clip, and optionally play it.
@@ -1672,9 +1672,8 @@ export class ClipAlbum {
 
 
 	_executeAnnotateAllClipsCommand(env) {
-		const name = env.getRequired('annotation_name');
-		const value = env.getRequired('annotation_value');
-		this._annotateAllClips(name, value);
+        const annotations = this._getAnnotations(env);
+		this._annotateAllClips(annotations);
 	}
 
 
@@ -1706,8 +1705,8 @@ export class ClipAlbum {
 
 	_executeUnannotateSelectedClipsCommand(env) {
 
-		const name = env.getRequired('annotation_name');
-		this._unannotateSelectedClips(name);
+        const names = this._getAnnotationNames(env);
+		this._unannotateSelectedClips(names);
 
 		// TODO: Optionally play selected clip.
 		this._selectNextClip();
@@ -1715,10 +1714,16 @@ export class ClipAlbum {
 	}
 
 
+    _getAnnotationNames(env) {
+        const name = env.getRequired('annotation_name');
+        return new Set([name]);
+    }
+    
+    
 	_executeUnannotatePageClipsCommand(env) {
 
-		const name = env.getRequired('annotation_name');
-		this._unannotatePageClips(name)
+        const names = this._getAnnotationNames(env);
+		this._unannotatePageClips(names)
 
 		// TODO: Optionally advance to next page, if there is one,
 		// select the first clip, and optionally play it.
@@ -1727,8 +1732,8 @@ export class ClipAlbum {
 
 
 	_executeUnannotateAllClipsCommand(env) {
-		const name = env.getRequired('annotation_name');
-		this._unannotateAllClips(name);
+        const names = this._getAnnotationNames(env);
+		this._unannotateAllClips(names);
 	}
     
     
@@ -1759,21 +1764,27 @@ export class ClipAlbum {
 
 
     _executeTagSelectedClipsCommand(env) {
-        const name = env.getRequired('tag');
-        this._tagSelectedClips(name);
+        const tags = this._getTags(env);
+        this._tagSelectedClips(tags);
         this._selectNextClip();
     }
 
 
+    _getTags(env) {
+        const tag = env.getRequired('tag');
+        return new Set([tag]);
+    }
+    
+    
     _executeTagPageClipsCommand(env) {
-        const name = env.getRequired('tag');
-        this._tagPageClips(name);
+        const tags = this._getTags(env);
+        this._tagPageClips(tags);
     }
 
 
     _executeTagAllClipsCommand(env) {
-        const name = env.getRequired('tag');
-        this._tagAllClips(name);
+        const tags = this._getTags(env);
+        this._tagAllClips(tags);
     }
 
 
@@ -1804,21 +1815,21 @@ export class ClipAlbum {
 
 
     _executeUntagSelectedClipsCommand(env) {
-        const name = env.getRequired('tag');
-        this._untagSelectedClips(name);
+        const tags = this._getTags(env);
+        this._untagSelectedClips(tags);
         this._selectNextClip();
     }
 
 
     _executeUntagPageClipsCommand(env) {
-        const name = env.getRequired('tag');
-        this._untagPageClips(name, null)
+        const tags = this._getTags(env);
+        this._untagPageClips(tags)
     }
 
 
     _executeUntagAllClipsCommand(env) {
-        const name = env.getRequired('tag');
-        this._untagAllClips(name, null);
+        const tags = this._getTags(env);
+        this._untagAllClips(tags);
     }
     
     
