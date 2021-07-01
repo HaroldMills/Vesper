@@ -1,5 +1,5 @@
-import { AnnotatingOverlay }
-    from '/static/vesper/clip-album/annotating-overlay.js';
+import { CommandableOverlay }
+    from '/static/vesper/clip-album/commandable-overlay.js';
 import { CommandableDelegate }
     from '/static/vesper/clip-album/keyboard-input-interpreter.js';
 import { TimeFrequencyUtils }
@@ -30,7 +30,7 @@ const _commandableDelegate = new CommandableDelegate(_COMMAND_SPECS);
  * XCall[.<subclass>] clip to Call[.<subclass>]. Note that two commands
  * are inverses.
  */
-export class CallsCleanupOverlay extends AnnotatingOverlay {
+export class CallsCleanupOverlay extends CommandableOverlay {
 
 
     constructor(clipView, settings) {
@@ -61,10 +61,11 @@ export class CallsCleanupOverlay extends AnnotatingOverlay {
             const newClassification =
                 classification.replace(fromCoarseClass, toCoarseClass);
             
-            const annotations = new Map();
-            annotations.set(this.annotationName, newClassification);
+            const annotations = new Map([
+                [this.annotationName, newClassification]
+            ]);
                        
-            this._annotateClip(clip.id, annotations);
+            this.clipAlbum._annotateClips([clip], annotations);
             
         }
         

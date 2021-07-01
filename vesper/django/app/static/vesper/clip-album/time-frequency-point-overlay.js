@@ -1,5 +1,5 @@
-import { AnnotatingOverlay }
-    from '/static/vesper/clip-album/annotating-overlay.js';
+import { CommandableOverlay }
+    from '/static/vesper/clip-album/commandable-overlay.js';
 import { CommandableDelegate }
     from '/static/vesper/clip-album/keyboard-input-interpreter.js';
 import { TimeFrequencyUtils }
@@ -15,7 +15,7 @@ const _COMMAND_SPECS = [
 const _commandableDelegate = new CommandableDelegate(_COMMAND_SPECS);
 
 
-export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
+export class TimeFrequencyPointOverlay extends CommandableOverlay {
 
 
     constructor(clipView, settings) {
@@ -36,51 +36,40 @@ export class TimeFrequencyPointOverlay extends AnnotatingOverlay {
 
     _executeSetTimeFrequencyPointCommand(env) {
 
-        const e = this.clipView.lastMouseEvent;
-        const tf = this.clipView.getMouseTimeAndFrequency(e);
-
-        if (tf !== null)
-            this._setTimeFrequencyAnnotations(...tf);
-
-    }
-
-
-    _setTimeFrequencyAnnotations(time, frequency) {
-
         const clip = this.clipView.clip;
+        const startIndex = clip.startIndex;
         
-        let index = null;
+        if (startIndex === null) {
+            // clip start index unknown
+            
+            window.alert(
+                `Cannot annotate clip because its start index is ` +
+                `unknown.`);
         
-        if (time !== null) {
+        } else {
             
-            const startIndex = clip.startIndex;
+            const event = this.clipView.lastMouseEvent;
+            const [time, freq] = this.clipView.getMouseTimeAndFrequency(event);
+
+            const index = startIndex + Math.round(time * clip.sampleRate);
             
-            if (startIndex === null) {
-                // clip start index unknown
-                
-                window.alert(
-                    `Cannot annotate clip because its start index is ` +
-                    `unknown.`);
+            const annotations = new Map([
+                [this.timeAnnotationName, index],
+                [this.frequencyAnnotationName, freq]
+            ]);
             
-                return;
-                
-            }
-                
-            index = startIndex + Math.round(time * clip.sampleRate);
+            this.clipAlbum._annotateClips([clip], annotations);
             
         }
-        
-        const annotations = new Map();
-        annotations.set(this.timeAnnotationName, index);
-        annotations.set(this.frequencyAnnotationName, frequency);
-        
-        this._annotateClip(clip.id, annotations);
 
     }
 
 
     _executeClearTimeFrequencyPointCommand(env) {
-        this._setTimeFrequencyAnnotations(null, null);
+        const clips = [this.clipView.clip];
+        const annotationNames = new Set(
+            [this.timeAnnotationName, this.frequencyAnnotationName]);
+        this.clipAlbum._unannotateClips(clips, annotationNames);
     }
 
 
