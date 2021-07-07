@@ -13,6 +13,105 @@ import { SpectrogramClipView }
 import { ViewUtils } from '/static/vesper/view/view-utils.js';
 
 
+const _DEFAULT_TAG_COLORS = [
+    'DarkOrange',
+    'Magenta',
+    'Green',
+    'Red',
+    'Blue',
+    'Brown',
+    'Black'
+];
+
+
+class _TagColors {
+    
+    
+    constructor(settings) {
+        
+        // Initialize map from tags to colors from tag colors setting.
+        const entries = this._getSetting(settings, 'clipView.tags.colors');
+        this._colors = entries === undefined ? new Map() : new Map(entries);
+        
+        // Get set of colors that appear in tag colors setting.
+        const colors = new Set(this._colors.values());
+        
+        // Get default colors that appear in tag colors setting.
+        const usedColors = _DEFAULT_TAG_COLORS.filter(c => colors.has(c));
+            
+        // Get default colors that do not appear in tag colors setting.
+        const unusedColors = _DEFAULT_TAG_COLORS.filter(c => !colors.has(c));
+            
+        // Create array of default colors ordered so that colors that
+        // appear in tag colors setting precede those that don't.
+        this._defaultColors = usedColors.concat(unusedColors);
+        
+        // Set next default color index to that of first default color
+        // that does not appear in tag colors setting.
+        this._nextIndex = usedColors.length;
+        
+    }
+    
+    
+    // TODO: Consider using something like the following more widely.
+    /**
+     Returns the value of a setting, or `undefined` if there is no such
+     setting.
+     */
+    _getSetting(settings, name) {
+        
+        const parts = name.split('.');
+        
+        let s = settings;
+        
+        for (const part of parts) {
+            
+            s = s[part];
+            
+            if (s === undefined)
+               return undefined;
+               
+        }
+        
+        return s;
+        
+    }
+    
+    
+    /**
+     Gets the color of the specified tag.
+     
+     If a color is specified for the tag in the clip album settings from
+     which this object was constructed, that color is returned. Otherwise
+     one of the default colors is returned.
+     */
+    getTagColor(tag) {
+        
+        let color = this._colors.get(tag);
+        
+        if (color === undefined) {
+            // tag color unknown
+            
+            // Choose the next default color for this tag.
+            color = this._defaultColors[this._nextIndex];
+            
+            // Remember choice.
+            this._colors.set(tag, color);
+            
+            // Increment next default color index with wraparound.
+            this._nextIndex =
+                (this._nextIndex + 1) % this._defaultColors.length;
+                
+        }
+        
+        return color;
+        
+    }
+    
+    
+}
+
+
 /*
  * TODO: Client should perform only those display pipeline functions that
  * are needed to update the display after a settings change. For example
@@ -196,6 +295,8 @@ export class ClipAlbum {
         // This creates the keyboard input interpreter.
         this.keyBindings =
             keyBindings === null ? _DEFAULT_KEY_BINDINGS : keyBindings;
+            
+        this._tagColors = new _TagColors(this.settings);
         
         this._clipViews = this._createClipViews(this.settings);
 
@@ -503,6 +604,11 @@ export class ClipAlbum {
        // Go to new URL.
         window.location.href = calendarUrl.href;
         
+    }
+    
+    
+    getTagColor(tag) {
+        return this._tagColors.getTagColor(tag);
     }
     
     

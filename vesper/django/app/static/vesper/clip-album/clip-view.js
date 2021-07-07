@@ -643,19 +643,36 @@ export class ClipView {
 
             }
 
+            const label = this.label;
+            label.textContent = labelParts.join(' ');
+            
             if (clip.tags !== null && clip.tags.length !== 0) {
+                // clip has one or more tags
+                
+                // Append space to label text if there is any, to
+                // separate it from tags.
+                if (label.textContent.length !== 0)
+                    label.textContent += ' ';
+                
+                // Get clip tags, sorted by name.
                 const tags = Array.from(clip.tags).sort();
-                const tagString = tags.join(', ');
-                labelParts.push(tagString);
+                
+                // For each tag, append appropriately-colored tag icon
+                // to label.
+                for (const tag of tags) {
+                    const color = this.clipAlbum.getTagColor(tag);
+                    const span = document.createElement('span');
+                    span.className = 'glyphicon glyphicon-tag';
+                    span.style.color = color;
+                    label.appendChild(span);
+                }
+                
             }
             
-			this.label.textContent =
-				(labelParts.length !== 0) ? labelParts.join(' ') : ''
-
 		}
-
+        
 	}
-
+    
 }
 
 
