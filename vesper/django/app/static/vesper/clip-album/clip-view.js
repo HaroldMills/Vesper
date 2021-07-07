@@ -660,11 +660,21 @@ export class ClipView {
                 // For each tag, append appropriately-colored tag icon
                 // to label.
                 for (const tag of tags) {
-                    const color = this.clipAlbum.getTagColor(tag);
+                    
+                    // Create span that displays a tag icon.
                     const span = document.createElement('span');
                     span.className = 'glyphicon glyphicon-tag';
+                    
+                    // Set color.
+                    const color = this.clipAlbum.getTagColor(tag);
                     span.style.color = color;
+                    
+                    // Set tooltip.
+                    span.setAttribute('data-toggle', 'tooltip');
+                    span.setAttribute('title', tag);
+                    
                     label.appendChild(span);
+                    
                 }
                 
             }
