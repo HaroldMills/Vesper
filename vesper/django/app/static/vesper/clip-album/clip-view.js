@@ -335,25 +335,25 @@ export class ClipView {
 
 	    // Set label horizontal location.
 	    if (loc.endsWith('Left')) {
-	    	label.left = offset;
+	    	    label.left = offset;
 	    } else if (loc.endsWith('Right')) {
-	    	label.right = offset;
+	    	    label.right = offset;
 	    } else {
-	    	label.width = '100%';
-	    	label.margin = '0 auto';
+	        	label.width = '100%';
+	    	    label.margin = '0 auto';
 	    }
 
 	    // Set label vertical location and padding.
 	    if (loc.startsWith('Below')) {
-	    	label.top = '100%';
-	    	label.marginTop = `${this.settings.selectionOutline.width}px`;
+	    	    label.top = '100%';
+	    	    label.marginTop = `${this.settings.selectionOutline.width}px`;
 	    } else if (loc.startsWith('Above')) {
-	    	label.bottom = '100%';
-	    	label.marginBottom = `${this.settings.selectionOutline.width}px`;
+	        	label.bottom = '100%';
+	        	label.marginBottom = `${this.settings.selectionOutline.width}px`;
 	    } else if (loc.startsWith('Top')) {
-	    	label.top = offset;
+	    	    label.top = offset;
 	    } else {
-	    	label.bottom = offset;
+	        	label.bottom = offset;
 	    }
 
 	    label.color = labelSettings.color;
