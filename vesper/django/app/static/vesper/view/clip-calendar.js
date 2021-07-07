@@ -214,6 +214,12 @@ function addMonthDay(day, daysDiv) {
 
 		    num = document.createElement('a');
 	        num.href = url.href;
+            
+            // Add tooltip showing number of clips.
+            const tooltipText =
+                day.count === 1 ? '1 clip' : `${day.count} clips`;
+            num.setAttribute('data-toggle', 'tooltip');
+            num.setAttribute('title', tooltipText);
 
 		}
 
