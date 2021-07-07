@@ -11,7 +11,7 @@ from vesper.command.command import CommandSyntaxError
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Device, DeviceConnection,
     DeviceInput, DeviceModel, DeviceModelInput, DeviceModelOutput,
-    DeviceOutput, Job, Processor, Station, StationDevice)
+    DeviceOutput, Job, Processor, Station, StationDevice, TagInfo)
 import vesper.command.command_utils as command_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
@@ -119,6 +119,7 @@ class MetadataImporter:
                 self._add_classifiers()
                 self._add_annotation_constraints(job_info)
                 self._add_annotations(job_info)
+                self._add_tags(job_info)
                 
         except Exception:
             self._logger.error(
@@ -501,6 +502,31 @@ class MetadataImporter:
             return AnnotationConstraint.objects.get(name=name)
     
         
+    def _add_tags(self, job_info):
+        
+        tags_data = self.metadata.get('tags')
+        
+        if tags_data is not None:
+            
+            for data in tags_data:
+                
+                name = _get_required(data, 'name', 'tag')
+                
+                self._logger.info('Adding tag "{}"...'.format(name))
+                
+                description = data.get('description', '')
+                creation_time = time_utils.get_utc_now()
+                creating_user = None
+                creating_job = Job.objects.get(id=job_info.job_id)
+                
+                TagInfo.objects.create(
+                    name=name,
+                    description=description,
+                    creation_time=creation_time,
+                    creating_user=creating_user,
+                    creating_job=creating_job)
+    
+    
 def _get_required(data, key, data_name):
     
     try:
