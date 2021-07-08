@@ -369,6 +369,8 @@ export class ClipView {
 	    const button = document.createElement('button');
 	    button.className = 'clip-play-button';
 	    button.addEventListener('click', e => this._onPlayButtonClick(e));
+        button.setAttribute('data-toggle', 'tooltip');
+        button.setAttribute('title', 'Play clip');
 	    this._div.appendChild(button);
 
 	    const icon = document.createElement('span');
