@@ -78,6 +78,11 @@ export class NightRugPlot {
 	    canvas.addEventListener('mousemove', e => this._onMouseEvent(e));
 	    canvas.addEventListener('mouseout', e => this._onMouseOut(e));
 	    canvas.addEventListener('click', e => this._onClick(e));
+        
+        // Create rug tooltip with no text.
+        canvas.setAttribute('data-toggle', 'tooltip');
+        canvas.setAttribute('title', '');
+        
 	    this._div.appendChild(canvas);
 
 	    return canvas;
@@ -418,8 +423,8 @@ export class NightRugPlot {
 
 
     _onMouseEvent(e) {
-        const range = this._getMousePageClipNumRange(e);
-        this._setMousePageClipNumRange(range);
+        const [pageNum, range] = this._getMousePageClipNumRange(e);
+        this._setMousePageClipNumRange(pageNum, range);
     }
 
 
@@ -428,10 +433,10 @@ export class NightRugPlot {
     	const pageNum = this._getMousePageNum(e);
 
     	if (pageNum === null)
-    		return null;
+    		return [null, null];
 
     	else
-    		return this._clipAlbum.getPageClipNumRange(pageNum);
+    		return [pageNum, this._clipAlbum.getPageClipNumRange(pageNum)];
 
     }
 
@@ -517,7 +522,7 @@ export class NightRugPlot {
 	}
 
 
-	_setMousePageClipNumRange(range) {
+	_setMousePageClipNumRange(pageNum, range) {
 
 		if (!_rangesEqual(range, this._mousePageClipNumRange)) {
 
@@ -527,13 +532,59 @@ export class NightRugPlot {
 			this._updatePageLines(oldRange);
 			this._updatePageLines(range);
 
+            this._updatePageTooltip(pageNum, range);
+                
 		}
 
 	}
 
 
+    _updatePageTooltip(pageNum, range) {
+        
+        let tooltipText = '';
+        
+        if (pageNum !== null) {
+            // have page number and clip number range
+            
+            // Get tooltip text.
+            const [startNum, endNum] = range;
+            const startTime = this._formatClipStartTime(startNum);
+            const endTime = this._formatClipStartTime(endNum - 1);
+            tooltipText = 
+                `page ${pageNum + 1}, ` +
+                `clips ${startNum + 1}-${endNum}, ` +
+                `times ${startTime}-${endTime}`;
+                
+        }
+
+        // Set tooltip text.
+        this._rugCanvas.setAttribute('title', tooltipText)
+            
+    }
+    
+    
+    _formatClipStartTime(index) {
+        
+        const time = this._clips[index].startTime;
+        
+        // Time is a string like '2020-10-03 02:39:57.432 EDT'. We return
+        // the time of day portion less the fractional part and any leading
+        // zero.
+        // TODO: Consider rounding times to nearest second both here and
+        // in clip labels.
+        const timeOfDay = time.split(' ')[1];
+        const [truncatedTime, _] = timeOfDay.split('.');
+        
+        if (truncatedTime[0] === '0')
+            return truncatedTime.slice(1);
+        else
+            return truncatedTime;
+        
+    }
+    
+    
     _onMouseOut(e) {
-	    this._setMousePageClipNumRange(null);
+	    this._setMousePageClipNumRange(null, null);
     }
 
 
