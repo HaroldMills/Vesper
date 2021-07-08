@@ -2,6 +2,7 @@
 
 
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
+import { ClipAlbumUtils } from '/static/vesper/clip-album/clip-album-utils.js';
 
 
 const _DEFAULT_PLOT_LIMITS = [17.5, 31.5];
@@ -548,8 +549,10 @@ export class NightRugPlot {
             
             // Get tooltip text.
             const [startNum, endNum] = range;
-            const startTime = this._formatClipStartTime(startNum);
-            const endTime = this._formatClipStartTime(endNum - 1);
+            const getRoundedClipStartTime =
+                ClipAlbumUtils.getRoundedClipStartTime;
+            const startTime = getRoundedClipStartTime(this._clips[startNum]);
+            const endTime = getRoundedClipStartTime(this._clips[endNum - 1]);
             tooltipText = 
                 `page ${pageNum + 1}, ` +
                 `clips ${startNum + 1}-${endNum}, ` +
@@ -563,27 +566,7 @@ export class NightRugPlot {
     }
     
     
-    _formatClipStartTime(index) {
-        
-        const time = this._clips[index].startTime;
-        
-        // Time is a string like '2020-10-03 02:39:57.432 EDT'. We return
-        // the time of day portion less the fractional part and any leading
-        // zero.
-        // TODO: Consider rounding times to nearest second both here and
-        // in clip labels.
-        const timeOfDay = time.split(' ')[1];
-        const [truncatedTime, _] = timeOfDay.split('.');
-        
-        if (truncatedTime[0] === '0')
-            return truncatedTime.slice(1);
-        else
-            return truncatedTime;
-        
-    }
-    
-    
-    _onMouseOut(e) {
+   _onMouseOut(e) {
 	    this._setMousePageClipNumRange(null, null);
     }
 

@@ -1,3 +1,6 @@
+import { ClipAlbumUtils } from '/static/vesper/clip-album/clip-album-utils.js';
+
+
 export class ClipView {
 
 
@@ -620,17 +623,18 @@ export class ClipView {
 		        if (this.clipAlbum.clipFilter.date === null) {
 		            // clips may be for more than one night
 
-		            // include date in start time, but not year part
+		            // Include date in start time, but not year part.
 		            const [_, month, day] = date.split('-');
 		            const compactedDate = [month, day].join('-')
 		            labelParts.push(compactedDate);
 
 		        }
 
-		        // always include time in start time
-		        const [truncatedTime, _] = time.split('.');
-	            labelParts.push(truncatedTime);
-
+                // Always include time in start time.
+                const roundedTime =
+                    ClipAlbumUtils.getRoundedClipStartTime(clip);
+                labelParts.push(roundedTime);
+                
 			}
 
             if (s.detectorScoreIncluded && clip.annotations !== null) {
