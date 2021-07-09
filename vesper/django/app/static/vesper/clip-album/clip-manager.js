@@ -215,8 +215,6 @@ export class ClipManager {
         
             this._settingPageNum = true;
             
-            // TODO: Handle errors by clearing `_pendingPageNums` and
-            // `_settingPageNum`.
             try {
                 await this._setPageNumAux();
             } catch (error) {
@@ -258,6 +256,8 @@ export class ClipManager {
                 // `setPageNum` may be called one or more times, setting
                 // `_pendingPageNum` for the next iteration of this loop.
                 await this._loadPages(loadPageNums);
+                
+                this._pageNum = pageNum;
                 
                 // console.log('clip manager finished loading pages');
                 
