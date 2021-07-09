@@ -9,13 +9,16 @@
  */
 
 (function() {
+  var jasmineRequire = window.jasmineRequire || require('./jasmine.js');
 
   /**
    * ## Require &amp; Instantiate
    *
    * Require Jasmine's core files. Specifically, this requires and attaches all of Jasmine's code to the `jasmine` reference.
    */
-  window.jasmine = jasmineRequire.core(jasmineRequire);
+  var jasmine = jasmineRequire.core(jasmineRequire),
+    global = jasmine.getGlobal();
+  global.jasmine = jasmine;
 
   /**
    * Since this is being run in a browser and the results should populate to an HTML page, require the HTML-specific Jasmine code, injecting the same reference.
@@ -37,7 +40,7 @@
   /**
    * Add all of the Jasmine global/public interface to the global scope, so a project can use the public interface directly. For example, calling `describe` in specs instead of `jasmine.getEnv().describe`.
    */
-  extend(window, jasmineInterface);
+  extend(global, jasmineInterface);
 
   /**
    * ## Runner Parameters
@@ -51,21 +54,21 @@
 
   var filterSpecs = !!queryString.getParam("spec");
 
-  var stoppingOnSpecFailure = queryString.getParam("failFast");
-  env.stopOnSpecFailure(stoppingOnSpecFailure);
-
-  var throwingExpectationFailures = queryString.getParam("throwFailures");
-  env.throwOnExpectationFailure(throwingExpectationFailures);
+  var config = {
+    failFast: queryString.getParam("failFast"),
+    oneFailurePerSpec: queryString.getParam("oneFailurePerSpec"),
+    hideDisabled: queryString.getParam("hideDisabled")
+  };
 
   var random = queryString.getParam("random");
 
   if (random !== undefined && random !== "") {
-    env.randomizeTests(random);
+    config.random = random;
   }
 
   var seed = queryString.getParam("seed");
   if (seed) {
-    env.seed(seed);
+    config.seed = seed;
   }
 
   /**
@@ -96,9 +99,11 @@
     filterString: function() { return queryString.getParam("spec"); }
   });
 
-  env.specFilter = function(spec) {
+  config.specFilter = function(spec) {
     return specFilter.matches(spec.getFullName());
   };
+
+  env.configure(config);
 
   /**
    * Setting up timing functions to be able to be overridden. Certain browsers (Safari, IE 8, phantomjs) require this hack.
