@@ -4,9 +4,7 @@
 from pathlib import Path
 import logging
 
-
-_YAML_FILE_NAME_EXTENSION = '.yaml'
-_PRESET_FILE_PATTERN = f'**/*{_YAML_FILE_NAME_EXTENSION}'
+import vesper.util.file_type_utils as file_type_utils
 
 
 # Note that even though the `PresetManager` class is typically used as a
@@ -226,12 +224,13 @@ class PresetManager:
             
             preset_type = self._preset_type_dict[preset_type_name]
             
-            preset_file_paths = preset_type_dir_path.glob(_PRESET_FILE_PATTERN)
+            paths = preset_type_dir_path.glob('**/*')
         
             presets = [
                 self._load_preset(p, preset_type)
-                for p in preset_file_paths]
-            
+                for p in paths
+                if file_type_utils.is_yaml_file(p)]
+ 
             # Remove `None` items from failed loads.
             presets = [p for p in presets if p is not None]
             
@@ -280,9 +279,8 @@ class PresetManager:
     
     def _get_preset_path(self, file_path):
         relative_path = file_path.relative_to(self.preset_dir_path)
-        parts = relative_path.parts
-        group_names = parts[:-1]
-        preset_name = parts[-1][:-len(_YAML_FILE_NAME_EXTENSION)]
+        group_names = relative_path.parts[:-1]
+        preset_name = relative_path.stem
         return group_names + (preset_name,)
     
 

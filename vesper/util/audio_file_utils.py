@@ -14,7 +14,6 @@ and perhaps FLAC files incrementally.
 """
 
 
-from pathlib import Path
 import io
 import numpy as np
 import wave
@@ -40,20 +39,6 @@ class AudioFileFormatError(Exception):
 
 class UnsupportedAudioFileFormatError(AudioFileFormatError):
     pass
-
-
-def is_wave_file_path(path):
-    
-    if isinstance(path, Path):
-        return path.suffix == WAVE_FILE_NAME_EXTENSION
-    
-    elif isinstance(path, str):
-        return path.endswith(WAVE_FILE_NAME_EXTENSION)
-    
-    else:
-        raise TypeError(
-            'Bad type "{}" for file path.'.format(
-                path.__class__.__name__))
 
 
 def get_wave_file_info(path):

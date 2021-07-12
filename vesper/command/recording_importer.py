@@ -15,7 +15,7 @@ from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.command.recording_utils as recording_utils
-import vesper.util.audio_file_utils as audio_file_utils
+import vesper.util.file_type_utils as file_type_utils
 import vesper.util.signal_utils as signal_utils
 import vesper.util.time_utils as time_utils
 
@@ -135,7 +135,7 @@ class RecordingImporter:
     
     def _get_recording_file_info(self, file_path):
         
-        if not audio_file_utils.is_wave_file_path(file_path):
+        if not file_type_utils.is_wave_file(file_path):
             return None
         
         else:

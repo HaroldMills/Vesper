@@ -20,6 +20,7 @@ from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.audio_file_utils as audio_file_utils
+import vesper.util.file_type_utils as file_type_utils
 import vesper.util.os_utils as os_utils
 import vesper.util.signal_utils as signal_utils
 import vesper.util.text_utils as text_utils
@@ -267,11 +268,10 @@ class ClipImporter:
             
             for file_name in file_names:
                 
-                if _is_audio_file_name(file_name):
-                    
-                    file_path = os.path.join(dir_path, file_name)
+                file_path = os.path.join(dir_path, file_name)
+                
+                if file_type_utils.is_wave_file(Path(file_path)):
                     self._process_audio_file(file_path)
-                        
                     self._file_count += 1
                     
                     
@@ -498,10 +498,6 @@ def _get_recording_channels_key(rc):
     return (station.name, station.get_night(recording.start_time))
     
     
-def _is_audio_file_name(file_name):
-    return audio_file_utils.is_wave_file_path(file_name)
-
-
 def _get_audio_file_info(file_path):
     
     try:

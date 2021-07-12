@@ -12,8 +12,6 @@ from vesper.archive.clip_class import ClipClass
 from vesper.archive.detector import Detector
 from vesper.archive.recording import Recording
 from vesper.archive.station import Station
-from vesper.util.audio_file_utils import \
-    WAVE_FILE_NAME_EXTENSION as _CLIP_FILE_NAME_EXTENSION
 from vesper.util.bunch import Bunch
 import vesper.util.os_utils as os_utils
 import vesper.util.time_utils as time_utils
@@ -1171,5 +1169,5 @@ def _create_clip_file_name(station_name, detector_name, start_time):
     ms = int(round(start_time.microsecond / 1000.))
     start_time = start_time.strftime('%Y-%m-%d_%H.%M.%S') + \
         '.{:03d}'.format(ms) + '_Z'
-    return '{:s}_{:s}_{:s}{:s}'.format(
-        station_name, detector_name, start_time, _CLIP_FILE_NAME_EXTENSION)
+    return '{:s}_{:s}_{:s}.wav'.format(
+        station_name, detector_name, start_time)
