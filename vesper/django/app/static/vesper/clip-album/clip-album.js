@@ -211,6 +211,7 @@ function setCursor(name) {
 }
 
 
+// TODO: Add commands for setting presets.
 const _COMMAND_SPECS = [
 
     ['show_next_page'],
@@ -429,16 +430,23 @@ export class ClipAlbum {
 
     _onChoosePresetsModalOkButtonClick() {
 
-        if (this.settingsPresets.length > 0)
-            [this.settings, this._settingsPresetPath] = _getSelectedPreset(
-                'choose-presets-modal-settings-select', this.settingsPresets);
-
-        if (this.keyBindingsPresets.length > 0)
-            [this.keyBindings, this._keyBindingsPresetPath] =
-                _getSelectedPreset(
-                    'choose-presets-modal-key-bindings-select',
-                    this.keyBindingsPresets);
-
+        this.settingsPresetPath = _getSelectedPresetPath(
+            'choose-presets-modal-settings-select');
+            
+        this.keyBindingsPresetPath = _getSelectedPresetPath(
+            'choose-presets-modal-key-bindings-select');
+                
+        // Get URL of this clip album.
+        const url = new URL(window.location.href);
+        const params = url.searchParams;
+        
+        // Update preset paths in URL.
+        params.set('settings', this.settingsPresetPath);
+        params.set('commands', this.keyBindingsPresetPath);
+                
+        // Push updated URL onto browser history.
+        window.history.pushState({}, '', url);
+        
     }
 
 
@@ -549,20 +557,16 @@ export class ClipAlbum {
         const url = new URL(window.location.href);
         const params = url.searchParams;
         
-        // Set preset paths in URL in case they have changed.
-        params.set('settings', this.settingsPresetPath)
-        params.set('commands', this.keyBindingsPresetPath)
-        
         // Get date of this clip album.
         const dateString = params.get('date');
         const date = _parseDate(dateString);
         
-        // Get next date.
-        const nextDate = _addDaysToDate(date, dayCount);
-        const nextDateString = _formatDate(nextDate);
+        // Get new date.
+        const newDate = _addDaysToDate(date, dayCount);
+        const newDateString = _formatDate(newDate);
         
         // Update date in URL.
-        params.set('date', nextDateString);
+        params.set('date', newDateString);
         
         // Go to new URL.
         window.location.href = url.href;
@@ -866,6 +870,22 @@ export class ClipAlbum {
     }
     
     
+    set settingsPresetPath(path) {
+        
+        if (path !== null) {
+            
+            const preset = _getPreset(this._settingsPresets, path);
+            
+            if (preset !== null) {
+                this.settings = preset;
+                this._settingsPresetPath = path;
+            }
+            
+        }
+        
+    }
+    
+    
 	get settings() {
 		return this._settings;
 	}
@@ -927,32 +947,42 @@ export class ClipAlbum {
 	 */
 	_updateLayoutSettings(settings) {
 
-		const oldFirstClipNum = this._layout.pagination[this.pageNum];
-		let paginationChanged;
-
-		if (settings.layoutType !== this.settings.layoutType) {
-			// layout type will change
-
-			this._layout = this._createLayout(settings);
-
-			// Pagination may or may not have changed. We say it has to
-			// ensure that display will update properly in all cases.
-			paginationChanged = true;
-
-		} else {
-			// layout type will not change
-
-			const oldPagination = this._layout.pagination;
-			this._layout.settings = settings.layout;
-			paginationChanged = !ArrayUtils.arraysEqual(
-				this._layout.pagination, oldPagination);
-
-		}
-
-		// Get new page number of clip that was first on old page.
-		const newPageNum = this._layout.getClipPageNum(oldFirstClipNum);
-
-		return [paginationChanged, newPageNum];
+        if (this.numPages === 0) {
+            // clip album empty
+            
+            return [false, this.pageNum];
+            
+        } else {
+            // clip album not empty
+            
+    		const oldFirstClipNum = this._layout.pagination[this.pageNum];
+    		let paginationChanged;
+    
+    		if (settings.layoutType !== this.settings.layoutType) {
+    			// layout type will change
+    
+    			this._layout = this._createLayout(settings);
+    
+    			// Pagination may or may not have changed. We say it has to
+    			// ensure that display will update properly in all cases.
+    			paginationChanged = true;
+    
+    		} else {
+    			// layout type will not change
+    
+    			const oldPagination = this._layout.pagination;
+    			this._layout.settings = settings.layout;
+    			paginationChanged = !ArrayUtils.arraysEqual(
+    				this._layout.pagination, oldPagination);
+    
+    		}
+    
+    		// Get new page number of clip that was first on old page.
+    		const newPageNum = this._layout.getClipPageNum(oldFirstClipNum);
+    
+    		return [paginationChanged, newPageNum];
+            
+        }
 
 	}
 
@@ -967,6 +997,22 @@ export class ClipAlbum {
 	}
 	
 	
+    set keyBindingsPresetPath(path) {
+        
+        if (path !== null) {
+            
+            const preset = _getPreset(this._keyBindingsPresets, path);
+            
+            if (preset !== null) {
+                this.keyBindings = preset;
+                this._keyBindingsPresetPath = path;
+            }
+            
+        }
+        
+    }
+    
+    
 	get keyBindings() {
 		return this._keyBindings;
 	}
@@ -2009,11 +2055,10 @@ function _populatePresetSelect(select, presetInfos, presetPath) {
 }
 
 
-function _getSelectedPreset(selectId, presets) {
+function _getSelectedPresetPath(selectId) {
     const select = document.getElementById(selectId);
-    const preset = presets[select.selectedIndex][1];
-    const presetPath = select.value;
-    return [preset, presetPath];
+    const value = select.value;
+    return value === '' ? null : value;
 }
 
 
