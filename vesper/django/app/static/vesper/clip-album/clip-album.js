@@ -211,7 +211,6 @@ function setCursor(name) {
 }
 
 
-// TODO: Add commands for setting presets.
 const _COMMAND_SPECS = [
 
     ['show_next_page'],
@@ -250,6 +249,9 @@ const _COMMAND_SPECS = [
     ['go_to_next_date'],
     ['go_to_previous_date'],
     ['go_to_clip_calendar'],
+    
+    ['set_clip_album_settings_preset', 'preset_path'],
+    ['set_clip_album_commands_preset', 'preset_path'],
 
 ];
 
@@ -409,17 +411,21 @@ export class ClipAlbum {
         // We could set up URLs so that a client could request all presets
         // of a specified type as JSON.
 
-        const settingsSelect =
-            document.getElementById('choose-presets-modal-settings-select');
+        // Populate settings select.
         _populatePresetSelect(
-            settingsSelect, this.settingsPresets, this.settingsPresetPath);
+            'choose-presets-modal-settings-select',
+            this.settingsPresets, this.settingsPresetPath);
 
-        const keyBindingsSelect = document.getElementById(
-            'choose-presets-modal-key-bindings-select');
+        // Populate key bindings select.
         _populatePresetSelect(
-            keyBindingsSelect, this.keyBindingsPresets,
-            this.keyBindingsPresetPath);
+            'choose-presets-modal-key-bindings-select',
+            this.keyBindingsPresets, this.keyBindingsPresetPath);
 
+        // Set up modal show listener.
+        $('#choose-presets-modal').on(
+            'show.bs.modal', (e) => this._onChoosePresetsModalShow());
+        
+        // Set up OK button click listener.
         const button = 
             document.getElementById('choose-presets-modal-ok-button');
         button.addEventListener(
@@ -428,43 +434,67 @@ export class ClipAlbum {
     }
 
 
+    _onChoosePresetsModalShow() {
+        
+        _updatePresetSelect(
+            'choose-presets-modal-settings-select', this.settingsPresetPath);
+            
+        _updatePresetSelect(
+            'choose-presets-modal-key-bindings-select',
+            this.keyBindingsPresetPath);
+            
+    }
+    
+    
     _onChoosePresetsModalOkButtonClick() {
 
-        this.settingsPresetPath = _getSelectedPresetPath(
+        const settingsPath = _getSelectedPresetPath(
             'choose-presets-modal-settings-select');
+        this._setSettingsPresetPath(settingsPath);
             
-        this.keyBindingsPresetPath = _getSelectedPresetPath(
+        const keyBindingsPath = _getSelectedPresetPath(
             'choose-presets-modal-key-bindings-select');
+        this._setKeyBindingsPresetPath(keyBindingsPath);
                 
-        // Get URL of this clip album.
-        const url = new URL(window.location.href);
-        const params = url.searchParams;
-        
-        // Update preset paths in URL.
-        params.set('settings', this.settingsPresetPath);
-        params.set('commands', this.keyBindingsPresetPath);
-                
-        // Push updated URL onto browser history.
-        window.history.pushState({}, '', url);
+        this._updateUrlSearchParams({
+            settings: settingsPath,
+            commands: keyBindingsPath
+        })
         
     }
 
 
+    _updateUrlSearchParams(newParams) {
+        
+        // Get search parameters of this clip album's URL.
+        const url = new URL(window.location.href);
+        const params = url.searchParams;
+        
+        // Set search parameters according to `newParams`.
+        for (const name of Object.getOwnPropertyNames(newParams))
+            params.set(name, newParams[name]);
+            
+        // Push updated URL onto browser history.
+        window.history.pushState({}, '', url);
+        
+    }
+    
+    
     _initGoToPageModal() {
         
-        // show listener
+        // Set up modal show listener.
         $('#go-to-page-modal').on(
             'show.bs.modal', (e) => this._onGoToPageModalShow());
         
-        // shown listener
+        // Set up modal shown listener.
         $('#go-to-page-modal').on(
             'shown.bs.modal', (e) => this._onGoToPageModalShown());
         
-        // hidden listener
+        // Set up modal hidden listener.
         $('#go-to-page-modal').on(
             'hidden.bs.modal', (e) => this._onGoToPageModalHidden());
         
-        // OK button click listener
+        // Set up OK button click listener.
         const button = document.getElementById('go-to-page-modal-ok-button');
         button.addEventListener(
             'click', e => this._onGoToPageModalOkButtonClick());
@@ -872,17 +902,41 @@ export class ClipAlbum {
     
     set settingsPresetPath(path) {
         
-        if (path !== null) {
+        const success = this._setSettingsPresetPath(path);
+        
+        if (success)
+            this._updateUrlSearchParams({settings: path});
+        
+    }
+    
+    
+    _setSettingsPresetPath(path) {
+        
+        if (path === null) {
+            
+            return false;
+            
+        } else {
+            // `path` is not null
             
             const preset = _getPreset(this._settingsPresets, path);
             
-            if (preset !== null) {
+            if (preset === null) {
+                // preset not found
+                
+                return false;
+                
+            } else {
+                // preset found
+                
                 this.settings = preset;
                 this._settingsPresetPath = path;
+                return true;
+                
             }
             
         }
-        
+             
     }
     
     
@@ -912,8 +966,11 @@ export class ClipAlbum {
 		    // so we don't need to invoke this._update explicitly here.
 		    this.pageNum = pageNum;
 
-		} else
+		} else {
+            
 		    this._update();
+            
+        }
 
 	}
 
@@ -999,17 +1056,41 @@ export class ClipAlbum {
 	
     set keyBindingsPresetPath(path) {
         
-        if (path !== null) {
+        const success = this._setKeyBindingsPresetPath(path);
+        
+        if (success)
+            this._updateUrlSearchParams({commands: path});
+        
+    }
+    
+    
+    _setKeyBindingsPresetPath(path) {
+        
+        if (path === null) {
+            
+            return false;
+            
+        } else {
+            // `path` is not null
             
             const preset = _getPreset(this._keyBindingsPresets, path);
             
-            if (preset !== null) {
+            if (preset === null) {
+                // preset not found
+                
+                return false;
+                
+            } else {
+                // preset found
+                
                 this.keyBindings = preset;
                 this._keyBindingsPresetPath = path;
+                return true;
+                
             }
             
         }
-        
+             
     }
     
     
@@ -1456,7 +1537,7 @@ export class ClipAlbum {
 
 	set pageNum(pageNum) {
 
-	    const newPageNum = this._clipPageNum(pageNum);
+	    const newPageNum = this._getPageNum(pageNum);
 	    
 	    if (this.numPages != 0 && newPageNum !== this.pageNum) {
 	        // page number will change
@@ -1475,7 +1556,7 @@ export class ClipAlbum {
 	}
 
 
-	_clipPageNum(pageNum) {
+	_getPageNum(pageNum) {
 	    
 	    if (this.numPages == 0 || pageNum < 0)
 	        return 0;
@@ -2001,6 +2082,16 @@ export class ClipAlbum {
         if (this._isSingleDateClipAlbum())
             this._goToClipCalendar();
     }
+    
+    
+    _executeSetClipAlbumSettingsPresetCommand(env) {
+        this.settingsPresetPath = env.getRequired('preset_path');
+    }
+
+
+    _executeSetClipAlbumCommandsPresetCommand(env) {
+        this.keyBindingsPresetPath = env.getRequired('preset_path');
+    }
 
 
 }
@@ -2039,7 +2130,9 @@ function _getPreset(presetInfos, presetPath) {
 }
 
 
-function _populatePresetSelect(select, presetInfos, presetPath) {
+function _populatePresetSelect(selectId, presetInfos, presetPath) {
+
+    const select = document.getElementById(selectId);
 
     for (const [i, [path, preset]] of presetInfos.entries()) {
 
@@ -2052,6 +2145,23 @@ function _populatePresetSelect(select, presetInfos, presetPath) {
 
     }
 
+}
+
+
+function _updatePresetSelect(selectId, presetPath) {
+    
+    const select = document.getElementById(selectId);
+    const options = select.options;
+    
+    for (let i = 0; i < options.length; i++) {
+        
+        const option = options.item(i);
+        
+        if (option.text === presetPath)
+            select.selectedIndex = i;
+        
+    }
+    
 }
 
 
