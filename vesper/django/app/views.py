@@ -1600,6 +1600,8 @@ def night(request):
         tag_name=tag_name)
     clips_json = _get_clips_json(clips, station)
 
+    page_num = params.get('page', 1)
+    
     settings_presets_json = _get_presets_json('Clip Album Settings')
     commands_presets_json = _get_presets_json('Clip Album Commands')
     
@@ -1620,6 +1622,7 @@ def night(request):
         solar_event_times_json=solar_event_times_json,
         recordings_json=recordings_json,
         clips_json=clips_json,
+        page_num = page_num,
         settings_presets_json=settings_presets_json,
         settings_preset_path=settings_preset_path,
         commands_presets_json=commands_presets_json,
@@ -1765,6 +1768,8 @@ def clip_album(request):
         annotation_value=d.annotation_value,
         tag_name=d.tag_name)
     clips_json = _get_clips_json(clips, station)
+    
+    page_num = params.get('page', 1)
 
     settings_presets_json = _get_presets_json('Clip Album Settings')
     commands_presets_json = _get_presets_json('Clip Album Commands')
@@ -1785,6 +1790,7 @@ def clip_album(request):
         solar_event_times_json='null',
         recordings_json='[]',
         clips_json=clips_json,
+        page_num=page_num,
         settings_presets_json=settings_presets_json,
         settings_preset_path=settings_preset_path,
         commands_presets_json=commands_presets_json,

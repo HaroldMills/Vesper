@@ -296,8 +296,8 @@ export class ClipAlbum {
             this.keyBindingsPresets, this.keyBindingsPresetPath);
         
         // This creates the keyboard input interpreter.
-        this.keyBindings =
-            keyBindings === null ? _DEFAULT_KEY_BINDINGS : keyBindings;
+        this._setKeyBindings(
+            keyBindings === null ? _DEFAULT_KEY_BINDINGS : keyBindings);
             
         this._tagColors = new _TagColors(this.settings);
         
@@ -314,7 +314,9 @@ export class ClipAlbum {
 
         this._clipManager = this._createClipManager();
 
-        this.pageNum = 0;
+        this._setPageNum(state.pageNum - 1);
+        
+        this._initHistory();
         
     }
     
@@ -456,15 +458,12 @@ export class ClipAlbum {
             'choose-presets-modal-key-bindings-select');
         this._setKeyBindingsPresetPath(keyBindingsPath);
                 
-        this._updateUrlSearchParams({
-            settings: settingsPath,
-            commands: keyBindingsPath
-        })
+        this._updateUrl();
         
     }
 
 
-    _updateUrlSearchParams(newParams) {
+    _updateUrl() {
         
         // Get search parameters of this clip album's URL.
         const url = new URL(window.location.href);
@@ -474,8 +473,8 @@ export class ClipAlbum {
         for (const name of Object.getOwnPropertyNames(newParams))
             params.set(name, newParams[name]);
             
-        // Push updated URL onto browser history.
-        window.history.pushState({}, '', url);
+        // Push new clip album URL and state onto browser history.
+        window.history.pushState(this._historyState, '', url);
         
     }
     
@@ -497,7 +496,7 @@ export class ClipAlbum {
         // Set up OK button click listener.
         const button = document.getElementById('go-to-page-modal-ok-button');
         button.addEventListener(
-            'click', e => this._onGoToPageModalOkButtonClick());
+            'click', e => this._onGoToPageModalOkButtonClick(e));
         
     }
     
@@ -551,7 +550,7 @@ export class ClipAlbum {
     }
     
     
-    _onGoToPageModalOkButtonClick() {
+    _onGoToPageModalOkButtonClick(event) {
         
         const form = document.getElementById('go-to-page-modal-form');
         
@@ -706,6 +705,33 @@ export class ClipAlbum {
 	}
 	
 	
+    get _historyState() {
+        return {
+            settingsPresetPath: this.settingsPresetPath,
+            keyBindingsPresetPath: this.keyBindingsPresetPath,
+            pageNum: this.pageNum
+        };
+    }
+    
+    
+    set _historyState(state) {
+        this._setSettingsPresetPath(state.settingsPresetPath);
+        this._setKeyBindingsPresetPath(state.keyBindingsPresetPath);
+        this._setPageNum(state.pageNum);
+    }
+    
+    
+    _initHistory() {
+        window.history.replaceState(this._historyState, null, '');
+        window.onpopstate = (e) => this._onPopHistoryState(e);
+    }
+    
+    
+    _onPopHistoryState(event) {
+        this._historyState = event.state;
+    }
+    
+    
 	_createSelection() {
 
 		if (this.numPages > 0) {
@@ -905,7 +931,7 @@ export class ClipAlbum {
         const success = this._setSettingsPresetPath(path);
         
         if (success)
-            this._updateUrlSearchParams({settings: path});
+            this._updateUrl();
         
     }
     
@@ -929,7 +955,7 @@ export class ClipAlbum {
             } else {
                 // preset found
                 
-                this.settings = preset;
+                this._setSettings(preset);
                 this._settingsPresetPath = path;
                 return true;
                 
@@ -945,7 +971,7 @@ export class ClipAlbum {
 	}
 
 
-	set settings(settings) {
+	_setSettings(settings) {
 
 		this._updateClipViewSettings(settings);
 
@@ -958,13 +984,13 @@ export class ClipAlbum {
 
 		    this._clipManager = this._createClipManager();
 		    
-            // Set `this._pageNum` to `null` so assignment below triggers
-            // full page update.
+            // Set `this._pageNum` to `null` so setting page number
+            // again below triggers full page update.
             this._pageNum = null;
             
-			// Note that this assignment triggers a call to this._update,
-		    // so we don't need to invoke this._update explicitly here.
-		    this.pageNum = pageNum;
+			// Note that this triggers a call to this._update, so we
+            // don't need to invoke this._update explicitly here.
+		    this._setPageNum(pageNum);
 
 		} else {
             
@@ -1059,7 +1085,7 @@ export class ClipAlbum {
         const success = this._setKeyBindingsPresetPath(path);
         
         if (success)
-            this._updateUrlSearchParams({commands: path});
+            this._updateUrl();
         
     }
     
@@ -1083,7 +1109,7 @@ export class ClipAlbum {
             } else {
                 // preset found
                 
-                this.keyBindings = preset;
+                this._setKeyBindings(preset);
                 this._keyBindingsPresetPath = path;
                 return true;
                 
@@ -1099,7 +1125,7 @@ export class ClipAlbum {
 	}
 
 
-	set keyBindings(keyBindings) {
+	_setKeyBindings(keyBindings) {
         this._keyBindings = keyBindings;
         this._keyboardInputInterpreter =
             this._createKeyboardInputInterpreter(keyBindings);
@@ -1536,26 +1562,32 @@ export class ClipAlbum {
 
 
 	set pageNum(pageNum) {
-
-	    const newPageNum = this._getPageNum(pageNum);
-	    
-	    if (this.numPages != 0 && newPageNum !== this.pageNum) {
-	        // page number will change
-
-			this._pageNum = newPageNum;
-			this._selection = this._createSelection();
-			const range = this.getPageClipNumRange(newPageNum);
-			if (this._rugPlot !== null)
-			    this._rugPlot.setPageClipNumRange(range);
-			this._clipManager.pageNum = newPageNum;
-            
-		}
-
-        this._update();
-            
+        this._setPageNum(pageNum);
+        this._updateUrl();
 	}
 
 
+    _setPageNum(pageNum) {
+        
+        const newPageNum = this._getPageNum(pageNum);
+        
+        if (this.numPages != 0 && newPageNum !== this.pageNum) {
+            // page number will change
+
+            this._pageNum = newPageNum;
+            this._selection = this._createSelection();
+            const range = this.getPageClipNumRange(newPageNum);
+            if (this._rugPlot !== null)
+                this._rugPlot.setPageClipNumRange(range);
+            this._clipManager.pageNum = newPageNum;
+            
+        }
+
+        this._update();
+            
+    }
+    
+    
 	_getPageNum(pageNum) {
 	    
 	    if (this.numPages == 0 || pageNum < 0)
