@@ -119,7 +119,7 @@ class _TagColors {
  */
 
 
-const _DEFAULT_SETTINGS = {
+const _FALLBACK_SETTINGS = {
 
 	layoutType: 'Nonuniform Resizing Clip Views',
 
@@ -179,7 +179,7 @@ const _ALLOWED_KEYS = new Set(
 	'~!@#$%^&*()_+{}|:"<>?');
 
 
-const _DEFAULT_KEY_BINDINGS = {
+const _FALLBACK_KEY_BINDINGS = {
 
     interpreterInitializationCommands: [
         ['set_persistent_variable', 'annotation_name', 'Classification'],
@@ -269,22 +269,20 @@ export class ClipAlbum {
         this._readOnly = state.archiveReadOnly;
         this._clipFilter = state.clipFilter;
         this._clips = this._createClips(state.clips);
+        
         this._settingsPresets = state.settingsPresets;
-        this._settingsPresetPath = state.settingsPresetPath;
+        [this._settings, this._settingsPresetPath] =
+            this._getSettingsPreset(state.settingsPresetPath);
+        
         this._keyBindingsPresets = state.keyBindingsPresets;
-        this._keyBindingsPresetPath = state.keyBindingsPresetPath;
+        [this._keyBindings, this._keyBindingsPresetPath] =
+            this._getKeyBindingsPreset(state.keyBindingsPresetPath);
         
         this._initUiElements();
         
-        const settings = _getPreset(
-            this.settingsPresets, this.settingsPresetPath);
-
-        this._settings = settings === null ? _DEFAULT_SETTINGS : settings;
-        
-        // It's important to set the clip view class before the key
-        // bindings, since setting the key bindings creates a new
-        // keyboard input interpreter, a process that accesses the
-        // clip view class.
+        // It's important to set the clip view class before creating
+        // the keyboard input interpreter, since creating the
+        // interpreter requires the clip view class.
         this._clipViewClasses = {
             'Spectrogram': SpectrogramClipView
         };
@@ -292,12 +290,8 @@ export class ClipAlbum {
         
         this._commandableDelegate = _commandableDelegate;
         
-        const keyBindings = _getPreset(
-            this.keyBindingsPresets, this.keyBindingsPresetPath);
-        
-        // This creates the keyboard input interpreter.
-        this._setKeyBindings(
-            keyBindings === null ? _DEFAULT_KEY_BINDINGS : keyBindings);
+        this._keyboardInputInterpreter =
+            this._createKeyboardInputInterpreter(this.keyBindings);
             
         this._tagColors = new _TagColors(this.settings);
         
@@ -316,7 +310,7 @@ export class ClipAlbum {
 
         this._setPageNum(state.pageNum - 1);
         
-        this._initHistory();
+        this._initUrlAndHistory();
         
     }
     
@@ -339,6 +333,21 @@ export class ClipAlbum {
     }
 
 
+    _getSettingsPreset(presetPath) {
+        return _getPreset(
+            presetPath, this._settingsPresets, _FALLBACK_SETTINGS,
+            'Clip Album Settings');      
+    }
+    
+    
+    _getKeyBindingsPreset(presetPath) {
+        return _getPreset(
+            presetPath, this._keyBindingsPresets, _FALLBACK_KEY_BINDINGS,
+            'Clip Album Commands');      
+        
+    }
+    
+    
 	_initUiElements() {
 	    
         this._clipsDiv = document.getElementById('clips');
@@ -458,24 +467,13 @@ export class ClipAlbum {
             'choose-presets-modal-key-bindings-select');
         this._setKeyBindingsPresetPath(keyBindingsPath);
                 
-        this._updateUrl();
+        this._updateUrlAndHistory();
         
     }
 
 
-    _updateUrl() {
-        
-        // Get search parameters of this clip album's URL.
-        const url = new URL(window.location.href);
-        const params = url.searchParams;
-        
-        // Set search parameters according to `newParams`.
-        for (const name of Object.getOwnPropertyNames(newParams))
-            params.set(name, newParams[name]);
-            
-        // Push new clip album URL and state onto browser history.
-        window.history.pushState(this._historyState, '', url);
-        
+    _updateUrlAndHistory() {
+        window.history.pushState(this._historyState, null, this._url);
     }
     
     
@@ -721,9 +719,30 @@ export class ClipAlbum {
     }
     
     
-    _initHistory() {
-        window.history.replaceState(this._historyState, null, '');
+    _initUrlAndHistory() {
+        window.history.replaceState(this._historyState, null, this._url);
         window.onpopstate = (e) => this._onPopHistoryState(e);
+    }
+    
+    
+    /**
+     Gets a URL that reflects this clip album's current state, including
+     search parameters for the settings preset path, the key bindings
+     preset path, and the page number.
+     */
+    get _url() {
+        
+        // Get browser URL.
+        const url = new URL(window.location.href);
+        
+        // Update search parameters according to clip album's current state.
+        const params = url.searchParams;
+        params.set('settings', this.settingsPresetPath);
+        params.set('commands', this.keyBindingsPresetPath);
+        params.set('page', this.pageNum + 1);
+        
+        return url;
+
     }
     
     
@@ -927,77 +946,50 @@ export class ClipAlbum {
     
     
     set settingsPresetPath(path) {
-        
-        const success = this._setSettingsPresetPath(path);
-        
-        if (success)
-            this._updateUrl();
-        
+        this._setSettingsPresetPath(path);
+        this._updateUrlAndHistory();
     }
     
     
     _setSettingsPresetPath(path) {
-        
-        if (path === null) {
-            
-            return false;
-            
-        } else {
-            // `path` is not null
-            
-            const preset = _getPreset(this._settingsPresets, path);
-            
-            if (preset === null) {
-                // preset not found
-                
-                return false;
-                
-            } else {
-                // preset found
-                
-                this._setSettings(preset);
-                this._settingsPresetPath = path;
-                return true;
-                
-            }
-            
-        }
-             
+        const [preset, actualPath] = this._getSettingsPreset(path);
+        this._setSettings(preset);
+        this._settingsPresetPath = actualPath;
     }
     
     
-	get settings() {
-		return this._settings;
-	}
+    _setSettings(settings) {
 
+        this._updateClipViewSettings(settings);
 
-	_setSettings(settings) {
+        const [paginationChanged, pageNum] =
+            this._updateLayoutSettings(settings);
 
-		this._updateClipViewSettings(settings);
+        this._settings = settings;
 
-		const [paginationChanged, pageNum] =
-			this._updateLayoutSettings(settings);
+        if (paginationChanged) {
 
-		this._settings = settings;
-
-		if (paginationChanged) {
-
-		    this._clipManager = this._createClipManager();
-		    
+            this._clipManager = this._createClipManager();
+            
             // Set `this._pageNum` to `null` so setting page number
             // again below triggers full page update.
             this._pageNum = null;
             
-			// Note that this triggers a call to this._update, so we
+            // Note that this triggers a call to this._update, so we
             // don't need to invoke this._update explicitly here.
-		    this._setPageNum(pageNum);
+            this._setPageNum(pageNum);
 
-		} else {
+        } else {
             
-		    this._update();
+            this._update();
             
         }
 
+    }
+
+
+	get settings() {
+		return this._settings;
 	}
 
 
@@ -1081,51 +1073,19 @@ export class ClipAlbum {
 	
 	
     set keyBindingsPresetPath(path) {
-        
-        const success = this._setKeyBindingsPresetPath(path);
-        
-        if (success)
-            this._updateUrl();
-        
+        this._setKeyBindingsPresetPath(path);
+        this._updateUrlAndHistory();
     }
     
     
     _setKeyBindingsPresetPath(path) {
-        
-        if (path === null) {
-            
-            return false;
-            
-        } else {
-            // `path` is not null
-            
-            const preset = _getPreset(this._keyBindingsPresets, path);
-            
-            if (preset === null) {
-                // preset not found
-                
-                return false;
-                
-            } else {
-                // preset found
-                
-                this._setKeyBindings(preset);
-                this._keyBindingsPresetPath = path;
-                return true;
-                
-            }
-            
-        }
-             
+        const [preset, actualPath] = this._getKeyBindingsPreset(path);
+        this._setKeyBindings(preset);
+        this._keyBindingsPresetPath = actualPath;
     }
     
     
-	get keyBindings() {
-		return this._keyBindings;
-	}
-
-
-	_setKeyBindings(keyBindings) {
+    _setKeyBindings(keyBindings) {
         this._keyBindings = keyBindings;
         this._keyboardInputInterpreter =
             this._createKeyboardInputInterpreter(keyBindings);
@@ -1169,6 +1129,11 @@ export class ClipAlbum {
         return newInterpreter;
 
     }
+
+
+	get keyBindings() {
+		return this._keyBindings;
+	}
 
 
     pushCommandable(commandable) {
@@ -1562,28 +1527,37 @@ export class ClipAlbum {
 
 
 	set pageNum(pageNum) {
-        this._setPageNum(pageNum);
-        this._updateUrl();
+        if (this._setPageNum(pageNum))
+            this._updateUrlAndHistory();
 	}
 
 
     _setPageNum(pageNum) {
         
+        let pageNumChanged = false;
         const newPageNum = this._getPageNum(pageNum);
         
         if (this.numPages != 0 && newPageNum !== this.pageNum) {
             // page number will change
 
             this._pageNum = newPageNum;
+            
             this._selection = this._createSelection();
-            const range = this.getPageClipNumRange(newPageNum);
-            if (this._rugPlot !== null)
+            
+            if (this._rugPlot !== null) {
+                const range = this.getPageClipNumRange(newPageNum);
                 this._rugPlot.setPageClipNumRange(range);
+            }
+                
             this._clipManager.pageNum = newPageNum;
+            
+            pageNumChanged = true;
             
         }
 
         this._update();
+        
+        return pageNumChanged;
             
     }
     
@@ -2151,13 +2125,29 @@ class _WindowResizeThrottle {
 }
 
 
-function _getPreset(presetInfos, presetPath) {
+function _getPreset(presetPath, presetInfos, fallbackPreset, presetType) {
 
-    for (const [path, preset] of presetInfos)
-        if (path.join('/') === presetPath)
-            return preset;
+    if (presetPath === '') {
+        // fallback preset specified
+        
+        return [fallbackPreset, presetPath];
+        
+    } else {
+        // non-fallback preset specified
+        
+        for (const [path, preset] of presetInfos)
+            if (path.join('/') === presetPath)
+                return [preset, presetPath];
 
-    return null;
+        // If we get here, there is no preset with the specified path.
+        
+        window.alert(
+            `Could not find ${presetType} preset "${presetPath}". ` +
+            `Will use built-in fallback preset instead.`);
+        
+        return [fallbackPreset, ''];
+        
+    }
 
 }
 
@@ -2198,9 +2188,15 @@ function _updatePresetSelect(selectId, presetPath) {
 
 
 function _getSelectedPresetPath(selectId) {
+    
+    // Note that the value of an HTML select element is the empty string
+    // if no option is selected: see
+    // https://developer.mozilla.org/en-US/docs/Web/API/HTMLSelectElement.
+    // The `ClipAlbum` class uses the empty string as the name of the
+    // built-in fallback preset, so it's safe to return.
     const select = document.getElementById(selectId);
-    const value = select.value;
-    return value === '' ? null : value;
+    return select.value;
+    
 }
 
 
