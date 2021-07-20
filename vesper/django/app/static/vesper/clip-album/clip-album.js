@@ -1229,7 +1229,7 @@ export class ClipAlbum {
             // Restore normal cursor before displaying alert.
             this._setCursorIfNeeded(waitCursorNeeded, 'auto');
             
-            window.alert(e.message);
+            window.alert(e);
             
             return;
             
@@ -1264,32 +1264,38 @@ export class ClipAlbum {
         
         const content = getRequestContent();
         
+        let response = null;
+        
         try {
             
-            const response = await(this._sendJsonPostRequest(url, content));
+            response = await(this._sendJsonPostRequest(url, content));
         
-            if (response.status === 200) {
-                
-                // Update client copies of clip metadata.
-                for (const clip of clips)
-                    updateClientMetadata(clip);
-                    
-            } else {
-                
-                throw (
-                    `Clip ${operationName} request failed with response ` +
-                    `${response.status} (${response.statusText}).`);
-    
-            }
-            
         } catch(e) {
             
             throw (
-                `Clip ${operationName} request failed with message: ` +
-                `${e.message}.`);
+                `Clip ${operationName} request failed with message: ${e}.`);
                 
         }
         
+        if (response.status === 200) {
+            
+            // Update client copies of clip metadata.
+            for (const clip of clips)
+                updateClientMetadata(clip);
+                
+        } else {
+            
+            let message = 
+                `Clip ${operationName} request failed with response ` +
+                `${response.status} (${response.statusText}).`;
+                
+            if (response.status === 403)
+                message += ' Perhaps you are not logged in?';
+                
+            throw message;
+               
+        }
+            
     }
     
     
