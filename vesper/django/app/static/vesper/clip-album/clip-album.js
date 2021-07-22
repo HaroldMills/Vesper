@@ -1161,9 +1161,22 @@ export class ClipAlbum {
 
 
 	_annotateSelectedClips(annotations) {
+        
 		const clipNums = this._selection.selectedIndices;
-		const clips = clipNums.map(i => this.clips[i]);
-		this._annotateClips(clips, annotations);
+        
+        if (clipNums.length == 0) {
+            
+            window.alert(
+                'There are no selected clips to annotate. ' +
+                'Please select one or more clips and try again.');
+            
+        } else {
+            
+		    const clips = clipNums.map(i => this.clips[i]);
+		    this._annotateClips(clips, annotations);
+            
+        }
+        
 	}
 
 
@@ -1408,9 +1421,22 @@ export class ClipAlbum {
 
 
     _tagSelectedClips(tags) {
+        
         const clipNums = this._selection.selectedIndices;
-        const clips = clipNums.map(i => this.clips[i]);
-        this._tagClips(clips, tags);
+        
+        if (clipNums.length === 0) {
+            
+            window.alert(
+                'There are no selected clips to tag. ' +
+                'Please select one or more clips and try again.');
+            
+        } else {
+            
+            const clips = clipNums.map(i => this.clips[i]);
+            this._tagClips(clips, tags);
+            
+        }
+        
     }
 
 
