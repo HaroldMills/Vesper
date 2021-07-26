@@ -41,6 +41,7 @@ export var ViewUtils;
             params.set('detector', newDetector);
             params.set('classification', newClassification);
             params.set('tag', newTag);
+            params.set('page', 1);
             
             // Go to new URL.
             window.location.href = url.href;
