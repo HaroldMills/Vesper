@@ -1569,7 +1569,18 @@ export class ClipAlbum {
         let pageNumChanged = false;
         const newPageNum = this._getPageNum(pageNum);
         
-        if (this.numPages != 0 && newPageNum !== this.pageNum) {
+        if (this.numPages === 0) {
+            // empty clip album
+        
+            // Make sure page number is defined and zero. It is `undefined`
+            // initially, and can be set to `null` before calling this method
+            // to force a UI update.
+            if (this._pageNum !== 0) {
+                this._pageNum = 0;
+                pageNumChanged = true;
+            }
+            
+        } else if (newPageNum !== this.pageNum) {
             // page number will change
 
             this._pageNum = newPageNum;
