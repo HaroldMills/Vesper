@@ -5,14 +5,17 @@ import datetime
 import logging
 
 from vesper.command.command import CommandExecutionError
-from vesper.django.app.models import Station
 from vesper.util.bunch import Bunch
-from vesper.singleton.extension_manager import extension_manager
-from vesper.singleton.preset_manager import preset_manager
 import vesper.util.signal_utils as signal_utils
 
 
 def create_recording_file_parser(spec):
+    
+    # These imports are here instead of at the top of this module so
+    # they don't interfere with unit tests for other functions of the
+    # module.
+    from vesper.singleton.extension_manager import extension_manager
+    from vesper.django.app.models import Station
     
     # Get parser name.
     classes = extension_manager.get_extensions('Recording File Parser')
@@ -41,6 +44,10 @@ def create_recording_file_parser(spec):
     
 def _get_station_name_aliases(spec):
     
+    # This import is here instead of at the top of this module so it
+    # won't interfere with unit tests for other functions of the module.
+    from vesper.singleton.preset_manager import preset_manager
+
     args = spec.get('arguments')
     
     if args is None:
