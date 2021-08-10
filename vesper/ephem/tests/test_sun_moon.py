@@ -187,7 +187,7 @@ LUNAR_ILLUMINATIONS = [(time, d[3]) for time, d in LUNAR_DATA]
 # data to pass. Hopefully the larger thresholds can be reduced when the
 # USNO web site is up again and we can obtain more and hopefully more
 # accurate test data from it.
-SOLAR_ALT_AZ_ERROR_THRESHOLD = .12
+SOLAR_ALT_AZ_ERROR_THRESHOLD = .19
 SOLAR_DISTANCE_ERROR_THRESHOLD = .00012
 LUNAR_ALT_AZ_ERROR_THRESHOLD = .14
 LUNAR_DISTANCE_ERROR_THRESHOLD = .015
