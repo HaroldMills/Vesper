@@ -122,6 +122,8 @@ _TF2_DETECTORS = '''
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector50
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector60
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector70
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector70_25
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector70_12
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector80
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector90
      
@@ -132,6 +134,8 @@ _TF2_DETECTORS = '''
     - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector40
     - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector50
     - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector60
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector60_25
+    - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector60_12
     - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector70
     - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector80
     - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector90
