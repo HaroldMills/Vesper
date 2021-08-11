@@ -11,6 +11,15 @@ from vesper.tests.test_case import TestCase
 import vesper.util.time_utils as time_utils
 
 
+_POPULATE_DATABASE = False
+"""
+`True` if and only if test class should populate test archive database.
+
+See the file `README.txt` in the same directory as this file for how
+to use this attribute.
+"""
+
+
 _CLASSIFICATION_CONSTRAINT_TEXT = '''
 name: Classification
 type: Hierarchical Values
@@ -34,46 +43,52 @@ class ArchiveTests(TestCase):
     
     @classmethod
     def setUpClass(cls):
+    
+        print('setUpClass')
         
-        preference_manager._push_test_module_preferences(__file__)
+        if _POPULATE_DATABASE:
+            
+            preference_manager._push_test_module_preferences(__file__)
         
-        create = Processor.objects.create
-        create(name='Tseep Detector', type='Detector')
-        create(name='Thrush Detector', type='Detector')
-        create(name='Coarse Classifier', type='Classifier')
-        create(name='Species Classifier', type='Classifier')
+            create = Processor.objects.create
+            create(name='Tseep Detector', type='Detector')
+            create(name='Thrush Detector', type='Detector')
+            create(name='Coarse Classifier', type='Classifier')
+            create(name='Species Classifier', type='Classifier')
         
-        creation_time = time_utils.get_utc_now()
+            creation_time = time_utils.get_utc_now()
         
-        constraint = AnnotationConstraint.objects.create(
-            name='Classification',
-            text=_CLASSIFICATION_CONSTRAINT_TEXT,
-            creation_time=creation_time)
+            constraint = AnnotationConstraint.objects.create(
+                name='Classification',
+                text=_CLASSIFICATION_CONSTRAINT_TEXT,
+                creation_time=creation_time)
         
-        AnnotationInfo.objects.create(
-            name='Classification',
-            type='String',
-            constraint=constraint,
-            creation_time=creation_time)
+            AnnotationInfo.objects.create(
+                name='Classification',
+                type='String',
+                constraint=constraint,
+                creation_time=creation_time)
         
-        constraint = AnnotationConstraint.objects.create(
-            name='Confidence',
-            text=_CONFIDENCE_CONSTRAINT_TEXT,
-            creation_time=creation_time)
+            constraint = AnnotationConstraint.objects.create(
+                name='Confidence',
+                text=_CONFIDENCE_CONSTRAINT_TEXT,
+                creation_time=creation_time)
         
-        AnnotationInfo.objects.create(
-            name='Confidence',
-            type='String',
-            constraint=constraint,
-            creation_time=creation_time)
-        
-        
+            AnnotationInfo.objects.create(
+                name='Confidence',
+                type='String',
+                constraint=constraint,
+                creation_time=creation_time)
+    
+    
     @classmethod
     def tearDownClass(cls):
-        preference_manager._pop_test_preferences()
-        
+        if _POPULATE_DATABASE:
+            preference_manager._pop_test_preferences()
+    
 
     def setUp(self):
+        print('setUp')
         self._archive = Archive()
         
         
@@ -244,8 +259,8 @@ class ArchiveTests(TestCase):
         cases = [
             
             ('Classification', (
+                '-----',
                 '-None-',
-                '* | -None-',
                 '*',
                 'Call',
                 'Call*',
@@ -254,8 +269,8 @@ class ArchiveTests(TestCase):
                 'Noise')),
             
             ('Confidence', (
+                '-----',
                 'None',
-                'Any | None',
                 'Any',
                 '1',
                 '2',
