@@ -11,18 +11,18 @@ _PREFERENCE_FILE_NAME = 'Preferences.yaml'
 class PreferenceManager:
     
     
-    def __init__(self, preference_dir_path):
-        self._load_preferences(preference_dir_path)
+    def __init__(self, preference_file_path):
+        self._load_preferences(preference_file_path)
         self._stack = []
         
         
-    def _load_preferences(self, preference_dir_path):
-        self._preferences = _load_preferences(preference_dir_path)
-        self._preference_dir_path = preference_dir_path
+    def _load_preferences(self, preference_file_path):
+        self._preferences = _load_preferences(preference_file_path)
+        self._preference_file_path = preference_file_path
         
         
     def reload_preferences(self):
-        self._load_preferences(self._preference_dir_path)
+        self._load_preferences(self._preference_file_path)
         
         
     @property
@@ -44,20 +44,22 @@ class PreferenceManager:
         test_module_file_path = Path(test_module_file_path)
         test_module_dir_path = test_module_file_path.parent
         test_module_name = test_module_file_path.stem
-        preference_dir_path = test_module_dir_path / 'data' / test_module_name
+        preference_file_path = \
+            test_module_dir_path / 'data' / test_module_name / \
+            _PREFERENCE_FILE_NAME
             
         # Push current preferences onto stack.
-        self._stack.append((self._preference_dir_path, self._preferences))
+        self._stack.append((self._preference_file_path, self._preferences))
         
         # Load test preferences.
-        self._load_preferences(preference_dir_path)
+        self._load_preferences(preference_file_path)
         
         
     def _pop_test_preferences(self):
         
         """Pops test preferences."""
         
-        self._preference_dir_path, self._preferences = self._stack.pop()
+        self._preference_file_path, self._preferences = self._stack.pop()
     
     
 class _Preferences:
