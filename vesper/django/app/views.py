@@ -1146,7 +1146,7 @@ def _get_tags(clip_id):
                 
                 
 @csrf_exempt
-def annotate_clips(request):
+def annotate_clip_batch(request):
 
     '''
     This view expects a request body that is a UTF-8 encoded JSON object.
@@ -1155,6 +1155,9 @@ def annotate_clips(request):
     property whose value is a JSON object mapping annotation names to
     annotation values. The specified annotations are set on all specified
     clips.
+    
+    This view is named `annotate_clip_batch` instead of `annotate_clips`
+    to leave room for an `annotate_clips` Vesper command.
     '''
 
     return _edit_clip_metadata(request, _annotate_clips)
@@ -1224,7 +1227,7 @@ def _annotate_clips(clip_ids, creation_time, creating_user, content):
             
             
 @csrf_exempt
-def unannotate_clips(request):
+def unannotate_clip_batch(request):
 
     '''
     This view expects a request body that is a UTF-8 encoded JSON object.
@@ -1233,6 +1236,9 @@ def unannotate_clips(request):
     property whose value is a JSON array of annotation names. The
     specified annotations are deleted for all specified clips, if they
     exist.
+    
+    This view is named `unannotate_clip_batch` instead of `unannotate_clips`
+    to leave room for an `unannotate_clips` Vesper command.
     '''
 
     args = ('annotation_names', AnnotationInfo, model_utils.unannotate_clip)
@@ -1262,7 +1268,7 @@ def _edit_clip_metadata_aux(
                 
                 
 @csrf_exempt
-def tag_clips(request):
+def tag_clip_batch(request):
 
     '''
     This view expects a request body that is a UTF-8 encoded JSON object.
@@ -1270,6 +1276,9 @@ def tag_clips(request):
     of the IDs of the clips to be tagged, and a "tags" property whose
     value is a JSON array of tags. The specified tags are added to all
     specified clips, when they don't exist already.
+    
+    This view is named `tag_clip_batch` instead of `tag_clips` to leave
+    room for a `tag_clips` Vesper command.
     '''
 
     args = ('tags', TagInfo, model_utils.tag_clip)
@@ -1277,7 +1286,7 @@ def tag_clips(request):
     
     
 @csrf_exempt
-def untag_clips(request):
+def untag_clip_batch(request):
 
     '''
     This view expects a request body that is a UTF-8 encoded JSON object.
@@ -1285,6 +1294,9 @@ def untag_clips(request):
     of the IDs of the clips to be untagged, and a "tags" property whose
     value is a JSON array of tags. The specified tags are removed from
     all specified clips, when they are present.
+    
+    This view is named `untag_clip_batch` instead of `untag_clips`
+    to leave room for an `untag_clips` Vesper command.
     '''
 
     args = ('tags', TagInfo, model_utils.untag_clip)

@@ -1213,7 +1213,7 @@ export class ClipAlbum {
         }
         
         return this._editClipMetadata(
-            clips, '/annotate-clips/', getRequestContent,
+            clips, '/annotate-clip-batch/', getRequestContent,
             updateClientAnnotations, 'annotation');
 
     }
@@ -1400,7 +1400,7 @@ export class ClipAlbum {
         }
                         
         return this._editClipMetadata(
-            clips, '/unannotate-clips/', getRequestContent,
+            clips, '/unannotate-clip-batch/', getRequestContent,
             updateClientAnnotations, 'unannotation');
 
     }
@@ -1466,7 +1466,8 @@ export class ClipAlbum {
         }
         
         return this._editClipMetadata(
-            clips, '/tag-clips/', getRequestContent, updateClientTags, 'tag');
+            clips, '/tag-clip-batch/', getRequestContent, updateClientTags,
+            'tag');
             
     }
     
@@ -1518,7 +1519,7 @@ export class ClipAlbum {
         }
                         
         return this._editClipMetadata(
-            clips, '/untag-clips/', getRequestContent, updateClientTags,
+            clips, '/untag-clip-batch/', getRequestContent, updateClientTags,
             'untag');
 
     }

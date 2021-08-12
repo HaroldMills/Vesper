@@ -94,14 +94,16 @@ if not settings.ARCHIVE_READ_ONLY:
         path('clips/', views.clips, name='clips'),
         path('clips/<int:clip_id>/', views.clip, name='clip'),
         
-        path('annotate-clips/', views.annotate_clips, name='annotate-clips'),
+        path('annotate-clip-batch/', views.annotate_clip_batch,
+             name='annotate-clip-batch'),
         
-        path('unannotate-clips/', views.unannotate_clips,
-             name='unannotate-clips'),
+        path('unannotate-clip-batch/', views.unannotate_clip_batch,
+             name='unannotate-clip-batch'),
         
-        path('tag-clips/', views.tag_clips, name='tag-clips'),
+        path('tag-clip-batch/', views.tag_clip_batch, name='tag-clip-batch'),
 
-        path('untag-clips/', views.untag_clips, name='untag-clips'),
+        path('untag-clip-batch/', views.untag_clip_batch,
+             name='untag-clip-batch'),
 
         path('presets/<name:preset_type_name>/', views.presets,
              name='presets'),
