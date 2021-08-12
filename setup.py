@@ -129,7 +129,7 @@ setup(
         'resampy',
         'ruamel_yaml',
         'skyfield~=1.38',
-        'tensorflow~=2.5',
+        'tensorflow~=2.6',
     ],
       
     entry_points={
