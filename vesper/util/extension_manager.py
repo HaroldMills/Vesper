@@ -172,9 +172,10 @@ Command:
     - vesper.command.execute_deferred_actions_command.ExecuteDeferredActionsCommand
     - vesper.command.export_command.ExportCommand
     - vesper.command.import_command.ImportCommand
+    - vesper.command.refresh_recording_audio_file_paths_command.RefreshRecordingAudioFilePathsCommand
     - vesper.command.test_command.TestCommand
     - vesper.command.transfer_call_classifications_command.TransferCallClassificationsCommand
-    - vesper.command.refresh_recording_audio_file_paths_command.RefreshRecordingAudioFilePathsCommand
+    - vesper.command.untag_clips_command.UntagClipsCommand
     - vesper.old_bird.add_old_bird_clip_start_indices_command.AddOldBirdClipStartIndicesCommand
     
 Detector:

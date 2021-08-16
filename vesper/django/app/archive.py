@@ -389,10 +389,11 @@ class Archive:
             _handle_unrecognized_annotation_name(annotation_name)
             
             
-    def get_tag_specs(self):
+    def get_tag_specs(self, include_not_applicable=True):
         infos = TagInfo.objects.all().order_by('name')
-        names = [i.name for i in infos]
-        specs = [_NOT_APPLICABLE] + names
+        specs = [i.name for i in infos]
+        if include_not_applicable:
+            specs = [_NOT_APPLICABLE] + specs
         return specs
     
     

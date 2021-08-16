@@ -39,10 +39,11 @@ from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, RecordingFile, Station, StringAnnotation,
     Tag, TagInfo)
-from vesper.django.app.transfer_call_classifications_form import \
-    TransferCallClassificationsForm
 from vesper.django.app.refresh_recording_audio_file_paths_form import \
     RefreshRecordingAudioFilePathsForm
+from vesper.django.app.transfer_call_classifications_form import \
+    TransferCallClassificationsForm
+from vesper.django.app.untag_clips_form import UntagClipsForm
 from vesper.ephem.sun_moon import SunMoon
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm as OldBirdExportClipCountsCsvFileForm
@@ -134,6 +135,9 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
  
       - name: Delete clips
         url_name: delete-clips
+        
+      - name: Untag clips
+        url_name: untag-clips
         
 - name: View
   dropdown:
@@ -756,6 +760,45 @@ def _create_delete_clips_command_spec(form):
 
     spec = {
         'name': 'delete_clips',
+        'arguments': {
+            'retain_count': data['retain_count']
+        }
+    }
+    
+    _add_clip_set_command_arguments(spec, data)
+    
+    return spec
+
+
+@login_required
+@csrf_exempt
+def untag_clips(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = UntagClipsForm()
+
+    elif request.method == 'POST':
+
+        form = UntagClipsForm(request.POST)
+
+        if form.is_valid():
+            command_spec = _create_untag_clips_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Other', form=form)
+
+    return render(request, 'vesper/untag-clips.html', context)
+
+
+def _create_untag_clips_command_spec(form):
+
+    data = form.cleaned_data
+
+    spec = {
+        'name': 'untag_clips',
         'arguments': {
             'retain_count': data['retain_count']
         }

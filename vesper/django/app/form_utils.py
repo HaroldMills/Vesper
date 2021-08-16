@@ -39,6 +39,6 @@ def get_string_annotation_value_choices(annotation_name):
     return [(s, s) for s in specs]
 
 
-def get_tag_choices():
-    specs = archive.get_tag_specs()
+def get_tag_choices(include_not_applicable=True):
+    specs = archive.get_tag_specs(include_not_applicable)
     return [(s, s) for s in specs]
