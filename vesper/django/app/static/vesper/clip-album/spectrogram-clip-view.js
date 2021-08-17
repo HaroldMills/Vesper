@@ -1,7 +1,7 @@
-import { ClipView }
-    from '/static/vesper/clip-album/clip-view.js';
 import { CallsCleanupOverlay }
     from '/static/vesper/clip-album/calls-cleanup-overlay.js';
+import { ClipView }
+    from '/static/vesper/clip-album/clip-view.js';
 import { TimeFrequencyPointOverlay }
     from '/static/vesper/clip-album/time-frequency-point-overlay.js';
 import { TimeFrequencyUtils }
@@ -21,6 +21,7 @@ const _OVERLAY_CLASSES = {
 
 const _DEFAULT_SPECTRAL_INTERPOLATION_FACTOR = 1;
 const _DEFAULT_REFERENCE_POWER = 1e-10;
+const _DEFAULT_NORMALIZE_BACKGROUND = false;
 const _DEFAULT_FREQUENCY_RANGE = [0, 11025];
 const _DEFAULT_COLORMAP = 'Gray';
 const _DEFAULT_REVERSE_COLORMAP = true;
@@ -117,10 +118,9 @@ export class SpectrogramClipView extends ClipView {
             
             // _showSpectrogramStats(this._spectrogram, settings);
             
-            // Uncomment the following assignment to normalize the
-            // spectrogram background.
-            // this._spectrogram =
-            //     _normalizeSpectrogramBackground(this._spectrogram, settings);
+            if (settings.low.normalizeBackground)
+                this._spectrogram = _normalizeSpectrogramBackground(
+                    this._spectrogram, settings);
             
 			this._spectrogramCanvas =
 				_createSpectrogramCanvas(this._spectrogram, settings);
@@ -307,12 +307,14 @@ function _getLowLevelSpectrogramSettings(settings, sampleRate) {
     const hopSize = _getHopSize(s.hopSize, sampleRate, floatWindowSize);
     const dftSize = _getDftSize(windowSize, s);
 	const referencePower = _getReferencePower(s.referencePower);
+    const normalizeBackground = _getNormalizeBackground(s.normalizeBackground);
 
 	return {
 		window: window,
 		hopSize: hopSize,
 		dftSize: dftSize,
-		referencePower: referencePower
+		referencePower: referencePower,
+        normalizeBackground: normalizeBackground
 	};
 
 }
@@ -388,6 +390,11 @@ function _isPowerOfTwo(n) {
 
 function _getReferencePower(referencePower) {
     return referencePower || _DEFAULT_REFERENCE_POWER;
+}
+
+
+function _getNormalizeBackground(normalizeBackground) {
+    return normalizeBackground || _DEFAULT_NORMALIZE_BACKGROUND;
 }
 
 
