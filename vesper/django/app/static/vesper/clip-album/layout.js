@@ -425,7 +425,16 @@ export class NonuniformResizingLayout extends _Layout {
 		clipsDiv.style.alignContent = 'stretch';
 		clipsDiv.style.alignItems = 'stretch';
 		clipsDiv.style.width = 'auto';
-		clipsDiv.style.margin = '0';
+		
+		// The "yMargin" in the following leaves some extra space for
+        // clip labels when they are above or below the clip view divs.
+        // A better approach might be to take the label location into
+        // consideration when performing layout and put the clip view
+        // div and the label in an additional parent div when the label
+        // is either above or below the clip view div. Or perhaps we
+        // should always use the parent div, but place the label on
+        // top of (in the z-order sense) the clip view div when needed.
+		clipsDiv.style.margin = yMargin + ' 0';
 
 		const rowStartClipNums = this._pages[pageNum];
 		const clipViews = this.clipViews;
