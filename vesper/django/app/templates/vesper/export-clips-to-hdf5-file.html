@@ -42,6 +42,8 @@
 
     <form class="form" role="form" action="{% url 'export-clips-to-hdf5-file' %}" method="post">
 
+        {% csrf_token %}
+        
         {% include "vesper/clip-set-form-elements.html" %}
         
         {{ form.output_file_path|block_form_element }}

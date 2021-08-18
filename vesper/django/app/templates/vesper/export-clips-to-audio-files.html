@@ -42,6 +42,8 @@
 
     <form class="form" role="form" action="{% url 'export-clips-to-audio-files' %}" method="post">
 
+        {% csrf_token %}
+        
         {% include "vesper/clip-set-form-elements.html" %}
 
         {{ form.output_dir_path|block_form_element }}

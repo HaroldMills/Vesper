@@ -326,7 +326,6 @@ def index(request):
 
 
 @login_required
-@csrf_exempt
 def detect(request):
 
     if request.method in _GET_AND_HEAD:
@@ -388,7 +387,6 @@ def _render_coming_soon(request, action, message):
 
 
 @login_required
-@csrf_exempt
 def classify(request):
 
     if request.method in _GET_AND_HEAD:
@@ -429,7 +427,6 @@ def _create_classify_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def execute_deferred_actions(request):
 
     if request.method in _GET_AND_HEAD:
@@ -460,7 +457,6 @@ def _create_execute_deferred_actions_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def old_bird_export_clip_counts_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
@@ -503,7 +499,6 @@ def old_bird_export_clip_counts_csv_file(request):
 
 
 @login_required
-@csrf_exempt
 def export_clip_metadata_to_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
@@ -568,7 +563,6 @@ def _add_clip_set_command_arguments(command_spec, form_data):
        
 
 @login_required
-@csrf_exempt
 def export_clips_to_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
@@ -618,7 +612,6 @@ def _create_export_clips_to_audio_files_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def export_clips_to_hdf5_file(request):
 
     if request.method in _GET_AND_HEAD:
@@ -662,7 +655,6 @@ def _create_export_clips_to_hdf5_file_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def refresh_recording_audio_file_paths(request):
 
     if request.method in _GET_AND_HEAD:
@@ -695,7 +687,6 @@ def _create_refresh_recording_audio_file_paths_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def delete_recordings(request):
 
     if request.method in _GET_AND_HEAD:
@@ -732,7 +723,6 @@ def _create_delete_recordings_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def delete_clips(request):
 
     if request.method in _GET_AND_HEAD:
@@ -771,7 +761,6 @@ def _create_delete_clips_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def untag_clips(request):
 
     if request.method in _GET_AND_HEAD:
@@ -810,7 +799,6 @@ def _create_untag_clips_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def create_clip_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
@@ -847,7 +835,6 @@ def _create_create_clip_audio_files_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def delete_clip_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
@@ -884,7 +871,6 @@ def _create_delete_clip_audio_files_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def transfer_call_classifications(request):
 
     if request.method in _GET_AND_HEAD:
@@ -1049,8 +1035,15 @@ def _parse_content_type(content_type):
     return Bunch(name=parts[0], params=params)
 
 
-@csrf_exempt
 def get_clip_audios(request):
+    
+    # Note that this view uses the HTTP POST method rather than the
+    # GET method to request data from the server. This is because
+    # some information needed by the server to process the request
+    # is included in the request body instead of in the URI. Note,
+    # however, that the view does not modify the server state, i.e.
+    # the archive.
+    
     if request.method == 'POST':
         return _handle_json_post(request, _get_clip_audios_aux)
     else:
@@ -1139,13 +1132,14 @@ def _get_uint32_bytes(i):
     return np.array([i], dtype=np.dtype('<u4')).tobytes()
 
 
-@csrf_exempt
 def get_clip_metadata(request):
     
     # Note that this view uses the HTTP POST method rather than the
     # GET method to request data from the server. This is because
     # some information needed by the server to process the request
-    # is included in the request body instead of in the URI.
+    # is included in the request body instead of in the URI. Note,
+    # however, that the view does not modify the server state, i.e.
+    # the archive.
     
     # TODO: Consider querying database for batches of clips instead
     # of one clip at a time. This could dramatically reduce the
@@ -1346,7 +1340,6 @@ def untag_clip_batch(request):
     return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
     
     
-@csrf_exempt
 def clip_metadata(request, clip_id):
     
     if request.method in _GET_AND_HEAD:
@@ -1910,7 +1903,6 @@ def _render_clip_album(request, context):
 
 
 @login_required
-@csrf_exempt
 def test_command(request):
 
     if request.method in _GET_AND_HEAD:
@@ -1935,7 +1927,6 @@ def test_command(request):
 
 
 @login_required
-@csrf_exempt
 def import_metadata(request):
 
     if request.method in _GET_AND_HEAD:
@@ -1975,7 +1966,6 @@ def _create_import_metadata_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def import_old_bird_clips(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2017,7 +2007,6 @@ def _create_import_old_bird_clips_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def import_recordings(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2068,7 +2057,6 @@ def _create_import_recordings_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def add_recording_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2106,7 +2094,6 @@ def _create_add_recording_audio_files_command_spec(form):
 
 
 @login_required
-@csrf_exempt
 def add_old_bird_clip_start_indices(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2153,7 +2140,6 @@ def job(request, job_id):
     return render(request, 'vesper/job.html', context)
 
 
-@csrf_exempt
 def about_vesper(request):
 
     if request.method not in _GET_AND_HEAD:

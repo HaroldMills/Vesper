@@ -49,6 +49,8 @@
 
     <form class="form" role="form" action="{% url 'delete-clips' %}" method="post">
 
+        {% csrf_token %}
+        
         {% include "vesper/clip-set-form-elements.html" %}
         
         {{ form.retain_count|form_element }}

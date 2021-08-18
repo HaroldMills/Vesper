@@ -60,6 +60,8 @@
 
     <form class="form" role="form" action="{% url 'import-recordings' %}" method="post">
 
+        {% csrf_token %}
+        
         {{ form.paths|block_form_element }}
         {{ form.recursive|form_checkbox }}
 

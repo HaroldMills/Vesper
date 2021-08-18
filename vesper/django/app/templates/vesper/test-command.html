@@ -13,7 +13,11 @@
     <h2>Test Command</h2>
 
     <form action="{% url 'test-command' %}" method="post">
+    
+        {% csrf_token %}
+        
         <input type="submit" value="Test">
+        
     </form>
 
 </body>

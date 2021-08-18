@@ -51,6 +51,8 @@
 
     <form class="form" role="form" action="{% url 'untag-clips' %}" method="post">
 
+        {% csrf_token %}
+        
         {% include "vesper/clip-set-form-elements.html" %}
         
         {{ form.retain_count|form_element }}

@@ -44,6 +44,8 @@
 
     <form class="form" role="form" action="{% url 'export-clip-metadata-to-csv-file' %}" method="post">
 
+        {% csrf_token %}
+        
         {% include "vesper/clip-set-form-elements.html" %}
         
         {{ form.table_format|form_element }}

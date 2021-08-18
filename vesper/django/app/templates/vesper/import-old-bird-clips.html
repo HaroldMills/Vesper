@@ -50,6 +50,8 @@
 
     <form class="form" role="form" action="{% url 'import-old-bird-clips' %}" method="post">
 
+        {% csrf_token %}
+        
         {{ form.paths|block_form_element }}
         {{ form.start_date|form_element }}
         {{ form.end_date|form_element }}

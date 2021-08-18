@@ -63,6 +63,8 @@
 
     <form class="form" role="form" action="{% url 'add-old-bird-clip-start-indices' %}" method="post">
 
+        {% csrf_token %}
+        
         {{ form.stations|block_form_element }}
         {{ form.start_date|form_element }}
         {{ form.end_date|form_element }}

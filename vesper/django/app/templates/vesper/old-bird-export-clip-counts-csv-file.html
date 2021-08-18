@@ -34,6 +34,8 @@
 
     <form class="form" role="form" action="{% url 'old-bird-export-clip-counts-csv-file' %}" method="post">
 
+        {% csrf_token %}
+        
         {{ form.detector|form_element }}
         {{ form.station_mic|form_element }}
         {{ form.start_date|form_element }}

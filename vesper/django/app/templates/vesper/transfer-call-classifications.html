@@ -49,6 +49,8 @@
 
     <form class="form" role="form" action="{% url 'transfer-call-classifications' %}" method="post">
 
+        {% csrf_token %}
+        
         {{ form.source_detector|form_element }}
         {{ form.target_detector|form_element }}
         {{ form.station_mics|block_form_element }}

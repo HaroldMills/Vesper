@@ -103,6 +103,8 @@
 
     <form class="form" role="form" action="{% url 'detect' %}" method="post">
 
+        {% csrf_token %}
+        
         {{ form.detectors|block_form_element }}
         {{ form.stations|block_form_element }}
         {{ form.start_date|form_element }}
