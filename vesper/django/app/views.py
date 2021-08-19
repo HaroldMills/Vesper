@@ -1035,15 +1035,17 @@ def _parse_content_type(content_type):
     return Bunch(name=parts[0], params=params)
 
 
+# This view handles an HTTP POST request to read data from the server,
+# but does not modify the server state. It uses the POST method rather
+# than the GET method since the request includes information (namely
+# a list of clip IDs) in its body that the view must read to understand
+# the request, and that is not allowed for GET requests: the meaning of
+# a GET request must be specified entirely by its URI (see
+# https://stackoverflow.com/questions/978061/http-get-with-request-body).
+# We exempt the view from Django's CSRF protection since, even though it
+# handles POST requests, it does not modify the server state.
+@csrf_exempt
 def get_clip_audios(request):
-    
-    # Note that this view uses the HTTP POST method rather than the
-    # GET method to request data from the server. This is because
-    # some information needed by the server to process the request
-    # is included in the request body instead of in the URI. Note,
-    # however, that the view does not modify the server state, i.e.
-    # the archive.
-    
     if request.method == 'POST':
         return _handle_json_post(request, _get_clip_audios_aux)
     else:
@@ -1093,6 +1095,10 @@ def _get_clip_audios_aux(content):
     
     clip_ids = content['clip_ids']
     
+    # TODO: Consider querying database for batches of clips instead
+    # of one clip at a time. This could dramatically reduce the
+    # number of database queries this functions performs. The Django
+    # QuerySet `in` field lookup or `in_bulk` method might be useful.
     clips = [get_object_or_404(Clip, pk=i) for i in clip_ids]
 
     content_type = 'audio/wav'
@@ -1132,20 +1138,17 @@ def _get_uint32_bytes(i):
     return np.array([i], dtype=np.dtype('<u4')).tobytes()
 
 
+# This view handles an HTTP POST request to read data from the server,
+# but does not modify the server state. It uses the POST method rather
+# than the GET method since the request includes information (namely
+# a list of clip IDs) in its body that the view must read to understand
+# the request, and that is not allowed for GET requests: the meaning of
+# a GET request must be specified entirely by its URI (see
+# https://stackoverflow.com/questions/978061/http-get-with-request-body).
+# We exempt the view from Django's CSRF protection since, even though it
+# handles POST requests, it does not modify the server state.
+@csrf_exempt
 def get_clip_metadata(request):
-    
-    # Note that this view uses the HTTP POST method rather than the
-    # GET method to request data from the server. This is because
-    # some information needed by the server to process the request
-    # is included in the request body instead of in the URI. Note,
-    # however, that the view does not modify the server state, i.e.
-    # the archive.
-    
-    # TODO: Consider querying database for batches of clips instead
-    # of one clip at a time. This could dramatically reduce the
-    # number of database queries this view performs. The Django
-    # QuerySet `in` field lookup or `in_bulk` method might be useful.
-    
     if request.method == 'POST':
         return _handle_json_post(request, _get_clip_metadata_aux)
     else:
@@ -1153,8 +1156,15 @@ def get_clip_metadata(request):
         
         
 def _get_clip_metadata_aux(content):
+    
     clip_ids = content['clip_ids']
+    
+    # TODO: Consider querying database for batches of clips instead
+    # of one clip at a time. This could dramatically reduce the
+    # number of database queries this functions performs. The Django
+    # QuerySet `in` field lookup or `in_bulk` method might be useful.
     metadata = dict((i, _get_clip_metadata(i)) for i in clip_ids)
+    
     return JsonResponse(metadata)
             
 
