@@ -13,6 +13,41 @@ import { SpectrogramClipView }
 import { ViewUtils } from '/static/vesper/view/view-utils.js';
 
 
+// This function is derived from code provided by the Django project at
+// https://docs.djangoproject.com/en/3.2/ref/csrf/.
+function getCookieValue(name) {
+    
+    let value = null;
+    
+    if (document.cookie && document.cookie !== '') {
+        
+        const cookies = document.cookie.split(';');
+        
+        for (let i = 0; i < cookies.length; i++) {
+            
+            const cookie = cookies[i].trim();
+            
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                value = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+            
+        }
+        
+    }
+    
+    // console.log(`getCookieValue: ${name} ${value}`);
+    
+    return value;
+    
+}
+
+
+// Django CSRF token to include in HTTP requests (e.g. POST) that can
+// modify the server state.
+const _CSRF_TOKEN = getCookieValue('csrftoken');
+
+
 const _DEFAULT_TAG_COLORS = [
     'DarkOrange',
     'Magenta',
@@ -1329,12 +1364,18 @@ export class ClipAlbum {
 
         const body = JSON.stringify(content);
         
+        // Include `X-CSRFToken` header to satisfy Django CSRF protection.
+        // Django will reject POST request without it: see
+        // https://docs.djangoproject.com/en/3.2/ref/csrf/.
+        const headers = new Headers({
+            'Content-Type': 'application/json; charset=utf-8',
+            'X-CSRFToken': _CSRF_TOKEN
+        });
+        
         return fetch(url, {
             method: 'POST',
             body: body,
-            headers: new Headers({
-                'Content-Type': 'application/json; charset=utf-8'
-            }),
+            headers: headers,
             credentials: 'same-origin'
         });
 

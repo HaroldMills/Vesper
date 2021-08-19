@@ -1192,7 +1192,6 @@ def _get_tags(clip_id):
     return sorted(t.info.name for t in tags)
                 
                 
-@csrf_exempt
 def annotate_clip_batch(request):
 
     '''
@@ -1273,7 +1272,6 @@ def _annotate_clips(clip_ids, creation_time, creating_user, content):
                 creating_user=creating_user)
             
             
-@csrf_exempt
 def unannotate_clip_batch(request):
 
     '''
@@ -1314,7 +1312,6 @@ def _edit_clip_metadata_aux(
                     creating_user=creating_user)
                 
                 
-@csrf_exempt
 def tag_clip_batch(request):
 
     '''
@@ -1332,7 +1329,6 @@ def tag_clip_batch(request):
     return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
     
     
-@csrf_exempt
 def untag_clip_batch(request):
 
     '''
