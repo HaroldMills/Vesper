@@ -87,14 +87,6 @@ if not settings.ARCHIVE_READ_ONLY:
              views.transfer_call_classifications,
              name='transfer-call-classifications'),
     
-        path('stations/', views.stations, name='stations'),
-        path('stations/<name:station_name>/', views.station, name='station'),
-        path('stations/<name:station_name>/clips/', views.station_clips,
-             name='station-clips'),
-    
-        path('clips/', views.clips, name='clips'),
-        path('clips/<int:clip_id>/', views.clip, name='clip'),
-        
         path('annotate-clip-batch/', views.annotate_clip_batch,
              name='annotate-clip-batch'),
         

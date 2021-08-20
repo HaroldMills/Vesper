@@ -6,7 +6,6 @@ import logging
 
 from django import forms, urls
 from django.db import transaction
-from django.db.models import Max, Min
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import (
@@ -36,7 +35,7 @@ from vesper.django.app.export_clips_to_hdf5_file_form import \
 from vesper.django.app.import_metadata_form import ImportMetadataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
-    AnnotationInfo, Clip, Job, Station, StringAnnotation, Tag, TagInfo)
+    AnnotationInfo, Clip, Job, StringAnnotation, Tag, TagInfo)
 from vesper.django.app.refresh_recording_audio_file_paths_form import \
     RefreshRecordingAudioFilePathsForm
 from vesper.django.app.transfer_call_classifications_form import \
@@ -938,62 +937,6 @@ def _create_transfer_call_classifications_command_spec(form):
             'end_date': data['end_date'],
         }
     }
-
-
-def stations(request):
-    stations = Station.objects.order_by('name')
-    context = dict(stations=stations)
-    return render(request, 'vesper/stations.html', context)
-
-
-def station(request, station_name):
-    station = Station.objects.get(name=station_name)
-    context = dict(station=station)
-    return render(request, 'vesper/station.html', context)
-
-
-def station_clips(request, station_name):
-    station = Station.objects.get(name=station_name)
-    first_time, last_time = _get_station_clip_start_time_extrema(station)
-    context = dict(
-        station=station,
-        first_time=str(first_time),
-        last_time=str(last_time))
-    return render(request, 'vesper/station-clips.html', context)
-
-
-def _get_station_clip_start_time_extrema(station):
-    # TODO: How expensive is the clip query below? I believe it requires a
-    # join on three tables, namely Clip, Recording, and StationDevice.
-    clips = Clip.objects.filter(recording__station_recorder__station=station)
-    times = clips.aggregate(
-        first_time=Min('start_time'),
-        last_time=Max('start_time'))
-    return (times['first_time'], times['last_time'])
-
-
-def clips(request):
-    first_time, last_time = _get_clip_start_time_extrema()
-    context = dict(
-        station=station,
-        first_time=str(first_time),
-        last_time=str(last_time))
-    return render(request, 'vesper/clips.html', context)
-
-
-def _get_clip_start_time_extrema():
-    times = Clip.objects.aggregate(
-        first_time=Min('start_time'),
-        last_time=Max('start_time'))
-    return (times['first_time'], times['last_time'])
-
-
-def clip(request, clip_id):
-    clip = Clip.objects.get(id=clip_id)
-    context = dict(
-        clip=clip,
-        start_time=str(clip.start_time))
-    return render(request, 'vesper/clip.html', context)
 
 
 def clip_audio(request, clip_id):
