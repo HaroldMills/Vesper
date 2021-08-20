@@ -939,38 +939,38 @@ def _create_transfer_call_classifications_command_spec(form):
     }
 
 
-def clip_audio(request, clip_id):
-    
-    clip = get_object_or_404(Clip, pk=clip_id)
-    
-    content_type = 'audio/wav'
-    
-    try:
-        content = clip_manager.get_audio_file_contents(clip, content_type)
-        
-    except Exception as e:
-        logger = logging.getLogger('django.server')
-        logger.error(
-            f'Attempt to get audio for clip "{str(clip)}" failed with '
-            f'{e.__class__.__name__} exception. Exception message was: '
-            f'{str(e)}')
-        return HttpResponseServerError()
+# def clip_audio(request, clip_id):
+#
+#     clip = get_object_or_404(Clip, pk=clip_id)
+#
+#     content_type = 'audio/wav'
+#
+#     try:
+#         content = clip_manager.get_audio_file_contents(clip, content_type)
+#
+#     except Exception as e:
+#         logger = logging.getLogger('django.server')
+#         logger.error(
+#             f'Attempt to get audio for clip "{str(clip)}" failed with '
+#             f'{e.__class__.__name__} exception. Exception message was: '
+#             f'{str(e)}')
+#         return HttpResponseServerError()
+#
+#     response = HttpResponse()
+#     response.write(content)
+#     response['Content-Type'] = content_type
+#     response['Content-Length'] = len(content)
+#     return response
 
-    response = HttpResponse()
-    response.write(content)
-    response['Content-Type'] = content_type
-    response['Content-Length'] = len(content)
-    return response
 
-
-def presets(request, preset_type_name):
-
-    if request.method in _GET_AND_HEAD:
-        content = _get_presets_json(preset_type_name)
-        return HttpResponse(content, content_type='application/json')
-
-    else:
-        return HttpResponseNotAllowed(_GET_AND_HEAD)
+# def presets(request, preset_type_name):
+#
+#     if request.method in _GET_AND_HEAD:
+#         content = _get_presets_json(preset_type_name)
+#         return HttpResponse(content, content_type='application/json')
+#
+#     else:
+#         return HttpResponseNotAllowed(_GET_AND_HEAD)
 
 
 def _get_presets_json(preset_type_name):
@@ -1326,14 +1326,14 @@ def untag_clip_batch(request):
     return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
     
     
-def clip_metadata(request, clip_id):
-    
-    if request.method in _GET_AND_HEAD:
-        metadata = _get_clip_metadata(clip_id)
-        return JsonResponse(metadata)
-
-    else:
-        return HttpResponseNotAllowed(_GET_AND_HEAD)
+# def clip_metadata(request, clip_id):
+#
+#     if request.method in _GET_AND_HEAD:
+#         metadata = _get_clip_metadata(clip_id)
+#         return JsonResponse(metadata)
+#
+#     else:
+#         return HttpResponseNotAllowed(_GET_AND_HEAD)
 
 
 def clip_calendar(request):

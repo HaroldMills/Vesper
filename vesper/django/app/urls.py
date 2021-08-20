@@ -20,10 +20,10 @@ urlpatterns = [
     path('get-clip-metadata/', views.get_clip_metadata,
          name='get-clip-metadata'),
     
-    path('clips/<int:clip_id>/audio/', views.clip_audio, name='clip-audio'),
+    # path('clips/<int:clip_id>/audio/', views.clip_audio, name='clip-audio'),
     
-    path('clips/<int:clip_id>/metadata/', views.clip_metadata,
-         name='clip-metadata'),
+    # path('clips/<int:clip_id>/metadata/', views.clip_metadata,
+    #      name='clip-metadata'),
     
     path('about-vesper/', views.about_vesper, name='about-vesper')
     
@@ -98,8 +98,8 @@ if not settings.ARCHIVE_READ_ONLY:
         path('untag-clip-batch/', views.untag_clip_batch,
              name='untag-clip-batch'),
 
-        path('presets/<name:preset_type_name>/', views.presets,
-             name='presets'),
+        # path('presets/<name:preset_type_name>/', views.presets,
+        #      name='presets'),
     
         path('jobs/<int:job_id>/', views.job, name='job'),
     
