@@ -71,6 +71,33 @@ import vesper.util.yaml_utils as yaml_utils
 import vesper.version as version
 
 
+# A note about Vesper security:
+#
+# For security, Vesper must require user authentication for all Django
+# views that can modify server state. In most cases, it suffices to
+# decorate the view with `@login_required`. In some cases, however,
+# such as for views that receive requests via calls to the JavaScript
+# `fetch` function on the client (see the `annotate_clip_batch`,
+# `unannotate_clip_batch`, `tag_clip_batch`, and `untag_clip_batch`
+# view functions), this does not seem to do what we need (see TODO
+# item preceding the `annotate_clip_batch` function), and we call
+# the `User.is_authenticated` method from within the view to check
+# that the user is logged in.
+#
+# Vesper must also defend against cross site request forgeries (CSRFs).
+# We use Django's CSRF protection for this, which requires that we
+# include the CSRF token in all HTTP requests that can modify the
+# server state. To do this, we use the `{% csrf_token %}` tag in HTML
+# template forms, which causes the `X-CSRFToken` header to be included
+# in the POST requests made when the forms are submitted, and we include
+# the `X-CSRFToken` header ourselves in calls to the JavaScript `fetch`
+# function that send POST requests to the server that can modify server
+# state. There are some Django views (e.g. `get_clip_audios` and
+# `get_clip_metadata`) that process POST requests that can never modify
+# server state, and we disable Django's CSRF protection for these views
+# with Django's `@csrf_exempt` decorator.
+
+
 class HttpError(Exception):
 
     def __init__(self, status_code, reason=None):
@@ -1192,6 +1219,13 @@ def _get_tags(clip_id):
     return sorted(t.info.name for t in tags)
                 
                 
+# TODO: Understand why decorating this view (or any of the
+# `unannotate_clip_batch`, `tag_clip_batch`, and `untag_clip_batch`
+# views) with `@login_required` causes the view to not be executed
+# when the user is not logged in (as expected), but return a 200
+# response instead of a redirect response. The views receive
+# requests from the clip album JavaScript `_editClipMetadataAux`
+# method. It might help to look at the code for `@login_required`.
 def annotate_clip_batch(request):
 
     '''
