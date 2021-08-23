@@ -385,8 +385,11 @@ class Detector:
           
         # Convert indices to times.
         times = self._convert_indices_to_times(indices)
-         
-        return times
+        
+        # Get ratios at times as detection scores.
+        scores = x1[indices - 1]
+        
+        return list(zip(times, scores))
     
     
     def _convert_indices_to_times(self, indices):
@@ -398,8 +401,10 @@ class Detector:
     
     
     def _notify_listener(self, clips, threshold):
-        for start_index, length in clips:
-            self._listener.process_clip(start_index, length, threshold)
+        for start_index, length, score in clips:
+            annotations = {'Detector Score': score}
+            self._listener.process_clip(
+                start_index, length, threshold, annotations)
             
             
     def complete_detection(self):
@@ -690,12 +695,12 @@ class _Clipper(_SeriesProcessor):
             
         clips = []
             
-        for time in crossings:
+        for time, score in crossings:
         
             start_time = max(time - self._initial_padding, 0)
             start_index = _seconds_to_samples(
                 start_time, self._sample_rate)
-            clips.append((start_index, self._length))
+            clips.append((start_index, self._length, score))
                   
         return clips
 
