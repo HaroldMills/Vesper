@@ -10,7 +10,6 @@ Old Bird Tseep and Thrush detectors that omit the post-processing steps
 
 import numpy as np
 
-# from vesper.pnf.ratio_file_writer import RatioFileWriter
 from vesper.pnf.pnf_energy_detector_1_0 import (
     Detector, _FirFilter, _seconds_to_samples, _SeriesProcessor,
     _SeriesProcessorChain)
