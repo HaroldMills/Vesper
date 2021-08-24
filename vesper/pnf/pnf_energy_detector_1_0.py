@@ -12,15 +12,12 @@ flight calls, respectively.
 
 # TODO: Modify detector interface to support any number of listeners.
 
-# TODO: Use newer `vesper.util.detection_score_file_writer` instead
-# of `vesper.pnf.ratio_file_writer` and delete the latter.
-
 
 import numpy as np
 import scipy.signal as signal
 
-# from vesper.pnf.ratio_file_writer import RatioFileWriter
 from vesper.util.bunch import Bunch
+from vesper.util.detection_score_file_writer import DetectionScoreFileWriter
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
@@ -214,6 +211,14 @@ _THRUSH_SETTINGS = Bunch(
 )
 
 
+_WRITE_DETECTION_SCORE_FILE = False
+"""
+`True` if detectors should write input audio and detection scores to a
+stereo audio file. This feature is for test purposes only: for normal
+operation such output should be disabled.
+"""
+
+
 class Detector:
     
     """
@@ -253,10 +258,14 @@ class Detector:
         self._unprocessed_samples = np.array([], dtype='float')
         self._num_samples_generated = 0
         
-#         self._ratio_file_writer = RatioFileWriter(
-#             input_sample_rate, self._signal_processor.hop_size,
-#             listener.detector_name)
-        
+        if _WRITE_DETECTION_SCORE_FILE:
+            file_name = f'{self.extension_name} Audio and Scores.wav'
+            file_path = f'/Users/harold/Desktop/{file_name}'
+            score_scale_factor = 1000
+            hop_size = self._signal_processor.hop_size
+            self._detection_score_file_writer = DetectionScoreFileWriter(
+                file_path, input_sample_rate, score_scale_factor, hop_size)
+         
 
     def _create_signal_processor(self):
         
@@ -359,8 +368,6 @@ class Detector:
         # Run signal processors on samples.
         ratios = self._signal_processor.process(samples)
            
-        # self._ratio_file_writer.write(samples, ratios)
-          
         for threshold in self._settings.thresholds:
             crossings = self._get_threshold_crossings(ratios, threshold)
             clips = self._series_processors[threshold].process(crossings)
@@ -369,6 +376,11 @@ class Detector:
         num_samples_generated = len(ratios)
         num_samples_processed = \
             num_samples_generated * self._signal_processor.hop_size
+            
+        if _WRITE_DETECTION_SCORE_FILE:
+            self._detection_score_file_writer.write(
+                samples[:num_samples_processed], ratios)
+          
         self._num_samples_processed += num_samples_processed
         self._unprocessed_samples = samples[num_samples_processed:]
         self._num_samples_generated += num_samples_generated
@@ -421,6 +433,9 @@ class Detector:
             
             if hasattr(self._listener, 'complete_processing'):
                 self._listener.complete_processing(threshold)
+                
+        if _WRITE_DETECTION_SCORE_FILE:
+            self._detection_score_file_writer.close()
         
 
 def _seconds_to_samples(duration, sample_rate):
