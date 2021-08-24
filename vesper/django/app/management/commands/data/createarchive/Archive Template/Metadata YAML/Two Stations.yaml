@@ -197,20 +197,20 @@ station_devices:
 # code.
 detectors:
 
-    - name: BirdVoxDetect 0.5.0 FT 50
+    - name: BirdVoxDetect 0.5.1 FT 50
       description: >
           BirdVoxDetect NFC detector with a fixed threshold of 50.
 
-    - name: BirdVoxDetect 0.5.0 AT 50
+    - name: BirdVoxDetect 0.5.1 AT 50
       description: >
           BirdVoxDetect NFC detector with an adaptive threshold
           whose nominal value is 50.
 
-    - name: MPG Ranch Thrush Detector 1.0 70
+    - name: MPG Ranch Thrush Detector 1.1 70
       description: >
           MPG Ranch Thrush NFC detector with a threshold of 70.
 
-    - name: MPG Ranch Tseep Detector 1.0 60
+    - name: MPG Ranch Tseep Detector 1.1 60
       description: >
           MPG Ranch Tseep NFC detector with a threshold of 60.
 
@@ -229,7 +229,7 @@ detectors:
 # classifiers without modifying Vesper's source code.
 classifiers:
 
-    - name: MPG Ranch NFC Coarse Classifier 3.0
+    - name: MPG Ranch NFC Coarse Classifier 3.1
       description: >
           Classifies an unclassified clip as a "Call" if it appears to be
           a nocturnal flight call, or as a "Noise" otherwise. Does not
