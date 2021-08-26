@@ -1,4 +1,4 @@
-recursive-include vesper *.css *.html *.js
+recursive-include vesper *.css *.css.map *.html *.js
 recursive-include vesper *.eot *.svg *.ttf *.woff2 *.woff
 recursive-include vesper *.h5 *.pb *.pkl *.bsp variables.*
 recursive-include vesper *.ini *.spec *.txt *.yaml *.sqlite LICENSE
