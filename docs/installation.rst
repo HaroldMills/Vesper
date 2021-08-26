@@ -54,18 +54,18 @@ To install the most recent version of Vesper in a new Conda environment:
 3. Create a new Conda environment for Vesper and install a Python
    interpreter in it by issuing the command::
 
-        conda create -n vesper-0.4.9 python=3.6
+        conda create -n vesper-0.4.10 python=3.9
 
    Conda will display a list of packages that it proposes to install,
    including Python and some others. Press the ``Return`` key to accept.
 
 4. Activate the environment you just created with::
 
-        conda activate vesper-0.4.9
+        conda activate vesper-0.4.10
 
 5. Install Vesper and various dependencies into the environment with::
 
-       pip install vesper==0.4.9
+       pip install vesper
        
    Here you must use pip rather than Conda since Vesper is distributed
    as a pip package. In addition to the Vesper package, pip will install
@@ -91,10 +91,10 @@ environment must have a name of the form:
         birdvoxdetect-<version number>
 
 where ``<version number>`` is the number of the BirdVoxDetect version
-installed in the environment, for example ``0.5.0``. The environment
+installed in the environment, for example ``0.5.1``. The environment
 must also include the ``vesper-birdvox`` package.
 
-To create a Conda environment to use, say, BirdVoxDetect version 0.5.0
+To create a Conda environment to use, say, BirdVoxDetect version 0.5.1
 with Vesper:
 
 1. Open a Windows Anaconda Prompt or Unix terminal.
@@ -102,22 +102,22 @@ with Vesper:
 2. Create a new Conda environment and install a Python interpreter in
    it by issuing the command::
 
-        conda create -n birdvoxdetect-0.5.0 python=3.7
+        conda create -n birdvoxdetect-0.5.1 python=3.7
 
    Conda will display a list of packages that it proposes to install,
    including Python and some others. Press the ``Return`` key to accept.
 
 4. Activate the environment you just created with::
 
-        conda activate birdvoxdetect-0.5.0
+        conda activate birdvoxdetect-0.5.1
 
 5. Install the ``vesper-birdvox`` and ``birdvoxdetect`` packages and
    their dependencies into the environment with::
 
-       pip install vesper-birdvox birdvoxdetect==0.5.0
+       pip install vesper-birdvox birdvoxdetect==0.5.1
        
-To install a version of BirdVoxDetect other than 0.5.0, substitute
-the appropriate version number for 0.5.0 in the instructions above,
+To install a version of BirdVoxDetect other than 0.5.1, substitute
+the appropriate version number for 0.5.1 in the instructions above,
 and be sure to specify a Python version compatible with your
 BirdVoxDetect version in step 2. See the installation instructions
 for the specific BirdVoxDetect version you are installing for a list

@@ -38,6 +38,23 @@ database:
    terminal (on macOS or Linux). This should apply any needed migrations
    to your database to bring it up to date.
    
+.. Note::
+   In some Vesper installations (such as ones including Python 3.9.6
+   and Django 3.2.6) the ``vesper_admin migrate`` command will
+   migrate your database correctly but not terminate. If the command
+   seems to hang, producing no output for at least thirty seconds,
+   type ``Ctrl-C`` on your keyboard to terminate it.
+
+I ran the ``vesper_admin`` command and it hung. What do I do?
+=============================================================
+
+In some Vesper installations (such as ones including Python 3.9.6 and
+Django 3.2.6) the ``vesper_admin`` command will function properly, for
+example by creating a superuser or migrating a database, except that
+it won't terminate. If the command seems to hang, producing no output
+for at least thirty seconds, type ``Ctrl-C`` on your keyboard to
+terminate it.
+
 How do I use BirdVoxDetect with Vesper?
 =======================================
 

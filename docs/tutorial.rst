@@ -90,7 +90,7 @@ Create a new Vesper archive
 ---------------------------
 
 #. Download the `Vesper archive template
-   <https://www.dropbox.com/s/f7pus8saz5m1mck/Archive%20Template.zip?dl=1>`_
+   <https://www.dropbox.com/s/yy4qugnki58zfrk/Archive%20Template.zip?dl=1>`_
    to your computer.
 
 #. Unzip the downloaded file. This should create an archive directory
@@ -135,16 +135,23 @@ Add a user to the archive
    and you must log in as one of those users to be able to modify the
    archive. Every archive should have at least one *superuser*, a user
    with certain administrative privileges. Add a superuser to your
-   archive  with the command::
+   archive with the command::
 
       vesper_admin createsuperuser
       
    The command will prompt you for the superuser's name, email
    address, and password (twice). You can skip the email address if
-   you wish. **Do not use a password that you really want to keep
-   secret.** Communication between the Vesper client and server is
-   currently unencrypted, so it is possible for someone eavesdropping
-   on your client/server network traffic to see your password.
+   you wish. **Do not use a password that you want to keep secret.**
+   Communication between the Vesper client and server is currently
+   unencrypted, so it is possible for someone eavesdropping on
+   your client/server network traffic to see your password.
+   
+.. Note::
+   In some Vesper installations (such as ones including Python 3.9.6
+   and Django 3.2.6) the ``vesper_admin createsuperuser`` command will
+   create the desired superuser but not terminate. If the command seems
+   to hang, producing no output for at least thirty seconds, type
+   ``Ctrl-C`` on your keyboard to terminate it.
 
 Start the Vesper server
 -----------------------
@@ -192,8 +199,8 @@ recordings and related metadata. In this section we will explain
 in a little more detail what that means, describing the main types
 of data in an archive and how they relate to each other.
 
-Recordings, clips, and annotations
-----------------------------------
+Recordings, clips, annotations, and tags
+----------------------------------------
 
 First and most importantly, a *recording* is a continuous
 audio recording. A recording has one or more *channels*, each
@@ -263,7 +270,13 @@ particular clip, and has a name and a value. A
 *classification* is an annotation that classifies the contents
 of a clip. For example, classification annotation might have
 the name "Classification" and a value like "Call" or "Noise".
-  
+
+A *tag* marks a clip as belonging to a set of clips. A tag
+has a name that can be used to refer to the set. For example,
+you might use a tag named "Review" to mark clips that you want
+to review with a collaborator, and a tag named "Export" to mark
+clips for which you want to export audio files.
+
 Stations and devices
 --------------------
 
@@ -320,6 +333,8 @@ summarizing those described above:
 | Annotation     | One piece of information about a clip, with a name and a value. |
 +----------------+-----------------------------------------------------------------+
 | Classification | Annotation that classifies a clip.                              |
++----------------+-----------------------------------------------------------------+
+| Tag            | Name for a set of clips.                                        |
 +----------------+-----------------------------------------------------------------+
 |                                                                                  |
 +----------------+-----------------------------------------------------------------+
