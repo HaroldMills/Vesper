@@ -12,25 +12,25 @@ To upload the Vesper package to the test Python package index:
 
     python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
-To upload the Vesper package to the  real Python package index:
+To upload the Vesper package to the real Python package index:
 
     python -m twine upload dist/*
 
 To create a conda environment using a local Vesper package:
 
-    conda create -n test python=3.6
+    conda create -n test python=3.9
     conda activate test
     pip install dist/vesper-<version>.tar.gz
     
 To create a conda environment using a Vesper package from the test PyPI:
 
-    conda create -n test python=3.6
+    conda create -n test python=3.9
     conda activate test
     pip install --extra-index-url https://test.pypi.org/simple/ vesper
 
 To create a conda environment using a Vesper package from the real PyPI:
 
-    conda create -n test python=3.6
+    conda create -n test python=3.9
     conda activate test
     pip install vesper==<version>
 
