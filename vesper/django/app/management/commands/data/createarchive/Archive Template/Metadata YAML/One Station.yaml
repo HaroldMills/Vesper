@@ -276,3 +276,12 @@ annotations:
     - name: Classification
       type: String
       constraint: Classification
+
+
+# The "tags" section specifies the tags that can be applied to clips.
+# Each tag must have a unique name, and optionally can have a description.
+tags:
+
+    - name: Review
+      description: Tags a clip for review.
+  

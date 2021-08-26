@@ -29,3 +29,6 @@ commands:
     t: [annotate_clips, Tone]
     o: [annotate_clips, Other]
     u: [annotate_clips, Unknown]
+    
+    r: [tag_clips, Review]
+    R: [untag_clips, Review]
