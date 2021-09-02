@@ -40,6 +40,40 @@ matching.
 '''
 
 
+# TODO: Consider changing matching algorithm to work with intervals
+# instead of points. The algorithm would work with a source clip
+# number i and a target clip number j. It would start with i = j = 0
+# and loop until either was the corresponding clip count. In the loop
+# body, it would increment i if clip i preceded clip j, or vice versa.
+# If the clips intersect, it would try to find a source clip that
+# matches clip j. To do that, it would consider all source clips that
+# intersect clip j, and choose the first one whose intersection is
+# maximal, perhaps requiring that the intersection meet or exceed
+# some minimum threshold. It would then increment j.
+#
+# The matching algorithm described above requires that the start times
+# and end times of the source and target clips increase monotonically.
+# It does not require that source clips do not intersect each other, or
+# that target clips do not intersect each other.
+#
+# The algorithm could work with clip subintervals if specified for
+# a detector (perhaps in the command settings), or otherwise with
+# entire clip intervals.
+#
+# The command could also allow specification of the classification
+# to transfer, since it won't necessarily be "Call*". The name of
+# the command could be just "Transfer Classifications".
+#
+# The command could also allow specification of tags for matching
+# and non-matching clips. Or maybe that belongs in a separate
+# "Match Clips" command that uses the same matching algorithm?
+#
+# Is the new matching algorithm commutative? Is that a desirable
+# property? I suspect so, since we're looking for a set of best matches,
+# and for that it seems that which clip sequence is the source and which
+# is the target should not matter.
+
+
 _CALL_START_WINDOWS = {
     
     # Thrush call detectors.
