@@ -367,24 +367,38 @@ class Archive:
             annotation_name, annotation_value, self._string_anno_ui_values)
     
     
-    def get_visible_string_annotation_ui_values(self, annotation_name):
+    def get_visible_string_annotation_ui_values(
+            self, annotation_name, include_unannotated=True):
         
         self._refresh_string_annotation_values_cache_if_needed()
         
         try:
-            return self._visible_string_anno_ui_values[annotation_name]
+            
+            values = self._visible_string_anno_ui_values[annotation_name]
+            
+            if include_unannotated:
+                return values
+            else:
+                return _remove_unannotated_items(values)
+
         except KeyError:
             _handle_unrecognized_annotation_name(annotation_name)
     
     
     def get_visible_string_annotation_ui_value_specs(
-            self, annotation_name):
+            self, annotation_name, include_unannotated=True):
         
         self._refresh_string_annotation_values_cache_if_needed()
         
         try:
-            return self._visible_string_anno_ui_value_specs[
-                annotation_name]
+            
+            specs = self._visible_string_anno_ui_value_specs[annotation_name]
+            
+            if include_unannotated:
+                return specs
+            else:
+                return _remove_unannotated_items(specs)
+
         except KeyError:
             _handle_unrecognized_annotation_name(annotation_name)
             
@@ -614,3 +628,19 @@ def _get_string_annotation_archive_value_specs_aux(annotation_value):
         specs.append(spec + separator + wildcard)
         
     return frozenset(specs)
+
+
+def _remove_unannotated_items(items):
+    
+    """
+    Removes items for unannotated clips from a list of annotation values
+    or annotation specs.
+    
+    For the time being, at least, this is easy since the items to be
+    removed are always the first two. If that changes, it may be best
+    to build and store two versions of each item list, one that includes
+    items for unannotated clips and one that does not, instead of storing
+    only the list of all items and removing the first two when needed.
+    """
+    
+    return items[2:]
