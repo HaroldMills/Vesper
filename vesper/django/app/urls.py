@@ -86,6 +86,9 @@ if not settings.ARCHIVE_READ_ONLY:
         path('transfer-call-classifications/',
              views.transfer_call_classifications,
              name='transfer-call-classifications'),
+        path('transfer-clip-classifications/',
+             views.transfer_clip_classifications,
+             name='transfer-clip-classifications'),
     
         path('annotate-clip-batch/', views.annotate_clip_batch,
              name='annotate-clip-batch'),

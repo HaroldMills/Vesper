@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    {% include "vesper/header-prefix.html" %}
+
+    <title>Transfer clip classifications - Vesper</title>
+
+    {% load vesper_extras %}
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+
+</head>
+
+<body>
+
+    {% include "vesper/navbar.html" %}
+
+    <h2>Transfer clip classifications</h2>
+
+    <p>
+        Transfers classifications from clips of one detector to
+        matching clips of another detector.
+    </p>
+    <p>
+        The detectors from and to whose clips classifications are
+        transferred are called the <i>source detector</i> and the
+        <i>target detector</i>, respectively. Clips of the source and
+        target detectors are called <i>source clips</i> and
+        <i>target clips</i>, respectively.
+        The set of source clips from which to transfer classifications
+        is specified as a detector, a set of station/mic pairs, and a range
+        of dates. For each of the specified source clips, the command
+        attempts to find the first unclassified target detector clip that
+        intersects the source clip maximally, and for which the duration of
+        the intersection is at least 70 percent of the minimum of the source
+        and target clip durations. If such a clip is found, the command
+        transfers the source clip's classification to it. The source clip
+        retains its classification. Classifications are never transferred
+        to target clips that are already classified.
+    </p>
+    
+    {% include "vesper/command-executes-as-job-message.html" %}
+
+    <!--
+        TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
+        of form elements. Or perhaps use django-bootstrap3 app? See
+        http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
+    -->
+
+    <form class="form" role="form" action="{% url 'transfer-clip-classifications' %}" method="post">
+
+        {% csrf_token %}
+        
+        {{ form.source_detector|form_element }}
+        {{ form.target_detector|form_element }}
+        {{ form.station_mics|block_form_element }}
+        {{ form.start_date|form_element }}
+        {{ form.end_date|form_element }}
+        {{ form.classification|form_element}}
+
+        <button type="submit" class="btn btn-default form-spacing command-form-spacing">Transfer</button>
+
+    </form>
+
+</body>
+
+</html>

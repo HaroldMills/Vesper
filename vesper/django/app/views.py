@@ -40,6 +40,8 @@ from vesper.django.app.refresh_recording_audio_file_paths_form import \
     RefreshRecordingAudioFilePathsForm
 from vesper.django.app.transfer_call_classifications_form import \
     TransferCallClassificationsForm
+from vesper.django.app.transfer_clip_classifications_form import \
+    TransferClipClassificationsForm
 from vesper.django.app.untag_clips_form import UntagClipsForm
 from vesper.ephem.sun_moon import SunMoon
 from vesper.old_bird.export_clip_counts_csv_file_form import \
@@ -188,6 +190,9 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       
       - name: Transfer call classifications
         url_name: transfer-call-classifications
+        
+      - name: Transfer clip classifications
+        url_name: transfer-clip-classifications
  
       - name: Execute deferred actions
         url_name: execute-deferred-actions
@@ -935,6 +940,47 @@ def _create_transfer_call_classifications_command_spec(form):
             'station_mics': data['station_mics'],
             'start_date': data['start_date'],
             'end_date': data['end_date'],
+        }
+    }
+
+
+@login_required
+def transfer_clip_classifications(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = TransferClipClassificationsForm()
+
+    elif request.method == 'POST':
+
+        form = TransferClipClassificationsForm(request.POST)
+
+        if form.is_valid():
+            command_spec = \
+                _create_transfer_clip_classifications_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Other', form=form)
+
+    return render(
+        request, 'vesper/transfer-clip-classifications.html', context)
+
+
+def _create_transfer_clip_classifications_command_spec(form):
+
+    data = form.cleaned_data
+
+    return {
+        'name': 'transfer_clip_classifications',
+        'arguments': {
+            'source_detector': data['source_detector'],
+            'target_detector': data['target_detector'],
+            'station_mics': data['station_mics'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
+            'classification': data['classification'],
         }
     }
 
