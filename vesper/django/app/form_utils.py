@@ -33,9 +33,10 @@ def get_processor_choices(processor_type):
     return [(n, n) for n in names]
 
 
-def get_string_annotation_value_choices(annotation_name):
+def get_string_annotation_value_choices(
+        annotation_name, include_unannotated=True):
     specs = archive.get_visible_string_annotation_ui_value_specs(
-        annotation_name)
+        annotation_name, include_unannotated)
     return [(s, s) for s in specs]
 
 
