@@ -191,6 +191,9 @@ Detector:
     - vesper.old_bird.old_bird_detector_redux_1_1.ThrushDetector
     - vesper.old_bird.old_bird_detector_redux_1_1.TseepDetector
     
+    # Pacific Southwest (PSW) Research Station detectors
+    - vesper.psw.nogo_detector_0_0.detector.Detector
+    
 Exporter:
     - vesper.command.clip_audio_file_exporter.ClipAudioFilesExporter
     - vesper.command.clips_hdf5_file_exporter.ClipsHdf5FileExporter
