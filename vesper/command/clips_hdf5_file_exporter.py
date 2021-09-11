@@ -15,6 +15,28 @@ import vesper.command.command_utils as command_utils
 # TODO: Make reading clip ids and classifications from output files faster?
 
 
+# TODO: Modify exporter to accept YAML settings via presets. Do not switch
+# in code between sets of settings according to clip metadata, e.g. detector
+# and/or classification.
+#
+# For example, settings for NOGO coarse classifier call clips
+# might look something like:
+#
+#     extraction_start_reference: Call Start Index
+#     extraction_start_offset: -.2
+#     extraction_duration: .6
+#     annotations:
+#         - [Classification, String]
+#         - [Call Start Index, Integer]
+#
+# Settings for NOGO coarse classifier non-call clips might look like:
+#
+#     extraction_start_offset: 0
+#     extraction_duration: .6
+#     annotations:
+#         - [Classification, String, 'Other']
+
+
 # Settings for exports from 2017 and 2018 MPG Ranch archives for coarse
 # classifier training.
 # _EXTRACTION_START_OFFSETS = {
@@ -32,20 +54,20 @@ import vesper.command.command_utils as command_utils
 
 # Settings for exports from 2018 MPG Ranch archives for species classifier
 # training.
-_EXTRACTION_START_OFFSETS = {
-    'Tseep': -.5,
-    'Thrush': -.5
-}
-_EXTRACTION_DURATIONS = {
-    'Tseep': 1.2,
-    'Thrush': 1.2
-}
-_ANNOTATION_INFOS = [
-    ('Classification', None), 
-    ('Call Start Index', int), 
-    ('Call End Index', int)]
-_DEFAULT_ANNOTATION_VALUES = {}
-_START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+# _EXTRACTION_START_OFFSETS = {
+#     'Tseep': -.5,
+#     'Thrush': -.5
+# }
+# _EXTRACTION_DURATIONS = {
+#     'Tseep': 1.2,
+#     'Thrush': 1.2
+# }
+# _ANNOTATION_INFOS = [
+#     ('Classification', None), 
+#     ('Call Start Index', int), 
+#     ('Call End Index', int)]
+# _DEFAULT_ANNOTATION_VALUES = {}
+# _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
 # # Settings for exports from 2017 MPG Ranch Archive 30k for NFC time bound
@@ -64,6 +86,40 @@ _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 #     ('Call End Index', int)]
 # _DEFAULT_ANNOTATION_VALUES = {}
 # _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+
+
+# Settings for positive examples from PSW NOGO Archive 2 for NOGO coarse
+# classifier training.
+# _EXTRACTION_START_OFFSETS = {
+#     'NOGO': -.2
+# }
+# _EXTRACTION_DURATIONS = {
+#     'NOGO': .6
+# }
+# _ANNOTATION_INFOS = [
+#     ('Classification', None), 
+#     ('Call Start Index', int)
+# ]
+# _DEFAULT_ANNOTATION_VALUES = {}
+
+
+# Settings for negative examples from PSW NOGO Archive 2 for NOGO coarse
+# classifier training.
+_EXTRACTION_START_OFFSETS = {
+    'NOGO': 0
+}
+_EXTRACTION_DURATIONS = {
+    'NOGO': .6
+}
+_ANNOTATION_INFOS = [
+    ('Classification', None), 
+]
+_DEFAULT_ANNOTATION_VALUES = {
+    'Classification': 'Other',
+}
+
+
+_START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
 _logger = logging.getLogger()
@@ -188,37 +244,18 @@ def _get_extraction_extent(clip, annotations):
         start_offset = _seconds_to_samples(start_offset, sample_rate)
         length = _seconds_to_samples(duration, sample_rate)
         
-        # Get call start index.
-        call_start_index = annotations['Call Start Index']
-        if call_start_index is None:
-            raise ValueError(f'Call start index missing for clip {clip}.')
+        # TODO: Specify in settings whether or not start offset is
+        # relative to an annotation value, and if so which one.
         
-        # Make start offset relative to clip start index rather
-        # than call start index.
-        start_offset += call_start_index - clip.start_index
+        # If "Call Start Index" annotation is present, assume extraction
+        # start index is specified relative to it, and modify start
+        # offset to be relative to clip start index rather than call
+        # start index.
+        call_start_index = annotations.get('Call Start Index')
+        if call_start_index is not None:
+            start_offset += call_start_index - clip.start_index
         
         return start_offset, length
-        
-
-# def _get_extraction_extent(clip, annotations):
-#     
-#     detector_name = _get_detector_name(clip)
-#     
-#     if detector_name is None:
-#         return None
-#     
-#     else:
-#         
-#         # Get start offset and duration in seconds.
-#         start_offset = _EXTRACTION_START_OFFSETS[detector_name]
-#         duration = _EXTRACTION_DURATIONS[detector_name]
-#         
-#         # Convert to samples.
-#         sample_rate = clip.sample_rate
-#         start_offset = _seconds_to_samples(start_offset, sample_rate)
-#         length = _seconds_to_samples(duration, sample_rate)
-#         
-#         return start_offset, length
         
 
 def _get_detector_name(clip):
@@ -230,6 +267,9 @@ def _get_detector_name(clip):
     
     elif detector_name.find('Tseep') != -1:
         return 'Tseep'
+    
+    elif detector_name.find('NOGO') != -1:
+        return 'NOGO'
     
     else:
         return None
@@ -245,7 +285,6 @@ def _format_datetime(dt):
     
 
 def _get_annotations(clip):
-    
     return dict([
         (name, _get_annotation_value(clip, name, value_converter))
         for name, value_converter in _ANNOTATION_INFOS])
@@ -262,7 +301,7 @@ def _get_annotation_value(clip, annotation_name, value_converter):
     
     else:
         
-        if value_converter is None:
+        if value_converter is None or annotation.value is None:
             return annotation.value
         else:
             return value_converter(annotation.value)
