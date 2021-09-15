@@ -28,11 +28,7 @@ import vesper.util.open_mp_utils as open_mp_utils
 # the "Test Classification" annotations.
 
 
-_MODEL_TRAINING_NAME = '2021-09-14_17.40.07'
-
-_MODEL_TRAINING_EPOCH_NUM = 100
-
-_EVALUATION_MODE_ENABLED = True
+_EVALUATION_MODE_ENABLED = False
 
 
 '''
@@ -61,9 +57,9 @@ class _Classifier(Annotator):
         # Suppress TensorFlow INFO and DEBUG log messages.
         logging.getLogger('tensorflow').setLevel(logging.WARN)
         
-        self._model, self._settings = \
-            classifier_utils.load_model_and_settings(
-                _MODEL_TRAINING_NAME, _MODEL_TRAINING_EPOCH_NUM)
+        self._model = classifier_utils.load_inference_model()
+        
+        self._settings = classifier_utils.load_inference_settings()
             
         self._threshold = threshold / 100
         

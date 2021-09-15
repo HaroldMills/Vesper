@@ -243,7 +243,7 @@ class ModelSaveCallback(tf.keras.callbacks.Callback):
         if epoch_num % self._settings.model_save_period == 0:
               
             model_dir_path = \
-                classifier_utils.get_tensorflow_saved_model_dir_path(
+                classifier_utils.get_training_tensorflow_model_dir_path(
                     self._training_name, epoch_num)
                   
             # Create model directory if needed.
@@ -253,7 +253,7 @@ class ModelSaveCallback(tf.keras.callbacks.Callback):
             self.model.save(str(model_dir_path))
             
             model_file_path = \
-                classifier_utils.get_keras_model_file_path(
+                classifier_utils.get_training_keras_model_file_path(
                     self._training_name, epoch_num)
                 
             # Save model in Keras model format.

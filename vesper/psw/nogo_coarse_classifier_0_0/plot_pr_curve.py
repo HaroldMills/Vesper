@@ -9,7 +9,6 @@ import csv
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow.keras as keras
 
 import vesper.psw.nogo_coarse_classifier_0_0.classifier_utils \
     as classifier_utils
@@ -52,17 +51,22 @@ def get_labels():
 
 def get_predictions():
     
-    # Load model.
-    file_path = classifier_utils.get_keras_model_file_path(
+    # Get classifier model.
+    model = classifier_utils.load_training_model(
         MODEL_TRAINING_NAME, MODEL_EPOCH_NUM)
-    model = keras.models.load_model(file_path)
     
-    # Create inference dataset.
+    # Create validation waveform dataset.
     dir_path = classifier_utils.get_dataset_dir_path('Validation')
-    dataset = \
+    waveform_dataset = \
         dataset_utils.create_waveform_dataset_from_tfrecord_files(dir_path)
-    settings = classifier_utils.load_inference_settings(MODEL_TRAINING_NAME)
-    dataset = dataset_utils.create_inference_dataset(dataset, settings)
+        
+    # Create validation spectrogram dataset.
+    training_settings = \
+        classifier_utils.load_training_settings(MODEL_TRAINING_NAME)
+    inference_settings = \
+        classifier_utils.get_inference_settings(training_settings)
+    dataset = dataset_utils.create_inference_dataset(
+        waveform_dataset, inference_settings)
     
     # Perform inference.
     return model.predict(dataset).flatten()

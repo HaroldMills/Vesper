@@ -8,14 +8,16 @@ from vesper.util.settings import Settings
 import vesper.util.yaml_utils as yaml_utils 
 
 
-_ML_DIR_PATH = Path(
+_TRAINING_DATA_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Vesper ML/NOGO Coarse Classifier 0.0')
 
-_MODEL_DIR_PATH = _ML_DIR_PATH / 'Models'
+_MODEL_DIR_PATH = _TRAINING_DATA_DIR_PATH / 'Models'
 _EPOCH_DIR_NAME_FORMAT = 'Epoch {}'
 _TENSORFLOW_SAVED_MODEL_DIR_NAME = 'TensorFlow SavedModel'
 _KERAS_MODEL_FILE_NAME = 'Keras Model.h5'
 _TRAINING_SETTINGS_FILE_NAME = 'Training Settings.yaml'
+
+_INFERENCE_DATA_DIR_PATH = Path(__file__).parent / 'data'
 
 _INFERENCE_SETTING_CHANGES = Settings(
     waveform_slice_min_non_call_slice_start_time=0,
@@ -28,7 +30,7 @@ _INFERENCE_SETTING_CHANGES = Settings(
 
 
 def get_dataset_dir_path(dataset_name):
-    return _ML_DIR_PATH / 'Datasets' / dataset_name
+    return _TRAINING_DATA_DIR_PATH / 'Datasets' / dataset_name
     
     
 def create_training_name(settings):
@@ -41,29 +43,46 @@ def get_training_start_time(training_name):
 
 
 def get_training_log_dir_path(training_name):
-    return _ML_DIR_PATH / 'Logs' / training_name
+    return _TRAINING_DATA_DIR_PATH / 'Logs' / training_name
 
 
 def get_training_model_dir_path(training_name):
     return _MODEL_DIR_PATH / training_name
     
     
-def get_epoch_model_dir_path(training_name, epoch_num):
+def get_training_epoch_model_dir_path(training_name, epoch_num):
     training_model_dir_path = get_training_model_dir_path(training_name)
     epoch_dir_name = _EPOCH_DIR_NAME_FORMAT.format(epoch_num)
     return training_model_dir_path / epoch_dir_name
 
 
-def get_tensorflow_saved_model_dir_path(training_name, epoch_num):
-    model_dir_path = get_epoch_model_dir_path(training_name, epoch_num)
+def get_training_tensorflow_model_dir_path(training_name, epoch_num):
+    model_dir_path = \
+        get_training_epoch_model_dir_path(training_name, epoch_num)
     return model_dir_path / _TENSORFLOW_SAVED_MODEL_DIR_NAME
 
 
-def get_keras_model_file_path(training_name, epoch_num):
-    model_dir_path = get_epoch_model_dir_path(training_name, epoch_num)
+def get_training_keras_model_file_path(training_name, epoch_num):
+    model_dir_path = \
+        get_training_epoch_model_dir_path(training_name, epoch_num)
     return model_dir_path / _KERAS_MODEL_FILE_NAME
 
 
+def load_training_model(training_name, epoch_num):
+    file_path = get_training_keras_model_file_path(training_name, epoch_num)
+    return _load_model(file_path)
+
+
+def _load_model(file_path):
+    logging.info(f'Loading classifier model from "{file_path}"...')
+    return tf.keras.models.load_model(file_path)
+
+
+def load_inference_model():
+    file_path = _INFERENCE_DATA_DIR_PATH / _KERAS_MODEL_FILE_NAME
+    return _load_model(file_path)
+    
+    
 def get_training_settings_file_path(training_name):
     model_dir_path = get_training_model_dir_path(training_name)
     return model_dir_path / _TRAINING_SETTINGS_FILE_NAME
@@ -77,24 +96,21 @@ def save_training_settings(settings, training_name):
 
 def load_training_settings(training_name):
     file_path = get_training_settings_file_path(training_name)
+    return _load_settings(file_path)
+
+
+def _load_settings(file_path):
     logging.info(f'Loading classifier settings from "{file_path}"...')
     text = file_path.read_text()
     dict_ = yaml_utils.load(text)
     return Settings.create_from_dict(dict_)
 
 
-def load_inference_settings(training_name):
-    training_settings = load_training_settings(training_name)
+def load_inference_settings():
+    file_path = _INFERENCE_DATA_DIR_PATH / _TRAINING_SETTINGS_FILE_NAME
+    training_settings = _load_settings(file_path)
+    return get_inference_settings(training_settings)
+
+
+def get_inference_settings(training_settings):
     return Settings(training_settings, _INFERENCE_SETTING_CHANGES)
-
-
-def load_model(training_name, epoch_num):
-    file_path = get_keras_model_file_path(training_name, epoch_num)
-    logging.info(f'Loading classifier model from "{file_path}"...')
-    return tf.keras.models.load_model(file_path)
-    
-    
-def load_model_and_settings(training_name, epoch_num):
-    model = load_model(training_name, epoch_num)
-    settings = load_inference_settings(training_name)
-    return model, settings
