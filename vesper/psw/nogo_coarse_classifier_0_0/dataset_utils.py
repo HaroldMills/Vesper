@@ -34,7 +34,7 @@ def create_waveform_dataset_from_tensors(waveforms):
     
     def generator():
         for waveform in waveforms:
-            yield _normalize_waveform(waveform)
+            yield (_normalize_waveform(waveform),)
             
     return tf.data.Dataset.from_generator(generator, tf.float32)
     
@@ -247,7 +247,7 @@ def _create_spectrogram_dataset(dataset, settings):
     return dataset
      
     
-def _diddle_training_example(gram, label, clip_id):
+def _diddle_training_example(gram, label, clip_id=None):
     
     # Reshape gram for input into Keras CNN.
     gram = tf.expand_dims(gram, 2)
@@ -256,15 +256,16 @@ def _diddle_training_example(gram, label, clip_id):
     return gram, label
 
 
-def create_inference_dataset(dir_path, settings):
+def create_inference_dataset(waveform_dataset, settings):
     
     """
-    Creates a dataset suitable for inference with neural network.
+    Creates a dataset suitable for inference with a neural network.
     
     The dataset comprises spectrograms computed from the waveforms
-    of a non-repeating waveform dataset.
+    of a waveform dataset. Each element of the dataset must be a
+    tuple whose first element is a waveform.
     
-    Each example of the dataset is a spectrogram slice.
+    Each example of the returned dataset is a spectrogram slice.
  
     All of the spectrogram slices of the dataset have the same shape,
     of the form (spectrum count, bin count, 1). The exact shape depends
@@ -273,9 +274,7 @@ def create_inference_dataset(dir_path, settings):
     """
     
     
-    dataset = create_waveform_dataset_from_tfrecord_files(dir_path)
-    
-    dataset = _create_spectrogram_dataset(dataset, settings)
+    dataset = _create_spectrogram_dataset(waveform_dataset, settings)
     
     dataset = dataset.map(
         _diddle_inference_example,
@@ -284,7 +283,15 @@ def create_inference_dataset(dir_path, settings):
     return dataset
 
 
-def _diddle_inference_example(gram, label, clip_id):
+def _diddle_inference_example(gram, label=None, clip_id=None):
+    
+    # TODO: Figure out why grams computed from datasets created from
+    # NumPy array waveforms (e.g. for classification) have an extra
+    # leading singleton dimension (i.e. one more than grams computed
+    # from TFRecord file waveforms), fix the problem, and delete the
+    # following workaround. ZZZ
+    if label is None:
+        gram = tf.squeeze(gram, 0)
     
     # Reshape gram for input into Keras CNN.
     gram = tf.expand_dims(gram, 0)
@@ -340,7 +347,7 @@ class _ExampleProcessor:
         self._window_fn = tf.signal.hann_window
         
         
-    def preprocess_waveform(self, waveform, label, clip_id):
+    def preprocess_waveform(self, waveform, label=None, clip_id=None):
         
         """
         Preprocesses one input waveform.
@@ -355,13 +362,20 @@ class _ExampleProcessor:
         
         if s.waveform_amplitude_scaling_data_augmentation_enabled:
             waveform = self._scale_waveform_amplitude(waveform)
-        
+            
         return (waveform, label, clip_id)
         
         
     def _slice_waveform(self, waveform, label):
         
-        if label == 1:
+        if label is None:
+            # example label unknown
+            
+            slice_start_index = \
+                self._waveform_slice_min_call_start_index - \
+                self._waveform_slice_min_call_start_index
+            
+        elif label == 1:
             # example is call
             
             slice_call_start_index = _get_random_index(

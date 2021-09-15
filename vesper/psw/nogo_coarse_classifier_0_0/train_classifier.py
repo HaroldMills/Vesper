@@ -22,10 +22,10 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.models import Sequential
 import tensorflow as tf
 
+from vesper.util.settings import Settings
 import vesper.psw.nogo_coarse_classifier_0_0.classifier_utils \
     as classifier_utils
 import vesper.psw.nogo_coarse_classifier_0_0.dataset_utils as dataset_utils
-import vesper.util.yaml_utils as yaml_utils
 
 
 '''
@@ -58,19 +58,77 @@ Training data augmentations:
 '''
 
 
+SETTINGS = Settings(
+    
+    waveform_sample_rate=48000,
+    
+    # Offset from start of example call waveform of start of call, in seconds.
+    waveform_call_start_time=.2,
+    
+    # Call start time settings. During training, example call waveforms
+    # are sliced so that call start times are uniformly distributed in
+    # the interval from `waveform_slice_min_call_start_time` to
+    # `waveform_slice_max_call_start_time`.
+    waveform_slice_min_call_start_time=0,
+    waveform_slice_max_call_start_time=.2,
+    
+    # Non-call slice start time settings. During training, example non-call
+    # waveforms are sliced with start times uniformly distributed in
+    # the interval from `waveform_slice_min_non_call_slice_start_time` to
+    # `waveform_slice_max_non_call_slice_start_time`.
+    waveform_slice_min_non_call_slice_start_time=0,
+    waveform_slice_max_non_call_slice_start_time=.2,
+    
+    waveform_slice_duration=.400,
+    
+    # `True` if and only if the waveform amplitude scaling data
+    # augmentation is enabled. This augmentation scales each waveform
+    # randomly to distribute the waveform log RMS amplitudes uniformly
+    # within a roughly 48 dB window.
+    waveform_amplitude_scaling_data_augmentation_enabled=True,
+    
+    # spectrogram settings
+    spectrogram_window_size=.020,
+    spectrogram_hop_size=50,
+    spectrogram_log_epsilon=1e-10,
+    
+    # spectrogram frequency axis slicing settings
+    spectrogram_start_freq=1000,
+    spectrogram_end_freq=5000,
+    
+    # The maximum spectrogram frequency shift for data augmentation,
+    # in bins. Set this to zero to disable this augmentation.
+    max_spectrogram_frequency_shift=2,
+    
+    # spectrogram_background_normalization_percentile_rank=40,
+    
+    # training settings
+    training_batch_size=128,
+    training_epoch_step_count=32,  # epoch size is batch size times step count
+    training_epoch_count=100,
+    model_save_period=5,           # epochs
+    # dropout_rate=.3,
+    
+    # validation settings
+    validation_batch_size=1,
+    validation_step_count=1000,
+    
+)
+
+
 
 
 def main():
     
-    settings = classifier_utils.TRAINING_SETTINGS
+    settings = SETTINGS
     
-    # train_annotator(settings)
+    train_annotator(settings)
 
     # show_waveform_dataset_examples('Training', settings)
     
     # show_training_dataset_examples('Training', settings)
     
-    show_dataset_sizes(settings)
+    # show_dataset_sizes(settings)
     
     
 def train_annotator(settings):
@@ -201,7 +259,8 @@ class ModelSaveCallback(tf.keras.callbacks.Callback):
             # Save model in Keras model format.
             self.model.save(str(model_file_path))
               
-            save_training_settings(self._settings, self._training_name)
+            classifier_utils.save_training_settings(
+                self._settings, self._training_name)
               
             print(f'Saved model at end of epoch {epoch_num}.')
               
@@ -211,12 +270,6 @@ def get_dataset(name, settings):
     return dataset_utils.create_training_dataset(dir_path, settings)
  
  
-def save_training_settings(settings, training_name):
-    file_path = classifier_utils.get_training_settings_file_path(training_name)
-    text = yaml_utils.dump(settings.__dict__, default_flow_style=False)
-    file_path.write_text(text)
-
-
 def show_waveform_dataset_examples(dataset_name, settings):
     
     dir_path = classifier_utils.get_dataset_dir_path(dataset_name)

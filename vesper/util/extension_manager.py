@@ -106,9 +106,15 @@ _TF1_DETECTORS = '''
 
 
 _TF2_CLASSIFIERS = '''
+
+    # MPG Ranch
     - vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.annotator.Annotator
     - vesper.mpg_ranch.nfc_coarse_classifier_3_1.classifier.Classifier
     - vesper.mpg_ranch.nfc_coarse_classifier_4_1.classifier.Classifier
+    
+    # PSW
+    - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier10
+    
 '''
 
 

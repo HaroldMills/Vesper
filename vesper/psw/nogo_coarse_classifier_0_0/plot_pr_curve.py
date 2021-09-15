@@ -19,9 +19,9 @@ import vesper.psw.nogo_coarse_classifier_0_0.dataset_utils as dataset_utils
 CLASSIFIER_DIR_PATH = Path(
     '/Users/harold/Desktop/NFC/Data/Vesper ML/NOGO Coarse Classifier 0.0')
 
-MODEL_FILE_PATH = Path(
-    CLASSIFIER_DIR_PATH,
-    'Models/2021-09-13_10.10.57/Epoch 100/Keras Model.h5')
+MODEL_TRAINING_NAME = '2021-09-14_17.40.07'
+
+MODEL_EPOCH_NUM = 100
 
 PLOT_FILE_PATH = CLASSIFIER_DIR_PATH / 'Precision-Recall Curve.pdf'
 
@@ -53,17 +53,19 @@ def get_labels():
 def get_predictions():
     
     # Load model.
-    model = keras.models.load_model(str(MODEL_FILE_PATH))
+    file_path = classifier_utils.get_keras_model_file_path(
+        MODEL_TRAINING_NAME, MODEL_EPOCH_NUM)
+    model = keras.models.load_model(file_path)
     
     # Create inference dataset.
     dir_path = classifier_utils.get_dataset_dir_path('Validation')
-    settings = classifier_utils.EVALUATION_SETTINGS
-    dataset = dataset_utils.create_inference_dataset(dir_path, settings)
+    dataset = \
+        dataset_utils.create_waveform_dataset_from_tfrecord_files(dir_path)
+    settings = classifier_utils.load_inference_settings(MODEL_TRAINING_NAME)
+    dataset = dataset_utils.create_inference_dataset(dataset, settings)
     
     # Perform inference.
-    predictions = model.predict(dataset)
-    
-    return np.array([p[0] for p in predictions])
+    return model.predict(dataset).flatten()
 
 
 def get_thresholds():
@@ -91,10 +93,7 @@ def compute_recall_and_precision(labels, predictions, threshold):
     positive_label_count = count(label_positive)
     positive_prediction_count = count(prediction_positive)
     
-    try:
-        recall = true_positive_count / positive_label_count
-    except Exception:
-        pass
+    recall = true_positive_count / positive_label_count
     precision = true_positive_count / positive_prediction_count
     
     return recall, precision

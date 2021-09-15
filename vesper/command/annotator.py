@@ -41,6 +41,15 @@ class Annotator:
             creating_processor=self._creating_processor)
 
 
+    def _tag(self, clip, tag_info):
+        
+        model_utils.tag_clip(
+            clip, tag_info,
+            creating_user=self._creating_user,
+            creating_job=self._creating_job,
+            creating_processor=self._creating_processor)
+
+        
     def _get_annotation_value(self, clip):
         try:
             annotation = StringAnnotation.objects.get(
