@@ -1,9 +1,9 @@
 """
 Module containing PSW NOGO coarse classifier, version 0.0.
 
-This classifier classifies an unclassified clip as `'NOGO'` if it
+This classifier classifies an unclassified clip as a `"NOGO"` if it
 appears to contain the start of a Northern Goshawk call in its first
-200 milliseconds, or as  `'Other'` otherwise. It does not classify
+200 milliseconds, or as an `"Other"` otherwise. It does not classify
 a clip that has already been classified, whether manually or
 automatically.
 """
@@ -20,28 +20,21 @@ import vesper.psw.nogo_coarse_classifier_0_0.dataset_utils as dataset_utils
 import vesper.util.open_mp_utils as open_mp_utils
 
 
-# TODO: Rather than tagging clips with "True" or "False" for
-# evaluation, it might be better to just record the classifier's
-# classifications in a new annotation (named "Test Classification",
-# say, or whatever the user wants) and then let the user display clips
-# according to a filter that refers to both the "Classification" and
-# the "Test Classification" annotations.
-
-
-_EVALUATION_MODE_ENABLED = False
+_COMPARISON_MODE_ENABLED = False
 
 
 '''
 This classifier can run in one of two modes, *normal mode* and
-*evaluation mode*. In normal mode, it annotates only unclassified clips,
-assigning to each a "Classification" annotation value or either "NOGO"
-or "Other".
+*comparison mode*. In normal mode, the classifier annotates only
+unclassified clips, assigning to each a "Classification" annotation
+value of either "NOGO" or "Other".
 
-In evaluation mode, the classifier does not modify any existing
-classification, but tags each clip that has a classification that is
-"Other" or starts with "NOGO" with either "True" or "False", according
-to whether the classifier's classification would be correct or incorrect,
-respectively, assuming that the existing classifications are correct.
+In comparison mode, the classifier does not modify any existing
+classifications, but for each clip that has a classification that starts
+with "NOGO" or is "Other", the classifier tags the clip as a
+"False Negative" if it is a "NOGO" that the classifier would classify as
+"Other", and tags the clip as a "False Positive" if it is an "Other" that
+the classifier would classify as a "NOGO".
 '''
 
 
@@ -63,10 +56,14 @@ class _Classifier(Annotator):
             
         self._threshold = threshold / 100
         
-        if _EVALUATION_MODE_ENABLED:
-            self._true_tag_info = TagInfo.objects.get(name='True')
-            self._false_tag_info = TagInfo.objects.get(name='False')
+        if _COMPARISON_MODE_ENABLED:
+            
+            self._false_positive_tag_info = \
+                TagInfo.objects.get(name='False Positive')
                   
+            self._false_negative_tag_info = \
+                TagInfo.objects.get(name='False Negative')
+                
         
     def annotate_clips(self, clips):
         
@@ -91,8 +88,8 @@ class _Classifier(Annotator):
             for clip, annotation_value, score in \
                     zip(clips, annotation_values, scores):
                 
-                if _EVALUATION_MODE_ENABLED:
-                    self._tag_clip(clip, annotation_value, score)
+                if _COMPARISON_MODE_ENABLED:
+                    self._tag_clip_if_needed(clip, annotation_value, score)
                     
                 else:
                     self._annotate_clip(clip, score)
@@ -121,8 +118,8 @@ class _Classifier(Annotator):
     
     
     def _is_clip_to_classify(self, annotation_value):
-        if _EVALUATION_MODE_ENABLED:
-            return _is_nogo_or_other(annotation_value)
+        if _COMPARISON_MODE_ENABLED:
+            return _is_nogo(annotation_value) or _is_other(annotation_value)
         else:
             return annotation_value is None
             
@@ -146,22 +143,25 @@ class _Classifier(Annotator):
         return dataset
     
     
-    def _tag_clip(self, clip, annotation_value, score):
+    def _tag_clip_if_needed(self, clip, annotation_value, score):
         
-        if _is_nogo_or_other(annotation_value):
+        if _is_other(annotation_value):
+            # clip is classified as "Other"
+                
+            if score >= self._threshold:
+                # classifier would classify clip as "NOGO"
+                
+                self._tag(clip, self._false_positive_tag_info)
+                   
+        elif _is_nogo(annotation_value):
+            # clip is classified as "NOGO*"
             
-            scored_nogo = score >= self._threshold
-            
-            scored_true = \
-                scored_nogo and _is_nogo(annotation_value) or \
-                not scored_nogo and _is_other(annotation_value)
-                        
-            if scored_true:
-                self._tag(clip, self._true_tag_info)
-            else:
-                self._tag(clip, self._false_tag_info)
-               
-        
+            if score < self._threshold:
+                # classifier would classify clip as "Other"
+                
+                self._tag(clip, self._false_negative_tag_info)
+                
+
     def _annotate_clip(self, clip, score):
         
         if score >= self._threshold:
@@ -172,12 +172,8 @@ class _Classifier(Annotator):
         self._annotate(clip, annotation_value)
         
         
-def _is_nogo_or_other(annotation_value):
-    return _is_nogo(annotation_value) or _is_other(annotation_value)
-           
-           
 def _is_nogo(annotation_value):
-    return annotation_value.startswith('NOGO')
+    return annotation_value is not None and annotation_value.startswith('NOGO')
 
 
 def _is_other(annotation_value):
