@@ -114,6 +114,14 @@ _TF2_CLASSIFIERS = '''
     
     # PSW
     - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier10
+    - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier20
+    - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier30
+    - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier40
+    - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier50
+    - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier60
+    - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier70
+    - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier80
+    - vesper.psw.nogo_coarse_classifier_0_0.classifier.Classifier90
     
 '''
 
