@@ -130,9 +130,6 @@ class HttpError(Exception):
 
 
 # Default navbar data for read-write archives.
-# Note that as of 2016-07-19, nested navbar dropdowns do not work.
-# The generated HTML looks right to me so the problem may be a
-# Bootstrap limitation.
 _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
 
 - name: File

@@ -36,12 +36,6 @@
     
     {% include "vesper/command-executes-as-job-message.html" %}
 
-    <!--
-        TODO: Get django-widget-tweaks Django app  and use it to set CSS classes
-        of form elements. Or perhaps use django-bootstrap3 app? See
-        http://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs.
-    -->
-
     <form class="form" role="form" action="{% url 'delete-clip-audio-files' %}" method="post">
 
         {% csrf_token %}
