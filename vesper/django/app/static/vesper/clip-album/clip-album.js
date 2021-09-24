@@ -755,7 +755,7 @@ export class ClipAlbum {
     
     _initUrlAndHistory() {
         window.history.replaceState(this._historyState, null, this._url);
-        window.onpopstate = (e) => this._onPopHistoryState(e);
+        window.onpopstate = e => this._onPopHistoryState(e);
     }
     
     
