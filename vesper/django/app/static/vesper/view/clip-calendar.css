@@ -119,11 +119,17 @@
 
 .day-num {
   color: black;
+  font-size: .9em;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 2;    /* Put dates on top of circles. */
+  text-decoration: none;
+}
+
+.day-num:hover, .day-num:active {
+    text-decoration: underline;
 }
 
 .day-num:visited {
