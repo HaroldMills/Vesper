@@ -16,13 +16,30 @@
 #title {
   display: inline-block;
   font-weight: bold;
-  margin-bottom: 20px;
+  margin: 15px 0;
 }
 
 @media screen and (max-width: 767px) {
   #title {
     text-align: center;
   }
+}
+
+.calendar {
+    
+    /*
+     * Set the `calendar` class width to:
+     *
+     *     3 * <month-days width> + 3 * <month spacing>
+     *
+     * where <month-days width> is specified in the `month-days` class
+     * below and <month spacing> is the desired spacing between months,
+     * i.e. twice the desired horizontal month padding.
+     */
+    width: 1170px;        /* 3 * 210 + 3 * 180 */
+    
+    margin: auto;
+    
 }
 
 .period {
@@ -40,13 +57,10 @@
 }
 
 .period-rule {
-    margin: 0.5em auto;
-    border-style: inset;
-    border-width: 1px;
 }
 
 .row {
-  margin-bottom: 20px;
+  margin: 35px 0;
 }
 
 .month {
@@ -57,19 +71,41 @@
 }
 
 .month-days {
+    
   display: flex;
   flex-wrap: wrap;
+  
+  /*
+   * Set the `month-days` class width to seven times the day width,
+   * specified in the `day` class below.
+   */
   width: 210px;
+  
+  /*
+   * Set the `month-days` class height to six times the day height,
+   * specified in the `day` class below.
+   */
   height: 180px;
+  
   margin: auto;
+  
 }
 
 .day {
+    
+  /*
+   * Note that changes to the `width`, `height`, and/or `line-height`
+   * properties of the `day` class necessitate changes to `month-days`
+   * and/or and/or `calendar` class properties. See comments in those
+   * classes for details.
+   */
   width: 30px;
   height: 30px;
-  text-align: center;
   line-height: 30px;
+  
+  text-align: center;
   position: relative;
+  
 }
 
 .circle {

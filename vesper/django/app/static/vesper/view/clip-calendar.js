@@ -158,13 +158,13 @@ function addPeriodRow(row, periodDiv) {
 function addRowMonth(month, rowDiv) {
 
 	const monthDiv = document.createElement('div');
-	monthDiv.className = 'col-sm-4 month';
+	monthDiv.classList.add('col-sm-4', 'month');
 
 	if (month !== null) {
 
 		// Add month name.
 		if (month.name !== null) {
-		    const nameHeading = document.createElement('h3');
+		    const nameHeading = document.createElement('h4');
 		    nameHeading.className = 'month-name';
 		    nameHeading.textContent = month.name;
 		    monthDiv.appendChild(nameHeading)
