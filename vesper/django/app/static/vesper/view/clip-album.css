@@ -40,17 +40,18 @@ body {
 }
 
 #error-div {
-  margin-top: 70px;
+  margin-top: 70px;            /* Leave room at top for navbar. */
   margin-left: 20px;
   display: inline-block;
   text-align: left;
 }
+
 ::selection {
   background-color: transparent;
 }
 
 #title-div {
-  margin-top: 70px;
+  margin-top: 70px;            /* Leave room at top for navbar. */
   display: inline-block;
   text-align: center;
 }
