@@ -1,0 +1,7 @@
+{% if item.type == 'link' %}
+    <li><a class="dropdown-item" href="{{item.url}}">{{item.name}}</a></li>
+{% elif item.type == 'separator' %}
+    <li><hr class="dropdown-divider"></li>
+{% elif item.type == 'unrecognized' %}
+    <li><a class="nav-link">--- Unrecognized navbar item type for dropdown item "{{item.name}}" ---</a></li>
+{% endif %}

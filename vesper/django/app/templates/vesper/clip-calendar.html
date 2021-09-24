@@ -5,13 +5,15 @@
 
     {% include "vesper/header-prefix.html" %}
 
+    {% load static %}
+
     <title>Clip Calendar</title>
     
     {% load vesper_extras %}
 
     {% if not error_message %}
         <script type="module">
-            import { init } from '/static/vesper/view/clip-calendar.js';
+            import { init } from "{% static 'vesper/view/clip-calendar.js' %}";
             init({
                 'stationMicName': '{{station_mic_name|default_if_none:''|escapejs}}',
                 'detectorName': '{{detector_name|default_if_none:''|escapejs}}',
@@ -24,7 +26,6 @@
         </script>
     {% endif %}
 
-    {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-calendar.css' %}">
 
 </head>
@@ -53,8 +54,8 @@
     
     		        <div id="title-buttons">
     		        
-                        <button id="filter-clips-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Filter clips">
-                            <span class="glyphicon glyphicon-filter"></span>
+                        <button id="filter-clips-button" type="button" class="title-button" data-bs-toggle="tooltip" title="Filter clips">
+                            <i class="bi-filter title-button-icon title-button-icon-filter"></i>
                         </button>
                         
     		        </div>

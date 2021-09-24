@@ -468,8 +468,9 @@ export class ClipAlbum {
             this.keyBindingsPresets, this.keyBindingsPresetPath);
 
         // Set up modal show listener.
-        $('#choose-presets-modal').on(
-            'show.bs.modal', (e) => this._onChoosePresetsModalShow());
+        const modal = document.getElementById('choose-presets-modal');
+        modal.addEventListener(
+            'show.bs.modal', e => this._onChoosePresetsModalShow());
         
         // Set up OK button click listener.
         const button = 
@@ -514,18 +515,15 @@ export class ClipAlbum {
     
     _initGoToPageModal() {
         
-        // Set up modal show listener.
-        $('#go-to-page-modal').on(
-            'show.bs.modal', (e) => this._onGoToPageModalShow());
-        
-        // Set up modal shown listener.
-        $('#go-to-page-modal').on(
-            'shown.bs.modal', (e) => this._onGoToPageModalShown());
-        
-        // Set up modal hidden listener.
-        $('#go-to-page-modal').on(
-            'hidden.bs.modal', (e) => this._onGoToPageModalHidden());
-        
+        // Set up modal event listeners.
+        const modal = document.getElementById('go-to-page-modal');
+        modal.addEventListener(
+            'show.bs.modal', e => this._onGoToPageModalShow());
+        modal.addEventListener(
+            'shown.bs.modal', e => this._onGoToPageModalShown());
+        modal.addEventListener(
+            'hidden.bs.modal', e => this._onGoToPageModalHidden());
+            
         // Set up OK button click listener.
         const button = document.getElementById('go-to-page-modal-ok-button');
         button.addEventListener(
@@ -557,6 +555,7 @@ export class ClipAlbum {
         
         this._uninstallKeyPressEventListener();
         
+        // Give keyboard focus to page number input.
         const number = document.getElementById('go-to-page-modal-number');
         number.focus();
         

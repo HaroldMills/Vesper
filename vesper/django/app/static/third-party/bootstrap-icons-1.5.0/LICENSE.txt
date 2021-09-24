@@ -1,0 +1,2 @@
+The Bootstrap icons are MIT licensed: see
+https://github.com/twbs/icons/blob/main/LICENSE.md.

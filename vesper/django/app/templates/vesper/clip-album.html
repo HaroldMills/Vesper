@@ -5,13 +5,15 @@
 
     {% include "vesper/header-prefix.html" %}
 
+    {% load static %}
+    
     <title>Clip Album</title>
 
     {% load vesper_extras %}
 
     {% if not error_message %}
         <script type="module">
-            import { init } from '/static/vesper/view/clip-album.js';
+            import { init } from "{% static 'vesper/view/clip-album.js' %}";
             init({
                 'clipFilter': {
             	        'stationMicName': '{{station_mic_name|escapejs}}',
@@ -33,7 +35,6 @@
         </script>
     {% endif %}
 
-    {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-album.css' %}">
 
 </head>
@@ -60,26 +61,26 @@
         
             <div id="title-buttons">
             
-                <button id="previous-page-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Previous page">
-                    <span class="glyphicon glyphicon-chevron-left"></span>
+                <button id="previous-page-button" type="button" class="title-button" data-bs-toggle="tooltip" title="Previous page">
+                    <i class="bi-chevron-left title-button-icon"></i>
                 </button>
                 
-                <button id="next-page-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Next page">
-                    <span class="glyphicon glyphicon-chevron-right"></span>
+                <button id="next-page-button" type="button" class="title-button" data-bs-toggle="tooltip" title="Next page">
+                    <i class="bi-chevron-right title-button-icon"></i>
                 </button>
-    
+                
                 <div class="dropdown title-dropdown">
                 
-                    <button type="button" class="btn-xs btn-default dropdown-toggle title-button" data-toggle="dropdown">
-                        <span class="caret"></span>
+                    <button id="moreButton" type="button" class="title-button" data-bs-toggle="dropdown" title="More" aria-haspopup="true" aria-expanded="false">
+                        <i class="bi-three-dots-vertical title-button-icon"></i>
                     </button>
                     
-                    <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                        <li><a id="filter-clips-anchor" class="dropdown-item title-dropdown-anchor" href="#filter-clips" data-toggle="modal" data-target="#filter-clips-modal">Filter clips...</a></li>
-                        <li><a id="choose-presets-anchor" class="dropdown-item title-dropdown-anchor" href="#choose-presets" data-toggle="modal" data-target="#choose-presets-modal">Choose presets...</a></li>
-                        <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go to page...</a></li>
+                    <ul class="dropdown-menu" aria-labelledby="moreButton">
+                        <li><a id="filter-clips-anchor" class="dropdown-item title-dropdown-anchor" href="#filter-clips" data-bs-toggle="modal" data-bs-target="#filter-clips-modal">Filter clips...</a></li>
+                        <li><a id="choose-presets-anchor" class="dropdown-item title-dropdown-anchor" href="#choose-presets" data-bs-toggle="modal" data-bs-target="#choose-presets-modal">Choose presets...</a></li>
+                        <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-bs-toggle="modal" data-bs-target="#go-to-page-modal">Go to page...</a></li>
                     </ul>
-                                    
+
                 </div>
                 
             </div>

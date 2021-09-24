@@ -5,33 +5,36 @@
 
     {% include "vesper/header-prefix.html" %}
 
+    {% load static %}
+    
     <title>Clips</title>
 
     {% load vesper_extras %}
 
-    <script type="module">
-        import { init } from '/static/vesper/view/clip-album.js';
-        init({
-            'clipFilter': {
-        	        'stationMicName': '{{station_mic_name|escapejs}}',
-        	        'detectorName': '{{detector_name|escapejs}}',
-        	        'classification': '{{classification|escapejs}}',
-                'tag': '{{tag|escapejs}}',
-        	        'date': '{{date}}'
-            },
-            'solarEventTimes': {{solar_event_times_json|safe}},
-            'recordings': {{recordings_json|safe}},
-            'clips': {{clips_json|safe}},
-            'pageNum': {{page_num}},
-            'settingsPresets': {{settings_presets_json|safe}},
-            'settingsPresetPath': "{{settings_preset_path|default_if_none:''|escapejs}}",
-            'keyBindingsPresets': {{commands_presets_json|safe}},
-            'keyBindingsPresetPath': "{{commands_preset_path|default_if_none:''|escapejs}}",
-            'archiveReadOnly':  {{archive_read_only|yesno:"true,false"}}
-        });
-    </script>
+    {% if not error_message %}
+        <script type="module">
+            import { init } from "{% static 'vesper/view/clip-album.js' %}";
+            init({
+                'clipFilter': {
+            	        'stationMicName': '{{station_mic_name|escapejs}}',
+            	        'detectorName': '{{detector_name|escapejs}}',
+            	        'classification': '{{classification|escapejs}}',
+                    'tag': '{{tag|escapejs}}',
+            	        'date': '{{date}}'
+                },
+                'solarEventTimes': {{solar_event_times_json|safe}},
+                'recordings': {{recordings_json|safe}},
+                'clips': {{clips_json|safe}},
+                'pageNum': {{page_num}},
+                'settingsPresets': {{settings_presets_json|safe}},
+                'settingsPresetPath': "{{settings_preset_path|default_if_none:''|escapejs}}",
+                'keyBindingsPresets': {{commands_presets_json|safe}},
+                'keyBindingsPresetPath': "{{commands_preset_path|default_if_none:''|escapejs}}",
+                'archiveReadOnly':  {{archive_read_only|yesno:"true,false"}}
+            });
+        </script>
+    {% endif %}
 
-    {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/night.css' %}">
 
 </head>
@@ -39,51 +42,62 @@
 <body>
 
     {% include "vesper/navbar.html" %}
-    {% include "vesper/clip-album-filter-clips-modal.html" %}
-    {% include "vesper/clip-album-choose-presets-modal.html" %}
-    {% include "vesper/clip-album-go-to-page-modal.html" %}
- 
-    <div id="title-div">
-    
-        <h3 id="title"></h3>
-    
-        <div id="title-buttons">
-        
-            <button id="previous-page-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Previous page">
-                <span class="glyphicon glyphicon-chevron-left"></span>
-            </button>
-            
-            <button id="next-page-button" type="button" class="btn-xs btn-default title-button" data-toggle="tooltip" title="Next page">
-                <span class="glyphicon glyphicon-chevron-right"></span>
-            </button>
 
-            <div class="dropdown title-dropdown">
+    {% if error_message %}
+    
+        <div id="error-div">
+            {{error_message|safe}}
+        </div>
+
+    {% else %}
+    
+        {% include "vesper/clip-album-filter-clips-modal.html" %}
+        {% include "vesper/clip-album-choose-presets-modal.html" %}
+        {% include "vesper/clip-album-go-to-page-modal.html" %}
+     
+        <div id="title-div">
+        
+            <h3 id="title"></h3>
+        
+            <div id="title-buttons">
             
-                <button type="button" class="btn-xs btn-default dropdown-toggle title-button" data-toggle="dropdown">
-                    <span class="caret"></span>
+                <button id="previous-page-button" type="button" class="title-button" data-bs-toggle="tooltip" title="Previous page">
+                    <i class="bi-chevron-left title-button-icon"></i>
                 </button>
                 
-                <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                    <li><a id="filter-clips-anchor" class="dropdown-item title-dropdown-anchor" href="#filter-clips" data-toggle="modal" data-target="#filter-clips-modal">Filter clips...</a></li>
-                    <li><a id="choose-presets-anchor" class="dropdown-item title-dropdown-anchor" href="#choose-presets" data-toggle="modal" data-target="#choose-presets-modal">Choose presets...</a></li>
-                    <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-toggle="modal" data-target="#go-to-page-modal">Go to page...</a></li>
-                    <li class="divider"></li>
-                    <li><a id="go-to-next-date-anchor" class="dropdown-item title-dropdown-anchor">Go to next date</a></li>
-                    <li><a id="go-to-previous-date-anchor" class="dropdown-item title-dropdown-anchor">Go to previous date</a></li>
-                    <li><a id="go-to-clip-calendar-anchor" class="dropdown-item title-dropdown-anchor">Go to clip calendar</a></li>
-                </ul>
-                                
+                <button id="next-page-button" type="button" class="title-button" data-bs-toggle="tooltip" title="Next page">
+                    <i class="bi-chevron-right title-button-icon"></i>
+                </button>
+                
+                <div class="dropdown title-dropdown">
+                
+                    <button id="moreButton" type="button" class="title-button" data-bs-toggle="dropdown" title="More" aria-haspopup="true" aria-expanded="false">
+                        <i class="bi-three-dots-vertical title-button-icon"></i>
+                    </button>
+                    
+                    <ul class="dropdown-menu" aria-labelledby="moreButton">
+                        <li><a id="filter-clips-anchor" class="dropdown-item title-dropdown-anchor" href="#filter-clips" data-bs-toggle="modal" data-bs-target="#filter-clips-modal">Filter clips...</a></li>
+                        <li><a id="choose-presets-anchor" class="dropdown-item title-dropdown-anchor" href="#choose-presets" data-bs-toggle="modal" data-bs-target="#choose-presets-modal">Choose presets...</a></li>
+                        <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-bs-toggle="modal" data-bs-target="#go-to-page-modal">Go to page...</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a id="go-to-next-date-anchor" class="dropdown-item title-dropdown-anchor">Go to next date</a></li>
+                        <li><a id="go-to-previous-date-anchor" class="dropdown-item title-dropdown-anchor">Go to previous date</a></li>
+                        <li><a id="go-to-clip-calendar-anchor" class="dropdown-item title-dropdown-anchor">Go to clip calendar</a></li>
+                    </ul>
+                                    
+                </div>
+                
             </div>
             
+            <div id="rug-plot"></div>
+            
         </div>
-        
-        <div id="rug-plot"></div>
-        
-    </div>
-
-    <div id="clips"></div>
     
-    <!-- div id='footer'></div> -->
+        <div id="clips"></div>
+        
+        <!-- div id='footer'></div> -->
+
+    {% endif %}
 
 </body>
 

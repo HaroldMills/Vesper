@@ -1,3 +1,5 @@
+@import 'title-buttons.css';
+
 html {
     
   /*
@@ -57,28 +59,6 @@ body {
   display: inline-block;
   font-weight: bold;
   margin-top: 0;
-}
-
-#title-buttons {
-    display: inline-block;
-    vertical-align: text-bottom;
-    margin-left: 20px;
-}
-
-.title-button:disabled {
-    color: #dddddd;
-}
-
-.title-dropdown {
-    display: inline-block;
-}
-
-.title-dropdown-anchor:disabled {
-    color: #dddddd;
-}
-
-.modal-select {
-    width: auto;
 }
 
 #go-to-page-modal-number {
@@ -159,11 +139,11 @@ body {
  */
 .clip-play-button {
   background-color: transparent;
-  color: orange;
+  color: darkorange;
   visibility: hidden;
   position: absolute;
-  width: 20px;
-  height: 24px;
+  width: 23px;
+  height: 23px;
   padding: 0;
   border: none;
   outline: none;
@@ -174,8 +154,11 @@ body {
   color: #00AA00;
 }
 
-.glyphicon.glyphicon-play {
-  font-size: 20px;
+.clip-play-button-icon {
+    position: relative;
+    top: -8px;
+    left: -2px;
+    font-size: 27px;
 }
 
 .clip-audio {

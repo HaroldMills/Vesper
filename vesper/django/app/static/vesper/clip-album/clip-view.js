@@ -372,12 +372,12 @@ export class ClipView {
 	    const button = document.createElement('button');
 	    button.className = 'clip-play-button';
 	    button.addEventListener('click', e => this._onPlayButtonClick(e));
-        button.setAttribute('data-toggle', 'tooltip');
+        button.setAttribute('data-bs-toggle', 'tooltip');
         button.setAttribute('title', 'Play clip');
 	    this._div.appendChild(button);
 
-	    const icon = document.createElement('span');
-	    icon.className = 'glyphicon glyphicon-play';
+	    const icon = document.createElement('i');
+	    icon.classList.add('bi-play-fill', 'clip-play-button-icon');
 	    button.appendChild(icon);
 
 	    return button;
@@ -461,18 +461,18 @@ export class ClipView {
 		button.right = 'unset';
 
 	    if (label.visibility === 'visible' && labelLoc.startsWith('Top')) {
-	    	// label visible and at top of clip
+	        	// label visible and at top of clip
 
-	    	// Put button at bottom left of clip.
+	    	    // Put button at bottom left of clip.
 	        button.top = 'unset';
 	        button.bottom = offset;
 
 	    } else {
-	    	// label not visible or at bottom of clip
+	    	    // label not visible or at bottom of clip
 
-	    	// Put button at top left of clip.
-	    	button.top = offset;
-	    	button.bottom = 'unset';
+	    	    // Put button at top left of clip.
+	        	button.top = offset;
+	    	    button.bottom = 'unset';
 
 	    }
 
@@ -668,18 +668,18 @@ export class ClipView {
                 for (const tag of tags) {
                     
                     // Create span that displays a tag icon.
-                    const span = document.createElement('span');
-                    span.className = 'glyphicon glyphicon-tag';
+                    const icon = document.createElement('i');
+                    icon.className = 'bi-tag-fill';
                     
                     // Set color.
                     const color = this.clipAlbum.getTagColor(tag);
-                    span.style.color = color;
+                    icon.style.color = color;
                     
                     // Set tooltip.
-                    span.setAttribute('data-toggle', 'tooltip');
-                    span.setAttribute('title', tag);
+                    icon.setAttribute('data-bs-toggle', 'tooltip');
+                    icon.setAttribute('title', tag);
                     
-                    label.appendChild(span);
+                    label.appendChild(icon);
                     
                 }
                 

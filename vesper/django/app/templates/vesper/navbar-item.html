@@ -1,22 +1,26 @@
 {% if item.type == 'link' %}
-    {% if item.name == active_navbar_item %}
-        <li class="active"><a href="{{item.url}}">{{item.name}}</a></li>
-    {% else %}
-        <li><a href="{{item.url}}">{{item.name}}</a></li>
-    {% endif %}
+    <li class="nav-item">
+        {% if item.name == active_navbar_item %}
+            <a class="nav-link active" aria-current="page" href="{{item.url}}">{{item.name}}</a>
+        {% else %}
+            <a class="nav-link" href="{{item.url}}">{{item.name}}</a>
+        {% endif %}
+    </li>
 {% elif item.type == 'separator' %}
-    <li role="separator" class="divider"></li>
+    <li><hr class="dropdown-divider"></li>
 {% elif item.type == 'dropdown' %}
-    <li class="dropdown">
-        <a class="dropdown-toggle" data-toggle="dropdown" href="none">
-            {{item.name}}<span class="caret"></span>
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbar{{item.name}}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            {{item.name}}
         </a>
-        <ul class="dropdown-menu">
+        <ul class="dropdown-menu" aria-labelledby="navbar{{item.name}}">
             {% for item in item.items %}
-                {% include "vesper/navbar-item.html" %}
+                {% include "vesper/navbar-dropdown-item.html" %}
             {% endfor %}
         </ul>
     </li>
 {% elif item.type == 'unrecognized' %}
-    <li><a>--- Unrecognized navbar item ---</a></li>
+    <li class="nav-item">
+        <a class="nav-link">--- Unrecognized navbar item type for item "{{item.name}}" ---</a>
+    </li>
 {% endif %}

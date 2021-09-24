@@ -14,6 +14,9 @@ let highlightedCircle = null;
 // Module-level state, set via `init` function.
 let state = null;
 
+// "Filter clips" modal, created by `onLoad` function.
+let filterClipsModal = null;
+
 
 export function init(state_) {
 
@@ -27,9 +30,16 @@ export function init(state_) {
 
 
 function onLoad() {
+    createFilterClipsModal();
 	setTitle();
     addButtonEventListeners();
 	setCalendarPeriods();
+}
+
+
+function createFilterClipsModal() {
+    const element = document.getElementById('filter-clips-modal');
+    filterClipsModal = new bootstrap.Modal(element, {});
 }
 
 
@@ -59,8 +69,9 @@ function addButtonEventListeners() {
     
     // filter clips button
     const filterButton = document.getElementById('filter-clips-button');
-    filterButton.addEventListener(
-        'click', e => $('#filter-clips-modal').modal('show'));
+    filterButton.addEventListener('click', function (e) {
+        filterClipsModal.show();
+    });
 
     // filter clips modal OK button
     const okButton = document.getElementById('filter-clips-modal-ok-button');
@@ -218,7 +229,7 @@ function addMonthDay(day, daysDiv) {
             // Add tooltip showing number of clips.
             const tooltipText =
                 day.count === 1 ? '1 clip' : `${day.count} clips`;
-            num.setAttribute('data-toggle', 'tooltip');
+            num.setAttribute('data-bs-toggle', 'tooltip');
             num.setAttribute('title', tooltipText);
 
 		}

@@ -1,3 +1,5 @@
+@import 'title-buttons.css';
+
 #main-div {
   text-align: center;
 }
@@ -21,28 +23,6 @@
   #title {
     text-align: center;
   }
-}
-
-#title-buttons {
-    display: inline-block;
-    vertical-align: text-bottom;
-    margin-left: 20px;
-}
-
-.title-button:disabled {
-    color: #dddddd;
-}
-
-.title-dropdown {
-    display: inline-block;
-}
-
-.title-dropdown-anchor:disabled {
-    color: #dddddd;
-}
-
-.modal-select {
-    width: auto;
 }
 
 .period {

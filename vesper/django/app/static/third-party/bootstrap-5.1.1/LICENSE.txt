@@ -1,0 +1,2 @@
+Bootstrap is MIT licensed: see
+https://github.com/twbs/bootstrap/blob/main/LICENSE.

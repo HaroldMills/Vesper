@@ -1,1 +1,0 @@
-JQuery is MIT licensed: see jquery.org/license.

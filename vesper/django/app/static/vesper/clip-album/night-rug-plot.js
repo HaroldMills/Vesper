@@ -81,7 +81,7 @@ export class NightRugPlot {
 	    canvas.addEventListener('click', e => this._onClick(e));
         
         // Create rug tooltip with no text.
-        canvas.setAttribute('data-toggle', 'tooltip');
+        canvas.setAttribute('data-bs-toggle', 'tooltip');
         canvas.setAttribute('title', '');
         
 	    this._div.appendChild(canvas);

@@ -1,0 +1,35 @@
+#title-buttons {
+    display: inline-block;
+    vertical-align: text-bottom;
+    margin-left: 20px;
+}
+
+.title-button {
+    width: 29px;
+    height: 29px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    padding: 0;
+}
+
+.title-button:hover:enabled {
+    background-color: #ececec;
+}
+
+.title-button-icon:disabled {
+    color: #dddddd;
+}
+
+.title-button-icon-filter {
+    font-size: 1.3rem;
+}
+
+.title-dropdown {
+    display: inline-block;
+}
+
+.title-dropdown-anchor:disabled {
+    color: #dddddd;
+}
+
