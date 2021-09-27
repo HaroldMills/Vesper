@@ -61,14 +61,8 @@
         
             <div id="title-buttons">
             
-                <button id="previous-page-button" type="button" class="title-button" data-bs-toggle="tooltip" title="Previous page">
-                    <i class="bi-chevron-left title-button-icon"></i>
-                </button>
-                
-                <button id="next-page-button" type="button" class="title-button" data-bs-toggle="tooltip" title="Next page">
-                    <i class="bi-chevron-right title-button-icon"></i>
-                </button>
-                
+                {% include "vesper/clip-album-title-buttons.html" %}
+
                 <div class="dropdown title-dropdown">
                 
                     <button id="moreButton" type="button" class="title-button" data-bs-toggle="dropdown" title="More" aria-haspopup="true" aria-expanded="false">
@@ -76,13 +70,12 @@
                     </button>
                     
                     <ul class="dropdown-menu" aria-labelledby="moreButton">
-                        <li><a id="filter-clips-anchor" class="dropdown-item title-dropdown-anchor" href="#filter-clips" data-bs-toggle="modal" data-bs-target="#filter-clips-modal">Filter clips...</a></li>
-                        <li><a id="choose-presets-anchor" class="dropdown-item title-dropdown-anchor" href="#choose-presets" data-bs-toggle="modal" data-bs-target="#choose-presets-modal">Choose presets...</a></li>
                         <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-bs-toggle="modal" data-bs-target="#go-to-page-modal">Go to page...</a></li>
-                        <li><hr class="dropdown-divider"></li>
                         <li><a id="go-to-next-date-anchor" class="dropdown-item title-dropdown-anchor">Go to next date</a></li>
                         <li><a id="go-to-previous-date-anchor" class="dropdown-item title-dropdown-anchor">Go to previous date</a></li>
                         <li><a id="go-to-clip-calendar-anchor" class="dropdown-item title-dropdown-anchor">Go to clip calendar</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a id="choose-presets-anchor" class="dropdown-item title-dropdown-anchor" href="#choose-presets" data-bs-toggle="modal" data-bs-target="#choose-presets-modal">Choose presets...</a></li>
                     </ul>
                                     
                 </div>

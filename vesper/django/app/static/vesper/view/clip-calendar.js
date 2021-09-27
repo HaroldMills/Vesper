@@ -14,10 +14,6 @@ let highlightedCircle = null;
 // Module-level state, set via `init` function.
 let state = null;
 
-// "Filter clips" modal, created by `onLoad` function.
-let filterClipsModal = null;
-
-
 export function init(state_) {
 
     // Set module-level state.
@@ -30,16 +26,9 @@ export function init(state_) {
 
 
 function onLoad() {
-    createFilterClipsModal();
 	setTitle();
     addButtonEventListeners();
 	setCalendarPeriods();
-}
-
-
-function createFilterClipsModal() {
-    const element = document.getElementById('filter-clips-modal');
-    filterClipsModal = new bootstrap.Modal(element, {});
 }
 
 
@@ -69,14 +58,19 @@ function addButtonEventListeners() {
     
     // filter clips button
     const filterButton = document.getElementById('filter-clips-button');
-    filterButton.addEventListener('click', function (e) {
-        filterClipsModal.show();
-    });
+    const filterModal = getFilterClipsModal();
+    filterButton.addEventListener('click', _ => filterModal.show());
 
     // filter clips modal OK button
     const okButton = document.getElementById('filter-clips-modal-ok-button');
     okButton.onclick = ViewUtils.onFilterClipsModalOkButtonClick;
     
+}
+
+
+function getFilterClipsModal() {
+    const modalDiv = document.getElementById('filter-clips-modal');
+    return bootstrap.Modal.getOrCreateInstance(modalDiv);
 }
 
 

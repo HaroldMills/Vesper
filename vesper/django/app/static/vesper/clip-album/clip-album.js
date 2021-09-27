@@ -397,9 +397,14 @@ export class ClipAlbum {
         nextButton.addEventListener(
             'click', e => this._onNextPageButtonClick(e));
         
+        // filter clips button
+        const filterButton = document.getElementById('filter-clips-button');
+        const filterModal = this._getFilterClipsModal();
+        filterButton.addEventListener('click', _ => filterModal.show());
+
         this._initFilterClipsModal();
-        this._initChoosePresetsModal();
         this._initGoToPageModal();
+        this._initChoosePresetsModal();
         
         // go to next date anchor
         const nextAnchor =
@@ -437,6 +442,12 @@ export class ClipAlbum {
 	}
 	
 	
+    _getFilterClipsModal() {
+        const modalDiv = document.getElementById('filter-clips-modal');
+        return bootstrap.Modal.getOrCreateInstance(modalDiv);
+    }
+    
+    
     _initFilterClipsModal() {
         
         const button = document.getElementById('filter-clips-modal-ok-button');
@@ -447,69 +458,6 @@ export class ClipAlbum {
             button.addEventListener(
                 'click', e => ViewUtils.onFilterClipsModalOkButtonClick(e));
         
-    }
-    
-    
-    _initChoosePresetsModal() {
-
-        // TODO: Rather than having the server send presets to the client,
-        // perhaps the client should fetch the presets from the server.
-        // We could set up URLs so that a client could request all presets
-        // of a specified type as JSON.
-
-        // Populate settings select.
-        _populatePresetSelect(
-            'choose-presets-modal-settings-select',
-            this.settingsPresets, this.settingsPresetPath);
-
-        // Populate key bindings select.
-        _populatePresetSelect(
-            'choose-presets-modal-key-bindings-select',
-            this.keyBindingsPresets, this.keyBindingsPresetPath);
-
-        // Set up modal show listener.
-        const modal = document.getElementById('choose-presets-modal');
-        modal.addEventListener(
-            'show.bs.modal', e => this._onChoosePresetsModalShow());
-        
-        // Set up OK button click listener.
-        const button = 
-            document.getElementById('choose-presets-modal-ok-button');
-        button.addEventListener(
-            'click', e => this._onChoosePresetsModalOkButtonClick());
-
-    }
-
-
-    _onChoosePresetsModalShow() {
-        
-        _updatePresetSelect(
-            'choose-presets-modal-settings-select', this.settingsPresetPath);
-            
-        _updatePresetSelect(
-            'choose-presets-modal-key-bindings-select',
-            this.keyBindingsPresetPath);
-            
-    }
-    
-    
-    _onChoosePresetsModalOkButtonClick() {
-
-        const settingsPath = _getSelectedPresetPath(
-            'choose-presets-modal-settings-select');
-        this._setSettingsPresetPath(settingsPath);
-            
-        const keyBindingsPath = _getSelectedPresetPath(
-            'choose-presets-modal-key-bindings-select');
-        this._setKeyBindingsPresetPath(keyBindingsPath);
-                
-        this._updateUrlAndHistory();
-        
-    }
-
-
-    _updateUrlAndHistory() {
-        window.history.pushState(this._historyState, null, this._url);
     }
     
     
@@ -599,6 +547,69 @@ export class ClipAlbum {
             
         }
         
+    }
+    
+    
+    _initChoosePresetsModal() {
+
+        // TODO: Rather than having the server send presets to the client,
+        // perhaps the client should fetch the presets from the server.
+        // We could set up URLs so that a client could request all presets
+        // of a specified type as JSON.
+
+        // Populate settings select.
+        _populatePresetSelect(
+            'choose-presets-modal-settings-select',
+            this.settingsPresets, this.settingsPresetPath);
+
+        // Populate key bindings select.
+        _populatePresetSelect(
+            'choose-presets-modal-key-bindings-select',
+            this.keyBindingsPresets, this.keyBindingsPresetPath);
+
+        // Set up modal show listener.
+        const modal = document.getElementById('choose-presets-modal');
+        modal.addEventListener(
+            'show.bs.modal', e => this._onChoosePresetsModalShow());
+        
+        // Set up OK button click listener.
+        const button = 
+            document.getElementById('choose-presets-modal-ok-button');
+        button.addEventListener(
+            'click', e => this._onChoosePresetsModalOkButtonClick());
+
+    }
+
+
+    _onChoosePresetsModalShow() {
+        
+        _updatePresetSelect(
+            'choose-presets-modal-settings-select', this.settingsPresetPath);
+            
+        _updatePresetSelect(
+            'choose-presets-modal-key-bindings-select',
+            this.keyBindingsPresetPath);
+            
+    }
+    
+    
+    _onChoosePresetsModalOkButtonClick() {
+
+        const settingsPath = _getSelectedPresetPath(
+            'choose-presets-modal-settings-select');
+        this._setSettingsPresetPath(settingsPath);
+            
+        const keyBindingsPath = _getSelectedPresetPath(
+            'choose-presets-modal-key-bindings-select');
+        this._setKeyBindingsPresetPath(keyBindingsPath);
+                
+        this._updateUrlAndHistory();
+        
+    }
+
+
+    _updateUrlAndHistory() {
+        window.history.pushState(this._historyState, null, this._url);
     }
     
     
