@@ -56,20 +56,21 @@ function setTitle() {
 
 function addButtonEventListeners() {
     
-    // filter clips button
-    const filterButton = document.getElementById('filter-clips-button');
-    const filterModal = getFilterClipsModal();
+    // set clip filter button
+    const filterButton = document.getElementById('set-clip-filter-button');
+    const filterModal = getSetClipFilterModal();
     filterButton.addEventListener('click', _ => filterModal.show());
 
-    // filter clips modal OK button
-    const okButton = document.getElementById('filter-clips-modal-ok-button');
-    okButton.onclick = ViewUtils.onFilterClipsModalOkButtonClick;
+    // set clip filter modal OK button
+    const okButton =
+        document.getElementById('set-clip-filter-modal-ok-button');
+    okButton.onclick = ViewUtils.onSetClipFilterModalOkButtonClick;
     
 }
 
 
-function getFilterClipsModal() {
-    const modalDiv = document.getElementById('filter-clips-modal');
+function getSetClipFilterModal() {
+    const modalDiv = document.getElementById('set-clip-filter-modal');
     return bootstrap.Modal.getOrCreateInstance(modalDiv);
 }
 

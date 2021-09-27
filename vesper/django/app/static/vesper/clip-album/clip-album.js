@@ -388,23 +388,23 @@ export class ClipAlbum {
         this._clipsDiv = document.getElementById('clips');
         
 	    // previous page button
-	    const prevButton = document.getElementById('previous-page-button');
+	    const prevButton = document.getElementById('go-to-previous-page-button');
 	    prevButton.addEventListener(
-	        'click', e => this._onPreviousPageButtonClick(e));
+	        'click', e => this._onGoToPreviousPageButtonClick(e));
  
 	    // next page button
-        const nextButton = document.getElementById('next-page-button');
+        const nextButton = document.getElementById('go-to-next-page-button');
         nextButton.addEventListener(
-            'click', e => this._onNextPageButtonClick(e));
+            'click', e => this._onGoToNextPageButtonClick(e));
         
-        // filter clips button
-        const filterButton = document.getElementById('filter-clips-button');
-        const filterModal = this._getFilterClipsModal();
+        // set clip filter button
+        const filterButton = document.getElementById('set-clip-filter-button');
+        const filterModal = this._getSetClipFilterModal();
         filterButton.addEventListener('click', _ => filterModal.show());
 
-        this._initFilterClipsModal();
+        this._initSetClipFilterModal();
         this._initGoToPageModal();
-        this._initChoosePresetsModal();
+        this._initSetPresetsModal();
         
         // go to next date anchor
         const nextAnchor =
@@ -432,32 +432,27 @@ export class ClipAlbum {
 	}
 	
 	
-	_onPreviousPageButtonClick(event) {
+	_onGoToPreviousPageButtonClick(event) {
 	    this.pageNum -= 1;
 	}
 	
 
-	_onNextPageButtonClick(event) {
+	_onGoToNextPageButtonClick(event) {
 	    this.pageNum += 1;
 	}
 	
 	
-    _getFilterClipsModal() {
-        const modalDiv = document.getElementById('filter-clips-modal');
+    _getSetClipFilterModal() {
+        const modalDiv = document.getElementById('set-clip-filter-modal');
         return bootstrap.Modal.getOrCreateInstance(modalDiv);
     }
     
     
-    _initFilterClipsModal() {
-        
-        const button = document.getElementById('filter-clips-modal-ok-button');
-        
-        // Some clip albums do not have a filter clips modal, so we have
-        // to test for the existence of the OK button here.
-        if (button !== null)
-            button.addEventListener(
-                'click', e => ViewUtils.onFilterClipsModalOkButtonClick(e));
-        
+    _initSetClipFilterModal() {
+        const button =
+            document.getElementById('set-clip-filter-modal-ok-button');
+        button.addEventListener(
+            'click', e => ViewUtils.onSetClipFilterModalOkButtonClick(e));
     }
     
     
@@ -550,7 +545,7 @@ export class ClipAlbum {
     }
     
     
-    _initChoosePresetsModal() {
+    _initSetPresetsModal() {
 
         // TODO: Rather than having the server send presets to the client,
         // perhaps the client should fetch the presets from the server.
@@ -559,48 +554,47 @@ export class ClipAlbum {
 
         // Populate settings select.
         _populatePresetSelect(
-            'choose-presets-modal-settings-select',
+            'set-presets-modal-settings-select',
             this.settingsPresets, this.settingsPresetPath);
 
         // Populate key bindings select.
         _populatePresetSelect(
-            'choose-presets-modal-key-bindings-select',
+            'set-presets-modal-key-bindings-select',
             this.keyBindingsPresets, this.keyBindingsPresetPath);
 
         // Set up modal show listener.
-        const modal = document.getElementById('choose-presets-modal');
+        const modal = document.getElementById('set-presets-modal');
         modal.addEventListener(
-            'show.bs.modal', e => this._onChoosePresetsModalShow());
+            'show.bs.modal', e => this._onSetPresetsModalShow());
         
         // Set up OK button click listener.
-        const button = 
-            document.getElementById('choose-presets-modal-ok-button');
+        const button = document.getElementById('set-presets-modal-ok-button');
         button.addEventListener(
-            'click', e => this._onChoosePresetsModalOkButtonClick());
+            'click', e => this._onSetPresetsModalOkButtonClick());
 
     }
 
 
-    _onChoosePresetsModalShow() {
+    _onSetPresetsModalShow() {
         
         _updatePresetSelect(
-            'choose-presets-modal-settings-select', this.settingsPresetPath);
+            'set-presets-modal-settings-select', this.settingsPresetPath);
             
         _updatePresetSelect(
-            'choose-presets-modal-key-bindings-select',
+            'set-presets-modal-key-bindings-select',
             this.keyBindingsPresetPath);
             
     }
     
     
-    _onChoosePresetsModalOkButtonClick() {
+    _onSetPresetsModalOkButtonClick() {
 
         const settingsPath = _getSelectedPresetPath(
-            'choose-presets-modal-settings-select');
+            'set-presets-modal-settings-select');
         this._setSettingsPresetPath(settingsPath);
             
         const keyBindingsPath = _getSelectedPresetPath(
-            'choose-presets-modal-key-bindings-select');
+            'set-presets-modal-key-bindings-select');
         this._setKeyBindingsPresetPath(keyBindingsPath);
                 
         this._updateUrlAndHistory();
@@ -889,10 +883,11 @@ export class ClipAlbum {
 
 	_updateButtonStates() {
 	    
-	    const prevButton = document.getElementById('previous-page-button');
+	    const prevButton =
+            document.getElementById('go-to-previous-page-button');
 	    prevButton.disabled = this.numPages === 0 || this.pageNum === 0;
 	    
-        const nextButton = document.getElementById('next-page-button');
+        const nextButton = document.getElementById('go-to-next-page-button');
 	    nextButton.disabled =
 	        this.numPages === 0 || this.pageNum === this.numPages - 1;
 	    

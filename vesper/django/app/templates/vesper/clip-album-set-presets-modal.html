@@ -1,15 +1,13 @@
-<!-- Modal for choosing clip album presets. -->
-
 <!-- Modal for setting a clip album's presets. -->
 
-<div id="choose-presets-modal" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modal-title" aria-hidden="true">
+<div id="set-presets-modal" class="modal fade" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modal-title" aria-hidden="true">
 
     <div class="modal-dialog">
 
         <div class="modal-content">
 
             <div class="modal-header">
-                <h4 id="modal-title" class="modal-title">Choose presets</h4>
+                <h4 id="modal-title" class="modal-title">Set presets</h4>
             </div>
 
             <div class="modal-body">
@@ -17,18 +15,18 @@
                 <form>
             
                     <div class="row mb-3">
-                        <label class="col-sm-5 col-form-label text-end" for="choose-presets-modal-settings-select">Clip album settings:</label>
+                        <label class="col-sm-5 col-form-label text-end" for="set-presets-modal-settings-select">Clip album settings:</label>
                         <div class="col-sm-6">
-                            <select id="choose-presets-modal-settings-select" class="form-select w-auto">
+                            <select id="set-presets-modal-settings-select" class="form-select w-auto">
                                 <!-- This select is populated by JavaScript. -->
                             </select>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <label class="col-sm-5 col-form-label text-end" for="choose-presets-modal-key-bindings-select">Clip album commands:</label>
+                        <label class="col-sm-5 col-form-label text-end" for="set-presets-modal-key-bindings-select">Clip album commands:</label>
                         <div class="col-sm-6">
-                            <select id="choose-presets-modal-key-bindings-select" class="form-select w-auto">
+                            <select id="set-presets-modal-key-bindings-select" class="form-select w-auto">
                                 <!--  This select is populated by JavaScript. -->
                             </select>
                         </div>
@@ -40,7 +38,7 @@
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="choose-presets-modal-ok-button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                <button type="button" id="set-presets-modal-ok-button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
             </div>
             
         </div>
