@@ -59,7 +59,11 @@
 .period-rule {
 }
 
-.row {
+/*
+ * This class used to be called just "row", but then it overrode the
+ * Bootstrap "row" class.
+ */
+.period-row {
   margin: 35px 0;
 }
 
