@@ -648,6 +648,17 @@ export class ClipView {
                 }
 
             }
+            
+            if (s.classifierScoreIncluded && clip.annotations !== null) {
+                
+                const annotation = clip.annotations.get('Classifier Score');
+                
+                if (annotation !== undefined) {
+                    const score =
+                        Math.round(parseFloat(annotation).toString());
+                    labelParts.push(score);
+                }
+            }
 
             const label = this.label;
             label.textContent = labelParts.join(' ');
