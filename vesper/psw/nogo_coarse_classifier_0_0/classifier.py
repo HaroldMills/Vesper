@@ -12,12 +12,14 @@ automatically.
 import logging
 
 from vesper.command.annotator import Annotator
-from vesper.django.app.models import TagInfo
+from vesper.django.app.models import AnnotationInfo, TagInfo
 from vesper.singleton.clip_manager import clip_manager
+import vesper.django.app.model_utils as model_utils
 import vesper.psw.nogo_coarse_classifier_0_0.classifier_utils as \
     classifier_utils
 import vesper.psw.nogo_coarse_classifier_0_0.dataset_utils as dataset_utils
 import vesper.util.open_mp_utils as open_mp_utils
+import vesper.util.time_utils as time_utils
 
 
 _COMPARISON_MODE_ENABLED = False
@@ -50,6 +52,9 @@ class _Classifier(Annotator):
         # Suppress TensorFlow INFO and DEBUG log messages.
         logging.getLogger('tensorflow').setLevel(logging.WARN)
         
+        # TODO: Perhaps `Annotator.__init__` should do this.
+        self._logger = logging.getLogger()
+
         self._model = classifier_utils.load_inference_model()
         
         self._settings = classifier_utils.load_inference_settings()
@@ -64,6 +69,10 @@ class _Classifier(Annotator):
             self._false_negative_tag_info = \
                 TagInfo.objects.get(name='False Negative')
                 
+        # TODO: Perhaps `Annotator` should handle annotation info
+        # creation and caching.
+        self._annotation_info_cache = {}
+
         
     def annotate_clips(self, clips):
         
@@ -88,9 +97,11 @@ class _Classifier(Annotator):
             for clip, annotation_value, score in \
                     zip(clips, annotation_values, scores):
                 
+                self._annotate_clip_score(clip, score)
+                
                 if _COMPARISON_MODE_ENABLED:
                     self._tag_clip_if_needed(clip, annotation_value, score)
-                    
+                
                 else:
                     self._annotate_clip(clip, score)
                     classified_clip_count += 1
@@ -122,7 +133,7 @@ class _Classifier(Annotator):
             return _is_nogo(annotation_value) or _is_other(annotation_value)
         else:
             return annotation_value is None
-            
+        
 
     def _create_dataset(self, clips):
         
@@ -138,9 +149,61 @@ class _Classifier(Annotator):
         
         dataset = dataset_utils.create_waveform_dataset_from_tensors(waveforms)
         
-        dataset = dataset_utils.create_inference_dataset(dataset, self._settings)
+        dataset = \
+            dataset_utils.create_inference_dataset(dataset, self._settings)
         
         return dataset
+    
+    
+    def _annotate_clip_score(self, clip, score):
+        
+        annotation_info = self._get_annotation_info('Classifier Score')
+        annotation_value = str(100 * score)
+        
+        model_utils.annotate_clip(
+            clip, annotation_info, annotation_value,
+            creating_user=self._creating_user,
+            creating_job=self._creating_job,
+            creating_processor=self._creating_processor)
+    
+    
+    def _get_annotation_info(self, annotation_name):
+        
+        try:
+            return self._annotation_info_cache[annotation_name]
+        
+        except KeyError:
+            # cache miss
+            
+            try:
+                info = AnnotationInfo.objects.get(name=annotation_name)
+            
+            except AnnotationInfo.DoesNotExist:
+                
+                classifier_name = self.extension_name
+ 
+                self._logger.info(
+                    f'    Adding annotation "{annotation_name}" to '
+                    f'archive for classifier "{classifier_name}"...')
+                
+                description = (
+                    f'Created automatically for classifier '
+                    f'"{classifier_name}".')
+                
+                type_ = 'String'
+                creation_time = time_utils.get_utc_now()
+                
+                info = AnnotationInfo.objects.create(
+                    name=annotation_name,
+                    description=description,
+                    type=type_,
+                    creation_time=creation_time,
+                    creating_user=self._creating_user,
+                    creating_job=self._creating_job)
+            
+            self._annotation_info_cache[annotation_name] = info
+            
+            return info
     
     
     def _tag_clip_if_needed(self, clip, annotation_value, score):
@@ -169,6 +232,8 @@ class _Classifier(Annotator):
         else:
             annotation_value = 'Other'
             
+        # TODO: `Annotator._annotate` should take an annotation name
+        # as well as an annotation value.
         self._annotate(clip, annotation_value)
         
         
