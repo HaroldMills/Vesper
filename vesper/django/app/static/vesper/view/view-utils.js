@@ -30,11 +30,17 @@ export var ViewUtils;
         const newTag = document.getElementById(
             'set-clip-filter-modal-tag-select').value;
         
-        if (newStationMic !== stationMic ||
-                newDetector !== detector ||
-                newClassification !== classification ||
-                newTag !== tag) {
-                // new clip filter differs from current one
+        if (newStationMic == stationMic &&
+                newDetector == detector &&
+                newClassification == classification &&
+                newTag == tag) {
+                // new clip filter is same as current one
+            
+            // Reload page to reflect possible changes to clip metadata.
+            window.location.reload();
+            
+        } else {
+            // new clip filter differs from current one
             
             // Update clip filter in URL.
             params.set('station_mic', newStationMic);
