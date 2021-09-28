@@ -140,7 +140,7 @@ function addCalendarPeriod(period, periodsDiv) {
 function addPeriodRow(row, periodDiv) {
 
 	const rowDiv = document.createElement('div');
-	rowDiv.className = 'period-row';
+	rowDiv.classList.add('row', 'my-5');
 
 	for (const month of row)
 		addRowMonth(month, rowDiv);

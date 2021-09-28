@@ -36,7 +36,7 @@
      * below and <month spacing> is the desired spacing between months,
      * i.e. twice the desired horizontal month padding.
      */
-    width: 1170px;        /* 3 * 210 + 3 * 180 */
+    width: 1140px;        /* 3 * 210 + 3 * 170 */
     
     margin: auto;
     
@@ -57,14 +57,6 @@
 }
 
 .period-rule {
-}
-
-/*
- * This class used to be called just "row", but then it overrode the
- * Bootstrap "row" class.
- */
-.period-row {
-  margin: 35px 0;
 }
 
 .month {
