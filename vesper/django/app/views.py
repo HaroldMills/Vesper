@@ -1,3 +1,4 @@
+from collections import defaultdict
 from urllib.parse import quote
 import datetime
 import itertools
@@ -5,7 +6,7 @@ import json
 import logging
 
 from django import forms, urls
-from django.db import transaction
+from django.db import connection, reset_queries, transaction
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import (
@@ -1109,13 +1110,12 @@ def _get_request_body(request, content_type_name, default_charset_name):
 
 def _get_clip_audios_aux(content):
     
+    # reset_queries()
+
     clip_ids = content['clip_ids']
     
-    # TODO: Consider querying database for batches of clips instead
-    # of one clip at a time. This could dramatically reduce the
-    # number of database queries this functions performs. The Django
-    # QuerySet `in` field lookup or `in_bulk` method might be useful.
-    clips = [get_object_or_404(Clip, pk=i) for i in clip_ids]
+    # TODO: Limit number of clip IDs per query?
+    clips = Clip.objects.filter(id__in=clip_ids)
 
     content_type = 'audio/wav'
     
@@ -1145,9 +1145,17 @@ def _get_clip_audios_aux(content):
     parts = itertools.chain.from_iterable(pairs)
     content = b''.join(parts)
     
+    # _show_queries('_get_clip_audios_aux')
+
     # Construct response
     return HttpResponse(content, content_type='application/octet-stream')
     
+
+def _show_queries(name):
+    queries = connection.queries
+    print(f'{name} performed {len(queries)} queries:')
+    for i, query in enumerate(connection.queries):
+        print(f'    {i}: {query}')
 
 
 def _get_uint32_bytes(i):
@@ -1175,39 +1183,67 @@ def _get_clip_metadata_aux(content):
     
     clip_ids = content['clip_ids']
     
-    # TODO: Consider querying database for batches of clips instead
-    # of one clip at a time. This could dramatically reduce the
-    # number of database queries this functions performs. The Django
-    # QuerySet `in` field lookup or `in_bulk` method might be useful.
-    metadata = dict((i, _get_clip_metadata(i)) for i in clip_ids)
+    # reset_queries()
+
+    annos = _get_annotations(clip_ids)
+    tags = _get_tags(clip_ids)
+
+    metadata = dict(
+        (i, _get_clip_metadata(i, annos, tags))
+        for i in clip_ids)
+    
+    # _show_queries('_get_clip_metadata_aux')
     
     return JsonResponse(metadata)
             
 
-def _get_clip_metadata(clip_id):
+def _get_annotations(clip_ids):
+    
+    # TODO: Limit number of clip IDs per query?
+    annos = StringAnnotation.objects. \
+        filter(clip_id__in=clip_ids). \
+        select_related('info')
+
+    # Group annotation (name, value) pairs by clip ID into lists.
+    annos_dict = defaultdict(list)
+    for a in annos:
+        anno_list = annos_dict[a.clip_id]
+        anno_list.append((a.info.name, a.value))
+
+    # Sort lists by annotation name.
+    for anno_list in annos_dict.values():
+        anno_list.sort()
+    
+    return annos_dict
+    
+
+def _get_tags(clip_ids):
+
+    # TODO: Limit number of clip IDs per query?
+    tags = Tag.objects. \
+        filter(clip_id__in=clip_ids). \
+        select_related('info')
+
+    # Group tag names by clip ID into lists.
+    tags_dict = defaultdict(list)
+    for t in tags:
+        tag_list = tags_dict[t.clip_id]
+        tag_list.append(t.info.name)
+
+    # Sort lists by tag name.
+    for tag_list in tags_dict.values():
+        tag_list.sort()
+
+    return tags_dict
+                
+                
+def _get_clip_metadata(clip_id, annos, tags):
     return {
-        'annotations': _get_annotations(clip_id),
-        'tags': _get_tags(clip_id)
+        'annotations': annos[clip_id],
+        'tags': tags[clip_id]
     }
 
 
-def _get_annotations(clip_id):
-    
-    annotations = StringAnnotation.objects. \
-        filter(clip_id=clip_id). \
-        select_related('info')
-
-    # We return a list of (name, value) pairs instead of a dictionary
-    # so that the JSON analog is iterable and ordered (JavaScript
-    # objects are not iterable).
-    return sorted((a.info.name, a.value) for a in annotations)
-
-
-def _get_tags(clip_id):
-    tags = Tag.objects.filter(clip_id=clip_id).select_related('info')
-    return sorted(t.info.name for t in tags)
-                
-                
 # TODO: Understand why decorating this view (or any of the
 # `unannotate_clip_batch`, `tag_clip_batch`, and `untag_clip_batch`
 # views) with `@login_required` causes the view to not be executed
