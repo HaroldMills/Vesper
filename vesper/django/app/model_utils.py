@@ -579,6 +579,63 @@ def get_clip_annotation_value(clip, annotation_info):
 
 @archive_lock.atomic
 @transaction.atomic
+def annotate_clips(
+        clip_ids, annotation_info, value, creation_time=None,
+        creating_user=None, creating_job=None, creating_processor=None):
+    
+    # Get existing clip annotations.
+    annotations = StringAnnotation.objects.filter(
+        clip_id__in=clip_ids, info=annotation_info)
+
+    # Get annotated clip IDs.
+    annotated_clip_ids = frozenset(a.clip_id for a in annotations)
+
+    # Get unannotated clip IDs.
+    unannotated_clip_ids = frozenset(clip_ids) - annotated_clip_ids
+
+    # Get IDs of clips that are annotated but not with specified value.
+    annotated_clip_ids = frozenset(
+        a.clip_id for a in annotations if a.value != value)
+
+    if creation_time is None:
+        creation_time = time_utils.get_utc_now()
+        
+    kwargs = {
+        'value': value,
+        'creation_time': creation_time,
+        'creating_user': creating_user,
+        'creating_job': creating_job,
+        'creating_processor': creating_processor
+    }
+
+    # TODO: Consider operating on objects in limited-size batches.
+
+    # Create annotations for unannotated clips.
+    annotations = [
+        StringAnnotation(clip_id=i, info=annotation_info, **kwargs)
+        for i in unannotated_clip_ids]
+    StringAnnotation.objects.bulk_create(annotations)
+
+    # Update annotations of already-annotated clips.
+    StringAnnotation.objects.filter(
+        clip_id__in=annotated_clip_ids,
+        info=annotation_info
+    ).update(**kwargs)
+
+    # Create edits for new annotations.
+    edited_clip_ids = unannotated_clip_ids | annotated_clip_ids
+    edits = [
+        StringAnnotationEdit(
+            clip_id=i,
+            info=annotation_info,
+            action=StringAnnotationEdit.ACTION_SET,
+            **kwargs)
+        for i in edited_clip_ids]
+    StringAnnotationEdit.objects.bulk_create(edits)
+
+
+@archive_lock.atomic
+@transaction.atomic
 def annotate_clip(
         clip, annotation_info, value, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
@@ -630,6 +687,45 @@ def annotate_clip(
     
 @archive_lock.atomic
 @transaction.atomic
+def unannotate_clips(
+        clip_ids, annotation_info, creation_time=None, creating_user=None,
+        creating_job=None, creating_processor=None):
+    
+    # Get existing clip annotations.
+    annotations = StringAnnotation.objects.filter(
+        clip_id__in=clip_ids, info=annotation_info)
+
+    # Get annotated clip IDs.
+    annotated_clip_ids = [a.clip_id for a in annotations]
+
+    # Delete annotations.
+    annotations.delete()
+
+    if creation_time is None:
+        creation_time = time_utils.get_utc_now()
+        
+    kwargs = {
+        'creation_time': creation_time,
+        'creating_user': creating_user,
+        'creating_job': creating_job,
+        'creating_processor': creating_processor
+    }
+
+    # TODO: Consider operating on objects in limited-size batches.
+
+    # Create edits for deleted annotations.
+    edits = [
+        StringAnnotationEdit(
+            clip_id=i,
+            info=annotation_info,
+            action=StringAnnotationEdit.ACTION_DELETE,
+            **kwargs)
+        for i in annotated_clip_ids]
+    StringAnnotationEdit.objects.bulk_create(edits)
+
+
+@archive_lock.atomic
+@transaction.atomic
 def unannotate_clip(
         clip, annotation_info, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
@@ -660,6 +756,50 @@ def unannotate_clip(
             creating_user=creating_user,
             creating_job=creating_job,
             creating_processor=creating_processor)
+
+
+@archive_lock.atomic
+@transaction.atomic
+def tag_clips(
+        clip_ids, tag_info, creation_time=None, creating_user=None,
+        creating_job=None, creating_processor=None):
+    
+    # Get existing tags.
+    tags = Tag.objects.filter(clip_id__in=clip_ids, info=tag_info)
+
+    # Get tagged clip IDs.
+    tagged_clip_ids = frozenset(t.clip_id for t in tags)
+
+    # Get IDs of untagged clips.
+    untagged_clip_ids = frozenset(clip_ids) - tagged_clip_ids
+
+    if creation_time is None:
+        creation_time = time_utils.get_utc_now()
+        
+    kwargs = {
+        'creation_time': creation_time,
+        'creating_user': creating_user,
+        'creating_job': creating_job,
+        'creating_processor': creating_processor
+    }
+
+    # TODO: Consider operating on objects in limited-size batches.
+
+    # Tag untagged clips.
+    tags = [
+        Tag(clip_id=i, info=tag_info, **kwargs)
+        for i in untagged_clip_ids]
+    Tag.objects.bulk_create(tags)
+
+    # Create edits for new tags.
+    edits = [
+        TagEdit(
+            clip_id=i,
+            info=tag_info,
+            action=TagEdit.ACTION_SET,
+            **kwargs)
+        for i in untagged_clip_ids]
+    TagEdit.objects.bulk_create(edits)
 
 
 @archive_lock.atomic
@@ -698,6 +838,44 @@ def tag_clip(
             **kwargs)
     
     
+@archive_lock.atomic
+@transaction.atomic
+def untag_clips(
+        clip_ids, tag_info, creation_time=None, creating_user=None,
+        creating_job=None, creating_processor=None):
+    
+    # Get existing tags.
+    tags = Tag.objects.filter(clip_id__in=clip_ids, info=tag_info)
+
+    # Get tagged clip IDs.
+    tagged_clip_ids = frozenset(t.clip_id for t in tags)
+
+    # Delete tags.
+    tags.delete()
+
+    if creation_time is None:
+        creation_time = time_utils.get_utc_now()
+        
+    kwargs = {
+        'creation_time': creation_time,
+        'creating_user': creating_user,
+        'creating_job': creating_job,
+        'creating_processor': creating_processor
+    }
+
+    # TODO: Consider operating on objects in limited-size batches.
+
+    # Create edits for deleted tags.
+    edits = [
+        TagEdit(
+            clip_id=i,
+            info=tag_info,
+            action=TagEdit.ACTION_SET,
+            **kwargs)
+        for i in tagged_clip_ids]
+    TagEdit.objects.bulk_create(edits)
+
+
 @archive_lock.atomic
 @transaction.atomic
 def untag_clip(

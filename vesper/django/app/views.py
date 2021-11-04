@@ -1265,7 +1265,13 @@ def annotate_clip_batch(request):
     to leave room for an `annotate_clips` Vesper command.
     '''
 
-    return _edit_clip_metadata(request, _annotate_clips)
+    # reset_queries()
+
+    response = _edit_clip_metadata(request, _annotate_clips)
+
+    # _show_queries('annotate_clip_batch')
+
+    return response
     
     
 def _edit_clip_metadata(request, edit_function, *args):
@@ -1322,13 +1328,9 @@ def _annotate_clips(clip_ids, creation_time, creating_user, content):
         
         info = get_object_or_404(AnnotationInfo, name=name)
 
-        for clip_id in clip_ids:
-
-            clip = get_object_or_404(Clip, pk=clip_id)
-
-            model_utils.annotate_clip(
-                clip, info, value, creation_time=creation_time,
-                creating_user=creating_user)
+        model_utils.annotate_clips(
+            clip_ids, info, value, creation_time=creation_time,
+            creating_user=creating_user)
             
             
 def unannotate_clip_batch(request):
@@ -1345,11 +1347,28 @@ def unannotate_clip_batch(request):
     to leave room for an `unannotate_clips` Vesper command.
     '''
 
-    args = ('annotation_names', AnnotationInfo, model_utils.unannotate_clip)
+    # reset_queries()
+
+    response = _edit_clip_metadata(request, _unannotate_clips)
+
+    # _show_queries('unannotate_clip_batch')
+
+    return response
     
-    return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
     
+def _unannotate_clips(clip_ids, creation_time, creating_user, content):
     
+    annotation_names = content['annotation_names']
+    
+    for name in annotation_names:
+        
+        info = get_object_or_404(AnnotationInfo, name=name)
+
+        model_utils.unannotate_clips(
+            clip_ids, info, creation_time=creation_time,
+            creating_user=creating_user)
+            
+            
 def _edit_clip_metadata_aux(
         clip_ids, creation_time, creating_user, content, name_key,
         info_class, edit_function):
@@ -1384,10 +1403,28 @@ def tag_clip_batch(request):
     room for a `tag_clips` Vesper command.
     '''
 
-    args = ('tags', TagInfo, model_utils.tag_clip)
-    return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
+    # reset_queries()
+
+    response = _edit_clip_metadata(request, _tag_clips)
+
+    # _show_queries('tag_clip_batch')
+
+    return response
     
     
+def _tag_clips(clip_ids, creation_time, creating_user, content):
+    
+    tag_names = content['tags']
+    
+    for name in tag_names:
+        
+        info = get_object_or_404(TagInfo, name=name)
+
+        model_utils.tag_clips(
+            clip_ids, info, creation_time=creation_time,
+            creating_user=creating_user)
+
+
 def untag_clip_batch(request):
 
     '''
@@ -1401,10 +1438,28 @@ def untag_clip_batch(request):
     to leave room for an `untag_clips` Vesper command.
     '''
 
-    args = ('tags', TagInfo, model_utils.untag_clip)
-    return _edit_clip_metadata(request, _edit_clip_metadata_aux, *args)
+    # reset_queries()
+
+    response = _edit_clip_metadata(request, _untag_clips)
+
+    # _show_queries('untag_clip_batch')
+
+    return response
+
     
+def _untag_clips(clip_ids, creation_time, creating_user, content):
     
+    tag_names = content['tags']
+    
+    for name in tag_names:
+        
+        info = get_object_or_404(TagInfo, name=name)
+
+        model_utils.untag_clips(
+            clip_ids, info, creation_time=creation_time,
+            creating_user=creating_user)
+
+
 # def clip_metadata(request, clip_id):
 #
 #     if request.method in _GET_AND_HEAD:
