@@ -634,55 +634,15 @@ def annotate_clips(
     StringAnnotationEdit.objects.bulk_create(edits)
 
 
-@archive_lock.atomic
-@transaction.atomic
+# This function doesn't need archive lock and transaction decorators
+# since it just calls another function that does.
 def annotate_clip(
         clip, annotation_info, value, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
     
-    try:
-        annotation = StringAnnotation.objects.get(
-            clip=clip,
-            info=annotation_info)
-        
-    except StringAnnotation.DoesNotExist:
-        annotation = None
-    
-    if annotation is None or annotation.value != value:
-        # annotation does not exist or value differs from specified value
-        
-        if creation_time is None:
-            creation_time = time_utils.get_utc_now()
-        
-        kwargs = {
-            'value': value,
-            'creation_time': creation_time,
-            'creating_user': creating_user,
-            'creating_job': creating_job,
-            'creating_processor': creating_processor
-        }
-    
-        if annotation is None:
-            # clip is not annotated
-            
-            StringAnnotation.objects.create(
-                clip=clip,
-                info=annotation_info,
-                **kwargs)
-            
-        else:
-            # clip is annotated but value differs from specified value
-            
-            StringAnnotation.objects.filter(
-                clip=clip,
-                info=annotation_info
-            ).update(**kwargs)
-            
-        StringAnnotationEdit.objects.create(
-            clip=clip,
-            info=annotation_info,
-            action=StringAnnotationEdit.ACTION_SET,
-            **kwargs)
+    annotate_clips(
+        [clip.id], annotation_info, value, creation_time=None,
+        creating_user=None, creating_job=None, creating_processor=None)
     
     
 @archive_lock.atomic
@@ -724,38 +684,15 @@ def unannotate_clips(
     StringAnnotationEdit.objects.bulk_create(edits)
 
 
-@archive_lock.atomic
-@transaction.atomic
+# This function doesn't need archive lock and transaction decorators
+# since it just calls another function that does.
 def unannotate_clip(
         clip, annotation_info, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
     
-    try:
-        annotation = StringAnnotation.objects.get(
-            clip=clip,
-            info=annotation_info)
-        
-    except StringAnnotation.DoesNotExist:
-        # clip is not annotated
-        
-        return
-    
-    else:
-        # clip is annotated
-    
-        annotation.delete()
-    
-        if creation_time is None:
-            creation_time = time_utils.get_utc_now()
-         
-        StringAnnotationEdit.objects.create(
-            clip=clip,
-            info=annotation_info,
-            action=StringAnnotationEdit.ACTION_DELETE,
-            creation_time=creation_time,
-            creating_user=creating_user,
-            creating_job=creating_job,
-            creating_processor=creating_processor)
+    unannotate_clips(
+        [clip.id], annotation_info, creation_time=None, creating_user=None,
+        creating_job=None, creating_processor=None)
 
 
 @archive_lock.atomic
@@ -802,40 +739,15 @@ def tag_clips(
     TagEdit.objects.bulk_create(edits)
 
 
-@archive_lock.atomic
-@transaction.atomic
+# This function doesn't need archive lock and transaction decorators
+# since it just calls another function that does.
 def tag_clip(
         clip, tag_info, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
     
-    try:
-        _ = Tag.objects.get(
-            clip=clip,
-            info=tag_info)
-        
-    except Tag.DoesNotExist:
-        # clip is not already tagged
-         
-        if creation_time is None:
-            creation_time = time_utils.get_utc_now()
-        
-        kwargs = {
-            'creation_time': creation_time,
-            'creating_user': creating_user,
-            'creating_job': creating_job,
-            'creating_processor': creating_processor
-        }
-    
-        Tag.objects.create(
-            clip=clip,
-            info=tag_info,
-            **kwargs)
-            
-        TagEdit.objects.create(
-            clip=clip,
-            info=tag_info,
-            action=TagEdit.ACTION_SET,
-            **kwargs)
+    tag_clips(
+        [clip.id], tag_info, creation_time=None, creating_user=None,
+        creating_job=None, creating_processor=None)
     
     
 @archive_lock.atomic
@@ -876,38 +788,15 @@ def untag_clips(
     TagEdit.objects.bulk_create(edits)
 
 
-@archive_lock.atomic
-@transaction.atomic
+# This function doesn't need archive lock and transaction decorators
+# since it just calls another function that does.
 def untag_clip(
         clip, tag_info, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None):
     
-    try:
-        tag = Tag.objects.get(
-            clip=clip,
-            info=tag_info)
-        
-    except Tag.DoesNotExist:
-        # clip is not tagged
-        
-        return
-    
-    else:
-        # clip is tagged
-    
-        tag.delete()
-    
-        if creation_time is None:
-            creation_time = time_utils.get_utc_now()
-         
-        TagEdit.objects.create(
-            clip=clip,
-            info=tag_info,
-            action=TagEdit.ACTION_DELETE,
-            creation_time=creation_time,
-            creating_user=creating_user,
-            creating_job=creating_job,
-            creating_processor=creating_processor)
+    untag_clips(
+        [clip.id], tag_info, creation_time=None, creating_user=None,
+        creating_job=None, creating_processor=None)
     
     
 def get_clip_detector_name(clip):
