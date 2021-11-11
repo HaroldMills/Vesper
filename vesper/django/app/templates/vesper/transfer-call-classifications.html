@@ -1,22 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Transfer call classifications - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Transfer call classifications</h2>
 
@@ -24,6 +19,7 @@
         Transfers <code>Call*</code> classifications from clips of one
         detector to corresponding clips of another detector.
     </p>
+
     <p>
         The detector from whose clips classifications are transferred is
         called the <i>source</i> detector and the detector to whose clips
@@ -38,7 +34,7 @@
         classification (i.e. we use the term "transfer" a little loosely
         here).
     </p>
-    
+
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <form class="form" role="form" action="{% url 'transfer-call-classifications' %}" method="post">
@@ -55,6 +51,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

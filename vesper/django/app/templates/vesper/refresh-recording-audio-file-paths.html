@@ -1,22 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Refresh recording audio file paths - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Refresh recording audio file paths</h2>
 
@@ -24,6 +19,7 @@
         Refreshes the recording audio file paths stored in this archive, 
         updating any that have changed.
     </p>
+
     <p>
         For each recording audio file of the archive, this command
         attempts to locate the file by name in the archive's recording
@@ -33,6 +29,7 @@
         error message is logged and the path stored for it in the archive
         is not modified.
     </p>
+    
     <p>
         The recording directories of an archive can be specified in the
         <code>recording_directories</code> setting of the
@@ -42,17 +39,15 @@
         recordings are located in the <code>Recordings</code> subdirectory
         of the archive directory.
     </p>
-    
+
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <form class="form" role="form" action="{% url 'refresh-recording-audio-file-paths' %}" method="post">
-    
+
         {% csrf_token %}
         
         <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Refresh Paths</button>
         
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

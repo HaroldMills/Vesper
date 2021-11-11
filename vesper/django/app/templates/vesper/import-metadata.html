@@ -1,30 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Import metadata - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
     <script src="{% static 'vesper/view/import-metadata.js' %}"></script>
 
-</head>
+    {% load vesper_extras %}
 
-<body class="command-form-body">
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Import metadata</h2>
 
     <p>
         Imports the specified metadata into this Vesper archive.
     </p>
-    
+
     <p>
         The metadata must be YAML text. The text can describe stations,
         devices (such as microphones and recorders), which devices were
@@ -35,12 +30,12 @@
         [Need to describe metadata YAML format in more detail, perhaps
         on another page that we link to here.]
     </p>
-    
+
     <p>
         Note that you can drag and drop a YAML file to the text area below
         to set the contents of the text area to the contents of the file.
     </p>
-    
+
     <p>
         Currently, some metadata imports (for example, ones that add
         detectors and/or classifiers) must be followed by a server
@@ -61,6 +56,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

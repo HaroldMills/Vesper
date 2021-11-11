@@ -1,31 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Create clip audio files - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Create clip audio files</h2>
 
     <p>
         Creates audio files for the specified clips of this Vesper archive.
     </p>
-    
+
     {% include "vesper/clips-specification-message.html" %}
-    
+
     <p>
         The audio files for the recordings of which the clips are parts
         must be available to supply the clips' audio data. After the clip
@@ -46,6 +41,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

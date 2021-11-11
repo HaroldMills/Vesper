@@ -1,13 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
+{% block head %}
 
-    {% include "vesper/header-prefix.html" %}
+    <title> - Vesper</title>
 
     {% load static %}
-    
-    <title>Clips</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-album.css' %}">
 
     {% load vesper_extras %}
 
@@ -35,13 +33,9 @@
         </script>
     {% endif %}
 
-    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-album.css' %}">
+{% endblock head %}
 
-</head>
-
-<body>
-
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     {% if error_message %}
     
@@ -92,6 +86,4 @@
 
     {% endif %}
 
-</body>
-
-</html>
+{% endblock main %}

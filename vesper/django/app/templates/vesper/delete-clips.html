@@ -1,38 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Delete clips - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Delete clips</h2>
 
     <p>
         Deletes the specified clips from this Vesper archive.
     </p>
-    
+
     {% include "vesper/clips-specification-message.html" %}
-    
+
     <p>
         All data associated with the clips, including their audio
         files and annotations, are deleted. You can optionally specify a
         number of clips to retain. The retained clips are selected at random
         from those specified, with all clips equally likely to be retained.
     </p>
-    
+
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <p class="warning">
@@ -52,6 +47,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

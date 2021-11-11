@@ -1,38 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Export clip metadata to CSV file - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Export clip metadata to CSV file</h2>
 
     <p>
         Exports metadata for the specified clips to a CSV file.
     </p>
-    
+
     {% include "vesper/clips-specification-message.html" %}
-    
+
     <p>
         The CSV file is written at the specified path on the server,
         and contains one row for each clip.
         [In the future, the CSV file will be delivered to the client rather
         than written to the server file system.]
     </p>
-    
+
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <form class="form" role="form" action="{% url 'export-clip-metadata-to-csv-file' %}" method="post">
@@ -48,6 +43,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

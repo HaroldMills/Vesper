@@ -1,13 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
+{% block head %}
 
-    {% include "vesper/header-prefix.html" %}
+    <title>Clip Album</title>
 
     {% load static %}
-    
-    <title>Clip Album</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-album.css' %}">
 
     {% load vesper_extras %}
 
@@ -35,57 +33,49 @@
         </script>
     {% endif %}
 
-    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-album.css' %}">
+{% endblock head %}
 
-</head>
-
-<body>
-
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     {% if error_message %}
-    
-        <div id="error-div">
-            {{error_message|safe}}
-        </div>
+        
+    <div id="error-div">
+        {{error_message|safe}}
+    </div>
 
     {% else %}
-    
-        {% include "vesper/set-clip-filter-modal.html" %}
-        {% include "vesper/clip-album-set-presets-modal.html" %}
-        {% include "vesper/clip-album-go-to-page-modal.html" %}
- 
-        <div id="title-div">
-    
-            <h4 id="title"></h4>
+
+    {% include "vesper/set-clip-filter-modal.html" %}
+    {% include "vesper/clip-album-set-presets-modal.html" %}
+    {% include "vesper/clip-album-go-to-page-modal.html" %}
+
+    <div id="title-div">
+
+        <h4 id="title"></h4>
+
+        <div id="title-buttons">
         
-            <div id="title-buttons">
+            {% include "vesper/clip-album-title-buttons.html" %}
+
+            <div class="dropdown title-dropdown">
             
-                {% include "vesper/clip-album-title-buttons.html" %}
-
-                <div class="dropdown title-dropdown">
+                <button id="moreButton" type="button" class="title-button" data-bs-toggle="dropdown" title="More" aria-haspopup="true" aria-expanded="false">
+                    <i class="bi-three-dots-vertical title-button-icon"></i>
+                </button>
                 
-                    <button id="moreButton" type="button" class="title-button" data-bs-toggle="dropdown" title="More" aria-haspopup="true" aria-expanded="false">
-                        <i class="bi-three-dots-vertical title-button-icon"></i>
-                    </button>
-                    
-                    <ul class="dropdown-menu" aria-labelledby="moreButton">
-                        <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-bs-toggle="modal" data-bs-target="#go-to-page-modal">Go to page...</a></li>
-                        <li><a id="set-presets-anchor" class="dropdown-item title-dropdown-anchor" href="#set-presets" data-bs-toggle="modal" data-bs-target="#set-presets-modal">Set presets...</a></li>
-                    </ul>
+                <ul class="dropdown-menu" aria-labelledby="moreButton">
+                    <li><a id="go-to-page-anchor" class="dropdown-item title-dropdown-anchor" href="#go-to-page" data-bs-toggle="modal" data-bs-target="#go-to-page-modal">Go to page...</a></li>
+                    <li><a id="set-presets-anchor" class="dropdown-item title-dropdown-anchor" href="#set-presets" data-bs-toggle="modal" data-bs-target="#set-presets-modal">Set presets...</a></li>
+                </ul>
 
-                </div>
-                
             </div>
             
         </div>
-            
-        <div id="clips"></div>
         
-        <!-- div id='footer'></div> -->
+    </div>
+        
+    <div id="clips"></div>
 
     {% endif %}
 
-</body>
-
-</html>
+{% endblock main %}

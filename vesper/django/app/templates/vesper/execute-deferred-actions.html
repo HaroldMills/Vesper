@@ -1,22 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Execute deferred actions - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body class="command-form-body">
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Execute deferred actions</h2>
 
@@ -28,7 +23,7 @@
         Examples of actions that may have been deferred include clip creation
         and annotation.
     </p>
-    
+
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <p>
@@ -43,8 +38,8 @@
         this policy automatically, obviating this warning, but the current
         version does not.
     </p>
-    
-<!--
+
+    <!--
     <p>
         WARNING: If your archive uses an SQLite database (the default),
         we recommend that you NOT run any other jobs or perform any
@@ -58,9 +53,7 @@
         made by the actions are rolled back and the job can be safely
         rerun.
     </p>
--->
-    
-    <p>
+    -->
 
     <form class="form" role="form" action="{% url 'execute-deferred-actions' %}" method="post">
 
@@ -70,6 +63,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

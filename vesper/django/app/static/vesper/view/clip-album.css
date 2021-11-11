@@ -12,10 +12,17 @@ html {
 }
 
 body {
-    
-  display: flex;
-  flex-direction: column;
-  
+
+  /*
+  Use full window height with no margins. It is important to keep the
+  vertical margins zero here to keep an unwanted vertical scrollbar
+  at bay. We worry about margins at lower levels of the DOM element
+  hierarchy, for example to ensure that the clip album title appears
+  below the navbar rather than behind it.
+  */
+  height: 100%;
+  margin: 0;
+
   /*
   We set min-width and min-height properties for the body to help avoid
   problems that tend to arise at smaller sizes, for example playback
@@ -27,6 +34,10 @@ body {
   min-width: 320px;
   min-height: 480px;
   
+}
+
+main {
+    
   /*
   Use full window height with no margins. It is important to keep the
   vertical margins zero here to keep an unwanted vertical scrollbar
@@ -36,6 +47,9 @@ body {
   */
   height: 100%;
   margin: 0;
+  
+  display: flex;
+  flex-direction: column;
   
 }
 

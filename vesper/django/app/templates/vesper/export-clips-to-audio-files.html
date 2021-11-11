@@ -1,37 +1,32 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Export clips to audio files - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Export clips to audio files</h2>
 
     <p>
         Exports the specified clips to wave files.
     </p>
-    
+
     {% include "vesper/clips-specification-message.html" %}
-    
+
     <p>
         The wave files are written to the specified output directory on
         the server. [In the future, the clips will be delivered to the
         client in a zip file rather than written to the server file system.]
     </p>
-    
+
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <form class="form" role="form" action="{% url 'export-clips-to-audio-files' %}" method="post">
@@ -46,6 +41,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

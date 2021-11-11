@@ -1,32 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Detect - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/detect-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Detect</h2>
 
     <p>
         Runs one or more detectors on all channels of the specified recordings.
     </p>
-    
+
     {% include "vesper/recordings-specification-message.html" %}
-    
+
     <p>
         The time intervals on which the detectors are run can optionally be
         limited via by selecting a <code>Detection Schedule</code> preset in
@@ -34,21 +29,23 @@
         are run only on time intervals in the intersection of the recording
         intervals and the schedule intervals.
     </p>
-<!--    
+
+    <!--    
     <p>
         Check the <code>Create clip audio files</code> check box to create
         a separate audio file in the archive for each detected clip, or
         uncheck it to rely on on-the-fly clip extraction from recording
         audio files to access clip samples.
     </p>
--->
+    -->
+    
     <p>
         Check the <code>Defer clip creation</code> check box to defer
         clip creation to the next invocation of the
         <code>Execute Deferred Actions</code> command.
     </p>
 
-<!--
+    <!--
     <p>
         Check the <code>Defer clip creation</code> check box to defer
         clip creation to a later time. When the box is unchecked, this
@@ -60,7 +57,7 @@
         clips in the database later by running the
         <code>Execute Deferred Actions</code> command.
     </p>
-    
+
     <p>
         If you run only one Vesper job at a time, and do not view clip
         albums while your jobs are running, you can safely leave the
@@ -72,7 +69,7 @@
         while one or more such jobs are running, you should check the
         <code>Defer clip creation</code> check box.
     </p>
-     
+    
     <p>
         You can run the <code>Execute Deferred Actions</code> command
         just once to create clips deferred from multiple detection jobs.
@@ -81,7 +78,7 @@
         <code>Execute Deferred Actions</code> command once to create
         the clips from both jobs.
     </p>
-    
+
     <p>
         Deferred clip creation is offered as a workaround to a
         limitation of the SQLite database, which provides only limited
@@ -91,8 +88,8 @@
         and if their use of the database is sufficiently heavy this
         can cause database errors in the form of database lock timeouts.
     </p>
--->
-    
+    -->
+
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <form class="form" role="form" action="{% url 'detect' %}" method="post">
@@ -110,6 +107,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

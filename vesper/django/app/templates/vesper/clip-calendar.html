@@ -1,14 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
-
-    {% load static %}
+{% block head %}
 
     <title>Clip Calendar</title>
-    
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-calendar.css' %}">
+
     {% load vesper_extras %}
 
     {% if not error_message %}
@@ -26,50 +24,44 @@
         </script>
     {% endif %}
 
-    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/clip-calendar.css' %}">
+{% endblock head %}
 
-</head>
+{% block main %}
 
-<body>
-
-    {% include "vesper/navbar.html" %}
-    
     {% if error_message %}
-    
+
         <div id="error-div">
             {{error_message|safe}}
         </div>
 
     {% else %}
-    
+
         {% include "vesper/set-clip-filter-modal.html" %}
-    
+
         <div id="main-div" class="container">
-    
+
             <div id="calendar" class="calendar">
-    
+
                 <div id="title-div">
                 
                     <h4 id="title"></h4>
-    
-    		        <div id="title-buttons">
-    		        
+
+                    <div id="title-buttons">
+                    
                         <button id="set-clip-filter-button" type="button" class="title-button" data-bs-toggle="tooltip" title="Set clip filter">
                             <i class="bi-filter title-button-icon"></i>
                         </button>
                         
-    		        </div>
-    		        
-    		    </div>
-    		    
+                    </div>
+                    
+                </div>
+                
                 <div id="periods"></div>
-    
+
             </div>
-    
+
         </div>
         
     {% endif %}
 
-</body>
-
-</html>
+{% endblock main %}

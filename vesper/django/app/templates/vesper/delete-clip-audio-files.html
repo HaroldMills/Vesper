@@ -1,31 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Delete clip audio files - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Delete clip audio files</h2>
 
     <p>
         Deletes the audio files of the specified clips of this archive.
     </p>
-    
+
     {% include "vesper/clips-specification-message.html" %}
-    
+
     <p>
         After the audio files are deleted, whenever Vesper needs the
         clips' audio data it will read them from the recordings of which
@@ -33,7 +28,7 @@
         Note that if the recordings are not available, you probably don't
         want to run this command!
     </p>
-    
+
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <form class="form" role="form" action="{% url 'delete-clip-audio-files' %}" method="post">
@@ -46,6 +41,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

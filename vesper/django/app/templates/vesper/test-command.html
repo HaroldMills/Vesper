@@ -1,25 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-    {% include "vesper/header-prefix.html" %}
-    <title>Test Command</title>
-</head>
+{% block head %}
+    <title>Test command - Vesper</title>
+{% endblock head %}
 
-<body>
-
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Test Command</h2>
 
     <form action="{% url 'test-command' %}" method="post">
-    
+
         {% csrf_token %}
         
         <input type="submit" value="Test">
         
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

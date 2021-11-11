@@ -1,29 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Classify - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/classify-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Classify</h2>
 
     <p>
         Runs one classifier on the specified clips.
     </p>
+    
     <p>
         The clips are specified as a set of station/mic pairs, a range of
         dates, a set of detectors, and an optional tag.
@@ -42,10 +38,8 @@
         {{ form.detectors|block_form_element }}
         {{ form.tag|form_element }}
 
-    <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Classify</button>
+        <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Classify</button>
 
-  </form>
+    </form>
 
-</body>
-
-</html>
+{% endblock main %}

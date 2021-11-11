@@ -1,31 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Export clips to HDF5 file - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Export clips to HDF5 file</h2>
 
     <p>
         Exports the specified clips to an HDF5 file.
     </p>
-    
+
     {% include "vesper/clips-specification-message.html" %}
-    
+
     <p>
         The HDF5 file is written to the specified path on the server.
         [In the future, the HDF5 file will be delivered to the client
@@ -46,6 +41,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

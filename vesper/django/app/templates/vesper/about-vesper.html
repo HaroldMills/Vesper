@@ -1,17 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
-
+{% block head %}
     <title>About Vesper</title>
+{% endblock head %}
 
-</head>
-
-<body>
-
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>About Vesper</h2>
 
@@ -21,13 +14,13 @@
         Vesper is open source software for acoustic monitoring of nocturnal
         bird migration.
     </p>
-    
+
     <p>
         <a href="{{documentation_url}}">View documentation.</a>
     </p>
-    
+
     <p>
         <a href="{{source_code_url}}">View source code repository.</a>
     </p>
-    
-</body>
+
+{% endblock main %}

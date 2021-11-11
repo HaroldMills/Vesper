@@ -1,23 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
-
-    {% include "vesper/header-prefix.html" %}
+{% block head %}
 
     <title>Add Old Bird clip start indices - Vesper</title>
-
-    {% load vesper_extras %}
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/add-old-bird-clip-start-indices.css' %}">
 
-</head>
+    {% load vesper_extras %}
 
-<body>
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Add Old Bird clip start indices</h2>
 
@@ -25,7 +20,7 @@
         Adds start indices to clips in this archive that were created by
         the original Old Bird Tseep and Thrush detectors.
     </p>
-    
+
     <p>
         The clips to add start indices for are specified as a set of
         stations and a range of dates.
@@ -45,14 +40,14 @@
         is missing, or if the recording file does not contain the
         clip's samples.
     </p>
-    
+
     <p>
         If you check the <code>Dry run</code> check box, the command
         will do everything it normally does, including writing all of
         its normal log messages, but it will not actually modify the
         archive database.
     </p>
-    
+
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <form class="form" role="form" action="{% url 'add-old-bird-clip-start-indices' %}" method="post">
@@ -68,6 +63,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}

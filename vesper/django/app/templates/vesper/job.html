@@ -1,29 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
+{% block head %}
 
-    {% include "vesper/header-prefix.html" %}
-
-    <title>Job {{job.id}}</title>
+    <title>Job {{job.id}} - Vesper</title>
 
     {% load static %}
     <script type="module" src="{% static 'vesper/view/job.js' %}"></script>
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/job.css' %}">
-    
-</head>
 
-<body>
+    {% load vesper_extras %}
 
-    {% include "vesper/navbar.html" %}
+{% endblock head %}
+
+{% block main %}
 
     <h2>Job {{job.id}} - {{command_name}}</h2>
 
     <h3>Command:</h3>
     <textarea class="text-area" id="command-textarea" rows="5" cols="100" readonly>{{job.command}}</textarea>
-    
+
     <table class="job-table">
-    
+
         <tbody>
         
             <tr>
@@ -48,4 +45,4 @@
     <h3>Log:</h3>
     <textarea class="text-area" id="job-textarea" rows="15" cols="100" readonly>{{job.log}}</textarea>
 
-</body>
+{% endblock main %}

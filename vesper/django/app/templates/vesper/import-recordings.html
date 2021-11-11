@@ -1,28 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'vesper/base.html' %}
 
-<head>
+{% block head %}
 
-    {% include "vesper/header-prefix.html" %}
-
-    <title>Import recordings - Vesper</title>
-
-    {% load vesper_extras %}
+    <title>Import metadata - Vesper</title>
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+    <script src="{% static 'vesper/view/import-metadata.js' %}"></script>
 
-</head>
+    {% load vesper_extras %}
 
-<body class="command-form-body">
+{% endblock head %}
 
-    {% include "vesper/navbar.html" %}
+{% block main %}
 
     <h2>Import recordings</h2>
 
     <p>
         Imports one or more recordings into this Vesper archive.
     </p>
+
     <p>
         Each recording comprises one or more .wav files in one of the
         archive's recording directories on the server. The files are
@@ -36,6 +33,7 @@
         imported: no action is taken for recordings that have already
         imported.
     </p>
+
     <p>
         An archive's recording directories can be specified via the
         <code>recording_directories</code> setting in the archive's
@@ -43,6 +41,7 @@
         specified, it defaults to a single path, that of the
         <code>Recordings</code> subdirectory of the archive directory.
     </p>
+
     <p>
         If the <code>Recursive</code> check box is not checked below, the
         import will include recordings present in the specified directories,
@@ -51,6 +50,7 @@
         will include recordings present in the specified directories, their
         subdirectories, subdirectories of those subdirectories, and so on.
     </p>
+
     <p>
         Default values for the input elements of this form can be
         specified in the archive's <code>Preferences.yaml</code> file.
@@ -69,6 +69,4 @@
 
     </form>
 
-</body>
-
-</html>
+{% endblock main %}
