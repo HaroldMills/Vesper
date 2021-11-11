@@ -22,8 +22,8 @@
     {% include "vesper/clips-specification-message.html" %}
 
     <p>
-        All data associated with the clips, including their audio
-        files and annotations, are deleted. You can optionally specify a
+        All data associated with the clips, including their audio files,
+        annotations, and tags, are deleted. You can optionally specify a
         number of clips to retain. The retained clips are selected at random
         from those specified, with all clips equally likely to be retained.
     </p>
@@ -31,11 +31,11 @@
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <p class="warning">
-        This command can delete a lot of clips and annotations, and cannot
-        be undone, so use it with caution!
+        You can delete a lot of clips and associated data with this command,
+        and your changes cannot be undone, so proceed with caution!
     </p>
 
-    <form class="form" role="form" action="{% url 'delete-clips' %}" method="post">
+   <form class="form" role="form" action="{% url 'delete-clips' %}" method="post">
 
         {% csrf_token %}
         

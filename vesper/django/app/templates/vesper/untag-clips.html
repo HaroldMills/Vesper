@@ -16,12 +16,12 @@
     <h2>Untag clips</h2>
 
     <p>
-        Untags the specified clips.
+        Removes the specified tag from the specified clips.
     </p>
 
     <p>
         The clips are specified as a set of station/mic pairs, a range of
-        dates, a set of detectors, an optional classification, and a tag.
+        dates, a set of detectors, and an optional classification.
     </p>
 
     <p>
@@ -33,8 +33,8 @@
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <p class="warning">
-        This command can untag a lot of clips, and cannot be undone,
-        so use it with caution!
+        You can untag a lot of clips with this command, and your changes
+        cannot be undone, so proceed with caution!
     </p>
 
     <form class="form" role="form" action="{% url 'untag-clips' %}" method="post">

@@ -25,14 +25,15 @@
         All data associated with the recordings except for their audio
         files (if present) are deleted from the archive, including their
         metadata and all of their clips, including the clips' audio files
-        (if present) and annotations.
+        (if present), annotations, and tags.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <p class="warning">
-        This command can delete a lot of recording metadata, clips, and
-        annotations, and cannot be undone, so use it with caution!
+        You can delete a lot of recordings, clips, and associated data
+        with this command, and your changes cannot be undone, so proceed
+        with caution!
     </p>
 
     <form class="form" role="form" action="{% url 'delete-recordings' %}" method="post">
