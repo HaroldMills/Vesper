@@ -39,8 +39,6 @@ from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, StringAnnotation, Tag, TagInfo)
 from vesper.django.app.refresh_recording_audio_file_paths_form import \
     RefreshRecordingAudioFilePathsForm
-from vesper.django.app.transfer_call_classifications_form import \
-    TransferCallClassificationsForm
 from vesper.django.app.transfer_clip_classifications_form import \
     TransferClipClassificationsForm
 from vesper.django.app.untag_clips_form import UntagClipsForm
@@ -186,9 +184,6 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       - name: Classify
         url_name: classify
       
-      - name: Transfer call classifications
-        url_name: transfer-call-classifications
-        
       - name: Transfer clip classifications
         url_name: transfer-clip-classifications
  
@@ -895,46 +890,6 @@ def _create_delete_clip_audio_files_command_spec(form):
     _add_clip_set_command_arguments(spec, data)
     
     return spec
-
-
-@login_required
-def transfer_call_classifications(request):
-
-    if request.method in _GET_AND_HEAD:
-        form = TransferCallClassificationsForm()
-
-    elif request.method == 'POST':
-
-        form = TransferCallClassificationsForm(request.POST)
-
-        if form.is_valid():
-            command_spec = \
-                _create_transfer_call_classifications_command_spec(form)
-            return _start_job(command_spec, request.user)
-
-    else:
-        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
-
-    context = _create_template_context(request, 'Other', form=form)
-
-    return render(
-        request, 'vesper/transfer-call-classifications.html', context)
-
-
-def _create_transfer_call_classifications_command_spec(form):
-
-    data = form.cleaned_data
-
-    return {
-        'name': 'transfer_call_classifications',
-        'arguments': {
-            'source_detector': data['source_detector'],
-            'target_detector': data['target_detector'],
-            'station_mics': data['station_mics'],
-            'start_date': data['start_date'],
-            'end_date': data['end_date'],
-        }
-    }
 
 
 @login_required
