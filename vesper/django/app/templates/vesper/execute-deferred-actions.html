@@ -17,43 +17,12 @@
 
     <p>
         Executes archive actions that were deferred by one or more previous
-        Vesper jobs.
-    </p>
-    <p>
-        Examples of actions that may have been deferred include clip creation
-        and annotation.
+        Vesper jobs. For example, this command can add to an archive clips
+        whose creation was deferred during one or more previous
+        <code>Detect</code> jobs.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
-
-    <p>
-        WARNING: Do not start any jobs
-        that defer archive actions, and do not attempt to classify clips
-        manually in a clip album, during the execution of an
-        <code>Execute Deferred Actions</code> command. Conversely, do not
-        start an <code>Execute Deferred Actions</code> command while any
-        job that defers archive actions is running. Failure to heed
-        this warning may cause SQLite database lock timeouts during
-        attempted database writes. A future version of Vesper may enforce
-        this policy automatically, obviating this warning, but the current
-        version does not.
-    </p>
-
-    <!--
-    <p>
-        WARNING: If your archive uses an SQLite database (the default),
-        we recommend that you NOT run any other jobs or perform any
-        other actions (for example, viewing clip albums) that access
-        the database during the execution of the new job. The
-        combination of Django and SQLite offer only limited support for
-        concurrent database access, so such accesses may cause the new
-        job to fail. The job executes all of its actions inside a single
-        database transaction, however, so if you do not heed this
-        warning and the job fails, any modifications to the database
-        made by the actions are rolled back and the job can be safely
-        rerun.
-    </p>
-    -->
 
     <form class="form" role="form" action="{% url 'execute-deferred-actions' %}" method="post">
 
