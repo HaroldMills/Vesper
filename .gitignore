@@ -60,3 +60,4 @@ ClipDatabase.db
 scratch.py
 
 .ipynb_checkpoints
+.vscode/launch.json
