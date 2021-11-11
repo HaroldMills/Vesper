@@ -413,11 +413,6 @@ def _create_template_context(
     return kwargs
 
 
-def _render_coming_soon(request, action, message):
-    context = _create_template_context(request, action, message=message)
-    return render(request, 'vesper/coming-soon.html', context)
-
-
 @login_required
 def classify(request):
 
