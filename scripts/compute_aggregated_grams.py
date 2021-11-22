@@ -7,14 +7,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.util.bunch import Bunch
 from vesper.util.data_windows import HannWindow
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-# TODO: Implement other aggregators.
-# TODO: Visual cue to variability within minutes?
 # TODO: Use signal package to compute spectrograms.
 # TODO: Support multichannel recordings.
+# TODO: Compute multiple aggregates for the same spectra.
+# TODO: Control different aspects of color mapping with different aggregates.
 
 
 AUDIO_DIR_PATH = Path('/Users/harold/Desktop/Grams/Audio Files')
@@ -27,6 +28,10 @@ GRAM_FILE_PATH = WORKING_DIR_PATH / 'grams.pdf'
 WINDOW_SIZE = .040                  # seconds
 HOP_SIZE = .020                     # seconds
 AGGREGATION_RECORD_SIZE = 60        # seconds
+AGGREGATOR_SPEC = Bunch(type='Averager')
+# AGGREGATOR_SPEC = Bunch(
+#     type='Percentile Aggregator',
+#     settings=Bunch(percentile=80))
 
 APPROXIMATE_CHUNK_SIZE = 20000      # sample frames
 
@@ -107,7 +112,7 @@ def get_tasks(file_path, task_size):
         spectrum_count = min(task_size, gram_size - start_spectrum_num)
         tasks.append((
             file_path, start_spectrum_num, spectrum_count, record_size,
-            window_size, hop_size, dft_size))
+            window_size, hop_size, dft_size, AGGREGATOR_SPEC))
         start_spectrum_num += spectrum_count
 
     freq_step = sample_rate / dft_size
@@ -117,7 +122,7 @@ def get_tasks(file_path, task_size):
 
 def compute_aggregate_spectra(
         file_path, start_spectrum_num, spectrum_count, record_size,
-        window_size, hop_size, dft_size):
+        window_size, hop_size, dft_size, aggregator_spec):
 
     print(f'{file_path.name} {start_spectrum_num} {spectrum_count}')
 
@@ -127,6 +132,8 @@ def compute_aggregate_spectra(
     spectrum_size = int(dft_size / 2) + 1
     spectra = np.zeros((spectrum_count, spectrum_size))
 
+    aggregator = create_aggregator(aggregator_spec)
+
     start_sample_num = start_spectrum_num * record_size
 
     for i in range(spectrum_count):
@@ -135,7 +142,7 @@ def compute_aggregate_spectra(
 
         gram = compute_spectrogram(samples, window, hop_size, dft_size)
 
-        spectra[i, :] = np.average(gram, 0)
+        spectra[i, :] = aggregator.aggregate(gram)
 
         start_sample_num += record_size
 
@@ -146,6 +153,19 @@ def compute_aggregate_spectra(
     tfa_utils.linear_to_log(spectra, out=spectra)
 
     return spectra
+
+
+def create_aggregator(spec):
+
+    cls = _aggregator_classes.get(spec.type)
+
+    if cls is None:
+        raise ValueError(f'Unrecognized aggregator type "{spec.type}".')
+
+    if hasattr(spec, 'settings'):
+        return cls(spec.settings)
+    else:
+        return cls()
 
 
 def compute_spectrogram(samples, window, hop_size, dft_size):
@@ -210,6 +230,38 @@ def plot_aggregate_gram(pdf, gram, time_step, freq_step, title):
     pdf.savefig()
     
     plt.close()
+
+
+class Aggregator:
+
+    name = None
+
+    def aggregate(self, spectra):
+        raise NotImplementedError()
+
+        
+class Averager(Aggregator):
+
+    name = 'Averager'
+
+    def aggregate(self, spectra):
+        return np.average(spectra, axis=0)
+
+
+class PercentileAggregator(Aggregator):
+
+    name = 'Percentile Aggregator'
+
+    def __init__(self, settings):
+        self.percentile = settings.percentile
+
+    def aggregate(self, spectra):
+        return np.percentile(spectra, self.percentile, axis=0)
+
+
+_aggregator_classes = dict(
+    (cls.name, cls) for cls in [Averager, PercentileAggregator]
+)
 
 
 if __name__ == '__main__':
