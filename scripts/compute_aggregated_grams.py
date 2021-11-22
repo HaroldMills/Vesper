@@ -1,6 +1,5 @@
 from multiprocessing import Pool
 from pathlib import Path
-import sys
 import time
 
 from matplotlib.backends.backend_pdf import PdfPages
@@ -12,18 +11,18 @@ from vesper.util.data_windows import HannWindow
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-# RESUME:
-#     * Implement other aggregators.
-#     * Visual cue to variability?
-#     * Compute grams for a whole season.
-#     * Use signal package to compute spectrograms.
-#     * Support multichannel recordings.
+# TODO: Implement other aggregators.
+# TODO: Visual cue to variability within minutes?
+# TODO: Use signal package to compute spectrograms.
+# TODO: Support multichannel recordings.
 
 
-DIR_PATH = Path('/Volumes/Recordings1/Nocturnal Bird Migration/Harold/2020')
-# DIR_PATH = Path('/Users/harold/Desktop')
-INPUT_FILE_PATH = DIR_PATH / 'Harold_2020-04-02_00.32.33_Z.wav'
-OUTPUT_FILE_PATH = Path('/Users/harold/Desktop/gram.pdf')
+AUDIO_DIR_PATH = Path('/Users/harold/Desktop/Grams/Audio Files')
+# AUDIO_DIR_PATH = Path(
+#     '/Volumes/Recordings1/Nocturnal Bird Migration/Harold/2021/Harold')
+WORKING_DIR_PATH = Path('/Users/harold/Desktop/Grams')
+LIST_FILE_PATH = WORKING_DIR_PATH / 'audio_file_names.txt'
+GRAM_FILE_PATH = WORKING_DIR_PATH / 'grams.pdf'
 
 WINDOW_SIZE = .040                  # seconds
 HOP_SIZE = .020                     # seconds
@@ -34,21 +33,42 @@ APPROXIMATE_CHUNK_SIZE = 20000      # sample frames
 WORKER_POOL_SIZE = 4                # processes
 TASK_SIZE = 50                      # spectra
 
+# Plot power range. 0 to 100 is usually a good starting point.
+MIN_PLOT_POWER = 0                  # dB
+MAX_PLOT_POWER = 100                # dB
+
+# Matplotlib colormap name, e.g. gray_r, viridis, plasma, inferno, magma,
+# cividis
+PLOT_COLORMAP = 'cividis'
+
 
 def main():
 
-    start_time = time.time()
+    with PdfPages(GRAM_FILE_PATH) as pdf:
+        
+        file_paths = get_audio_file_paths()
 
-    gram, time_step, freq_step = compute_aggregate_gram(INPUT_FILE_PATH)
+        for file_path in file_paths:
 
-    end_time = time.time()
-    elapsed = end_time - start_time
-    print(f'Elapsed time was {elapsed} seconds.')
+            start_time = time.time()
 
-    plot_aggregate_gram(
-        gram, time_step, freq_step, INPUT_FILE_PATH.name, OUTPUT_FILE_PATH)
+            gram, time_step, freq_step = compute_aggregate_gram(file_path)
 
-    # print(f'Gram shape is {gram.shape}.')
+            end_time = time.time()
+            elapsed = end_time - start_time
+            print(f'Elapsed time was {elapsed} seconds.')
+
+            plot_aggregate_gram(
+                pdf, gram, time_step, freq_step, file_path.name)
+
+
+def get_audio_file_paths():
+    with open(LIST_FILE_PATH) as list_file:
+        contents = list_file.read()
+    lines = [line.strip() for line in contents.strip().split('\n')]
+    names = [line for line in lines if not line.startswith('#')]
+    return [AUDIO_DIR_PATH / name for name in names]
+
 
 
 def compute_aggregate_gram(file_path):
@@ -95,7 +115,6 @@ def get_tasks(file_path, task_size):
     return tasks, freq_step
 
 
-# TODO: Handle multichannel files.
 def compute_aggregate_spectra(
         file_path, start_spectrum_num, spectrum_count, record_size,
         window_size, hop_size, dft_size):
@@ -149,8 +168,6 @@ def compute_spectrogram(samples, window, hop_size, dft_size):
 
     while start_spectrum_num != spectrum_count:
 
-        # print(start_spectrum_num, spectrum_count)
-
         read_size = min(waveform_chunk_size, sample_count - start_sample_num)
         end_sample_num = start_sample_num + read_size
         waveform_chunk = samples[start_sample_num:end_sample_num]
@@ -171,34 +188,28 @@ def get_spectrum_count(sample_count, window_size, hop_size):
     return int((sample_count - window_size) // hop_size) + 1
 
 
-def plot_aggregate_gram(gram, time_step, freq_step, title, file_path):
+def plot_aggregate_gram(pdf, gram, time_step, freq_step, title):
 
-    with PdfPages(file_path) as pdf:
-        
-        plt.figure(figsize=(6, 3))
-        
-        start_time = 0
-        end_time = gram.shape[0] * time_step / 3600
-        start_freq = 0
-        end_freq = (gram.shape[1] - 1) * freq_step
-        extent = (start_time, end_time, start_freq, end_freq)
-        
-        # `vmin` and `vmax` were chosen by looking at histogram of spectrogram
-        # values plotted by `plot_histogram` function.
-        #
-        # A few colormaps: gray_r, viridis, plasma, inferno, magma, cividis
-        plt.imshow(
-            gram.T, cmap='gray_r', vmin=0, vmax=100, origin='lower',
-            extent=extent, aspect='auto')
-        
-        plt.title(title)
-        plt.xlabel('Time (hours)')
-        plt.ylabel('Frequency (Hz)')
-        # plt.ylim(0, 11000)
+    plt.figure(figsize=(6, 3))
+    
+    start_time = 0
+    end_time = gram.shape[0] * time_step / 3600
+    start_freq = 0
+    end_freq = (gram.shape[1] - 1) * freq_step
+    extent = (start_time, end_time, start_freq, end_freq)
+    
+    plt.imshow(
+        gram.T, cmap=PLOT_COLORMAP, vmin=MIN_PLOT_POWER, vmax=MAX_PLOT_POWER,
+        origin='lower', extent=extent, aspect='auto')
+    
+    plt.title(title)
+    plt.xlabel('Time (hours)')
+    plt.ylabel('Frequency (Hz)')
+    # plt.ylim(0, 11000)
 
-        pdf.savefig()
-        
-        plt.close()
+    pdf.savefig()
+    
+    plt.close()
 
 
 if __name__ == '__main__':
