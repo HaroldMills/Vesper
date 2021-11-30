@@ -1,6 +1,123 @@
+"""
+Script that computes aggregated spectrograms of long recordings.
+
+The aggregation product can be either averages or percentiles.
+
+I wrote this script mostly to explore the relative efficiency of
+various approaches to computing aggregated spectrograms. For example,
+I wanted to see how the size of the waveform chunks from which
+(unaveraged) spectrograms are computed influences speed, how much
+the use of multiple processes can help, and how much of a difference
+it makes if the waveform is on an internal disk instead of an
+external one.
+
+Things learned so far with this script:
+
+* For results to be representative of real-world situations, it seems
+  to be important to time operations on a group of long audio files,
+  not on just one, at least when an external disk is involved. When I
+  repeatedly timed operations on a single file on an external disk,
+  reported performance was sometimes much higher than when I timed
+  operations on several (e.g. seven) files. This might have to do
+  with the size of some cache somewhere, either on the external disk
+  or in the OS software that interacts with it.
+
+* The size of the waveform chunks from which spectrograms are
+  computed before aggregation is important. The optimal size appears
+  to be fairly small, say tens of thousands of samples. I suspect
+  this has to do with the size of CPU caches. The optimal size
+  presumably depends on the particular computer on which the code
+  is running. So it might be helpful to provide a Vesper command
+  that runs some test computations to find a good chunk size.
+
+* Using multiple processes can help, though as you would expect
+  the factor by which computation is sped up decreases as the
+  number of processors increases.
+  
+* It can help a lot to have audio files on an internal SSD instead
+  of an external hard disk. The output below shows that for my
+  2019 MacBook Pro and an external USB hard drive, computation
+  of spectrograms for audio files on the internal SSD is about
+  three times faster than for files on an external USB hard drive.
+
+
+File Location,File Name,File Duration,Computation Time,Computation Rate
+internal disk,Harold_2021-08-27_00.49.34_Z.wav,32760,6.1,5332
+internal disk,Harold_2021-08-28_00.47.55_Z.wav,32940,6.3,5267
+internal disk,Harold_2021-08-29_00.46.16_Z.wav,33060,6.9,4798
+internal disk,Harold_2021-08-30_00.44.36_Z.wav,33240,6.5,5131
+internal disk,Harold_2021-08-31_00.42.56_Z.wav,33420,6.8,4939
+internal disk,Harold_2021-09-01_00.41.15_Z.wav,33600,6.5,5134
+internal disk,Harold_2021-09-02_00.39.33_Z.wav,33720,6.7,5024
+external disk,Harold_2021-08-27_00.49.34_Z.wav,32760,20.6,1591
+external disk,Harold_2021-08-28_00.47.55_Z.wav,32940,21.6,1523
+external disk,Harold_2021-08-29_00.46.16_Z.wav,33060,21.5,1535
+external disk,Harold_2021-08-30_00.44.36_Z.wav,33240,21.8,1528
+external disk,Harold_2021-08-31_00.42.56_Z.wav,33420,20.1,1665
+external disk,Harold_2021-09-01_00.41.15_Z.wav,33600,20.3,1655
+external disk,Harold_2021-09-02_00.39.33_Z.wav,33720,21.4,1578
+
+
+In addition to testing the speed of spectrogram computations, this
+script can test the speed of certain kinds of related audio file
+reads: see the `time_audio_file_ops` function. Below is output from
+that function comparing sequential reads with and without seeks
+before each read for audio files on an internal SSD and an external
+USB drive on my 2019 MacBook Pro. Reads from the internal disk are
+much faster, and the difference would seem to explain most of the
+differences in the spectrogram computation times listed above.
+
+
+Operation,File Location,File Name,Operation Time
+read without seeks,internal disk,Harold_2021-08-27_00.49.34_Z.wav,0.48
+read without seeks,internal disk,Harold_2021-08-28_00.47.55_Z.wav,0.47
+read without seeks,internal disk,Harold_2021-08-29_00.46.16_Z.wav,0.48
+read without seeks,internal disk,Harold_2021-08-30_00.44.36_Z.wav,0.51
+read without seeks,internal disk,Harold_2021-08-31_00.42.56_Z.wav,0.61
+read without seeks,internal disk,Harold_2021-09-01_00.41.15_Z.wav,0.48
+read without seeks,internal disk,Harold_2021-09-02_00.39.33_Z.wav,0.49
+read without seeks,external disk,Harold_2021-08-27_00.49.34_Z.wav,14.90
+read without seeks,external disk,Harold_2021-08-28_00.47.55_Z.wav,13.58
+read without seeks,external disk,Harold_2021-08-29_00.46.16_Z.wav,13.97
+read without seeks,external disk,Harold_2021-08-30_00.44.36_Z.wav,14.06
+read without seeks,external disk,Harold_2021-08-31_00.42.56_Z.wav,12.62
+read without seeks,external disk,Harold_2021-09-01_00.41.15_Z.wav,12.81
+read without seeks,external disk,Harold_2021-09-02_00.39.33_Z.wav,13.64
+read with seeks,internal disk,Harold_2021-08-27_00.49.34_Z.wav,0.71
+read with seeks,internal disk,Harold_2021-08-28_00.47.55_Z.wav,0.71
+read with seeks,internal disk,Harold_2021-08-29_00.46.16_Z.wav,0.82
+read with seeks,internal disk,Harold_2021-08-30_00.44.36_Z.wav,0.78
+read with seeks,internal disk,Harold_2021-08-31_00.42.56_Z.wav,0.73
+read with seeks,internal disk,Harold_2021-09-01_00.41.15_Z.wav,0.70
+read with seeks,internal disk,Harold_2021-09-02_00.39.33_Z.wav,0.70
+read with seeks,external disk,Harold_2021-08-27_00.49.34_Z.wav,13.23
+read with seeks,external disk,Harold_2021-08-28_00.47.55_Z.wav,13.51
+read with seeks,external disk,Harold_2021-08-29_00.46.16_Z.wav,14.09
+read with seeks,external disk,Harold_2021-08-30_00.44.36_Z.wav,14.05
+read with seeks,external disk,Harold_2021-08-31_00.42.56_Z.wav,12.65
+read with seeks,external disk,Harold_2021-09-01_00.41.15_Z.wav,12.77
+read with seeks,external disk,Harold_2021-09-02_00.39.33_Z.wav,13.72
+
+
+All of the above outputs (i.e. both sets) were from script runs with
+the following settings:
+
+WINDOW_SIZE = .040                  # seconds
+HOP_SIZE = .020                     # seconds
+AGGREGATION_RECORD_SIZE = 60        # seconds
+AGGREGATOR_SPEC = Bunch(type='Averager')
+
+APPROXIMATE_CHUNK_SIZE = 20000      # sample frames
+
+WORKER_POOL_SIZE = 4                # processes
+TASK_SIZE = 50                      # spectra
+"""
+
+
 from multiprocessing import Pool
 from pathlib import Path
 import time
+import wave
 
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
@@ -18,10 +135,13 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 # TODO: Control different aspects of color mapping with different aggregates.
 
 
-AUDIO_DIR_PATH = Path('/Users/harold/Desktop/Grams/Audio Files')
-# AUDIO_DIR_PATH = Path(
-#     '/Volumes/Recordings1/Nocturnal Bird Migration/Harold/2021/Harold')
+AUDIO_FILE_LOCATIONS = (
+    ('internal disk', '/Users/harold/Desktop/Grams/Audio Files'),
+    ('external disk',
+        '/Volumes/Recordings1/Nocturnal Bird Migration/Harold/2021/Harold')
+)
 WORKING_DIR_PATH = Path('/Users/harold/Desktop/Grams')
+AUDIO_FILE_DIR_PATH = WORKING_DIR_PATH / 'Audio Files'
 LIST_FILE_PATH = WORKING_DIR_PATH / 'audio_file_names.txt'
 GRAM_FILE_PATH = WORKING_DIR_PATH / 'grams.pdf'
 
@@ -49,31 +169,56 @@ PLOT_COLORMAP = 'cividis'
 
 def main():
 
-    with PdfPages(GRAM_FILE_PATH) as pdf:
-        
-        file_paths = get_audio_file_paths()
+    compute_aggregate_grams()
 
-        for file_path in file_paths:
-
-            start_time = time.time()
-
-            gram, time_step, freq_step = compute_aggregate_gram(file_path)
-
-            end_time = time.time()
-            elapsed = end_time - start_time
-            print(f'Elapsed time was {elapsed} seconds.')
-
-            plot_aggregate_gram(
-                pdf, gram, time_step, freq_step, file_path.name)
+    # time_audio_file_ops(read_audio_file_without_seeks, 'read without seeks')
+    # time_audio_file_ops(read_audio_file_with_seeks, 'read with seeks')
 
 
-def get_audio_file_paths():
+def compute_aggregate_grams():
+
+    file_names = get_audio_file_names()
+
+    print(
+        'File Location,File Name,File Duration,Computation Time,'
+        'Computation Rate')
+
+    for location_name, dir_path in AUDIO_FILE_LOCATIONS:
+
+        dir_path = Path(dir_path)
+
+        with PdfPages(GRAM_FILE_PATH) as pdf:
+            
+            for file_name in file_names:
+
+                file_path = dir_path / file_name
+
+                start_time = time.time()
+                gram, time_step, freq_step = compute_aggregate_gram(file_path)
+                end_time = time.time()
+
+                elapsed = end_time - start_time
+                duration = gram.shape[0] * time_step
+                rate = duration / elapsed
+                print(
+                    f'{location_name},{file_path.name},{round(duration)},'
+                    f'{elapsed:.01f},{round(rate)}')
+
+                plot_aggregate_gram(
+                    pdf, gram, time_step, freq_step, file_path.name)
+
+
+def get_audio_file_paths(location_name):
+    dir_paths = dict(p for p in AUDIO_FILE_LOCATIONS)
+    dir_path = Path(dir_paths[location_name])
+    return [dir_path / n for n in get_audio_file_names()]
+
+
+def get_audio_file_names():
     with open(LIST_FILE_PATH) as list_file:
         contents = list_file.read()
     lines = [line.strip() for line in contents.strip().split('\n')]
-    names = [line for line in lines if not line.startswith('#')]
-    return [AUDIO_DIR_PATH / name for name in names]
-
+    return [line for line in lines if not line.startswith('#')]
 
 
 def compute_aggregate_gram(file_path):
@@ -124,7 +269,7 @@ def compute_aggregate_spectra(
         file_path, start_spectrum_num, spectrum_count, record_size,
         window_size, hop_size, dft_size, aggregator_spec):
 
-    print(f'{file_path.name} {start_spectrum_num} {spectrum_count}')
+    # print(f'{file_path.name} {start_spectrum_num} {spectrum_count}')
 
     reader = WaveAudioFileReader(str(file_path))
     window = HannWindow(window_size).samples
@@ -230,6 +375,50 @@ def plot_aggregate_gram(pdf, gram, time_step, freq_step, title):
     pdf.savefig()
     
     plt.close()
+
+
+def time_audio_file_ops(op, op_name):
+
+    file_names = get_audio_file_names()
+
+    print('Operation,File Location,File Name,Operation Time')
+
+    for location_name, dir_path in AUDIO_FILE_LOCATIONS:
+
+        dir_path = Path(dir_path)
+
+        for file_name in file_names:
+
+            file_path = dir_path / file_name
+
+            start_time = time.time()
+
+            op(file_path)
+
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f'{op_name},{location_name},{file_name},{elapsed_time:.2f}')
+
+
+def read_audio_file_without_seeks(file_path):
+    with wave.open(str(file_path), 'rb') as reader:
+        while True:
+            bytes = reader.readframes(1440000)
+            byte_count = len(bytes)
+            if byte_count == 0:
+                break
+
+
+def read_audio_file_with_seeks(file_path):
+    with wave.open(str(file_path), 'rb') as reader:
+        pos = 0
+        while True:
+            reader.setpos(pos)
+            bytes = reader.readframes(1440000)
+            pos = reader.tell()
+            byte_count = len(bytes)
+            if byte_count == 0:
+                break
 
 
 class Aggregator:
