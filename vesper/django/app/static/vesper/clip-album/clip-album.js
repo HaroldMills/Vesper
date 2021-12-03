@@ -251,6 +251,12 @@ const _COMMAND_SPECS = [
     ['show_next_page'],
     ['show_previous_page'],
 
+    ['start_page_auto_advance'],
+    ['stop_page_auto_advance'],
+    ['toggle_page_auto_advance'],
+    ['accelerate_page_auto_advance'],
+    ['decelerate_page_auto_advance'],
+
     ['select_first_clip'],
     ['select_next_clip'],
     ['select_previous_clip'],
@@ -342,6 +348,12 @@ export class ClipAlbum {
         this._audioContext = new AudioContext();
 
         this._clipManager = this._createClipManager();
+
+        this._pageAutoAdvanceActive = false;
+        this._pageAutoAdvancePeriod = 2;
+        this._minPageAutoAdvancePeriod = .25;
+        this._maxPageAutoAdvancePeriod = 16;
+        this._pageAutoAdvanceAcceleration = 2 ** .25;
 
         this._setPageNum(state.pageNum - 1);
         
@@ -1728,6 +1740,93 @@ export class ClipAlbum {
 	}
 
 
+    _startPageAutoAdvance() {
+
+        if (!this._pageAutoAdvanceActive &&
+                this.numPages !== 0 &&
+                this.pageNum !== this.numPages - 1) {
+            // page auto-advance is not already active and current page
+            // is not final page
+
+            this._pageAutoAdvanceActive = true;
+            this._startPageAutoAdvanceTimer();
+
+        }
+
+    }
+
+
+    _startPageAutoAdvanceTimer() {
+        this._pageAutoAdvanceTimeoutId = setTimeout(
+            () => this._autoAdvancePage(),
+            1000 * this._pageAutoAdvancePeriod);
+    }
+
+
+    _autoAdvancePage() {
+
+        this._showNextPage();
+
+        if (this.pageNum !== this.numPages - 1) {
+            // new page is not final page
+
+            this._startPageAutoAdvanceTimer();
+
+        } else {
+            // new page is final page
+
+            this._pageAutoAdvanceActive = false;
+
+        }
+
+    }
+
+
+    _stopPageAutoAdvance() {
+        if (this._pageAutoAdvanceActive) {
+            clearTimeout(this._pageAutoAdvanceTimeoutId);
+            this._pageAutoAdvanceActive = false;
+        }
+    }
+
+
+    _togglePageAutoAdvance() {
+        if (this._pageAutoAdvanceActive)
+            this._stopPageAutoAdvance();
+        else
+            this._startPageAutoAdvance();
+    }
+
+
+    _acceleratePageAutoAdvance() {
+        this._scalePageAutoAdvancePeriod(
+            1 / this._pageAutoAdvanceAcceleration);
+    }
+
+
+    _scalePageAutoAdvancePeriod(factor) {
+        if (this._pageAutoAdvanceActive) {
+            this._pageAutoAdvancePeriod = this._clipPageAutoAdvancePeriod(
+                this._pageAutoAdvancePeriod * factor);
+        }
+    }
+
+
+    _clipPageAutoAdvancePeriod(period) {
+        if (period < this._minPageAutoAdvancePeriod)
+            return this._minPageAutoAdvancePeriod;
+        else if (period > this._maxPageAutoAdvancePeriod)
+            return this._maxPageAutoAdvancePeriod;
+        else
+            return period;
+    }
+
+
+    _deceleratePageAutoAdvance() {
+        this._scalePageAutoAdvancePeriod(this._pageAutoAdvanceAcceleration);
+    }
+
+    
 	_selectFirstClip() {
 		if (this.numPages > 0) {
 			const [startNum, _] = this.getPageClipNumRange(this.pageNum);
@@ -1909,6 +2008,31 @@ export class ClipAlbum {
     }
 
 
+    _executeStartPageAutoAdvanceCommand(env) {
+        this._startPageAutoAdvance();
+    }
+
+
+    _executeStopPageAutoAdvanceCommand(env) {
+        this._stopPageAutoAdvance();
+    }
+
+
+    _executeTogglePageAutoAdvanceCommand(env) {
+        this._togglePageAutoAdvance();
+    }
+
+
+    _executeAcceleratePageAutoAdvanceCommand(env) {
+        this._acceleratePageAutoAdvance();
+    }
+
+
+    _executeDeceleratePageAutoAdvanceCommand(env) {
+        this._deceleratePageAutoAdvance();
+    }
+
+    
     _executeSelectFirstClipCommand(env) {
         this._selectFirstClip();
     }
