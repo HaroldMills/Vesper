@@ -262,6 +262,12 @@ const _COMMAND_SPECS = [
     ['select_next_clip'],
     ['select_previous_clip'],
 
+    ['start_clip_auto_advance'],
+    ['stop_clip_auto_advance'],
+    ['toggle_clip_auto_advance'],
+    ['accelerate_clip_auto_advance'],
+    ['decelerate_clip_auto_advance'],
+
     ['play_selected_clip'],
     ['play_selected_clip_at_rate', 'playback_rate'],
 
@@ -351,6 +357,8 @@ export class ClipAlbum {
         this._clipManager = this._createClipManager();
 
         this._pageAutoAdvanceTimer = this._createPageAutoAdvanceTimer();
+
+        this._clipAutoAdvanceTimer = this._createClipAutoAdvanceTimer();
 
         this._setPageNum(state.pageNum - 1);
         
@@ -779,6 +787,21 @@ export class ClipAlbum {
             maxPageAutoAdvanceInterval, pageAutoAdvanceIntervalScaleFactor,
             () => this._autoAdvancePage());
         
+    }
+
+
+    _createClipAutoAdvanceTimer() {
+
+        const clipAutoAdvanceInterval = 2;
+        const minClipAutoAdvanceInterval = .25;
+        const maxClipAutoAdvanceInterval = 16;
+        const clipAutoAdvanceIntervalScaleFactor = 2 ** .25;
+
+        return new IntervalTimer(
+            clipAutoAdvanceInterval, minClipAutoAdvanceInterval,
+            maxClipAutoAdvanceInterval, clipAutoAdvanceIntervalScaleFactor,
+            () => this._autoAdvanceClip());
+
     }
 
 
@@ -1778,7 +1801,10 @@ export class ClipAlbum {
 
 
     _togglePageAutoAdvance() {
-        this._pageAutoAdvanceTimer.toggle();
+        if (this._pageAutoAdvanceTimer.running)
+            this._stopPageAutoAdvance();
+        else
+            this._startPageAutoAdvance();
     }
 
 
@@ -1789,6 +1815,85 @@ export class ClipAlbum {
 
     _deceleratePageAutoAdvance() {
         this._pageAutoAdvanceTimer.increaseInterval();
+    }
+
+    
+    _startClipAutoAdvance() {
+
+        if (this.clips.length == 0)
+            return;
+
+        this._selectFirstAutoAdvanceClip();
+
+        this._clipAutoAdvanceTimer.start();
+
+    }
+
+
+    _selectFirstAutoAdvanceClip() {
+
+        if (this._selection === null) {
+            // no selection
+
+            // Select first clip of current page.
+            this._selectFirstClip();
+
+        } else {
+
+            const intervals = this._selection.selectedIntervals;
+
+            if (intervals.length === 0) {
+                // empty selection
+
+                // Select first clip of current page.
+                this._selectFirstClip();
+
+            } else {
+                // nonempty selection
+
+                // Select first clip of current selection. This ensures
+                // that the selection is a singleton.
+                const clipNum = intervals[0][0];
+                this.selectClip(clipNum);
+
+            }
+
+        }
+
+    }
+
+
+    _autoAdvanceClip() {
+
+        this._selectNextClip();
+
+        // Return `true` if and only if new clip is final clip.
+        const clipNum = this._selection.selectedIntervals[0][0];
+        return (clipNum === this.clips.length - 1);
+
+    }
+
+
+    _stopClipAutoAdvance() {
+        this._clipAutoAdvanceTimer.stop();
+    }
+
+
+    _toggleClipAutoAdvance() {
+        if (this._clipAutoAdvanceTimer.running)
+            this._stopClipAutoAdvance();
+        else
+            this._startClipAutoAdvance();
+    }
+
+
+    _accelerateClipAutoAdvance() {
+        this._clipAutoAdvanceTimer.decreaseInterval();
+    }
+
+
+    _decelerateClipAutoAdvance() {
+        this._clipAutoAdvanceTimer.increaseInterval();
     }
 
     
@@ -2013,6 +2118,31 @@ export class ClipAlbum {
     }
 
 
+    _executeStartClipAutoAdvanceCommand(env) {
+        this._startClipAutoAdvance();
+    }
+
+
+    _executeStopClipAutoAdvanceCommand(env) {
+        this._stopClipAutoAdvance();
+    }
+
+
+    _executeToggleClipAutoAdvanceCommand(env) {
+        this._toggleClipAutoAdvance();
+    }
+
+
+    _executeAccelerateClipAutoAdvanceCommand(env) {
+        this._accelerateClipAutoAdvance();
+    }
+
+
+    _executeDecelerateClipAutoAdvanceCommand(env) {
+        this._decelerateClipAutoAdvance();
+    }
+
+    
     _executePlaySelectedClipCommand(env) {
         this._playSelectedClip();
     }

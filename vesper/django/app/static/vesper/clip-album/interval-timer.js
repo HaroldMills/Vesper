@@ -15,6 +15,11 @@ export class IntervalTimer {
     }
 
 
+    get running() {
+        return this._running;
+    }
+
+
     start() {
         if (!this._running) {
             this._running = true;
@@ -47,14 +52,6 @@ export class IntervalTimer {
             clearTimeout(this._timeoutId);
             this._running = false;
         }
-    }
-
-
-    toggle() {
-        if (this._running)
-            this.stop();
-        else
-            this.start();
     }
 
 
