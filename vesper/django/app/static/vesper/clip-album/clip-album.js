@@ -2,6 +2,7 @@ import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { Clip, CLIP_LOAD_STATUS } from '/static/vesper/clip-album/clip.js';
 import { CommandableDelegate, KeyboardInputInterpreter }
     from '/static/vesper/clip-album/keyboard-input-interpreter.js';
+import { IntervalTimer } from '/static/vesper/clip-album/interval-timer.js';
 import { Layout } from '/static/vesper/clip-album/layout.js';
 import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
@@ -349,11 +350,7 @@ export class ClipAlbum {
 
         this._clipManager = this._createClipManager();
 
-        this._pageAutoAdvanceActive = false;
-        this._pageAutoAdvancePeriod = 2;
-        this._minPageAutoAdvancePeriod = .25;
-        this._maxPageAutoAdvancePeriod = 16;
-        this._pageAutoAdvanceAcceleration = 2 ** .25;
+        this._pageAutoAdvanceTimer = this._createPageAutoAdvanceTimer();
 
         this._setPageNum(state.pageNum - 1);
         
@@ -770,6 +767,21 @@ export class ClipAlbum {
     }
     
     
+    _createPageAutoAdvanceTimer() {
+
+        const pageAutoAdvanceInterval = 2;
+        const minPageAutoAdvanceInterval = .25;
+        const maxPageAutoAdvanceInterval = 16;
+        const pageAutoAdvanceIntervalScaleFactor = 2 ** .25;
+
+        return new IntervalTimer(
+            pageAutoAdvanceInterval, minPageAutoAdvanceInterval,
+            maxPageAutoAdvanceInterval, pageAutoAdvanceIntervalScaleFactor,
+            () => this._autoAdvancePage());
+        
+    }
+
+
     _initUrlAndHistory() {
         window.history.replaceState(this._historyState, null, this._url);
         window.onpopstate = e => this._onPopHistoryState(e);
@@ -1742,24 +1754,11 @@ export class ClipAlbum {
 
     _startPageAutoAdvance() {
 
-        if (!this._pageAutoAdvanceActive &&
-                this.numPages !== 0 &&
-                this.pageNum !== this.numPages - 1) {
-            // page auto-advance is not already active and current page
-            // is not final page
+        if (this.numPages !== 0 && this.pageNum !== this.numPages - 1)
+            // current page is not final page
 
-            this._pageAutoAdvanceActive = true;
-            this._startPageAutoAdvanceTimer();
+            this._pageAutoAdvanceTimer.start()
 
-        }
-
-    }
-
-
-    _startPageAutoAdvanceTimer() {
-        this._pageAutoAdvanceTimeoutId = setTimeout(
-            () => this._autoAdvancePage(),
-            1000 * this._pageAutoAdvancePeriod);
     }
 
 
@@ -1767,63 +1766,29 @@ export class ClipAlbum {
 
         this._showNextPage();
 
-        if (this.pageNum !== this.numPages - 1) {
-            // new page is not final page
-
-            this._startPageAutoAdvanceTimer();
-
-        } else {
-            // new page is final page
-
-            this._pageAutoAdvanceActive = false;
-
-        }
+        // Return `true` if and only if new page is final page.
+        return (this.pageNum === this.numPages - 1)
 
     }
 
 
     _stopPageAutoAdvance() {
-        if (this._pageAutoAdvanceActive) {
-            clearTimeout(this._pageAutoAdvanceTimeoutId);
-            this._pageAutoAdvanceActive = false;
-        }
+        this._pageAutoAdvanceTimer.stop();
     }
 
 
     _togglePageAutoAdvance() {
-        if (this._pageAutoAdvanceActive)
-            this._stopPageAutoAdvance();
-        else
-            this._startPageAutoAdvance();
+        this._pageAutoAdvanceTimer.toggle();
     }
 
 
     _acceleratePageAutoAdvance() {
-        this._scalePageAutoAdvancePeriod(
-            1 / this._pageAutoAdvanceAcceleration);
-    }
-
-
-    _scalePageAutoAdvancePeriod(factor) {
-        if (this._pageAutoAdvanceActive) {
-            this._pageAutoAdvancePeriod = this._clipPageAutoAdvancePeriod(
-                this._pageAutoAdvancePeriod * factor);
-        }
-    }
-
-
-    _clipPageAutoAdvancePeriod(period) {
-        if (period < this._minPageAutoAdvancePeriod)
-            return this._minPageAutoAdvancePeriod;
-        else if (period > this._maxPageAutoAdvancePeriod)
-            return this._maxPageAutoAdvancePeriod;
-        else
-            return period;
+        this._pageAutoAdvanceTimer.decreaseInterval();
     }
 
 
     _deceleratePageAutoAdvance() {
-        this._scalePageAutoAdvancePeriod(this._pageAutoAdvanceAcceleration);
+        this._pageAutoAdvanceTimer.increaseInterval();
     }
 
     
