@@ -777,7 +777,7 @@ export class ClipAlbum {
     
     _createPageAutoAdvancer() {
 
-        const pause = 2;
+        const pause = 4;
         const minPause = .25;
         const maxPause = 16;
         const pauseScaleFactor = 2 ** .25;
