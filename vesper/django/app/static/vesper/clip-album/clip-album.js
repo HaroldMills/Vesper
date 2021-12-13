@@ -797,7 +797,7 @@ export class ClipAlbum {
     _createClipAutoAdvancer() {
 
         const pause = .5;
-        const minPause = .125;
+        const minPause = .125 / 128;
         const maxPause = 16;
         const pauseScaleFactor = 2 ** .25;
 
