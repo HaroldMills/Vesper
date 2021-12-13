@@ -1,8 +1,8 @@
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
+import { AutoAdvancer } from '/static/vesper/clip-album/auto-advancer.js';
 import { Clip, CLIP_LOAD_STATUS } from '/static/vesper/clip-album/clip.js';
 import { CommandableDelegate, KeyboardInputInterpreter }
     from '/static/vesper/clip-album/keyboard-input-interpreter.js';
-import { IntervalTimer } from '/static/vesper/clip-album/interval-timer.js';
 import { Layout } from '/static/vesper/clip-album/layout.js';
 import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
@@ -356,9 +356,9 @@ export class ClipAlbum {
 
         this._clipManager = this._createClipManager();
 
-        this._pageAutoAdvanceTimer = this._createPageAutoAdvanceTimer();
+        this._pageAutoAdvancer = this._createPageAutoAdvancer();
 
-        this._clipAutoAdvanceTimer = this._createClipAutoAdvanceTimer();
+        this._clipAutoAdvancer = this._createClipAutoAdvancer();
 
         this._setPageNum(state.pageNum - 1);
         
@@ -775,32 +775,58 @@ export class ClipAlbum {
     }
     
     
-    _createPageAutoAdvanceTimer() {
+    _createPageAutoAdvancer() {
 
-        const pageAutoAdvanceInterval = 2;
-        const minPageAutoAdvanceInterval = .25;
-        const maxPageAutoAdvanceInterval = 16;
-        const pageAutoAdvanceIntervalScaleFactor = 2 ** .25;
+        const pause = 2;
+        const minPause = .25;
+        const maxPause = 16;
+        const pauseScaleFactor = 2 ** .25;
 
-        return new IntervalTimer(
-            pageAutoAdvanceInterval, minPageAutoAdvanceInterval,
-            maxPageAutoAdvanceInterval, pageAutoAdvanceIntervalScaleFactor,
-            () => this._autoAdvancePage());
+        return new AutoAdvancer(
+            pageNum => this._handleAutoAdvancePage(pageNum),
+            pause, minPause, maxPause, pauseScaleFactor);
         
     }
 
 
-    _createClipAutoAdvanceTimer() {
+    async _handleAutoAdvancePage(pageNum) {
+        this.pageNum = pageNum;
+    }
 
-        const clipAutoAdvanceInterval = 2;
-        const minClipAutoAdvanceInterval = .25;
-        const maxClipAutoAdvanceInterval = 16;
-        const clipAutoAdvanceIntervalScaleFactor = 2 ** .25;
 
-        return new IntervalTimer(
-            clipAutoAdvanceInterval, minClipAutoAdvanceInterval,
-            maxClipAutoAdvanceInterval, clipAutoAdvanceIntervalScaleFactor,
-            () => this._autoAdvanceClip());
+    _createClipAutoAdvancer() {
+
+        const pause = .5;
+        const minPause = .125;
+        const maxPause = 16;
+        const pauseScaleFactor = 2 ** .25;
+
+        return new AutoAdvancer(
+            clipNum => this._handleAutoAdvanceClip(clipNum),
+            pause, minPause, maxPause, pauseScaleFactor);
+
+    }
+
+
+    async _handleAutoAdvanceClip(clipNum) {
+        this._selectClip(clipNum);
+        await this._clipViews[clipNum].playClip();
+    }
+
+
+    _selectClip(i) {
+
+        const clipPageNum = this._layout.getClipPageNum(i);
+
+        if (this.pageNum !== clipPageNum) {
+            this.pageNum = clipPageNum;
+            _scrollToTop();
+        }
+
+        this.selectClip(i);
+
+        const clipView = this._clipViews[i];
+        this._scrollToClipViewIfNeeded(clipView);
 
     }
 
@@ -1777,31 +1803,43 @@ export class ClipAlbum {
 
     _startPageAutoAdvance() {
 
-        if (this.numPages !== 0 && this.pageNum !== this.numPages - 1)
-            // current page is not final page
+        if (!this._autoAdvanceRunning() &&
+                this.numPages !== 0 && this.pageNum != this.numPages - 1) {
+            // neither page nor clip auto advance is already running, clip
+            // album is not empty, and current page is not final page
 
-            this._pageAutoAdvanceTimer.start()
+            this._pageAutoAdvancer.start(this.pageNum, this.numPages);
+
+        }
 
     }
 
 
-    _autoAdvancePage() {
+    _autoAdvanceRunning() {
 
-        this._showNextPage();
+        // Be careful here with parentheses and newlines. For example, this:
+        //
+        //     return
+        //         this._pageAutoAdvancer.running ||
+        //         this._clipAutoAdvancer.running;
+        //
+        // always returns `undefined`, effectively ignoring all but the
+        // first line.
 
-        // Return `true` if and only if new page is final page.
-        return (this.pageNum === this.numPages - 1)
+        return (
+            this._pageAutoAdvancer.running ||
+            this._clipAutoAdvancer.running);
 
     }
 
 
     _stopPageAutoAdvance() {
-        this._pageAutoAdvanceTimer.stop();
+        this._pageAutoAdvancer.stop();
     }
 
 
     _togglePageAutoAdvance() {
-        if (this._pageAutoAdvanceTimer.running)
+        if (this._pageAutoAdvancer.running)
             this._stopPageAutoAdvance();
         else
             this._startPageAutoAdvance();
@@ -1809,52 +1847,51 @@ export class ClipAlbum {
 
 
     _acceleratePageAutoAdvance() {
-        this._pageAutoAdvanceTimer.decreaseInterval();
+        this._pageAutoAdvancer.decreasePause();
     }
 
 
     _deceleratePageAutoAdvance() {
-        this._pageAutoAdvanceTimer.increaseInterval();
+        this._pageAutoAdvancer.increasePause();
     }
 
     
     _startClipAutoAdvance() {
 
-        if (this.clips.length == 0)
-            return;
+        if (!this._autoAdvanceRunning() && this.clips.length !== 0) {
+            // neither page nor clip auto advance is already running
+            // and album is not empty
 
-        this._selectFirstAutoAdvanceClip();
+            const startClipNum = this._getAutoAdvanceStartClipNum();
+            const endClipNum = this.clips.length;
+            this._clipAutoAdvancer.start(startClipNum, endClipNum);
 
-        this._clipAutoAdvanceTimer.start();
+        }
 
     }
 
 
-    _selectFirstAutoAdvanceClip() {
+    _getAutoAdvanceStartClipNum() {
 
         if (this._selection === null) {
             // no selection
 
-            // Select first clip of current page.
-            this._selectFirstClip();
+            return 0;
 
         } else {
+            // have selection
 
-            const intervals = this._selection.selectedIntervals;
+            const selectedIntervals = this._selection.selectedIntervals;
 
-            if (intervals.length === 0) {
+            if (selectedIntervals.length === 0) {
                 // empty selection
 
-                // Select first clip of current page.
-                this._selectFirstClip();
+                return this._layout.getPageClipNumRange(this.pageNum)[0];
 
             } else {
                 // nonempty selection
 
-                // Select first clip of current selection. This ensures
-                // that the selection is a singleton.
-                const clipNum = intervals[0][0];
-                this.selectClip(clipNum);
+                return selectedIntervals[0][0];
 
             }
 
@@ -1863,24 +1900,13 @@ export class ClipAlbum {
     }
 
 
-    _autoAdvanceClip() {
-
-        this._selectNextClip();
-
-        // Return `true` if and only if new clip is final clip.
-        const clipNum = this._selection.selectedIntervals[0][0];
-        return (clipNum === this.clips.length - 1);
-
-    }
-
-
     _stopClipAutoAdvance() {
-        this._clipAutoAdvanceTimer.stop();
+        this._clipAutoAdvancer.stop();
     }
 
 
     _toggleClipAutoAdvance() {
-        if (this._clipAutoAdvanceTimer.running)
+        if (this._clipAutoAdvancer.running)
             this._stopClipAutoAdvance();
         else
             this._startClipAutoAdvance();
@@ -1888,12 +1914,12 @@ export class ClipAlbum {
 
 
     _accelerateClipAutoAdvance() {
-        this._clipAutoAdvanceTimer.decreaseInterval();
+        this._clipAutoAdvancer.decreasePause();
     }
 
 
     _decelerateClipAutoAdvance() {
-        this._clipAutoAdvanceTimer.increaseInterval();
+        this._clipAutoAdvancer.increasePause();
     }
 
     

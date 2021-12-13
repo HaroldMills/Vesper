@@ -429,24 +429,10 @@ export class ClipView {
 	}
 
 
-	playClip(rate = 1) {
-
-		if (this.clip.audioBuffer != null) {
-			// have clip samples
-
-            
-            const context = this.clipAlbum._audioContext;
-			const source = context.createBufferSource();
-			source.buffer = this.clip.audioBuffer;
-            
-            if (rate != 1)
-                source.playbackRate.value = rate;
-                
-           	source.connect(context.destination);
-			source.start();
-
-		}
-
+	async playClip(rate = 1) {
+		const buffer = this.clip.audioBuffer;
+		const context = this.clipAlbum._audioContext;
+        await playAudioBuffer(buffer, context, rate);
 	}
 
 
@@ -720,4 +706,26 @@ function _updateSettingsIfNeeded(settings) {
 }
 
 
+function playAudioBuffer(buffer, audioContext, rate = 1) {
 
+	return new Promise((resolve, reject) => {
+
+		if (buffer !== null) {
+			// have audio samples
+
+			const source = audioContext.createBufferSource();
+			source.buffer = buffer;
+
+			if (rate != 1)
+			    source.playbackRate.value = rate;
+			
+			source.addEventListener('ended', resolve);
+
+			source.connect(audioContext.destination);
+			source.start();
+
+		}
+
+	});
+
+}
