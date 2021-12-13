@@ -824,9 +824,7 @@ export class ClipAlbum {
         }
 
         this.selectClip(i);
-
-        const clipView = this._clipViews[i];
-        this._scrollToClipViewIfNeeded(clipView);
+        this._scrollToClipViewIfNeeded(i);
 
     }
 
@@ -1962,7 +1960,7 @@ export class ClipAlbum {
 			} else {
 
 				this.selectClip(i + 1);
-				this._scrollToClipViewIfNeeded(this._clipViews[i + 1]);
+				this._scrollToClipViewIfNeeded(i + 1);
 
 			}
 
@@ -1984,7 +1982,9 @@ export class ClipAlbum {
 	}
 
 
-	_scrollToClipViewIfNeeded(clipView) {
+	_scrollToClipViewIfNeeded(clipNum) {
+
+        const clipView = this._clipViews[clipNum];
 
 	    const rect = clipView.div.getBoundingClientRect();
 
@@ -2067,7 +2067,7 @@ export class ClipAlbum {
 			} else {
 
 				this.selectClip(i - 1);
-				this._scrollToClipViewIfNeeded(this._clipViews[i - 1]);
+				this._scrollToClipViewIfNeeded(i - 1);
 
 			}
 
