@@ -128,7 +128,7 @@ setup(
         'jsonschema~=3.2.0',
         'resampy',
         'ruamel_yaml',
-        'skyfield~=1.38.0',
+        'skyfield~=1.39.0',
         'tensorflow~=2.6.0',
     ],
       
