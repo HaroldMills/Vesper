@@ -1,5 +1,6 @@
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
-import { AutoAdvancer } from '/static/vesper/clip-album/auto-advancer.js';
+import { AutoAdvancer, AutoAdvancerState }
+    from '/static/vesper/clip-album/auto-advancer.js';
 import { Clip, CLIP_LOAD_STATUS } from '/static/vesper/clip-album/clip.js';
 import { CommandableDelegate, KeyboardInputInterpreter }
     from '/static/vesper/clip-album/keyboard-input-interpreter.js';
@@ -1801,10 +1802,10 @@ export class ClipAlbum {
 
     _startPageAutoAdvance() {
 
-        if (!this._autoAdvanceRunning() &&
+        if (this._autoAdvanceStopped() &&
                 this.numPages !== 0 && this.pageNum != this.numPages - 1) {
-            // neither page nor clip auto advance is already running, clip
-            // album is not empty, and current page is not final page
+            // page and clip auto advance are both stopped, clip album
+            // is not empty, and current page is not final page
 
             this._pageAutoAdvancer.start(this.pageNum, this.numPages);
 
@@ -1813,20 +1814,19 @@ export class ClipAlbum {
     }
 
 
-    _autoAdvanceRunning() {
+    _autoAdvanceStopped() {
 
         // Be careful here with parentheses and newlines. For example, this:
         //
-        //     return
-        //         this._pageAutoAdvancer.running ||
-        //         this._clipAutoAdvancer.running;
+        //   return
+        //       this._pageAutoAdvancer.state === AutoAdvancerState.Stopped &&
+        //       this._clipAutoAdvancer.state === AutoAdvancerState.Stopped;
         //
-        // always returns `undefined`, effectively ignoring all but the
-        // first line.
+        // always returns `undefined`, ignoring all but the first line.
 
         return (
-            this._pageAutoAdvancer.running ||
-            this._clipAutoAdvancer.running);
+            this._pageAutoAdvancer.state === AutoAdvancerState.Stopped &&
+            this._clipAutoAdvancer.state === AutoAdvancerState.Stopped);
 
     }
 
@@ -1837,7 +1837,7 @@ export class ClipAlbum {
 
 
     _togglePageAutoAdvance() {
-        if (this._pageAutoAdvancer.running)
+        if (this._pageAutoAdvancer.state === AutoAdvancerState.Running)
             this._stopPageAutoAdvance();
         else
             this._startPageAutoAdvance();
@@ -1856,9 +1856,9 @@ export class ClipAlbum {
     
     _startClipAutoAdvance() {
 
-        if (!this._autoAdvanceRunning() && this.clips.length !== 0) {
-            // neither page nor clip auto advance is already running
-            // and album is not empty
+        if (this._autoAdvanceStopped() && this.clips.length !== 0) {
+            // page and clip auto advance are both stopped and album
+            // is not empty
 
             const startClipNum = this._getAutoAdvanceStartClipNum();
             const endClipNum = this.clips.length;
@@ -1904,7 +1904,7 @@ export class ClipAlbum {
 
 
     _toggleClipAutoAdvance() {
-        if (this._clipAutoAdvancer.running)
+        if (this._clipAutoAdvancer.state === AutoAdvancerState.Running)
             this._stopClipAutoAdvance();
         else
             this._startClipAutoAdvance();

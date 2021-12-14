@@ -4,11 +4,14 @@
  */
 
 
-export class AutoAdvancer {
+import { Pauser } from '/static/vesper/util/pauser.js';
+
+
+ export class AutoAdvancer {
 
 
     constructor(indexHandler, pause, minPause, maxPause, pauseScaleFactor) {
-        this._running = false;
+        this._state = AutoAdvancerState.Stopped;
         this._startIndex = null;
         this._endIndex = null;
         this._indexHandler = indexHandler;
@@ -19,8 +22,8 @@ export class AutoAdvancer {
     }
 
 
-    get running() {
-        return this._running;
+    get state() {
+        return this._state;
     }
 
 
@@ -56,24 +59,31 @@ export class AutoAdvancer {
 
     async start(startIndex, endIndex) {
 
-        if (!this._running) {
+        if (this.state === AutoAdvancerState.Stopped) {
 
-            this._running = true;
+            this._state = AutoAdvancerState.Running;
 
             for (let i = startIndex; i !== endIndex; i++) {
 
-                if (!this._running)
-                    // auto-advance has been stopped
+                // Handle index `i`.
+                await this._indexHandler(i);
 
+                // Break if `stop` method was called during index handling.
+                if (this.state === AutoAdvancerState.Stopping)
                     break;
     
-                await this._indexHandler(i);
-    
-                await _pause(this._pause);
+                // Pause.
+                this._pauser = new Pauser(this.pause);
+                await this._pauser.pause();
+                this._pauser = null;
+
+                // Break if `stop` method was called during pause.
+                if (this.state === AutoAdvancerState.Stopping)
+                    break;
     
             }
 
-            this.stop();
+            this._state = AutoAdvancerState.Stopped;
 
         }
 
@@ -81,21 +91,29 @@ export class AutoAdvancer {
 
 
     stop() {
-        if (this._running)
-            this._running = false;
+
+        if (this.state === AutoAdvancerState.Running) {
+
+            this._state = AutoAdvancerState.Stopping;
+
+            // Cancel pause if in progress.
+            if (this._pauser !== null)
+                this._pauser.cancel();
+
+        }
+
     }
 
 
     decreasePause() {
-        this._scalePauseIfRunning(1 / this._pauseScaleFactor);
+        if (this.state === AutoAdvancerState.Running)
+            this._scalePause(1 / this._pauseScaleFactor);
     }
 
 
-    _scalePauseIfRunning(factor) {
-        if (this._running) {
-            const pause = factor * this._pause;
-            this._pause = this._clipPauseIfNeeded(pause);
-        }
+    _scalePause(factor) {
+        const pause = factor * this._pause;
+        this._pause = this._clipPauseIfNeeded(pause);
     }
 
 
@@ -110,15 +128,30 @@ export class AutoAdvancer {
 
 
     increasePause() {
-        this._scalePauseIfRunning(this._pauseScaleFactor);
+        if (this.state === AutoAdvancerState.Running)
+            this._scalePause(this._pauseScaleFactor);
     }
 
 
 }
 
 
-function _pause(duration) {
-    return new Promise(
-        (resolve, reject) => setTimeout(resolve, 1000 * duration)
-    );
+export class AutoAdvancerState {
+
+    static Stopped = new AutoAdvancerState('Stopped');
+    static Running = new AutoAdvancerState('Running');
+    static Stopping = new AutoAdvancerState('Stopping');
+
+    constructor(name) {
+        this._name = name;
+    }
+
+    get name() {
+        return this._name;
+    }
+
+    toString() {
+        return this.name;
+    }
+
 }
