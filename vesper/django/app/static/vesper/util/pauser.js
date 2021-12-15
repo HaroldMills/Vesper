@@ -2,13 +2,17 @@
  * Cancellable, promise-based pauser.
  * 
  * We could also implement cancellable, promise-based pauses with a
- *  `pause` function that returns a `Promise` on which we have set a
- * `cancel` function, but I prefer this form.
+ * `pause` function that returns a `Promise` on which we have set
+ * (i.e. "monkey-patched") a `cancel` function (for details on that
+ * and other approaches, see https://stackoverflow.com/questions/25345701/
+ * how-to-cancel-timeout-inside-of-javascript-promise), but I prefer
+ * this form.
  */
  export class Pauser {
 
     constructor(duration) {
         this._duration = duration;
+        this._pauseCalled = false;
         this._resolve = null;
     }
 
@@ -17,9 +21,17 @@
     }
 
     pause() {
+
+        if (this._pauseCalled) {
+            throw new Error('Attempt to call Pauser.pause more than once.');
+        }
+
+        this._pauseCalled = true;
+
         return new Promise(
             (resolve, reject) => this._setTimeout(resolve, this._duration)
         )
+
     }
 
     _setTimeout(resolve, duration) {
@@ -35,6 +47,10 @@
     }
 
     cancel() {
+
+        if (!this._pauseCalled) {
+            throw new Error('Pauser.cancel called before Pauser.pause.');
+        }
 
         if (this._resolve !== null) {
             // have a resolve function
