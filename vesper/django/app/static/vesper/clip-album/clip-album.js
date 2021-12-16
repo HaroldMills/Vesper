@@ -1,6 +1,4 @@
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
-import { AutoAdvancer, AutoAdvancerState }
-    from '/static/vesper/clip-album/auto-advancer.js';
 import { Clip, CLIP_LOAD_STATUS } from '/static/vesper/clip-album/clip.js';
 import { CommandableDelegate, KeyboardInputInterpreter }
     from '/static/vesper/clip-album/keyboard-input-interpreter.js';
@@ -8,6 +6,8 @@ import { Layout } from '/static/vesper/clip-album/layout.js';
 import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
 import { NOT_APPLICABLE } from '/static/vesper/ui-constants.js';
+import { PausingIterator, PausingIteratorState }
+    from '/static/vesper/util/pausing-iterator.js';
 import { PreloadingClipManager }
     from '/static/vesper/clip-album/clip-manager.js';
 import { SpectrogramClipView }
@@ -357,9 +357,9 @@ export class ClipAlbum {
 
         this._clipManager = this._createClipManager();
 
-        this._pageAutoAdvancer = this._createPageAutoAdvancer();
+        this._pageIterator = this._createPageAutoAdvanceIterator();
 
-        this._clipAutoAdvancer = this._createClipAutoAdvancer();
+        this._clipIterator = this._createClipAutoAdvanceIterator();
 
         this._setPageNum(state.pageNum - 1);
         
@@ -776,14 +776,14 @@ export class ClipAlbum {
     }
     
     
-    _createPageAutoAdvancer() {
+    _createPageAutoAdvanceIterator() {
 
         const pause = 4;
         const minPause = .25;
         const maxPause = 16;
         const pauseScaleFactor = 2 ** .25;
 
-        return new AutoAdvancer(
+        return new PausingIterator(
             pageNum => this._handleAutoAdvancePage(pageNum),
             pause, minPause, maxPause, pauseScaleFactor);
         
@@ -795,14 +795,14 @@ export class ClipAlbum {
     }
 
 
-    _createClipAutoAdvancer() {
+    _createClipAutoAdvanceIterator() {
 
         const pause = .5;
         const minPause = .125 / 128;
         const maxPause = 16;
         const pauseScaleFactor = 2 ** .25;
 
-        return new AutoAdvancer(
+        return new PausingIterator(
             clipNum => this._handleAutoAdvanceClip(clipNum),
             pause, minPause, maxPause, pauseScaleFactor);
 
@@ -1807,7 +1807,7 @@ export class ClipAlbum {
             // page and clip auto advance are both stopped, clip album
             // is not empty, and current page is not final page
 
-            this._pageAutoAdvancer.start(this.pageNum, this.numPages);
+            this._pageIterator.iterate(this.pageNum, this.numPages);
 
         }
 
@@ -1819,25 +1819,25 @@ export class ClipAlbum {
         // Be careful here with parentheses and newlines. For example, this:
         //
         //   return
-        //       this._pageAutoAdvancer.state === AutoAdvancerState.Stopped &&
-        //       this._clipAutoAdvancer.state === AutoAdvancerState.Stopped;
+        //       this._pageIterator.state === PausingIteratorState.Stopped &&
+        //       this._clipIterator.state === PausingIteratorState.Stopped;
         //
         // always returns `undefined`, ignoring all but the first line.
 
         return (
-            this._pageAutoAdvancer.state === AutoAdvancerState.Stopped &&
-            this._clipAutoAdvancer.state === AutoAdvancerState.Stopped);
+            this._pageIterator.state === PausingIteratorState.Stopped &&
+            this._clipIterator.state === PausingIteratorState.Stopped);
 
     }
 
 
     _stopPageAutoAdvance() {
-        this._pageAutoAdvancer.stop();
+        this._pageIterator.stop();
     }
 
 
     _togglePageAutoAdvance() {
-        if (this._pageAutoAdvancer.state === AutoAdvancerState.Running)
+        if (this._pageIterator.state === PausingIteratorState.Running)
             this._stopPageAutoAdvance();
         else
             this._startPageAutoAdvance();
@@ -1845,12 +1845,12 @@ export class ClipAlbum {
 
 
     _acceleratePageAutoAdvance() {
-        this._pageAutoAdvancer.decreasePause();
+        this._pageIterator.decreasePause();
     }
 
 
     _deceleratePageAutoAdvance() {
-        this._pageAutoAdvancer.increasePause();
+        this._pageIterator.increasePause();
     }
 
     
@@ -1862,7 +1862,7 @@ export class ClipAlbum {
 
             const startClipNum = this._getAutoAdvanceStartClipNum();
             const endClipNum = this.clips.length;
-            this._clipAutoAdvancer.start(startClipNum, endClipNum);
+            this._clipIterator.iterate(startClipNum, endClipNum);
 
         }
 
@@ -1899,12 +1899,12 @@ export class ClipAlbum {
 
 
     _stopClipAutoAdvance() {
-        this._clipAutoAdvancer.stop();
+        this._clipIterator.stop();
     }
 
 
     _toggleClipAutoAdvance() {
-        if (this._clipAutoAdvancer.state === AutoAdvancerState.Running)
+        if (this._clipIterator.state === PausingIteratorState.Running)
             this._stopClipAutoAdvance();
         else
             this._startClipAutoAdvance();
@@ -1912,12 +1912,12 @@ export class ClipAlbum {
 
 
     _accelerateClipAutoAdvance() {
-        this._clipAutoAdvancer.decreasePause();
+        this._clipIterator.decreasePause();
     }
 
 
     _decelerateClipAutoAdvance() {
-        this._clipAutoAdvancer.increasePause();
+        this._clipIterator.increasePause();
     }
 
     

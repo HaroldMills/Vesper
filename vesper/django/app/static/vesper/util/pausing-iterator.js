@@ -1,17 +1,17 @@
 /**
- * Auto-advancer, which asynchronously invokes a handler on each of
- * a sequence of integers with pauses inbetween.
+ * Pausing iterator, which asynchronously invokes a handler on each of
+ * a sequence of consecutive integers with pauses inbetween.
  */
 
 
 import { Pauser } from '/static/vesper/util/pauser.js';
 
 
- export class AutoAdvancer {
+ export class PausingIterator {
 
 
     constructor(indexHandler, pause, minPause, maxPause, pauseScaleFactor) {
-        this._state = AutoAdvancerState.Stopped;
+        this._state = PausingIteratorState.Stopped;
         this._startIndex = null;
         this._endIndex = null;
         this._indexHandler = indexHandler;
@@ -57,11 +57,11 @@ import { Pauser } from '/static/vesper/util/pauser.js';
     }
 
 
-    async start(startIndex, endIndex) {
+    async iterate(startIndex, endIndex) {
 
-        if (this.state === AutoAdvancerState.Stopped) {
+        if (this.state === PausingIteratorState.Stopped) {
 
-            this._state = AutoAdvancerState.Running;
+            this._state = PausingIteratorState.Running;
 
             for (let i = startIndex; i !== endIndex; i++) {
 
@@ -71,7 +71,7 @@ import { Pauser } from '/static/vesper/util/pauser.js';
                 // Break if this is the last iteration, or if `stop`
                 // method was called during index handling.
                 if (i === endIndex - 1 ||
-                        this.state === AutoAdvancerState.Stopping)
+                        this.state === PausingIteratorState.Stopping)
                     break;
     
                 // Pause.
@@ -80,12 +80,12 @@ import { Pauser } from '/static/vesper/util/pauser.js';
                 this._pauser = null;
 
                 // Break if `stop` method was called during pause.
-                if (this.state === AutoAdvancerState.Stopping)
+                if (this.state === PausingIteratorState.Stopping)
                     break;
     
             }
 
-            this._state = AutoAdvancerState.Stopped;
+            this._state = PausingIteratorState.Stopped;
 
         }
 
@@ -94,9 +94,9 @@ import { Pauser } from '/static/vesper/util/pauser.js';
 
     stop() {
 
-        if (this.state === AutoAdvancerState.Running) {
+        if (this.state === PausingIteratorState.Running) {
 
-            this._state = AutoAdvancerState.Stopping;
+            this._state = PausingIteratorState.Stopping;
 
             // Cancel pause if in progress.
             if (this._pauser !== null)
@@ -108,7 +108,7 @@ import { Pauser } from '/static/vesper/util/pauser.js';
 
 
     decreasePause() {
-        if (this.state === AutoAdvancerState.Running)
+        if (this.state === PausingIteratorState.Running)
             this._scalePause(1 / this._pauseScaleFactor);
     }
 
@@ -130,7 +130,7 @@ import { Pauser } from '/static/vesper/util/pauser.js';
 
 
     increasePause() {
-        if (this.state === AutoAdvancerState.Running)
+        if (this.state === PausingIteratorState.Running)
             this._scalePause(this._pauseScaleFactor);
     }
 
@@ -138,11 +138,11 @@ import { Pauser } from '/static/vesper/util/pauser.js';
 }
 
 
-export class AutoAdvancerState {
+export class PausingIteratorState {
 
-    static Stopped = new AutoAdvancerState('Stopped');
-    static Running = new AutoAdvancerState('Running');
-    static Stopping = new AutoAdvancerState('Stopping');
+    static Stopped = new PausingIteratorState('Stopped');
+    static Running = new PausingIteratorState('Running');
+    static Stopping = new PausingIteratorState('Stopping');
 
     constructor(name) {
         this._name = name;

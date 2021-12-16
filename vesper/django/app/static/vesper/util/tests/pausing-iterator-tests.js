@@ -1,20 +1,20 @@
-import { AutoAdvancer, AutoAdvancerState }
-    from '/static/vesper/clip-album/auto-advancer.js';
 import { Pauser } from '/static/vesper/util/pauser.js';
+import { PausingIterator, PausingIteratorState }
+    from '/static/vesper/util/pausing-iterator.js';
 
 
-describe('AutoAdvancer', () => {
+describe('PausingIterator', () => {
 
 
 	it('constructor', () => {
-		const a = new AutoAdvancer(null, 1, .5, 2, 1.25);
-        expect(a.state).toBe(AutoAdvancerState.Stopped);
-        expect(a.startIndex).toBe(null);
-        expect(a.endIndex).toBe(null);
-        expect(a.pause).toBe(1);
-        expect(a.minPause).toBe(.5);
-        expect(a.maxPause).toBe(2);
-        expect(a.pauseScaleFactor).toBe(1.25);
+		const i = new PausingIterator(null, 1, .5, 2, 1.25);
+        expect(i.state).toBe(PausingIteratorState.Stopped);
+        expect(i.startIndex).toBe(null);
+        expect(i.endIndex).toBe(null);
+        expect(i.pause).toBe(1);
+        expect(i.minPause).toBe(.5);
+        expect(i.maxPause).toBe(2);
+        expect(i.pauseScaleFactor).toBe(1.25);
 	});
 
 
@@ -26,8 +26,8 @@ describe('AutoAdvancer', () => {
             integers.push(i);
         }
 
-        const a = new AutoAdvancer(handler, .1, .05, .2, 1.25);
-        await a.start(3, 5);
+        const i = new PausingIterator(handler, .1, .05, .2, 1.25);
+        await i.iterate(3, 5);
         expect(integers).toEqual([3, 4]);
 
     });
@@ -41,8 +41,8 @@ describe('AutoAdvancer', () => {
             integers.push(i);
         }
 
-        const a = new AutoAdvancer(handler, .1, .05, .2, 1.25);
-        a.start(3, 5);
+        const i = new PausingIterator(handler, .1, .05, .2, 1.25);
+        i.iterate(3, 5);
 
         await Pauser.pause(.3);
 
@@ -59,12 +59,12 @@ describe('AutoAdvancer', () => {
             integers.push(i);
         }
 
-        const a = new AutoAdvancer(handler, .1, .05, .2, 1.25);
-        a.start(3, 5);
+        const i = new PausingIterator(handler, .1, .05, .2, 1.25);
+        i.iterate(3, 5);
 
         await Pauser.pause(.05);
 
-        a.stop();
+        i.stop();
 
         await Pauser.pause(.2);
 
@@ -75,13 +75,13 @@ describe('AutoAdvancer', () => {
 
     it('stop cancels pause', async () => {
 
-        const a = new AutoAdvancer(() => {}, 2, 1, 4, 1.25);
+        const i = new PausingIterator(() => {}, 2, 1, 4, 1.25);
 
         const startTime = Date.now();
 
-        setTimeout(() => a.stop(), .1 * 1000);
+        setTimeout(() => i.stop(), .1 * 1000);
 
-        await a.start(0, 2);
+        await i.iterate(0, 2);
 
         const endTime = Date.now();
         const elapsedTime = endTime - startTime;
@@ -98,13 +98,13 @@ describe('AutoAdvancer', () => {
             times.push(Date.now());
         }
 
-        const a = new AutoAdvancer(handler, .125, .05, .3, 2);
-        a.start(0, 3);
+        const i = new PausingIterator(handler, .125, .05, .3, 2);
+        i.iterate(0, 3);
 
         await Pauser.pause(.05);
 
-        a.decreasePause();
-        expect(a.pause).toBe(.0625);
+        i.decreasePause();
+        expect(i.pause).toBe(.0625);
 
         await Pauser.pause(.2);
 
@@ -125,13 +125,13 @@ describe('AutoAdvancer', () => {
             times.push(Date.now());
         }
 
-        const a = new AutoAdvancer(handler, .125, .05, .3, 2);
-        a.start(0, 3);
+        const i = new PausingIterator(handler, .125, .05, .3, 2);
+        i.iterate(0, 3);
 
         await Pauser.pause(.05);
 
-        a.increasePause();
-        expect(a.pause).toBe(.25);
+        i.increasePause();
+        expect(i.pause).toBe(.25);
 
         await Pauser.pause(.5);
 
@@ -145,20 +145,20 @@ describe('AutoAdvancer', () => {
 
 
     it('increasePause does nothing when not running', async () => {
-        const a = new AutoAdvancer(() => {}, .125, .05, .2, 2);
-        a.increasePause();
-        await a.start(0, 2);
-        a.increasePause();
-        expect(a.pause).toBe(.125);
+        const i = new PausingIterator(() => {}, .125, .05, .2, 2);
+        i.increasePause();
+        await i.iterate(0, 2);
+        i.increasePause();
+        expect(i.pause).toBe(.125);
     });
 
 
     it('decreasePause does nothing when not running', async () => {
-        const a = new AutoAdvancer(() => {}, .125, .05, .2, 2);
-        a.decreasePause();
-        await a.start(0, 2);
-        a.decreasePause();
-        expect(a.pause).toBe(.125);
+        const i = new PausingIterator(() => {}, .125, .05, .2, 2);
+        i.decreasePause();
+        await i.iterate(0, 2);
+        i.decreasePause();
+        expect(i.pause).toBe(.125);
     });
 
 
