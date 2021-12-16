@@ -68,8 +68,10 @@ import { Pauser } from '/static/vesper/util/pauser.js';
                 // Handle index `i`.
                 await this._indexHandler(i);
 
-                // Break if `stop` method was called during index handling.
-                if (this.state === AutoAdvancerState.Stopping)
+                // Break if this is the last iteration, or if `stop`
+                // method was called during index handling.
+                if (i === endIndex - 1 ||
+                        this.state === AutoAdvancerState.Stopping)
                     break;
     
                 // Pause.
