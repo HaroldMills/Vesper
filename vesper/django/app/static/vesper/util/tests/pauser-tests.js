@@ -4,6 +4,16 @@ import { Pauser } from '/static/vesper/util/pauser.js';
 describe('Pauser', () => {
 
 
+    it ('static pause', async () => {
+        const requestedPause = .1;
+        const startTime = Date.now();
+        await Pauser.pause(requestedPause);
+        const endTime = Date.now();
+        const elapsedTime = (endTime - startTime) / 1000;
+        expect(elapsedTime).toBeCloseTo(requestedPause, 2);
+    });
+
+
 	it('constructor', () => {
 		const p = new Pauser(1);
         expect(p.duration).toBe(1);

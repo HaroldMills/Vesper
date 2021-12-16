@@ -1,7 +1,7 @@
 /**
- * Cancellable, promise-based pauser.
+ * Cancelable, promise-based pauser.
  * 
- * We could also implement cancellable, promise-based pauses with a
+ * We could also implement cancelable, promise-based pauses with a
  * `pause` function that returns a `Promise` on which we have set
  * (i.e. "monkey-patched") a `cancel` function (for details on that
  * and other approaches, see https://stackoverflow.com/questions/25345701/
@@ -9,6 +9,14 @@
  * this form.
  */
  export class Pauser {
+
+    /**
+     * Pauses for a specified duration, without the option of canceling.
+     */
+    static async pause(duration) {
+        const pauser = new Pauser(duration);
+        await pauser.pause();
+    }
 
     constructor(duration) {
         this._duration = duration;
