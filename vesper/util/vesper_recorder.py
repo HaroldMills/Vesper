@@ -209,7 +209,7 @@ def _parse_config_file(file_path, home_dir_path):
     
     schedule_dict = config.get('schedule', {})
     schedule = Schedule.compile_dict(
-        schedule_dict, lat=lat, lon=lon, time_zone=time_zone)
+        schedule_dict, latitude=lat, longitude=lon, time_zone=time_zone)
     
     recordings_dir_path = config.get(
         'recordings_dir_path', _DEFAULT_RECORDINGS_DIR_PATH)
