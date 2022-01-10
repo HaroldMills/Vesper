@@ -1,6 +1,3 @@
-'use strict'
-
-
 import {
 	BuiltInFunction, Environment, CommandInterpreter,
 	CompositeCommandInterpreter, RegularFunction

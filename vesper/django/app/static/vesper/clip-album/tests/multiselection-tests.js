@@ -1,6 +1,3 @@
-'use strict'
-
-
 import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 
 

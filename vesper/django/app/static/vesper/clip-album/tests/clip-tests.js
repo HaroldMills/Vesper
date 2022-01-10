@@ -1,6 +1,3 @@
-'use strict'
-
-
 import { Clip } from '/static/vesper/clip-album/clip.js';
 
 

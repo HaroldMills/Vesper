@@ -1,6 +1,3 @@
-'use strict'
-
-
 import { Spectrogram } from '../signal/spectrogram.js';
 import { Window } from '../signal/window.js';
 

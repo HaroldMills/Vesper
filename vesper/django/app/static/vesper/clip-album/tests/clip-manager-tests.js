@@ -1,6 +1,3 @@
-'use strict'
-
-
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { CLIP_LOAD_STATUS } from '/static/vesper/clip-album/clip.js';
 import { PreloadingClipManager }
