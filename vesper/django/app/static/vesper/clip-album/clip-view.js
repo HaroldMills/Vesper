@@ -1,6 +1,3 @@
-import { ClipAlbumUtils } from '/static/vesper/clip-album/clip-album-utils.js';
-
-
 export class ClipView {
 
 
@@ -595,32 +592,8 @@ export class ClipView {
 			}
 
 			if (s.startTimeIncluded) {
-
-                /*
-                 * TODO: Have server tell client if clips are all for
-                 * one calendar year or all for one date, and if so for
-                 * which year or date, and compact start time display
-                 * accordingly. When start times are abbreviated, clip
-                 * album should indicate year or date of clips somewhere.
-                 */
-
-                const [date, time] = clip.startTime.split(' ');
-
-		        if (this.clipAlbum.clipFilter.date === null) {
-		            // clips may be for more than one night
-
-		            // Include date in start time, but not year part.
-		            const [_, month, day] = date.split('-');
-		            const compactedDate = [month, day].join('-')
-		            labelParts.push(compactedDate);
-
-		        }
-
-                // Always include time in start time.
-                const roundedTime =
-                    ClipAlbumUtils.getRoundedClipStartTime(clip);
-                labelParts.push(roundedTime);
-                
+				const time = this.clipAlbum._formatDateTime(clip.startTime);
+				labelParts.push(time);
 			}
 
             if (s.detectorScoreIncluded && clip.annotations !== null) {

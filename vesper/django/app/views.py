@@ -1740,6 +1740,7 @@ def night(request):
         solar_event_times_json=solar_event_times_json,
         recordings_json=recordings_json,
         clips_json=clips_json,
+        time_zone_name=station.time_zone,
         page_num = page_num,
         settings_presets_json=settings_presets_json,
         settings_preset_path=settings_preset_path,
@@ -1752,12 +1753,7 @@ def night(request):
 
 def _get_solar_event_times_json(station, night):
 
-    # See note near the top of this file about why we send local
-    # instead of UTC times to clients.
-
-    sun_moon = SunMoon(
-        station.latitude, station.longitude, station.tz,
-        result_times_local=True)
+    sun_moon = SunMoon(station.latitude, station.longitude, station.tz)
     
     events = sun_moon.get_solar_events(night, day=False)
     
@@ -1780,59 +1776,50 @@ def _get_recordings_json(recordings, station):
     # Make sure recordings are in order of increasing start time.
     recordings = sorted(recordings, key=lambda r: r.start_time)
 
-    # See note near the top of this file about why we send local
-    # instead of UTC times to clients.
+    recording_dicts = [_get_recording_dict(r) for r in recordings]
 
-    utc_to_local = station.utc_to_local
-    recording_dicts = [
-        _get_recording_dict(r, utc_to_local) for r in recordings]
     return json.dumps(recording_dicts)
 
 
-def _get_recording_dict(recording, utc_to_local):
-
-    start_time = _format_time(utc_to_local(recording.start_time))
-    end_time = _format_time(utc_to_local(recording.end_time))
-
+def _get_recording_dict(recording):
     return {
-        'startTime': start_time,
-        'endTime': end_time
+        'startTime': _format_time(recording.start_time),
+        'endTime': _format_time(recording.end_time)
     }
 
 
 def _get_clips_json(clips, station):
-
-    # See note near the top of this file about why we send local
-    # instead of UTC times to clients.
-
-    utc_to_local = station.utc_to_local
-    clip_lists = [_get_clip_list(c, utc_to_local) for c in clips]
+    clip_lists = [_get_clip_list(c) for c in clips]
     result = json.dumps(clip_lists)
     return result
 
 
-def _get_clip_list(c, utc_to_local):
-
-    # See note about UTC and local times near the top of this file.
-    start_time = _format_time(utc_to_local(c.start_time))
-
+def _get_clip_list(c):
+    start_time = _format_time(c.start_time)
     return [c.id, c.start_index, c.length, c.sample_rate, start_time]
 
 
 def _format_time(time):
 
-    prefix = time.strftime('%Y-%m-%d %H:%M:%S')
+    """
+    Formats a UTC time according to ISO 8601 to millisecond precision,
+    for example as "2020-09-16T01:23:45.678Z". If the millisecond
+    digits are all zero, they and the decimal point are omitted.
+    """
 
-    millis = int(round(time.microsecond / 1000.))
-    millis = f'{millis:03d}'
-    while len(millis) != 0 and millis[-1] == '0':
-        millis = millis[:-1]
-    if len(millis) != 0:
-        millis = '.' + millis
+    result = time.isoformat(timespec='milliseconds')
 
-    time_zone = time.strftime('%Z')
+    # Remove UTC offset.
+    result = result[:-6]
 
-    return prefix + millis + ' ' + time_zone
+    # Remove milliseconds if zero.
+    if result.endswith('.000'):
+        result = result[:-4]
+
+    # Append UTC indicator.
+    result += 'Z'
+
+    return result
 
 
 def _get_preset_paths(params, preferences):
@@ -1908,6 +1895,7 @@ def clip_album(request):
         solar_event_times_json='null',
         recordings_json='[]',
         clips_json=clips_json,
+        time_zone_name=station.time_zone,
         page_num=page_num,
         settings_presets_json=settings_presets_json,
         settings_preset_path=settings_preset_path,

@@ -1,5 +1,9 @@
+import { DateTime, IANAZone }
+    from '/static/third-party/luxon-2.2.0/luxon.min.js';
+
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
 import { Clip, CLIP_LOAD_STATUS } from '/static/vesper/clip-album/clip.js';
+import { ClipAlbumUtils } from '/static/vesper/clip-album/clip-album-utils.js';
 import { CommandableDelegate, KeyboardInputInterpreter }
     from '/static/vesper/clip-album/keyboard-input-interpreter.js';
 import { Layout } from '/static/vesper/clip-album/layout.js';
@@ -317,8 +321,13 @@ export class ClipAlbum {
         
         this._readOnly = state.archiveReadOnly;
         this._clipFilter = state.clipFilter;
-        this._clips = this._createClips(state.clips);
-        
+        this._clips = state.clips.map(_parseClip);
+        this._recordings = state.recordings.map(_parseRecording);
+        this._solarEventTimes = _parseSolarEventTimes(state.solarEventTimes);
+        this._timeZone = new IANAZone(state.timeZoneName);
+            
+		this._dateTimeFormatOptions = this._getDateTimeFormatOptions();
+
         this._settingsPresets = state.settingsPresets;
         [this._settings, this._settingsPresetPath] =
             this._getSettingsPreset(state.settingsPresetPath);
@@ -341,7 +350,7 @@ export class ClipAlbum {
         
         this._keyboardInputInterpreter =
             this._createKeyboardInputInterpreter(this.keyBindings);
-            
+
         this._tagColors = new _TagColors(this.settings);
         
         this._clipViews = this._createClipViews(this.settings);
@@ -368,24 +377,49 @@ export class ClipAlbum {
     }
     
     
-    _createClips(clipInfos) {
+    // TODO: Have clip album figure out if clips are all for one calendar
+    // year or all for one date, and if so for which year or date, and
+    // choose `DateTime` format accordingly. Display date information
+    // (i.e. year or date) missing from displayed start times in clip
+    // album title. Make it very easy to obtain full clip information,
+    // including station, sensor, and complete start time including time
+    // zone, e.g. in tooltips, a footer, or individual clip views.
 
-        const clips = [];
 
-        for (const entry of clipInfos.entries()) {
-            clips.push(this._createClip(entry));
-        }
+	_getDateTimeFormatOptions() {
 
-        return clips;
+		if (this._isSingleDateClipAlbum()) {
 
+			return {
+				includeDate: false,
+				includeHourLeadingZero: false,
+				includeMillisecond: false
+			};
+
+		} else {
+
+			return {
+				includeYear: false,
+				includeMillisecond: false
+			};
+
+		}
+
+	}
+
+
+    _isSingleDateClipAlbum() {
+        return this._clipFilter.date !== null;
     }
 
 
-    _createClip([clipNum, clipInfo]) {
-        return new Clip(clipNum, ...clipInfo);
+    _formatDateTime(time) {
+        return ClipAlbumUtils.formatDateTime(
+        	time, this.timeZone, this._dateTimeFormatOptions);
+
     }
-
-
+    
+    
     _getSettingsPreset(presetPath) {
         return _getPreset(
             presetPath, this._settingsPresets, _FALLBACK_SETTINGS,
@@ -727,10 +761,7 @@ export class ClipAlbum {
         if (this._isSingleDateClipAlbum()) {
             
             const rugPlotDiv = document.getElementById('rug-plot');
-            
-            return new NightRugPlot(
-                this, rugPlotDiv, this.clips, state.recordings,
-                state.solarEventTimes);
+            return new NightRugPlot(this, rugPlotDiv);
                 
         } else {
             
@@ -738,11 +769,6 @@ export class ClipAlbum {
             
         }
         
-    }
-    
-    
-    _isSingleDateClipAlbum() {
-        return this._clipFilter.date !== null;
     }
     
     
@@ -1035,6 +1061,21 @@ export class ClipAlbum {
 	get clips() {
 		return this._clips;
 	}
+
+
+    get recordings() {
+        return this._recordings;
+    }
+
+
+    get solarEventTimes() {
+        return this._solarEventTimes;
+    }
+
+
+    get timeZone() {
+        return this._timeZone;
+    }
 
 
 	get clipViewClasses() {
@@ -2434,6 +2475,51 @@ export class ClipAlbum {
         this.keyBindingsPresetPath = env.getRequired('preset_path');
     }
 
+
+}
+
+
+function _parseClip(clipInfo, clipNum) {
+
+    const [id, startIndex, length, sampleRate, isoStartTime] = clipInfo;
+
+    const utcStartTime = DateTime.fromISO(isoStartTime);
+
+    return new Clip(
+        clipNum, id, startIndex, length, sampleRate, utcStartTime);
+
+}
+
+
+function _parseRecording(isoRecordingBounds) {
+    const bounds = isoRecordingBounds;
+    return {
+        startTime: DateTime.fromISO(bounds.startTime),
+        endTime: DateTime.fromISO(bounds.endTime)
+    }
+}
+
+
+function _parseSolarEventTimes(isoEventTimes) {
+
+    if (isoEventTimes === null) {
+
+        return null;
+
+    } else {
+
+        const eventNames = Object.getOwnPropertyNames(isoEventTimes);
+        const utcEventTimes = {};
+
+        for (const name of eventNames) {
+            const isoTime = isoEventTimes[name];
+            const utcTime = isoTime === null ? null : DateTime.fromISO(isoTime);
+            utcEventTimes[name] = utcTime;
+        }
+
+        return utcEventTimes;
+
+    }
 
 }
 

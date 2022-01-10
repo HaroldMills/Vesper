@@ -1,49 +1,95 @@
+import { DateTime, IANAZone }
+    from '/static/third-party/luxon-2.2.0/luxon.min.js';
+
 import { ClipAlbumUtils } from '/static/vesper/clip-album/clip-album-utils.js';
 
 
 describe('ClipAlbumUtils', () => {
 
 
-    it('getRoundedClipStartTime', () => {
+    const dateTime = DateTime.fromISO('2020-06-20T12:34:56.789Z');
+
+
+    it('formatDateTime without options', () => {
         
         const cases = [
+            ['US/Eastern', '2020-06-20 08:34:56.789'],
+            ['US/Central', '2020-06-20 07:34:56.789'],
+        ]
 
-            // round down
-            ['2020-10-03 12:01:46.123 EDT', '12:01:46'],
-            ['2020-10-03 12:01:46.12 EDT', '12:01:46'],
-            ['2020-10-03 12:01:46.1 EDT', '12:01:46'],
-            ['2020-10-03 12:01:46 EDT', '12:01:46'],
-            
-            // round up
-            ['2020-10-03 12:01:46.789 EDT', '12:01:47'],
-            ['2020-10-03 12:01:46.78 EDT', '12:01:47'],
-            ['2020-10-03 12:01:46.7 EDT', '12:01:47'],
- 
-            // fraction of .5
-            ['2020-10-03 12:01:45.5 EDT', '12:01:46'],
-            ['2020-10-03 12:01:46.5 EDT', '12:01:46'],
-            
-            // single hour digit
-            ['2020-10-03 02:01:46.123 EDT', '2:01:46'],
-            
-            // second wraparound
-            ['2020-10-03 02:01:59.9 EDT', '2:02:00'],
-            
-            // minute wraparound
-            ['2020-10-03 02:59:59.9 EDT', '3:00:00'],
-
-            // hour wraparound
-            ['2020-10-03 23:59:59.9 EDT', '0:00:00'],
-
-        ];
-
-        for (const [startTime, expected] of cases) {
-            const clip = { startTime: startTime };
-            const actual = ClipAlbumUtils.getRoundedClipStartTime(clip);
-            expect(actual).toEqual(expected);
+        for (const [timeZoneName, expected] of cases) {
+            const timeZone = new IANAZone(timeZoneName);
+            const actual = ClipAlbumUtils.formatDateTime(dateTime, timeZone);
+            expect(actual).toBe(expected);
         }
 
     });
 
 
+    it('formatDateTime with options', () => {
+
+        // Options are:
+        //     includeDate
+        //     includeYear
+        //     includeHourLeadingZero
+        //     includeMillisecond
+
+        const cases = [
+
+            ['0000', '8:34:56'],
+            ['0001', '8:34:56.789'],
+            ['0010', '08:34:56'],
+            ['0011', '08:34:56.789'],
+
+            ['0100', '8:34:56'],
+            ['0101', '8:34:56.789'],
+            ['0110', '08:34:56'],
+            ['0111', '08:34:56.789'],
+
+            ['1000', '06-20 08:34:56'],
+            ['1001', '06-20 08:34:56.789'],
+            ['1010', '06-20 08:34:56'],
+            ['1011', '06-20 08:34:56.789'],
+
+            ['1100', '2020-06-20 08:34:56'],
+            ['1101', '2020-06-20 08:34:56.789'],
+            ['1110', '2020-06-20 08:34:56'],
+            ['1111', '2020-06-20 08:34:56.789'],
+
+        ];
+
+        const timeZone = new IANAZone('US/Eastern');
+        
+        for (const [encodedOptions, expected] of cases) {
+
+            const options = _getOptions(encodedOptions);
+
+            const actual =
+                ClipAlbumUtils.formatDateTime(dateTime, timeZone, options);
+
+            expect(actual).toBe(expected);
+            
+        }
+
+
+    });
+
 });
+
+
+function _getOptions(encodedOptions) {
+
+    const chars = Array.from(encodedOptions);
+    const bools = chars.map(c => c === '1');
+    const [
+        includeDate, includeYear, includeHourLeadingZero,
+        includeMillisecond] = bools;
+
+    return {
+        includeDate: includeDate,
+        includeYear: includeYear,
+        includeHourLeadingZero: includeHourLeadingZero,
+        includeMillisecond: includeMillisecond
+    };
+
+}

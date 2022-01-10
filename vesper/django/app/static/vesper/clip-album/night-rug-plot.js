@@ -1,11 +1,9 @@
-'use strict'
-
+import { DateTime, Duration } from
+    '/static/third-party/luxon-2.2.0/luxon.min.js';
 
 import { ArrayUtils } from '/static/vesper/util/array-utils.js';
-import { ClipAlbumUtils } from '/static/vesper/clip-album/clip-album-utils.js';
 
 
-const _DEFAULT_PLOT_LIMITS = [17.5, 31.5];
 const _PLOT_LIMIT_PADDING = 1;       // hours
 const _RUG_HEIGHT = 25;              // client pixels, also appears in CSS
 const _CLIP_LINE_MARGIN = 6;         // client pixels
@@ -15,11 +13,7 @@ const _MINOR_TICK_HEIGHT = 2;        // client pixels
 const _TICK_FONT_SIZE = 12.5;        // client pixels
 const _RES_FACTOR = 2;               // canvas pixels per client pixel
 const _PAGE_DISTANCE_THRESHOLD = 5;  // client pixels
-
-const _TWILIGHT_EVENT_NAMES = [
-    'sunset', 'civilDusk', 'nauticalDusk', 'astronomicalDusk',
-    'astronomicalDawn', 'nauticalDawn', 'civilDawn', 'sunrise'
-];
+const _ONE_HOUR = {hours: 1};
 
 const _DAY_COLOR = '#FFFFFF';
 const _CIVIL_TWILIGHT_COLOR = '#CCCCCC';
@@ -42,22 +36,31 @@ const _UNDERLAY_SPEC = [
 export class NightRugPlot {
 
 
-	constructor(clipAlbum, div, clips, recordings, solarEventTimes) {
+	constructor(clipAlbum, div) {
 
 		this._clipAlbum = clipAlbum;
 		this._div = div;
-		this._clips = clips;
-		this._recordings = recordings;
 
-		this._rugCanvas = this._createRugCanvas();
-		this._axisCanvas = this._createAxisCanvas();
-		this._lastClientWidth = null;
+		this._clips = clipAlbum.clips;
+		this._recordings = clipAlbum.recordings;
+		this._solarEventTimes = clipAlbum.solarEventTimes;
+		this._timeZone = clipAlbum.timeZone;
 
-		this._clipTimes = this._clips.map(_getClipTime);
-		this._recordingIntervals = this._recordings.map(_getRecordingInterval);
-		this._twilightEventTimes = _getTwilightEventTimes(solarEventTimes);
-
+		// Get plot start and end times.
 		[this._startTime, this._endTime] = this._getPlotLimits();
+
+		// Get certain times and durations in epoch milliseconds to
+		// facilitate rendering and mouse event processing.
+		this._startTimeInMillis = this._startTime.toMillis();
+		this._endTimeInMillis = this._endTime.toMillis();
+		this._plotDuration = this._endTimeInMillis - this._startTimeInMillis;
+		this._clipTimesInMillis = this._clips.map(c => c.startTime.toMillis());
+
+		this._clipStartTimeFormatOptions = {
+			includeDate: false,
+			includeHourLeadingZero: false,
+			includeMillisecond: false
+		};
 
 		// We work with page clip number ranges rather than page numbers
 		// in the rug plot since that makes it more straightforward to
@@ -66,7 +69,41 @@ export class NightRugPlot {
 		this._pageClipNumRange = null;
 		this._mousePageClipNumRange = null;
 
+		this._rugCanvas = this._createRugCanvas();
+		this._axisCanvas = this._createAxisCanvas();
+		this._lastClientWidth = null;
+
 		this._updateIfNeeded();
+
+	}
+
+
+	_getPlotLimits() {
+
+	    const times = this._solarEventTimes;
+
+		if (times !== null && times['sunrise'] !== null &&
+				times['sunset'] !== null) {
+			// have sunrise and sunset times
+
+			const padding = Duration.fromObject({hours: _PLOT_LIMIT_PADDING});
+			const startTime = times['sunset'].minus(padding);
+			const endTime = times['sunrise'].plus(padding);
+			return [startTime, endTime];
+
+		} else {
+			// don't have sunrise and sunset times
+
+			// The following assumes that our clip album is for a single
+			// date, so that its clip filter has a date.
+			const midnight = DateTime.fromISO(this._clipAlbum.clipFilter.date);
+
+			const startTime = midnight.plus({hours: 18});
+			const endTime = midnight.plus({hours: 30});
+
+			return [startTime, endTime];
+
+		}
 
 	}
 
@@ -98,42 +135,6 @@ export class NightRugPlot {
 	    this._div.appendChild(canvas);
 
 	    return canvas;
-
-	}
-
-
-	_getPlotLimits() {
-
-		const padding = _PLOT_LIMIT_PADDING;
-
-		// Removed the following 2017-07-26 since for NFC monitoring we
-		// would like the rug plot to consistently show a whole night,
-		// even if (or *especially* if) recording did not cover the whole
-		// night.
-
-//		if (this._recordingIntervals.length !== 0) {
-//
-//			const intervals = this._recordingIntervals;
-//			const startTime = intervals[0].startTime - padding;
-//			const endTime = intervals[intervals.length - 1].endTime + padding;
-//			return [startTime, endTime];
-//
-//		} else if (this._twilightEventTimes !== null) {}
-
-	    const times = this._twilightEventTimes;
-
-		if (times !== null && times['sunset'] !== null &&
-				times['sunrise'] !== null) {
-
-			const startTime = times['sunset'] - padding;
-			const endTime = times['sunrise'] + padding;
-			return [startTime, endTime];
-
-		} else {
-
-			return _DEFAULT_PLOT_LIMITS;
-
-		}
 
 	}
 
@@ -173,7 +174,7 @@ export class NightRugPlot {
 	_draw() {
 		this._drawUnderlay();
 		this._drawRecordingRects();
-		this._drawClipLines(0, this._clipTimes.length, _CLIP_COLOR);
+		this._drawClipLines(0, this._clips.length, _CLIP_COLOR);
 		this._updatePageLines(this._pageClipNumRange);
 		this._updatePageLines(this._mousePageClipNumRange);
 		this._drawAxis();
@@ -185,15 +186,15 @@ export class NightRugPlot {
 		const context = this._rugCanvas.getContext('2d');
 		const height = _RUG_HEIGHT * _RES_FACTOR;
 
-		if (this._twilightEventTimes !== null) {
+		if (this._solarEventTimes !== null) {
 
 			context.fillStyle = _DAY_COLOR;
 			context.fillRect(0, 0, this._canvasWidth, height);
 
 			for (const [startName, endName, color] of _UNDERLAY_SPEC) {
 
-			    const startTime = this._twilightEventTimes[startName];
-			    const endTime = this._twilightEventTimes[endName];
+			    const startTime = this._solarEventTimes[startName];
+			    const endTime = this._solarEventTimes[endName];
 
 			    if (startTime !== null && endTime !== null)
 			    	// start and end event times are defined
@@ -205,12 +206,6 @@ export class NightRugPlot {
 
 		}
 
-	}
-
-
-	_timeToRectX(time) {
-		const x = this._timeToX(time);
-		return _getNearestEvenInt(x);
 	}
 
 
@@ -226,6 +221,12 @@ export class NightRugPlot {
 	}
 
 
+	_timeToRectX(time) {
+		const x = this._timeToX(time);
+		return _getNearestEvenInt(x);
+	}
+
+
 	_drawRecordingRects() {
 
 		const context = this._rugCanvas.getContext('2d');
@@ -233,9 +234,9 @@ export class NightRugPlot {
 		const height =
 			(_RUG_HEIGHT - 2 * (_CLIP_LINE_MARGIN + 1)) * _RES_FACTOR;
 
-		for (const interval of this._recordingIntervals)
+		for (const recording of this._recordings)
 			this._drawRect(
-				context, interval.startTime, interval.endTime, y, height,
+				context, recording.startTime, recording.endTime, y, height,
 				_RECORDING_COLOR);
 
 	}
@@ -303,7 +304,7 @@ export class NightRugPlot {
 		const xs = new Set();
 
 		for (let i = startClipNum; i < endClipNum; i++) {
-			const time = this._clipTimes[i];
+			const time = this._clips[i].startTime;
 			const x = this._timeToLineX(time);
 			if (x !== null)
 			    xs.add(x);
@@ -358,7 +359,12 @@ export class NightRugPlot {
 		const yMajor = _lineY(_MAJOR_TICK_HEIGHT);
 		const yMinor = _lineY(_MINOR_TICK_HEIGHT);
 
-		for (let t = Math.ceil(this._startTime); t <= this._endTime; t++) {
+		const utcStartHour = this._startTime.startOf('hour');
+		const localStartHour = utcStartHour.setZone(this._timeZone);
+		const localEndTime = this._endTime.setZone(this._timeZone);
+		const pastPlotEnd = dt => dt.diff(localEndTime).toMillis() > 0;
+
+		for (let t = localStartHour; !pastPlotEnd(t); t = t.plus(_ONE_HOUR)) {
 
 			const x = this._timeToLineX(t);
 
@@ -366,7 +372,7 @@ export class NightRugPlot {
 
 				context.moveTo(x, y0);
 
-				if (t % 2 == 0) {
+				if (t.hour % 2 == 0) {
 					// major tick
 
 					context.lineTo(x, yMajor);
@@ -374,8 +380,7 @@ export class NightRugPlot {
 					// We label a major tick only if it is not so close to
 					// the edge of the canvas that the label might be clipped.
 					if (x >= minLabelX && x <= maxLabelX) {
-						const hour = t < 24 ? t : t - 24;
-						const text = hour.toString();
+						const text = t.hour.toString();
 						context.fillText(text, x, yMajor + fontSize);
 					}
 
@@ -402,9 +407,8 @@ export class NightRugPlot {
 
 
 	_timeToX(time) {
-		const deltaTime = this._endTime - this._startTime;
-		return this._canvasWidth * (time - this._startTime) / deltaTime;
-
+		const timeOffset = time.toMillis() - this._startTimeInMillis;
+		return this._canvasWidth * timeOffset / this._plotDuration;
 	}
 
 
@@ -444,7 +448,7 @@ export class NightRugPlot {
 
 	_getMousePageNum(e) {
 
-		if (this._clipTimes.length === 0)
+		if (this._clips.length === 0)
 			// no clips
 
             return null;
@@ -452,10 +456,11 @@ export class NightRugPlot {
 		else {
 			// at least one clip
 
-			const clipTimes = this._clipTimes;
-			const numClips = clipTimes.length;
-			const firstClipX = this._timeToClientX(clipTimes[0]);
-			const lastClipX = this._timeToClientX(clipTimes[numClips - 1]);
+			const clips = this._clips;
+			const numClips = clips.length;
+			const firstClipX = this._timeToClientX(clips[0].startTime);
+			const lastClipX =
+			    this._timeToClientX(clips[numClips - 1].startTime);
 
 			const rect = this._rugCanvas.getBoundingClientRect();
 			const mouseX = e.clientX - rect.left;
@@ -482,21 +487,22 @@ export class NightRugPlot {
 
 	_timeToClientX(time) {
 		const clientWidth = this._rugCanvas.clientWidth
-		const deltaTime = this._endTime - this._startTime;
-		return clientWidth * (time - this._startTime) / deltaTime;
+		const timeOffset = time.toMillis() - this._startTimeInMillis;
+		return clientWidth * timeOffset / this._plotDuration;
 	}
 
 
 	_clientXToTime(x) {
-		const deltaTime = this._endTime - this._startTime;
-		const width = this._rugCanvas.clientWidth;
-		return this._startTime + x * deltaTime / width;
+		const clientWidth = this._rugCanvas.clientWidth;
+		const timeOffset = this._plotDuration * x / clientWidth;
+		return this._startTime.plus(timeOffset)
 	}
 
 
 	_findClosestClipNum(time) {
 
-		const clipTimes = this._clipTimes;
+		const timeInMillis = time.toMillis();
+		const clipTimes = this._clipTimesInMillis;
 		const numClips = clipTimes.length;
 
 		if (numClips === 0)
@@ -504,7 +510,7 @@ export class NightRugPlot {
 
 		else {
 
-		    const clipNum = ArrayUtils.findLastLE(clipTimes, time);
+		    const clipNum = ArrayUtils.findLastLE(clipTimes, timeInMillis);
 
 		    if (clipNum === -1)
 		    	return 0;
@@ -513,8 +519,8 @@ export class NightRugPlot {
 		    	return numClips - 1;
 
 		    else {
-		    	const d0 = time - clipTimes[clipNum];
-		    	const d1 = clipTimes[clipNum + 1] - time;
+		    	const d0 = timeInMillis - clipTimes[clipNum];
+		    	const d1 = clipTimes[clipNum + 1] - timeInMillis;
 		    	return d0 < d1 ? clipNum : clipNum + 1;
 		    }
 
@@ -549,10 +555,8 @@ export class NightRugPlot {
             
             // Get tooltip text.
             const [startNum, endNum] = range;
-            const getRoundedClipStartTime =
-                ClipAlbumUtils.getRoundedClipStartTime;
-            const startTime = getRoundedClipStartTime(this._clips[startNum]);
-            const endTime = getRoundedClipStartTime(this._clips[endNum - 1]);
+			const startTime = this._getTooltipClipTimeText(startNum);
+			const endTime = this._getTooltipClipTimeText(endNum - 1)
             tooltipText = 
                 `page ${pageNum + 1}, ` +
                 `clips ${startNum + 1}-${endNum}, ` +
@@ -566,7 +570,13 @@ export class NightRugPlot {
     }
     
     
-   _onMouseOut(e) {
+    _getTooltipClipTimeText(clipNum) {
+		const time = this._clips[clipNum].startTime;
+		return this._clipAlbum._formatDateTime(time);
+	}
+
+
+    _onMouseOut(e) {
 	    this._setMousePageClipNumRange(null, null);
     }
 
@@ -596,98 +606,6 @@ function _rangesEqual(a, b) {
 
 	else
 		return a[0] === b[0] && a[1] === b[1];
-
-}
-
-
-function _getClipTime(clip) {
-	return _timeStringToHours(clip.startTime);
-}
-
-
-function _timeStringToHours(timeString) {
-	const timeObject = _parseTime(timeString);
-	return _timeObjectToHours(timeObject);
-}
-
-
-/*
- * Parses a string time into an object with 'year', 'month', 'day',
- * etc. properties.
- */
-function _parseTime(s) {
-
-	// Get start time parts as strings.
-	const [date, time, timeZone] = s.split(' ');
-	const [year, month, day] = date.split('-');
-	const [hour, minute, sec] = time.split(':');
-	const [second, millisecond] =
-		sec.includes('.') ? sec.split('.') : [sec, '0']
-
-	const toInt = Number.parseInt;
-
-	return {
-		'year': toInt(year),
-		'month': toInt(month),
-		'day': toInt(day),
-		'hour': toInt(hour),
-		'minute': toInt(minute),
-		'second': toInt(second),
-		'millisecond': toInt(millisecond),
-		'timeZone': timeZone
-	};
-
-}
-
-
-/*
- * Converts a time object to a number of hours past midnight of the day
- * on which the night of the clip starts. The description of these units
- * is somewhat complicated, but they are handy for plotting!
- */
-function _timeObjectToHours(t) {
-	const hourOffset = t.hour >= 12 ? 0 : 24;
-	const hour = t.hour + hourOffset;
-	const seconds =
-        hour * 3600 + t.minute * 60 + t.second + t.millisecond / 1000.;
-	return seconds / 3600;
-}
-
-
-function _getRecordingInterval(recording) {
-
-	const startTime = _timeStringToHours(recording.startTime);
-	const endTime = _timeStringToHours(recording.endTime);
-
-	return {
-		'startTime': startTime,
-		'endTime': endTime
-	};
-
-}
-
-
-function _getTwilightEventTimes(solarEventTimeStrings) {
-
-	if (solarEventTimeStrings !== null) {
-
-		const times = {};
-
-		for (const eventName of _TWILIGHT_EVENT_NAMES) {
-			const timeString = solarEventTimeStrings[eventName];
-			if (timeString === null)
-				times[eventName] = null;
-			else
-			    times[eventName] = _timeStringToHours(timeString);
-		}
-
-		return times;
-
-	} else {
-
-		return null;
-
-	}
 
 }
 

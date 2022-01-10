@@ -1,82 +1,71 @@
-// I wrote this in JavaScript, following the style of array-utils.js,
-// which was translated from TypeScript. We might eventually want to
-// use TypeScript for this module, too.
+export class ClipAlbumUtils {
 
-
-export var ClipAlbumUtils;
-
-(function (ClipAlbumUtils) {
-    
     /**
-     Gets a rounded version of the time of day portion of the start time
-     of a clip.
-     
-     The clip start time is a local date/time string as received from the
-     server, for example "2020-10-02 02:06:44.537 EDT". We assume that
-     the fractional part may be absent, and that when present it may
-     have a variable number of digits.
+     * Formats a Luxon `DateTime` in the specified time zone.
+     * 
+     * A `DateTime` formatted by this function with no `options` argument
+     * looks like `2020-06-20 12:34:56.789`.
+     * 
+     * The `options` argument can be used to omit or alter some parts
+     * of the result.
+     * 
+     * `options` fields (all default to `true` if omitted):
+     * 
+     *     includeDate
+     *         `true` if date should be included.
+     * 
+     *         An example of a date is `2020-06-20`.
+     * 
+     *     includeYear
+     *         `true` if year should be included in date.
+     * 
+     *          Ignored if `includeDate` is `false`.
+     * 
+     *          An example of a date without a year is `06-20`.
+     * 
+     *     includeHourLeadingZero
+     *         `true` if hour should always have two digits, or `false`
+     *         if the first digit of the two-digit hour should be omitted
+     *         when it is zero.
+     * 
+     *         Ignored if `includeDate` is `true`.
+     * 
+     *     includeMillisecond
+     *         `true` if time should include three millisecond digits.
      */
-    function getRoundedClipStartTime(clip) {
-        const timeOfDay = clip.startTime.split(' ')[1];
-        const [hour, minute, second, fraction] = _parseTime(timeOfDay);
-        return _roundTime(hour, minute, second, fraction);
-    }
-    
-    
-    function _parseTime(time) {
-        
-        // Split time into parts.
-        const index = time.indexOf('.');
-        const hhmmss = index === -1 ? time : time.slice(0, index);
-        const [hh, mm, ss] = hhmmss.split(':');
-        const f = index === -1 ? '0' : time.slice(index);
-        
-        // Parse parts.
-        const hour = parseInt(hh);
-        const minute = parseInt(mm);
-        const second = parseInt(ss);
-        const fraction = parseFloat(f);
-        
-        return [hour, minute, second, fraction];
-        
-    }
-    
-    
-    function _roundTime(hour, minute, second, fraction) {
-        
-        if (fraction > .5 || fraction === .5 && second % 2 === 1) {
-            
-            // Round up to nearest second.
-            
-            second += 1;
-            
-            if (second === 60) {
-                
-                second = 0;
-                minute += 1;
-                
-                if (minute === 60) {
-                    
-                    minute = 0;
-                    hour += 1;
-                    
-                    if (hour === 24)
-                        hour = 0
-                        
-                }
-                
-            }
-            
+    static formatDateTime(dateTime, timeZone, options = {}) {
+
+        const localDateTime = dateTime.setZone(timeZone);
+
+        const isoString = localDateTime.toISO({includeOffset: false});
+
+        let [date, time] = isoString.split('T');
+
+        if (!_get(options.includeMillisecond))
+            time = time.slice(0, -4);
+
+        if (_get(options.includeDate)) {
+
+            if (!_get(options.includeYear))
+                date = date.slice(5);
+
+            return `${date} ${time}`;
+
+        } else {
+            // date not included
+
+            if (!_get(options.includeHourLeadingZero) && time.startsWith('0'))
+                time = time.slice(1);
+
+            return time;
+
         }
-        
-        const h = hour.toString();
-        const mm = minute.toString().padStart(2, '0');
-        const ss = second.toString().padStart(2, '0');
-        
-        return [h, mm, ss].join(':');
-        
+
     }
 
-    ClipAlbumUtils.getRoundedClipStartTime = getRoundedClipStartTime;
-    
-})(ClipAlbumUtils || (ClipAlbumUtils = {}));
+}
+
+
+function _get(option) {
+    return option !== undefined ? option : true;
+}
