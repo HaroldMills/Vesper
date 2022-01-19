@@ -1,21 +1,32 @@
-"""Module containing class `ClipAudioFilesExporter`."""
+"""Module containing class `ClipAudioFileExporter`."""
 
 
+from datetime import timedelta as TimeDelta
 import logging
 import os.path
 
 from vesper.command.command import CommandExecutionError
 from vesper.singleton.clip_manager import clip_manager
 from vesper.singleton.extension_manager import extension_manager
+from vesper.singleton.preset_manager import preset_manager
+from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
+import vesper.util.clip_time_interval_utils as clip_time_interval_utils
 import vesper.util.os_utils as os_utils
+import vesper.util.signal_utils as signal_utils
+
+
+_DEFAULT_TIME_INTERVAL = Bunch(
+    left_padding=0,
+    right_padding=0,
+    offset=0)
 
 
 _logger = logging.getLogger()
 
 
-class ClipAudioFilesExporter:
+class ClipAudioFileExporter:
     
     """
     Exports clip audio files.
@@ -27,20 +38,23 @@ class ClipAudioFilesExporter:
     """
         
     
-    extension_name = 'Clip Audio Files Exporter'
+    extension_name = 'Clip Audio File Exporter'
     
     
     def __init__(self, args):
     
         get = command_utils.get_required_arg
+        self._time_interval_preset_name = get('time_interval', args)
         self._output_dir_path = get('output_dir_path', args)
         spec = get('clip_file_name_formatter', args)
-         
+        
+        self._time_interval = \
+            _parse_time_interval_preset(self._time_interval_preset_name)
+
         self._file_name_formatter = _create_file_name_formatter(spec)
     
     
     def begin_exports(self):
-        
         try:
             os_utils.create_directory(self._output_dir_path)
         except OSError as e:
@@ -48,9 +62,21 @@ class ClipAudioFilesExporter:
  
     
     def export(self, clip):
-        file_name = self._file_name_formatter.get_file_name(clip)
+
+        start_offset, length = \
+            clip_time_interval_utils.get_clip_time_interval(
+                clip, self._time_interval)
+
+        file_name = self._file_name_formatter.get_file_name(clip, start_offset)
         file_path = os.path.join(self._output_dir_path, file_name)
-        clip_manager.export_audio_file(clip, file_path)
+
+        try:
+            clip_manager.export_audio_file(
+                clip, file_path, start_offset, length)
+        except Exception as e:
+            _logger.warning(f'Could not export clip {clip}. {e}')
+            return False
+
         return True
         
         
@@ -58,13 +84,35 @@ class ClipAudioFilesExporter:
         pass
             
             
+def _parse_time_interval_preset(preset_name):
+    
+    if preset_name == '':
+        return _DEFAULT_TIME_INTERVAL
+    
+    preset_type = 'Clip Export Time Interval'
+    preset_path = (preset_type, preset_name)
+    preset = preset_manager.get_preset(preset_path)
+    data = preset.data
+
+    try:
+        return clip_time_interval_utils.parse_clip_time_interval_preset(data)
+
+    except Exception as e:
+
+        _logger.warning(
+            f'Error parsing {preset_type} preset "{preset_name}". '
+            f'{e}. Preset will be ignored.')
+
+        return _DEFAULT_TIME_INTERVAL
+
+
 def _create_file_name_formatter(spec):
     formatter_classes = extension_manager.get_extensions(
         'Clip File Name Formatter')
     formatter_class = formatter_classes[spec['name']]
     return formatter_class()
  
- 
+
 class SimpleClipFileNameFormatter:
      
     """Formats clip audio file names."""
@@ -73,14 +121,14 @@ class SimpleClipFileNameFormatter:
     extension_name = 'Simple Clip File Name Formatter'
      
      
-    def get_file_name(self, clip):
+    def get_file_name(self, clip, start_offset):
      
         """Creates a audio file name for the specified clip."""
         
         station_name = clip.station.name
         mic_output_name = _get_mic_output_name(clip)
         detector_name = _get_detector_name(clip)
-        start_time = _format_start_time(clip)
+        start_time = _format_start_time(clip, start_offset)
         classification = _get_classification(clip)
         
         return (
@@ -105,9 +153,11 @@ def _get_detector_name(clip):
         return clip.creating_processor.name
     
     
-def _format_start_time(clip):
-    time = clip.start_time
-    ms = int(round(time.microsecond / 1000.))
+def _format_start_time(clip, start_offset):
+    seconds = signal_utils.get_duration(start_offset, clip.sample_rate)
+    offset = TimeDelta(seconds=seconds)
+    time = clip.start_time + offset
+    ms = time.microsecond // 1000
     return time.strftime('%Y-%m-%d_%H.%M.%S') + f'.{ms:03d}_Z'
 
 

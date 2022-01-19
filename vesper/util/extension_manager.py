@@ -208,7 +208,7 @@ Detector:
     - vesper.psw.nogo_detector_0_0.detector.Detector
     
 Exporter:
-    - vesper.command.clip_audio_file_exporter.ClipAudioFilesExporter
+    - vesper.command.clip_audio_file_exporter.ClipAudioFileExporter
     - vesper.command.clips_hdf5_file_exporter.ClipsHdf5FileExporter
     - vesper.command.clip_metadata_csv_file_exporter.ClipMetadataCsvFileExporter
     
@@ -218,6 +218,7 @@ Importer:
     - vesper.old_bird.clip_importer.ClipImporter
 
 Preset:
+    - vesper.command.clip_export_time_interval_preset.ClipExportTimeIntervalPreset
     - vesper.command.clip_table_format_preset.ClipTableFormatPreset
     - vesper.command.detection_schedule_preset.DetectionSchedulePreset
     - vesper.command.station_name_aliases_preset.StationNameAliasesPreset

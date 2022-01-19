@@ -404,7 +404,8 @@ class ClipManager:
         audio_file_utils.write_wave_file(path, samples, clip.sample_rate)
 
 
-    def export_audio_file(self, clip, path):
+    # TODO: Change `start_offset` default to zero here and for `get_samples`.
+    def export_audio_file(self, clip, path, start_offset=None, length=None):
         
         """
         Exports an audio file for the specified clip.
@@ -418,9 +419,17 @@ class ClipManager:
             
         path : str
             the path of the audio file to create.
+
+        start_offset : int
+            export start offset in samples after clip start, or `None`
+            to export from the start of the clip.
+
+        length : int
+            export length in samples, or `None` to export through the
+            end of the clip.
         """
         
-        samples = self.get_samples(clip)
+        samples = self.get_samples(clip, start_offset, length)
         self._create_audio_file(clip, samples, path)        
         
         
