@@ -48,7 +48,7 @@ class ClipManager:
         return Bunch(samples=samples, sample_rate=sample_rate)
     
     
-    def get_samples(self, clip, start_offset=None, length=None):
+    def get_samples(self, clip, start_offset=0, length=None):
         
         """
         Gets samples of the specified clip.
@@ -62,9 +62,9 @@ class ClipManager:
         clip : Clip
             the clip for which to get samples.
             
-        start_offset : int or None
+        start_offset : int
             offset from the start of the specified clip of the samples to
-            get, or `None` to get samples from the start of the clip.
+            get.
             
         length : int or None
             the number of samples to get, or `None` to get samples through
@@ -86,8 +86,7 @@ class ClipManager:
             If some other error occurs, for example a file I/O error.
         """
         
-        start_offset, length = \
-            _complete_clip_segment_spec(clip, start_offset, length)
+        length = _get_clip_time_interval_length(clip, start_offset, length)
 
         if start_offset >= 0 and start_offset + length <= clip.length:
             # all requested samples are in clip audio file if it exists
@@ -115,8 +114,7 @@ class ClipManager:
         return samples[0, start_index:end_index]
 
 
-    def _get_samples_from_recording(
-            self, clip, start_offset=None, length=None):
+    def _get_samples_from_recording(self, clip, start_offset=0, length=None):
         
         if clip.start_index is None:
             # have no clip start index
@@ -144,10 +142,9 @@ class ClipManager:
             f'{message}')
     
     
-    def get_recording_file_info(self, clip, start_offset=None, length=None):
+    def get_recording_file_info(self, clip, start_offset=0, length=None):
         
-        start_offset, length = \
-            _complete_clip_segment_spec(clip, start_offset, length)
+        length = _get_clip_time_interval_length(clip, start_offset, length)
         
         start_index = clip.start_index + start_offset
         end_index = start_index + length
@@ -404,8 +401,7 @@ class ClipManager:
         audio_file_utils.write_wave_file(path, samples, clip.sample_rate)
 
 
-    # TODO: Change `start_offset` default to zero here and for `get_samples`.
-    def export_audio_file(self, clip, path, start_offset=None, length=None):
+    def export_audio_file(self, clip, path, start_offset=0, length=None):
         
         """
         Exports an audio file for the specified clip.
@@ -421,10 +417,9 @@ class ClipManager:
             the path of the audio file to create.
 
         start_offset : int
-            export start offset in samples after clip start, or `None`
-            to export from the start of the clip.
+            export start offset in samples after clip start.
 
-        length : int
+        length : int or None
             export length in samples, or `None` to export through the
             end of the clip.
         """
@@ -462,15 +457,12 @@ def _get_clip_id_parts(num, format_):
     return parts
     
     
-def _complete_clip_segment_spec(clip, start_offset, length):
+def _get_clip_time_interval_length(clip, start_offset, length):
     
-    if start_offset is None:
-        start_offset = 0
-        
     if length is None:
         length = max(clip.length - start_offset, 0)
         
-    return start_offset, length
+    return length
             
 
 def _create_audio_file_contents(samples, sample_rate):
