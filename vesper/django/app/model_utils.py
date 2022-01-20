@@ -832,7 +832,7 @@ def get_clip_query_annotation_data(annotation_name, annotation_value):
     value = archive.get_string_annotation_archive_value(
         annotation_name, annotation_value)
     
-    if value == archive.NOT_APPLICABLE:
+    if value == archive.NULL_CHOICE:
         return None, None
     
     elif value == archive.STRING_ANNOTATION_VALUE_NONE:
@@ -843,7 +843,7 @@ def get_clip_query_annotation_data(annotation_name, annotation_value):
 
 
 def get_clip_query_tag_name(tag_name):
-    if tag_name == archive.NOT_APPLICABLE:
+    if tag_name == archive.NULL_CHOICE:
         return None
     else:
         return tag_name

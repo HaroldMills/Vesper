@@ -8,10 +8,6 @@ from vesper.singleton.preference_manager import preference_manager
 _DEFAULTS_PREFERENCE_NAME = 'form_defaults'
 
 
-# TODO: Preference manager should perform preference type checking, not
-# this module (and others).
-
-
 def get_field_default(form_title, field_label, default):
     
     preferences = preference_manager.preferences
@@ -42,4 +38,9 @@ def get_string_annotation_value_choices(
 
 def get_tag_choices(include_not_applicable=True):
     specs = archive.get_tag_specs(include_not_applicable)
+    return [(s, s) for s in specs]
+
+
+def get_preset_choices(preset_type, include_none=True):
+    specs = archive.get_preset_specs(preset_type, include_none)
     return [(s, s) for s in specs]

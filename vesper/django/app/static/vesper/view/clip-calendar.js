@@ -1,4 +1,4 @@
-import { NOT_APPLICABLE } from '/static/vesper/ui-constants.js';
+import { NULL_CHOICE } from '/static/vesper/ui-constants.js';
 import { ViewUtils } from '/static/vesper/view/view-utils.js';
 
 
@@ -35,12 +35,11 @@ function onLoad() {
 function setTitle() {
 
     const classificationText =
-        state.classification === NOT_APPLICABLE
-        ? '' : ` / ${state.classification}`;
+        state.classification === NULL_CHOICE
+		? '' : ` / ${state.classification}`;
         
     const tagText =
-        state.tag === NOT_APPLICABLE
-        ? '' : ` / ${state.tag}`;
+        state.tag === NULL_CHOICE ? '' : ` / ${state.tag}`;
         
 	const title =
 		`${state.stationMicName} / ${state.detectorName}` +

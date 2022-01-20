@@ -1599,7 +1599,7 @@ def _get_string_annotation_ui_value_spec(
     spec = archive.get_string_annotation_ui_value('Classification', spec)
 
     if spec is None or spec not in annotation_ui_value_specs:
-        spec = archive.NOT_APPLICABLE
+        spec = archive.NULL_CHOICE
 
     return spec
 
@@ -1609,7 +1609,7 @@ def _get_string_annotation_info(annotation_name, annotation_ui_value_spec):
     value_spec = archive.get_string_annotation_archive_value(
         annotation_name, annotation_ui_value_spec)
     
-    if value_spec == archive.NOT_APPLICABLE:
+    if value_spec == archive.NULL_CHOICE:
         
         # We return an `annotation_name` of `None` to denote all clips.
         annotation_name = None
@@ -1630,13 +1630,13 @@ def _get_tag_spec(tag_specs, params, preferences):
     spec = _get_calendar_query_field_value('tag', params, preferences)
     
     if spec is None or spec not in tag_specs:
-        spec = archive.NOT_APPLICABLE
+        spec = archive.NULL_CHOICE
         
     return spec
     
     
 def _get_tag_name(tag_spec):
-    if tag_spec == archive.NOT_APPLICABLE:
+    if tag_spec == archive.NULL_CHOICE:
         return None
     else:
         return tag_spec

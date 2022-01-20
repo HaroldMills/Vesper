@@ -6,6 +6,7 @@ from collections import defaultdict
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Processor, TagInfo)
 from vesper.singleton.preference_manager import preference_manager
+from vesper.singleton.preset_manager import preset_manager
         
 import vesper.util.yaml_utils as yaml_utils
 
@@ -16,7 +17,7 @@ import vesper.util.yaml_utils as yaml_utils
 # the client.
 
 
-_NOT_APPLICABLE = '-----'
+_NULL_CHOICE = '-----'
 _STRING_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
 _STRING_ANNOTATION_VALUE_WILDCARD = '*'
 _STRING_ANNOTATION_VALUE_NONE = '-None-'
@@ -113,8 +114,8 @@ class Archive:
         
     
     @property
-    def NOT_APPLICABLE(self):
-        return _NOT_APPLICABLE
+    def NULL_CHOICE(self):
+        return _NULL_CHOICE
     
     
     @property
@@ -407,7 +408,15 @@ class Archive:
         infos = TagInfo.objects.all().order_by('name')
         specs = [i.name for i in infos]
         if include_not_applicable:
-            specs = [_NOT_APPLICABLE] + specs
+            specs = [_NULL_CHOICE] + specs
+        return specs
+
+
+    def get_preset_specs(self, preset_type, include_none=True):
+        presets = preset_manager.get_presets(preset_type)
+        specs = ['/'.join(p.path[1:]) for p in presets]
+        if include_none:
+            specs = [_NULL_CHOICE] + specs
         return specs
     
     
@@ -597,7 +606,7 @@ def _get_string_annotation_archive_value_specs(annotation_values):
     """
     
     default_specs = [
-        _NOT_APPLICABLE,
+        _NULL_CHOICE,
         _STRING_ANNOTATION_VALUE_NONE,
         _STRING_ANNOTATION_VALUE_WILDCARD
     ]

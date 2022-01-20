@@ -6,7 +6,7 @@ import vesper.django.app.form_utils as form_utils
 
 
 _FORM_TITLE = 'Export clips to audio files'
-_TIME_INTERVAL_FIELD_LABEL = 'Time interval'
+_TIME_INTERVAL_FIELD_LABEL = 'Clip export time interval preset'
 _DIR_PATH_FIELD_LABEL = 'Output directory'
 
 
@@ -33,7 +33,6 @@ class ExportClipsToAudioFilesForm(ClipSetForm):
         super().__init__(*args, **kwargs)
         
         # Populate time interval field.
-        presets = preset_manager.get_presets('Clip Export Time Interval')
-        preset_paths = ['/'.join(p.path[1:]) for p in presets]
-        choices = [(None, 'None')] + [(p, p) for p in preset_paths]
-        self.fields['time_interval'].choices = choices
+        self.fields['time_interval'].choices = \
+            form_utils.get_preset_choices('Clip Export Time Interval')
+

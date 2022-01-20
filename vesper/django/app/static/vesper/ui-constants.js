@@ -1,1 +1,1 @@
-export const NOT_APPLICABLE = '-----';
+export const NULL_CHOICE = '-----';

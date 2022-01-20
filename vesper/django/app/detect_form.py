@@ -6,7 +6,7 @@ import vesper.django.app.form_utils as form_utils
 
 
 _FORM_TITLE = 'Detect'
-_SCHEDULE_FIELD_LABEL = 'Schedule'
+_SCHEDULE_FIELD_LABEL = 'Detection schedule preset'
 _DEFER_CLIP_CREATION_LABEL = 'Defer clip creation'
     
     
@@ -47,7 +47,5 @@ class DetectForm(forms.Form):
         self.fields['stations'].choices = [(n, n) for n in station_names]
         
         # Populate schedule field.
-        presets = preset_manager.get_presets('Detection Schedule')
-        preset_paths = ['/'.join(p.path[1:]) for p in presets]
-        choices = [(None, 'None')] + [(p, p) for p in preset_paths]
-        self.fields['schedule'].choices = choices
+        self.fields['schedule'].choices = \
+            form_utils.get_preset_choices('Detection Schedule')

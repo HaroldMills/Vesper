@@ -6,7 +6,7 @@ import vesper.django.app.form_utils as form_utils
 
 
 _FORM_TITLE = 'Export clip metadata to CSV file'
-_TABLE_FORMAT_FIELD_LABEL = 'Table format'
+_TABLE_FORMAT_FIELD_LABEL = 'Clip table format preset'
 
 
 def _get_field_default(name, default):
@@ -30,7 +30,6 @@ class ExportClipMetadataToCsvFileForm(ClipSetForm):
         super().__init__(*args, **kwargs)
         
         # Populate table format field.
-        presets = preset_manager.get_presets('Clip Table Format')
-        preset_paths = ['/'.join(p.path[1:]) for p in presets]
-        choices = [(p, p) for p in preset_paths]
-        self.fields['table_format'].choices = choices
+        self.fields['table_format'].choices = \
+            form_utils.get_preset_choices(
+                'Clip Table Format', include_none=False)

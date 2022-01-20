@@ -9,7 +9,7 @@ import { CommandableDelegate, KeyboardInputInterpreter }
 import { Layout } from '/static/vesper/clip-album/layout.js';
 import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
 import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
-import { NOT_APPLICABLE } from '/static/vesper/ui-constants.js';
+import { NULL_CHOICE } from '/static/vesper/ui-constants.js';
 import { PausingIterator, PausingIteratorState }
     from '/static/vesper/util/pausing-iterator.js';
 import { PreloadingClipManager }
@@ -931,11 +931,11 @@ export class ClipAlbum {
         const dateText = this._isSingleDateClipAlbum() ? ` / ${f.date}` : '';
         
         const classificationText =
-            f.classification === NOT_APPLICABLE
+            f.classification === NULL_CHOICE
             ? '' : ` / ${f.classification}`;
             
         const tagText =
-            f.tag === NOT_APPLICABLE
+            f.tag === NULL_CHOICE
             ? '' : ` / ${f.tag}`;
             
         const title = `${f.stationMicName}${dateText} / ${f.detectorName}` +
