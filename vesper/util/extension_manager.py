@@ -218,7 +218,7 @@ Importer:
     - vesper.old_bird.clip_importer.ClipImporter
 
 Preset:
-    - vesper.command.clip_export_time_interval_preset.ClipExportTimeIntervalPreset
+    - vesper.command.clip_export_settings_preset.ClipExportSettingsPreset
     - vesper.command.clip_table_format_preset.ClipTableFormatPreset
     - vesper.command.detection_schedule_preset.DetectionSchedulePreset
     - vesper.command.station_name_aliases_preset.StationNameAliasesPreset

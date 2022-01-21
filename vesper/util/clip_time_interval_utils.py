@@ -1,4 +1,4 @@
-# Utility functions concerning time intervals defined in terms of clip bounds.
+# Utility functions concerning clip time interval specifications.
 
 
 from vesper.util.bunch import Bunch
@@ -8,24 +8,24 @@ import vesper.util.signal_utils as signal_utils
 _CLIP_ALIGNMENTS = frozenset(['Center', 'Left', 'Right'])
 
 
-def parse_clip_time_interval_preset(preset):
+def parse_clip_time_interval_spec(spec):
 
-    if 'duration' in preset:
+    if 'duration' in spec:
         # duration explicit
 
-        duration = preset['duration']
+        duration = spec['duration']
 
         if duration <= 0:
             raise ValueError(f'Interval duration must be positive.')
 
-        alignment = preset.get('alignment', 'Center')
+        alignment = spec.get('alignment', 'Center')
 
         if alignment not in _CLIP_ALIGNMENTS:
             raise ValueError(
                 f'Unrecognized clip alignment "{alignment}". '
                 f'Alignment must be "Center", "Left", or "Right". ')
 
-        offset = preset.get('offset', 0)
+        offset = spec.get('offset', 0)
 
         result = Bunch(
             duration=duration,
@@ -35,9 +35,9 @@ def parse_clip_time_interval_preset(preset):
     else:
         # duration implicit
 
-        left_padding = preset.get('left_padding', 0)
-        right_padding = preset.get('right_padding', 0)
-        offset = preset.get('offset', 0)
+        left_padding = spec.get('left_padding', 0)
+        right_padding = spec.get('right_padding', 0)
+        offset = spec.get('offset', 0)
 
         result = Bunch(
             left_padding=left_padding,
@@ -47,17 +47,19 @@ def parse_clip_time_interval_preset(preset):
     return result
 
 
-def get_clip_time_interval(clip, interval):
+def get_clip_time_interval(clip, interval_spec):
 
     def s2f(duration):
         return signal_utils.seconds_to_frames(duration, clip.sample_rate)
 
-    if hasattr(interval, 'duration'):
+    spec = interval_spec
+
+    if hasattr(spec, 'duration'):
         # duration explicit
 
-        length = s2f(interval.duration)
+        length = s2f(spec.duration)
 
-        alignment = interval.alignment
+        alignment = spec.alignment
 
         if alignment == 'Center':
             start_offset = (clip.length - length) // 2
@@ -68,14 +70,14 @@ def get_clip_time_interval(clip, interval):
         else:
             start_offset = clip.length - length
 
-        start_offset -= s2f(interval.offset)
+        start_offset -= s2f(spec.offset)
 
     else:
         # duration implicit
 
-        offset = s2f(interval.offset)
-        left_padding = s2f(interval.left_padding) + offset
-        right_padding = s2f(interval.right_padding) - offset
+        offset = s2f(spec.offset)
+        left_padding = s2f(spec.left_padding) + offset
+        right_padding = s2f(spec.right_padding) - offset
 
         start_offset = -left_padding
         length = clip.length + left_padding + right_padding

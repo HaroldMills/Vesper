@@ -12,7 +12,7 @@ R = 'Right'
 class ClipTimedIntervalUtilsTests(TestCase):
 
 
-    def test_parse_clip_time_interval_preset(self):
+    def test_parse_clip_time_interval_spec(self):
 
         cases = [
 
@@ -36,13 +36,13 @@ class ClipTimedIntervalUtilsTests(TestCase):
 
         ]
 
-        parse = clip_time_interval_utils.parse_clip_time_interval_preset
-        for preset, expected in cases:
-            actual = parse(preset)
+        parse = clip_time_interval_utils.parse_clip_time_interval_spec
+        for spec, expected in cases:
+            actual = parse(spec)
             self.assertEqual(actual, expected)
 
     
-    def test_parse_clip_time_interval_preset_errors(self):
+    def test_parse_clip_time_interval_spec_errors(self):
 
         cases = [
             ed(0),
@@ -50,9 +50,9 @@ class ClipTimedIntervalUtilsTests(TestCase):
             ed(1, 'X')
         ]
 
-        parse = clip_time_interval_utils.parse_clip_time_interval_preset
-        for preset in cases:
-            self._assert_raises(ValueError, parse, preset)
+        parse = clip_time_interval_utils.parse_clip_time_interval_spec
+        for spec in cases:
+            self._assert_raises(ValueError, parse, spec)
 
 
     def test_get_clip_time_interval(self):
@@ -79,14 +79,14 @@ class ClipTimedIntervalUtilsTests(TestCase):
 
         get_interval = clip_time_interval_utils.get_clip_time_interval
         clip = Bunch(sample_rate=8, length=4)
-        for bunch, expected in cases:
-            actual = get_interval(clip, bunch)
+        for spec, expected in cases:
+            actual = get_interval(clip, spec)
             self.assertEqual(actual, expected)
 
 
 def ed(duration, alignment=None, offset=None):
 
-    """Constructs an explicit-duration dictionary."""
+    """Constructs an explicit-duration spec dictionary."""
 
     result = {}
 
@@ -104,7 +104,7 @@ def ed(duration, alignment=None, offset=None):
 
 def id(left_padding=None, right_padding=None, offset=None):
 
-    """Constructs an implicit-duration dictionary."""
+    """Constructs an implicit-duration spec dictionary."""
 
     result = {}
 
@@ -122,7 +122,7 @@ def id(left_padding=None, right_padding=None, offset=None):
 
 def eb(duration, alignment, offset):
 
-    """Constructs an explicit-duration bunch."""
+    """Constructs an explicit-duration spec bunch."""
 
     return Bunch(
         duration=duration,
@@ -132,7 +132,7 @@ def eb(duration, alignment, offset):
 
 def ib(left_padding, right_padding, offset):
 
-    """Constructs an implicit-duration bunch."""
+    """Constructs an implicit-duration spec bunch."""
 
     return Bunch(
         left_padding=left_padding,

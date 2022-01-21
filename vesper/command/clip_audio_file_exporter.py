@@ -6,6 +6,7 @@ import logging
 import os.path
 
 from vesper.command.command import CommandExecutionError
+from vesper.singleton.archive import archive
 from vesper.singleton.clip_manager import clip_manager
 from vesper.singleton.extension_manager import extension_manager
 from vesper.singleton.preset_manager import preset_manager
@@ -44,12 +45,12 @@ class ClipAudioFileExporter:
     def __init__(self, args):
     
         get = command_utils.get_required_arg
-        self._time_interval_preset_name = get('time_interval', args)
+        self._settings_preset_name = get('clip_export_settings_preset', args)
         self._output_dir_path = get('output_dir_path', args)
         spec = get('clip_file_name_formatter', args)
         
         self._time_interval = \
-            _parse_time_interval_preset(self._time_interval_preset_name)
+            _parse_settings_preset(self._settings_preset_name)
 
         self._file_name_formatter = _create_file_name_formatter(spec)
     
@@ -84,26 +85,33 @@ class ClipAudioFileExporter:
         pass
             
             
-def _parse_time_interval_preset(preset_name):
+def _parse_settings_preset(preset_name):
     
-    if preset_name == '':
+    if preset_name == archive.NULL_CHOICE:
+        # no preset specified
+
         return _DEFAULT_TIME_INTERVAL
     
-    preset_type = 'Clip Export Time Interval'
+    preset_type = 'Clip Export Settings'
     preset_path = (preset_type, preset_name)
     preset = preset_manager.get_preset(preset_path)
     data = preset.data
 
-    try:
-        return clip_time_interval_utils.parse_clip_time_interval_preset(data)
+    time_interval = data.get('time_interval')
 
-    except Exception as e:
+    if time_interval is not None:
+        # preset specifies clip time interval
 
-        _logger.warning(
-            f'Error parsing {preset_type} preset "{preset_name}". '
-            f'{e}. Preset will be ignored.')
+        try:
+            return clip_time_interval_utils.parse_clip_time_interval_spec(
+                time_interval)
 
-        return _DEFAULT_TIME_INTERVAL
+        except Exception as e:
+            _logger.warning(
+                f'Error parsing {preset_type} preset "{preset_name}". '
+                f'{e} Preset will be ignored.')
+
+    return _DEFAULT_TIME_INTERVAL
 
 
 def _create_file_name_formatter(spec):

@@ -617,7 +617,8 @@ def _create_export_clips_to_audio_files_command_spec(form):
             'exporter': {
                 'name': 'Clip Audio File Exporter',
                 'arguments': {
-                    'time_interval': data['time_interval'],
+                    'clip_export_settings_preset':
+                        data['clip_export_settings_preset'],
                     'output_dir_path': data['output_dir_path'],
                     'clip_file_name_formatter': {
                         'name': 'Simple Clip File Name Formatter',
