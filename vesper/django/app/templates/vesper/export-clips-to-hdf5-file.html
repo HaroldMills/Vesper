@@ -35,6 +35,7 @@
         
         {% include "vesper/clip-set-form-elements.html" %}
         
+        {{ form.clip_hdf5_file_export_settings_preset|form_element }}
         {{ form.output_file_path|block_form_element }}
 
         <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Export</button>

@@ -34,4 +34,3 @@ class ExportClipsToAudioFilesForm(ClipSetForm):
         # Populate settings preset field.
         self.fields['clip_export_settings_preset'].choices = \
             form_utils.get_preset_choices('Clip Export Settings')
-

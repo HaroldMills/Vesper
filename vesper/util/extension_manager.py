@@ -219,6 +219,7 @@ Importer:
 
 Preset:
     - vesper.command.clip_export_settings_preset.ClipExportSettingsPreset
+    - vesper.command.clip_hdf5_file_export_settings_preset.ClipHdf5FileExportSettingsPreset
     - vesper.command.clip_table_format_preset.ClipTableFormatPreset
     - vesper.command.detection_schedule_preset.DetectionSchedulePreset
     - vesper.command.station_name_aliases_preset.StationNameAliasesPreset

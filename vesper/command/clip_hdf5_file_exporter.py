@@ -4,37 +4,18 @@
 import logging
 
 import h5py
-import math
 
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import StringAnnotation
+from vesper.singleton.archive import archive
 from vesper.singleton.clip_manager import clip_manager
+from vesper.singleton.preset_manager import preset_manager
+from vesper.util.bunch import Bunch
+import vesper.util.clip_time_interval_utils as clip_time_interval_utils
 import vesper.command.command_utils as command_utils
 
 
 # TODO: Make reading clip ids and classifications from output files faster?
-
-
-# TODO: Modify exporter to accept YAML settings via presets. Do not switch
-# in code between sets of settings according to clip metadata, e.g. detector
-# and/or classification.
-#
-# For example, settings for NOGO coarse classifier call clips
-# might look something like:
-#
-#     extraction_start_reference: Call Start Index
-#     extraction_start_offset: -.2
-#     extraction_duration: .6
-#     annotations:
-#         - [Classification, String]
-#         - [Call Start Index, Integer]
-#
-# Settings for NOGO coarse classifier non-call clips might look like:
-#
-#     extraction_start_offset: 0
-#     extraction_duration: .6
-#     annotations:
-#         - [Classification, String, 'Other']
 
 
 # Settings for exports from 2017 and 2018 MPG Ranch archives for coarse
@@ -54,17 +35,20 @@ import vesper.command.command_utils as command_utils
 
 # Settings for exports from 2018 MPG Ranch archives for species classifier
 # training.
-_EXTRACTION_START_OFFSETS = {
-    'Tseep': -.5,
-    'Thrush': -.5
-}
-_EXTRACTION_DURATIONS = {
-    'Tseep': 1.2,
-    'Thrush': 1.2
-}
-_ANNOTATION_INFOS = []
-_DEFAULT_ANNOTATION_VALUES = {}
-_START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+# _EXTRACTION_START_OFFSETS = {
+#     'Tseep': -.5,
+#     'Thrush': -.5
+# }
+# _EXTRACTION_DURATIONS = {
+#     'Tseep': 1.2,
+#     'Thrush': 1.2
+# }
+# _ANNOTATION_INFOS = [
+#     ('Classification', None), 
+#     ('Call Start Index', int), 
+#     ('Call End Index', int)]
+# _DEFAULT_ANNOTATION_VALUES = {}
+# _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
 # # Settings for exports from 2017 MPG Ranch Archive 30k for NFC time bound
@@ -116,6 +100,11 @@ _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 # }
 
 
+_DEFAULT_TIME_INTERVAL = Bunch(
+    left_padding=0,
+    right_padding=0,
+    offset=0)
+
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
@@ -136,10 +125,16 @@ class ClipHdf5FileExporter:
     
     
     def __init__(self, args):
-        self._output_file_path = \
-            command_utils.get_required_arg('output_file_path', args)
+
+        get = command_utils.get_required_arg
+        self._settings_preset_name = \
+            get('clip_hdf5_file_export_settings_preset', args)
+        self._output_file_path = get('output_file_path', args)
     
-    
+        self._time_interval = \
+            _parse_settings_preset(self._settings_preset_name)
+
+
     def begin_exports(self):
         
         try:
@@ -154,151 +149,106 @@ class ClipHdf5FileExporter:
     def export(self, clip):
         
         annotations = _get_annotations(clip)
-        
-        result = self._extract_samples(clip, annotations)
-        
-        if result is not None:
-            
-            samples, start_index = result
-            
-            # Create dataset from clip samples.
-            name = '/clips/{:08d}'.format(clip.id)
-            self._file[name] = samples
-            
-            # Set dataset attributes from clip metadata.
-            attrs = self._file[name].attrs
-            attrs['clip_id'] = clip.id
-            attrs['station'] = clip.station.name
-            attrs['mic_output'] = clip.mic_output.name
-            attrs['detector'] = clip.creating_processor.name
-            attrs['date'] = str(clip.date)
-            attrs['sample_rate'] = clip.sample_rate
-            attrs['clip_start_time'] = _format_datetime(clip.start_time)
-            attrs['clip_start_index'] = clip.start_index
-            attrs['clip_length'] = clip.length
-            attrs['extraction_start_index'] = start_index
-            
-            for name, value in annotations.items():
-                name = name.lower().replace(' ', '_')
-                try:
-                    attrs[name] = value
-                except Exception:
-                    _logger.error(
-                        f'Could not assign value "{value}" for attribute '
-                        f'"{name}" for clip starting at {clip.start_time}.')
-                    raise
-                
-            return True
-        
-        else:
+
+        try:
+            samples, start_index = self._get_samples(clip, annotations)
+        except Exception as e:
+            _logger.warning(
+                f'Could not get samples for clip {clip}, so it will '
+                f'not appear in output. Error message was: {e}')
             return False
+
+        # Create dataset from clip samples.
+        name = '/clips/{:08d}'.format(clip.id)
+        self._file[name] = samples
+        
+        # Set dataset attributes from clip metadata.
+        attrs = self._file[name].attrs
+        attrs['clip_id'] = clip.id
+        attrs['station'] = clip.station.name
+        attrs['mic_output'] = clip.mic_output.name
+        attrs['detector'] = clip.creating_processor.name
+        attrs['date'] = str(clip.date)
+        attrs['sample_rate'] = clip.sample_rate
+        attrs['clip_start_time'] = _format_start_time(clip.start_time)
+        attrs['clip_start_index'] = clip.start_index
+        attrs['clip_length'] = clip.length
+        attrs['export_start_index'] = start_index
+        
+        for name, value in annotations.items():
+            name = name.lower().replace(' ', '_')
+            try:
+                attrs[name] = value
+            except Exception:
+                _logger.error(
+                    f'Could not assign value "{value}" for attribute '
+                    f'"{name}" for clip starting at {clip.start_time}.')
+                raise
+            
+        return True
         
  
-    def _extract_samples(self, clip, annotations):
+    def _get_samples(self, clip, annotations):
         
-        extent = _get_extraction_extent(clip, annotations)
+        start_offset, length = \
+            clip_time_interval_utils.get_clip_time_interval(
+                clip, self._time_interval)
+
+        # TODO: Specify in settings whether or not start offset is
+        # relative to an annotation value, and if so which one.
+        #
+        # If "Call Start Index" annotation is present, assume extraction
+        # start index is specified relative to it, and modify start
+        # offset to be relative to clip start index rather than call
+        # start index.
+        # call_start_index = annotations.get('Call Start Index')
+        # if call_start_index is not None:
+        #     start_offset += call_start_index - clip.start_index
+
+        samples = clip_manager.get_samples(clip, start_offset, length)
         
-        if extent is None:
-            return None
+        start_index = clip.start_index + start_offset
         
-        else:
-            
-            start_offset, length = extent
-            
-            try:
-                samples = clip_manager.get_samples(clip, start_offset, length)
-            
-            except Exception as e:
-                _logger.warning(
-                    f'Could not get samples for clip {clip}, so it will '
-                    f'not appear in output. Error message was: {e}')
-                return None
-            
-            start_index = clip.start_index + start_offset
-            
-            return samples, start_index
+        return samples, start_index
     
 
     def end_exports(self):
         pass
 
 
-def _get_extraction_extent(clip, annotations):
+def _parse_settings_preset(preset_name):
     
-    detector_name = _get_detector_name(clip)
-    
-    if detector_name is None:
-        return None
-    
-    else:
-        
-        # Get start offset and duration in seconds.
-        start_offset = _EXTRACTION_START_OFFSETS[detector_name]
-        duration = _EXTRACTION_DURATIONS[detector_name]
-        
-        # Convert to samples.
-        sample_rate = clip.sample_rate
-        start_offset = _seconds_to_samples(start_offset, sample_rate)
-        length = _seconds_to_samples(duration, sample_rate)
-        
-        # TODO: Specify in settings whether or not start offset is
-        # relative to an annotation value, and if so which one.
-        
-        # If "Call Start Index" annotation is present, assume extraction
-        # start index is specified relative to it, and modify start
-        # offset to be relative to clip start index rather than call
-        # start index.
-        call_start_index = annotations.get('Call Start Index')
-        if call_start_index is not None:
-            start_offset += call_start_index - clip.start_index
-        
-        return start_offset, length
-        
+    if preset_name == archive.NULL_CHOICE:
+        # no preset specified
 
-def _get_detector_name(clip):
+        return _DEFAULT_TIME_INTERVAL
     
-    detector_name = clip.creating_processor.name
-    
-    if detector_name.find('Thrush') != -1:
-        return 'Thrush'
-    
-    elif detector_name.find('Tseep') != -1:
-        return 'Tseep'
-    
-    elif detector_name.find('NOGO') != -1:
-        return 'NOGO'
-    
-    else:
-        return None
-    
-    
-def _seconds_to_samples(duration, sample_rate):
-    sign = -1 if duration < 0 else 1
-    return sign * int(math.ceil(abs(duration) * sample_rate))
+    preset_type = 'Clip HDF5 File Export Settings'
+    preset_path = (preset_type, preset_name)
+    preset = preset_manager.get_preset(preset_path)
+    data = preset.data
 
-            
-def _format_datetime(dt):
-    return dt.strftime(_START_TIME_FORMAT)
+    time_interval = data.get('time_interval')
+
+    if time_interval is not None:
+        # preset specifies clip time interval
+
+        try:
+            return clip_time_interval_utils.parse_clip_time_interval_spec(
+                time_interval)
+
+        except Exception as e:
+            _logger.warning(
+                f'Error parsing {preset_type} preset "{preset_name}". '
+                f'{e} Preset will be ignored.')
+
+    return _DEFAULT_TIME_INTERVAL
     
 
 def _get_annotations(clip):
-    return dict([
-        (name, _get_annotation_value(clip, name, value_converter))
-        for name, value_converter in _ANNOTATION_INFOS])
+    annotations = clip.string_annotations.select_related('info')
+    return dict((a.info.name, a.value) for a in annotations)
         
         
-def _get_annotation_value(clip, annotation_name, value_converter):
-    
-    try:
-        annotation = clip.string_annotations.get(
-            info__name=annotation_name)
-        
-    except StringAnnotation.DoesNotExist:
-        return _DEFAULT_ANNOTATION_VALUES.get(annotation_name)
-    
-    else:
-        
-        if value_converter is None or annotation.value is None:
-            return annotation.value
-        else:
-            return value_converter(annotation.value)
+def _format_start_time(dt):
+    return dt.strftime(_START_TIME_FORMAT)

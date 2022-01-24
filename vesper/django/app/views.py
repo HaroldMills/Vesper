@@ -667,6 +667,8 @@ def _create_export_clips_to_hdf5_file_command_spec(form):
             'exporter': {
                 'name': 'Clip HDF5 File Exporter',
                 'arguments': {
+                    'clip_hdf5_file_export_settings_preset':
+                        data['clip_hdf5_file_export_settings_preset'],
                     'output_file_path': data['output_file_path'],
                 }
             },
