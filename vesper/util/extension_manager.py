@@ -209,7 +209,7 @@ Detector:
     
 Exporter:
     - vesper.command.clip_audio_file_exporter.ClipAudioFileExporter
-    - vesper.command.clips_hdf5_file_exporter.ClipsHdf5FileExporter
+    - vesper.command.clip_hdf5_file_exporter.ClipHdf5FileExporter
     - vesper.command.clip_metadata_csv_file_exporter.ClipMetadataCsvFileExporter
     
 Importer:

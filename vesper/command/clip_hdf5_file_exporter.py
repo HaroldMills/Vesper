@@ -1,4 +1,4 @@
-"""Module containing class `ClipsHdf5FileExporter`."""
+"""Module containing class `ClipHdf5FileExporter`."""
 
 
 import logging
@@ -54,20 +54,17 @@ import vesper.command.command_utils as command_utils
 
 # Settings for exports from 2018 MPG Ranch archives for species classifier
 # training.
-# _EXTRACTION_START_OFFSETS = {
-#     'Tseep': -.5,
-#     'Thrush': -.5
-# }
-# _EXTRACTION_DURATIONS = {
-#     'Tseep': 1.2,
-#     'Thrush': 1.2
-# }
-# _ANNOTATION_INFOS = [
-#     ('Classification', None), 
-#     ('Call Start Index', int), 
-#     ('Call End Index', int)]
-# _DEFAULT_ANNOTATION_VALUES = {}
-# _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+_EXTRACTION_START_OFFSETS = {
+    'Tseep': -.5,
+    'Thrush': -.5
+}
+_EXTRACTION_DURATIONS = {
+    'Tseep': 1.2,
+    'Thrush': 1.2
+}
+_ANNOTATION_INFOS = []
+_DEFAULT_ANNOTATION_VALUES = {}
+_START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
 # # Settings for exports from 2017 MPG Ranch Archive 30k for NFC time bound
@@ -105,18 +102,18 @@ import vesper.command.command_utils as command_utils
 
 # Settings for negative examples from PSW NOGO Archive 2 for NOGO coarse
 # classifier training.
-_EXTRACTION_START_OFFSETS = {
-    'NOGO': 0
-}
-_EXTRACTION_DURATIONS = {
-    'NOGO': .6
-}
-_ANNOTATION_INFOS = [
-    ('Classification', None), 
-]
-_DEFAULT_ANNOTATION_VALUES = {
-    'Classification': 'Other',
-}
+# _EXTRACTION_START_OFFSETS = {
+#     'NOGO': 0
+# }
+# _EXTRACTION_DURATIONS = {
+#     'NOGO': .6
+# }
+# _ANNOTATION_INFOS = [
+#     ('Classification', None), 
+# ]
+# _DEFAULT_ANNOTATION_VALUES = {
+#     'Classification': 'Other',
+# }
 
 
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
@@ -125,7 +122,7 @@ _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 _logger = logging.getLogger()
 
 
-class ClipsHdf5FileExporter:
+class ClipHdf5FileExporter:
     
     """
     Exports clips to an HDF5 file.
@@ -135,7 +132,7 @@ class ClipsHdf5FileExporter:
     """
         
     
-    extension_name = 'Clips HDF5 File Exporter'
+    extension_name = 'Clip HDF5 File Exporter'
     
     
     def __init__(self, args):

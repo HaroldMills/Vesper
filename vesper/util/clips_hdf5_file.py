@@ -4,7 +4,7 @@ from vesper.util.bunch import Bunch
 import vesper.util.numpy_utils as numpy_utils
 
 
-class ClipsHdf5File:
+class ClipHdf5File:
     
     
     def __init__(self, file_path):
