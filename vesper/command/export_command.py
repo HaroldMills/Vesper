@@ -116,11 +116,6 @@ def _get_clips(
         command_utils.log_and_reraise_fatal_exception(e, 'Clip query')
     
     
-def _create_clip_count_text(count):
-    suffix = '' if count == 1 else 's'
-    return f'{count} clip{suffix}'
-        
-
 _LOGGING_PERIOD = 500    # clips
 
 
