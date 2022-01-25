@@ -13,7 +13,7 @@ class ClipExporter:
         pass
 
 
-    def end_subset_exports(self, station, mic_output, date, detector):
+    def end_subset_exports(self):
         pass
 
 

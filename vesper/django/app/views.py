@@ -31,8 +31,8 @@ from vesper.django.app.export_clip_metadata_to_csv_file_form import \
     ExportClipMetadataToCsvFileForm
 from vesper.django.app.export_clips_to_audio_files_form import \
     ExportClipsToAudioFilesForm
-from vesper.django.app.export_clips_to_hdf5_file_form import \
-    ExportClipsToHdf5FileForm
+from vesper.django.app.export_clips_to_hdf5_files_form import \
+    ExportClipsToHdf5FilesForm
 from vesper.django.app.import_metadata_form import ImportMetadataForm
 from vesper.django.app.import_recordings_form import ImportRecordingsForm
 from vesper.django.app.models import (
@@ -151,8 +151,9 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       - name: Export clips to audio files
         url_name: export-clips-to-audio-files
         
-      # - name: Export clips to HDF5 file
-      #   url_name: export-clips-to-hdf5-file
+      # - name: Export clips to HDF5 files
+      #   url_name: export-clips-to-hdf5-files
+
       
 - name: Edit
   dropdown:
@@ -636,17 +637,18 @@ def _create_export_clips_to_audio_files_command_spec(form):
 
 
 @login_required
-def export_clips_to_hdf5_file(request):
+def export_clips_to_hdf5_files(request):
 
     if request.method in _GET_AND_HEAD:
-        form = ExportClipsToHdf5FileForm()
+        form = ExportClipsToHdf5FilesForm()
 
     elif request.method == 'POST':
 
-        form = ExportClipsToHdf5FileForm(request.POST)
+        form = ExportClipsToHdf5FilesForm(request.POST)
 
         if form.is_valid():
-            command_spec = _create_export_clips_to_hdf5_file_command_spec(form)
+            command_spec = \
+                _create_export_clips_to_hdf5_files_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -654,10 +656,10 @@ def export_clips_to_hdf5_file(request):
 
     context = _create_template_context(request, 'Export', form=form)
 
-    return render(request, 'vesper/export-clips-to-hdf5-file.html', context)
+    return render(request, 'vesper/export-clips-to-hdf5-files.html', context)
 
 
-def _create_export_clips_to_hdf5_file_command_spec(form):
+def _create_export_clips_to_hdf5_files_command_spec(form):
 
     data = form.cleaned_data
 
@@ -669,7 +671,9 @@ def _create_export_clips_to_hdf5_file_command_spec(form):
                 'arguments': {
                     'clip_hdf5_file_export_settings_preset':
                         data['clip_hdf5_file_export_settings_preset'],
-                    'output_file_path': data['output_file_path'],
+                    'export_to_multiple_files':
+                        data['export_to_multiple_files'],
+                    'output_path': data['output_path'],
                 }
             },
         }

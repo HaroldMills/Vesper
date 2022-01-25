@@ -64,8 +64,8 @@ if not settings.ARCHIVE_READ_ONLY:
              name='export-clip-metadata-to-csv-file'),
         path('export-clips-to-audio-files/', views.export_clips_to_audio_files,
              name='export-clips-to-audio-files'),
-        path('export-clips-to-hdf5-file/', views.export_clips_to_hdf5_file,
-             name='export-clips-to-hdf5-file'),
+        path('export-clips-to-hdf5-files/', views.export_clips_to_hdf5_files,
+             name='export-clips-to-hdf5-files'),
         
         path('refresh-recording-audio-file-paths/',
              views.refresh_recording_audio_file_paths,

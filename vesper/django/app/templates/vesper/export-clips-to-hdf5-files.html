@@ -1,0 +1,56 @@
+{% extends 'vesper/base.html' %}
+
+{% block head %}
+
+    <title>Export clips to HDF5 file</title>
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+
+    {% load vesper_extras %}
+
+{% endblock head %}
+
+{% block main %}
+
+    <h2>Export clips to HDF5 files</h2>
+
+    <p>
+        Exports audio data and metadata for the specified clips to one
+        or more HDF5 files.
+    </p>
+
+    {% include "vesper/clips-specification-message.html" %}
+
+    <p>
+        Select the <code>Export to multiple HDF5 files</code> check box
+        below to save clips to multiple files instead of a single file.
+        When the check box is selected, this command will create one
+        HDF5 file for each unique combination of station/mic pair,
+        date, and detector among the specified clips, and export all
+        of the clips for each combination to the corresponding file.
+        It will save the files to the server directory whose
+        path is specified in the <code>File or directory path</code>
+        text field. When the <code>Export to multiple HDF5 files</code>
+        check box is not selected, the command will export all clips to
+        a single HDF5 file on the server. In this case, specify the path
+        of the file in the <code>File or directory path</code> text field.
+    </p>
+
+    {% include "vesper/command-executes-as-job-message.html" %}
+
+    <form class="form" role="form" action="{% url 'export-clips-to-hdf5-files' %}" method="post">
+
+        {% csrf_token %}
+        
+        {% include "vesper/clip-set-form-elements.html" %}
+        
+        {{ form.clip_hdf5_file_export_settings_preset|form_element }}
+        {{ form.export_to_multiple_files|form_checkbox }}
+        {{ form.output_path|block_form_element }}
+
+        <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Export</button>
+
+    </form>
+
+{% endblock main %}

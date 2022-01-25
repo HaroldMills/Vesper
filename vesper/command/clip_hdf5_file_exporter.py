@@ -2,17 +2,18 @@
 
 
 import logging
+import os
 
 import h5py
 
 from vesper.command.clip_exporter import ClipExporter
 from vesper.command.command import CommandExecutionError
-from vesper.django.app.models import StringAnnotation
 from vesper.singleton.archive import archive
 from vesper.singleton.clip_manager import clip_manager
 from vesper.singleton.preset_manager import preset_manager
 from vesper.util.bunch import Bunch
 import vesper.util.clip_time_interval_utils as clip_time_interval_utils
+import vesper.util.os_utils as os_utils
 import vesper.command.command_utils as command_utils
 
 
@@ -108,18 +109,15 @@ _DEFAULT_TIME_INTERVAL = Bunch(
 
 _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
+_SINGLE_OUTPUT_MIC_NAME_SUFFIX = ' Output'
+
 
 _logger = logging.getLogger()
 
 
 class ClipHdf5FileExporter(ClipExporter):
     
-    """
-    Exports clips to an HDF5 file.
-    
-    The clips are written to the server-side HDF5 file specified in
-    the `output_file_path` argument.
-    """
+    """Exports clips to one or more HDF5 files."""
         
     
     extension_name = 'Clip HDF5 File Exporter'
@@ -130,23 +128,49 @@ class ClipHdf5FileExporter(ClipExporter):
         get = command_utils.get_required_arg
         self._settings_preset_name = \
             get('clip_hdf5_file_export_settings_preset', args)
-        self._output_file_path = get('output_file_path', args)
+        self._export_to_multiple_files = get('export_to_multiple_files', args)
+        self._output_path = get('output_path', args)
     
         self._time_interval = \
             _parse_settings_preset(self._settings_preset_name)
 
 
     def begin_exports(self):
-        
+        if not self._export_to_multiple_files:
+            self._create_hdf5_file(self._output_path)
+
+
+    def _create_hdf5_file(self, file_path):
+
+        # Create parent directory if needed.
+        dir_path = os.path.dirname(file_path)
         try:
-            self._file = h5py.File(self._output_file_path, 'w')
+            os_utils.create_directory(dir_path)
+        except OSError as e:
+            raise CommandExecutionError(str(e))
+
+        # Create HDF5 file.
+        try:
+            self._file = h5py.File(file_path, 'w')
         except OSError as e:
             raise CommandExecutionError(str(e))
         
-        # Always create the "clips" group, even if it will be empty.
+        # Always create "clips" group in file, even if it will be empty.
         self._file.create_group('/clips')
         
     
+    def begin_subset_exports(self, station, mic_output, date, detector):
+
+        if self._export_to_multiple_files:
+
+            file_name = \
+                _create_hdf5_file_name(station, mic_output, date, detector)
+
+            file_path = os.path.join(self._output_path, file_name)
+
+            self._create_hdf5_file(file_path)
+
+
     def export(self, clip):
         
         annotations = _get_annotations(clip)
@@ -213,6 +237,16 @@ class ClipHdf5FileExporter(ClipExporter):
         return samples, start_index
 
 
+    def end_subset_exports(self, station, mic_output, date, detector):
+        if self._export_to_multiple_files:
+            self._file.close()
+
+
+    def end_exports(self):
+        if not self._export_to_multiple_files:
+            self._file.close()
+
+
 def _parse_settings_preset(preset_name):
     
     if preset_name == archive.NULL_CHOICE:
@@ -241,6 +275,16 @@ def _parse_settings_preset(preset_name):
 
     return _DEFAULT_TIME_INTERVAL
     
+
+def _create_hdf5_file_name(station, mic_output, date, detector):
+
+    # Abbreviate mic output name if mic has only one output.
+    mic_name = mic_output.name
+    if mic_name.endswith(_SINGLE_OUTPUT_MIC_NAME_SUFFIX):
+        mic_name = mic_name[:-len(_SINGLE_OUTPUT_MIC_NAME_SUFFIX)]
+
+    return f'{station.name}_{mic_name}_{date}_{detector.name}.h5'
+
 
 def _get_annotations(clip):
     annotations = clip.string_annotations.select_related('info')
