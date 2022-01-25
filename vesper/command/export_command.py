@@ -73,7 +73,7 @@ class ExportCommand(ClipSetCommand):
                     'Clip export failed. See below for exception traceback.')
                 raise
 
-            exporter.end_subset_exports(station, mic_output, date, detector)
+            exporter.end_subset_exports()
             
         exporter.end_exports()
             

@@ -16,15 +16,17 @@
     <h2>Export clips to audio files</h2>
 
     <p>
-        Exports the specified clips to wave files.
+        Exports the specified clips to audio files.
     </p>
 
     {% include "vesper/clips-specification-message.html" %}
 
     <p>
-        The wave files are written to the specified output directory on
-        the server. [In the future, the clips will be delivered to the
-        client in a zip file rather than written to the server file system.]
+        This command writes a WAVE file for each clip to the specified
+        server directory. You can control the padding (if any) included
+        for each clip by creating an appropriate
+        <code>Clip Audio File Export Settings</code> preset and selecting
+        it below.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
@@ -35,7 +37,7 @@
         
         {% include "vesper/clip-set-form-elements.html" %}
 
-        {{ form.clip_export_settings_preset|form_element }}
+        {{ form.clip_audio_file_export_settings_preset|form_element }}
         {{ form.output_dir_path|block_form_element }}
 
         <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Export</button>

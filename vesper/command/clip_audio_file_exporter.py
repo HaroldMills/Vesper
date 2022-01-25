@@ -46,7 +46,8 @@ class ClipAudioFileExporter(ClipExporter):
     def __init__(self, args):
     
         get = command_utils.get_required_arg
-        self._settings_preset_name = get('clip_export_settings_preset', args)
+        self._settings_preset_name = \
+            get('clip_audio_file_export_settings_preset', args)
         self._output_dir_path = get('output_dir_path', args)
         spec = get('clip_file_name_formatter', args)
         

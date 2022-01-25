@@ -237,7 +237,7 @@ class ClipHdf5FileExporter(ClipExporter):
         return samples, start_index
 
 
-    def end_subset_exports(self, station, mic_output, date, detector):
+    def end_subset_exports(self):
         if self._export_to_multiple_files:
             self._file.close()
 
