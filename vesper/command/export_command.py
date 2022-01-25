@@ -43,12 +43,16 @@ class ExportCommand(ClipSetCommand):
         
     def execute(self, job_info):
         
-        self._exporter.begin_exports()
+        exporter = self._exporter
+
+        exporter.begin_exports()
     
         value_tuples = self._create_clip_query_values_iterator()
         
         for station, mic_output, date, detector in value_tuples:
             
+            exporter.begin_subset_exports(station, mic_output, date, detector)
+
             clips = _get_clips(
                 station, mic_output, date, detector, self._annotation_name,
                 self._annotation_value, self._tag_name)
@@ -62,14 +66,16 @@ class ExportCommand(ClipSetCommand):
                 f'date {date}, and detector {detector.name}.')
             
             try:
-                _export_clips(clips, self._exporter)
+                _export_clips(clips, exporter)
                     
             except Exception:
                 _logger.error(
                     'Clip export failed. See below for exception traceback.')
                 raise
+
+            exporter.end_subset_exports(station, mic_output, date, detector)
             
-        self._exporter.end_exports()
+        exporter.end_exports()
             
         return True
 

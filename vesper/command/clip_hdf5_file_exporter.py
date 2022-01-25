@@ -5,6 +5,7 @@ import logging
 
 import h5py
 
+from vesper.command.clip_exporter import ClipExporter
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import StringAnnotation
 from vesper.singleton.archive import archive
@@ -111,7 +112,7 @@ _START_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 _logger = logging.getLogger()
 
 
-class ClipHdf5FileExporter:
+class ClipHdf5FileExporter(ClipExporter):
     
     """
     Exports clips to an HDF5 file.
@@ -210,10 +211,6 @@ class ClipHdf5FileExporter:
         start_index = clip.start_index + start_offset
         
         return samples, start_index
-    
-
-    def end_exports(self):
-        pass
 
 
 def _parse_settings_preset(preset_name):

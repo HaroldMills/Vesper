@@ -5,6 +5,7 @@ from datetime import timedelta as TimeDelta
 import logging
 import os.path
 
+from vesper.command.clip_exporter import ClipExporter
 from vesper.command.command import CommandExecutionError
 from vesper.singleton.archive import archive
 from vesper.singleton.clip_manager import clip_manager
@@ -27,7 +28,7 @@ _DEFAULT_TIME_INTERVAL = Bunch(
 _logger = logging.getLogger()
 
 
-class ClipAudioFileExporter:
+class ClipAudioFileExporter(ClipExporter):
     
     """
     Exports clip audio files.
@@ -79,10 +80,6 @@ class ClipAudioFileExporter:
             return False
 
         return True
-        
-        
-    def end_exports(self):
-        pass
             
             
 def _parse_settings_preset(preset_name):

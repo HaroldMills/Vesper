@@ -8,6 +8,7 @@ import csv
 import logging
 import tempfile
 
+from vesper.command.clip_exporter import ClipExporter
 from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import AnnotationInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
@@ -322,7 +323,7 @@ columns:
 _SUN_MOONS = SunMoonCache()
 
 
-class ClipMetadataCsvFileExporter:
+class ClipMetadataCsvFileExporter(ClipExporter):
     
     
     extension_name = 'Clip Metadata CSV File Exporter'
