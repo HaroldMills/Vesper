@@ -283,7 +283,7 @@ def _create_hdf5_file_name(station, mic_output, date, detector):
     if mic_name.endswith(_SINGLE_OUTPUT_MIC_NAME_SUFFIX):
         mic_name = mic_name[:-len(_SINGLE_OUTPUT_MIC_NAME_SUFFIX)]
 
-    return f'{station.name}_{mic_name}_{date}_{detector.name}.h5'
+    return f'{station.name}_{mic_name}_{detector.name}_{date}.h5'
 
 
 def _get_annotations(clip):
