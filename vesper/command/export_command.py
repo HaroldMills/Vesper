@@ -2,6 +2,7 @@
 
 
 import logging
+import time
 
 from vesper.command.clip_set_command import ClipSetCommand
 from vesper.command.command import CommandSyntaxError
@@ -43,6 +44,10 @@ class ExportCommand(ClipSetCommand):
         
     def execute(self, job_info):
         
+        start_time = time.time()
+        total_visited_count = 0
+        total_exported_count = 0
+
         exporter = self._exporter
 
         exporter.begin_exports()
@@ -66,17 +71,28 @@ class ExportCommand(ClipSetCommand):
                 f'date {date}, and detector {detector.name}.')
             
             try:
-                _export_clips(clips, exporter)
+                visited_count, exported_count = _export_clips(clips, exporter)
                     
             except Exception:
                 _logger.error(
                     'Clip export failed. See below for exception traceback.')
                 raise
 
+            total_visited_count += visited_count
+            total_exported_count += exported_count
+
             exporter.end_subset_exports()
             
         exporter.end_exports()
-            
+
+        elapsed_time = time.time() - start_time
+        timing_text = command_utils.get_timing_text(
+            elapsed_time, total_exported_count, 'clips')
+
+        _logger.info(
+            f'Command exported a total of {total_exported_count} '
+            f'of {total_visited_count} visited clips{timing_text}.')
+
         return True
 
 
@@ -127,6 +143,8 @@ _LOGGING_PERIOD = 500    # clips
 
 def _export_clips(clips, exporter):
     
+    start_time = time.time()
+    
     visited_count = 0
     exported_count = 0
     
@@ -140,5 +158,12 @@ def _export_clips(clips, exporter):
         if visited_count % _LOGGING_PERIOD == 0:
             _logger.info(f'Visited {visited_count} clips...')
             
+    elapsed_time = time.time() - start_time
+    timing_text = command_utils.get_timing_text(
+        elapsed_time, exported_count, 'clips')
+
     _logger.info(
-        f'Exported {exported_count} of {visited_count} visited clips.')
+        f'Exported {exported_count} of {visited_count} visited clips'
+        f'{timing_text}.')
+
+    return visited_count, exported_count
