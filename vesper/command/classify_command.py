@@ -37,6 +37,10 @@ class ClassifyCommand(Command):
 
     def execute(self, job_info):
         
+        start_time = time.time()
+        total_visited_count = 0
+        total_classified_count = 0
+
         classifier = self._create_classifier(job_info.job_id)
         
         classifier.begin_annotations()
@@ -58,16 +62,28 @@ class ClassifyCommand(Command):
                 f'date {date}, and detector "{detector.name}".')
             
             try:
-                _classify_clips(clips, classifier)
+                visited_count, classified_count = \
+                    _classify_clips(clips, classifier)
                     
             except Exception:
                 _logger.error(
                     'Clip classification failed. See below for exception '
                     'traceback.')
                 raise
+
+            total_visited_count += visited_count
+            total_classified_count += classified_count
             
         classifier.end_annotations()
     
+        elapsed_time = time.time() - start_time
+        timing_text = command_utils.get_timing_text(
+            elapsed_time, classified_count, 'clips')
+                
+        _logger.info(
+            f'Command classified a total of {total_classified_count} '
+            f'of {total_visited_count} visited clips{timing_text}.')
+
         return True
 
 
@@ -160,22 +176,25 @@ _LOGGING_PERIOD = 500    # clips
 def _classify_clips(clips, classifier):
     
     start_time = time.time()
-    
+
     if hasattr(classifier, 'annotate_clips'):
         classify = _classify_clip_batches
     else:
         classify = _classify_clips_individually
         
-    num_clips_classified = classify(clips, classifier)
+    classified_count = classify(clips, classifier)
+
+    visited_count = len(clips)
 
     elapsed_time = time.time() - start_time
-    num_clips = len(clips)
     timing_text = command_utils.get_timing_text(
-        elapsed_time, num_clips, 'clips')
+        elapsed_time, classified_count, 'clips')
             
     _logger.info(
-        f'Classified {num_clips_classified} of {num_clips} visited clips'
+        f'Classified {classified_count} of {visited_count} visited clips'
         f'{timing_text}.')
+
+    return visited_count, classified_count
 
 
 def _classify_clip_batches(clips, classifier):
@@ -184,23 +203,23 @@ def _classify_clip_batches(clips, classifier):
 
 def _classify_clips_individually(clips, classifier):
     
-    num_visited_clips = 0
-    num_classified_clips = 0
+    visited_count = 0
+    classified_count = 0
     
     for clip in clips:
         
         try:
             if classifier.annotate(clip):
-                num_classified_clips += 1
+                classified_count += 1
                         
         except Exception as e:
             _logger.error(
                 f'Classification failed for clip "{str(clip)}". '
                 f'Error message was: {str(e)}')
         
-        num_visited_clips += 1
+        visited_count += 1
         
-        if num_visited_clips % _LOGGING_PERIOD == 0:
-            _logger.info(f'Visited {num_visited_clips} clips...')
+        if visited_count % _LOGGING_PERIOD == 0:
+            _logger.info(f'Visited {visited_count} clips...')
             
-    return num_classified_clips
+    return classified_count
