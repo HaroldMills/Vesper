@@ -4,6 +4,8 @@
 import logging
 import time
 
+# from django.db import connection
+
 from vesper.command.clip_set_command import ClipSetCommand
 from vesper.command.command import CommandSyntaxError
 from vesper.singleton.extension_manager import extension_manager
@@ -44,11 +46,15 @@ class ExportCommand(ClipSetCommand):
         
     def execute(self, job_info):
         
+        # initial_query_count = len(connection.queries)
+
         start_time = time.time()
         total_visited_count = 0
         total_exported_count = 0
 
         exporter = self._exporter
+
+        select_related_args = exporter.clip_query_set_select_related_args
 
         exporter.begin_exports()
     
@@ -62,6 +68,9 @@ class ExportCommand(ClipSetCommand):
                 station, mic_output, date, detector, self._annotation_name,
                 self._annotation_value, self._tag_name)
             
+            if select_related_args is not None:
+                clips = clips.select_related(*select_related_args)
+
             count = clips.count()
             count_text = text_utils.create_count_text(count, 'clip')
             
@@ -77,6 +86,15 @@ class ExportCommand(ClipSetCommand):
                 _logger.error(
                     'Clip export failed. See below for exception traceback.')
                 raise
+
+            # final_query_count = len(connection.queries)
+            # for i, query in enumerate(connection.queries):
+            #     if i >= initial_query_count:
+            #         print()
+            #         print(i + 1, query)
+            # print()
+            # query_count = final_query_count - initial_query_count
+            # print(f'Made {query_count} queries.')
 
             total_visited_count += visited_count
             total_exported_count += exported_count

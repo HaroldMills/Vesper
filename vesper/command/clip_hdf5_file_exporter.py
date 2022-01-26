@@ -121,8 +121,13 @@ class ClipHdf5FileExporter(ClipExporter):
         
     
     extension_name = 'Clip HDF5 File Exporter'
-    
-    
+
+    clip_query_set_select_related_args = (
+        'station', 'mic_output__device', 'mic_output__model_output',
+        'creating_processor'
+    )
+
+
     def __init__(self, args):
 
         get = command_utils.get_required_arg
@@ -209,7 +214,7 @@ class ClipHdf5FileExporter(ClipExporter):
                     f'Could not assign value "{value}" for attribute '
                     f'"{name}" for clip starting at {clip.start_time}.')
                 raise
-            
+
         return True
         
  

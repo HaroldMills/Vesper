@@ -1,6 +1,9 @@
 class ClipExporter:
 
 
+    clip_query_set_select_related_args = None
+
+    
     def begin_exports(self):
         pass
 
