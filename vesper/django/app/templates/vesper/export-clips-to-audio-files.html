@@ -16,19 +16,24 @@
     <h2>Export clips to audio files</h2>
 
     <p>
-        Exports the specified clips to audio files.
+        Exports the specified clips to WAVE audio files.
     </p>
 
     {% include "vesper/clips-specification-message.html" %}
 
     <p>
-        This command writes a WAVE file for each clip to the specified
-        server directory. You can control the padding (if any) included
-        for each clip by creating an appropriate
-        <code>Clip Audio File Export Settings</code> preset and selecting
-        it below.
+        You can adjust the padding included with each exported clip by
+        creating an appropriate <code>Clip Audio File Export Settings</code>
+        preset and selecting it below.
     </p>
 
+    <p>
+        This command writes one WAVE file for each exported clip to the
+        specified output directory on the server. It automatically names
+        each output file to include the station name, microphone name,
+        start time, and detector name of its clip.
+    </p>
+        
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <form class="form" role="form" action="{% url 'export-clips-to-audio-files' %}" method="post">

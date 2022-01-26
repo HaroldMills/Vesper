@@ -23,18 +23,27 @@
     {% include "vesper/clips-specification-message.html" %}
 
     <p>
+        You can adjust the padding included with each exported clip by
+        creating an appropriate <code>Clip HDF5 File Export Settings</code>
+        preset and selecting it below.
+    </p>
+
+    <p>
         Select the <code>Export to multiple HDF5 files</code> check box
         below to save clips to multiple files instead of a single file.
-        When the check box is selected, this command will create one
+        When the check box is selected, this command creates one
         HDF5 file for each unique combination of station/mic pair,
-        date, and detector among the specified clips, and export all
+        date, and detector among the specified clips, and exports all
         of the clips for each combination to the corresponding file.
-        It will save the files to the server directory whose
-        path is specified in the <code>File or directory path</code>
-        text field. When the <code>Export to multiple HDF5 files</code>
-        check box is not selected, the command will export all clips to
+        It saves the files to the server directory whose path is specified
+        in the <code>File or directory path</code> text field. The command
+        automatically names each output file to include the station name,
+        microphone name, date, and detector name of the clips it contains.
+        When the <code>Export to multiple HDF5 files</code>
+        check box is not selected, the command exports all clips to
         a single HDF5 file on the server. In this case, specify the path
-        of the file in the <code>File or directory path</code> text field.
+        of the file, including the file name, in the
+        <code>File or directory path</code> text field.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
