@@ -151,8 +151,8 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       - name: Export clips to audio files
         url_name: export-clips-to-audio-files
         
-      # - name: Export clips to HDF5 files
-      #   url_name: export-clips-to-hdf5-files
+      - name: Export clips to HDF5 files
+        url_name: export-clips-to-hdf5-files
 
       
 - name: Edit
