@@ -164,16 +164,25 @@ class ClipHdf5FileExporter(ClipExporter):
         self._file.create_group('/clips')
         
     
-    def begin_subset_exports(self, station, mic_output, date, detector):
+    def begin_subset_exports(
+            self, station, mic_output, date, detector, clip_count):
 
         if self._export_to_multiple_files:
 
-            file_name = \
-                _create_hdf5_file_name(station, mic_output, date, detector)
+            if clip_count != 0:
+                # have clips to export
 
-            file_path = os.path.join(self._output_path, file_name)
+                file_name = \
+                    _create_hdf5_file_name(station, mic_output, date, detector)
 
-            self._create_hdf5_file(file_path)
+                file_path = os.path.join(self._output_path, file_name)
+
+                self._create_hdf5_file(file_path)
+
+            else:
+                # no clips to export
+
+                self._file = None
 
 
     def export(self, clip):
@@ -243,7 +252,7 @@ class ClipHdf5FileExporter(ClipExporter):
 
 
     def end_subset_exports(self):
-        if self._export_to_multiple_files:
+        if self._export_to_multiple_files and self._file is not None:
             self._file.close()
 
 

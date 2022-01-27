@@ -62,8 +62,6 @@ class ExportCommand(ClipSetCommand):
         
         for station, mic_output, date, detector in value_tuples:
             
-            exporter.begin_subset_exports(station, mic_output, date, detector)
-
             clips = _get_clips(
                 station, mic_output, date, detector, self._annotation_name,
                 self._annotation_value, self._tag_name)
@@ -71,16 +69,20 @@ class ExportCommand(ClipSetCommand):
             if select_related_args is not None:
                 clips = clips.select_related(*select_related_args)
 
-            count = clips.count()
-            count_text = text_utils.create_count_text(count, 'clip')
+            clip_count = clips.count()
+            count_text = text_utils.create_count_text(clip_count, 'clip')
             
             _logger.info(
                 f'Exporter will visit {count_text} for station '
                 f'"{station.name}", mic output "{mic_output.name}", '
                 f'date {date}, and detector {detector.name}.')
             
+            exporter.begin_subset_exports(
+                station, mic_output, date, detector, clip_count)
+
             try:
-                visited_count, exported_count = _export_clips(clips, exporter)
+                visited_count, exported_count = \
+                    _export_clips(clips, exporter)
                     
             except Exception:
                 _logger.error(
@@ -98,9 +100,9 @@ class ExportCommand(ClipSetCommand):
 
             total_visited_count += visited_count
             total_exported_count += exported_count
-
+        
             exporter.end_subset_exports()
-            
+
         exporter.end_exports()
 
         elapsed_time = time.time() - start_time

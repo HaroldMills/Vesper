@@ -8,7 +8,8 @@ class ClipExporter:
         pass
 
 
-    def begin_subset_exports(self, station, mic_output, date, detector):
+    def begin_subset_exports(
+            self, station, mic_output, date, detector, clip_count):
         pass
 
 
