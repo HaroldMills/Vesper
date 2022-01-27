@@ -20,19 +20,29 @@ def main():
             if i == CLIP_COUNT:
                 break
 
-            samples, sample_rate = read_clip(clip_group, clip_id)
+            samples, attributes = read_clip(clip_group, clip_id)
 
-            print(clip_id, len(samples), samples.dtype, sample_rate)
+            show_clip(clip_id, samples, attributes)
 
-            write_wave_file(clip_id, samples, sample_rate)
+            write_wave_file(clip_id, samples, attributes['sample_rate'])
 
 
 def read_clip(clip_group, clip_id):
     clip = clip_group[clip_id]
     samples = clip[:]
-    sample_rate = clip.attrs['sample_rate']
-    return samples, sample_rate
+    attributes = dict((name, value) for name, value in clip.attrs.items())
+    return samples, attributes
 
+
+def show_clip(clip_id, samples, attributes):
+    print(f'clip {clip_id}:')
+    print(f'    length: {len(samples)}')
+    print('    attributes:')
+    for key in sorted(attributes.keys()):
+        value = attributes[key]
+        print(f'        {key}: {value}')
+    print()
+        
 
 def write_wave_file(i, samples, sample_rate):
     file_name = f'{i}.wav'
