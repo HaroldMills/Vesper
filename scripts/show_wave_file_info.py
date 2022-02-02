@@ -4,51 +4,58 @@ its chunks.
 """
 
 
+from pathlib import Path
 import wave
 
 
-_FILE_PATH = (
-    '/Users/harold/Downloads/Ridge_20141022/RIDGE_20141023_082704.wav')
+FILE_PATHS = (
+    Path('/Users/harold/Desktop/NFC/FLAC Test/FLOOD-21C_20180901_194500.wav'),
+    Path('/Users/harold/Desktop/NFC/FLAC Test/bobo.wav')
+)
 
 
-def _main():
+def main():
+    for path in FILE_PATHS:
+        print(f'For file "{path.name}"...')
+        show_num_frames(path)
+        show_chunks(path)
     
-    _show_num_frames()
-    _show_chunks()
     
+def show_num_frames(file_path):
     
-def _show_num_frames():
-    
-    with wave.open(_FILE_PATH, 'rb') as reader:
-        p = reader.getparams()
-        print(
-            'wave module says file has {} sample frames in {} bytes'.format(
-                p.nframes, p.nframes * p.sampwidth))
+        with wave.open(str(file_path), 'rb') as reader:
+
+            p = reader.getparams()
+            byte_count = p.nframes * p.nchannels * p.sampwidth
+
+            print(
+                f'    Python wave module says file has {p.nframes} sample '
+                f'frames in {byte_count} bytes.')
         
         
-def _show_chunks():
+def show_chunks(file_path):
     
-    with open(_FILE_PATH, 'rb') as f:
+    with open(file_path, 'rb') as f:
         
-        file_size = _read_file_header(f)
+        file_size = read_file_header(f)
         
-        print('WAVE format subchunk IDs and sizes:')
+        print('    WAVE format subchunk IDs and sizes:')
         offset = 12
         while offset != file_size:
             f.seek(offset)
-            chunk_id, chunk_size = _read_chunk_header(f)
-            print('    "{}" {}'.format(chunk_id, chunk_size))
+            chunk_id, chunk_size = read_chunk_header(f)
+            print(f'        "{chunk_id}" {chunk_size}')
             offset += chunk_size + 8
         
         
-def _read_file_header(f):
-    _read_id(f, 'RIFF')
-    file_size = _read_int32(f) + 8
-    _read_id(f, 'WAVE')
+def read_file_header(f):
+    read_id(f, 'RIFF')
+    file_size = read_int32(f) + 8
+    read_id(f, 'WAVE')
     return file_size
     
 
-def _read_id(f, expected=None):
+def read_id(f, expected=None):
     
     # Read ID.
     data = f.read(4)
@@ -56,13 +63,13 @@ def _read_id(f, expected=None):
     
     # Check ID if indicated.
     if expected is not None and id_ != expected:
-        raise ValueError('Expected ID "{}" not found.'.format(id_))
+        raise ValueError(f'Expected ID "{id_}" not found.')
     
     else:
         return id_
         
 
-def _read_int32(f):
+def read_int32(f):
     bytes_ = reversed(f.read(4))
     i = 0
     for b in bytes_:
@@ -70,31 +77,11 @@ def _read_int32(f):
     return i
 
     
-def _read_chunk_header(f):
-    chunk_id = _read_id(f)
-    chunk_size = _read_int32(f)
+def read_chunk_header(f):
+    chunk_id = read_id(f)
+    chunk_size = read_int32(f)
     return chunk_id, chunk_size    
     
     
-# def _read_header(reader, check_format=True):
-#     
-#     p = reader.getparams()
-#         
-#     sample_size = p.sampwidth * 8
-# 
-#     if check_format:
-#         _check_wave_file_format(sample_size, p.comptype)
-#     
-#     sample_rate = float(p.framerate)
-#     
-#     return Bunch(
-#         num_channels=p.nchannels,
-#         length=p.nframes,
-#         sample_size=sample_size,
-#         sample_rate=sample_rate,
-#         compression_type=p.comptype,
-#         compression_name=p.compname)
-    
-    
 if __name__ == '__main__':
-    _main()
+    main()
