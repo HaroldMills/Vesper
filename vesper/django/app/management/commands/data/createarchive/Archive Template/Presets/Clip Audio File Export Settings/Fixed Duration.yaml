@@ -1,0 +1,20 @@
+# There are two basic ways to specify the time intervals of exported
+# clips. This preset demonstrates one of the ways, which involves
+# duration, alignment, and offset settings. If you specify a duration,
+# you're using this form of specification, and if you don't you're
+# using the other. See the other preset that accompanies this one for
+# an example of the other form.
+
+time_interval:
+
+    # Exported clip duration, in seconds.
+    duration: 3 
+
+    # Alignment of archive clip within exported clip, either "Center",
+    # "Left", or "Right". This setting is optional and defaults to "Center".
+    alignment: Center
+
+    # Offset of archive clip in exported clip relative to where it would
+    # be given duration and alignment alone, in seconds. This setting is
+    # optional and defaults to zero.
+    offset: -.1 
