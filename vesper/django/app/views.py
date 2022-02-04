@@ -14,7 +14,7 @@ from django.http import (
     HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseServerError,
     JsonResponse)
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.views.decorators.csrf import csrf_exempt
 import numpy as np
 
@@ -245,6 +245,9 @@ _DEFAULT_NAVBAR_DATA_READ_ONLY = yaml_utils.load(f'''
 ''')
 
 
+_logger = logging.getLogger(__name__)
+
+
 def _create_navbar_items():
     default_data = _get_default_navbar_data()
     data = preference_manager.preferences.get('navbar', default_data)
@@ -259,31 +262,54 @@ def _get_default_navbar_data():
         
     
 def _create_navbar_items_aux(data):
-    return tuple(_create_navbar_item(d) for d in data)
+    items = [_create_navbar_item(d) for d in data]
+    return [i for i in items if i is not None]
 
 
 def _create_navbar_item(data):
+
     if isinstance(data, str):
+
         if data == 'separator':
             return _create_navbar_separator_item()
+
         else:
-            return _create_navbar_unrecognized_item()
-    elif 'url_name' in data or 'url' in data:
+            _handle_bad_navbar_item(f'Unrecognized navbar item type "{data}".')
+            return None
+
+    elif 'url_name' in data:
+
+        url_name = data['url_name']
+
+        try:
+            reverse(url_name)
+
+        except NoReverseMatch:
+            _handle_bad_navbar_item(
+                f'Unrecognized navbar item URL name "{url_name}".')
+            return None
+
         return _create_navbar_link_item(data)
+
+    elif 'url' in data:
+        return _create_navbar_link_item(data)
+
     elif 'dropdown' in data:
         return _create_navbar_dropdown_item(data)
+
     else:
-        return _create_navbar_unrecognized_item(data)
+        _handle_bad_navbar_item(f'Bad navbar item specification {data}.')
+        return None
 
 
 def _create_navbar_separator_item():
     return Bunch(type='separator')
 
 
-def _create_navbar_unrecognized_item():
-    return Bunch(type='unrecognized')
+def _handle_bad_navbar_item(message):
+    _logger.warning(f'{message} Item will not appear in navbar.')
 
-    
+
 def _create_navbar_link_item(data):
     name = data['name']
     url = _get_navbar_link_url(data)
@@ -342,9 +368,6 @@ def _create_navbar_right_items(request):
         return [item]
 
 
-_navbar_items = _create_navbar_items()
-
-
 _ONE_DAY = datetime.timedelta(days=1)
 _GET_AND_HEAD = ('GET', 'HEAD')
 
@@ -398,11 +421,10 @@ def _start_job(command_spec, user):
     return HttpResponseRedirect(url)
 
 
-def _create_template_context(
-        request, active_navbar_item='', **kwargs):
+def _create_template_context(request, active_navbar_item='', **kwargs):
 
     kwargs.update(
-        navbar_items=_navbar_items,
+        navbar_items=_create_navbar_items(),
         navbar_right_items=_create_navbar_right_items(request),
         active_navbar_item=active_navbar_item)
 
@@ -951,8 +973,7 @@ def _create_transfer_clip_classifications_command_spec(form):
 #         content = clip_manager.get_audio_file_contents(clip, content_type)
 #
 #     except Exception as e:
-#         logger = logging.getLogger('django.server')
-#         logger.error(
+#         _logger.error(
 #             f'Attempt to get audio for clip "{str(clip)}" failed with '
 #             f'{e.__class__.__name__} exception. Exception message was: '
 #             f'{str(e)}')
@@ -1086,8 +1107,7 @@ def _get_clip_audios_aux(content):
                 clip, content_type)
             
         except Exception as e:
-            logger = logging.getLogger('django.server')
-            logger.error(
+            _logger.error(
                 f'Attempt to get audio file contents for clip '
                 f'"{str(clip)}" failed with {e.__class__.__name__} '
                 f'exception. Exception message was: {str(e)}')
