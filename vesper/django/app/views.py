@@ -421,10 +421,18 @@ def _start_job(command_spec, user):
     return HttpResponseRedirect(url)
 
 
+_navbar_items = None
+
+
 def _create_template_context(request, active_navbar_item='', **kwargs):
 
+    global _navbar_items
+
+    if _navbar_items is None:
+        _navbar_items = _create_navbar_items()
+
     kwargs.update(
-        navbar_items=_create_navbar_items(),
+        navbar_items=_navbar_items,
         navbar_right_items=_create_navbar_right_items(request),
         active_navbar_item=active_navbar_item)
 
