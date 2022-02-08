@@ -11,31 +11,16 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 
-import logging
 import os
 
 from vesper.archive_settings import archive_settings
 from vesper.archive_paths import archive_paths
+import vesper.util.logging_utils as logging_utils
 
 
-def _configure_logging():
-
-    """Configures the root logger message format."""
-
-    # We put the time of a log message first for sorting purposes (in
-    # case sorting is ever needed). We put the message last so a log line
-    # can be split into its parts relatively easily, even if the message
-    # happens to contain one or more separators. We put the level name
-    # just before the message since that reads nicely.
-    separator = ' | '
-    format = separator.join((
-        '%(asctime)s.%(msecs)03d', '%(name)s', '%(levelname)s', '%(message)s'))
-    logging.basicConfig(format=format, datefmt='%Y-%m-%d %H:%M:%S')
-
-
-# TODO: Is there a better place for this? We want to run it just once,
-# as early as possible when our Django project starts.
-_configure_logging()
+# TODO: Is there a better place for this? We want to configure logging
+# early, before anybody logs anything.
+logging_utils.configure_root_logger()
 
 
 # Set this `True` to omit UI and URLs that support archive modification,

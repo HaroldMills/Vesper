@@ -7,6 +7,7 @@ from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
 import logging
 
+import vesper.util.logging_utils as logging_utils
 import vesper.util.os_utils as os_utils
 
 
@@ -70,7 +71,7 @@ class JobLoggingManager:
         # processes and threads to the logging thread.
         self.queue = Queue()
         
-        formatter = Formatter('%(asctime)s %(levelname)-8s %(message)s')
+        formatter = logging_utils.create_formatter()
         
         # Create handler that writes log messages to the job log file.
         os_utils.create_parent_directory(job.log_file_path)
