@@ -10,7 +10,7 @@ import tempfile
 
 from vesper.command.clip_exporter import ClipExporter
 from vesper.command.command import CommandExecutionError
-from vesper.django.app.models import AnnotationInfo
+from vesper.django.app.models import AnnotationInfo, TagInfo
 from vesper.ephem.sun_moon import SunMoon, SunMoonCache
 from vesper.singleton.clip_manager import clip_manager
 from vesper.singleton.preset_manager import preset_manager
@@ -185,6 +185,7 @@ Measurements by name:
     Station Name
     Sunrise
     Sunset
+    Tag Status
 '''
 
 
@@ -240,6 +241,9 @@ Time:
 Annotations:
     Annotation Value
     Recent Clip Count
+
+Tags:
+    Tag Status
 
 Sun:
     Astronomical Dawn
@@ -1386,6 +1390,18 @@ class SunsetMeasurement(_SolarEventTimeMeasurement):
     name = 'Sunset'
 
 
+class TagStatusMeasurement(Measurement):
+
+    name = 'Tag Status'
+
+    def __init__(self, settings):
+        tag_name = self._get_required_setting(settings, 'tag_name')
+        self._tag_info = TagInfo.objects.get(name=tag_name)
+    
+    def measure(self, clip):
+        return model_utils.is_clip_tagged(clip, self._tag_info)
+
+
 _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     AnnotationValueMeasurement,
     AstronomicalDawnMeasurement,
@@ -1442,7 +1458,8 @@ _MEASUREMENT_CLASSES = dict((c.name, c) for c in [
     StartTimeMeasurement,
     StationNameMeasurement,
     SunriseMeasurement,
-    SunsetMeasurement
+    SunsetMeasurement,
+    TagStatusMeasurement,
 ])
 
 

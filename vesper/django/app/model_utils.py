@@ -572,9 +572,8 @@ def get_clip_annotation_value(clip, annotation_info):
         
     except StringAnnotation.DoesNotExist:
         return None
-    
-    else:
-        return annotation.value
+
+    return annotation.value
 
 
 @archive_lock.atomic
@@ -693,6 +692,25 @@ def unannotate_clip(
     unannotate_clips(
         [clip.id], annotation_info, creation_time=None, creating_user=None,
         creating_job=None, creating_processor=None)
+
+
+def get_clip_tags(clip):
+
+    tags = Tag.objects.filter(
+        clip_id=clip.id
+    ).annotate(name=F('info__name'))
+
+    return frozenset(t.name for t in tags)
+
+    
+def is_clip_tagged(clip, tag_info):
+
+    try:
+        tag = Tag.objects.get(clip=clip, info=tag_info)
+    except Tag.DoesNotExist:
+        return False
+    
+    return True
 
 
 @archive_lock.atomic
