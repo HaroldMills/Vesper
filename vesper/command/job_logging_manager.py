@@ -2,7 +2,7 @@
 
 
 from collections import defaultdict
-from logging import FileHandler, Formatter, Handler, StreamHandler
+from logging import FileHandler, Handler
 from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
 import logging
@@ -77,18 +77,21 @@ class JobLoggingManager:
         os_utils.create_parent_directory(job.log_file_path)
         file_handler = FileHandler(job.log_file_path, 'w')
         file_handler.setFormatter(formatter)
-        
-        # Create handler that writes log messages to stderr.
-        stderr_handler = StreamHandler()
-        stderr_handler.setFormatter(formatter)
+
+        # We used to create a second handler here, of type StreamHandler,
+        # which wrote messages to stderr, and add it to the QueueListener
+        # below, but that is no longer desirable since we now configure
+        # console output on the root logger in our Django project's
+        # settings.py file. Adding the second handler here would be
+        # redundant, causing jobs to output two copies of each log
+        # message to the console.
         
         self._record_counts_handler = _RecordCountsHandler()
         
         # Create logging listener that will run on its own thread and log
         # messages sent to it via the queue.
         self._listener = QueueListener(
-            self.queue, file_handler, stderr_handler,
-            self._record_counts_handler)
+            self.queue, file_handler, self._record_counts_handler)
         
         
     @property
