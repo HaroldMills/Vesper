@@ -410,12 +410,12 @@ class ClipMetadataCsvFileExporter(ClipExporter):
         except Exception as e:
             self._handle_output_error('Could not close output file.', e)
         
-        # Move output file from temporary file directory to specified
-        # location.
+        # Copy temporary output file to specified path.
         try:
             os_utils.copy_file(temp_file_path, self._output_file_path)
         except Exception as e:
-            self._handle_output_error('Could not rename output file.', e)
+            self._handle_output_error(
+                'Could not copy temporary output file to specified path.', e)
     
     
 def _get_table_format(table_format_name):
