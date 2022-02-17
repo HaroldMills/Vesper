@@ -90,7 +90,7 @@ def _parse_settings_preset(preset_name):
 
         return _DEFAULT_TIME_INTERVAL
     
-    preset_type = 'Clip Export Settings'
+    preset_type = 'Clip Audio File Export Settings'
     preset_path = (preset_type, preset_name)
     preset = preset_manager.get_preset(preset_path)
     data = preset.data
