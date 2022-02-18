@@ -22,16 +22,13 @@
     {% include "vesper/clips-specification-message.html" %}
 
     <p>
-        You can adjust the padding included with each exported clip by
-        creating an appropriate <code>Clip Audio File Export Settings</code>
-        preset and selecting it below.
-    </p>
-
-    <p>
         This command writes one WAVE file for each exported clip to the
         specified output directory on the server. It automatically names
         each output file to include the station name, microphone name,
-        start time, and detector name of its clip.
+        start time, and detector name of its contents. You can adjust
+        the padding included with each exported clip by creating an
+        appropriate <code>Clip Audio File Export Settings</code> preset
+        and selecting it below.
     </p>
         
     {% include "vesper/command-executes-as-job-message.html" %}

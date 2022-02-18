@@ -22,10 +22,12 @@
     {% include "vesper/clips-specification-message.html" %}
 
     <p>
-        The CSV file is written at the specified path on the server,
-        and contains one row for each clip.
-        [In the future, the CSV file will be delivered to the client rather
-        than written to the server file system.]
+        This command writes the CSV file at the specified path on the
+        server, overwriting any existing file at that path. The file
+        contains one row for each clip. You can adjust the types and
+        format of the metadata written to the columns of the file by
+        creating an appropriate <code>Clip Table Format</code> preset
+        and selecting it below.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
