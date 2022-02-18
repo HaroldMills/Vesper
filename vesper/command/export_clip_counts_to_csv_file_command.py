@@ -15,10 +15,10 @@ import vesper.command.command_utils as command_utils
 import vesper.util.os_utils as os_utils
 
 
-# TODO: Allow specification of sets of detectors, sensors, dates, and
-#       classifications of clips to count.
-# TODO: Allow specification of classification annotation name.
-# TODO: Support tagged clip counts.
+# TODO: Allow user specification of sets of detectors, sensors, dates, and
+#       annotation values of clips to count.
+# TODO: Allow user specification of annotation name.
+# TODO: Support export of clip tag counts.
 # TODO: Optionally output estimated bird counts as well as clip counts.
 #       This will require looking at clip times.
 
@@ -26,12 +26,23 @@ import vesper.util.os_utils as os_utils
 _logger = logging.getLogger()
 
 
-_CLIP_COUNT_QUERY = '''
+_ANNOTATION_NAME = 'Classification'
+
+_ANNOTATION_VALUE_SUBSTITUTIONS = {
+    None: 'Unclassified'
+}
+
+_ANNOTATION_VALUE_COMPONENT_SEPARATOR = '.'
+
+
+def _create_clip_count_query(annotation_name):
+
+    return f'''
 SELECT
-    vesper_processor.name Detector,
-    vesper_station.name Station,
-    date Date,
-    value Classification,
+    vesper_processor.name AS detector_name,
+    vesper_station.name AS station_name,
+    vesper_clip.date AS date,
+    vesper_string_annotation.value AS annotation_value,
     count(*)
 FROM
     vesper_clip
@@ -39,27 +50,27 @@ LEFT JOIN vesper_string_annotation
     ON vesper_clip.id = vesper_string_annotation.clip_id
         AND info_id = (
             SELECT id from vesper_annotation_info
-            WHERE name = 'Classification')
+            WHERE name = '{annotation_name}')
 INNER JOIN vesper_processor
     ON vesper_clip.creating_processor_id = vesper_processor.id
 INNER JOIN vesper_station
-    ON vesper_station.id = station_id
+    ON vesper_station.id = vesper_clip.station_id
 GROUP BY
-    Detector,
-    Station,
-    Date,
-    Classification
+    detector_name,
+    station_name,
+    date,
+    annotation_value
 '''.lstrip()
 
-_CLASSIFICATION_SUBSTITUTIONS = {
-    None: 'Unclassified'
-}
 
-_CSV_FILE_HEADER = ('Detector', 'Station', 'Date', 'Classification', 'Clips')
+def _get_csv_file_header(annotation_name):
+    return ('Detector', 'Station', 'Date', annotation_name, 'Clips')
 
 
 _Row = namedtuple(
-    'Row', ('detector', 'station', 'date', 'classification', 'clip_count'))
+    '_Row',
+    ('detector_name', 'station_name', 'date', 'annotation_value',
+     'clip_count'))
 
 
 class ExportClipCountsToCsvFileCommand(Command):
@@ -74,18 +85,28 @@ class ExportClipCountsToCsvFileCommand(Command):
         
         get = command_utils.get_required_arg
         self._output_file_path = get('output_file_path', args)
+
+        # In the future, these might come from the command arguments
+        # and/or a preset named by a command argument.
+        self._annotation_name = _ANNOTATION_NAME
+        self._annotation_value_substitutions = _ANNOTATION_VALUE_SUBSTITUTIONS
+        self._annotation_value_component_separator = \
+            _ANNOTATION_VALUE_COMPONENT_SEPARATOR
         
         
     def execute(self, job_info):
 
         _logger.info('Querying archive database...')
-        rows = self._query_database()
+        rows = self._query_database(self._annotation_name)
 
-        _logger.info('Performing output value substitutions...')
-        rows = self._perform_substitutions(rows)
+        _logger.info('Performing annotation value substitutions...')
+        rows = self._perform_substitutions(
+            rows, self._annotation_value_substitutions)
 
-        _logger.info('Adding wildcard classification clip counts...')
-        rows = self._add_wildcard_rows(rows)
+        if self._annotation_value_component_separator is not None:
+            _logger.info('Adding wildcard clip counts...')
+            rows = self._add_wildcard_rows(
+                rows, self._annotation_value_component_separator)
 
         _logger.info('Writing output file...')
         self._write_csv_file(rows)
@@ -93,11 +114,13 @@ class ExportClipCountsToCsvFileCommand(Command):
         return True
 
 
-    def _query_database(self):
+    def _query_database(self, annotation_name):
+
+        query = _create_clip_count_query(annotation_name)
 
         try:
             with connection.cursor() as cursor:
-                cursor.execute(_CLIP_COUNT_QUERY)
+                cursor.execute(query)
                 rows = cursor.fetchall()
         except Exception as e:
             self._handle_error('Database query failed.', e)
@@ -109,26 +132,29 @@ class ExportClipCountsToCsvFileCommand(Command):
         raise CommandExecutionError(f'{message} Error message was: {str(e)}.')
     
     
-    def _perform_substitutions(self, rows):
-        return [self._perform_substitutions_aux(r) for r in rows]
+    def _perform_substitutions(self, rows, substitutions):
+        return [
+            self._perform_substitutions_aux(r, substitutions) for r in rows]
 
 
-    def _perform_substitutions_aux(self, r):
+    def _perform_substitutions_aux(self, row, substitutions):
                 
-        classification = _CLASSIFICATION_SUBSTITUTIONS.get(
-            r.classification, r.classification)
-                    
-        return _Row(
-            r.detector, r.station, r.date, classification, r.clip_count)
+        value = substitutions.get(row.annotation_value)
+
+        if value is None:
+            return row
+
+        else:
+            return row._replace(annotation_value=value)
 
 
-    def _add_wildcard_rows(self, rows):
+    def _add_wildcard_rows(self, rows, separator):
 
-        parent_classifications = self._get_parent_classifications(rows)
+        parent_values = self._get_parent_annotation_values(rows, separator)
 
         wildcard_rows = list(itertools.chain.from_iterable(
-            self._create_wildcard_rows(rows, c)
-            for c in parent_classifications))
+            self._create_wildcard_rows(rows, v, separator)
+            for v in parent_values))
 
         rows = rows + wildcard_rows
 
@@ -137,55 +163,54 @@ class ExportClipCountsToCsvFileCommand(Command):
         return rows
 
 
-    def _get_parent_classifications(self, rows):
+    def _get_parent_annotation_values(self, rows, separator):
 
-        classifications = set()
+        parent_values = set()
 
         for r in rows:
 
-            parts = r.classification.split('.')
+            parts = r.annotation_value.split(separator)
 
             if len(parts) > 1:
 
                 for i in range(len(parts) - 1):
-                    classification = '.'.join(parts[:i + 1])
-                    classifications.add(classification)
+                    parent_value = separator.join(parts[:i + 1])
+                    parent_values.add(parent_value)
 
-        return sorted(classifications)
+        return sorted(parent_values)
 
 
-    def _create_wildcard_rows(self, rows, parent_classification):
+    def _create_wildcard_rows(self, rows, parent_annotation_value, separator):
 
 
         # For each distinct combination of detector, station, and date,
-        # count clips that have classifications that are subclassifications
-        # of the parent classification, including the parent classification
-        # itself.
+        # count clips that have annotation values that are subvalues
+        # of the parent value, including the parent value itself.
 
-        descendent_prefix = parent_classification + '.'
+        descendent_prefix = parent_annotation_value + separator
         clip_counts = defaultdict(int)
 
         for r in rows:
 
-            classification = r.classification
+            value = r.annotation_value
 
-            if classification == parent_classification or \
-                    classification.startswith(descendent_prefix):
+            if value == parent_annotation_value or \
+                    value.startswith(descendent_prefix):
 
-                key = (r.detector, r.station, r.date)
+                key = (r.detector_name, r.station_name, r.date)
                 clip_counts[key] += int(r.clip_count)
                 
 
         # Create wildcard row for each clip count.
         wildcard_rows = [
-            self._create_wildcard_row(key, clip_count, parent_classification)
+            self._create_wildcard_row(key, clip_count, parent_annotation_value)
             for key, clip_count in clip_counts.items()]
         
         return wildcard_rows
 
 
-    def _create_wildcard_row(self, key, clip_count, parent_classification):
-        t = key + (parent_classification + '*', clip_count)
+    def _create_wildcard_row(self, key, clip_count, parent_annotation_value):
+        t = key + (parent_annotation_value + '*', clip_count)
         return _Row(*t)
 
 
@@ -206,8 +231,9 @@ class ExportClipCountsToCsvFileCommand(Command):
             self._handle_error('Could not create output file CSV writer.', e)
 
         # Write header.
+        header = _get_csv_file_header(self._annotation_name)
         try:
-            writer.writerow(_CSV_FILE_HEADER)
+            writer.writerow(header)
         except Exception as e:
             self._handle_error('Could not write output file header.', e)
 
