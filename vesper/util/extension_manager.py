@@ -185,6 +185,7 @@ Command:
     - vesper.command.detect_command.DetectCommand
     - vesper.command.execute_deferred_actions_command.ExecuteDeferredActionsCommand
     - vesper.command.export_clip_counts_to_csv_file_command.ExportClipCountsToCsvFileCommand
+    - vesper.command.export_clip_tag_counts_to_csv_file_command.ExportClipTagCountsToCsvFileCommand
     - vesper.command.export_command.ExportCommand
     - vesper.command.import_command.ImportCommand
     - vesper.command.refresh_recording_audio_file_paths_command.RefreshRecordingAudioFilePathsCommand
