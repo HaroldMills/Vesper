@@ -2,17 +2,12 @@
 
 
 from collections import namedtuple, defaultdict
-from pathlib import Path
-import csv
-import itertools
 import logging
-import tempfile
 
 from django.db import connection
 
-from vesper.command.command import Command, CommandExecutionError
+from vesper.command.command import Command
 import vesper.command.command_utils as command_utils
-import vesper.util.os_utils as os_utils
 
 
 # TODO: Allow user specification of sets of detectors, sensors, dates, and
@@ -47,8 +42,7 @@ GROUP BY
 '''.lstrip()
 
 
-def _get_csv_file_header():
-    return ('Detector', 'Station', 'Date', 'Tag', 'Clips')
+_OUTPUT_FILE_HEADER = ('Detector', 'Station', 'Date', 'Tag', 'Clips')
 
 
 _Row = namedtuple(
@@ -76,7 +70,8 @@ class ExportClipCountsByTagToCsvFileCommand(Command):
         rows = self._query_database()
 
         _logger.info('Writing output file...')
-        self._write_csv_file(rows)
+        command_utils.write_csv_file(
+            self._output_file_path, rows, _OUTPUT_FILE_HEADER)
 
         return True
 
@@ -88,55 +83,7 @@ class ExportClipCountsByTagToCsvFileCommand(Command):
                 cursor.execute(_CLIP_COUNT_QUERY)
                 rows = cursor.fetchall()
         except Exception as e:
-            self._handle_error('Database query failed.', e)
+            command_utils.handle_command_execution_error(
+                'Database query failed.', e)
 
         return [_Row(*r) for r in rows]
-
-
-    def _handle_error(self, message, e):
-        raise CommandExecutionError(f'{message} Error message was: {str(e)}.')
-    
-    
-    def _write_csv_file(self, rows):
-        
-        # Create output CSV file in temporary file directory.
-        try:
-            temp_file = tempfile.NamedTemporaryFile(
-                'wt', newline='', prefix='vesper-', suffix='.csv',
-                delete=False)
-        except Exception as e:
-            self._handle_error('Could not open output file.', e)
-        
-        # Create CSV writer.
-        try:
-            writer = csv.writer(temp_file)
-        except Exception as e:
-            self._handle_error('Could not create output file CSV writer.', e)
-
-        # Write header.
-        header = _get_csv_file_header()
-        try:
-            writer.writerow(header)
-        except Exception as e:
-            self._handle_error('Could not write output file header.', e)
-
-        # Write data rows.
-        try:
-            writer.writerows(rows)
-        except Exception as e:
-            self._handle_error('Could not write output file data rows.', e)
-
-        temp_file_path = Path(temp_file.name)
-        
-        # Close output file.
-        try:
-            temp_file.close()
-        except Exception as e:
-            self._handle_error('Could not close output file.', e)
-        
-        # Copy temporary output file to specified path.
-        try:
-            os_utils.copy_file(temp_file_path, self._output_file_path)
-        except Exception as e:
-            self._handle_error(
-                'Could not copy temporary output file to specified path.', e)

@@ -4,17 +4,13 @@ Module containing class `ExportClipCountsByClassificationToCsvFileCommand`.
 
 
 from collections import namedtuple, defaultdict
-from pathlib import Path
-import csv
 import itertools
 import logging
-import tempfile
 
 from django.db import connection
 
-from vesper.command.command import Command, CommandExecutionError
+from vesper.command.command import Command
 import vesper.command.command_utils as command_utils
-import vesper.util.os_utils as os_utils
 
 
 # TODO: Allow user specification of sets of detectors, sensors, dates, and
@@ -111,7 +107,8 @@ class ExportClipCountsByClassificationToCsvFileCommand(Command):
                 rows, self._annotation_value_component_separator)
 
         _logger.info('Writing output file...')
-        self._write_csv_file(rows)
+        header = _get_csv_file_header(self._annotation_name)
+        command_utils.write_csv_file(self._output_file_path, rows, header)
 
         return True
 
@@ -125,15 +122,12 @@ class ExportClipCountsByClassificationToCsvFileCommand(Command):
                 cursor.execute(query)
                 rows = cursor.fetchall()
         except Exception as e:
-            self._handle_error('Database query failed.', e)
+            command_utils.handle_command_execution_error(
+                'Database query failed.', e)
 
         return [_Row(*r) for r in rows]
 
 
-    def _handle_error(self, message, e):
-        raise CommandExecutionError(f'{message} Error message was: {str(e)}.')
-    
-    
     def _perform_substitutions(self, rows, substitutions):
         return [
             self._perform_substitutions_aux(r, substitutions) for r in rows]
@@ -214,48 +208,3 @@ class ExportClipCountsByClassificationToCsvFileCommand(Command):
     def _create_wildcard_row(self, key, clip_count, parent_annotation_value):
         t = key + (parent_annotation_value + '*', clip_count)
         return _Row(*t)
-
-
-    def _write_csv_file(self, rows):
-        
-        # Create output CSV file in temporary file directory.
-        try:
-            temp_file = tempfile.NamedTemporaryFile(
-                'wt', newline='', prefix='vesper-', suffix='.csv',
-                delete=False)
-        except Exception as e:
-            self._handle_error('Could not open output file.', e)
-        
-        # Create CSV writer.
-        try:
-            writer = csv.writer(temp_file)
-        except Exception as e:
-            self._handle_error('Could not create output file CSV writer.', e)
-
-        # Write header.
-        header = _get_csv_file_header(self._annotation_name)
-        try:
-            writer.writerow(header)
-        except Exception as e:
-            self._handle_error('Could not write output file header.', e)
-
-        # Write data rows.
-        try:
-            writer.writerows(rows)
-        except Exception as e:
-            self._handle_error('Could not write output file data rows.', e)
-
-        temp_file_path = Path(temp_file.name)
-        
-        # Close output file.
-        try:
-            temp_file.close()
-        except Exception as e:
-            self._handle_error('Could not close output file.', e)
-        
-        # Copy temporary output file to specified path.
-        try:
-            os_utils.copy_file(temp_file_path, self._output_file_path)
-        except Exception as e:
-            self._handle_error(
-                'Could not copy temporary output file to specified path.', e)
