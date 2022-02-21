@@ -15,11 +15,12 @@ from vesper.django.app.models import (
 import vesper.util.time_utils as time_utils
 
 
+CLIP_TYPE = 'Tseep'
+# CLIP_TYPE = 'Thrush'
+
 DETECTORS = (
-    # ('Old Bird Tseep Detector', 'Original'),
-    # ('Old Bird Tseep Detector Redux 1.1', 'Redux'),
-    ('Old Bird Thrush Detector', 'Original'),
-    ('Old Bird Thrush Detector Redux 1.1', 'Redux'),
+    (f'Old Bird {CLIP_TYPE} Detector', 'Original'),
+    (f'Old Bird {CLIP_TYPE} Detector Redux 1.1', 'Redux'),
 )
 
 STATION_MIC_PAIRS = (
@@ -36,12 +37,12 @@ START_DATE = datetime.date(2016, 4, 1)
 END_DATE = datetime.date(2016, 6, 30)
 
 OUTPUT_FILE_PATH = Path(
-    '/Users/harold/Desktop/NFC/Data/Old Bird/Lighthouse/'
-    'Lighthouse 2016 Old Bird Detector Comparison Archive/'
-    'Old Bird Thrush Detector Comparison.csv')
+    f'/Users/harold/Desktop/NFC/Data/Old Bird/Lighthouse/'
+    f'Lighthouse 2016 Old Bird Detector Comparison Archive/'
+    f'Old Bird {CLIP_TYPE} Detector Comparison.csv')
 
 OUTPUT_FILE_HEADER_FORMAT = (
-    'Station / Mic,Date,'
+    'Detector,Station / Mic,Date,'
     '{} Clips,{} Clips,'
     'Perfect Matches,Imperfect Matches,'
     'Unmatched {} Clips,Unmatched {} Clips')
@@ -249,7 +250,7 @@ def write_output_row(writer, station, mic_output, date, clip_pairs):
         station_mic_name = f'{station.name} / {mic_output.device.name}'
         
         writer.writerow((
-            station_mic_name, str(date),
+            CLIP_TYPE, station_mic_name, str(date),
             a_count, b_count,
             perfect_match_count, imperfect_match_count,
             unmatched_a_count, unmatched_b_count))
