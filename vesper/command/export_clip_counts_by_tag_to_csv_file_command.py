@@ -1,4 +1,4 @@
-"""Module containing class `ExportClipTagCountsToCsvFileCommand`."""
+"""Module containing class `ExportClipCountsByTagToCsvFileCommand`."""
 
 
 from collections import namedtuple, defaultdict
@@ -56,10 +56,10 @@ _Row = namedtuple(
     ('detector_name', 'station_name', 'date', 'tag_name', 'clip_count'))
 
 
-class ExportClipTagCountsToCsvFileCommand(Command):
+class ExportClipCountsByTagToCsvFileCommand(Command):
     
     
-    extension_name = 'export_clip_tag_counts_to_csv_file'
+    extension_name = 'export_clip_counts_by_tag_to_csv_file'
     
     
     def __init__(self, args):

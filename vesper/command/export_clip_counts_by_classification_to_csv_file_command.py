@@ -1,4 +1,6 @@
-"""Module containing class `ExportClipCountsToCsvFileCommand`."""
+"""
+Module containing class `ExportClipCountsByClassificationToCsvFileCommand`.
+"""
 
 
 from collections import namedtuple, defaultdict
@@ -18,7 +20,6 @@ import vesper.util.os_utils as os_utils
 # TODO: Allow user specification of sets of detectors, sensors, dates, and
 #       annotation values of clips to count.
 # TODO: Allow user specification of annotation name.
-# TODO: Support export of clip tag counts.
 # TODO: Optionally output estimated bird counts as well as clip counts.
 #       This will require looking at clip times.
 
@@ -73,10 +74,10 @@ _Row = namedtuple(
      'clip_count'))
 
 
-class ExportClipCountsToCsvFileCommand(Command):
+class ExportClipCountsByClassificationToCsvFileCommand(Command):
     
     
-    extension_name = 'export_clip_counts_to_csv_file'
+    extension_name = 'export_clip_counts_by_classification_to_csv_file'
     
     
     def __init__(self, args):
@@ -99,13 +100,13 @@ class ExportClipCountsToCsvFileCommand(Command):
         _logger.info('Querying archive database...')
         rows = self._query_database(self._annotation_name)
 
-        _logger.info('Performing annotation value substitutions...')
+        _logger.info('Performing classification value substitutions...')
         rows = self._perform_substitutions(
             rows, self._annotation_value_substitutions)
 
         if self._annotation_value_component_separator is not None:
             _logger.info(
-                'Adding clip counts for wildcard annotation values...')
+                'Adding clip counts for wildcard classification values...')
             rows = self._add_wildcard_rows(
                 rows, self._annotation_value_component_separator)
 

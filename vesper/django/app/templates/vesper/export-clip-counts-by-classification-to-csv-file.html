@@ -2,7 +2,7 @@
 
 {% block head %}
 
-    <title>Export clip tag counts to CSV file</title>
+    <title>Export clip counts by classification to CSV file</title>
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
@@ -13,22 +13,23 @@
 
 {% block main %}
 
-    <h2>Export clip tag counts to CSV file</h2>
+    <h2>Export clip counts by classification to CSV file</h2>
 
     <p>
-        Exports counts of all clip tags to a CSV file.
+        Exports counts of all clips by classification to a CSV file.
     </p>
 
     <p>
         This command writes a CSV file at the specified path on the server,
         overwriting any existing file at that path. Each row of the output
         file contains a clip count for one combination of a detector,
-        station, date, and tag.
+        station, date, and classification. The file includes wildcard
+        classification rows for classifications that have subclassifications.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
 
-    <form class="form" role="form" action="{% url 'export-clip-tag-counts-to-csv-file' %}" method="post">
+    <form class="form" role="form" action="{% url 'export-clip-counts-by-classification-to-csv-file' %}" method="post">
 
         {% csrf_token %}
         

@@ -27,10 +27,10 @@ from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
 from vesper.django.app.execute_deferred_actions_form import \
     ExecuteDeferredActionsForm
-from vesper.django.app.export_clip_counts_to_csv_file_form import \
-    ExportClipCountsToCsvFileForm
-from vesper.django.app.export_clip_tag_counts_to_csv_file_form import \
-    ExportClipTagCountsToCsvFileForm
+from vesper.django.app.export_clip_counts_by_classification_to_csv_file_form \
+    import ExportClipCountsByClassificationToCsvFileForm
+from vesper.django.app.export_clip_counts_by_tag_to_csv_file_form import \
+    ExportClipCountsByTagToCsvFileForm
 from vesper.django.app.export_clip_metadata_to_csv_file_form import \
     ExportClipMetadataToCsvFileForm
 from vesper.django.app.export_clips_to_audio_files_form import \
@@ -146,11 +146,11 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
         
       - separator
       
-      - name: Export clip classification counts to CSV file
-        url_name: export-clip-counts-to-csv-file
+      - name: Export clip counts by classification to CSV file
+        url_name: export-clip-counts-by-classification-to-csv-file
 
-      - name: Export clip tag counts to CSV file
-        url_name: export-clip-tag-counts-to-csv-file
+      - name: Export clip counts by tag to CSV file
+        url_name: export-clip-counts-by-tag-to-csv-file
         
       - name: Export clip metadata to CSV file
         url_name: export-clip-metadata-to-csv-file
@@ -559,18 +559,19 @@ def old_bird_export_clip_counts_csv_file(request):
 
 
 @login_required
-def export_clip_counts_to_csv_file(request):
+def export_clip_counts_by_classification_to_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
-        form = ExportClipCountsToCsvFileForm()
+        form = ExportClipCountsByClassificationToCsvFileForm()
 
     elif request.method == 'POST':
 
-        form = ExportClipCountsToCsvFileForm(request.POST)
+        form = ExportClipCountsByClassificationToCsvFileForm(request.POST)
 
         if form.is_valid():
             command_spec = \
-                _create_export_clip_counts_to_csv_file_command_spec(form)
+                _create_export_clip_counts_by_classification_to_csv_file_command_spec(
+                    form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -579,15 +580,18 @@ def export_clip_counts_to_csv_file(request):
     context = _create_template_context(request, 'Export', form=form)
 
     return render(
-        request, 'vesper/export-clip-counts-to-csv-file.html', context)
+        request,
+        'vesper/export-clip-counts-by-classification-to-csv-file.html',
+        context)
 
 
-def _create_export_clip_counts_to_csv_file_command_spec(form):
+def _create_export_clip_counts_by_classification_to_csv_file_command_spec(
+        form):
 
     data = form.cleaned_data
 
     spec = {
-        'name': 'export_clip_counts_to_csv_file',
+        'name': 'export_clip_counts_by_classification_to_csv_file',
         'arguments': {
             'output_file_path': data['output_file_path']
         }
@@ -597,18 +601,19 @@ def _create_export_clip_counts_to_csv_file_command_spec(form):
 
 
 @login_required
-def export_clip_tag_counts_to_csv_file(request):
+def export_clip_counts_by_tag_to_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
-        form = ExportClipTagCountsToCsvFileForm()
+        form = ExportClipCountsByTagToCsvFileForm()
 
     elif request.method == 'POST':
 
-        form = ExportClipTagCountsToCsvFileForm(request.POST)
+        form = ExportClipCountsByTagToCsvFileForm(request.POST)
 
         if form.is_valid():
             command_spec = \
-                _create_export_clip_tag_counts_to_csv_file_command_spec(form)
+                _create_export_clip_counts_by_tag_to_csv_file_command_spec(
+                    form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -617,15 +622,15 @@ def export_clip_tag_counts_to_csv_file(request):
     context = _create_template_context(request, 'Export', form=form)
 
     return render(
-        request, 'vesper/export-clip-tag-counts-to-csv-file.html', context)
+        request, 'vesper/export-clip-counts-by-tag-to-csv-file.html', context)
 
 
-def _create_export_clip_tag_counts_to_csv_file_command_spec(form):
+def _create_export_clip_counts_by_tag_to_csv_file_command_spec(form):
 
     data = form.cleaned_data
 
     spec = {
-        'name': 'export_clip_tag_counts_to_csv_file',
+        'name': 'export_clip_counts_by_tag_to_csv_file',
         'arguments': {
             'output_file_path': data['output_file_path']
         }

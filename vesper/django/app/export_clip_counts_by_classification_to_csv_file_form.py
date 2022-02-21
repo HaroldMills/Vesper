@@ -3,10 +3,10 @@ from django import forms
 import vesper.django.app.form_utils as form_utils
 
 
-_FORM_TITLE = 'Export clip counts to CSV file'
+_FORM_TITLE = 'Export clip counts by classification to CSV file'
 
 
-class ExportClipCountsToCsvFileForm(forms.Form):
+class ExportClipCountsByClassificationToCsvFileForm(forms.Form):
     
 
     output_file_path = forms.CharField(
