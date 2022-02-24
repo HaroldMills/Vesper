@@ -35,20 +35,18 @@ class TagClipsCommand(ClipSetCommand):
         
     def execute(self, job_info):
         self._job_info = job_info
-        clip_indices = self._get_clip_indices()
+        clip_indices = self._get_tag_clip_indices()
         self._tag_clips(clip_indices)
         return True
     
     
-    def _get_clip_indices(self):
+    def _get_tag_clip_indices(self):
         
         if self._clip_count is None:
             # tag all clips
 
             return None
             
-        _logger.info('Getting indices of clips to tag...')
-        
         clip_count = self._count_clips()
         
         if clip_count <= self._clip_count:
@@ -59,6 +57,8 @@ class TagClipsCommand(ClipSetCommand):
         # If we get here, a clip count is specified and it is less than
         # the number of untagged clips.
             
+        _logger.info('Getting indices of clips to tag...')
+        
         indices = random.sample(range(clip_count), self._clip_count)
             
         return frozenset(indices)
@@ -116,7 +116,7 @@ class TagClipsCommand(ClipSetCommand):
             
             # Get IDs of clips to tag.
             tag_clip_ids = \
-                self._get_tag_clip_ids(clip_ids, clip_indices, clip_index)
+                self._get_tag_clip_ids(clip_ids, clip_index, clip_indices)
             clip_count = len(clip_ids)
             tagged_count = len(tag_clip_ids)
             clip_index += clip_count
@@ -149,10 +149,10 @@ class TagClipsCommand(ClipSetCommand):
         if total_tagged_count == total_clip_count:
             prefix = 'Tagged'
         else:
-            untagged_count = total_clip_count - total_tagged_count
+            total_untagged_count = total_clip_count - total_tagged_count
             prefix = (
                 f'Tagged {total_tagged_count} and left untagged '
-                f'{untagged_count} of')
+                f'{total_untagged_count} of')
         count_text = text_utils.create_count_text(total_clip_count, 'clip')
         elapsed_time = time.time() - start_time
         timing_text = command_utils.get_timing_text(
@@ -160,7 +160,7 @@ class TagClipsCommand(ClipSetCommand):
         _logger.info(f'{prefix} a total of {count_text}{timing_text}.')
 
 
-    def _get_tag_clip_ids(self, clip_ids, clip_indices, clip_index):
+    def _get_tag_clip_ids(self, clip_ids, start_clip_index, clip_indices):
 
         if clip_indices is None:
             # tagging all clips
@@ -170,6 +170,7 @@ class TagClipsCommand(ClipSetCommand):
         else:
             # not tagging all clips
 
+            clip_index = start_clip_index
             tag_clip_ids = []
         
             for clip_id in clip_ids:

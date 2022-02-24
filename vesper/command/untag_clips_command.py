@@ -35,36 +35,44 @@ class UntagClipsCommand(ClipSetCommand):
         
     def execute(self, job_info):
         self._job_info = job_info
-        retain_indices = self._get_retain_clip_indices()
-        self._untag_clips(retain_indices)
+        clip_indices = self._get_retain_clip_indices()
+        if clip_indices is not None:
+            self._untag_clips(clip_indices)
         return True
     
     
     def _get_retain_clip_indices(self):
         
         if self._retain_count == 0:
-            indices = []
+            # retain no clips
+
+            return []
             
-        else:
+        # Count clips that are candidates for untagging.
+        clip_count = self._count_clips()
+        
+        if clip_count <= self._retain_count:
+            # retain all clips
             
             _logger.info(
-                'Getting indices of clips for which to retain tags...')
+                f'Retain count {self._retain_count} is greater than '
+                f'or equal to number of specified clips {clip_count}, '
+                f'so no clips will be untagged.')
             
-            clip_count = self._count_clips()
+            # We use a return value of `None` to inform the caller
+            # that there's nothing to do.
+            return None
+
+        # If we get here, a nonzero retain count is specified that is less
+        # than the number of clips that are candidates for untagging.
             
-            if clip_count <= self._retain_count:
-                # will retain all clips
-                
-                indices = list(range(clip_count))
-                
-            else:
-                # will not retain all clips
-                
-                indices = random.sample(range(clip_count), self._retain_count)
+        _logger.info('Selecting clips for which to retain tags...')
+        
+        indices = random.sample(range(clip_count), self._retain_count)
             
         return frozenset(indices)
-    
-    
+ 
+ 
     def _count_clips(self):
         
         value_tuples = self._create_clip_query_values_iterator()
@@ -91,12 +99,11 @@ class UntagClipsCommand(ClipSetCommand):
         
         start_time = time.time()
         
-        retaining_tags = len(retain_indices) == 0
-        
         value_tuples = self._create_clip_query_values_iterator()
         
-        index = 0
-        total_retained_count = 0
+        clip_index = 0
+        total_clip_count = 0
+        total_untagged_count = 0
         
         for station, mic_output, date, detector in value_tuples:
             
@@ -111,27 +118,19 @@ class UntagClipsCommand(ClipSetCommand):
                 tag_name=self._tag_name,
                 order=False)
             
-            
-            # Figure out which clips to untag
-            
-            count = 0
-            retained_count = 0
-            clips_to_untag = []
-            
-            for clip in clips:
-                
-                if index not in retain_indices:
-                    clips_to_untag.append(clip)
-                else:
-                    retained_count += 1
-                    
-                count += 1
-                index += 1
-                
-                
+            # Get list of clip IDs.
+            clip_ids = clips.values_list('pk', flat=True)
+
+            # Get IDs of clips to untag.
+            untag_clip_ids = \
+                self._get_untag_clip_ids(clip_ids, clip_index, retain_indices)
+            clip_count = len(clip_ids)
+            untagged_count = len(untag_clip_ids)
+            clip_index += clip_count
+              
             # Untag clips.
             try:
-                self._untag_clip_batch(clips_to_untag)
+                self._untag_clip_batch(untag_clip_ids)
             except Exception as e:
                 batch_text = \
                     _get_batch_text(station, mic_output, date, detector)
@@ -139,35 +138,59 @@ class UntagClipsCommand(ClipSetCommand):
                     e, f'Untagging of clips for {batch_text}')
 
             # Log clip counts.
-            if retaining_tags:
+            if untagged_count == clip_count:
                 prefix = 'Untagged'
             else:
-                untagged_count = count - retained_count
+                retained_count = clip_count - untagged_count
                 prefix = (
                     f'Untagged {untagged_count} and left tagged '
                     f'{retained_count} of')
-            count_text = text_utils.create_count_text(count, 'clip')
+            count_text = text_utils.create_count_text(clip_count, 'clip')
             batch_text = _get_batch_text(station, mic_output, date, detector)
             _logger.info(f'{prefix} {count_text} for {batch_text}.')
 
-            total_retained_count += retained_count
+            total_clip_count += clip_count
+            total_untagged_count += untagged_count
                 
         # Log total clip counts and untagging rate.
-        if total_retained_count == 0:
+        if total_untagged_count == total_clip_count:
             prefix = 'Untagged'
         else:
-            untagged_count = index - total_retained_count
+            total_retained_count = total_clip_count - total_untagged_count
             prefix = (
-                f'Untagged {untagged_count} and left tagged '
+                f'Untagged {total_untagged_count} and left tagged '
                 f'{total_retained_count} of')
-        count_text = text_utils.create_count_text(index, 'clip')
+        count_text = text_utils.create_count_text(total_clip_count, 'clip')
         elapsed_time = time.time() - start_time
         timing_text = command_utils.get_timing_text(
-            elapsed_time, index, 'clips')
+            elapsed_time, total_clip_count, 'clips')
         _logger.info(f'{prefix} a total of {count_text}{timing_text}.')
 
 
-    def _untag_clip_batch(self, clips):
+    def _get_untag_clip_ids(self, clip_ids, start_clip_index, retain_indices):
+
+        if len(retain_indices) == 0:
+            # untagging all clips
+
+            return clip_ids
+
+        else:
+            # not untagging all clips
+
+            clip_index = start_clip_index
+            untag_clip_ids = []
+        
+            for clip_id in clip_ids:
+                
+                if clip_index not in retain_indices:
+                    untag_clip_ids.append(clip_id)
+                    
+                clip_index += 1
+
+            return untag_clip_ids
+
+
+    def _untag_clip_batch(self, clip_ids):
         
         with archive_lock.atomic():
              
@@ -193,25 +216,24 @@ class UntagClipsCommand(ClipSetCommand):
                 creation_time = time_utils.get_utc_now()
                 creating_job = Job.objects.get(id=self._job_info.job_id)
                 
-                for i in range(0, len(clips), max_chunk_size):
+                for i in range(0, len(clip_ids), max_chunk_size):
                     
-                    chunk = clips[i:i + max_chunk_size]
+                    chunk = clip_ids[i:i + max_chunk_size]
                     
-                    # Delete tags from archive database.
-                    ids = [clip.id for clip in chunk]
-                    Tag.objects.filter(info=tag_info, clip_id__in=ids).delete()
+                    # Delete tags.
+                    Tag.objects.filter(info=tag_info, clip_id__in=chunk).delete()
                     
                     # Create tag edits.
                     TagEdit.objects.bulk_create([
                         TagEdit(
-                            clip=clip,
+                            clip_id=clip_id,
                             info=tag_info,
                             action=action,
                             creation_time=creation_time,
                             creating_user=None,
                             creating_job=creating_job,
                             creating_processor=None)
-                        for clip in chunk])
+                        for clip_id in chunk])
                     
                     
 def _get_batch_text(station, mic_output, date, detector):

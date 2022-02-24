@@ -21,13 +21,14 @@
 
     <p>
         The clips are specified as a set of station/mic pairs, a range of
-        dates, a set of detectors, and an optional classification.
+        dates, a set of detectors, an optional classification, and a tag.
     </p>
 
     <p>
         You can optionally specify a number of clips for which to retain
-        the tag. The retained clips are selected at random from those
-        specified, with all clips equally likely to be retained.
+        the tag in the <code>Retain count</code> field. The clips for which
+        to retain tags are selected at random from those specified, with
+        all clips equally likely to be selected.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
