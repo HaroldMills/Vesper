@@ -29,8 +29,8 @@ class UntagClipsCommand(ClipSetCommand):
         
         super().__init__(args, True)
         
-        get = command_utils.get_required_arg
-        self._retain_count = get('retain_count', args)
+        get_opt = command_utils.get_optional_arg
+        self._retain_count = get_opt('retain_count', args)
         
         
     def execute(self, job_info):
@@ -43,7 +43,7 @@ class UntagClipsCommand(ClipSetCommand):
     
     def _get_retain_clip_indices(self):
         
-        if self._retain_count == 0:
+        if self._retain_count is None or self._retain_count == 0:
             # retain no clips
 
             return []
