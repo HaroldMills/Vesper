@@ -10,6 +10,7 @@ import vesper.util.os_utils as os_utils
 # TODO: Add type checking to functions that get arguments.
 
 
+# TODO: Consider making this a `Command` method.
 def get_required_arg(name, args):
     try:
         return args[name]
@@ -18,6 +19,7 @@ def get_required_arg(name, args):
             'Missing required command argument "{}".'.format(name))
 
 
+# TODO: Consider making this a `Command` method.
 def get_optional_arg(name, args, default=None):
     return args.get(name, default)
 

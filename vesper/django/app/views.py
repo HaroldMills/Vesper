@@ -43,6 +43,7 @@ from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, StringAnnotation, Tag, TagInfo)
 from vesper.django.app.refresh_recording_audio_file_paths_form import \
     RefreshRecordingAudioFilePathsForm
+from vesper.django.app.tag_clips_form import TagClipsForm
 from vesper.django.app.transfer_clip_classifications_form import \
     TransferClipClassificationsForm
 from vesper.django.app.untag_clips_form import UntagClipsForm
@@ -173,6 +174,10 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
         
       - name: Untag clips
         url_name: untag-clips
+
+      - name: Tag clips
+        url_name: tag-clips
+
         
 - name: View
   dropdown:
@@ -900,6 +905,44 @@ def _create_delete_clips_command_spec(form):
         'name': 'delete_clips',
         'arguments': {
             'retain_count': data['retain_count']
+        }
+    }
+    
+    _add_clip_set_command_arguments(spec, data)
+    
+    return spec
+
+
+@login_required
+def tag_clips(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = TagClipsForm()
+
+    elif request.method == 'POST':
+
+        form = TagClipsForm(request.POST)
+
+        if form.is_valid():
+            command_spec = _create_tag_clips_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Other', form=form)
+
+    return render(request, 'vesper/tag-clips.html', context)
+
+
+def _create_tag_clips_command_spec(form):
+
+    data = form.cleaned_data
+
+    spec = {
+        'name': 'tag_clips',
+        'arguments': {
+            'clip_count': data['clip_count']
         }
     }
     

@@ -85,6 +85,7 @@ if not settings.ARCHIVE_READ_ONLY:
              name='delete-recordings'),
         path('delete-clips/', views.delete_clips, name='delete-clips'),
         path('untag-clips/', views.untag_clips, name='untag-clips'),
+        path('tag-clips/', views.tag_clips, name='tag-clips'),
         path('create-clip-audio-files/', views.create_clip_audio_files,
              name='create-clip-audio-files'),
         path('delete-clip-audio-files/', views.delete_clip_audio_files,

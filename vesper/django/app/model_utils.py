@@ -426,6 +426,7 @@ def get_clips(**kwargs):
     annotation_name = kwargs.get('annotation_name')
     annotation_value = kwargs.get('annotation_value')
     tag_name = kwargs.get('tag_name')
+    tag_excluded = kwargs.get('tag_excluded', False)
     order = kwargs.get('order', True)
     
     clips = _get_base_clips(station, mic_output, date, detector)
@@ -433,7 +434,7 @@ def get_clips(**kwargs):
     clips = _filter_clips_by_annotation_if_needed(
         clips, annotation_name, annotation_value)
     
-    clips = _filter_clips_by_tag_if_needed(clips, tag_name)
+    clips = _filter_clips_by_tag_if_needed(clips, tag_name, tag_excluded)
         
     if order:
         clips = clips.order_by('start_time')
@@ -507,16 +508,19 @@ def _filter_clips_by_annotation_if_needed(
             return clips
                 
 
-def _filter_clips_by_tag_if_needed(clips, tag_name):
+def _filter_clips_by_tag_if_needed(clips, tag_name, tag_excluded):
     
-    # TODO: Support tag exclusion as well as inclusion.
-
     if tag_name is None:
         return clips
-    
+
     else:
+
         info = TagInfo.objects.get(name=tag_name)
-        return clips.filter(tag__info=info)
+
+        if tag_excluded:
+            return clips.exclude(tag__info=info)
+        else:
+            return clips.filter(tag__info=info)
 
 
 def create_clip_query_values_iterator(

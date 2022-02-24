@@ -1,0 +1,50 @@
+{% extends 'vesper/base.html' %}
+
+{% block head %}
+
+    <title>Tag clips</title>
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+
+    {% load vesper_extras %}
+
+{% endblock head %}
+
+{% block main %}
+
+    <h2>Tag clips</h2>
+
+    <p>
+        Adds the specified tag to the specified clips.
+    </p>
+
+    <p>
+        The clips are specified as a set of station/mic pairs, a range
+        of dates, a set of detectors, an optional classification, and
+        a tag. Only clips that do not already have the specified tag
+        are considered for tagging.
+    </p>
+
+    <p>
+        You can optionally specify the number of clips to tag in the
+        <code>Clip count</code> field. The clips to tag are selected at
+        random from those specified, with all clips equally likely to be
+        selected.
+    </p>
+
+    {% include "vesper/command-executes-as-job-message.html" %}
+
+    <form class="form" role="form" action="{% url 'tag-clips' %}" method="post">
+
+        {% csrf_token %}
+        
+        {% include "vesper/clip-set-form-elements.html" %}
+        
+        {{ form.clip_count|form_element }}
+
+        <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Tag</button>
+
+    </form>
+
+{% endblock main %}

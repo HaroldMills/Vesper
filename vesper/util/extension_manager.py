@@ -189,6 +189,7 @@ Command:
     - vesper.command.export_command.ExportCommand
     - vesper.command.import_command.ImportCommand
     - vesper.command.refresh_recording_audio_file_paths_command.RefreshRecordingAudioFilePathsCommand
+    - vesper.command.tag_clips_command.TagClipsCommand
     - vesper.command.test_command.TestCommand
     - vesper.command.transfer_clip_classifications_command.TransferClipClassificationsCommand
     - vesper.command.untag_clips_command.UntagClipsCommand
