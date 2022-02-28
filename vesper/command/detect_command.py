@@ -593,10 +593,14 @@ class DetectCommand(Command):
 
 def _get_schedule(schedule_name):
     
-    if schedule_name == '':
+    if schedule_name == archive.NULL_CHOICE:
+        # no schedule specified
+
         return None
     
     else:
+        # schedule specified
+        
         preset_path = ('Detection Schedule', schedule_name)
         preset = preset_manager.get_preset(preset_path)
         return preset.data
