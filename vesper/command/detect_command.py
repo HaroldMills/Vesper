@@ -191,9 +191,9 @@ class DetectCommand(Command):
                 night = station.get_night(recording.start_time)
                 recording_lists[(station.name, night)].append(recording)
             
-            total_num_station_nights = len(recording_lists)
+            total_station_night_count = len(recording_lists)
             station_nights_text = text_utils.create_count_text(
-                total_num_station_nights, 'station-night')
+                total_station_night_count, 'station-night')
             
             if self._process_random_station_nights:
                 # will process recordings for randomly selected subset
@@ -316,9 +316,9 @@ class DetectCommand(Command):
                     f'"{str(recording)}".')
                 
             else:
-                num_channels = recording.num_channels
+                channel_count = recording.num_channels
                 for file_ in recording_files:
-                    for channel_num in range(num_channels):
+                    for channel_num in range(channel_count):
                         runner = OldBirdDetectorRunner(self._job_info)
                         runner.run_detectors(
                             detectors, file_, channel_num,
@@ -330,12 +330,12 @@ class DetectCommand(Command):
         if len(detector_models) == 0:
             return
         
-        num_recordings = len(recordings)
+        recording_count = len(recordings)
         
         for i, recording in enumerate(recordings):
             
             self._logger.info(
-                f'    Processing recording {i + 1} of {num_recordings} - '
+                f'    Processing recording {i + 1} of {recording_count} - '
                 f'"{str(recording)}"...')
             
             recording_files = recording.files.all()
@@ -533,7 +533,7 @@ class DetectCommand(Command):
             self, detector_models, recording, file_reader,
             file_start_index, interval_start_index):
         
-        num_channels = recording.num_channels
+        channel_count = recording.num_channels
         
         detectors = []
         
@@ -541,7 +541,7 @@ class DetectCommand(Command):
 
         for detector_model in detector_models:
             
-            for channel_num in range(num_channels):
+            for channel_num in range(channel_count):
                 
                 recording_channel = RecordingChannel.objects.get(
                     recording=recording, channel_num=channel_num)
@@ -565,7 +565,7 @@ class DetectCommand(Command):
 
 
     def _log_detection_performance(
-            self, num_detectors, num_channels, interval_duration,
+            self, detector_count, channel_count, interval_duration,
             processing_time):
         
         format_ = text_utils.format_number
@@ -574,14 +574,14 @@ class DetectCommand(Command):
         time = format_(processing_time)
         
         detectors_text = text_utils.create_count_text(
-            num_detectors, 'detector')
+            detector_count, 'detector')
 
         message = (
             f'        Ran {detectors_text} on {dur} seconds of '
-            f'{num_channels}-channel audio in {time} seconds')
+            f'{channel_count}-channel audio in {time} seconds')
         
         if processing_time != 0:
-            total_duration = num_detectors * num_channels * interval_duration
+            total_duration = detector_count * channel_count * interval_duration
             speedup = format_(total_duration / processing_time)
             message += f', {speedup} times faster than real time.'
         else:
@@ -751,13 +751,13 @@ class _DetectorListener:
         
         self._clips = []
         self._deferred_clips = []
-        self._num_clips = 0
-        self._num_database_failures = 0
-        self._num_file_failures = 0
+        self._clip_count = 0
+        self._database_failure_count = 0
+        self._file_failure_count = 0
         
         self._annotation_info_cache = {}
  
-#         self._num_transactions = 0
+#         self._transaction_count = 0
 #         self._total_transactions_duration = 0
         
         
@@ -768,7 +768,7 @@ class _DetectorListener:
             self, start_index, length, threshold=None, annotations=None):
         
         self._clips.append((start_index, length, annotations))
-        self._num_clips += 1
+        self._clip_count += 1
         
         if len(self._clips) == _CLIP_BATCH_SIZE:
             self._create_clips(threshold)
@@ -886,7 +886,7 @@ class _DetectorListener:
                             raise _ClipCreationError(e)
 
 #                     trans_end_time = time.time()
-#                     self._num_transactions += 1
+#                     self._transaction_count += 1
 #                     self._total_transactions_duration += \
 #                         trans_end_time - trans_start_time
             
@@ -899,7 +899,7 @@ class _DetectorListener:
                     start_time, duration)
                 
                 batch_size = len(self._clips)
-                self._num_database_failures += batch_size
+                self._database_failure_count += batch_size
                 
                 if batch_size == 1:
                     prefix = 'Clip'
@@ -922,7 +922,7 @@ class _DetectorListener:
                             clip_manager.create_audio_file(clip)
                             
                         except Exception as e:
-                            self._num_file_failures += 1
+                            self._file_failure_count += 1
                             self._logger.error(
                                 f'            Attempt to create audio file '
                                 f'for clip {str(clip)} failed with message: '
@@ -932,7 +932,7 @@ class _DetectorListener:
         self._clips = []
         
 #         self._logger.info(
-#             f'        Processed {self._num_clips} clips from detector '
+#             f'        Processed {self._clip_count} clips from detector '
 #             f'"{self._detector_model.name}"...')
 
 
@@ -980,7 +980,7 @@ class _DetectorListener:
         # Create remaining clips.
         self._create_clips(threshold)
         
-        clips_text = text_utils.create_count_text(self._num_clips, 'clip')
+        clips_text = text_utils.create_count_text(self._clip_count, 'clip')
         
         if self._defer_clip_creation:
             
@@ -990,7 +990,8 @@ class _DetectorListener:
                 f'        Processed {clips_text} from detector '
                 f'"{self._detector_model.name}".')
             
-        elif self._num_database_failures == 0 and self._num_file_failures == 0:
+        elif self._database_failure_count == 0 and \
+                self._file_failure_count == 0:
             
             self._logger.info(
                 f'        Created {clips_text} from detector '
@@ -999,15 +1000,15 @@ class _DetectorListener:
         else:
             
             db_failures_text = text_utils.create_count_text(
-                self._num_database_failures, 'clip creation failure')
+                self._database_failure_count, 'clip creation failure')
             
             if self._create_clip_files:
                 
-                num_file_failures = \
-                    self._num_database_failures + self._num_file_failures
+                file_failure_count = \
+                    self._database_failure_count + self._file_failure_count
                 
                 file_failures_text = ' and ' + text_utils.create_count_text(
-                    num_file_failures, 'audio file creation failure')
+                    file_failure_count, 'audio file creation failure')
                 
             else:
                 
@@ -1018,7 +1019,7 @@ class _DetectorListener:
                 f'"{self._detector_model.name}" with '
                 f'{db_failures_text}{file_failures_text}.')
         
-#         avg = self._total_transactions_duration / self._num_transactions
+#         avg = self._total_transactions_duration / self._transaction_count
 #         self._logger.info(
 #             f'        Average database transaction duration was {avg} '
 #             f'seconds.')
