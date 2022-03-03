@@ -164,13 +164,13 @@ class DetectCommand(Command):
                 for name in self._detector_names]
         
         except Exception as e:
-            self._logger.error((
-                'Collection of detectors to run on recordings on failed with '
-                'an exception.\n'
-                'The exception message was:\n'
-                '    {}\n'
-                'The archive was not modified.\n'
-                'See below for exception traceback.').format(str(e)))
+            self._logger.error(
+                f'Collection of detectors to run on recordings on failed '
+                f'with an exception.\n'
+                f'The exception message was:\n'
+                f'    {str(e)}\n'
+                f'The archive was not modified.\n'
+                f'See below for exception traceback.')
             raise
             
             
@@ -204,17 +204,17 @@ class DetectCommand(Command):
                 start_num = self._start_station_night_index + 1
                 end_num = self._end_station_night_index
                 
-                self._logger.info((
-                    'This command will process recordings for '
-                    'station-nights {} to {} of a shuffled sequence '
-                    'of {}.').format(start_num, end_num, station_nights_text))
+                self._logger.info(
+                    f'This command will process recordings for '
+                    f'station-nights {start_num} to {end_num} of a '
+                    f'shuffled sequence of {station_nights_text}.')
                 
             else:
                 # will process recordings for all station-nights
                 
                 self._logger.info(
-                    'This command will process recordings for {}.'.format(
-                        station_nights_text))
+                    f'This command will process recordings for '
+                    f'{station_nights_text}.')
                     
             # Sort recordings for each station-night by start time.
             for recordings in recording_lists.values():
@@ -223,13 +223,13 @@ class DetectCommand(Command):
             return recording_lists
         
         except Exception as e:
-            self._logger.error((
-                'Collection of recordings to process failed with '
-                'an exception.\n'
-                'The exception message was:\n'
-                '    {}\n'
-                'The archive was not modified.\n'
-                'See below for exception traceback.').format(str(e)))
+            self._logger.error(
+                f'Collection of recordings to process failed with '
+                f'an exception.\n'
+                f'The exception message was:\n'
+                f'    {str(e)}\n'
+                f'The archive was not modified.\n'
+                f'See below for exception traceback.')
             raise
 
             
@@ -248,7 +248,7 @@ class DetectCommand(Command):
             station = Station.objects.get(name=station_name)
         except Station.DoesNotExist:
             raise CommandExecutionError(
-                'Unrecognized station "{}".'.format(station_name))
+                'Unrecognized station "{station_name}".')
         
         time_interval = station.get_night_interval_utc(start_date, end_date)
         
@@ -286,7 +286,7 @@ class DetectCommand(Command):
 
     def _show_station_nights(self, header, recording_lists):
         station_nights = sorted(recording_lists.keys())
-        print('{}:'.format(header))
+        print(f'{header}:')
         for i, sn in enumerate(station_nights):
             station_name, night = sn
             print(i, station_name, str(night), len(recording_lists[sn]))
@@ -296,9 +296,9 @@ class DetectCommand(Command):
     def _log_station_night(self, station_night, i, n):
         
         station_name, night = station_night
-        self._logger.info((
-            'Processing recordings for station-night {} of {} - '
-            '"{} {}"...').format(i + 1, n, station_name, str(night)))
+        self._logger.info(
+            f'Processing recordings for station-night {i + 1} of {n} - '
+            f'"{station_name} {str(night)}"...')
 
 
     def _run_old_bird_detectors(self, detectors, recordings):
@@ -312,8 +312,8 @@ class DetectCommand(Command):
             
             if len(recording_files) == 0:
                 self._logger.info(
-                    'No file information available for recording "{}".'.format(
-                        str(recording)))
+                    f'No file information available for recording '
+                    f'"{str(recording)}".')
                 
             else:
                 num_channels = recording.num_channels
@@ -335,8 +335,8 @@ class DetectCommand(Command):
         for i, recording in enumerate(recordings):
             
             self._logger.info(
-                '    Processing recording {} of {} - "{}"...'.format(
-                    i + 1, num_recordings, str(recording)))
+                f'    Processing recording {i + 1} of {num_recordings} - '
+                f'"{str(recording)}"...')
             
             recording_files = recording.files.all()
             
@@ -412,9 +412,9 @@ class DetectCommand(Command):
                 
         if file_.path is None:
             
-            self._logger.error((
-                '        Archive has no path for file {} of recording, '
-                'so no detectors will be run on it.').format(file_.num))
+            self._logger.error(
+                f'        Archive has no path for file {file_.num} of '
+                f'recording, so no detectors will be run on it.')
         
         else:
             
@@ -509,24 +509,24 @@ class DetectCommand(Command):
             if time_interval.start == file_.start_time:
                 # interval includes file start
                 
-                interval_text = ' interval [file start, {}]'.format(end)
+                interval_text = f' interval [file start, {end}]'
                 
             elif time_interval.end == file_.end_time:
                 # interval includes file end
                 
-                interval_text = ' interval [{}, file end]'.format(start)
+                interval_text = f' interval [{start}, file end]'
                 
             else:
                 # interval includes neither file start nor file end
                 
-                interval_text = ' interval [{}, {}]'.format(start, end)                 
+                interval_text = f' interval [{start}, {end}]'         
              
         detectors_text = text_utils.create_units_text(
             len(detector_models), 'detector')
         
         self._logger.info(
-            '        Running {} on file "{}"{}...'.format(
-                detectors_text, file_path, interval_text))
+            f'        Running {detectors_text} on file "{file_path}"'
+            f'{interval_text}...')
         
 
     def _create_detectors(
@@ -577,14 +577,13 @@ class DetectCommand(Command):
             num_detectors, 'detector')
 
         message = (
-            '        Ran {} on {} seconds of {}-channel '
-            'audio in {} seconds').format(
-                detectors_text, dur, num_channels, time)
+            f'        Ran {detectors_text} on {dur} seconds of '
+            f'{num_channels}-channel audio in {time} seconds')
         
         if processing_time != 0:
             total_duration = num_detectors * num_channels * interval_duration
             speedup = format_(total_duration / processing_time)
-            message += ', {} times faster than real time.'.format(speedup)
+            message += f', {speedup} times faster than real time.'
         else:
             message += '.'
             
@@ -713,7 +712,7 @@ def _create_detector(detector_model, recording, listener):
     try:
         cls = classes[detector_name]
     except KeyError:
-        raise ValueError('Unrecognized detector "{}".'.format(detector_name))
+        raise ValueError(f'Unrecognized detector "{detector_name}".')
     
     return cls(recording.sample_rate, listener)
 
@@ -924,17 +923,17 @@ class _DetectorListener:
                             
                         except Exception as e:
                             self._num_file_failures += 1
-                            self._logger.error((
-                                '            Attempt to create audio file '
-                                'for clip {} failed with message: {} Clip '
-                                'database record was still created.').format(
-                                    str(clip), str(e)))
+                            self._logger.error(
+                                f'            Attempt to create audio file '
+                                f'for clip {str(clip)} failed with message: '
+                                f'{str(e)} Clip database record was still '
+                                f'created.')
                             
         self._clips = []
         
 #         self._logger.info(
-#             '        Processed {} clips from detector "{}"...'.format(
-#                 self._num_clips, self._detector_model.name))
+#             f'        Processed {self._num_clips} clips from detector '
+#             f'"{self._detector_model.name}"...')
 
 
     def _get_annotation_info(self, name):
@@ -987,15 +986,15 @@ class _DetectorListener:
             
             self._write_deferred_clips_file()
             
-            self._logger.info((
-                '        Processed {} from detector "{}".').format(
-                    clips_text, self._detector_model.name))
+            self._logger.info(
+                f'        Processed {clips_text} from detector '
+                f'"{self._detector_model.name}".')
             
         elif self._num_database_failures == 0 and self._num_file_failures == 0:
             
-            self._logger.info((
-                '        Created {} from detector "{}".').format(
-                    clips_text, self._detector_model.name))
+            self._logger.info(
+                f'        Created {clips_text} from detector '
+                f'"{self._detector_model.name}".')
             
         else:
             
@@ -1015,14 +1014,14 @@ class _DetectorListener:
                 file_failures_text = ''
             
             self._logger.info(
-                '        Processed {} from detector "{}" with {}{}.'.format(
-                    clips_text, self._detector_model.name,
-                    db_failures_text, file_failures_text))
+                f'        Processed {clips_text} from detector '
+                f'"{self._detector_model.name}" with '
+                f'{db_failures_text}{file_failures_text}.')
         
 #         avg = self._total_transactions_duration / self._num_transactions
-#         self._logger.info((
-#             '        Average database transaction duration was {} '
-#             'seconds.').format(avg))
+#         self._logger.info(
+#             f'        Average database transaction duration was {avg} '
+#             f'seconds.')
 
 
     def _write_deferred_clips_file(self):
