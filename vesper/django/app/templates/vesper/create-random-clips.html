@@ -1,0 +1,62 @@
+{% extends 'vesper/base.html' %}
+
+{% block head %}
+
+    <title>Create random clips</title>
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/detect-form.css' %}">
+
+    {% load vesper_extras %}
+
+{% endblock head %}
+
+{% block main %}
+
+    <h2>Create random clips</h2>
+
+    <p>
+        Creates random clips in all channels of the specified recordings.
+    </p>
+
+    {% include "vesper/recordings-specification-message.html" %}
+
+    <p>
+        This command marks the clips it creates as having been created
+        by the processor <code>Vesper Random Clip Creator 1.0</code>. It
+        creates the processor in the archive database if needed.
+    </p>
+
+    <p>
+        You can limit the time intervals in which the command creates
+        clips by selecting a <code>Detection Schedule</code> preset
+        below. When you specify a schedule, the command creates clips
+        only in the time intervals of the intersection of the recording
+        intervals and the schedule intervals.
+    </p>
+
+    <p>
+        Specify the clip duration in seconds in the
+        <code>Clip duration</code> field, and the number of clips to
+        create in the <code>Clip count</code> field.
+    </p>
+
+    {% include "vesper/command-executes-as-job-message.html" %}
+
+    <form class="form" role="form" action="{% url 'create-random-clips' %}" method="post">
+
+        {% csrf_token %}
+        
+        {{ form.stations|block_form_element }}
+        {{ form.start_date|form_element }}
+        {{ form.end_date|form_element }}
+        {{ form.schedule|form_element }}
+        {{ form.clip_duration|form_element }}
+        {{ form.clip_count|form_element}}
+
+        <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Create clips</button>
+
+    </form>
+
+{% endblock main %}

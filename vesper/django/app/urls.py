@@ -52,6 +52,8 @@ if not settings.ARCHIVE_READ_ONLY:
              name='import-old-bird-clips'),
     
         path('detect/', views.detect, name='detect'),
+        path('create-random-clips/', views.create_random_clips,
+             name='create-random-clips'),
         path('classify/', views.classify, name='classify'),
         path('execute-deferred-actions/', views.execute_deferred_actions,
              name='execute-deferred-actions'),

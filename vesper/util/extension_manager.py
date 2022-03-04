@@ -179,6 +179,7 @@ Command:
     - vesper.command.add_recording_audio_files_command.AddRecordingAudioFilesCommand
     - vesper.command.classify_command.ClassifyCommand
     - vesper.command.create_clip_audio_files_command.CreateClipAudioFilesCommand
+    - vesper.command.create_random_clips_command.CreateRandomClipsCommand
     - vesper.command.delete_clip_audio_files_command.DeleteClipAudioFilesCommand
     - vesper.command.delete_clips_command.DeleteClipsCommand
     - vesper.command.delete_recordings_command.DeleteRecordingsCommand

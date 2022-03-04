@@ -22,6 +22,7 @@ from vesper.django.app.add_recording_audio_files_form import \
     AddRecordingAudioFilesForm
 from vesper.django.app.classify_form import ClassifyForm
 from vesper.django.app.clip_set_form import ClipSetForm
+from vesper.django.app.create_random_clips_form import CreateRandomClipsForm
 from vesper.django.app.delete_clips_form import DeleteClipsForm
 from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
@@ -194,6 +195,9 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       - name: Detect
         url_name: detect
      
+      - name: Create random clips
+        url_name: create-random-clips
+
       - name: Classify
         url_name: classify
       
@@ -449,6 +453,45 @@ def _create_template_context(request, active_navbar_item='', **kwargs):
         active_navbar_item=active_navbar_item)
 
     return kwargs
+
+
+@login_required
+def create_random_clips(request):
+
+    if request.method in _GET_AND_HEAD:
+        form = CreateRandomClipsForm()
+
+    elif request.method == 'POST':
+
+        form = CreateRandomClipsForm(request.POST)
+
+        if form.is_valid():
+            command_spec = _create_create_random_clips_command_spec(form)
+            return _start_job(command_spec, request.user)
+
+    else:
+        return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
+
+    context = _create_template_context(request, 'Process', form=form)
+
+    return render(request, 'vesper/create-random-clips.html', context)
+
+
+def _create_create_random_clips_command_spec(form):
+
+    data = form.cleaned_data
+
+    return {
+        'name': 'create_random_clips',
+        'arguments': {
+            'stations': data['stations'],
+            'start_date': data['start_date'],
+            'end_date': data['end_date'],
+            'schedule': data['schedule'],
+            'clip_duration': data['clip_duration'],
+            'clip_count': data['clip_count']
+        }
+    }
 
 
 @login_required
