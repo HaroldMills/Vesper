@@ -137,7 +137,7 @@ class OldBirdDetectorRunner:
             self._copy_file_channel(recording_file, channel_num)
         except Exception as e:
             self._logger.error(
-                'File channel copy failed with message: {}'.format(str(e)))
+                f'File channel copy failed with message: {str(e)}')
             return
         
         self._run_detectors_aux(detectors, recording_file, channel_num)
@@ -148,9 +148,9 @@ class OldBirdDetectorRunner:
         file_path = model_utils.get_absolute_recording_file_path(
             recording_file)
         
-        self._logger.info((
-            'Copying input file "{}" channel {} to "{}"...').format(
-                file_path.name, channel_num, _INPUT_FILE_PATH))
+        self._logger.info(
+            f'Copying input file "{file_path.name}" channel {channel_num} '
+            f'to "{_INPUT_FILE_PATH}"...')
         
         start_time = time.time()
         
@@ -170,11 +170,11 @@ class OldBirdDetectorRunner:
         dur = format_(file_duration)
         time = format_(processing_time)
         
-        message = '{} {}-second file in {} seconds'.format(prefix, dur, time)
+        message = f'{prefix} {dur}-second file in {time} seconds'
         
         if processing_time != 0:
             speedup = format_(file_duration / processing_time)
-            message += ', {} times faster than real time.'.format(speedup)
+            message += f', {speedup} times faster than real time.'
         else:
             message += '.'
             
@@ -184,7 +184,7 @@ class OldBirdDetectorRunner:
     def _run_detectors_aux(self, detectors, recording_file, channel_num):
 
         self._logger.info(
-            'Running detectors on file "{}"...'.format(_INPUT_FILE_PATH))
+            f'Running detectors on file "{_INPUT_FILE_PATH}"...')
         
         start_time = time.time()
         
@@ -209,7 +209,7 @@ class OldBirdDetectorRunner:
         
         name = _get_detector_name(detector)
         
-        self._logger.info('Starting {} detector...'.format(name))
+        self._logger.info(f'Starting {name} detector...')
         
         monitor = _DetectorMonitor(
             name, detector, recording_file, channel_num, self._job_info)
@@ -276,9 +276,9 @@ class _DetectorMonitor(Thread):
             self._prepare_output_dir()
             
         except Exception:
-            self._logger.error(append_stack_trace((
-                'Preparation of {} detector output directory raised '
-                'exception. Detector will not be started.').format(self.name)))
+            self._logger.error(append_stack_trace(
+                f'Preparation of {self.name} detector output directory '
+                f'raised exception. Detector will not be started.'))
             return
         
         try:
@@ -288,8 +288,7 @@ class _DetectorMonitor(Thread):
             
         except Exception:
             self._logger.error(append_stack_trace(
-                'Attempt to start {} detector raised exception.'.format(
-                    self.name)))
+                f'Attempt to start {self.name} detector raised exception.'))
             return
             
         try:
@@ -300,28 +299,28 @@ class _DetectorMonitor(Thread):
                     # detector process ended on its own, so there
                     # must have been an error
                     
-                    message = self._detector_process.stderr.read()
+                    message = self._detector_process.stderr.read().strip()
                     self._logger.error(
-                        '{} detector quit with error message: {}'.format(
-                            self.name, message.strip()))
+                        f'{self.name} detector quit with error message: '
+                        f'{message}')
                     return
                 
                 elif self._job_info.stop_requested:
                     # somebody has asked us to stop
                     
                     self._logger.info(
-                        'Terminating {} detector in response to stop '
-                        'request...')
+                        f'Terminating {self.name} detector in response to '
+                        f'stop request...')
                     self._detector_process.terminate()
                     return
                 
                 elif self._is_input_file_exhausted():
                     # detector process finished processing an input file
                     
-                    self._logger.info((
-                        'Terminating {} detector since detector log indicates '
-                        'that audio file processing is complete...').format(
-                            self.name))
+                    self._logger.info(
+                        f'Terminating {self.name} detector since detector '
+                        f'log indicates that audio file processing is '
+                        f'complete...')
                     self._detector_process.terminate()
                     break
                     
@@ -334,9 +333,9 @@ class _DetectorMonitor(Thread):
         
         except Exception:
             self._detector_process.terminate()
-            self._logger.error(append_stack_trace((
-                '{} detector monitor raised exception. Detector has been '
-                'terminated.').format(self.name)))
+            self._logger.error(append_stack_trace(
+                f'{self.name} detector monitor raised exception. '
+                f'Detector has been terminated.'))
             return
             
         try:
@@ -345,9 +344,9 @@ class _DetectorMonitor(Thread):
             self._process_detected_clips()
             
         except Exception:
-            self._logger.error(append_stack_trace((
-                '{} detector monitor raised exception. Detector was already '
-                'terminated.').format(self.name)))
+            self._logger.error(append_stack_trace(
+                f'{self.name} detector monitor raised exception. '
+                f'Detector was already terminated.'))
     
     
     def _prepare_output_dir(self):
@@ -355,8 +354,8 @@ class _DetectorMonitor(Thread):
         name = self.name
         
         self._logger.info(
-            'Clearing {} files from output directory "{}"...'.format(
-                name, _OUTPUT_DIR_PATH))
+            f'Clearing {name} files from output directory '
+            f'"{_OUTPUT_DIR_PATH}"...')
     
         log_path = self._detector_log_path
         os_utils.delete_file(log_path)
@@ -364,8 +363,7 @@ class _DetectorMonitor(Thread):
         pattern = _CLIP_FILE_NAME_PATTERN_FORMAT.format(name)
         os_utils.delete_files(_OUTPUT_DIR_PATH, pattern)
         
-        self._logger.info(
-            'Creating empty detector log file "{}"...'.format(log_path))
+        self._logger.info(f'Creating empty detector log file "{log_path}"...')
         os_utils.create_file(log_path)
 
 
@@ -381,8 +379,7 @@ class _DetectorMonitor(Thread):
         
         else:
             self._logger.debug(
-                '{} detector log times {} {}'.format(
-                    self.name, nums[-2], nums[-1]))
+                f'{self.name} detector log times {nums[-2]} {nums[-1]}')
             return nums[-2] == nums[-1]
         
         
@@ -420,9 +417,9 @@ class _DetectorMonitor(Thread):
         try:
             clip_samples, _ = audio_file_utils.read_wave_file(file_path)
         except Exception as e:
-            self._logger.error((
-                'Could not read clip file "{}". Error message was: {}. '
-                'File will be ignored.').format(file_path, str(e)))
+            self._logger.error(
+                f'Could not read clip file "{file_path}". Error message '
+                f'was: {str(e)}. File will be ignored.')
             return None
             
         # A clip always has one channel. Get that channel's samples.
@@ -430,8 +427,8 @@ class _DetectorMonitor(Thread):
         
         if len(clip_samples) == 0:
             self._logger.error(
-                'Clip file "{}" has zero length and will be ignored.'.format(
-                    file_path))
+                f'Clip file "{file_path}" has zero length and will be '
+                f'ignored.')
             return None
         
         # Get clip start time relative to recording file start.
@@ -439,9 +436,9 @@ class _DetectorMonitor(Thread):
         try:
             _, start_delta = _parse_clip_file_name(file_name)
         except ValueError as e:
-            self._logger.error((
-                'Could not parse clip file name at "{}". Error message '
-                'was: {}. File will be ignored.').format(file_path, str(e)))
+            self._logger.error(
+                f'Could not parse clip file name at "{file_path}". '
+                f'Error message was: {str(e)}. File will be ignored.')
             return None
             
         start_seconds = start_delta.total_seconds() - _CLIP_SEARCH_PADDING
@@ -476,15 +473,15 @@ class _DetectorMonitor(Thread):
             clip_samples, recording_samples, tolerance=1)
         
         if len(indices) == 0:
-            self._logger.error((
-                'Could not find samples of clip file "{}" in recording. '
-                'File will be ignored.').format(file_path))
+            self._logger.error(
+                f'Could not find samples of clip file "{file_path}" in '
+                f'recording. File will be ignored.')
             return None
         
         elif len(indices) > 1:
-            self._logger.error((
-                'Found samples of clip file "{}" more than once in '
-                'recording. File will be ignored.').format(file_path))
+            self._logger.error(
+                f'Found samples of clip file "{file_path}" more than '
+                f'once in recording. File will be ignored.')
             return None
         
         else:
@@ -544,13 +541,12 @@ class _DetectorMonitor(Thread):
                     )
                     
         except Exception as e:
-            self._logger.error((
-                'Attempt to create clip from file "{}" failed with message: '
-                '{}. File will be ignored.').format(
-                    file_path, str(e)))
+            self._logger.error(
+                f'Attempt to create clip from file "{file_path}" failed '
+                f'with message: {str(e)}. File will be ignored.')
         
         else:
-            self._logger.info('Archived {} clip {}.'.format(self.name, clip))
+            self._logger.info(f'Archived {self.name} clip {clip}.')
 
 
     def _delete_file(self, file_path):
@@ -561,11 +557,11 @@ class _DetectorMonitor(Thread):
 
 
 def _get_detector_executable_name(detector_name):
-    return '{}-x.exe'.format(detector_name)
+    return f'{detector_name}-x.exe'
 
 
 def _get_detector_log_path(detector_name):
-    file_name = 'Log{}.txt'.format(detector_name)
+    file_name = f'Log{detector_name}.txt'
     return os.path.join(_OUTPUT_DIR_PATH, file_name)
 
 
@@ -601,9 +597,9 @@ def _parse_clip_file_name(file_name):
 def _raise_value_error(file_name, message=None):
     
     if message is None:
-        message = 'Bad clip file name "{}".'.format(file_name)
+        message = f'Bad clip file name "{file_name}".'
     else:
-        message = '{} in clip file name "{}".'.format(message, file_name)
+        message = f'{message} in clip file name "{file_name}".'
         
     raise ValueError(message)
 
@@ -612,4 +608,4 @@ def _check(file_name, part_name, check, n, *args):
     try:
         check(n, *args)
     except ValueError:
-        _raise_value_error(file_name, 'Bad {} "{}"'.format(part_name, n))
+        _raise_value_error(file_name, f'Bad {part_name} "{n}".')
