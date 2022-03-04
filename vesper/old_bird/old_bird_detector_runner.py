@@ -13,7 +13,6 @@ from django.db import transaction
 
 from vesper.django.app.models import Clip, Job, RecordingChannel
 from vesper.signal.wave_audio_file import WaveAudioFileReader
-from vesper.singleton.clip_manager import clip_manager
 from vesper.util.logging_utils import append_stack_trace
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
@@ -114,8 +113,7 @@ class OldBirdDetectorRunner:
         self._logger = logging.getLogger()
         
         
-    def run_detectors(
-            self, detectors, recording_file, channel_num, create_clip_files):
+    def run_detectors(self, detectors, recording_file, channel_num):
         
         """
         Runs the specified detectors on one channel of one recording file.
@@ -142,8 +140,7 @@ class OldBirdDetectorRunner:
                 'File channel copy failed with message: {}'.format(str(e)))
             return
         
-        self._run_detectors_aux(
-            detectors, recording_file, channel_num, create_clip_files)
+        self._run_detectors_aux(detectors, recording_file, channel_num)
         
         
     def _copy_file_channel(self, recording_file, channel_num):
@@ -184,8 +181,7 @@ class OldBirdDetectorRunner:
         self._logger.info(message)
 
 
-    def _run_detectors_aux(
-            self, detectors, recording_file, channel_num, create_clip_files):
+    def _run_detectors_aux(self, detectors, recording_file, channel_num):
 
         self._logger.info(
             'Running detectors on file "{}"...'.format(_INPUT_FILE_PATH))
@@ -198,8 +194,7 @@ class OldBirdDetectorRunner:
         # not archived due to the various possible errors, etc.
         
         monitors = [
-            self._start_detector(
-                d, recording_file, channel_num, create_clip_files)
+            self._start_detector(d, recording_file, channel_num)
             for d in detectors]
         
         self._join_monitors(monitors)
@@ -210,16 +205,14 @@ class OldBirdDetectorRunner:
             'Detection ran on', recording_file.duration, processing_time)
 
 
-    def _start_detector(
-            self, detector, recording_file, channel_num, create_clip_files):
+    def _start_detector(self, detector, recording_file, channel_num):
         
         name = _get_detector_name(detector)
         
         self._logger.info('Starting {} detector...'.format(name))
         
         monitor = _DetectorMonitor(
-            name, detector, recording_file, channel_num, create_clip_files,
-            self._job_info)
+            name, detector, recording_file, channel_num, self._job_info)
         monitor.start()
         
         return monitor
@@ -242,16 +235,13 @@ class _DetectorMonitor(Thread):
     """
     
     
-    def __init__(
-            self, name, detector, recording_file, channel_num,
-            create_clip_files, job_info):
+    def __init__(self, name, detector, recording_file, channel_num, job_info):
         
         super().__init__(name=name)
         
         self._detector = detector
         self._recording_file = recording_file
         self._channel_num = channel_num
-        self._create_clip_files = create_clip_files
         self._job_info = job_info
         
         self._recording = recording_file.recording
@@ -553,17 +543,6 @@ class _DetectorMonitor(Thread):
                         creating_processor=self._detector
                     )
                     
-                    # We must create the clip audio file after creating
-                    # the clip row in the database. The file's path
-                    # depends on the clip ID, which is set as part of
-                    # creating the clip row.
-                    #
-                    # We create the audio file within the database
-                    # transaction to ensure that the clip row and
-                    # audio file are created atomically.
-                    if self._create_clip_files:
-                        clip_manager.create_audio_file(clip, samples)
-                                    
         except Exception as e:
             self._logger.error((
                 'Attempt to create clip from file "{}" failed with message: '

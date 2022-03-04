@@ -18,7 +18,6 @@ from vesper.django.app.models import (
 from vesper.old_bird.old_bird_detector_runner import OldBirdDetectorRunner
 from vesper.signal.wave_audio_file import WaveAudioFileReader
 from vesper.singleton.archive import archive
-from vesper.singleton.clip_manager import clip_manager
 from vesper.singleton.extension_manager import extension_manager
 from vesper.singleton.preset_manager import preset_manager
 from vesper.util.schedule import Interval, Schedule
@@ -101,12 +100,6 @@ End index of shuffled station-nights for which to run detectors, when
 _DEFERRED_DATABASE_WRITE_FILE_NAME_FORMAT = 'Job {} Part {:03d}.pkl'
 
 
-# TODO: Remove command argument and code for creating clip files if we
-# decide we really want to do that. (Do the same in other files as well:
-# do a global search for `create_clip_files`). For the time being, the
-# argument is always set `False` in the initializer below.
-
-
 class DetectCommand(Command):
     
     
@@ -124,7 +117,6 @@ class DetectCommand(Command):
         self._end_date = get('end_date', args)
         self._schedule_name = get('schedule', args)
         self._defer_clip_creation = get('defer_clip_creation', args)
-        self._create_clip_files = False  # get('create_clip_files', args)
         
         self._schedule = _get_schedule(self._schedule_name)
         self._station_schedules = {}
@@ -320,9 +312,7 @@ class DetectCommand(Command):
                 for file_ in recording_files:
                     for channel_num in range(channel_count):
                         runner = OldBirdDetectorRunner(self._job_info)
-                        runner.run_detectors(
-                            detectors, file_, channel_num,
-                            self._create_clip_files)
+                        runner.run_detectors(detectors, file_, channel_num)
 
         
     def _run_other_detectors(self, detector_models, recordings):
@@ -549,8 +539,7 @@ class DetectCommand(Command):
                 listener = _DetectorListener(
                     detector_model, recording, recording_channel,
                     file_start_index, interval_start_index,
-                    self._defer_clip_creation, self._create_clip_files,
-                    file_reader, job, self._logger)
+                    self._defer_clip_creation, file_reader, job, self._logger)
                 
                 detector = _create_detector(
                     detector_model, recording, listener)
@@ -732,7 +721,7 @@ class _DetectorListener:
     def __init__(
             self, detector_model, recording, recording_channel,
             file_start_index, interval_start_index, defer_clip_creation,
-            create_clip_files, file_reader, job, logger):
+            file_reader, job, logger):
         
         # Give this detector listener a unique serial number.
         self._serial_number = _DetectorListener.next_serial_number
@@ -744,7 +733,6 @@ class _DetectorListener:
         self._file_start_index = file_start_index          # index in recording
         self._interval_start_index = interval_start_index  # index in file
         self._defer_clip_creation = defer_clip_creation
-        self._create_clip_files = create_clip_files
         self._file_reader = file_reader
         self._job = job
         self._logger = logger
@@ -752,8 +740,7 @@ class _DetectorListener:
         self._clips = []
         self._deferred_clips = []
         self._clip_count = 0
-        self._database_failure_count = 0
-        self._file_failure_count = 0
+        self._failure_count = 0
         
         self._annotation_info_cache = {}
  
@@ -791,8 +778,6 @@ class _DetectorListener:
         start_offset = self._file_start_index + self._interval_start_index
         creation_time = time_utils.get_utc_now()
         
-        create_clip_files = self._create_clip_files
-        
         if self._defer_clip_creation:
             
             for start_index, length, annotations in self._clips:
@@ -809,9 +794,6 @@ class _DetectorListener:
             sample_rate = self._recording.sample_rate
             mic_output = recording_channel.mic_output
         
-            if create_clip_files:
-                clips = []
-             
             # Create database records for current batch of clips in one
             # database transaction.
             
@@ -856,12 +838,6 @@ class _DetectorListener:
                                 creating_processor=detector_model
                             )
                             
-                            if create_clip_files:
-                                
-                                # Save clip so we can create clip file
-                                # outside of transaction.
-                                clips.append(clip)
-                                
                             if annotations is not None:
                                 
                                 for name, value in annotations.items():
@@ -899,7 +875,7 @@ class _DetectorListener:
                     start_time, duration)
                 
                 batch_size = len(self._clips)
-                self._database_failure_count += batch_size
+                self._failure_count += batch_size
                 
                 if batch_size == 1:
                     prefix = 'Clip'
@@ -910,24 +886,6 @@ class _DetectorListener:
                     f'            Attempt to create clip {clip_string} '
                     f'failed with message: {str(e.wrapped_exception)}. '
                     f'{prefix} will be ignored.')
-
-            else:
-                # clip creation succeeded
-                
-                if create_clip_files:
-                
-                    for clip in clips:
-                        
-                        try:
-                            clip_manager.create_audio_file(clip)
-                            
-                        except Exception as e:
-                            self._file_failure_count += 1
-                            self._logger.error(
-                                f'            Attempt to create audio file '
-                                f'for clip {str(clip)} failed with message: '
-                                f'{str(e)} Clip database record was still '
-                                f'created.')
                             
         self._clips = []
         
@@ -980,44 +938,31 @@ class _DetectorListener:
         # Create remaining clips.
         self._create_clips(threshold)
         
-        clips_text = text_utils.create_count_text(self._clip_count, 'clip')
+        clip_count_text = \
+            text_utils.create_count_text(self._clip_count, 'clip')
         
         if self._defer_clip_creation:
             
             self._write_deferred_clips_file()
             
             self._logger.info(
-                f'        Processed {clips_text} from detector '
+                f'        Processed {clip_count_text} from detector '
                 f'"{self._detector_model.name}".')
             
-        elif self._database_failure_count == 0 and \
-                self._file_failure_count == 0:
+        elif self._failure_count == 0:
             
             self._logger.info(
-                f'        Created {clips_text} from detector '
+                f'        Created {clip_count_text} from detector '
                 f'"{self._detector_model.name}".')
             
         else:
             
-            db_failures_text = text_utils.create_count_text(
-                self._database_failure_count, 'clip creation failure')
-            
-            if self._create_clip_files:
+            failure_count_text = text_utils.create_count_text(
+                self._failure_count, 'clip creation failure')
                 
-                file_failure_count = \
-                    self._database_failure_count + self._file_failure_count
-                
-                file_failures_text = ' and ' + text_utils.create_count_text(
-                    file_failure_count, 'audio file creation failure')
-                
-            else:
-                
-                file_failures_text = ''
-            
             self._logger.info(
-                f'        Processed {clips_text} from detector '
-                f'"{self._detector_model.name}" with '
-                f'{db_failures_text}{file_failures_text}.')
+                f'        Processed {clip_count_text} from detector '
+                f'"{self._detector_model.name}" with {failure_count_text}.')
         
 #         avg = self._total_transactions_duration / self._transaction_count
 #         self._logger.info(
