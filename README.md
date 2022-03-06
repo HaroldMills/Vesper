@@ -30,5 +30,7 @@ Vesper is provided under the
 
 Many thanks to [MPG Ranch](http://mpgranch.com), Project Night Flight, [Old Bird](http://oldbird.org), and anonymous donors for financial support of the Vesper project.
 
+Favicon by Moon And Birds by Vectors Market from NounProject.com.
+
 ![Image of Zenodo DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.1020572.svg)
 
