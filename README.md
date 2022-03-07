@@ -30,7 +30,7 @@ Vesper is provided under the
 
 Many thanks to [MPG Ranch](http://mpgranch.com), Project Night Flight, [Old Bird](http://oldbird.org), and anonymous donors for financial support of the Vesper project.
 
-Vesper's favicon is [Moon And Birds](https://thenounproject.com/icon/moon-and-birds-281583/) by [Vectors Market](https://thenounproject.com/vectorsmarket/), obtained from [NounProject.com](https://thenounproject.com/).
+Vesper's favicon is [Moon And Birds](https://thenounproject.com/icon/moon-and-birds-281583/) by [Vectors Market](https://thenounproject.com/vectorsmarket/), obtained from [Noun Project](https://thenounproject.com/).
 
 ![Image of Zenodo DOI badge](https://zenodo.org/badge/DOI/10.5281/zenodo.1020572.svg)
 
