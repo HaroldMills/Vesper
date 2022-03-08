@@ -136,11 +136,13 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
 AUDIO_FILE_LOCATIONS = (
-    ('internal disk', '/Users/harold/Desktop/Grams/Audio Files'),
+    ('internal disk',
+        '/Users/harold/Desktop/NFC/2021-11 Aggregate Gram Tests/Audio Files'),
     ('external disk',
         '/Volumes/Recordings1/Nocturnal Bird Migration/Harold/2021/Harold')
 )
-WORKING_DIR_PATH = Path('/Users/harold/Desktop/Grams')
+WORKING_DIR_PATH = Path(
+    '/Users/harold/Desktop/NFC/2021-11 Aggregate Gram Tests')
 AUDIO_FILE_DIR_PATH = WORKING_DIR_PATH / 'Audio Files'
 LIST_FILE_PATH = WORKING_DIR_PATH / 'audio_file_names.txt'
 GRAM_FILE_PATH = WORKING_DIR_PATH / 'grams.pdf'
