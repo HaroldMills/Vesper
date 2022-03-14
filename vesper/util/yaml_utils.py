@@ -1,55 +1,37 @@
-"""
-YAML utility functions.
-
-According to the ruamel_yaml documentation (particularly
-https://yaml.readthedocs.io/en/stable/basicuse.html), the ruamel_yaml API
-is "still in the process of being fleshed out" in versions 0.15+. The code
-below was tested with version 0.15.46, so Vesper should pin ruamel_yaml
-to that version until the API stabilizes.
-"""
+"""YAML utility functions."""
 
 
-import ruamel.yaml as yaml
+from io import StringIO
+
+from ruamel.yaml import YAML
+
+
+def load(source):
+    yaml = _create_yaml()
+    return yaml.load(source)
  
- 
-def load(source, **kwargs):
-    return yaml.safe_load(source, **kwargs)
- 
- 
-def dump(obj, dest=None, **kwargs):
+
+def _create_yaml():
+
+    # We use the default 'rt' type, which is safe. We also use the
+    # pure-Python implementation, which is slower than the default
+    # C implementation but less quirky. See
+    # https://yaml.readthedocs.io/en/latest for details.
+     return YAML(pure=True)
+
+
+def dump(obj, dest=None, default_flow_style=True):
+    
+    yaml = _create_yaml()
+
+    if not default_flow_style:
+        yaml.default_flow_style=False
      
     if dest is None:
-        return yaml.safe_dump(obj, **kwargs)
+        s = StringIO()
+        yaml.dump(obj, s)
+        return s.getvalue()
      
     else:
-        yaml.safe_dump(obj, dest, **kwargs)
+        yaml.dump(obj, dest)
         return None
-
-
-# The following uses the `YAML` class, which is new in version 0.15 and
-# may ultimately be what we want to use in this module. Note that we
-# currently pass a `default_flow_style` keyword argument to the
-# `yaml_utils.dump` function in a couple of places, which is not supported
-# by the `dump` function below. We should either support the argument or
-# not use it.
-#
-# from ruamel_yaml import YAML
-# 
-# 
-# def load(source):
-#     yaml = YAML()
-#     return yaml.load(source)
-#  
-#  
-# def dump(obj, dest=None):
-#      
-#     yaml = YAML()
-#      
-#     if dest is None:
-#         s = io.StringIO()
-#         yaml.dump(obj, s)
-#         return s.getvalue()
-#      
-#     else:
-#         yaml.dump(obj, dest)
-#         return None
