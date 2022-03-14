@@ -23,7 +23,6 @@ class LinearMap(InvertibleMap):
         
     def __eq__(self, other):
         return isinstance(other, LinearMap) and \
-            super().__eq__(other) and \
             self.a == other.a and \
             self.b == other.b
         
