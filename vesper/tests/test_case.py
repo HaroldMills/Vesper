@@ -17,7 +17,8 @@ class TestCase(unittest.TestCase):
             function(*args, **kwargs)
             
         except exception_class as e:
-            print(str(e))
+            pass
+            # print(str(e))
             
             
     def _assert_arrays_equal(self, x, y):
