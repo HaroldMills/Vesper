@@ -137,8 +137,8 @@ class PresetManagerTests(TestCase):
         manager.unload_presets()
         
         # Check that no presets are loaded.
-        self.assertEquals(manager._loaded_preset_types, ())
-        self.assertEquals(manager._loaded_presets, ())
+        self.assertEqual(manager._loaded_preset_types, ())
+        self.assertEqual(manager._loaded_presets, ())
         
         # Load presets again.
         self.test_get_presets()
@@ -147,9 +147,9 @@ class PresetManagerTests(TestCase):
         manager.unload_presets('A')
         
         # Check that presets of type B and C are loaded, but none of type A.
-        self.assertEquals(manager._loaded_preset_types, (B, C))
+        self.assertEqual(manager._loaded_preset_types, (B, C))
         presets = manager._loaded_presets
-        self.assertEquals(len(presets), 2)
+        self.assertEqual(len(presets), 2)
         for preset in presets:
-            self.assertEquals(preset.path[0], 'B')
+            self.assertEqual(preset.path[0], 'B')
             

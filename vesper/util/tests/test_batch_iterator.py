@@ -22,8 +22,8 @@ class BatchIteratorTests(TestCase):
         
         batch_iterator = BatchIterator(data_set, batch_size)
         self.assertIs(batch_iterator.data_set, data_set)
-        self.assertEquals(batch_iterator.batch_size, batch_size)
-        self.assertEquals(batch_iterator.num_batches, num_batches)
+        self.assertEqual(batch_iterator.batch_size, batch_size)
+        self.assertEqual(batch_iterator.num_batches, num_batches)
         
         batch_num = 0
         
