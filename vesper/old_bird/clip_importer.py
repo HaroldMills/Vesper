@@ -4,7 +4,6 @@
 import datetime
 import logging
 import os.path
-import re
 import time
 
 
@@ -19,6 +18,7 @@ from vesper.singleton.clip_manager import clip_manager
 from vesper.util.bunch import Bunch
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
+import vesper.old_bird.clip_import_utils as clip_import_utils
 import vesper.util.audio_file_utils as audio_file_utils
 import vesper.util.file_type_utils as file_type_utils
 import vesper.util.os_utils as os_utils
@@ -329,7 +329,8 @@ class ClipImporter:
         station = self._get_station(dir_names)
         
         # Get clip detector, start time, and date.
-        detector_name, local_start_time = _parse_file_name(file_name)
+        detector_name, local_start_time = \
+            clip_import_utils.parse_clip_file_name(file_name)
         detector = self._get_detector(detector_name)
         start_time = station.local_to_utc(local_start_time)
         date = station.get_night(start_time)
@@ -520,43 +521,6 @@ def _get_audio_file_info(file_path):
     else:
         return info.length, info.sample_rate
         
-
-_FILE_NAME_REGEX = re.compile(
-    r'^'
-    r'(?P<detector_name>[^_]+)'
-    r'_'
-    r'(?P<year>\d\d\d\d)-(?P<month>\d\d)-(?P<day>\d\d)'
-    r'_'
-    r'(?P<hour>\d\d)\.(?P<minute>\d\d)\.(?P<second>\d\d)'
-    r'_'
-    r'(?P<num>\d\d)'
-    r'\.wav'
-    r'$')
-
-
-def _parse_file_name(file_name):
-    
-    m = _FILE_NAME_REGEX.match(file_name)
-    
-    if m is not None:
-        
-        m = Bunch(**m.groupdict())
-        
-        try:
-            start_time = time_utils.parse_date_time(
-                m.year, m.month, m.day, m.hour, m.minute, m.second)
-        except Exception as e:
-            raise ValueError(
-                'Could not get start time from file name: {}'.format(str(e)))
-        
-        tenths = datetime.timedelta(microseconds=100000 * int(m.num))
-        start_time += tenths
-        
-        return m.detector_name, start_time
-        
-    else:
-        raise ValueError('Could not parse file name.')
-
 
 def _get_recording_start_and_end_times(station, date):
     

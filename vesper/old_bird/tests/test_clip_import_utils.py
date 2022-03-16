@@ -1,12 +1,7 @@
 import datetime
 
-# Set up Django. This must happen before any use of Django, including
-# ORM class imports.
-import vesper.util.django_utils as django_utils
-django_utils.set_up_django()
-
 from vesper.tests.test_case import TestCase
-import vesper.old_bird.clip_importer as clip_importer
+import vesper.old_bird.clip_import_utils as clip_import_utils
 
 
 def _dt(year, month, day, hour, minute, second, tenths):
@@ -18,7 +13,7 @@ def _dt(year, month, day, hour, minute, second, tenths):
 class ClipImporterTests(TestCase):
 
 
-    def test_parse_file_name(self):
+    def test_parse_clip_file_name(self):
         
         cases = [
             
@@ -30,7 +25,7 @@ class ClipImporterTests(TestCase):
                  
         ]
         
-        parse = clip_importer._parse_file_name
+        parse = clip_import_utils.parse_clip_file_name
         
         for file_name, expected_detector_name, expected_start_time in cases:
             
@@ -42,7 +37,7 @@ class ClipImporterTests(TestCase):
             self.assertEqual(start_time, expected_start_time)
             
             
-    def test_parse_file_name_errors(self):
+    def test_parse_clip_file_name_errors(self):
         
         cases = [
         
@@ -59,7 +54,7 @@ class ClipImporterTests(TestCase):
 
         ]
         
-        parse = clip_importer._parse_file_name
+        parse = clip_import_utils.parse_clip_file_name
         
         for file_name in cases:
             self._assert_raises(ValueError, parse, file_name)
