@@ -59,6 +59,18 @@ Whenever you modify plugin entry points, you must run:
 for the plugin manager to be able to see the changes. If you don't do this,
 you will see ImportError exceptions when the plugin manager tries to load
 entry points that no longer exist.
+
+To run Django unit tests:
+
+    conda activate vesper-latest
+    cd "Desktop/Test Archive"
+    vesper_admin test -p "dtest_*.py" vesper.django
+
+To run non-Django unit tests:
+
+    conda activate vesper-latest
+    cd "/Users/harold/Documents/Code/Python/Vesper/vesper"
+    python -m unittest discover -s /Users/harold/Documents/Code/Python/Vesper/vesper
 """
 
 
