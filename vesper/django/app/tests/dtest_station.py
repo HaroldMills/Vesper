@@ -1,21 +1,17 @@
 import datetime
 
+from django.test import TestCase
 import pytz
 
-# Set up Django. This must happen before any use of Django, including
-# ORM class imports.
-import vesper.util.django_utils as django_utils
-django_utils.set_up_django()
-
 from vesper.django.app.models import Station
-from vesper.tests.test_case import TestCase
 
 
 class StationTests(TestCase):
     
     
     def setUp(self):
-        self.station = Station('Test', time_zone='US/Eastern')
+        self.station = \
+            Station.objects.create(name='Test', time_zone='US/Eastern')
         self.tz = self.station.tz
         
         
