@@ -1,17 +1,17 @@
 import datetime
 
-from django.test import TestCase
 import pytz
 
 from vesper.django.app.models import Station
+from vesper.django.app.tests.test_case import TestCase
 
 
 class StationTests(TestCase):
     
     
     def setUp(self):
-        self.station = \
-            Station.objects.create(name='Test', time_zone='US/Eastern')
+        self._create_shared_test_models()
+        self.station = Station.objects.get(name='Station 1')
         self.tz = self.station.tz
         
         
