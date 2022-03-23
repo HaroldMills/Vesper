@@ -8,19 +8,19 @@ _SHARED_TEST_MODEL_DATA = '''
 
 stations:
 
-    - name: Station 1
+    - name: Station 0
       description: First test station.
       time_zone: US/Eastern
       latitude: 42.5
       longitude: -76.5
-      elevation: 1
+      elevation: 100
 
-    - name: Station 2
+    - name: Station 1
       description: Second test station.
       time_zone: US/Eastern
       latitude: 42
       longitude: -76
-      elevation: 2
+      elevation: 200
 
 device_models:
 
@@ -50,26 +50,31 @@ devices:
     - name: Swift
       model: Swift
       serial_number: "0"
-      description: Recorder used at Station 1.
+      description: Recorder used at Station 0.
 
     - name: 21c 0
       model: 21c
       serial_number: "0"
-      description: Microphone used at Station 1.
+      description: Microphone used at Station 0.
 
     - name: PC
       model: PC
       serial_number: "0"
-      description: Recorder used at Station 2.
+      description: Recorder used at Station 1.
 
     - name: 21c 1
       model: 21c
       serial_number: "1"
-      description: Microphone used at Station 2.
+      description: Microphone used at Station 1.
+
+    - name: 21c 2
+      model: 21c
+      serial_number: "2"
+      description: Microphone used at Station 1.
 
 station_devices:
 
-    - station: Station 1
+    - station: Station 0
       start_time: 2050-01-01
       end_time: 2051-01-01
       devices:
@@ -79,15 +84,18 @@ station_devices:
           - output: 21c 0 Output
             input: Swift Input
 
-    - station: Station 2
+    - station: Station 1
       start_time: 2050-01-01
       end_time: 2051-01-01
       devices:
           - PC
           - 21c 1
+          - 21c 2
       connections:
           - output: 21c 1 Output
             input: PC Input 0
+          - output: 21c 2 Output
+            input: PC Input 1
 
 detectors:
 
