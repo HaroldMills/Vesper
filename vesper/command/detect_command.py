@@ -817,11 +817,10 @@ class _DetectorListener:
                          
                         try:
                         
-                            # It would be nice to use Django's
-                            # `bulk_create` here, but unfortunately that
-                            # won't automatically set clip IDs for us
-                            # except (as of this writing) if we're using
-                            # PostgreSQL.
+                            # TODO: Consider using Django's `bulk_create`
+                            # here to creat clips and annotations more
+                            # efficiently.
+                            
                             clip = Clip.objects.create(
                                 station=station,
                                 mic_output=mic_output,
