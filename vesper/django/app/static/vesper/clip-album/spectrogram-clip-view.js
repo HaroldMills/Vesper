@@ -115,6 +115,17 @@ export class SpectrogramClipView extends ClipView {
             // spectrogram.
             
 			this._spectrogram = _computeSpectrogram(clip.samples, settings);
+
+            if (this._spectrogram.length === 0) {
+
+                console.log(
+                    'Spectrogram length is zero in ' +
+                    'spectrogram-clip-view._updateCanvas. ' +
+                    `Sample array length is ${clip.samples.length}.`);
+                    
+                return;
+        
+            }
             
             // _showSpectrogramStats(this._spectrogram, settings);
             
