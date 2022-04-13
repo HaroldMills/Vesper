@@ -116,12 +116,22 @@ export class SpectrogramClipView extends ClipView {
             
 			this._spectrogram = _computeSpectrogram(clip.samples, settings);
 
+            // For investigating GitHub issue 197
+            // (https://github.com/HaroldMills/Vesper/issues/197).
             if (this._spectrogram.length === 0) {
 
                 console.log(
                     'Spectrogram length is zero in ' +
-                    'spectrogram-clip-view._updateCanvas. ' +
-                    `Sample array length is ${clip.samples.length}.`);
+                    'spectrogram-clip-view._updateCanvas. ');
+
+                console.log('Clip info:');
+                console.log(`    num: ${clip.num}`);
+                console.log(`    id: ${clip.id}`);
+                console.log(`    startIndex: ${clip.startIndex}`);
+                console.log(`    length: ${clip.length}`);
+                console.log(`    sampleRate: ${clip.sampleRate}`);
+                console.log(`    startTime: ${clip.startTime}`);
+                console.log(`    sample array length: ${clip.samples.length}`);
                     
                 return;
         
