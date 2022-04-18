@@ -2,6 +2,7 @@
 
 
 from collections import defaultdict
+import itertools
 
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Processor, TagInfo)
@@ -194,7 +195,29 @@ class Archive:
         
     def get_visible_processors_of_type(self, processor_type):
         self._refresh_processor_cache_if_needed()
-        return self._visible_processors_by_type.get(processor_type, [])
+        return self._get_visible_processors_of_type(processor_type)
+
+
+    def _get_visible_processors_of_type(self, processor_type):
+
+        if isinstance(processor_type, str):
+            return self._visible_processors_by_type.get(processor_type, [])
+
+        else:
+            # `processor_type` is not a string
+
+            # Assume `processor_type` is an iterable collection of
+            # strings, possibly nested.
+
+            # Get processors of the specified types in a flat list.
+            processors = list(itertools.chain.from_iterable(
+                self._get_visible_processors_of_type(t)
+                for t in processor_type))
+
+            # Sort the list by processor name.
+            processors.sort(key=lambda p: p.name)
+
+            return processors
         
         
     def get_processor(self, processor_name):

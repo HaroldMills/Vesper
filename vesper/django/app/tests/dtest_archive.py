@@ -106,6 +106,8 @@ class ArchiveTests(TestCase):
         cases = [
             ('Detector', ['Thrush Detector', 'Tseep Detector']),
             ('Classifier', ['Coarse Classifier']),
+            (['Detector', 'Classifier'],
+             ['Coarse Classifier', 'Thrush Detector', 'Tseep Detector']),
             ('Bobo', [])
         ]
         
