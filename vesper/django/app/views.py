@@ -484,7 +484,7 @@ def _create_create_random_clips_command_spec(form):
     return {
         'name': 'create_random_clips',
         'arguments': {
-            'stations': data['stations'],
+            'station_mics': data['station_mics'],
             'start_date': data['start_date'],
             'end_date': data['end_date'],
             'schedule': data['schedule'],
@@ -1895,7 +1895,8 @@ def night(request):
     detector_name = params['detector']
     detector = archive.get_processor(detector_name)
     detector_ui_name = archive.get_processor_ui_name(detector)
-    detectors = archive.get_visible_processors_of_type('Detector')
+    detectors = archive.get_visible_processors_of_type(
+        ['Detector', 'Clip Creator'])
     detector_ui_names = [archive.get_processor_ui_name(d) for d in detectors]
     
     annotation_name = 'Classification'
@@ -2128,7 +2129,8 @@ def _get_clip_filter_data(params, preferences):
     detector_name = _get_calendar_query_field_value(
         'detector', params, preferences)
     detector = archive.get_processor(detector_name)
-    detectors = archive.get_visible_processors_of_type('Detector')
+    detectors = archive.get_visible_processors_of_type(
+        ['Detector', 'Clip Creator'])
     detector_ui_names = [archive.get_processor_ui_name(d) for d in detectors]
     detector_ui_name = archive.get_processor_ui_name(detector)
     

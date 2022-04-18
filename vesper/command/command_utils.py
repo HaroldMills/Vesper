@@ -4,13 +4,16 @@ import logging
 import tempfile
 
 from vesper.command.command import CommandExecutionError, CommandSyntaxError
+import vesper.django.app.model_utils as model_utils
 import vesper.util.os_utils as os_utils
+
+
+_logger = logging.getLogger()
 
 
 # TODO: Add type checking to functions that get arguments.
 
 
-# TODO: Consider making this a `Command` method.
 def get_required_arg(name, args):
     try:
         return args[name]
@@ -19,9 +22,28 @@ def get_required_arg(name, args):
             'Missing required command argument "{}".'.format(name))
 
 
-# TODO: Consider making this a `Command` method.
 def get_optional_arg(name, args, default=None):
     return args.get(name, default)
+
+
+def get_station_mic_output_pairs(ui_names):
+
+    pairs_dict = model_utils.get_station_mic_output_pairs_dict()
+
+    pairs = set()
+
+    for name in ui_names:
+
+        pair = pairs_dict.get(name)
+
+        if pair is None:
+            raise CommandExecutionError(
+                f'Unrecognized station / mic output UI name "{name}".')
+
+        else:
+            pairs.add(pair)
+
+    return sorted(pairs)
 
 
 def get_timing_text(elapsed_time, item_count, items_name):
@@ -94,9 +116,6 @@ def write_csv_file(file_path, rows, header=None):
 def handle_command_execution_error(message, exception):
     raise CommandExecutionError(
         f'{message} Error message was: {str(exception)}.')
-
-
-_logger = logging.getLogger()
 
 
 def log_and_reraise_fatal_exception(exception, action_text, result_text=None):

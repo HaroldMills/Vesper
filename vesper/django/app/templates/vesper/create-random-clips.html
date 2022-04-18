@@ -17,10 +17,13 @@
     <h2>Create random clips</h2>
 
     <p>
-        Creates random clips in all channels of the specified recordings.
+        Creates random clips in the specified recording channels.
     </p>
 
-    {% include "vesper/recordings-specification-message.html" %}
+    <p>
+        The recording channels are specified as a set of station/mic pairs
+        and a range of dates.
+    </p>
 
     <p>
         This command marks the clips it creates as having been created
@@ -48,7 +51,7 @@
 
         {% csrf_token %}
         
-        {{ form.stations|block_form_element }}
+        {{ form.station_mics|block_form_element }}
         {{ form.start_date|form_element }}
         {{ form.end_date|form_element }}
         {{ form.schedule|form_element }}

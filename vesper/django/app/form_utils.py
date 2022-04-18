@@ -24,8 +24,8 @@ def get_field_default(form_title, field_label, default):
 
 
 def get_processor_choices(processor_type):
-    detectors = archive.get_visible_processors_of_type(processor_type)
-    names = [archive.get_processor_ui_name(d) for d in detectors]
+    processors = archive.get_visible_processors_of_type(processor_type)
+    names = [archive.get_processor_ui_name(p) for p in processors]
     return [(n, n) for n in names]
 
 
