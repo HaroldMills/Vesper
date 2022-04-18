@@ -1,94 +1,89 @@
-# Set up Django. This must happen before any use of Django, including
-# ORM class imports.
-import vesper.util.django_utils as django_utils
-django_utils.set_up_django()
-
 from vesper.django.app.archive import Archive
-from vesper.django.app.models import (
-    AnnotationConstraint, AnnotationInfo, Processor)
+from vesper.django.app.models import Processor
+from vesper.django.app.tests.dtest_case import TestCase
 from vesper.singleton.preference_manager import preference_manager
-from vesper.tests.test_case import TestCase
-import vesper.util.time_utils as time_utils
+import vesper.django.app.metadata_import_utils as metadata_import_utils
+import vesper.util.yaml_utils as yaml_utils
 
 
-_POPULATE_DATABASE = False
-"""
-`True` if and only if test class should populate test archive database.
+_TEST_PREFERENCES = '''
 
-See the file `README.txt` in the same directory as this file for how
-to use this attribute.
-"""
+ui_names:
+
+    processors:
+        Tseep Detector: Tseep
+
+    annotation_values:
+
+        Classification:
+            Call.AMRE: American Redstart
+            Call.BTBW: Black-throated Blue Warbler
+            Call.CSWA: Chestnut-sided Warbler
+
+        Confidence:
+            "-None-": None
+            "* | -None-": "Any | None"
+            "*": "Any"
+
+hidden_objects:
+
+    processors:
+        - Species Classifier
+
+    annotation_values:
+
+        Classification:
+            - Black-throated Blue Warbler
+            - Call.CSWA
+
+'''
 
 
-_CLASSIFICATION_CONSTRAINT_TEXT = '''
-name: Classification
-type: Hierarchical Values
-values:
-    - Call:
-        - CSWA
-        - BTBW
-        - AMRE
-    - Noise
-'''.lstrip()
+_TEST_MODEL_DATA = '''
 
-_CONFIDENCE_CONSTRAINT_TEXT = '''
-name: Confidence
-type: Values
-values: ['1', '2', '3']
-'''.lstrip()
+detectors:
+    - name: Tseep Detector
+    - name: Thrush Detector
+
+classifiers:
+    - name: Coarse Classifier
+    - name: Species Classifier
+
+annotation_constraints:
+
+    - name: Classification
+      type: Hierarchical Values
+      values:
+          - Call:
+              - CSWA
+              - BTBW
+              - AMRE
+          - Noise
+
+    - name: Confidence
+      type: Values
+      values: ['1', '2', '3']
+
+annotations:
+
+    - name: Classification
+      type: String
+      constraint: Classification
+
+    - name: Confidence
+      type: String
+      constraint: Confidence
+
+'''
 
 
 class ArchiveTests(TestCase):
     
     
-    @classmethod
-    def setUpClass(cls):
-    
-        print('setUpClass')
-        
-        if _POPULATE_DATABASE:
-            
-            preference_manager._push_test_module_preferences(__file__)
-        
-            create = Processor.objects.create
-            create(name='Tseep Detector', type='Detector')
-            create(name='Thrush Detector', type='Detector')
-            create(name='Coarse Classifier', type='Classifier')
-            create(name='Species Classifier', type='Classifier')
-        
-            creation_time = time_utils.get_utc_now()
-        
-            constraint = AnnotationConstraint.objects.create(
-                name='Classification',
-                text=_CLASSIFICATION_CONSTRAINT_TEXT,
-                creation_time=creation_time)
-        
-            AnnotationInfo.objects.create(
-                name='Classification',
-                type='String',
-                constraint=constraint,
-                creation_time=creation_time)
-        
-            constraint = AnnotationConstraint.objects.create(
-                name='Confidence',
-                text=_CONFIDENCE_CONSTRAINT_TEXT,
-                creation_time=creation_time)
-        
-            AnnotationInfo.objects.create(
-                name='Confidence',
-                type='String',
-                constraint=constraint,
-                creation_time=creation_time)
-    
-    
-    @classmethod
-    def tearDownClass(cls):
-        if _POPULATE_DATABASE:
-            preference_manager._pop_test_preferences()
-    
-
     def setUp(self):
-        print('setUp')
+        preference_manager.load_preferences_from_yaml(_TEST_PREFERENCES)
+        model_data = yaml_utils.load(_TEST_MODEL_DATA)
+        metadata_import_utils.import_metadata(model_data)
         self._archive = Archive()
         
         
@@ -104,8 +99,8 @@ class ArchiveTests(TestCase):
             processors = self._archive.get_processors_of_type(processor_type)
             names = [p.name for p in processors]
             self.assertEqual(names, expected_names)
-            
-            
+
+
     def test_get_visible_processors_of_type(self):
         
         cases = [
@@ -165,8 +160,8 @@ class ArchiveTests(TestCase):
         self.assertEqual(a.STRING_ANNOTATION_VALUE_WILDCARD, '*')
         self.assertEqual(a.STRING_ANNOTATION_VALUE_ANY, '*')
         self.assertEqual(a.STRING_ANNOTATION_VALUE_NONE, '-None-')
-        
-        
+
+
     def test_get_string_annotation_values(self):
         
         cases = [
