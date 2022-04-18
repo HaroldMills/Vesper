@@ -1,4 +1,3 @@
-from pathlib import Path
 import logging
 import os.path
 
@@ -7,59 +6,49 @@ import vesper.util.yaml_utils as yaml_utils
 
 _PREFERENCE_FILE_NAME = 'Preferences.yaml'
 
+_DEFAULTS_MESSAGE =  'Will use default preference values.'
+    
 
 class PreferenceManager:
     
     
-    def __init__(self, preference_file_path):
-        self._load_preferences(preference_file_path)
-        self._stack = []
-        
-        
-    def _load_preferences(self, preference_file_path):
-        self._preferences = _load_preferences(preference_file_path)
-        self._preference_file_path = preference_file_path
-        
-        
-    def reload_preferences(self):
-        self._load_preferences(self._preference_file_path)
-        
-        
+    @staticmethod
+    def create_for_file(file_path):
+        manager = PreferenceManager()
+        manager.load_preferences_from_file(file_path)
+        return manager
+
+
+    @staticmethod
+    def create_for_yaml(yaml):
+        manager = PreferenceManager()
+        manager.load_preferences_from_yaml(yaml)
+        return manager
+
+
+    def __init__(self):
+        self._preferences = _Preferences()
+        self._preference_file_path = None
+
+
     @property
     def preferences(self):
         return self._preferences
     
     
-    def _push_test_module_preferences(self, test_module_file_path):
-        
-        """
-        Pushes preferences for a unit test module.
-        
-        Some unit test modules require special preference values. Such
-        a module can push preference values using this function as part
-        of its setup, and pop them using the `_pop_test_preferences`
-        method as part of its teardown.
-        """
-        
-        test_module_file_path = Path(test_module_file_path)
-        test_module_dir_path = test_module_file_path.parent
-        test_module_name = test_module_file_path.stem
-        preference_file_path = \
-            test_module_dir_path / 'data' / test_module_name / \
-            _PREFERENCE_FILE_NAME
-            
-        # Push current preferences onto stack.
-        self._stack.append((self._preference_file_path, self._preferences))
-        
-        # Load test preferences.
-        self._load_preferences(preference_file_path)
+    def load_preferences_from_file(self, file_path):
+        self._preferences = _load_preferences_from_file(file_path)
+        self._preference_file_path = file_path
         
         
-    def _pop_test_preferences(self):
+    def reload_preferences(self):
+        if self._preference_file_path is not None:
+            self.load_preferences_from_file(self._preference_file_path)
         
-        """Pops test preferences."""
         
-        self._preference_file_path, self._preferences = self._stack.pop()
+    def load_preferences_from_yaml(self, yaml):
+        self._preferences = _load_preferences_from_yaml(yaml)
+        self._preference_file_path = None
     
     
 class _Preferences:
@@ -113,42 +102,55 @@ def _get_item(preferences, name):
         return _get_item(preferences[parts[0]], parts[1])
             
             
-def _load_preferences(file_path):
-    
-    defaults_message = 'Will use default preference values.'
+def _load_preferences_from_file(file_path):
     
     if not os.path.exists(file_path):
         logging.warning(
             f'Preference file "{file_path}" does not exist. '
-            f'{defaults_message}')
+            f'{_DEFAULTS_MESSAGE}')
         return _Preferences()
         
     try:
         with open(file_path, 'r') as file_:
-            contents = file_.read()
+            yaml = file_.read()
     except Exception as e:
         logging.warning(
             f'Read failed for preference file "{file_path}". '
-            f'{defaults_message}')
+            f'{_DEFAULTS_MESSAGE}')
         return _Preferences()
     
     try:
-        preferences = yaml_utils.load(contents)
+        return _load_preferences_from_yaml_aux(yaml)
     except Exception as e:
-        logging.warning(
-            f'YAML load failed for preference file "{file_path}". '
-            f'{defaults_message} YAML load error message was:\n{str(e)}')
+        logging.warning(f'For preference file "{file_path}": {str(e)}')
         return _Preferences()
+
+
+def _load_preferences_from_yaml(yaml):
+
+    try:
+        return _load_preferences_from_yaml_aux(yaml)
+    except Exception as e:
+        logging.warning(f'For preference string: {str(e)}')
+        return _Preferences()
+
+
+def _load_preferences_from_yaml_aux(yaml):
+
+    try:
+        preferences = yaml_utils.load(yaml)
+    except Exception as e:
+        raise Exception(
+            f'Contents are not valid YAML. {_DEFAULTS_MESSAGE} '
+            f'Error message was:\n{str(e)}')
     
     if preferences is None:
         # preference file contains no data
         
         return _Preferences()
     
-    elif not isinstance(preferences, dict):
-        logging.warning(
-            f'Preference file "{file_path}" does not contain a YAML mapping. '
-            f'{defaults_message}')
-        return _Preferences()
+    if not isinstance(preferences, dict):
+        raise Exception(
+            f'Contents are not a YAML mapping. {_DEFAULTS_MESSAGE}')
     
     return _Preferences(preferences)
