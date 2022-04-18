@@ -23,6 +23,11 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Consider creating a separate interval module, including intersection
 # functions.
 
+# TODO: Consider providing a method for getting the intersection of a
+# schedule with an interval. The existing `get_intervals` method gets
+# the schedule intervals that intersect an interval, which is a little
+# different.
+
 
 Interval = namedtuple('Interval', ('start', 'end'))
 Transition = namedtuple('Transition', ('time', 'state'))
