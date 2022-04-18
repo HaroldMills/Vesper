@@ -9,6 +9,12 @@ import numpy as np
 from vesper.util.bunch import Bunch
 
 
+# TODO: Review this module and revise. Bring terms up to date.
+# Consider using `sample_rate` instead of `frame_rate`, and use
+# `sample_count` instead of `num_samples`. Consider either
+# eliminating `resample` function or writing unit tests for it.
+
+
 def seconds_to_frames(seconds, frame_rate):
     return int(round(seconds * frame_rate))
 
@@ -55,6 +61,16 @@ def get_span(num_samples, sample_rate):
         return 0
     else:
         return (num_samples - 1) / sample_rate
+
+
+def time_to_index(time, start_time, sample_rate):
+    delta = (time - start_time).total_seconds()
+    return seconds_to_frames(delta, sample_rate)
+
+
+def index_to_time(index, start_time, sample_rate):
+    delta = datetime.timedelta(seconds=index / sample_rate)
+    return start_time + delta
 
 
 def get_end_time(start_time, num_samples, sample_rate):
