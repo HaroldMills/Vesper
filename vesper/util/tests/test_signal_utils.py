@@ -1,12 +1,97 @@
+from datetime import timedelta as TimeDelta
+
 import numpy as np
 
 from vesper.tests.test_case import TestCase
 import vesper.util.signal_utils as signal_utils
+import vesper.util.time_utils as time_utils
 
 
 class SignalUtilsTests(TestCase):
     
     
+    def test_seconds_to_frames(self):
+
+        cases = [
+            ((1, 24000), 24000),
+            ((1.5, 48000), 72000),
+            ((.8, 1), 1),
+        ]
+
+        self._test(signal_utils.seconds_to_frames, cases)
+
+
+    def _test(self, func, cases):
+        for args, expected in cases:
+            actual = func(*args)
+            self.assertEqual(actual, expected)
+
+
+    def test_get_duration(self):
+
+        cases = [
+            ((0, 24000), 0),
+            ((12000, 24000), .5),
+            ((48000, 48000), 1),
+        ]
+
+        self._test(signal_utils.get_duration, cases)
+
+
+    def test_get_span(self):
+
+        cases = [
+            ((0, 24000), 0),
+            ((1, 24000), 0),
+            ((12001, 24000), .5),
+            ((48001, 48000), 1),
+        ]
+
+        self._test(signal_utils.get_span, cases)
+
+
+    def test_time_to_index(self):
+
+        cases = [
+            (('2100-01-01 00:00:00', '2100-01-01 00:00:00', 24000), 0),
+            (('2100-01-01 00:00:01', '2100-01-01 00:00:00', 24000), 24000),
+            (('2100-01-02 00:00:01', '2100-01-01 23:59:59', 48000), 96000),
+            (('2100-01-01 00:00:00.5', '2100-01-01 00:00:00', 24000), 12000),
+        ]
+
+        for (time, start_time, sample_rate), expected in cases:
+            time = _parse_time(time)
+            start_time = _parse_time(start_time)
+            actual = signal_utils.time_to_index(time, start_time, sample_rate)
+            self.assertEqual(actual, expected)
+
+
+    def test_index_to_time(self):
+
+        start_time = _parse_time('2100-01-01 00:00:00')
+
+        cases = [
+            ((0, start_time, 24000), start_time),
+            ((12000, start_time, 24000), start_time + TimeDelta(seconds=.5)),
+            ((12000, start_time, 48000), start_time + TimeDelta(seconds=.25)),
+        ]
+
+        self._test(signal_utils.index_to_time, cases)
+
+
+    def test_get_end_time(self):
+
+        start_time = _parse_time('2100-01-01 00:00:00')
+
+        cases = [
+            ((start_time, 0, 24000), start_time),
+            ((start_time, 12001, 24000), start_time + TimeDelta(seconds=.5)),
+            ((start_time, 12001, 48000), start_time + TimeDelta(seconds=.25)),
+        ]
+
+        self._test(signal_utils.get_end_time, cases)
+
+
     def test_get_concatenated_signal_read_data(self):
         
         
@@ -227,3 +312,30 @@ class SignalUtilsTests(TestCase):
             expected = np.array(expected)
             actual = signal_utils.find_peaks(x, min_value)
             self._assert_arrays_equal(actual, expected)
+
+
+def _parse_time(s):
+
+    date, time = s.split()
+
+    year, month, day = date.split('-')
+    year = int(year)
+    month = int(month)
+    day = int(day)
+
+    parts = time.split('.')
+
+    if len(parts) == 1:
+        microsecond = 0
+    else:
+        digits = parts[1]
+        fraction = int(digits) / 10 ** len(digits)
+        microsecond = int(round(1000000 * fraction))
+
+    hour, minute, second = parts[0].split(':')
+    hour = int(hour)
+    minute = int(minute)
+    second = int(second)
+
+    return time_utils.create_utc_datetime(
+        year, month, day, hour, minute, second, microsecond)
