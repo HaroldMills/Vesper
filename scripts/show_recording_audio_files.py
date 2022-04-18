@@ -4,7 +4,7 @@ more directories.
 
 Usage:
 
-    python show_recording_files <recording directories>
+    python show_recording_audio_files.py <recording directories>
 """
 
 
