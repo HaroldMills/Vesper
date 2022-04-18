@@ -1,7 +1,7 @@
 from vesper.django.app.models import (
     AnnotationConstraint, AnnotationInfo, Device, DeviceModel, Processor,
     Station, TagInfo)
-from vesper.django.app.tests.test_case import TestCase
+from vesper.django.app.tests.dtest_case import TestCase
 
 
 class ModelAttributeTests(TestCase):

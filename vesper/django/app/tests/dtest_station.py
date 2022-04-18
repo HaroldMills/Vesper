@@ -3,7 +3,7 @@ import datetime
 import pytz
 
 from vesper.django.app.models import Station
-from vesper.django.app.tests.test_case import TestCase
+from vesper.django.app.tests.dtest_case import TestCase
 
 
 class StationTests(TestCase):
