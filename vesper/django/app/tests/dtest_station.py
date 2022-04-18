@@ -11,7 +11,7 @@ class StationTests(TestCase):
     
     def setUp(self):
         self._create_shared_test_models()
-        self.station = Station.objects.get(name='Station 1')
+        self.station = Station.objects.get(name='Station 0')
         self.tz = self.station.tz
         
         

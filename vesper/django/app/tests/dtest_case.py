@@ -1,5 +1,9 @@
+"""Module containing Django unit test test case superclass."""
+
+
 import django
 
+from vesper.tests.test_case_mixin import TestCaseMixin
 import vesper.django.app.metadata_import_utils as metadata_import_utils
 import vesper.util.yaml_utils as yaml_utils
 
@@ -17,9 +21,9 @@ stations:
 
     - name: Station 1
       description: Second test station.
-      time_zone: US/Eastern
-      latitude: 42
-      longitude: -76
+      time_zone: US/Pacific
+      latitude: 38.2
+      longitude: -122.9
       elevation: 200
 
 device_models:
@@ -114,6 +118,29 @@ classifiers:
           classify a clip that has already been classified, whether
           manually or automatically.
 
+# processors:
+
+#     - name: Old Bird Thrush Detector Redux 1.1
+#       type: Detector
+#       description: Vesper reimplementation of Old Bird Thrush detector.
+
+#     - name: Old Bird Tseep Detector Redux 1.1
+#       type: Detector
+#       description: Vesper reimplementation of Old Bird Tseep detector.
+
+#     - name: Vesper Random Clip Creator 1.0
+#       type: Clip Creator
+#       description: Creates random clips in specified recording channels.
+
+#     - name: MPG Ranch NFC Coarse Classifier 3.0
+#       type: Classifier
+#       description: >
+#           Classifies an unclassified clip as a "Call" if it appears to be
+#           a nocturnal flight call, or as a "Noise" otherwise. Does not
+#           classify a clip that has already been classified, whether
+#           manually or automatically.
+
+
 annotation_constraints:
 
     - name: Coarse Classification
@@ -154,7 +181,7 @@ tags:
 """Model data shared by various Django unit test modules."""
 
 
-class TestCase(django.test.TestCase):
+class TestCase(django.test.TestCase, TestCaseMixin):
 
 
     def _get_shared_test_model_data(self):
