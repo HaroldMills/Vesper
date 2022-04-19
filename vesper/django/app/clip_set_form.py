@@ -46,7 +46,7 @@ class ClipSetForm(forms.Form):
         
         # Populate detectors field.
         self.fields['detectors'].choices = \
-            form_utils.get_processor_choices('Detector')
+            form_utils.get_processor_choices(['Detector', 'Clip Creator'])
 
         # Populate classification field.
         self.fields['classification'].choices = \

@@ -30,7 +30,7 @@ class ClassifyForm(forms.Form):
  
         # Populate detectors field.
         self.fields['detectors'].choices = \
-            form_utils.get_processor_choices('Detector')
+            form_utils.get_processor_choices(['Detector', 'Clip Creator'])
         
         # Populate tag field.
         self.fields['tag'].choices = form_utils.get_tag_choices()
