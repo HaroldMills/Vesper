@@ -4,6 +4,7 @@
 from datetime import timedelta as TimeDelta
 import logging
 
+import django.db
 import numpy as np
 
 from vesper.command.command import Command
@@ -58,11 +59,15 @@ class CreateRandomClipsCommand(Command):
         if self._schedule_preset is None:
             self._schedule_cache = None
         else:
-            self._schedule_cache = ScheduleCache(self._schedule_preset)
+            self._schedule_cache = _ScheduleCache(self._schedule_preset)
+
+        self._clip_creator = _ClipCreator()
         
         
     def execute(self, job_info):
         
+        # django.db.reset_queries()
+
         self._job_info = job_info
 
         _logger.info(
@@ -163,7 +168,7 @@ class CreateRandomClipsCommand(Command):
                         f'{str(channel)}. Clip for which collision '
                         'could not be resolved will not be created.')
 
-                    # Move on to the next clip.
+                    # Move on to next clip.
                     continue
 
             # Get time of first clip sample.
@@ -176,21 +181,7 @@ class CreateRandomClipsCommand(Command):
 
             date = station.get_night(start_time)
 
-            # TODO: Use Django's `bulk_create` to create clips.
-            # Consider making a class, an instance of which you can push
-            # clips (and perhaps accompanying annotations and tags) to
-            # that will write them in batches to the database. The class
-            # will include a `flush` method that writes all accumulated
-            # data to the database, regardless of whether or not it is
-            # a full batch. The class could be used by this command and
-            # the detect command to create new clips. It might also
-            # make sense to have analogous classes for writing tags
-            # and/or annotations for existing clips. Pay careful
-            # attention to what writes should happen in the same
-            # transaction, e.g. all those pertaining to a particular
-            # clip.
-
-            clip = Clip.objects.create(
+            clip = Clip(
                 station=station,
                 mic_output=channel.mic_output,
                 recording_channel=channel,
@@ -204,7 +195,14 @@ class CreateRandomClipsCommand(Command):
                 creating_processor=creating_processor,
                 creating_job=creating_job)
 
+            self._clip_creator.add_clip(clip)
+
             used_start_indices.add(start_index)
+
+        # Make sure to create all clips.
+        self._clip_creator.flush()
+
+        # _show_queries('create_random_clips')
 
         return True
 
@@ -439,7 +437,15 @@ def _resolve_start_index_collision(
     return None
 
 
-class ScheduleCache:
+def _show_queries(name):
+    connection = django.db.connection
+    queries = connection.queries
+    print(f'{name} performed {len(queries)} queries:')
+    for i, query in enumerate(connection.queries):
+        print(f'    {i}: {query}')
+
+
+class _ScheduleCache:
 
 
     def __init__(self, schedule_spec):
@@ -468,3 +474,23 @@ class ScheduleCache:
             self._schedules[station.name] = schedule
             
             return schedule
+
+
+class _ClipCreator:
+
+
+    def __init__(self, batch_size=50):
+        self._batch_size = batch_size
+        self._clips = []
+
+
+    def add_clip(self, clip):
+        self._clips.append(clip)
+        if len(self._clips) == self._batch_size:
+            self.flush()
+
+
+    def flush(self):
+        if len(self._clips) != 0:
+            Clip.objects.bulk_create(self._clips)
+            self._clips.clear()
