@@ -202,6 +202,28 @@ class CreateRandomClipsCommandTests(TestCase):
             self.assertEqual(actual, expected)
 
 
+    def test_resolve_start_index_collision(self):
+
+        # args are start_index, length, used_start_indices, interval_end_index
+
+        cases = [
+            ((5, 10, {5}, 20), 6),
+            ((5, 10, {5, 6}, 20), 7),
+            ((5, 10, {4, 5, 6, 7}, 20), 8),
+            ((9, 10, {9}, 20), 10),
+            ((10, 10, {10}, 20), 9),
+            ((10, 10, {9, 10}, 20), 8),
+            ((9, 10, {5, 7, 8, 9, 10}, 20), 6),
+            ((0, 10, {0}, 10), None),
+            ((2, 10, {0, 1, 2, 3, 4}, 14), None),
+        ]
+
+        f = create_random_clips_command._resolve_start_index_collision
+        for args, expected in cases:
+            actual = f(*args)
+            self.assertEqual(actual, expected)
+
+
 def _get_sm_pairs():
 
     sm_pairs = {}

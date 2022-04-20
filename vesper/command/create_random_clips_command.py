@@ -28,35 +28,12 @@ creating processor of each clip that it creates.
 _logger = logging.getLogger()
 
 
-class ScheduleCache:
+# TODO: Consider avoiding collisions across multiple runs of this command.
 
-
-    def __init__(self, schedule_spec):
-        self._schedule_spec = schedule_spec
-        self._schedules = {}
-
-
-    def get_schedule(self, station):
-
-        try:
-            return self._schedules[station.name]
-        
-        except KeyError:
-            # cache miss
-            
-            if _logger is not None:
-                _logger.info(
-                    f'Compiling schedule for station "{station.name}"...')
-
-            # Compile schedule for this station.
-            schedule = Schedule.compile_dict(
-                self._schedule_spec, station.latitude, station.longitude,
-                station.time_zone)
-            
-            # Add schedule to cache.
-            self._schedules[station.name] = schedule
-            
-            return schedule
+# TODO: Consider optionally avoiding creating clips that intersect
+# specified existing ones, e.g. Call* clips. The command might do this
+# by excluding the intervals of the specified clips from consideration
+# for random clip creation.
 
 
 class CreateRandomClipsCommand(Command):
@@ -141,9 +118,14 @@ class CreateRandomClipsCommand(Command):
 
         _logger.info('Creating clips ...')
 
+        # Bookkeeping for start index collision detection and resolution.
+        last_interval_num = -1
+        used_start_indices = set()
+
         for i, start_offset in zip(interval_indices, start_offsets):
 
-            station, channel, interval_start_time, _ = usable_intervals[i]
+            station, channel, interval_start_time, interval_end_time = \
+                usable_intervals[i]
             recording = channel.recording
             sample_rate = recording.sample_rate
 
@@ -156,6 +138,33 @@ class CreateRandomClipsCommand(Command):
             # Get clip length in samples.
             length = signal_utils.seconds_to_frames(
                 self._clip_duration, sample_rate)
+
+            if i != last_interval_num:
+                # new interval
+
+                last_interval_num = i
+                used_start_indices.clear()
+
+            elif start_index in used_start_indices:
+                # start index collision
+
+                interval_end_index = signal_utils.time_to_index(
+                    interval_end_time, interval_start_time, sample_rate)
+
+                start_index = self._resolve_start_index_collision(
+                    start_index, length, used_start_indices,
+                    interval_end_index)
+
+                if start_index is None:
+
+                    _logger.warning(
+                        'Could not resolve clip start index collision '
+                        'while creating random clips in recording channel '
+                        f'{str(channel)}. Clip for which collision '
+                        'could not be resolved will not be created.')
+
+                    # Move on to the next clip.
+                    continue
 
             # Get time of first clip sample.
             start_time = signal_utils.index_to_time(
@@ -195,6 +204,8 @@ class CreateRandomClipsCommand(Command):
                 creating_processor=creating_processor,
                 creating_job=creating_job)
 
+            used_start_indices.add(start_index)
+
         return True
 
 
@@ -215,6 +226,21 @@ class CreateRandomClipsCommand(Command):
             )
 
         return processor
+
+
+def _get_schedule_preset(schedule_name):
+    
+    if schedule_name == archive.NULL_CHOICE:
+        # no schedule specified
+
+        return None
+    
+    else:
+        # schedule specified
+        
+        preset_path = ('Detection Schedule', schedule_name)
+        preset = preset_manager.get_preset(preset_path)
+        return preset.data
 
 
 def _get_processing_intervals(sm_pairs, start_date, end_date, schedule_cache):
@@ -377,16 +403,68 @@ def _get_concatenated_time_bounds_aux(intervals, clip_duration):
     return usable_interval_indices, np.array(time_bounds)
 
 
-def _get_schedule_preset(schedule_name):
-    
-    if schedule_name == archive.NULL_CHOICE:
-        # no schedule specified
+def _resolve_start_index_collision(
+        start_index, length, used_start_indices, interval_end_index):
 
-        return None
-    
-    else:
-        # schedule specified
+    # This method tries to resolve a start index collision, first
+    # by looking for a later usable start index and then, if none
+    # is available, for an earlier one. For reasonable random clip
+    # densities, the next start index will almost always be available
+    # so this method will just return that.
+
+    # Find first start index after `start_index` that is unused.
+    # This will usually be the next index, but might not be if other
+    # collisions for this same start index have already been resolved.
+    new_start_index = start_index + 1
+    while new_start_index in used_start_indices:
+        new_start_index += 1
+
+    if new_start_index + length <= interval_end_index:
+        # clip with this start index fits in interval
+
+        return new_start_index
+
+    # If we get here, there are no unused start indices for this interval
+    # after `start_index`.
+
+    # Find first start index before `start_index` that is unused.
+    new_start_index = start_index - 1
+    while new_start_index in used_start_indices:
+        new_start_index -= 1
+
+    if new_start_index >= 0:
+        return new_start_index
+
+    # If we get here, there are no unused start indices for this interval!
+    return None
+
+
+class ScheduleCache:
+
+
+    def __init__(self, schedule_spec):
+        self._schedule_spec = schedule_spec
+        self._schedules = {}
+
+
+    def get_schedule(self, station):
+
+        try:
+            return self._schedules[station.name]
         
-        preset_path = ('Detection Schedule', schedule_name)
-        preset = preset_manager.get_preset(preset_path)
-        return preset.data
+        except KeyError:
+            # cache miss
+            
+            if _logger is not None:
+                _logger.info(
+                    f'Compiling schedule for station "{station.name}"...')
+
+            # Compile schedule for this station.
+            schedule = Schedule.compile_dict(
+                self._schedule_spec, station.latitude, station.longitude,
+                station.time_zone)
+            
+            # Add schedule to cache.
+            self._schedules[station.name] = schedule
+            
+            return schedule
