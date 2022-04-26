@@ -19,7 +19,7 @@ def get_required_arg(name, args):
         return args[name]
     except KeyError:
         raise CommandSyntaxError(
-            'Missing required command argument "{}".'.format(name))
+            f'Missing required command argument "{name}".')
 
 
 def get_optional_arg(name, args, default=None):
@@ -53,13 +53,12 @@ def get_timing_text(elapsed_time, item_count, items_name):
     # reported item count, elapsed time, and rate consistent.
     elapsed_time = round(10 * elapsed_time) / 10
     
-    time_text = ' in {:.1f} seconds'.format(elapsed_time)
+    time_text = f' in {elapsed_time:.1f} seconds'
     
     if elapsed_time > 0:
         
         rate = item_count / elapsed_time
-        return '{}, an average of {:.1f} {} per second'.format(
-            time_text, rate, items_name)
+        return f'{time_text}, an average of {rate:.1f} {items_name} per second'
         
     else:
         # elapsed time is zero
@@ -122,9 +121,9 @@ def log_and_reraise_fatal_exception(exception, action_text, result_text=None):
     
     error = _logger.error
     
-    error('{} failed with an exception.'.format(action_text))
-    error('The exception message was:')
-    error('    {}'.format(str(exception)))
+    error(f'{action_text} failed with an exception.')
+    error(f'The exception message was:')
+    error(f'    {str(exception)}')
     
     if result_text is not None:
         error(result_text)
