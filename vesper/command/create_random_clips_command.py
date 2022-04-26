@@ -223,6 +223,8 @@ class CreateRandomClipsCommand(Command):
                 description=_PROCESSOR_DESCRIPTION
             )
 
+            archive.refresh_processor_cache()
+
         return processor
 
 
