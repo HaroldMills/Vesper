@@ -437,6 +437,18 @@ def _start_job(command_spec, user):
     return HttpResponseRedirect(url)
 
 
+# TODO: When we create the navbar items, we should also create a
+# dictionary that maps command names (of some sort) to active navbar
+# items, and we should use that dictionary to look up the appropriate
+# active navbar item in each command view. Currently, the name of the
+# active navbar item is hard-coded in each command view function in
+# its call to `_create_template_context`. This is a bad idea for two
+# reasons. First, it can break for custom navbars, which we want to
+# support. Second, it violates the DRY principle by specifying the
+# navbar dropdown associated with a command in two places: the navbar
+# spec and the view functions.
+
+
 _navbar_items = None
 
 
