@@ -409,7 +409,7 @@ def detect(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Detect', form=form)
+    context = _create_template_context(request, 'Process', form=form)
 
     return render(request, 'vesper/detect.html', context)
 
@@ -511,7 +511,7 @@ def classify(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Classify', form=form)
+    context = _create_template_context(request, 'Process', form=form)
 
     return render(request, 'vesper/classify.html', context)
 
@@ -551,7 +551,7 @@ def execute_deferred_actions(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Import', form=form)
+    context = _create_template_context(request, 'Process', form=form)
 
     return render(request, 'vesper/execute-deferred-actions.html', context)
 
@@ -600,7 +600,7 @@ def old_bird_export_clip_counts_csv_file(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Export', form=form)
+    context = _create_template_context(request, 'File', form=form)
 
     return render(
         request, 'vesper/old-bird-export-clip-counts-csv-file.html', context)
@@ -625,7 +625,7 @@ def export_clip_counts_by_classification_to_csv_file(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Export', form=form)
+    context = _create_template_context(request, 'File', form=form)
 
     return render(
         request,
@@ -667,7 +667,7 @@ def export_clip_counts_by_tag_to_csv_file(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Export', form=form)
+    context = _create_template_context(request, 'File', form=form)
 
     return render(
         request, 'vesper/export-clip-counts-by-tag-to-csv-file.html', context)
@@ -705,7 +705,7 @@ def export_clip_metadata_to_csv_file(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Export', form=form)
+    context = _create_template_context(request, 'File', form=form)
 
     return render(
         request, 'vesper/export-clip-metadata-to-csv-file.html', context)
@@ -769,7 +769,7 @@ def export_clips_to_audio_files(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Export', form=form)
+    context = _create_template_context(request, 'File', form=form)
 
     return render(request, 'vesper/export-clips-to-audio-files.html', context)
 
@@ -820,7 +820,7 @@ def export_clips_to_hdf5_files(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Export', form=form)
+    context = _create_template_context(request, 'File', form=form)
 
     return render(request, 'vesper/export-clips-to-hdf5-files.html', context)
 
@@ -868,7 +868,7 @@ def refresh_recording_audio_file_paths(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Other', form=form)
+    context = _create_template_context(request, 'Admin', form=form)
 
     return render(
         request, 'vesper/refresh-recording-audio-file-paths.html', context)
@@ -899,7 +899,7 @@ def delete_recordings(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Other', form=form)
+    context = _create_template_context(request, 'Edit', form=form)
 
     return render(request, 'vesper/delete-recordings.html', context)
 
@@ -935,7 +935,7 @@ def delete_clips(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Other', form=form)
+    context = _create_template_context(request, 'Edit', form=form)
 
     return render(request, 'vesper/delete-clips.html', context)
 
@@ -973,7 +973,7 @@ def tag_clips(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Other', form=form)
+    context = _create_template_context(request, 'Edit', form=form)
 
     return render(request, 'vesper/tag-clips.html', context)
 
@@ -1011,7 +1011,7 @@ def untag_clips(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Other', form=form)
+    context = _create_template_context(request, 'Edit', form=form)
 
     return render(request, 'vesper/untag-clips.html', context)
 
@@ -1049,7 +1049,7 @@ def create_clip_audio_files(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Other', form=form)
+    context = _create_template_context(request, 'Admin', form=form)
 
     return render(request, 'vesper/create-clip-audio-files.html', context)
 
@@ -1085,7 +1085,7 @@ def delete_clip_audio_files(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Other', form=form)
+    context = _create_template_context(request, 'Admin', form=form)
 
     return render(request, 'vesper/delete-clip-audio-files.html', context)
 
@@ -1122,7 +1122,7 @@ def transfer_clip_classifications(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Other', form=form)
+    context = _create_template_context(request, 'Process', form=form)
 
     return render(
         request, 'vesper/transfer-clip-classifications.html', context)
@@ -2213,7 +2213,7 @@ def import_metadata(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Import', form=form)
+    context = _create_template_context(request, 'File', form=form)
 
     return render(request, 'vesper/import-metadata.html', context)
 
@@ -2252,7 +2252,7 @@ def import_old_bird_clips(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Import', form=form)
+    context = _create_template_context(request, 'File', form=form)
 
     return render(request, 'vesper/import-old-bird-clips.html', context)
 
@@ -2293,7 +2293,7 @@ def import_recordings(request):
     else:
         return HttpResponseNotAllowed(('GET', 'HEAD', 'POST'))
 
-    context = _create_template_context(request, 'Import', form=form)
+    context = _create_template_context(request, 'File', form=form)
 
     return render(request, 'vesper/import-recordings.html', context)
 

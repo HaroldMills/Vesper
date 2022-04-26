@@ -1,19 +1,21 @@
 {% if item.type == 'link' %}
     <li class="nav-item">
-        {% if item.name == active_navbar_item %}
-            <a class="nav-link active" aria-current="page" href="{{item.url}}">{{item.name}}</a>
-        {% else %}
-            <a class="nav-link" href="{{item.url}}">{{item.name}}</a>
-        {% endif %}
+        <a class="nav-link" href="{{item.url}}">{{item.name}}</a>
     </li>
 {% elif item.type == 'separator' %}
     <li><hr class="dropdown-divider"></li>
 {% elif item.type == 'dropdown' %}
     <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbar{{item.name}}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            {{item.name}}
-        </a>
-        <ul class="dropdown-menu" aria-labelledby="navbar{{item.name}}">
+        {% if item.name == active_navbar_item %}
+            <a class="nav-link active dropdown-toggle" href="#" id="navbar{{item.name}}" role="button" data-bs-toggle="dropdown" aria-current="page" aria-expanded="false">
+                {{item.name}}
+            </a>
+        {% else %}
+            <a class="nav-link dropdown-toggle" href="#" id="navbar{{item.name}}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                {{item.name}}
+            </a>
+        {% endif %}
+    <ul class="dropdown-menu" aria-labelledby="navbar{{item.name}}">
             {% for item in item.items %}
                 {% include "vesper/navbar-dropdown-item.html" %}
             {% endfor %}
