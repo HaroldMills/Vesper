@@ -1,6 +1,6 @@
 from datetime import (
     date as Date, datetime as DateTime, time as Time, timedelta as TimeDelta)
-from vesper.command.create_random_clips_command import ScheduleCache
+from vesper.command.create_random_clips_command import _ScheduleCache
 from vesper.django.app.models import (
     DeviceOutput, Recording, RecordingChannel, Station, StationDevice)
 from vesper.django.app.tests.dtest_case import TestCase
@@ -74,7 +74,7 @@ class CreateRandomClipsCommandTests(TestCase):
         self._stations = dict((s.name, s) for s in Station.objects.all())
         self._sm_pairs = _get_sm_pairs()
         self._create_recordings()
-        self._schedule_cache = ScheduleCache(_SCHEDULE_SPEC)
+        self._schedule_cache = _ScheduleCache(_SCHEDULE_SPEC)
 
 
     def _create_recordings(self):

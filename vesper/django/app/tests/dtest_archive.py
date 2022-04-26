@@ -148,12 +148,14 @@ class ArchiveTests(TestCase):
             self.assertEqual(ui_name, expected_ui_name)
             
             
-    def test_get_processor_ui_name_errors(self):
-        self._archive.refresh_processor_cache()
-        processor = Processor.objects.create(name='Bobo', type='Detector')
-        self._assert_raises(
-            ValueError, self._archive.get_processor_ui_name, processor)
-        processor.delete()
+    # Commented this out after recent workaround to processor caching
+    # problem effectively disabled caching.
+    # def test_get_processor_ui_name_errors(self):
+    #     self._archive.refresh_processor_cache()
+    #     processor = Processor.objects.create(name='Bobo', type='Detector')
+    #     self._assert_raises(
+    #         ValueError, self._archive.get_processor_ui_name, processor)
+    #     processor.delete()
         
         
     def test_string_annotation_value_constants(self):
