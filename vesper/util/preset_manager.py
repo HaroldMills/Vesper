@@ -253,7 +253,7 @@ class PresetManager:
         preset_path = self._get_preset_path(file_path)
         
         try:
-            file_ = open(file_path, 'rU')
+            file_ = open(file_path, 'r')
         except:
             logging.warning(
                 f'Preset manager could not open preset file "{file_path}".')
