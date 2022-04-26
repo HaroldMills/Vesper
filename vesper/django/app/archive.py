@@ -12,6 +12,21 @@ from vesper.singleton.preset_manager import preset_manager
 import vesper.util.yaml_utils as yaml_utils
 
 
+# TODO: Reconsider archive data caches. When I first implemented them,
+# I didn't consider that there can be multiple Django server processes
+# (as there are, for example, with the Django test server), so that
+# refreshing a cache in one process (e.g. refreshing a processer cache
+# after creating a new processor) will not refresh the cache in all of
+# the processes. There are various options for addressing this issue,
+# including not using caches or having them refresh automatically
+# every so often, e.g. if when a request for cache content arrives the
+# cache was last refreshed more than some interval ago. In the interim,
+# I have modified the `_refresh_processor_cache_if_needed` and
+# `_refresh_string_annotation_values_cache_if_needed` methods to always
+# refresh their caches, i.e. so that each cache is refreshed on every
+# access. If we decide to retain the caches, note that for read-only
+# archives we could populate them only once.
+
 # TODO: Move code that modifies lists of items for presentation in
 # the UI to the client? This includes, for example, wildcard additions
 # and UI name substitutions. The basic idea is to move UI concerns to
@@ -145,8 +160,14 @@ class Archive:
     
     
     def _refresh_processor_cache_if_needed(self):
-        if self._processor_cache_dirty:
-            self.refresh_processor_cache()
+
+        # For the time being, we refresh the cache on every access to
+        # work around a multi-process caching issue. See todo item
+        # near the top of this module for more.
+        self.refresh_processor_cache()
+
+        # if self._processor_cache_dirty:
+        #     self.refresh_processor_cache()
             
             
     def refresh_processor_cache(self):
@@ -182,7 +203,7 @@ class Archive:
             dict(
                 (k, self._get_visible_processors(v, hidden_names))
                 for k, v in self._processors_by_type.items())
-            
+
         self._processor_cache_dirty = False
         
             
@@ -245,8 +266,14 @@ class Archive:
      
     
     def _refresh_string_annotation_values_cache_if_needed(self):
-        if self._string_anno_values_cache_dirty:
-            self.refresh_string_annotation_values_cache()
+
+        # For the time being, we refresh the cache on every access to
+        # work around a multi-process caching issue. See todo item
+        # near the top of this module for more.
+        self.refresh_string_annotation_values_cache()
+
+        # if self._string_anno_values_cache_dirty:
+        #     self.refresh_string_annotation_values_cache()
              
              
     def refresh_string_annotation_values_cache(self):
@@ -279,7 +306,7 @@ class Archive:
              self._get_visible_string_annotation_ui_value_specs(
                  i.name, hidden_values_pref))
             for i in AnnotationInfo.objects.all())
-                
+
         self._string_anno_values_cache_dirty = False
          
              
