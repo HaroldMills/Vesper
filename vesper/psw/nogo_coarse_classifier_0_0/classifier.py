@@ -139,7 +139,7 @@ class _Classifier(Annotator):
         
         # TODO: Resample clip waveforms if needed. See other recent
         # classifiers for examples of this.
-        waveforms = [clip_manager.get_samples(c) for c in clips]
+        waveforms = self._get_clip_waveforms(clips)
         
         # TODO: This is a workaround that compensates for a problem
         # in `dataset_utils._ExampleProcessor._slice_waveform`, which
@@ -155,6 +155,26 @@ class _Classifier(Annotator):
         return dataset
     
     
+    def _get_clip_waveforms(self, clips):
+
+        waveforms = []
+
+        for clip in clips:
+
+            try:
+                waveform = clip_manager.get_samples(clip)
+
+            except Exception as e:
+                self._logger.warning(
+                    f'Could not get samples for clip {str(clip)}, so it '
+                    f'will not be classified. Error message was: {str(e)}')
+                continue
+
+            waveforms.append(waveform)
+
+        return waveforms
+        
+
     def _annotate_clip_score(self, clip, score):
         
         annotation_info = self._get_annotation_info('Classifier Score')
