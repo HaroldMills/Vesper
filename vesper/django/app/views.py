@@ -1281,6 +1281,11 @@ def _get_request_body(request, content_type_name, default_charset_name):
     return request.body.decode(charset)
 
 
+# TODO: Handle errors better in this method. Currently, it responds
+# either with all of the requested clip audios or a server error,
+# even if, say, all but one of the audios are available. A better
+# approach would be to return all of the audios that are available,
+# and some sort of error message for each one that is not.
 def _get_clip_audios_aux(content):
     
     # reset_queries()
