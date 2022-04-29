@@ -804,8 +804,8 @@ export class ClipAlbum {
     
     _createPageAutoAdvanceIterator() {
 
-        const pause = 4;
-        const minPause = .25;
+        const pause = 2;
+        const minPause = .125;
         const maxPause = 16;
         const pauseScaleFactor = 2 ** .25;
 
@@ -823,8 +823,8 @@ export class ClipAlbum {
 
     _createClipAutoAdvanceIterator() {
 
-        const pause = .5;
-        const minPause = .125 / 128;
+        const pause = 1;
+        const minPause = .125;
         const maxPause = 16;
         const pauseScaleFactor = 2 ** .25;
 
