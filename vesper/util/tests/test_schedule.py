@@ -4,7 +4,7 @@ from datetime import (
     time as Time,
     timedelta as TimeDelta)
 import itertools
-import time
+# import time
 
 import pytz
 
@@ -344,7 +344,7 @@ def _dtize_interval(start, end):
 #              
 #         for case in cases:
 #                  
-#             print('\nrunning schedule for {}...'.format(case))
+#             print(f'\nrunning schedule for {case}...')
 #                  
 #             schedule = _create_schedule(case)
 #             runner = ScheduleRunner(schedule)
@@ -396,7 +396,7 @@ class _ScheduleListener:
     
     
 def _show_event(name, time, state):
-    print('{} at {} {}'.format(name, time, state))
+    print(f'{name} at {time} {state}')
 
 
 def _create_schedule(interval_offsets):
@@ -1232,7 +1232,7 @@ class ScheduleParsingTests(TestCase):
                  
                 for preposition, factor in _PREPOSITIONS:
                      
-                    time = '{} {} {}'.format(offset, preposition, event_name)
+                    time = f'{offset} {preposition} {event_name}'
                     actual = schedule._parse_time(time)
                      
                     self._assert_twilight_event_time(
@@ -1278,8 +1278,7 @@ class ScheduleParsingTests(TestCase):
                  
                 for preposition, factor in _PREPOSITIONS:
                      
-                    dt = '{} {} {} {}'.format(
-                        date_string, offset, preposition, event_name)
+                    dt = f'{date_string} {offset} {preposition} {event_name}'
                     actual = parse(dt)
                      
                     self._assert_twilight_event_date_time(
