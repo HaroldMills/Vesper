@@ -553,6 +553,8 @@ _TIME_INTERVAL_PROPERTY_NAMES = ('start_time', 'end_time', 'duration')
 _DATE_INTERVAL_PROPERTY_NAMES = ('start_date', 'end_date')
 
 _ONE_DAY = TimeDelta(days=1)
+_TWO_DAYS = TimeDelta(days=2)
+_MIDNIGHT = Time(0)
 
 
 def _compile_schedule(spec, location):
@@ -576,7 +578,7 @@ def _compile_interval_schedule(spec, location):
         _check_spec_against_schema(spec, _INTERVAL_SCHEMA)
         interval = _compile_interval(interval, location)
     except ValueError as e:
-        raise ValueError('Bad interval schedule: {}'.format(str(e)))
+        _handle_schedule_compilation_error(e, 'interval')
     
     return Schedule([interval])
     
@@ -683,6 +685,12 @@ def _compile_duration(duration):
         raise ValueError('Bad interval duration "{}".'.format(duration))
     
     
+def _handle_schedule_compilation_error(e, schedule_type):
+    raise ValueError(
+        f'Could not compile {schedule_type} schedule. '
+        f'Error message was: {str(e)}')
+    
+
 def _compile_intervals_schedule(spec, location):
     
     try:
@@ -694,11 +702,11 @@ def _compile_intervals_schedule(spec, location):
         _check_spec_against_schema(spec, _INTERVALS_SCHEMA)
         intervals = tuple(_compile_interval(i, location) for i in intervals)
     except ValueError as e:
-        raise ValueError('Bad intervals schedule: {}'.format(str(e)))
-    
+        _handle_schedule_compilation_error(e, 'interval')
+
     return Schedule(intervals)
 
-    
+
 def _compile_daily_schedule(spec, location):
     
     try:
@@ -713,7 +721,7 @@ def _compile_daily_schedule(spec, location):
         intervals = _compile_daily_intervals(
             date_intervals, time_intervals, location)
     except ValueError as e:
-        raise ValueError('Bad daily schedule: {}'.format(str(e)))
+        _handle_schedule_compilation_error(e, 'daily')
     
     return Schedule(intervals)
 
@@ -878,6 +886,10 @@ def _compile_daily_intervals(date_intervals, time_intervals, location):
 
 def _compile_daily_intervals_aux(date_intervals, time_intervals, location):
     
+    time_zone = location.time_zone
+    event_times = _compute_solar_event_times(
+        date_intervals, time_intervals, location)
+
     dates = _get_interval_dates(date_intervals)
 
     combine = _combine_date_and_time
@@ -887,20 +899,89 @@ def _compile_daily_intervals_aux(date_intervals, time_intervals, location):
         for interval in time_intervals:
             
             if 'start' not in interval:
-                end = combine(date, interval['end'], location, 'end')
+                end = combine(
+                    date, interval['end'], time_zone, event_times, 'end')
                 duration = interval['duration']
                 yield Interval(end - duration, end)
                 
             elif 'end' not in interval:
-                start = combine(date, interval['start'], location, 'start')
+                start = combine(
+                    date, interval['start'], time_zone, event_times, 'start')
                 duration = interval['duration']
                 yield Interval(start, start + duration)
                 
             else:
-                start = combine(date, interval['start'], location, 'start')
-                end = _get_daily_interval_end(start, interval['end'], location)
+                start = combine(
+                    date, interval['start'], time_zone, event_times, 'start')
+                end = _get_daily_interval_end(
+                    start, interval['end'], time_zone, event_times)
                 yield Interval(start, end)
             
+
+def _compute_solar_event_times(date_intervals, time_intervals, location):
+
+    event_names = _get_solar_event_names(time_intervals)
+
+    if len(event_names) == 0:
+        return {}
+
+    _check_location(location)
+
+    sun_moon = _get_sun_moon(location)
+    time_zone = location.time_zone
+
+    event_times = {}
+
+    for start_date, end_date in date_intervals:
+
+        start_time = _get_localized_midnight(start_date, location)
+
+        # Compute solar event times for one day past specified end date.
+        # These are needed since intervals can start on one day and end
+        # on the next, for example ones from sunset to sunrise. See
+        # `_get_daily_interval_end` function for handling of such
+        # intervals.
+        end_time = _get_localized_midnight(end_date + _TWO_DAYS, location)
+
+        events = sun_moon.get_solar_events_in_interval(
+            start_time, end_time, event_names)
+
+        for e in events:
+            local_time = e.time.astimezone(time_zone)
+            date = local_time.date()
+            event_times[(date, e.name)] = e.time
+
+    return event_times
+
+
+def _get_solar_event_names(time_intervals):
+
+    names = set()
+
+    for interval in time_intervals:
+        _add_solar_event_name_if_present(names, interval, 'start')
+        _add_solar_event_name_if_present(names, interval, 'end')
+
+    return sorted(names)
+
+
+def _add_solar_event_name_if_present(event_names, interval, attribute_name):
+    value = interval.get(attribute_name)
+    if value is not None and isinstance(value, _TwilightEventTime):
+        event_names.add(value.event_name)
+
+        
+def _check_location(location):
+    for name in ('latitude', 'longitude', 'time_zone'):
+        if not hasattr(location, name) or getattr(location, name) is None:
+            raise ValueError(
+                f'Cannot compute solar event times: no {name} specified.')
+
+
+def _get_localized_midnight(date, location):
+    midnight = DateTime.combine(date, _MIDNIGHT)
+    return location.time_zone.localize(midnight)
+
 
 def _get_interval_dates(date_intervals):
     date_iterator = itertools.chain.from_iterable(
@@ -916,32 +997,32 @@ def _get_interval_dates_aux(interval):
         date += _ONE_DAY
         
         
-def _combine_date_and_time(date, time, location, name):
+def _combine_date_and_time(date, time, time_zone, solar_event_times, name):
     
     if isinstance(time, Time):
-        _check_location_attribute(location.time_zone, 'time zone', name)
+        _check_location_attribute(time_zone, 'time zone', name)
         naive_dt = DateTime.combine(date, time)
-        localized_dt = location.time_zone.localize(naive_dt)
+        localized_dt = time_zone.localize(naive_dt)
         return localized_dt.astimezone(pytz.utc)
         
     else:
-        _check_location_attribute(location.latitude, 'latitude', name)
-        _check_location_attribute(location.longitude, 'longitude', name)
-        dt = _TwilightEventDateTime(date, time.event_name, time.offset)
-        return dt.resolve(location)
+        key = (date, time.event_name)
+        event_time = solar_event_times[key]
+        return event_time + time.offset
 
 
-def _get_daily_interval_end(start, end_time, location):
+def _get_daily_interval_end(start, end_time, time_zone, solar_event_times):
     
     combine = _combine_date_and_time
     date = start.date()
     
-    end = combine(date, end_time, location, 'end')
+    end = combine(date, end_time, time_zone, solar_event_times, 'end')
     
     if end < start:
         # end time will be on date following start time
         
-        end = combine(date + _ONE_DAY, end_time, location, 'end')
+        end = combine(
+            date + _ONE_DAY, end_time, time_zone, solar_event_times, 'end')
         
     return end
         
