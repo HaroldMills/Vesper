@@ -70,8 +70,7 @@ class Schedule:
             spec = yaml_utils.load(spec)
         except Exception as e:
             raise ValueError(
-                'Could not load schedule YAML. Error message was: {}'.format(
-                    e.message))
+                f'Could not load schedule YAML. Error message was: {str(e)}')
             
         return Schedule.compile_dict(spec, latitude, longitude, time_zone)
     
@@ -640,7 +639,7 @@ def _compile_date_time(dt, location, dt_name):
         dt = _parse_date_time(dt)
         
         if dt is None:
-            raise ValueError('Bad interval {} "{}".'.format(dt_name, dt_text))
+            raise ValueError(f'Bad interval {dt_name} "{dt_text}".')
         
         if isinstance(dt, DateTime):
             return _naive_to_utc(dt, location, dt_name, dt_text)
@@ -653,8 +652,7 @@ def _compile_date_time(dt, location, dt_name):
             return dt.resolve(location)
         
     else:
-        raise ValueError(
-            'Bad interval {} {}.'.format(dt_name, str(dt)))
+        raise ValueError(f'Bad interval {dt_name} {str(dt)}.')
         
     
 def _naive_to_utc(dt, location, dt_name, dt_text=None):
@@ -671,18 +669,17 @@ def _check_location_attribute(value, name, dt_name, dt_text=None):
         if dt_text is None:
             suffix = ''
         else:
-            suffix = ' "{}"'.format(dt_text)
+            suffix = f' "{dt_text}"'
             
         raise ValueError(
-            'No {} available to resolve interval {}{}.'.format(
-                name, dt_name, suffix))
+            f'No {name} available to resolve interval {dt_name}{suffix}.')
 
 
 def _compile_duration(duration):
     try:
         return _parse_duration(duration.split())
     except Exception:
-        raise ValueError('Bad interval duration "{}".'.format(duration))
+        raise ValueError(f'Bad interval duration "{duration}".')
     
     
 def _handle_schedule_compilation_error(e, schedule_type):
@@ -754,16 +751,15 @@ def _check_absence(spec, property_names, excluding_property_name):
     for name in property_names:
         if name in spec:
             raise ValueError(
-                'Schedule cannot include both "{}" and "{}".'.format(
-                    excluding_property_name, name))
+                f'Schedule cannot include both "{excluding_property_name}" '
+                f'and "{name}".')
             
             
 def _check_presence(spec, property_names, spec_name):
     for name in property_names:
         if name not in spec:
             raise ValueError(
-                '{} must include "{}" property.'.format(
-                    spec_name.capitalize(), name))
+                f'{spec_name.capitalize()} must include "{name}" property.')
 
             
 def _any_absent(spec, property_names):
@@ -798,10 +794,10 @@ def _compile_date(date, name):
         return date
     else:
         if isinstance(date, str):
-            suffix = '"{}"'.format(date)
+            suffix = f'"{date}"'
         else:
-            suffix = '{}'.format(str(date))
-        raise ValueError('Bad {} date {}.'.format(name, suffix))
+            suffix = str(date)
+        raise ValueError(f'Bad {name} date {suffix}.')
     
     
 def _check_daily_time_interval_properties(spec):
@@ -875,7 +871,7 @@ def _compile_time_interval(spec, property_names):
 def _compile_time(time, name):
     result = _parse_time(time)
     if result is None:
-        raise ValueError('Bad interval {} time "{}".'.format(name, time))
+        raise ValueError(f'Bad interval {name} time "{time}".')
     return result
 
 
@@ -1037,7 +1033,7 @@ def _compile_union_schedule(spec, location):
     try:
         _check_spec_against_schema(spec, _UNION_SCHEMA)
     except ValueError as e:
-        raise ValueError('Bad union schedule: {}'.format(str(e)))
+        raise ValueError(f'Bad union schedule: {str(e)}')
     
     schedules = tuple(_compile_schedule(s, location) for s in union)
     intervals = tuple(itertools.chain.from_iterable(
