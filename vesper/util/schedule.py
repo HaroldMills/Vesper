@@ -708,9 +708,10 @@ def _compile_daily_schedule(spec, location):
 
     try:
         _check_daily_properties(spec)
-        dates = _compile_daily_dates(daily)
+        date_intervals = _compile_daily_date_intervals(daily)
         time_intervals = _compile_daily_time_intervals(daily)
-        intervals = _compile_daily_intervals(dates, time_intervals, location)
+        intervals = _compile_daily_intervals(
+            date_intervals, time_intervals, location)
     except ValueError as e:
         raise ValueError('Bad daily schedule: {}'.format(str(e)))
     
@@ -764,19 +765,11 @@ def _any_absent(spec, property_names):
     return False
 
 
-def _compile_daily_dates(spec):
-    
+def _compile_daily_date_intervals(spec):
     if 'date_intervals' in spec:
-        date_intervals = _compile_date_intervals(spec['date_intervals'])
-        date_iterator = itertools.chain.from_iterable(
-            _get_dates(i) for i in date_intervals)
-        unique_dates = set(date_iterator)
-        return sorted(unique_dates)
-        
+        return _compile_date_intervals(spec['date_intervals'])
     else:
-        date_interval = \
-            _compile_date_interval(spec, _DATE_INTERVAL_PROPERTY_NAMES)
-        return tuple(_get_dates(date_interval))
+        return (_compile_date_interval(spec, _DATE_INTERVAL_PROPERTY_NAMES),)
         
 
 def _compile_date_intervals(intervals):
@@ -792,13 +785,6 @@ def _compile_date_interval(interval, property_names):
     return (start, end)
     
     
-def _get_dates(interval):
-    date, end = interval
-    while date <= end:
-        yield date
-        date += _ONE_DAY
-        
-        
 def _compile_date(date, name):
     if isinstance(date, Date):
         return date
@@ -885,12 +871,15 @@ def _compile_time(time, name):
     return result
 
 
-def _compile_daily_intervals(dates, time_intervals, location):
-    return tuple(_compile_daily_intervals_aux(dates, time_intervals, location))
+def _compile_daily_intervals(date_intervals, time_intervals, location):
+    return tuple(_compile_daily_intervals_aux(
+        date_intervals, time_intervals, location))
 
 
-def _compile_daily_intervals_aux(dates, time_intervals, location):
+def _compile_daily_intervals_aux(date_intervals, time_intervals, location):
     
+    dates = _get_interval_dates(date_intervals)
+
     combine = _combine_date_and_time
     
     for date in dates:
@@ -912,7 +901,21 @@ def _compile_daily_intervals_aux(dates, time_intervals, location):
                 end = _get_daily_interval_end(start, interval['end'], location)
                 yield Interval(start, end)
             
-            
+
+def _get_interval_dates(date_intervals):
+    date_iterator = itertools.chain.from_iterable(
+        _get_interval_dates_aux(i) for i in date_intervals)
+    unique_dates = set(date_iterator)
+    return sorted(unique_dates)
+
+
+def _get_interval_dates_aux(interval):
+    date, end = interval
+    while date <= end:
+        yield date
+        date += _ONE_DAY
+        
+        
 def _combine_date_and_time(date, time, location, name):
     
     if isinstance(time, Time):
