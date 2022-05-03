@@ -1042,7 +1042,6 @@ class ScheduleCompilationTests(TestCase):
           
         for spec in specs:
             for location in locations:
-                print(location)
                 self._assert_raises(ValueError, compile_, spec, **location)
           
           
