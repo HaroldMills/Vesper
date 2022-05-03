@@ -62,14 +62,14 @@ entry points that no longer exist.
 
 To run Django unit tests:
 
-    conda activate vesper-latest
     cd "Desktop/Test Archive"
+    conda activate vesper-latest
     vesper_admin test -p "dtest_*.py" vesper.django
 
 To run non-Django unit tests:
 
-    conda activate vesper-latest
     cd "/Users/harold/Documents/Code/Python/Vesper/vesper"
+    conda activate vesper-latest
     python -m unittest discover -s /Users/harold/Documents/Code/Python/Vesper/vesper
 """
 
