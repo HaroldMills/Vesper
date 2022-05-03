@@ -68,7 +68,6 @@ def _parse_periods(periods):
 
 def _parse_period(name, start, end):
     name = _parse_name(name)
-    print(name)
     start = _parse_month(start)
     end = _parse_month(end)
     return Bunch(name=name, start=start, end=end)
