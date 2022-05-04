@@ -129,8 +129,8 @@ devices:
 station_devices:
 
     - station: Ithaca
-      start_time: 2020-01-01
-      end_time: 2021-01-01
+      start_time: 2021-01-01
+      end_time: 2022-01-01
       devices:
           - PC
           - 21c
@@ -149,14 +149,9 @@ station_devices:
 # code.
 detectors:
 
-    - name: BirdVoxDetect 0.5.1 FT 50
+    - name: BirdVoxDetect 0.6.0 FT 50
       description: >
           BirdVoxDetect NFC detector with a fixed threshold of 50.
-
-    - name: BirdVoxDetect 0.5.1 AT 50
-      description: >
-          BirdVoxDetect NFC detector with an adaptive threshold
-          whose nominal value is 50.
 
     - name: MPG Ranch Thrush Detector 1.1 70
       description: >

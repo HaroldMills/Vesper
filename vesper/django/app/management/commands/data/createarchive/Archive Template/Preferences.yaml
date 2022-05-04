@@ -29,5 +29,5 @@ form_defaults:
     Import Recordings:
         Recursive: false
     Detect:
-        Schedule: Ithaca 2020 Fall
+        Schedule: Ithaca 2021 Fall
         Defer clip creation: false

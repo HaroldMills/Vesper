@@ -1,0 +1,32 @@
+# There are two basic ways to specify the time intervals of exported
+# clips. This preset demonstrates one of the ways, which involves
+# "left_padding", "right_padding", and "offset" settings. See the
+# other preset that accompanies this one for an example of the other
+# form.
+#
+# Note that if a preset specifies left and/or right padding, it
+# usually does not also specify an offset. That's because such an
+# offset could just be added to the left padding and subtracted
+# from the right padding and then omitted. Another way of saying
+# this is that when a preset of this form specifies an offset, it
+# usually specifies that offset alone.
+
+time_interval:
+
+    # Left padding added to the archive clip in the exported clip, in
+    # seconds. This setting is optional and defaults to zero. It is
+    # usually positive when specified, but can also be negative to omit
+    # a leading segment of the archive clip in the exported clip.
+    left_padding: .6
+
+    # Right padding added to the archive clip in the exported clip, in
+    # seconds. This setting is optional and defaults to zero. It is
+    # usually positive when specified, but can also be negative to omit
+    # a trailing segment of the archive clip in the exported clip.
+    right_padding: .5
+
+    # Offset of archive clip in exported clip relative to where it
+    # would be given left and right padding alone (including if they
+    # are omitted and hence zero), in seconds. This setting is optional
+    # and defaults to zero.
+    offset: .1
