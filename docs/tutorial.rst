@@ -90,7 +90,7 @@ Create a new Vesper archive
 ---------------------------
 
 #. Download the `Vesper archive template
-   <https://www.dropbox.com/s/yy4qugnki58zfrk/Archive%20Template.zip?dl=1>`_
+   <https://www.dropbox.com/s/ylscsoyttnu1qxk/Archive%20Template.zip?dl=1>`_
    to your computer.
 
 #. Unzip the downloaded file. This should create an archive directory
@@ -147,8 +147,8 @@ Add a user to the archive
    your client/server network traffic to see your password.
    
 .. Note::
-   In some Vesper installations (such as ones including Python 3.9.6
-   and Django 3.2.6) the ``vesper_admin createsuperuser`` command will
+   In some Vesper installations (such as ones including Python 3.9.12
+   and Django 3.2.13) the ``vesper_admin createsuperuser`` command will
    create the desired superuser but not terminate. If the command seems
    to hang, producing no output for at least thirty seconds, type
    ``Ctrl-C`` on your keyboard to terminate it.
@@ -583,12 +583,10 @@ your own archive you can import your own recordings into it.
 
 To import a recording into your archive:
 
-#. Download the `recording file <https://www.dropbox.com/s/1smkyadxuttya6t/Ithaca_2020-10-03_06.00.00_Z.wav?dl=1>`_
+#. Download the `recording file <https://www.dropbox.com/s/1smkyadxuttya6t/Ithaca_2021-10-03_06.00.00_Z.wav?dl=1>`_
    for this tutorial and put it in the ``Recordings`` subdirectory of
    your archive.
    
-   
-
 #. Select ``File->Import recordings``. This should take you to a page
    that looks like this:
 

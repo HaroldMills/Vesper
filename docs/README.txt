@@ -1,7 +1,7 @@
 To build a local HTML version of the Vesper documentation:
 
-    conda activate vesper-dev
     cd "/Users/harold/Documents/Code/Python/Vesper/docs"
+    conda activate vesper-dev
     make html
     
 View the local documentation at:
