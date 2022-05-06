@@ -54,14 +54,14 @@ To install the most recent version of Vesper in a new Conda environment:
 3. Create a new Conda environment for Vesper and install a Python
    interpreter in it by issuing the command::
 
-        conda create -n vesper-0.4.10 python=3.9
+        conda create -n vesper-0.4.12 python=3.9
 
    Conda will display a list of packages that it proposes to install,
    including Python and some others. Press the ``Return`` key to accept.
 
 4. Activate the environment you just created with::
 
-        conda activate vesper-0.4.10
+        conda activate vesper-0.4.12
 
 5. Install Vesper and various dependencies into the environment with::
 
