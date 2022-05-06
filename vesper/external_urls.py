@@ -17,7 +17,7 @@ def _create_documentation_url():
     else:
         doc_version = vesper_version.full_version
         
-    return 'https://vesper.readthedocs.io/en/' + doc_version + '/'
+    return 'https://vesper.readthedocs.io/en/v' + doc_version + '/'
 
 
 def _create_tutorial_url():
