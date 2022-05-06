@@ -17,6 +17,17 @@ commands:
     "#": [set_local, annotation_scope, Page]
     "\\": [clear_command_and_locals]
 
+    "1": [start_page_auto_advance]
+    "2": [stop_page_auto_advance]
+    "3": [toggle_page_auto_advance]
+    "4": [accelerate_page_auto_advance]
+    "5": [decelerate_page_auto_advance]
+    "6": [start_clip_auto_advance]
+    "7": [stop_clip_auto_advance]
+    "8": [toggle_clip_auto_advance]
+    "9": [accelerate_clip_auto_advance]
+    "0": [decelerate_clip_auto_advance]
+
     A: [annotate_clips, Call.AMCO]
     a: [annotate_clips, Call.ATSP]
     b: [annotate_clips, Call.BBWA]
