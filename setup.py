@@ -18,37 +18,31 @@ To upload the Vesper package to the real Python package index:
 
 To create a conda environment using a local Vesper package:
 
-    conda create -n test python=3.9
+    conda create -n test python=3.10
     conda activate test
     pip install dist/vesper-<version>.tar.gz
     
 To create a conda environment using a Vesper package from the test PyPI:
 
-    conda create -n test python=3.9
+    conda create -n test python=3.10
     conda activate test
     pip install --extra-index-url https://test.pypi.org/simple/ vesper
 
 To create a conda environment using a Vesper package from the real PyPI:
 
-    conda create -n test python=3.9
+    conda create -n test python=3.10
     conda activate test
     pip install vesper==<version>
 
-To create a conda environment for Vesper development with TensorFlow 1.15.x:
-    conda create -n vesper-dev-tf115 python=3.6
-    conda activate vesper-dev-tf115
-    pip install bokeh django jsonschema matplotlib resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow~=1.15.0
-
-To create a conda environment for Vesper development with TensorFlow 2.x:
-    conda create -n vesper-dev-tf2 python=3.9
-    conda activate vesper-dev-tf2
+To create a conda environment for Vesper development:
+    conda create -n vesper-dev python=3.10
+    conda activate vesper-dev
     conda install pyaudio
-    pip install bokeh django jsonschema matplotlib resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow
+    pip install bokeh django jsonschema matplotlib pytz resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow
 
-To create a conda environment using the latest, local Vesper source code
-and TensorFlow 2.x:
-    conda create -n vesper-latest-tf2 python=3.9
-    conda activate vesper-latest-tf2
+To create a conda environment using the latest, local Vesper source code:
+    conda create -n vesper-latest python=3.10
+    conda activate vesper-latest
     conda install pyaudio
     pip install -e /Users/harold/Documents/Code/Python/Vesper
 
@@ -68,7 +62,7 @@ To run Django unit tests:
 
 To run non-Django unit tests:
 
-    cd "/Users/harold/Documents/Code/Python/Vesper/vesper"
+    cd /Users/harold/Documents/Code/Python/Vesper/vesper
     conda activate vesper-latest
     python -m unittest discover -s /Users/harold/Documents/Code/Python/Vesper/vesper
 """
@@ -136,12 +130,13 @@ setup(
     ],
     
     install_requires=[
-        'django~=3.2.0',
-        'jsonschema~=3.2.0',
+        'django~=4.0.0',
+        'jsonschema~=4.5.0',
+        'pytz',
         'resampy',
         'ruamel_yaml',
-        'skyfield~=1.39.0',
-        'tensorflow~=2.6.0',
+        'skyfield~=1.42.0',
+        'tensorflow~=2.9.0',
     ],
       
     entry_points={
