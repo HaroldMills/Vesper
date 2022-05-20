@@ -8,8 +8,7 @@
 import os
 import sys
 
-from vesper.archive_settings import archive_settings
-from vesper.archive_paths import archive_paths
+# from vesper.archive_paths import archive_paths
 
 
 def main():
@@ -32,8 +31,8 @@ def main():
     if args[0].endswith('vesper_admin'):
         args[0] = __file__
         
-    if 'createsuperuser' in args or 'runserver' in args:
-        _check_archive_dir()
+    # if 'createsuperuser' in args or 'runserver' in args:
+    #     _check_archive_dir()
     
     os.environ.setdefault(
         'DJANGO_SETTINGS_MODULE', 'vesper.django.project.settings')
@@ -42,66 +41,69 @@ def main():
     execute_from_command_line(args)
     
     
-def _check_archive_dir():
+# def _check_archive_dir():
     
-    """
-    Checks that the purported archive directory appears to contain a
-    Vesper archive.
-    """
+#     """
+#     Checks that the purported archive directory appears to contain a
+#     Vesper archive.
+#     """
     
-    _check_database()
-    _check_preferences()
-    _check_presets()
+#     _check_database()
+#     _check_preferences()
+#     _check_presets()
     
     
-def _check_database():
+# def _check_database():
+
+#     from django.conf import settings
     
-    if archive_settings.database.engine == 'SQLite':
+#     # See `vesper.util.archive_lock` module for `is_database_sqlite`.
+#     if is_database_sqlite():
         
-        file_path = archive_paths.sqlite_database_file_path
+#         file_path = archive_paths.sqlite_database_file_path
         
-        if not file_path.exists():
+#         if not file_path.exists():
             
-            archive_dir_path = archive_paths.archive_dir_path
-            relative_file_path = file_path.relative_to(archive_dir_path)
+#             archive_dir_path = archive_paths.archive_dir_path
+#             relative_file_path = file_path.relative_to(archive_dir_path)
         
-            print(
-                f'The directory "{archive_dir_path}" does not appear to '
-                f'be a Vesper archive directory, since it does not contain '
-                f'an archive database file "{relative_file_path}". Please '
-                f'run your command again in an archive directory.')
+#             print(
+#                 f'The directory "{archive_dir_path}" does not appear to '
+#                 f'be a Vesper archive directory, since it does not contain '
+#                 f'an archive database file "{relative_file_path}". Please '
+#                 f'run your command again in an archive directory.')
             
-            sys.exit(1)
+#             sys.exit(1)
                         
             
-def _check_preferences():
+# def _check_preferences():
     
-    file_path = archive_paths.preference_file_path
+#     file_path = archive_paths.preference_file_path
     
-    if not file_path.exists():
+#     if not file_path.exists():
         
-        archive_dir_path = archive_paths.archive_dir_path
-        relative_file_path = file_path.relative_to(archive_dir_path)
+#         archive_dir_path = archive_paths.archive_dir_path
+#         relative_file_path = file_path.relative_to(archive_dir_path)
         
-        print(
-            f'WARNING: The Vesper archive at "{archive_dir_path}" does '
-            f'not contain a preference file "{relative_file_path.name}". '
-            f'The server will use default preferences for this archive.')
+#         print(
+#             f'WARNING: The Vesper archive at "{archive_dir_path}" does '
+#             f'not contain a preference file "{relative_file_path.name}". '
+#             f'The server will use default preferences for this archive.')
 
 
-def _check_presets():
+# def _check_presets():
     
-    dir_path = archive_paths.preset_dir_path
+#     dir_path = archive_paths.preset_dir_path
     
-    if not dir_path.exists():
+#     if not dir_path.exists():
         
-        archive_dir_path = archive_paths.archive_dir_path
-        relative_dir_path = dir_path.relative_to(archive_dir_path)
+#         archive_dir_path = archive_paths.archive_dir_path
+#         relative_dir_path = dir_path.relative_to(archive_dir_path)
         
-        print(
-            f'WARNING: The Vesper archive at "{archive_dir_path}" does '
-            f'not contain a preset directory "{relative_dir_path}". '
-            f'No presets will be available for use with this archive.')
+#         print(
+#             f'WARNING: The Vesper archive at "{archive_dir_path}" does '
+#             f'not contain a preset directory "{relative_dir_path}". '
+#             f'No presets will be available for use with this archive.')
 
 
 if __name__ == '__main__':

@@ -68,7 +68,7 @@ transactions at all.
 
 from multiprocessing import RLock
 
-from vesper.archive_settings import archive_settings
+from django.conf import settings
 
 
 class DoNothingLock:
@@ -87,12 +87,17 @@ _lock = None
 
 def create_lock():
     
-    if archive_settings.database.engine == 'SQLite':
+    if is_database_sqlite():
         lock_class = RLock
     else:
         lock_class = DoNothingLock
         
     set_lock(lock_class())
+
+
+def is_database_sqlite():
+    engine = settings.DATABASES['default']['ENGINE']
+    return engine == 'django.db.backends.sqlite3'
 
 
 def set_lock(lock):

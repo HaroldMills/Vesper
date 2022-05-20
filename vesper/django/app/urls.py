@@ -30,7 +30,7 @@ urlpatterns = [
 ]
 
 
-if not settings.ARCHIVE_READ_ONLY:
+if not settings.VESPER_ARCHIVE_READ_ONLY:
     
     urlpatterns += [
     

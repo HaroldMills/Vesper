@@ -25,7 +25,7 @@ urlpatterns = [
 ]
 
 
-if not settings.ARCHIVE_READ_ONLY:
+if not settings.VESPER_ARCHIVE_READ_ONLY:
     
     from django.contrib import admin
     
@@ -38,10 +38,10 @@ if not settings.ARCHIVE_READ_ONLY:
 # Django Debug Toolbar
 # See https://django-debug-toolbar.readthedocs.io/en/stable/installation.html.
 
-if settings.INCLUDE_DJANGO_DEBUG_TOOLBAR:
+# if settings.INCLUDE_DJANGO_DEBUG_TOOLBAR:
      
-    import debug_toolbar
+#     import debug_toolbar
      
-    urlpatterns = [
-        path('debug/', include(debug_toolbar.urls)),
-    ] + urlpatterns
+#     urlpatterns = [
+#         path('debug/', include(debug_toolbar.urls)),
+#     ] + urlpatterns

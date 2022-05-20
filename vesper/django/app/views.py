@@ -271,7 +271,7 @@ def _create_navbar_items():
 
 
 def _get_default_navbar_data():
-    if settings.ARCHIVE_READ_ONLY:
+    if settings.VESPER_ARCHIVE_READ_ONLY:
         return _DEFAULT_NAVBAR_DATA_READ_ONLY
     else:
         return _DEFAULT_NAVBAR_DATA_READ_WRITE
@@ -347,7 +347,7 @@ def _create_navbar_dropdown_item(data):
 
 def _create_navbar_right_items(request):
 
-    if settings.ARCHIVE_READ_ONLY:
+    if settings.VESPER_ARCHIVE_READ_ONLY:
         return []
     
     else:
@@ -1974,7 +1974,7 @@ def night(request):
         settings_preset_path=settings_preset_path,
         commands_presets_json=commands_presets_json,
         commands_preset_path=commands_preset_path,
-        archive_read_only=settings.ARCHIVE_READ_ONLY)
+        archive_read_only=settings.VESPER_ARCHIVE_READ_ONLY)
 
     return render(request, 'vesper/night.html', context)
 
@@ -2129,7 +2129,7 @@ def clip_album(request):
         settings_preset_path=settings_preset_path,
         commands_presets_json=commands_presets_json,
         commands_preset_path=commands_preset_path,
-        archive_read_only=settings.ARCHIVE_READ_ONLY)
+        archive_read_only=settings.VESPER_ARCHIVE_READ_ONLY)
 
     return _render_clip_album(request, context)
 
