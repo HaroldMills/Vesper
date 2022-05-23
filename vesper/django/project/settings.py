@@ -86,20 +86,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'vesper.django.project.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.0/ref/settings/#databases
-#
-# See https://github.com/jazzband/dj-database-url for the form of
-# URLs for various kinds of databases.
-#
-# The default below is for the file "Archive Database.sqlite" in the
-# current working directory.
-
-DATABASES = {
-    'default': env.dj_db_url('DATABASE_URL')
-}
-
-
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
 
@@ -152,12 +138,35 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 
-VESPER_ARCHIVE_READ_ONLY = env.bool('VESPER_ARCHIVE_READ_ONLY', True)
-
+# The path of the Vesper archive directory, by default the current
+# working directory.
+#
+# We define this attribute here instead of at the end of this file
+# so we can use it in the default database URL, below.
 VESPER_ARCHIVE_DIR_PATH = env.path('VESPER_ARCHIVE_DIR_PATH', os.getcwd())
+
+# The URL of the Vesper archive database, by default the URL of the
+# SQLite database in the file "Archive Database.sqlite" of the Vesper
+# archive directory.
+#
+# See https://github.com/jazzband/dj-database-url for the form of
+# URLs for various kinds of databases.
+VESPER_ARCHIVE_DATABASE_URL = env.dj_db_url(
+    'DATABASE_URL',
+    f'sqlite:///{VESPER_ARCHIVE_DIR_PATH}/Archive Database.sqlite')
+
+
+# Database
+# https://docs.djangoproject.com/en/4.0/ref/settings/#databases
+DATABASES = {
+    'default': VESPER_ARCHIVE_DATABASE_URL
+}
+
 
 VESPER_RECORDING_DIR_PATHS = \
     env.list('VESPER_RECORDING_DIR_PATHS', [], subcast=Path)
+
+VESPER_ARCHIVE_READ_ONLY = env.bool('VESPER_ARCHIVE_READ_ONLY', True)
 
 
 # print(
