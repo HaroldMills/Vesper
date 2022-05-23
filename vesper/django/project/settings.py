@@ -19,10 +19,10 @@ import os
 
 from environs import Env
 
-
-# TODO: Is there a better place for this? We want to configure logging
-# early, before anybody logs anything.
 import vesper.util.logging_utils as logging_utils
+
+
+# Configure logging for Vesper server early, before anybody logs anything.
 logging_utils.configure_root_logger()
 
 
@@ -167,12 +167,3 @@ VESPER_RECORDING_DIR_PATHS = \
     env.list('VESPER_RECORDING_DIR_PATHS', [], subcast=Path)
 
 VESPER_ARCHIVE_READ_ONLY = env.bool('VESPER_ARCHIVE_READ_ONLY', True)
-
-
-# print(
-#     f'vesper.django.project.settings: archive dir path is '
-#     f'"{VESPER_ARCHIVE_DIR_PATH}"')
-
-# print(f'vesper.django.project.settings: recording directory paths are:')
-# for path in VESPER_RECORDING_DIR_PATHS:
-#     print(f'    "{str(path)}"')
