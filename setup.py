@@ -38,7 +38,7 @@ To create a conda environment for Vesper development:
     conda create -n vesper-dev python=3.10
     conda activate vesper-dev
     conda install pyaudio
-    pip install bokeh django jsonschema matplotlib pytz resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow
+    pip install bokeh django "environs[django]" jsonschema matplotlib pytz resampy ruamel_yaml skyfield sphinx sphinx_rtd_theme tensorflow
 
 To create a conda environment using the latest, local Vesper source code:
     conda create -n vesper-latest python=3.10
@@ -131,6 +131,7 @@ setup(
     
     install_requires=[
         'django~=4.0.0',
+        'environs[django]',
         'jsonschema~=4.5.0',
         'pytz',
         'resampy',
