@@ -1,0 +1,19 @@
+# The Docker Compose project name. A unique archive name is a good
+# choice here.
+name: ithaca-2022-archive
+
+services:
+
+    vesper:
+
+        image: vesper
+        ports:
+            - 8000:8000
+        command: python vesper/django/manage.py runserver 0.0.0.0:8000
+        volumes:
+            - .:/Archive
+            - /Volumes/Recordings/2022:/Recordings
+        environment:
+            VESPER_DJANGO_SECRET_KEY: "rk4bdfstyc!*te=!y8gf58t7kdd5$$5l+v6e&y%-&in!fl(=ay"
+            VESPER_DJANGO_DEBUG: true
+            VESPER_ARCHIVE_READ_ONLY: false

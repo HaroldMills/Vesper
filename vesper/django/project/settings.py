@@ -15,9 +15,8 @@ https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 
 from pathlib import Path
-import os
 
-from environs import Env
+from environs import Env, EnvError
 
 import vesper.util.logging_utils as logging_utils
 
@@ -28,19 +27,21 @@ logging_utils.configure_root_logger()
 
 # Read .env file and environment variables.
 env = Env()
-env.read_env('Server Settings.env', recurse=False)
+env.read_env('Environment Variables.env', recurse=False)
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: Never put the actual secret key here.
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env('VESPER_DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: Don't run with debug turned on in production.
-DEBUG = env.bool('DEBUG', False)
+DEBUG = env.bool('VESPER_DJANGO_DEBUG', False)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list(
+    'VESPER_DJANGO_ALLOWED_HOSTS',
+    ['.localhost', '127.0.0.1', '[::1]'], subcast=str)
 
 
 # Application definition
@@ -143,7 +144,7 @@ LOGOUT_REDIRECT_URL = '/'
 #
 # We define this attribute here instead of at the end of this file
 # so we can use it in the default database URL, below.
-VESPER_ARCHIVE_DIR_PATH = env.path('VESPER_ARCHIVE_DIR_PATH', os.getcwd())
+VESPER_ARCHIVE_DIR_PATH = env.path('VESPER_ARCHIVE_DIR_PATH', '/Archive')
 
 # The URL of the Vesper archive database, by default the URL of the
 # SQLite database in the file "Archive Database.sqlite" of the Vesper
@@ -163,7 +164,18 @@ DATABASES = {
 }
 
 
-VESPER_RECORDING_DIR_PATHS = \
-    env.list('VESPER_RECORDING_DIR_PATHS', [], subcast=Path)
+# The paths of the Vesper archive recording directories.
+#
+# The value of this settintg is used by the `VesperConfig` class
+# to initialize `archive_paths.recording_dir_paths`.
+try:
+    VESPER_RECORDING_DIR_PATHS = \
+        env.list('VESPER_RECORDING_DIR_PATHS', subcast=Path)
 
+except EnvError:
+    # environment variable not defined
+
+    VESPER_RECORDING_DIR_PATHS = None
+
+    
 VESPER_ARCHIVE_READ_ONLY = env.bool('VESPER_ARCHIVE_READ_ONLY', True)
