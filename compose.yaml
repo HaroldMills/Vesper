@@ -1,0 +1,37 @@
+# Docker Compose file for use in Vesper development.
+#
+# The commands below should be run from the directory containing this file.
+#
+# To start services in detached mode with existing `vesper-dev_vesper` image:
+#
+#     docker compose up -d
+#
+# To start services in detached mode after building new `vesper-dev_vesper`
+# image:
+#
+#     docker compose up -d --build
+#
+# To see logs when services are running in detached mode:
+#
+#     docker compose logs
+#
+# To stop services:
+#
+#     docker compose down
+
+name: vesper-dev
+
+services:
+
+    vesper:
+        build: .
+        ports:
+            - 8000:8000
+        command: python /Code/vesper/django/manage.py runserver 0.0.0.0:8000
+        volumes:
+            - .:/Code
+            - /Users/harold/Desktop/Test Archive:/Archive
+        environment:
+            VESPER_DJANGO_SECRET_KEY: "rk4bdfstyc!*te=!y8gf58t7kdd5$$5l+v6e&y%-&in!fl(=ay"
+            VESPER_DJANGO_DEBUG: true
+            VESPER_ARCHIVE_READ_ONLY: false
