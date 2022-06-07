@@ -48,6 +48,7 @@ coverage.xml
 # Django stuff:
 *.log
 *.pot
+vesper/django/staticfiles/
 
 # Sphinx documentation
 docs/_build/
@@ -61,3 +62,6 @@ scratch.py
 
 .ipynb_checkpoints
 .vscode/launch.json
+
+# Production Docker Compose file
+docker-compose-prod.yaml

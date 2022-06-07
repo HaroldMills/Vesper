@@ -1,0 +1,66 @@
+# Docker Compose file for use in Vesper development.
+#
+# The commands below should be run from the directory containing this file.
+#
+# To start services in detached mode with existing `vesper-dev_vesper` image:
+#
+#     docker compose up -d
+#
+# To start services in detached mode after building new `vesper-dev_vesper`
+# image:
+#
+#     docker compose up -d --build
+#
+# To see logs when services are running in detached mode:
+#
+#     docker compose logs
+#
+# To stop services:
+#
+#     docker compose down
+#
+# To collect static files:
+#
+#    docker compose exec vesper vesper_admin collectstatic
+
+name: vesper-dev
+
+services:
+
+    vesper:
+
+        build: .
+
+        ports:
+            - 8000:8000
+
+        # command: python /Code/vesper/django/manage.py runserver 0.0.0.0:8000
+        command: gunicorn vesper.django.project.wsgi -w 4 -b 0.0.0.0:8000
+
+        volumes:
+            - .:/Code
+            - /Users/harold/Desktop/Test Archive:/Archive
+
+        environment:
+
+            # Django secret key. DO NOT USE THE KEY BELOW FOR A PUBLIC
+            # VESPER WEB SITE. The key below is not secret since it is
+            # publicly available in this file in the Vesper GitHub
+            # repository. It is intended only as an example of the sort
+            # of key to use. If you use it for a public Vesper site, you
+            # will make it relatively easy for a malicious actor to
+            # attack your site.
+            #
+            # To use this file for a public Vesper site, replace the key
+            # below with your own that you keep secret. The key should be
+            # a long sequence of randomly-generated characters. One way to
+            # generate such a key (assuming that Python is installed on your
+            # computer) is to execute the following (which was used to
+            # generate the key below) at a command prompt or terminal:
+            #
+            #     python -c "import secrets; print(secrets.token_urlsafe(40))"
+            VESPER_DJANGO_SECRET_KEY: "Af6PQCWfoAtxuqrVaMEgnYT5NfVWwd4oInvEXkzxfuQxhf05eEET5A"
+
+            VESPER_DJANGO_DEBUG: true
+
+            VESPER_ARCHIVE_READ_ONLY: false

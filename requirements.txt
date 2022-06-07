@@ -60,3 +60,5 @@ typing_extensions==4.2.0
 urllib3==1.26.9
 Werkzeug==2.1.2
 wrapt==1.14.1
+whitenoise==6.1.0
+gunicorn==20.1.0
