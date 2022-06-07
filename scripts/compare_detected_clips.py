@@ -12,7 +12,12 @@ django_utils.set_up_django()
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Device, Processor, Station, StringAnnotation)
+import vesper.django.app.model_utils as model_utils
 import vesper.util.time_utils as time_utils
+
+
+# TODO: Make this a Vesper command called "Match and Tag Clips" that
+# matches clips and tags matched and/or unmatched ones.
 
 
 CLIP_TYPE = 'Tseep'
@@ -35,6 +40,9 @@ STATION_MIC_PAIRS = (
 
 START_DATE = datetime.date(2016, 4, 1)
 END_DATE = datetime.date(2016, 6, 30)
+
+# TODO: Support comparison of unclassified clips.
+CLASSIFICATION = 'Call*'
 
 OUTPUT_FILE_PATH = Path(
     f'/Users/harold/Desktop/NFC/Data/Old Bird/Lighthouse/'
@@ -88,7 +96,8 @@ def compare_clips():
                 print(f'{station_name} / {mic_name} {str(date)}...')
                 
                 clip_pairs = match_clips(
-                    station, mic_output, date, detector_a, detector_b)
+                    station, mic_output, date, detector_a, detector_b,
+                    CLASSIFICATION)
                 
                 write_output_row(writer, station, mic_output, date, clip_pairs)
                 
@@ -102,10 +111,11 @@ def write_output_header(writer, detector_a_short_name, detector_b_short_name):
     writer.writerow(header)
     
     
-def match_clips(station, mic_output, date, detector_a, detector_b):
+def match_clips(
+        station, mic_output, date, detector_a, detector_b, classification):
     
-    clips_a = get_clips(station, mic_output, date, detector_a)
-    clips_b = get_clips(station, mic_output, date, detector_b)
+    clips_a = get_clips(station, mic_output, date, detector_a, classification)
+    clips_b = get_clips(station, mic_output, date, detector_b, classification)
     
     bounds_a = get_clip_bounds(clips_a)
     bounds_b = get_clip_bounds(clips_b)
@@ -117,14 +127,28 @@ def match_clips(station, mic_output, date, detector_a, detector_b):
     return clip_pairs
 
 
-def get_clips(station, mic_output, date, detector):
-    return tuple(
-        Clip.objects.filter(
-            station=station,
-            mic_output=mic_output,
-            date=date,
-            creating_processor=detector
-        ).order_by('start_index'))
+def get_clips(station, mic_output, date, detector, classification):
+
+    kwargs = {
+        'station': station,
+        'mic_output': mic_output,
+        'date': date,
+        'detector': detector
+    }
+
+    if classification is not None:
+        kwargs['annotation_name'] = 'Classification'
+        kwargs['annotation_value'] = classification
+
+    return model_utils.get_clips(**kwargs)
+
+    # return tuple(
+    #     Clip.objects.filter(
+    #         station=station,
+    #         mic_output=mic_output,
+    #         date=date,
+    #         creating_processor=detector
+    #     ).order_by('start_index'))
 
 
 def get_clip_bounds(clips):
