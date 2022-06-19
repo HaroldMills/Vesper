@@ -1,18 +1,18 @@
 from vesper.tests.test_case import TestCase
-import vesper.signal.indexer as indexer
+import vesper.signal.sample_reader as sample_reader
 
 
-# This module tests the auxiliary functions of the indexer module, but
-# not the `Indexer` class. The `test_signal` module tests the `Indexer`
-# class as part of testing the `Signal` class.
+# This module tests the auxiliary functions of the `sample_reader`
+# module, but not the `SampleReader` class. The `test_signal` module
+# tests the `SampleReader` class as part of testing the `Signal` class.
 
 
-class IndexerTests(TestCase):
+class SampleReaderTests(TestCase):
 
 
     def test_normalize_int_key(self):
         
-        method = indexer._normalize_int_key
+        method = sample_reader._normalize_int_key
         
         n = 5
         
@@ -37,7 +37,7 @@ class IndexerTests(TestCase):
 
     def test_normalize_int_key_errors(self):
         
-        method = indexer._normalize_int_key
+        method = sample_reader._normalize_int_key
         
         n = 5
         
@@ -107,20 +107,20 @@ class IndexerTests(TestCase):
         
         for args, expected in cases:
             args = (slice(*args), n)
-            actual = indexer._normalize_slice_key(*args)
+            actual = sample_reader._normalize_slice_key(*args)
             expected = slice(*expected)
             self.assertEqual(actual, expected)
             
             
     def test_normalize_slice_key_errors(self):
-        method = indexer._normalize_slice_key
+        method = sample_reader._normalize_slice_key
         key = slice(0, 5, 2)
         self._assert_raises(IndexError, method, key, 5)
         
         
     def test_normalize_int_or_slice_key(self):
         
-        method = indexer._normalize_int_or_slice_key
+        method = sample_reader._normalize_int_or_slice_key
             
         n = 5
         
@@ -156,7 +156,7 @@ class IndexerTests(TestCase):
             
     def test_normalize_int_or_slice_key_errors(self):
          
-        method = indexer._normalize_int_or_slice_key
+        method = sample_reader._normalize_int_or_slice_key
         
         n = 5
          

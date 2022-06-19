@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from vesper.signal.sample_provider import SampleProvider
+from vesper.signal.sample_read_delegate import SampleReadDelegate
 from vesper.signal.signal import Signal
 from vesper.signal.time_axis import TimeAxis
 import vesper.util.time_frequency_analysis_utils as tfa_utils
@@ -21,10 +21,10 @@ class Spectrogram(Signal):
         channel_count = len(waveform.channels)
         array_shape = _get_array_shape(settings)
         dtype = 'float64'
-        sample_provider = _SampleProvider(waveform, settings, dtype)
+        read_delegate = _SampleReadDelegate(waveform, settings, dtype)
         
         super().__init__(
-            time_axis, channel_count, array_shape, dtype, sample_provider,
+            time_axis, channel_count, array_shape, dtype, read_delegate,
             name)
         
         
@@ -58,7 +58,7 @@ def _get_array_shape(settings):
     return (spectrum_size,)
 
 
-class _SampleProvider(SampleProvider):
+class _SampleReadDelegate(SampleReadDelegate):
     
     
     def __init__(self, waveform, settings, dtype):
@@ -69,7 +69,7 @@ class _SampleProvider(SampleProvider):
         super().__init__(False)
         
         
-    def get_samples(self, channel_key, frame_key):
+    def read(self, channel_key, frame_key):
         
         start_channel, end_channel = _get_bounds(channel_key)
         channel_count = end_channel - start_channel

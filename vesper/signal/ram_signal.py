@@ -3,7 +3,7 @@
 
 from numbers import Number
 
-from vesper.signal.sample_provider import SampleProvider
+from vesper.signal.sample_read_delegate import SampleReadDelegate
 from vesper.signal.signal import Signal
 from vesper.signal.time_axis import TimeAxis
 
@@ -29,11 +29,11 @@ class RamSignal(Signal):
         else:
             _check_frame_count(frame_count, time_axis)
             
-        sample_provider = _SampleProvider(samples, frame_first)
+        read_delegate = _SampleReadDelegate(samples, frame_first)
         
         super().__init__(
             time_axis, channel_count, array_shape, samples.dtype,
-            sample_provider, name)
+            read_delegate, name)
         
         
 def _get_shape(samples, frame_first):
@@ -62,11 +62,11 @@ def _check_frame_count(frame_count, time_axis):
             f'array does not match time axis length {time_axis.length}.')
 
 
-class _SampleProvider(SampleProvider):
+class _SampleReadDelegate(SampleReadDelegate):
     
     def __init__(self, samples, frame_first):
         super().__init__(frame_first)
         self._samples = samples
         
-    def get_samples(self, first_key, second_key):
+    def read(self, first_key, second_key):
         return self._samples[first_key, second_key]

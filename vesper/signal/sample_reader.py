@@ -1,52 +1,60 @@
-"""Module containing class `Indexer`."""
+"""Module containing class `SampleReader`."""
 
 
 import numpy as np
 
 
 '''
-An `Indexer` is intended for use as a signal attribute, and not
-as a standalone signal "flavor", so it has a minimal set of attributes.
-Signal metadata like the time axis and the sample aray shape are
-available as attributes of an indexer's signal but not as attributes
-of the indexer itself.
+A `SampleReader` provides read access to the samples of a signal.
+It is intended for use as a signal attribute, and not as a standalone
+signal "flavor", so it has a minimal set of attributes. Signal
+metadata like the time axis and the sample aray shape are available as
+attributes of a reader's signal but not as attributes of the reader
+itself.
 
 
-i.signal
+r.signal
 
-i.frame_first
+r.frame_first      # `true` if and only if reader is frame-first
 
-len(i)             # frame count if `i.frame_first`, otherwise channel count
+len(r)             # channel count if channel-first, frame count if
+                   # frame-first
 
-i.shape            # first two elements ordered according to `i.frame_first`
+r.shape            # first two elements ordered according to reader type
 
-i.dtype            # NumPy `dtype` of samples
+r.sample_type      # NumPy `dtype` of samples
 
-i[...]
+r[...]             # synchronous, reads one signal segment, raises exception
+                   # if not all of segment available
+
+r.read(...)        # asynchronous, can read multiple segments, yields
+                   # intersection of requested segments and available
+                   # segments
 '''
 
 
-class Indexer:
+class SampleReader:
     
     """
-    Signal indexer.
+    Signal sample reader.
     
-    A signal indexer provides read-only access to the samples of a
-    signal. It can be indexed much like a NumPy array, and indexing
-    yields a NumPy array of samples.
+    A sample reader provides read-only access to the samples of a
+    signal. Reads can be either synchronous or asynchronous.
+    Synchronous reads are accomplished by indexing a reader much
+    like a NumPy array, yielding a NumPy array of samples.
     
-    A signal indexer is of one of two types, called *frame-first* and
-    *channel-first*. For both types, the first two indices specify the
-    signal frame and channel numbers, but for a frame-first indexer the
-    frame number comes first, preceding the channel number, while for a
-    channel-first indexer the channel number comes first, preceding the
-    frame number.
+    A sample reader is of one of two types, called *frame-first* and
+    *channel-first*. For both types, the first two indices specified
+    for a read refer to the signal frame and channel numbers, but for
+    a frame-first reader the frame number is specified first,
+    preceding the channel number, while for a channel-first reader
+    the channel number is specified first, preceding the frame number.
     
-    A signal indexer translates a call to its `__getitem__` method to a
-    call to the `get_samples` method of its signal's sample provider.
-    The indexer handles matters like `__getitem__` argument type and
+    A sample reader translates a call to its `__getitem__` method to a
+    call to the `read` method of its signal's sample read delegate.
+    The reader handles matters like `__getitem__` argument type and
     range checking, normalization, and (if needed) reordering so the
-    sample provider doesn't have to. This simplifies `Signal` subclass
+    read delegate doesn't have to. This simplifies `Signal` subclass
     implementation considerably.
     """
     
@@ -54,7 +62,7 @@ class Indexer:
     def __init__(self, signal, frame_first):
         self._signal = signal
         self._frame_first = frame_first
-        self._sample_provider = signal._sample_provider
+        self._read_delegate = signal._read_delegate
         self._normalize_args = self._get_normalize_args()
         
         
@@ -63,11 +71,11 @@ class Indexer:
         """
         Creates a table of two pairs of positional arguments for the
         `_normalize_int_or_slice_key` function. The table is indexed
-        by zero to obtain arguments for normalizing the first indexer
-        key (the frame key when the indexer is frame-first and the
+        by zero to obtain arguments for normalizing the first reader
+        key (the frame key when the reader is frame-first and the
         channel key when it is channel-first) and by one to obtain
-        arguments for normalizing the second indexer key (the channel
-        key when the indexer is frame-first and the frame key when it
+        arguments for normalizing the second reader key (the channel
+        key when the reader is frame-first and the frame key when it
         is channel-first). 
         """
         
@@ -121,15 +129,15 @@ class Indexer:
         
         first_key, second_key, samples_key = self._get_keys(key)
         
-        # Get requested sample arrays from sample provider.
-        samples = self._sample_provider.get_samples(first_key, second_key)
+        # Get requested sample arrays from read delegate.
+        samples = self._read_delegate.read(first_key, second_key)
 
         # Index sample arrays if specified.
         if samples_key is not None:
             samples = samples[samples_key]
         
         # Swap first two axes of result if needed.
-        if self.frame_first != self._sample_provider.frame_first and \
+        if self.frame_first != self._read_delegate.frame_first and \
                 isinstance(first_key, slice) and isinstance(second_key, slice):
             samples = np.swapaxes(samples, 0, 1)
         
@@ -138,8 +146,8 @@ class Indexer:
     
     def _get_keys(self, key):
         
-        # Get keys assuming sample provider and indexer index orders
-        # are the same.
+        # Get keys assuming read delegate and reader index orders are
+        # the same.
         if isinstance(key, tuple):
             first_key = key[0]
             second_key = key[1]
@@ -154,9 +162,9 @@ class Indexer:
         first_key = normalize(first_key, *self._normalize_args[0])
         second_key = normalize(second_key, *self._normalize_args[1])
             
-        # Swap first and second keys if sample provider and indexer index
+        # Swap first and second keys if read delegate and reader index
         # orders differ.
-        if self._sample_provider.frame_first != self.frame_first:
+        if self._read_delegate.frame_first != self.frame_first:
             temp = first_key
             first_key = second_key
             second_key = temp

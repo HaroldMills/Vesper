@@ -4,8 +4,8 @@
 import numpy as np
 
 from vesper.signal.channel import Channel
-from vesper.signal.indexer import Indexer
 from vesper.signal.named_sequence import NamedSequence
+from vesper.signal.sample_reader import SampleReader
 from vesper.util.named import Named
 
 
@@ -16,12 +16,14 @@ s.time_axis            # `TimeAxis`
 
 s.channels             # `NamedSequence` of `Channel` objects
 
+s.channel_count 
+s.frame_count
 s.array_shape          # sample array shape
 
-s.dtype                # NumPy `dtype` of samples
+s.sample_type          # NumPy `dtype` of samples
 
-s.as_frames            # frame-first indexer yielding Numpy sample arrays
-s.as_channels          # channel-first indexer yielding NumPy sample arrays
+s.as_channels          # channel-first sample reader
+s.as_frames            # frame-first sample reader
 '''
 
 
@@ -48,17 +50,17 @@ class Signal(Named):
     The `Signal` class is agnostic with regard to these two perspectives,
     supporting both and favoring neither. A `Signal` object itself cannot
     be indexed directly (since that would entail favoring one of the two
-    perspectives), but instead is indexed via a *signal indexer*. Every
-    signal has two indexers, which are available as the signal's
-    `as_frames` and `as_channels` properties. The `as_frames` indexer
-    supports frame-first indexing, while the `as_channels` indexer
-    supports channel-first indexing.
+    perspectives), but instead is indexed via a *sample reader*. Every
+    signal has two sample readers, which are available as the signal's
+    `as_frames` and `as_channels` properties. The `as_frames` sample
+    reader supports frame-first indexing, while the `as_channels` sample
+    reader supports channel-first indexing.
     """
     
     
     def __init__(
             self, time_axis, channel_count, array_shape, dtype,
-            sample_provider, name=None):
+            read_delegate, name=None):
         
         if name is None:
             name = 'Signal'
@@ -69,9 +71,9 @@ class Signal(Named):
         self._channels = self._create_channels(channel_count)
         self._array_shape = tuple(array_shape)
         self._dtype = np.dtype(dtype)
-        self._sample_provider = sample_provider
-        self._as_frames = Indexer(self, True)
-        self._as_channels = Indexer(self, False)
+        self._read_delegate = read_delegate
+        self._as_frames = SampleReader(self, True)
+        self._as_channels = SampleReader(self, False)
         
         
     def _create_channels(self, channel_count):

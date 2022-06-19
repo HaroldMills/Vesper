@@ -1,6 +1,6 @@
 import numpy as np
 
-from vesper.signal.sample_provider import SampleProvider
+from vesper.signal.sample_read_delegate import SampleReadDelegate
 from vesper.signal.signal import Signal
 from vesper.signal.time_axis import TimeAxis
 from vesper.tests.test_case import TestCase
@@ -22,8 +22,8 @@ class SignalTests(TestCase):
         
         _assert_metadata(s, name, time_axis, array_shape, dtype)
         
-        _check_indexer(s.as_frames, s, True)
-        _check_indexer(s.as_channels, s, False)
+        _check_sample_reader(s.as_frames, s, True)
+        _check_sample_reader(s.as_channels, s, False)
         
         if samples is not None:
             utils.test_indexing(s.as_channels, samples, NUM_INDEXING_TESTS)
@@ -84,13 +84,13 @@ class SignalTests(TestCase):
             time_axis = TimeAxis(length, frame_rate)
             shape = (channel_count, length) + array_shape
             samples = utils.create_samples(shape, dtype=dtype)
-            sample_provider = _SampleProvider(samples)
+            read_delegate = _SampleReadDelegate(samples)
             
             
             # Test initializer with specified name.
             
             s = Signal(
-                time_axis, channel_count, array_shape, dtype, sample_provider,
+                time_axis, channel_count, array_shape, dtype, read_delegate,
                 name)
             
             self.assert_signal(
@@ -100,7 +100,7 @@ class SignalTests(TestCase):
             # Test initializer with default name.
             
             s = Signal(
-                time_axis, channel_count, array_shape, dtype, sample_provider)
+                time_axis, channel_count, array_shape, dtype, read_delegate)
             
             self.assert_signal(
                 s, 'Signal', time_axis, channel_count, array_shape, dtype,
@@ -114,29 +114,29 @@ def _assert_metadata(s, name, time_axis, array_shape, dtype):
     assert s.dtype == np.dtype(dtype)
     
 
-def _check_indexer(i, s, frame_first):
+def _check_sample_reader(r, s, frame_first):
     
-    assert i.signal is s
-    assert i.frame_first == frame_first
+    assert r.signal is s
+    assert r.frame_first == frame_first
     
     frame_count = s.time_axis.length
     channel_count = len(s.channels)
     
     if frame_first:
-        assert len(i) == frame_count
-        assert i.shape == (frame_count, channel_count) + s.array_shape 
+        assert len(r) == frame_count
+        assert r.shape == (frame_count, channel_count) + s.array_shape 
     else:
-        assert len(i) == channel_count
-        assert i.shape == (channel_count, frame_count) + s.array_shape
+        assert len(r) == channel_count
+        assert r.shape == (channel_count, frame_count) + s.array_shape
         
-    assert i.dtype == s.dtype
+    assert r.dtype == s.dtype
     
     
-class _SampleProvider(SampleProvider):
+class _SampleReadDelegate(SampleReadDelegate):
     
     def __init__(self, samples):
         super().__init__(False)
         self._samples = samples
         
-    def get_samples(self, first_slice, second_slice):
+    def read(self, first_slice, second_slice):
         return self._samples[first_slice, second_slice]

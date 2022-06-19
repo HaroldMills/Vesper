@@ -25,14 +25,14 @@ class AudioFileSignal(Signal):
     
     
     def __init__(
-            self, length, frame_rate, channel_count, dtype, sample_provider,
+            self, length, frame_rate, channel_count, dtype, read_delegate,
             name=None, file_path=None, file_format=None):
         
         time_axis = TimeAxis(length, frame_rate)
         array_shape = ()
         
         super().__init__(
-            time_axis, channel_count, array_shape, dtype, sample_provider,
+            time_axis, channel_count, array_shape, dtype, read_delegate,
             name)
         
         self._file_path = file_path

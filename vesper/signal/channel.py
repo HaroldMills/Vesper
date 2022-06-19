@@ -18,17 +18,22 @@ c.signal
 
 c.number
 
-c.time_axis            # `TimeAxis`
+c.time_axis        # `TimeAxis`
 
-len(c)                 # sample array count, `c.time_axis.frame_count`
+len(c)             # sample array count, `c.time_axis.frame_count`
 
-c.array_shape          # sample array shape
+c.array_shape      # sample array shape
 
-c.shape                # `(len(c),) + c.array_shape`
+c.shape            # `(len(c),) + c.array_shape`
 
-c.dtype                # NumPy `dtype` of samples
+c.sample_type      # NumPy `dtype` of samples
 
-c[...]                 # frame index first, followed by sample array indices
+r[...]             # synchronous, reads one channel segment, raises exception
+                   # if not all of segment available
+
+r.read(...)        # asynchronous, can read multiple channel segments, yields
+                   # intersection of requested segments and available
+                   # segments
 '''
 
 

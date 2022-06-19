@@ -7,7 +7,7 @@ import wave
 import numpy as np
 
 from vesper.signal.audio_file_signal import AudioFileSignal
-from vesper.signal.sample_provider import SampleProvider
+from vesper.signal.sample_read_delegate import SampleReadDelegate
 from vesper.signal.signal_error import SignalError
 
 
@@ -49,10 +49,10 @@ class WaveFileSignal(AudioFileSignal):
                 
         file_format = _get_file_format(channel_count, sample_size, frame_rate)
         
-        sample_provider = _SampleProvider(file, channel_count, dtype)
+        read_delegate = _SampleReadDelegate(file, channel_count, dtype)
         
         super().__init__(
-            frame_count, frame_rate, channel_count, dtype, sample_provider,
+            frame_count, frame_rate, channel_count, dtype, read_delegate,
             name, file_path, file_format)
         
 
@@ -90,7 +90,7 @@ def _get_file_format(channel_count, sample_size, frame_rate):
     return f'{channel_string}, {sample_size}-bit, {frame_rate} Hz WAVE'
        
        
-class _SampleProvider(SampleProvider):
+class _SampleReadDelegate(SampleReadDelegate):
     
     
     def __init__(self, file, channel_count, dtype):
@@ -108,7 +108,7 @@ class _SampleProvider(SampleProvider):
             self._channel_count = reader.getnchannels()
         
         
-    def get_samples(self, frame_key, channel_key):
+    def read(self, frame_key, channel_key):
         
         start_frame, end_frame = _get_bounds(frame_key)
         frame_count = end_frame - start_frame
