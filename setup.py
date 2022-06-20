@@ -65,6 +65,13 @@ To run non-Django unit tests:
     cd /Users/harold/Documents/Code/Python/Vesper/vesper
     conda activate vesper-latest
     python -m unittest discover -s /Users/harold/Documents/Code/Python/Vesper/vesper
+
+To run non-Django unit tests for just one subpackage of the `vesper` package:
+
+    cd /Users/harold/Documents/Code/Python/Vesper/vesper
+    conda activate vesper-latest
+    python -m unittest discover -s /Users/harold/Documents/Code/Python/Vesper/vesper/<subpackage>
+
 """
 
 
