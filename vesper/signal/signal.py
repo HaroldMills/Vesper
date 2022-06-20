@@ -59,7 +59,7 @@ class Signal(Named):
     
     
     def __init__(
-            self, time_axis, channel_count, array_shape, dtype,
+            self, time_axis, channel_count, array_shape, sample_type,
             read_delegate, name=None):
         
         if name is None:
@@ -70,7 +70,7 @@ class Signal(Named):
         self._time_axis = time_axis
         self._channels = self._create_channels(channel_count)
         self._array_shape = tuple(array_shape)
-        self._dtype = np.dtype(dtype)
+        self._sample_type = np.dtype(sample_type)
         self._read_delegate = read_delegate
         self._as_frames = SampleReader(self, True)
         self._as_channels = SampleReader(self, False)
@@ -97,8 +97,8 @@ class Signal(Named):
     
     
     @property
-    def dtype(self):
-        return self._dtype
+    def sample_type(self):
+        return self._sample_type
     
     
     @property

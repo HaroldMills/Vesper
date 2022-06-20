@@ -40,7 +40,7 @@ class WaveFileSignal(AudioFileSignal):
                     f'Unsupported sample size of {sample_size} bits',
                     file_path)
             else:
-                dtype = np.dtype('<i2')
+                sample_type = np.dtype('<i2')
  
             if reader.getcomptype() != 'NONE':
                 _raise_signal_error((
@@ -49,10 +49,10 @@ class WaveFileSignal(AudioFileSignal):
                 
         file_format = _get_file_format(channel_count, sample_size, frame_rate)
         
-        read_delegate = _SampleReadDelegate(file, channel_count, dtype)
+        read_delegate = _SampleReadDelegate(file, channel_count, sample_type)
         
         super().__init__(
-            frame_count, frame_rate, channel_count, dtype, read_delegate,
+            frame_count, frame_rate, channel_count, sample_type, read_delegate,
             name, file_path, file_format)
         
 
@@ -93,13 +93,13 @@ def _get_file_format(channel_count, sample_size, frame_rate):
 class _SampleReadDelegate(SampleReadDelegate):
     
     
-    def __init__(self, file, channel_count, dtype):
+    def __init__(self, file, channel_count, sample_type):
         
         super().__init__(True)
         
         self._file = file
         self._channel_count = channel_count
-        self._dtype = dtype
+        self._sample_type = sample_type
         
         self._file_path = _get_file_path(file)
 
@@ -132,14 +132,15 @@ class _SampleReadDelegate(SampleReadDelegate):
                 _raise_signal_error('Samples read failed', self._file_path)
                 
         # Check actual read size.
-        byte_count = frame_count * self._channel_count * self._dtype.itemsize
+        byte_count = \
+            frame_count * self._channel_count * self._sample_type.itemsize
         if len(buffer) != byte_count:
             _raise_signal_error(
                 f'Read {len(buffer)} bytes rather than expected {byte_count}',
                 self._file_path)
             
         # Convert sample data to one-dimensional NumPy array.
-        samples = np.frombuffer(buffer, dtype=self._dtype)
+        samples = np.frombuffer(buffer, dtype=self._sample_type)
         
         # Reshape sample array to two dimensions.
         samples.shape = (frame_count, self._channel_count)

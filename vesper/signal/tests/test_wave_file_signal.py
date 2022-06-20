@@ -23,21 +23,23 @@ class WaveFileSignalTests(TestCase):
             ('Two Channels.wav', 10, 2, 24000, '<i2')
         ]
         
-        for file_name, frame_count, channel_count, frame_rate, dtype in cases:
+        for (file_name, frame_count, channel_count, frame_rate,
+                sample_type) in cases:
             
             file_path = _DATA_DIR_PATH / file_name
             time_axis = TimeAxis(frame_count, frame_rate)
             shape = (channel_count, frame_count)
-            samples = utils.create_samples(shape, dtype='<i2')
+            samples = utils.create_samples(shape, sample_type='<i2')
             
             signal = WaveFileSignal(file_path, name=file_name)
             SignalTests.assert_signal(
-                signal, file_name, time_axis, channel_count, (), dtype,
+                signal, file_name, time_axis, channel_count, (), sample_type,
                 samples)
             
             signal = WaveFileSignal(file_path)
             SignalTests.assert_signal(
-                signal, 'Signal', time_axis, channel_count, (), dtype, samples)
+                signal, 'Signal', time_axis, channel_count, (), sample_type,
+                samples)
 
 
     def test_empty_file(self):

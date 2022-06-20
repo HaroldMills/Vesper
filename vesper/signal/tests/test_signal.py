@@ -15,12 +15,12 @@ class SignalTests(TestCase):
 
     @staticmethod
     def assert_signal(
-            s, name, time_axis, channel_count, array_shape, dtype,
+            s, name, time_axis, channel_count, array_shape, sample_type,
             samples=None):
         
         # If provided, `samples` must be channel-first.
         
-        _assert_metadata(s, name, time_axis, array_shape, dtype)
+        _assert_metadata(s, name, time_axis, array_shape, sample_type)
         
         _check_sample_reader(s.as_frames, s, True)
         _check_sample_reader(s.as_channels, s, False)
@@ -44,22 +44,24 @@ class SignalTests(TestCase):
             # Check channel access by number.
             c = s.channels[i]
             SignalTests.assert_channel(
-                c, s, name, i, time_axis, array_shape, dtype, channel_samples)
+                c, s, name, i, time_axis, array_shape, sample_type,
+                channel_samples)
             
             # Check channel access by name.
             c = s.channels[name]
             SignalTests.assert_channel(
-                c, s, name, i, time_axis, array_shape, dtype, channel_samples)
+                c, s, name, i, time_axis, array_shape, sample_type,
+                channel_samples)
              
             
     @staticmethod
     def assert_channel(
-            c, signal, name, number, time_axis, array_shape, dtype,
+            c, signal, name, number, time_axis, array_shape, sample_type,
             samples=None):
         
         # If provided, `samples` must be channel-first.
         
-        _assert_metadata(c, name, time_axis, array_shape, dtype)
+        _assert_metadata(c, name, time_axis, array_shape, sample_type)
         
         assert c.signal == signal
         assert c.number == number
@@ -79,39 +81,41 @@ class SignalTests(TestCase):
         
         frame_rate = 24000
         
-        for name, length, channel_count, array_shape, dtype in cases:
+        for name, length, channel_count, array_shape, sample_type in cases:
             
             time_axis = TimeAxis(length, frame_rate)
             shape = (channel_count, length) + array_shape
-            samples = utils.create_samples(shape, dtype=dtype)
+            samples = utils.create_samples(shape, sample_type=sample_type)
             read_delegate = _SampleReadDelegate(samples)
             
             
             # Test initializer with specified name.
             
             s = Signal(
-                time_axis, channel_count, array_shape, dtype, read_delegate,
-                name)
+                time_axis, channel_count, array_shape, sample_type,
+                read_delegate, name)
             
             self.assert_signal(
-                s, name, time_axis, channel_count, array_shape, dtype, samples)
+                s, name, time_axis, channel_count, array_shape, sample_type,
+                samples)
         
         
             # Test initializer with default name.
             
             s = Signal(
-                time_axis, channel_count, array_shape, dtype, read_delegate)
+                time_axis, channel_count, array_shape, sample_type,
+                read_delegate)
             
             self.assert_signal(
-                s, 'Signal', time_axis, channel_count, array_shape, dtype,
-                samples)
+                s, 'Signal', time_axis, channel_count, array_shape,
+                sample_type, samples)
     
 
-def _assert_metadata(s, name, time_axis, array_shape, dtype):
+def _assert_metadata(s, name, time_axis, array_shape, sample_type):
     assert s.name == name
     assert s.time_axis == time_axis
     assert s.array_shape == array_shape
-    assert s.dtype == np.dtype(dtype)
+    assert s.sample_type == np.dtype(sample_type)
     
 
 def _check_sample_reader(r, s, frame_first):
@@ -129,7 +133,7 @@ def _check_sample_reader(r, s, frame_first):
         assert len(r) == channel_count
         assert r.shape == (channel_count, frame_count) + s.array_shape
         
-    assert r.dtype == s.dtype
+    assert r.sample_type == s.sample_type
     
     
 class _SampleReadDelegate(SampleReadDelegate):

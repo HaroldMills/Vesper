@@ -30,7 +30,7 @@ class AudioFileReader:
     num_channels
     length
     sample_rate
-    dtype
+    sample_type
 
     read(start_index=0, length=None, samples=None)
 
@@ -44,7 +44,7 @@ class AudioFileWriter:
     num_channels
     length
     sample_rate
-    dtype
+    sample_type
     
     append(samples)
     
@@ -56,7 +56,7 @@ class WaveFileReader(AudioFileReader):
     
 
 class WaveFileWriter(AudioFileWriter):
-     __init__(file_path, num_channels, sample_rate, dtype=None)
+     __init__(file_path, num_channels, sample_rate, sample_type=None)
 '''
 
 
@@ -122,13 +122,13 @@ class WaveAudioFileReader(AudioFileReader):
                 'not supported.').format(self._name, sample_size))
             
         if sample_size == 8:
-            dtype = np.uint8            # unsigned as per WAVE file spec
+            sample_type = np.uint8            # unsigned as per WAVE file spec
         else:
-            dtype = np.dtype('<i2')
+            sample_type = np.dtype('<i2')
             
         super().__init__(
             file_path, WaveAudioFileType, num_channels, length, sample_rate,
-            dtype, mono_1d)
+            sample_type, mono_1d)
         
         
     def read(self, start_index=0, length=None):
@@ -173,7 +173,7 @@ class WaveAudioFileReader(AudioFileReader):
             self._reader.close()
             raise OSError('Samples read failed for {}.'.format(self._name))
             
-        samples = np.frombuffer(buffer, dtype=self.dtype)
+        samples = np.frombuffer(buffer, dtype=self.sample_type)
         
         if len(samples) != length * self.num_channels:
             raise OSError(

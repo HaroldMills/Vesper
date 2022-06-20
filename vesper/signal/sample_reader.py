@@ -119,8 +119,8 @@ class SampleReader:
         
         
     @property
-    def dtype(self):
-        return self.signal.dtype
+    def sample_type(self):
+        return self.signal.sample_type
     
     
     def __getitem__(self, key):

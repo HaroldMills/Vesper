@@ -102,18 +102,18 @@ def assert_arrays_equal(x, y, strict=False):
     assert np.alltrue(x == y)
 
 
-def create_samples(shape, factor=100, dtype='int32'):
+def create_samples(shape, factor=100, sample_type='int32'):
     arrays = [
-        _create_samples_aux(shape, factor, dtype, i)
+        _create_samples_aux(shape, factor, sample_type, i)
         for i in range(len(shape))]
     return sum(arrays)
     
     
-def _create_samples_aux(shape, factor, dtype, i):
+def _create_samples_aux(shape, factor, sample_type, i):
     n = len(shape)
     j = n - 1 - i
     m = shape[i]
-    s = (factor ** j) * np.arange(m, dtype=dtype)
+    s = (factor ** j) * np.arange(m, dtype=sample_type)
     s.shape = (m,) + (1,) * j
     return s
 

@@ -7,7 +7,7 @@ from vesper.util.named import Named
 '''
 A `Channel` is intended for use as a standalone object, and so has a
 full set of attributes. For example, signal metadata like the time axis,
-the sample array shape, and the sample dtype are available as channel
+the sample array shape, and the sample type are available as channel
 attributes, even though they are also available as attributes of the
 channels' signal.
 
@@ -90,8 +90,8 @@ class Channel(Named):
     
     
     @property
-    def dtype(self):
-        return self.signal.dtype
+    def sample_type(self):
+        return self.signal.sample_type
     
     
     def __getitem__(self, key):
