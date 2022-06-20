@@ -18,7 +18,7 @@ def get_audio_file_type(file_path):
     """Gets the audio file type for the specified file."""
     
     if not os.path.exists(file_path):
-        raise ValueError('File "{}" does not exist.'.format(file_path))
+        raise ValueError(f'File "{file_path}" does not exist.')
     
     for file_type in _AUDIO_FILE_TYPES:
         if file_type.is_supported_file(file_path):

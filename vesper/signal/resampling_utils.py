@@ -57,7 +57,7 @@ def resample_to_24000_hz(samples, input_rate):
         # efficiently using a polyphase filter
       
         up, down, filter_ = case
-        # print('Resampling from {} Hz to 24000 Hz...'.format(input_rate))
+        # print(f'Resampling from {input_rate} Hz to 24000 Hz...')
         result = signal.resample_poly(samples, up, down, window=filter_)
         
         # Always return an array that has the same dtype as the input.

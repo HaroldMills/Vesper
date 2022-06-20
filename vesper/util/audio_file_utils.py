@@ -70,8 +70,8 @@ def _check_wave_file_format(sample_size, compression_type):
     
     if sample_size != 16:
         raise UnsupportedAudioFileFormatError(
-            ('Audio file has unsupported sample size of {} bits. Only '
-             '16-bit samples are currently supported.').format(sample_size))
+            f'Audio file has unsupported sample size of {sample_size} '
+            f'bits. Only 16-bit samples are currently supported.')
         
     if compression_type != 'NONE':
         raise UnsupportedAudioFileFormatError(
