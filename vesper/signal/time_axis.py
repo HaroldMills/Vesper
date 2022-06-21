@@ -46,10 +46,10 @@ class TimeAxis:
     def __init__(self, length, frame_rate, start_time=0):
         
         if length < 0:
-            raise ValueError('Time axis length cannot be negative.')
+            raise ValueError('Signal length cannot be negative.')
         
         if frame_rate <= 0:
-            raise ValueError('Time axis frame rate must be positive.')
+            raise ValueError('Signal frame rate must be positive.')
         
         self._length = length
         self._frame_rate = frame_rate
