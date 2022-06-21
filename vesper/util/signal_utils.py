@@ -11,8 +11,7 @@ from vesper.util.bunch import Bunch
 
 # TODO: Review this module and revise. Bring terms up to date.
 # Consider using `sample_rate` instead of `frame_rate`, and use
-# `sample_count` instead of `num_samples`. Consider either
-# eliminating `resample` function or writing unit tests for it.
+# `sample_count` instead of `num_samples`.
 
 
 def seconds_to_frames(seconds, frame_rate):
@@ -364,36 +363,3 @@ def find_peaks(x, min_value=None):
             indices = indices[keep_indices]
             
         return indices
-        
-        
-def resample(audio, target_sample_rate):
-    
-    """
-    Resamples audio to a specified sample rate.
-    
-    This function should only be used for relatively short audio segments,
-    say not longer than a second or so. It uses the `scipy.signal.resample`
-    method to perform the resampling, which computes a length-M DFT and a
-    length-N inverse DFT, where M and N are the input and output length,
-    respectively. M and N may not be powers of two, and they may even be
-    prime, which can make this function slow if M or N is too large.
-    """
-    
-    
-    if audio.sample_rate == target_sample_rate:
-        # do not need to resample
-        
-        return audio
-    
-    else:
-        # need to resample
-        
-        # We put this import here instead of at the top of this module
-        # so  the module can be used in Python environments that don't
-        # include SciPy as long as this function is not called.
-        import scipy.signal as signal
-
-        ratio = target_sample_rate / audio.sample_rate
-        num_samples = int(round(len(audio.samples) * ratio))
-        samples = signal.resample(audio.samples, num_samples)
-        return Bunch(samples=samples, sample_rate=target_sample_rate)

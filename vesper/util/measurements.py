@@ -1,9 +1,23 @@
-"""Clip bandwidth measurements."""
+"""
+Clip spectrum measurements.
+
+The code in this module was used by NFC coarse and species classifiers
+that I developed for MPG Ranch in 2016. I deleted those classifiers,
+which were in modules `vesper.util.nfc_coarse_classifier` and
+`vesper.util.nfc_species_classifier`, on 2022-06-21 since the coarse
+classifier has been superseded by a better one and the species
+classifier did not work well enough to be useful. I retained this
+module, even though it is unused, since I thought some of the code
+might prove useful later and I wanted to make it relatively easy to
+find.
+
+As part of the deletion, I also moved the `_denoise` function from
+`vesper.util.time_frequency_analysis_utils` to this module since it
+is used only by this module.
+"""
 
 
 import numpy as np
-
-import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
 def equivalent_bandwidth(x):
@@ -45,7 +59,7 @@ def apply_measurement_to_spectra(
     s = np.power(10, s / 10.)
     
     if denoise:
-        tfa_utils.denoise(s, out=s)
+        _denoise(s, out=s)
     
     num_blocks = num_spectra - block_size + 1
     measurements = np.array([_measure(measurement, s, i, block_size)
@@ -61,3 +75,41 @@ def apply_measurement_to_spectra(
 def _measure(measurement, s, i, block_size):
     block = s[i:i + block_size]
     return measurement(block.ravel())
+
+
+
+
+# TODO: Revisit this function, and consider renaming and/or reimplementing
+# it. The current implementation clips spectral values below according to
+# order statistical thresholds. We use the function to reduce the variation
+# within spectra that contain only background noise. This isn't what is
+# usually meant by the term "denoising", however, which usually implies
+# *zeroing* bins that are deemed to contain only background noise.
+def _denoise(spectra, percentile=50, out=None):
+
+    """Denoises a sequence of spectra."""
+
+    if out is None:
+        out = np.array(spectra)
+
+    elif out is not spectra:
+        np.copyto(out, spectra)
+
+    # Compute percentile spectral values across time for each frequency bin.
+    percentiles = np.percentile(out, percentile, axis=0)
+
+    # The `np.percentile` function yields an array whose dtype is float64,
+    # even though `out` has dtype float32. We create an array with dtype
+    # float32 to avoid implicit casting errors in subsequent arithmetic.
+    percentiles = np.array(percentiles, dtype='float32')
+
+    # Subtract percentiles from spectral values.
+    out -= percentiles
+
+    # Zero negative spectral values.
+    out[out < 0.] = 0.
+
+    # Add percentiles back.
+    out += percentiles
+
+    return out

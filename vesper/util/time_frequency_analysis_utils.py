@@ -247,39 +247,3 @@ def log_to_linear(spectra, reference_power=1., out=None):
     np.power(10, out, out=out)
 
     return out
-
-
-# TODO: Revisit this function, and consider renaming and/or reimplementing
-# it. The current implementation clips spectral values below according to
-# order statistical thresholds. We use the function to reduce the variation
-# within spectra that contain only background noise. This isn't what is
-# usually meant by the term "denoising", however, which usually implies
-# *zeroing* bins that are deemed to contain only background noise.
-def denoise(spectra, percentile=50, out=None):
-
-    """Denoises a sequence of spectra."""
-
-    if out is None:
-        out = np.array(spectra)
-
-    elif out is not spectra:
-        np.copyto(out, spectra)
-
-    # Compute percentile spectral values across time for each frequency bin.
-    percentiles = np.percentile(out, percentile, axis=0)
-
-    # The `np.percentile` function yields an array whose dtype is float64,
-    # even though `out` has dtype float32. We create an array with dtype
-    # float32 to avoid implicit casting errors in subsequent arithmetic.
-    percentiles = np.array(percentiles, dtype='float32')
-
-    # Subtract percentiles from spectral values.
-    out -= percentiles
-
-    # Zero negative spectral values.
-    out[out < 0.] = 0.
-
-    # Add percentiles back.
-    out += percentiles
-
-    return out
