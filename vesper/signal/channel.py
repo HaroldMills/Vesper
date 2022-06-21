@@ -12,15 +12,15 @@ attributes, even though they are also available as attributes of the
 channels' signal.
 
 
-c.name
-
 c.signal
 
-c.number
+c.number           # channel number, in [0, `c.signal.channel_count`]
+
+c.name
 
 c.time_axis        # `TimeAxis`
 
-len(c)             # sample array count, `c.time_axis.frame_count`
+len(c)             # sample array count, `c.time_axis.length`
 
 c.array_shape      # sample array shape
 
