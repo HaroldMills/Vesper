@@ -114,6 +114,7 @@ class SignalTests(TestCase):
 def _assert_metadata(s, name, time_axis, array_shape, sample_type):
     assert s.name == name
     assert s.time_axis == time_axis
+    assert len(s) == time_axis.length
     assert s.array_shape == array_shape
     assert s.sample_type == np.dtype(sample_type)
     

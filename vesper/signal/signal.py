@@ -14,10 +14,10 @@ s.name
 
 s.time_axis            # `TimeAxis`
 
+len(s)                 # frame count, `s.time_axis.length`
+
 s.channels             # `NamedSequence` of `Channel` objects
 
-s.channel_count 
-s.frame_count
 s.array_shape          # sample array shape
 
 s.sample_type          # NumPy `dtype` of samples
@@ -86,11 +86,15 @@ class Signal(Named):
         return self._time_axis
     
     
+    def __len__(self):
+        return self.time_axis.length
+
+
     @property
     def channels(self):
         return self._channels
-    
-    
+
+
     @property
     def array_shape(self):
         return self._array_shape
