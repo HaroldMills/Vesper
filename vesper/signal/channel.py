@@ -76,7 +76,7 @@ class Channel(Named):
     
     
     def __len__(self):
-        return self.time_axis.frame_count
+        return self.time_axis.length
     
     
     @property
