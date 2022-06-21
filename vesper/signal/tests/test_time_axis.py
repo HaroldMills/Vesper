@@ -15,7 +15,6 @@ class TimeAxisTests(TestCase):
         assert a.length == length
         assert a.frame_rate == frame_rate
         assert a.frame_period == frame_period
-        assert a.offset == offset
         
         index_to_time = LinearMap(frame_period, offset)
 
