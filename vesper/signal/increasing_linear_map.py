@@ -1,19 +1,19 @@
-"""Module containing class `LinearMap`."""
+"""Module containing class `IncreasingLinearMap`."""
 
 
 from vesper.signal.invertible_map import InvertibleMap
 
 
-class LinearMap(InvertibleMap):
+class IncreasingLinearMap(InvertibleMap):
     
     
     def __init__(self, a=1, b=0):
         
         super().__init__()
         
-        if a == 0:
+        if a <= 0:
             raise ValueError(
-                'Scale factor cannot be zero for invertible linear map.')
+                'Scale factor must be positive for increasing linear map.')
         
         self._a = a
         self._b = b
@@ -22,7 +22,7 @@ class LinearMap(InvertibleMap):
         
         
     def __eq__(self, other):
-        return isinstance(other, LinearMap) and \
+        return isinstance(other, IncreasingLinearMap) and \
             self.a == other.a and \
             self.b == other.b
         
@@ -44,5 +44,5 @@ class LinearMap(InvertibleMap):
     @property
     def inverse(self):
         if self._inverse is None:
-            self._inverse = LinearMap(1 / self.a, -self.b / self.a)
+            self._inverse = IncreasingLinearMap(1 / self.a, -self.b / self.a)
         return self._inverse

@@ -1,4 +1,4 @@
-from vesper.signal.linear_map import LinearMap
+from vesper.signal.increasing_linear_map import IncreasingLinearMap
 from vesper.signal.time_axis import TimeAxis
 from vesper.tests.test_case import TestCase
 import vesper.signal.tests.utils as utils
@@ -16,7 +16,7 @@ class TimeAxisTests(TestCase):
         assert a.frame_rate == frame_rate
         assert a.frame_period == frame_period
         
-        index_to_time = LinearMap(frame_period, start_time)
+        index_to_time = IncreasingLinearMap(frame_period, start_time)
 
         start_time = index_to_time(0) if length != 0 else None
         assert a.start_time == start_time
@@ -64,7 +64,7 @@ class TimeAxisTests(TestCase):
         
 #     def test_index_to_time_mapping(self):
 #           
-#         a = TimeAxis(5, 10, 2, LinearMapping(.5, .25))
+#         a = TimeAxis(5, 10, 2, IncreasingLinearMap(.5, .25))
 #            
 #         cases = [
 #             (10, 5.25),

@@ -1,11 +1,11 @@
 import numpy as np
 
-from vesper.signal.linear_map import LinearMap
+from vesper.signal.increasing_linear_map import IncreasingLinearMap
 from vesper.tests.test_case import TestCase
 import vesper.signal.tests.utils as utils
 
 
-class LinearMapTests(TestCase):
+class IncreasingLinearMapTests(TestCase):
 
 
     def test_init(self):
@@ -16,8 +16,8 @@ class LinearMapTests(TestCase):
         ]
         
         for args, expected in incomplete_args_cases:
-            m = LinearMap(*args)
-            expected = LinearMap(*expected)
+            m = IncreasingLinearMap(*args)
+            expected = IncreasingLinearMap(*expected)
             self.assertEqual(m, expected)
             
         keyword_args_cases = [
@@ -25,8 +25,8 @@ class LinearMapTests(TestCase):
         ]
         
         for kwargs, expected in keyword_args_cases:
-            m = LinearMap(**kwargs)
-            expected = LinearMap(*expected)
+            m = IncreasingLinearMap(**kwargs)
+            expected = IncreasingLinearMap(*expected)
             self.assertEqual(m, expected)
             
             
@@ -39,14 +39,14 @@ class LinearMapTests(TestCase):
         ]
         
         for args0, args1, expected in cases:
-            m0 = LinearMap(*args0)
-            m1 = LinearMap(*args1)
+            m0 = IncreasingLinearMap(*args0)
+            m1 = IncreasingLinearMap(*args1)
             self.assertEqual(m0 == m1, expected)
             
             
     def test(self):
         
-        m = LinearMap(2, 1)
+        m = IncreasingLinearMap(2, 1)
         
         self.assertEqual(m.a, 2)
         self.assertEqual(m.b, 1)
@@ -68,4 +68,9 @@ class LinearMapTests(TestCase):
         
         
     def test_noninvertible_map(self):
-        self._assert_raises(ValueError, LinearMap, 0, 0)
+
+        # zero slope
+        self._assert_raises(ValueError, IncreasingLinearMap, 0, 0)
+
+        # negative slope
+        self._assert_raises(ValueError, IncreasingLinearMap, -1, 0)

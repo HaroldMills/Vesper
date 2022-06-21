@@ -1,7 +1,7 @@
 """Module containing class `TimeAxis`."""
 
 
-from vesper.signal.linear_map import LinearMap
+from vesper.signal.increasing_linear_map import IncreasingLinearMap
 
 
 '''
@@ -64,7 +64,8 @@ class TimeAxis:
         
         self._length = length
         self._frame_rate = frame_rate
-        self._index_to_time_map = LinearMap(1 / frame_rate, start_time)
+        self._index_to_time_map = \
+            IncreasingLinearMap(1 / frame_rate, start_time)
 
         
     def __eq__(self, other):
