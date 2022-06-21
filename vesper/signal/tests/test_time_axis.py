@@ -12,12 +12,6 @@ class TimeAxisTests(TestCase):
         
         frame_period = 1 / frame_rate
         
-        start_index = 0 if length != 0 else None
-        assert a.start_index == start_index
-        
-        end_index = length - 1 if length != 0 else None
-        assert a.end_index == end_index
-        
         assert a.length == length
         assert a.frame_rate == frame_rate
         assert a.frame_period == frame_period
@@ -25,10 +19,10 @@ class TimeAxisTests(TestCase):
         
         index_to_time = LinearMap(frame_period, offset)
 
-        start_time = index_to_time(a.start_index) if length != 0 else None
+        start_time = index_to_time(0) if length != 0 else None
         assert a.start_time == start_time
         
-        end_time = index_to_time(a.end_index) if length != 0 else None
+        end_time = index_to_time(a.length - 1) if length != 0 else None
         assert a.end_time == end_time
         
         span = end_time - start_time if length != 0 else None

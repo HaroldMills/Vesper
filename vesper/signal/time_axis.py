@@ -5,8 +5,6 @@ from vesper.signal.linear_map import LinearMap
 
 
 '''
-a.start_index
-a.end_index
 a.length                   # signal length in sample frames
 
 a.frame_rate               # signal frame rate, in hertz
@@ -80,23 +78,6 @@ class TimeAxis:
                    
 
     @property
-    def start_index(self):
-        if self.length == 0:
-            return None
-        else:
-            return 0
-        
-        
-    @property
-    def end_index(self):
-        length = self.length
-        if length == 0:
-            return None
-        else:
-            return length - 1
-        
-        
-    @property
     def length(self):
         return self._length
                
@@ -126,11 +107,11 @@ class TimeAxis:
     
     @property
     def start_time(self):
-        return self._index_to_time(self.start_index)
-    
+        return self._index_to_time(0)
+     
     
     def _index_to_time(self, index):
-        if index is None:
+        if self.length == 0:
             return None
         else:
             return self.index_to_time(index)
@@ -138,32 +119,46 @@ class TimeAxis:
     
     @property
     def end_time(self):
-        return self._index_to_time(self.end_index)
+        return self._index_to_time(self.length - 1)
     
     
     def get_span(self, i, j):
+        self._check_index(i)
+        self._check_index(j)
         return self.index_to_time(j) - self.index_to_time(i)
     
     
+    def _check_index(self, i):
+        if i < 0 or i >= self.length:
+            raise ValueError(
+                f'Invalid index {i} for signal of length {self.length}.')
+
+
     @property
     def span(self):
-        if self.length == 0:
+
+        length = self.length
+
+        if length == 0:
             return None
         else:
-            return self.get_span(self.start_index, self.end_index)
+            return self.get_span(0, length - 1)
 
 
     @property
     def duration(self):
         
-        if self.length == 0:
+        span = self.span
+
+        if span is None:
             return 0
-        
+
         else:
-            
+            # signal not empty
+ 
             # We define the duration in terms of the span so the it
             # will behave well for nonlinear index to time mappings.
-            return self.span + self.frame_period
+            return span + self.frame_period
     
     
 #     def index_to_datetime(self, indices):
