@@ -65,6 +65,15 @@ class TimeAxis:
 
     @property
     def length(self):
+
+        """
+        Axis length in sample frames.
+
+        This class has this property instead of a `__len__` special
+        method since a time axis is not itself a sequence. It only
+        provides information about a sequence.
+        """
+
         return self._length
                
         
