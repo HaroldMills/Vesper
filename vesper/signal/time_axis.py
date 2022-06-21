@@ -29,24 +29,13 @@ a.end_datetime             # `datetime` at end index, `None` if unknown
 '''
 
 
-# TODO: Add support for datetime-aware and piecewise linear (as opposed
-# to just plain linear) time axes. Common use cases will be:
-#
-#     1. Knowing the start datetime of a linear time axis, e.g.
-#        the start datetime of an audio file.
-#
-#     2. Knowing several (index, datetime) pairs, e.g. the start
-#        datetimes of the files of an audio file sequence.
-#
-# To support these cases, one might add an `index_datetimes` initializer
-# argument that is a dictionary mapping time axis indices to datetimes.
-# However, that by itself would not support the specification a nonlinear
-# time axis that is not datetime-aware. A remedy might be to include an
-# additional `index_times` initializer argument that is a dictionary
-# mapping time axis indices to times. Then one could provide one or the
-# other of these arguments (but not both) to create a nonlinear time axis,
-# either datetime-aware or not. Specifying an `index_datetimes` dictionary
-# containing a single item would create a linear datetime-aware time axis.
+# TODO: Implement datetime-awareness. Include new `start_datetime`
+# initializer argument.
+
+# TODO: Implement piecewise increasing linear time axes. Include new,
+# mutually exclusive `index_times` and `index_datetimes` initializer
+# arguments that specify (via a dictionary or a sequence of pairs
+# mapping from indices to times or datetimes.
 
 
 class TimeAxis:
