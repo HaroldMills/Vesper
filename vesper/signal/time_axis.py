@@ -54,7 +54,7 @@ class TimeAxis:
     """Signal time axis."""
     
     
-    def __init__(self, length, frame_rate, offset=0):
+    def __init__(self, length, frame_rate, start_time=0):
         
         if length < 0:
             raise ValueError('Time axis length cannot be negative.')
@@ -64,9 +64,7 @@ class TimeAxis:
         
         self._length = length
         self._frame_rate = frame_rate
-        self._offset = offset
- 
-        self._index_to_time_map = LinearMap(1 / frame_rate, offset)
+        self._index_to_time_map = LinearMap(1 / frame_rate, start_time)
 
         
     def __eq__(self, other):

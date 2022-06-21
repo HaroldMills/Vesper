@@ -8,7 +8,7 @@ class TimeAxisTests(TestCase):
 
 
     @staticmethod
-    def assert_axis(a, length, frame_rate, offset=0):
+    def assert_axis(a, length, frame_rate, start_time=0):
         
         frame_period = 1 / frame_rate
         
@@ -16,7 +16,7 @@ class TimeAxisTests(TestCase):
         assert a.frame_rate == frame_rate
         assert a.frame_period == frame_period
         
-        index_to_time = LinearMap(frame_period, offset)
+        index_to_time = LinearMap(frame_period, start_time)
 
         start_time = index_to_time(0) if length != 0 else None
         assert a.start_time == start_time
