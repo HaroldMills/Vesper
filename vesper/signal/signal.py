@@ -96,6 +96,11 @@ class Signal(Named):
 
 
     @property
+    def channel_count(self):
+        return len(self.channels)
+    
+    
+    @property
     def array_shape(self):
         return self._array_shape
     

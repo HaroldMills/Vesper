@@ -31,6 +31,7 @@ class SignalTests(TestCase):
                 s.as_frames, np.swapaxes(samples, 0, 1), NUM_INDEXING_TESTS)
         
         assert len(s.channels) == channel_count
+        assert s.channel_count == channel_count
         
         for i in range(channel_count):
             
