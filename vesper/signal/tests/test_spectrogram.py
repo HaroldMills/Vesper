@@ -2,14 +2,13 @@ import numpy as np
 
 from vesper.signal.ram_signal import RamSignal
 from vesper.signal.spectrogram import Spectrogram
-from vesper.signal.tests.test_signal import SignalTests
+from vesper.signal.tests.signal_test_case import SignalTestCase
 from vesper.signal.time_axis import TimeAxis
-from vesper.tests.test_case import TestCase
 from vesper.util.bunch import Bunch
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-class SpectrogramTests(TestCase):
+class SpectrogramTests(SignalTestCase):
 
 
     def test_init(self):
@@ -38,7 +37,7 @@ class SpectrogramTests(TestCase):
         
         samples = _get_gram_samples(waveform, window, hop_size, dft_size)
         
-        SignalTests.assert_signal(
+        self.assert_signal(
             gram, 'Spectrogram', time_axis, channel_count, array_shape,
             'float64', samples)
         

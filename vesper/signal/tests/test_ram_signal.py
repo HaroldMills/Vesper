@@ -2,13 +2,12 @@ import itertools
 import numpy as np
 
 from vesper.signal.ram_signal import RamSignal
-from vesper.signal.tests.test_signal import SignalTests
+from vesper.signal.tests.signal_test_case import SignalTestCase
 from vesper.signal.time_axis import TimeAxis
-from vesper.tests.test_case import TestCase
 import vesper.signal.tests.utils as utils
 
 
-class RamSignalTests(TestCase):
+class RamSignalTests(SignalTestCase):
 
 
     def test_init(self):
@@ -45,13 +44,13 @@ class RamSignalTests(TestCase):
             
             # Frame rate and frame-first samples.
             s = RamSignal(frame_rate, samples_f, True, name)
-            SignalTests.assert_signal(
+            self.assert_signal(
                 s, expected_name, time_axis, channel_count, array_shape,
                 sample_type, samples_c)
     
             # Time axis and rame-first samples.
             s = RamSignal(time_axis, samples_f, True, name)
-            SignalTests.assert_signal(
+            self.assert_signal(
                 s, expected_name, time_axis, channel_count, array_shape,
                 sample_type, samples_c)
             
