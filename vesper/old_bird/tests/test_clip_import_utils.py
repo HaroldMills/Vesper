@@ -57,4 +57,4 @@ class ClipImporterTests(TestCase):
         parse = clip_import_utils.parse_clip_file_name
         
         for file_name in cases:
-            self._assert_raises(ValueError, parse, file_name)
+            self.assert_raises(ValueError, parse, file_name)

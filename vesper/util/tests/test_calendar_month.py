@@ -36,7 +36,7 @@ class CalendarMonthTests(TestCase):
         ]
         
         for case in cases:
-            self._assert_raises(TypeError, CM, *case)
+            self.assert_raises(TypeError, CM, *case)
             
             
     def test_init_month_value_errors(self):
@@ -48,7 +48,7 @@ class CalendarMonthTests(TestCase):
         ]
         
         for case in cases:
-            self._assert_raises(ValueError, CM, *case)
+            self.assert_raises(ValueError, CM, *case)
         
         
     def test_repr(self):

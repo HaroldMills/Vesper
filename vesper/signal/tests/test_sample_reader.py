@@ -49,11 +49,11 @@ class SampleReaderTests(TestCase):
         for case in cases:
             
             # Test without axis name arg.
-            self._assert_raises(IndexError, method, *case)
+            self.assert_raises(IndexError, method, *case)
             
             # Test with axis name arg.
             args = case + ('time',)
-            self._assert_raises(IndexError, method, *args)
+            self.assert_raises(IndexError, method, *args)
 
 
     def test_normalize_slice_key(self):
@@ -115,7 +115,7 @@ class SampleReaderTests(TestCase):
     def test_normalize_slice_key_errors(self):
         method = sample_reader._normalize_slice_key
         key = slice(0, 5, 2)
-        self._assert_raises(IndexError, method, key, 5)
+        self.assert_raises(IndexError, method, key, 5)
         
         
     def test_normalize_int_or_slice_key(self):
@@ -179,8 +179,8 @@ class SampleReaderTests(TestCase):
                 args = (slice(*case), n)
                 
             # Test without axis name arg.
-            self._assert_raises(IndexError, method, *args)
+            self.assert_raises(IndexError, method, *args)
             
             # Test with axis name arg.
             args += ('time',)
-            self._assert_raises(IndexError, method, *args)
+            self.assert_raises(IndexError, method, *args)

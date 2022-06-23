@@ -53,7 +53,7 @@ class TimeAxisTests(TestCase):
         ]
         
         for case in cases:
-            self._assert_raises(ValueError, TimeAxis, *case)
+            self.assert_raises(ValueError, TimeAxis, *case)
         
         
     def test_eq(self):

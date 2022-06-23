@@ -554,7 +554,7 @@ class ScheduleCompilationTests(TestCase):
         location = {'time_zone': 'US/Eastern'}
           
         for spec in cases:
-            self._assert_raises(ValueError, compile_, spec, **location)
+            self.assert_raises(ValueError, compile_, spec, **location)
           
           
     def test_interval_schedule_compilation_location_errors(self):
@@ -574,7 +574,7 @@ class ScheduleCompilationTests(TestCase):
         '''
   
         for location in cases:
-            self._assert_raises(ValueError, compile_, spec, **location)
+            self.assert_raises(ValueError, compile_, spec, **location)
           
           
     def test_intervals_schedule_compilation(self):
@@ -1004,7 +1004,7 @@ class ScheduleCompilationTests(TestCase):
         location = {'time_zone': 'US/Eastern'}
           
         for spec in cases:
-            self._assert_raises(ValueError, compile_, spec, **location)
+            self.assert_raises(ValueError, compile_, spec, **location)
           
           
     def test_daily_schedule_compilation_location_errors(self):
@@ -1042,7 +1042,7 @@ class ScheduleCompilationTests(TestCase):
           
         for spec in specs:
             for location in locations:
-                self._assert_raises(ValueError, compile_, spec, **location)
+                self.assert_raises(ValueError, compile_, spec, **location)
           
           
     def test_compile_union_schedule(self):

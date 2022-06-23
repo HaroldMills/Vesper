@@ -33,4 +33,4 @@ class AudioFileUtilsTests(TestCase):
         
     def _assert_function_raises(self, cls, function, file_name):
         file_path = utils.create_test_audio_file_path(file_name)
-        self._assert_raises(cls, function, file_path)
+        self.assert_raises(cls, function, file_path)

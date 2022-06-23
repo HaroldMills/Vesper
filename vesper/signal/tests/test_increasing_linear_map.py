@@ -70,7 +70,7 @@ class IncreasingLinearMapTests(TestCase):
     def test_noninvertible_map(self):
 
         # zero slope
-        self._assert_raises(ValueError, IncreasingLinearMap, 0, 0)
+        self.assert_raises(ValueError, IncreasingLinearMap, 0, 0)
 
         # negative slope
-        self._assert_raises(ValueError, IncreasingLinearMap, -1, 0)
+        self.assert_raises(ValueError, IncreasingLinearMap, -1, 0)

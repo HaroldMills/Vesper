@@ -193,7 +193,7 @@ class RecordingFileParserTests(TestCase):
         
         for file_name in cases:
             file_path = os.path.join(DATA_DIR_PATH, file_name)
-            self._assert_raises(ValueError, parser.parse_file, file_path)
+            self.assert_raises(ValueError, parser.parse_file, file_path)
             
             
 def dt(*args):

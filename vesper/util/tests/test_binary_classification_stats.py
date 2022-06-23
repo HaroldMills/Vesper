@@ -136,7 +136,7 @@ class BinaryClassificationStatsTests(TestCase):
             actual = getattr(s, name)
             
             try:
-                self._assert_arrays_close(actual, expected)
+                self.assert_arrays_close(actual, expected)
                 
             except AssertionError:
                 print(

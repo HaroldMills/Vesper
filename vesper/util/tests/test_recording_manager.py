@@ -28,7 +28,7 @@ class RecordingManagerTests(TestCase):
         
         
     def test_init_archive_path_errors(self):
-        self._assert_raises(ValueError, RecordingManager, 'Archive', [])
+        self.assert_raises(ValueError, RecordingManager, 'Archive', [])
         
         
     def test_init_directory_paths(self):
@@ -64,7 +64,7 @@ class RecordingManagerTests(TestCase):
     def _test_conversion_errors(self, manager):
          
         # relative to absolute
-        self._assert_raises(
+        self.assert_raises(
             ValueError, manager.get_absolute_recording_file_path, Path('bobo'))
          
         # absolute to relative
@@ -73,7 +73,7 @@ class RecordingManagerTests(TestCase):
             'bobo'      # nonexistent
         ]
         for case in cases:
-            self._assert_raises(
+            self.assert_raises(
                 ValueError, manager.get_relative_recording_file_path, case)
           
           

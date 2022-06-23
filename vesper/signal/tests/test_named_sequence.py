@@ -52,12 +52,12 @@ class NamedSequenceTests(TestCase):
         # indexing with integers
         self.assertEqual(s[0], one)
         self.assertEqual(s[1], two)
-        self._assert_raises(IndexError, s.__getitem__, 2)
+        self.assert_raises(IndexError, s.__getitem__, 2)
         
         # indexing with names
         self.assertEqual(s['one'], one)
         self.assertEqual(s['two'], two)
-        self._assert_raises(IndexError, s.__getitem__, 'three')
+        self.assert_raises(IndexError, s.__getitem__, 'three')
         
         # `names` attribute
         self.assertEqual(s.names, ('one', 'two'))
@@ -79,7 +79,7 @@ class NamedSequenceTests(TestCase):
         # index
         self.assertEqual(s.index(one), 0)
         self.assertEqual(s.index(two), 1)
-        self._assert_raises(ValueError, s.index, three)
+        self.assert_raises(ValueError, s.index, three)
         
         # count
         self.assertEqual(s.count(one), 1)

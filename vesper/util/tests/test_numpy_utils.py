@@ -73,7 +73,7 @@ class NumPyUtilsTests(TestCase):
                     x = np.arange(n)
                     a = choice(x, size, replace)
                     b = choice(x, size, replace)
-                    self._assert_arrays_equal(a, b)
+                    self.assert_arrays_equal(a, b)
                     
                     
     def test_reproducible_permutation(self):
@@ -84,7 +84,7 @@ class NumPyUtilsTests(TestCase):
         for n in range(10):
             a = permutation(n)
             b = permutation(n)
-            self._assert_arrays_equal(a, b)
+            self.assert_arrays_equal(a, b)
             
         # array argument
         ns = [10, 20]
@@ -92,7 +92,7 @@ class NumPyUtilsTests(TestCase):
             x = np.arange(n)
             a = permutation(x)
             b = permutation(x)
-            self._assert_arrays_equal(a, b)
+            self.assert_arrays_equal(a, b)
             
             
     def test_reproducible_shuffle(self):
@@ -109,4 +109,4 @@ class NumPyUtilsTests(TestCase):
             y = np.arange(n)
             shuffle(y)
             
-            self._assert_arrays_equal(x, y)
+            self.assert_arrays_equal(x, y)

@@ -58,9 +58,9 @@ class RamSignalTests(SignalTestCase):
     def test_init_errors(self):
         
         # sample array with fewer than two dimensions
-        self._assert_raises(ValueError, RamSignal, 24000, np.arange(10), False)
+        self.assert_raises(ValueError, RamSignal, 24000, np.arange(10), False)
         
         # frame count mismatch
         time_axis = TimeAxis(10, 24000)
         samples = np.arange(11).reshape((1, -1))
-        self._assert_raises(ValueError, RamSignal, time_axis, samples, False)
+        self.assert_raises(ValueError, RamSignal, time_axis, samples, False)

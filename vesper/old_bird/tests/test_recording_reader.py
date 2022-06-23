@@ -39,7 +39,7 @@ class AddOldBirdClipStartIndicesTests(TestCase):
 #             print(actual)
 #             print()
             
-            self._assert_arrays_equal(actual, expected)
+            self.assert_arrays_equal(actual, expected)
             
                     
 def _create_file_bunch(i):

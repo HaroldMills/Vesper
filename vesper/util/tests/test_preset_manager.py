@@ -106,7 +106,7 @@ class PresetManagerTests(TestCase):
     
     
     def test_get_presets_errors(self):
-        self._assert_raises(ValueError, self.manager.get_presets, 'X')
+        self.assert_raises(ValueError, self.manager.get_presets, 'X')
         
         
     def test_get_preset(self):
@@ -123,7 +123,7 @@ class PresetManagerTests(TestCase):
     def test_get_preset_errors(self):
         
         # Unrecognized preset type.
-        self._assert_raises(ValueError, self.manager.get_preset, ('X', 'Bobo'))
+        self.assert_raises(ValueError, self.manager.get_preset, ('X', 'Bobo'))
         
         
     def test_unload_presets(self):

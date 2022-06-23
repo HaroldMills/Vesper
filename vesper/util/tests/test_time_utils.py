@@ -107,7 +107,7 @@ class TimeUtilsTests(TestCase):
         f = time_utils.create_utc_datetime
         
         for y, m, d, h, z in cases:
-            self._assert_raises(ValueError, f, y, m, d, h, time_zone=z)
+            self.assert_raises(ValueError, f, y, m, d, h, time_zone=z)
             
             
     def test_parse_date_time(self):
@@ -176,7 +176,7 @@ class TimeUtilsTests(TestCase):
             m = _D2(m)
             s = _D2(s)
             f = _D6(f)
-            self._assert_raises(
+            self.assert_raises(
                 ValueError, time_utils.parse_date_time, y, M, d, h, m, s, f)
             
             
@@ -231,7 +231,7 @@ class TimeUtilsTests(TestCase):
             y = _D4(y)
             m = _D2(m)
             d = _D2(d)
-            self._assert_raises(ValueError, time_utils.parse_date, y, m, d)
+            self.assert_raises(ValueError, time_utils.parse_date, y, m, d)
             
             
     def test_parse_fractional_second(self):
@@ -340,7 +340,7 @@ class TimeUtilsTests(TestCase):
             h = _D2(h)
             m = _D2(m)
             s = _D2(s)
-            self._assert_raises(ValueError, time_utils.parse_time, h, m, s)
+            self.assert_raises(ValueError, time_utils.parse_time, h, m, s)
             
             
     def test_parse_time_delta(self):
@@ -417,7 +417,7 @@ class TimeUtilsTests(TestCase):
             h = str(h)
             m = _D2(m)
             s = _D2(s)
-            self._assert_raises(
+            self.assert_raises(
                 ValueError, time_utils.parse_time_delta, h, m, s)
             
             
@@ -431,7 +431,7 @@ class TimeUtilsTests(TestCase):
         for case in good:
             function(*_tuplize(case))
         for case in bad:
-            self._assert_raises(ValueError, function, *_tuplize(case))
+            self.assert_raises(ValueError, function, *_tuplize(case))
             
             
     def test_check_month(self):
@@ -588,10 +588,10 @@ class TimeUtilsTests(TestCase):
         
         # bad increment
         for increment in _BAD_TIME_ROUNDING_INCREMENTS:
-            self._assert_raises(ValueError, function, arg, increment)
+            self.assert_raises(ValueError, function, arg, increment)
         
         # bad mode
-        self._assert_raises(ValueError, function, arg, 1, 'bobo')
+        self.assert_raises(ValueError, function, arg, 1, 'bobo')
 
 
 def _tuplize(x):

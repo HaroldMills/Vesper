@@ -235,7 +235,7 @@ class SignalUtilsTests(TestCase):
             y = np.array(y)
             expected = np.array(expected)
             result = signal_utils.find_samples(x, y)
-            self._assert_arrays_equal(result, expected)
+            self.assert_arrays_equal(result, expected)
 
 
     def test_tolerant_find_samples(self):
@@ -264,7 +264,7 @@ class SignalUtilsTests(TestCase):
             y = np.array(y)
             expected = np.array(expected)
             result = signal_utils.find_samples(x, y, tolerance=1)
-            self._assert_arrays_equal(result, expected)
+            self.assert_arrays_equal(result, expected)
             
             
     def test_find_peaks_with_no_min_value(self):
@@ -291,7 +291,7 @@ class SignalUtilsTests(TestCase):
             x = np.array(x)
             expected = np.array(expected)
             actual = signal_utils.find_peaks(x)
-            self._assert_arrays_equal(actual, expected)
+            self.assert_arrays_equal(actual, expected)
             
             
     def test_find_peaks_with_min_value(self):
@@ -311,7 +311,7 @@ class SignalUtilsTests(TestCase):
             x = np.array(x)
             expected = np.array(expected)
             actual = signal_utils.find_peaks(x, min_value)
-            self._assert_arrays_equal(actual, expected)
+            self.assert_arrays_equal(actual, expected)
 
 
 def _parse_time(s):

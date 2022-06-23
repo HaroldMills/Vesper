@@ -96,16 +96,16 @@ class SettingsTests(TestCase):
         
         
     def test_non_dict_settings_error(self):
-        self._assert_raises(TypeError, Settings.create_from_dict, 'bobo')
+        self.assert_raises(TypeError, Settings.create_from_dict, 'bobo')
         
         
     def test_non_array_settings_error(self):
-        self._assert_raises(
+        self.assert_raises(
             ValueError, Settings.create_from_yaml_file,
             _NON_ARRAY_SETTINGS_FILE_PATH)
         
         
     def test_malformed_settings_error(self):
-        self._assert_raises(
+        self.assert_raises(
             ValueError, Settings.create_from_yaml_file,
             _MALFORMED_SETTINGS_FILE_PATH)

@@ -79,7 +79,7 @@ class FileTypeUtilsTests(TestCase):
         
     def test_nonexistent_file_error(self):
         path = Path(DATA_DIR_PATH, 'nonexistent_file')
-        self._assert_raises(ValueError, file_type_utils.is_wave_file, path)
+        self.assert_raises(ValueError, file_type_utils.is_wave_file, path)
             
             
     def test_is_file_of_type(self):

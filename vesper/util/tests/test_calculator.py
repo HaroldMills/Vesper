@@ -427,7 +427,7 @@ class CalculatorTests(TestCase):
             # print(f'testing "{operator_name}" operator errors...')
             for operand_stack in operand_stacks:
                 self._set_up(operand_stack)
-                self._assert_raises(
+                self.assert_raises(
                     CalculatorError, self.calculator.execute, operator_name)
                 self._assert_calculator(operand_stack)
     

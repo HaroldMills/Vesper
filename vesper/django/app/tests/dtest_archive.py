@@ -132,7 +132,7 @@ class ArchiveTests(TestCase):
             
             
     def test_get_processor_errors(self):
-        self._assert_raises(ValueError, self._archive.get_processor, 'Bobo')
+        self.assert_raises(ValueError, self._archive.get_processor, 'Bobo')
 
             
     def test_get_processor_ui_name(self):
@@ -153,7 +153,7 @@ class ArchiveTests(TestCase):
     # def test_get_processor_ui_name_errors(self):
     #     self._archive.refresh_processor_cache()
     #     processor = Processor.objects.create(name='Bobo', type='Detector')
-    #     self._assert_raises(
+    #     self.assert_raises(
     #         ValueError, self._archive.get_processor_ui_name, processor)
     #     processor.delete()
         
@@ -180,7 +180,7 @@ class ArchiveTests(TestCase):
             
             
     def test_get_string_annotation_values_errors(self):
-        self._assert_raises(
+        self.assert_raises(
             ValueError, self._archive.get_string_annotation_values, 'Bobo')
         
         
@@ -224,13 +224,13 @@ class ArchiveTests(TestCase):
 
 
     def test_get_string_annotation_archive_value_errors(self):
-        self._assert_raises(
+        self.assert_raises(
             ValueError, self._archive.get_string_annotation_archive_value,
             'Bobo', 'Value')
 
 
     def test_get_string_annotation_ui_value_errors(self):
-        self._assert_raises(
+        self.assert_raises(
             ValueError, self._archive.get_string_annotation_ui_value,
             'Bobo', 'Value')
         
@@ -248,7 +248,7 @@ class ArchiveTests(TestCase):
             
             
     def test_get_visible_string_annotation_ui_values_errors(self):
-        self._assert_raises(
+        self.assert_raises(
             ValueError, self._archive.get_visible_string_annotation_ui_values,
             'Bobo')
 
@@ -287,7 +287,7 @@ class ArchiveTests(TestCase):
     def test_get_visible_string_annotation_ui_value_specs_errors(
             self):
         
-        self._assert_raises(
+        self.assert_raises(
             ValueError,
             self._archive.get_visible_string_annotation_ui_value_specs,
             'Bobo')

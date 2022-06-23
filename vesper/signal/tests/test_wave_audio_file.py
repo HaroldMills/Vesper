@@ -91,25 +91,25 @@ class WaveAudioFileTests(TestCase):
 
 
     def test_nonexistent_file_error(self):
-        self._assert_raises(ValueError, WaveAudioFileReader, 'Nonexistent')
+        self.assert_raises(ValueError, WaveAudioFileReader, 'Nonexistent')
         
         
     def test_non_wav_file_error(self):
         file_path = utils.create_test_audio_file_path('Empty')
-        self._assert_raises(
+        self.assert_raises(
             UnsupportedAudioFileError, WaveAudioFileReader, file_path)
         
         
     def test_empty_wav_file_error(self):
         file_path = utils.create_test_audio_file_path('Empty.wav')
-        self._assert_raises(OSError, WaveAudioFileReader, file_path)
+        self.assert_raises(OSError, WaveAudioFileReader, file_path)
         
         
     def test_closed_wav_file_read_error(self):
         file_path = utils.create_test_audio_file_path('One Channel.wav')
         reader = WaveAudioFileReader(file_path)
         reader.close()
-        self._assert_raises(OSError, reader.read)
+        self.assert_raises(OSError, reader.read)
 
         
     def test_out_of_range_wav_file_read_errors(self):
@@ -124,10 +124,10 @@ class WaveAudioFileTests(TestCase):
         
         for start_index, length in cases:
             reader = WaveAudioFileReader(file_path)
-            self._assert_raises(ValueError, reader.read, start_index, length)
+            self.assert_raises(ValueError, reader.read, start_index, length)
         
 
     def test_truncated_wav_file_error(self):
         file_path = utils.create_test_audio_file_path('Truncated.wav')
         reader = WaveAudioFileReader(file_path)
-        self._assert_raises(OSError, reader.read)
+        self.assert_raises(OSError, reader.read)

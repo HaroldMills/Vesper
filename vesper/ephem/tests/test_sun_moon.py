@@ -590,21 +590,21 @@ class SunMoonTests(TestCase):
         
         # Methods that accept a single `datetime` argument.
         time = DateTime(2020, 10, 1)
-        self._assert_raises(ValueError, sm.get_solar_position, time)
-        self._assert_raises(ValueError, sm.get_solar_period_name, time)
-        self._assert_raises(ValueError, sm.get_lunar_position, time)
-        self._assert_raises(ValueError, sm.get_lunar_illumination, time)
+        self.assert_raises(ValueError, sm.get_solar_position, time)
+        self.assert_raises(ValueError, sm.get_solar_period_name, time)
+        self.assert_raises(ValueError, sm.get_lunar_position, time)
+        self.assert_raises(ValueError, sm.get_lunar_illumination, time)
         
         # `get_solar_events_in_interval` with first `datetime` naive.
         time1 = DateTime(2020, 10, 1)
         time2 = _get_localized_time(2020, 10, 2)
-        self._assert_raises(
+        self.assert_raises(
             ValueError, sm.get_solar_events_in_interval, time1, time2)
         
         # `get_solar_events_in_interval` with second `datetime` naive.
         time1 = _get_localized_time(2020, 10, 1)
         time2 = DateTime(2020, 10, 2)
-        self._assert_raises(
+        self.assert_raises(
             ValueError, sm.get_solar_events_in_interval, time1, time2)
     
     
@@ -651,7 +651,7 @@ class SunMoonTests(TestCase):
             )
             
             for case in cases:
-                self._assert_raises(ValueError, *case)
+                self.assert_raises(ValueError, *case)
     
     
     def test_solar_event_time_altitudes(self):

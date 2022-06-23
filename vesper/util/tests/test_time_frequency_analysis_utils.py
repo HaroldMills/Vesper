@@ -126,7 +126,7 @@ class TimeFrequencyAnalysisUtilsTests(TestCase):
         ]
 
         for args in cases:
-            self._assert_raises(
+            self.assert_raises(
                 ValueError, tfa_utils.get_num_analysis_records, *args)
 
 
@@ -166,7 +166,7 @@ class TimeFrequencyAnalysisUtilsTests(TestCase):
             actual = tfa_utils._get_analysis_records(
                 samples, record_size, hop_size)
 
-            self._assert_arrays_equal(actual, expected)
+            self.assert_arrays_equal(actual, expected)
 
 
     def test_get_analysis_records_2d(self):
@@ -308,20 +308,20 @@ class TimeFrequencyAnalysisUtilsTests(TestCase):
         # out of place, result allocated by op
         actual = op(input, *args, **kwargs)
         self.assertFalse(actual is input)
-        self._assert_arrays_equal(actual, expected)
+        self.assert_arrays_equal(actual, expected)
 
         # out of place, result preallocated
         actual = np.zeros_like(expected)
         kwargs_ = dict(kwargs, out=actual)
         actual = op(input, *args, **kwargs_)
         self.assertFalse(actual is input)
-        self._assert_arrays_equal(actual, expected)
+        self.assert_arrays_equal(actual, expected)
 
         # in place
         kwargs_ = dict(kwargs, out=input)
         actual = op(input, *args, **kwargs_)
         self.assertTrue(actual is input)
-        self._assert_arrays_equal(actual, expected)
+        self.assert_arrays_equal(actual, expected)
 
 
     def test_linear_to_log(self):

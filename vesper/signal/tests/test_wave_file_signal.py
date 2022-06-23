@@ -43,7 +43,7 @@ class WaveFileSignalTests(SignalTestCase):
 
     def test_empty_file(self):
         file_path = _DATA_DIR_PATH / 'Empty.wav'
-        self._assert_raises(Exception, WaveFileSignal, file_path)
+        self.assert_raises(Exception, WaveFileSignal, file_path)
         
         
     def test_truncated_file(self):
@@ -51,4 +51,4 @@ class WaveFileSignalTests(SignalTestCase):
         signal = WaveFileSignal(file_path)
         time_axis = TimeAxis(10, 22050)
         self.assert_signal(signal, 'Signal', time_axis, 1, (), '<i2')
-        self._assert_raises(SignalError, lambda s: s.as_channels[0], signal)
+        self.assert_raises(SignalError, lambda s: s.as_channels[0], signal)

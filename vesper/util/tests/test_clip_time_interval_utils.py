@@ -52,7 +52,7 @@ class ClipTimedIntervalUtilsTests(TestCase):
 
         parse = clip_time_interval_utils.parse_clip_time_interval_spec
         for spec in cases:
-            self._assert_raises(ValueError, parse, spec)
+            self.assert_raises(ValueError, parse, spec)
 
 
     def test_get_clip_time_interval(self):
