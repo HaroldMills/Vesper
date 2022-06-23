@@ -14,8 +14,8 @@ a.index_to_time(i)         # `i` in [0, length], scalar or array, int or float
 a.time_to_index(t)         # `t` can be scalar or array. Result is float
                            # Maybe offer rounded int result as an option?
                            
-a.start_time
-a.end_time
+a.start_time               # seconds
+a.end_time                 # seconds
       
 a.get_span(i, j)           # `index_to_time[j] - index_to_time[i]`
 a.span                     # `get_span(0, length - 1)`, or None if length zero

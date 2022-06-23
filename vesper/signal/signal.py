@@ -17,6 +17,7 @@ s.time_axis            # `TimeAxis`
 len(s)                 # frame count, `s.time_axis.length`
 
 s.channels             # `NamedSequence` of `Channel` objects
+s.channel_count        # `len(s.channels)`
 
 s.array_shape          # sample array shape
 
@@ -37,24 +38,56 @@ class Signal(Named):
     
     Provides access to signal samples and associated metadata.
 
-    A signal can be viewed and indexed according to two perspectives.
-    According to the *frame perspective*, a signal is a sequence of
-    sample frames and is indexed *frame-first*, with the first two
-    indices specifying the frame number and channel number, respectively.
-    According to the *channel perspective*, a signal is a sequence of
-    channels and is indexed *channel-first*, with the first two indices
-    specifying the channel number and frame number, respectively. As
-    far as indexing is concerned, the difference between the two
-    perspectives is just the order of the first two indices.
+    A signal is a sequence of *sample frames*, where a sample frame
+    is a sequence of numeric *sample arrays*. All of the sample
+    frames of a signal have the same length, and all of the sample
+    arrays of a signal have the same dimensions. The number of
+    dimensions of the sample arrays of a signal is the
+    *dimensionality* of the signal. A zero-dimensional signal is
+    also called a *scalar signal* or a *waveform*, and a
+    one-dimensional signal is also called a *vector signal* or a
+    *gram*. A two-dimensional signal is also called a *video*.
+
+    All of the samples of a signal have same type, the signal's
+    *sample type*. Common sample types are 16-bit integers and
+    32-bit floating point numbers.
+
+    The number of sample arrays per sample frame of a signal is
+    the *channel count* of the signal. The sequence comprising
+    the ith sample array of each frame of a signal, with the
+    sample arrays in the same order as the frames to which they
+    belong, is the ith *channel* of the signal.
+
+    Each sample frame of a signal has an associated elapsed time
+    in seconds. The sample frames of a signal are evenly spaced
+    in time, with the times increasing by the signal's *frame
+    period* from one frame to the next. The reciprocal of a signal's
+    frame period is the signal's *frame rate*. The frame period
+    and frame rate have units of seconds and hertz, respectively.
     
-    The `Signal` class is agnostic with regard to these two perspectives,
-    supporting both and favoring neither. A `Signal` object itself cannot
-    be indexed directly (since that would entail favoring one of the two
-    perspectives), but instead is indexed via a *sample reader*. Every
-    signal has two sample readers, which are available as the signal's
-    `as_frames` and `as_channels` properties. The `as_frames` sample
-    reader supports frame-first indexing, while the `as_channels` sample
-    reader supports channel-first indexing.
+    This class supports two methods of indexing the samples of a signal,
+    corresponding to two different perspectives. According to the
+    first perspective, called the *frame-first* perspective, a signal
+    is a sequence of sample frames as described above, and the indices
+    of a sample comprise first its frame number, followed by its channel
+    number, followed by its sample array indices. According to the second
+    perspective, called the *channel-first* perspective, a signal is
+    a sequence of channels, each of which is a sequence of sample arrays,
+    and the order of the first two indices of a sample are the reverse
+    of what they are from the frame-first perspective. That is, the
+    indices of a sample comprise first the channel number, followed
+    by the frame number, followed by the sample array indices.
+
+    The samples of a signal are read via a *sample reader*, an
+    auxiliary object provided by the signal. Every signal offers
+    two sample readers. One, accessed via the `as_frames` signal
+    property, supports frame-first indexing, while the other, accessed
+    via the `as_channels` property, supports channel-first indexing.
+
+    The channels of a signal are represented by `Channel` objects,
+    accessed via the `channels` signal property. The samples of a
+    channel can be read via a `Channel` as well as via signal sample
+    readers as described above.
     """
     
     

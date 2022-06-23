@@ -14,11 +14,11 @@ channels' signal.
 
 c.signal
 
-c.number           # channel number, in [0, `c.signal.channel_count`]
+c.number           # channel number, in [0, `c.signal.channel_count`)
 
 c.name
 
-c.time_axis        # `TimeAxis`
+c.time_axis        # `c.signal.time_axis`
 
 len(c)             # sample array count, `c.time_axis.length`
 
