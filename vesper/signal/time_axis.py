@@ -32,7 +32,7 @@ a.end_datetime             # `datetime` at end index, `None` if unknown
 # TODO: Implement datetime-awareness. Include new `start_datetime`
 # initializer argument.
 
-# TODO: Implement piecewise increasing linear time axes. Include new,
+# TODO: Implement piecewise linearly increasing time axes. Include new,
 # mutually exclusive `index_times` and `index_datetimes` initializer
 # arguments that specify (via a dictionary or a sequence of pairs
 # mapping from indices to times or datetimes.
