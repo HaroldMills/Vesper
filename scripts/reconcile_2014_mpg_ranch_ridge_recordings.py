@@ -31,7 +31,7 @@ django_utils.set_up_django()
 
 from vesper.django.app.models import Recording, Station
 from vesper.mpg_ranch.recording_file_parser import RecordingFileParser
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_reader import WaveFileReader
 import vesper.util.audio_file_utils as audio_file_utils
 
 
@@ -236,7 +236,7 @@ def split_files(groups):
                 f'Splitting file "{old_file_path}" into '
                 f'{new_file_count} parts...')
             
-            old_file_reader = WaveAudioFileReader(str(old_file_path))
+            old_file_reader = WaveFileReader(str(old_file_path))
             start_index = 0
             
             for i, recording in enumerate(recordings):

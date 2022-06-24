@@ -12,7 +12,7 @@ import time
 from django.db import transaction
 
 from vesper.django.app.models import Clip, Job, RecordingChannel
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_reader import WaveFileReader
 from vesper.util.logging_utils import append_stack_trace
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
@@ -262,7 +262,7 @@ class _DetectorMonitor(Thread):
         
         file_path = model_utils.get_absolute_recording_file_path(
             recording_file)
-        self._recording_file_reader = WaveAudioFileReader(str(file_path))
+        self._recording_file_reader = WaveFileReader(str(file_path))
         
         
     @property

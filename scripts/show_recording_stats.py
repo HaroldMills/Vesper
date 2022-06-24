@@ -29,7 +29,7 @@ from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 import numpy as np
 
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_reader import WaveFileReader
 from vesper.util.bunch import Bunch
 
 
@@ -349,7 +349,7 @@ def get_recording_stats(file_paths, interval_duration):
 
 def get_file_interval_stats(file_path, interval_duration):
     
-    reader = WaveAudioFileReader(str(file_path))
+    reader = WaveFileReader(str(file_path))
     channel_count = reader.num_channels
     interval_length = int(interval_duration * reader.sample_rate)
     

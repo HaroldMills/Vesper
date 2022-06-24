@@ -1,4 +1,4 @@
-"""Module containing class `WaveAudioFileType`."""
+"""Module containing class `WaveFileReader`."""
 
 
 import os.path
@@ -14,7 +14,7 @@ from vesper.signal.unsupported_audio_file_error import \
 _WAVE_FILE_EXTENSIONS = frozenset(['.wav', '.WAV'])
     
 
-class WaveAudioFileReader(AudioFileReader):
+class WaveFileReader(AudioFileReader):
     
 
     @staticmethod
@@ -42,7 +42,7 @@ class WaveAudioFileReader(AudioFileReader):
             if not os.path.exists(file_path):
                 raise ValueError(f'File "{file_path}" does not exist.')
             
-            if not WaveAudioFileReader.is_wave_file(file_path):
+            if not WaveFileReader.is_wave_file(file_path):
                 raise UnsupportedAudioFileError(
                     f'File "{file_path}" does not appear to be a WAVE file.')
                 

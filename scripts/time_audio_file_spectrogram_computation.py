@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_reader import WaveFileReader
 from vesper.util.data_windows import HannWindow
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
@@ -25,7 +25,7 @@ def main():
     
     start_time = time.time()
     
-    reader = WaveAudioFileReader(str(FILE_PATH), mono_1d=True)
+    reader = WaveFileReader(str(FILE_PATH), mono_1d=True)
     sample_rate = reader.sample_rate
 
     spectrograph = create_spectrograph(WINDOW_SIZE, HOP_SIZE, sample_rate)

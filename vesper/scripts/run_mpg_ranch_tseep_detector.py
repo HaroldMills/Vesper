@@ -11,7 +11,7 @@ import sys
 import time
 
 from vesper.mpg_ranch.nfc_detector_0_1.detector import TseepDetector
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_reader import WaveFileReader
 
 
 READ_SIZE = 60
@@ -24,7 +24,7 @@ def main():
     start_time = time.time()
     
     file_path = sys.argv[1]
-    reader = WaveAudioFileReader(file_path)
+    reader = WaveFileReader(file_path)
     
     length = reader.length
     

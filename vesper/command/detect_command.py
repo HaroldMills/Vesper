@@ -16,7 +16,7 @@ from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, Recording, RecordingChannel, Station)
 from vesper.old_bird.old_bird_detector_runner import OldBirdDetectorRunner
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_reader import WaveFileReader
 from vesper.singleton.archive import archive
 from vesper.singleton.extension_manager import extension_manager
 from vesper.singleton.preset_manager import preset_manager
@@ -417,7 +417,7 @@ class DetectCommand(Command):
             else:
                 # have absolute path of recording file
                 
-                reader = WaveAudioFileReader(str(abs_path))
+                reader = WaveFileReader(str(abs_path))
                 
                 intervals = _get_file_detection_intervals(
                     file_, recording_intervals)

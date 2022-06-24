@@ -1,10 +1,11 @@
-from vesper.signal.unsupported_audio_file_error import UnsupportedAudioFileError
-from vesper.signal.wave_audio_file import  WaveAudioFileReader
+from vesper.signal.unsupported_audio_file_error import \
+    UnsupportedAudioFileError
+from vesper.signal.wave_file_reader import  WaveFileReader
 from vesper.tests.test_case import TestCase
 import vesper.signal.tests.utils as utils
 
 
-class WaveAudioFileTests(TestCase):
+class WaveFileReaderTests(TestCase):
 
 
     # def test_reader(self):
@@ -86,23 +87,23 @@ class WaveAudioFileTests(TestCase):
 
 
     def test_nonexistent_file_error(self):
-        self.assert_raises(ValueError, WaveAudioFileReader, 'Nonexistent')
+        self.assert_raises(ValueError, WaveFileReader, 'Nonexistent')
         
         
     def test_non_wav_file_error(self):
         file_path = utils.create_test_audio_file_path('Empty')
         self.assert_raises(
-            UnsupportedAudioFileError, WaveAudioFileReader, file_path)
+            UnsupportedAudioFileError, WaveFileReader, file_path)
         
         
     def test_empty_wav_file_error(self):
         file_path = utils.create_test_audio_file_path('Empty.wav')
-        self.assert_raises(OSError, WaveAudioFileReader, file_path)
+        self.assert_raises(OSError, WaveFileReader, file_path)
         
         
     def test_closed_wav_file_read_error(self):
         file_path = utils.create_test_audio_file_path('One Channel.wav')
-        reader = WaveAudioFileReader(file_path)
+        reader = WaveFileReader(file_path)
         reader.close()
         self.assert_raises(OSError, reader.read)
 
@@ -118,11 +119,11 @@ class WaveAudioFileTests(TestCase):
         ]
         
         for start_index, length in cases:
-            reader = WaveAudioFileReader(file_path)
+            reader = WaveFileReader(file_path)
             self.assert_raises(ValueError, reader.read, start_index, length)
         
 
     def test_truncated_wav_file_error(self):
         file_path = utils.create_test_audio_file_path('Truncated.wav')
-        reader = WaveAudioFileReader(file_path)
+        reader = WaveFileReader(file_path)
         self.assert_raises(OSError, reader.read)

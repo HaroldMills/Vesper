@@ -8,7 +8,7 @@ import os.path
 import numpy as np
 
 from vesper.archive_paths import archive_paths
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_reader import WaveFileReader
 from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
@@ -304,7 +304,7 @@ class ClipManager:
             self._clear_recording_file_reader_cache()
             
             # Create new reader.
-            reader = WaveAudioFileReader(str(path))
+            reader = WaveFileReader(str(path))
             
             # Cache new reader.
             self._recording_file_reader_cache[path] = reader

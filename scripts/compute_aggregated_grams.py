@@ -123,7 +123,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import numpy as np
 
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_reader import WaveFileReader
 from vesper.util.bunch import Bunch
 from vesper.util.data_windows import HannWindow
 import vesper.util.time_frequency_analysis_utils as tfa_utils
@@ -235,7 +235,7 @@ def compute_aggregate_gram(file_path):
 def get_tasks(file_path, task_size):
 
     # Get file frame count and sample rate.
-    reader = WaveAudioFileReader(str(file_path))
+    reader = WaveFileReader(str(file_path))
     frame_count = reader.length
     sample_rate = reader.sample_rate
     reader.close()
@@ -273,7 +273,7 @@ def compute_aggregate_spectra(
 
     # print(f'{file_path.name} {start_spectrum_num} {spectrum_count}')
 
-    reader = WaveAudioFileReader(str(file_path))
+    reader = WaveFileReader(str(file_path))
     window = HannWindow(window_size).samples
 
     spectrum_size = int(dft_size / 2) + 1

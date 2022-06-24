@@ -16,7 +16,7 @@ import numpy as np
 
 from vesper.old_bird.old_bird_detector_redux_1_1_mt import (
     ThrushDetector, TseepDetector)
-from vesper.signal.wave_audio_file import WaveAudioFileReader
+from vesper.signal.wave_file_reader import WaveFileReader
 
 import scripts.old_bird_detector_eval.utils as utils
 
@@ -88,7 +88,7 @@ def run_detectors_on_file(file_path, listeners):
     
     start_time = time.time()
     
-    reader = WaveAudioFileReader(str(file_path))
+    reader = WaveFileReader(str(file_path))
             
     sample_rate = reader.sample_rate
     

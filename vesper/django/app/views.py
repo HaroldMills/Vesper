@@ -74,7 +74,7 @@ import vesper.version as version
 # Commented out along with recording view code at the end of this file.
 # from pathlib import Path
 # from vesper.django.app.models import RecordingFile
-# from vesper.signal.wave_audio_file import WaveAudioFileReader
+# from vesper.signal.wave_audio_file import WaveFileReader
 # from vesper.singleton.recording_manager import recording_manager
 # from vesper.util.byte_buffer import ByteBuffer
 # import vesper.util.audio_file_utils as audio_file_utils
@@ -2606,7 +2606,7 @@ def about_vesper(request):
 #     except KeyError:
 #
 #         # Create new reader.
-#         reader = WaveAudioFileReader(str(path))
+#         reader = WaveFileReader(str(path))
 #
 #         # Cache new reader.
 #         _recording_file_reader_cache[path] = reader
