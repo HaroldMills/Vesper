@@ -7,61 +7,21 @@ import wave
 import numpy as np
 
 from vesper.signal.audio_file_reader import AudioFileReader
-from vesper.signal.unsupported_audio_file_error import UnsupportedAudioFileError
+from vesper.signal.unsupported_audio_file_error import \
+    UnsupportedAudioFileError
 
 
-'''
-audio_file_utils:
-    read_audio_file(file_path)
-    write_audio_file(file_path, waveform)
+_WAVE_FILE_EXTENSIONS = frozenset(['.wav', '.WAV'])
     
-    
-class AudioFileType:
-    name
-    reader_class
-    writer_class
-    is_recognized_file(file_path)
-    
-    
-class AudioFileReader:
-
-    file_type
-    
-    num_channels
-    length
-    sample_rate
-    sample_type
-
-    read(start_index=0, length=None, samples=None)
-
-    close()
-
-
-class AudioFileWriter:
-
-    file_type
-    
-    num_channels
-    length
-    sample_rate
-    sample_type
-    
-    append(samples)
-    
-    close()
-    
-    
-class WaveFileReader(AudioFileReader):
-    __init__(file_path)
-    
-
-class WaveFileWriter(AudioFileWriter):
-     __init__(file_path, num_channels, sample_rate, sample_type=None)
-'''
-
 
 class WaveAudioFileReader(AudioFileReader):
     
+
+    @staticmethod
+    def is_wave_file(file_path):
+        extension = os.path.splitext(file_path)[1]
+        return extension in _WAVE_FILE_EXTENSIONS
+
 
     def __init__(self, file_, mono_1d=False):
         
@@ -82,7 +42,7 @@ class WaveAudioFileReader(AudioFileReader):
             if not os.path.exists(file_path):
                 raise ValueError(f'File "{file_path}" does not exist.')
             
-            if not WaveAudioFileType.is_supported_file(file_path):
+            if not WaveAudioFileReader.is_wave_file(file_path):
                 raise UnsupportedAudioFileError(
                     f'File "{file_path}" does not appear to be a WAVE file.')
                 
@@ -126,8 +86,8 @@ class WaveAudioFileReader(AudioFileReader):
             sample_type = np.dtype('<i2')
             
         super().__init__(
-            file_path, WaveAudioFileType, num_channels, length, sample_rate,
-            sample_type, mono_1d)
+            file_path, num_channels, length, sample_rate, sample_type,
+            mono_1d)
         
         
     def read(self, start_index=0, length=None):
@@ -191,20 +151,3 @@ class WaveAudioFileReader(AudioFileReader):
         if self._reader is not None:
             self._reader.close()
             self._reader = None
-
-
-class WaveAudioFileType:
-    
-
-    name = 'WAVE Audio File Type'
-    
-    reader_class = WaveAudioFileReader
-    
-    # writer_class = WaveAudioFileWriter
-    
-    file_name_extensions = frozenset(['.wav', '.WAVE'])
-    
-    @staticmethod
-    def is_supported_file(file_path):
-        extension = os.path.splitext(file_path)[1]
-        return extension in WaveAudioFileType.file_name_extensions

@@ -1,11 +1,6 @@
-import io
-
-import numpy as np
-
 from vesper.signal.unsupported_audio_file_error import UnsupportedAudioFileError
-from vesper.signal.wave_audio_file import WaveAudioFileType, WaveAudioFileReader
+from vesper.signal.wave_audio_file import  WaveAudioFileReader
 from vesper.tests.test_case import TestCase
-import vesper.signal.audio_file_utils as audio_file_utils
 import vesper.signal.tests.utils as utils
 
 
