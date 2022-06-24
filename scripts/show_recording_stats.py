@@ -350,7 +350,7 @@ def get_recording_stats(file_paths, interval_duration):
 def get_file_interval_stats(file_path, interval_duration):
     
     reader = WaveFileReader(str(file_path))
-    channel_count = reader.num_channels
+    channel_count = reader.channel_count
     interval_length = int(interval_duration * reader.sample_rate)
     
     interval_count = reader.length // interval_length

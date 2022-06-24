@@ -16,7 +16,7 @@ class WaveFileReaderTests(TestCase):
     #         ('Four Channels.wav', 4, 100, 22050, np.int16)
     #     ]
     #
-    #     for file_name, num_channels, length, sample_rate, dtype in cases:
+    #     for file_name, channel_count, length, sample_rate, dtype in cases:
     #
     #         file_path = utils.create_test_audio_file_path(file_name)
     #
@@ -25,7 +25,7 @@ class WaveFileReaderTests(TestCase):
     #         # Test reader constructed from file.
     #         with WaveAudioFileType.reader_class(file_path) as reader:
     #             self._test_reader(
-    #                 reader, file_path, WaveAudioFileType, num_channels, length,
+    #                 reader, file_path, WaveAudioFileType, channel_count, length,
     #                 sample_rate, dtype)
     #
     #         # Test reader constructed from file contents.
@@ -34,26 +34,26 @@ class WaveFileReaderTests(TestCase):
     #         file_ = io.BytesIO(data)
     #         with WaveAudioFileType.reader_class(file_) as reader:
     #             self._test_reader(
-    #                 reader, None, WaveAudioFileType, num_channels, length,
+    #                 reader, None, WaveAudioFileType, channel_count, length,
     #                 sample_rate, dtype)
     #
     #         self._test_create_multichannel_array_signal(
-    #             file_path, num_channels, length, sample_rate, dtype)
+    #             file_path, channel_count, length, sample_rate, dtype)
     #
     #
     # def _test_reader(
-    #             self, reader, file_path, file_type, num_channels, length,
+    #             self, reader, file_path, file_type, channel_count, length,
     #             sample_rate, dtype):
     #
     #         self.assertEqual(reader.file_path, file_path)
     #         self.assertEqual(reader.file_type, WaveAudioFileType)
-    #         self.assertEqual(reader.num_channels, num_channels)
+    #         self.assertEqual(reader.channel_count, channel_count)
     #         self.assertEqual(reader.length, length)
     #         self.assertEqual(reader.sample_rate, sample_rate)
     #         self.assertEqual(reader.dtype, dtype)
     #
     #         expected = utils.create_samples(
-    #             (num_channels, length), factor=1000, dtype=dtype)
+    #             (channel_count, length), factor=1000, dtype=dtype)
     #
     #         # all samples
     #         samples = reader.read()
@@ -72,17 +72,17 @@ class WaveFileReaderTests(TestCase):
     #
     #
     # def _test_create_multichannel_array_signal(
-    #         self, file_path, num_channels, length, sample_rate, dtype):
+    #         self, file_path, channel_count, length, sample_rate, dtype):
     #
     #     audio = audio_file_utils.create_multichannel_array_signal(file_path)
     #
-    #     self.assertEqual(len(audio), num_channels)
+    #     self.assertEqual(len(audio), channel_count)
     #     self.assertEqual(audio.time_axis.length, length)
     #     self.assertEqual(audio.time_axis.sample_rate, sample_rate)
     #     self.assertEqual(audio.dtype, dtype)
     #
     #     expected = utils.create_samples(
-    #         (num_channels, length), factor=1000, dtype=dtype)
+    #         (channel_count, length), factor=1000, dtype=dtype)
     #     utils.assert_arrays_equal(audio[:], expected, strict=True)
 
 

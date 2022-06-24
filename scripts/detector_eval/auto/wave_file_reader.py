@@ -13,7 +13,7 @@ class WaveFileReader:
     
     def __init__(self, file_path):
         self._reader = wave.open(file_path, 'rb')
-        (self.num_channels, _, self.sample_rate, self.length, _, _) = \
+        (self.channel_count, _, self.sample_rate, self.length, _, _) = \
             self._reader.getparams()
 
         
@@ -21,7 +21,7 @@ class WaveFileReader:
         self._reader.setpos(start_index)
         buffer = self._reader.readframes(length)
         samples = np.frombuffer(buffer, dtype='<i2')
-        samples = samples.reshape((length, self.num_channels)).transpose()
+        samples = samples.reshape((length, self.channel_count)).transpose()
         return samples
 
 

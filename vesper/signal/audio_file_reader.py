@@ -7,11 +7,11 @@ class AudioFileReader:
     
 
     def __init__(
-            self, file_path, num_channels, length, sample_rate,
+            self, file_path, channel_count, length, sample_rate,
             sample_type, mono_1d=False):
         
         self._file_path = file_path
-        self._num_channels = num_channels
+        self._channel_count = channel_count
         self._length = length
         self._sample_rate = sample_rate
         self._sample_type = sample_type
@@ -32,8 +32,8 @@ class AudioFileReader:
     
     
     @property
-    def num_channels(self):
-        return self._num_channels
+    def channel_count(self):
+        return self._channel_count
     
     
     @property

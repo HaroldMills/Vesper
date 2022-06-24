@@ -60,8 +60,8 @@ class WaveFileReader(AudioFileReader):
             raise OSError(f'Could not open {self._name}.')
         
         try:
-            (num_channels, sample_width, sample_rate, length, compression_type,
-             compression_name) = self._reader.getparams()
+            (channel_count, sample_width, sample_rate, length,
+             compression_type, compression_name) = self._reader.getparams()
         except:
             self._reader.close()
             raise OSError(f'Could not read metadata from {self._name}.')
@@ -86,7 +86,7 @@ class WaveFileReader(AudioFileReader):
             sample_type = np.dtype('<i2')
             
         super().__init__(
-            file_path, num_channels, length, sample_rate, sample_type,
+            file_path, channel_count, length, sample_rate, sample_type,
             mono_1d)
         
         
@@ -132,14 +132,14 @@ class WaveFileReader(AudioFileReader):
             
         samples = np.frombuffer(buffer, dtype=self.sample_type)
         
-        if len(samples) != length * self.num_channels:
+        if len(samples) != length * self.channel_count:
             raise OSError(
                 f'Got fewer samples than expected from read of {self._name}.')
         
-        if self.num_channels == 1 and self.mono_1d:
+        if self.channel_count == 1 and self.mono_1d:
             samples = samples.reshape((length,))
         else:
-            samples = samples.reshape((length, self.num_channels)).transpose()
+            samples = samples.reshape((length, self.channel_count)).transpose()
         
         # TODO: Deinterleave samples?
         # TODO: Byte swap samples on big endian platforms?
