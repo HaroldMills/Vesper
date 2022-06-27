@@ -19,13 +19,13 @@ class Spectrogram(Signal):
             
         time_axis = _create_time_axis(waveform.time_axis, settings)
         channel_count = len(waveform.channels)
-        array_shape = _get_array_shape(settings)
+        sample_array_shape = _get_sample_array_shape(settings)
         sample_type = 'float64'
         read_delegate = _SampleReadDelegate(waveform, settings, sample_type)
         
         super().__init__(
-            time_axis, channel_count, array_shape, sample_type, read_delegate,
-            name)
+            time_axis, channel_count, sample_array_shape, sample_type,
+            read_delegate, name)
         
         
 def _create_time_axis(waveform_time_axis, settings):
@@ -53,7 +53,7 @@ def _get_gram_frame_count(waveform_frame_count, window_size, hop_size):
         return 1 + (waveform_frame_count - window_size) // hop_size
 
 
-def _get_array_shape(settings):
+def _get_sample_array_shape(settings):
     spectrum_size = settings.dft_size // 2 + 1
     return (spectrum_size,)
 
@@ -65,7 +65,7 @@ class _SampleReadDelegate(SampleReadDelegate):
         self._waveform = waveform
         self._settings = settings
         self._sample_type = sample_type
-        self._array_shape = (self._settings.dft_size // 2 + 1,)
+        self._sample_array_shape = (self._settings.dft_size // 2 + 1,)
         super().__init__(False)
         
         
@@ -139,7 +139,7 @@ class _SampleReadDelegate(SampleReadDelegate):
     def _get_result_shape(self, channel_key, frame_key):
         channel_dim = _get_dim(channel_key)
         frame_dim = _get_dim(frame_key)
-        return channel_dim + frame_dim + self._array_shape
+        return channel_dim + frame_dim + self._sample_array_shape
     
     
 def _get_bounds(key):

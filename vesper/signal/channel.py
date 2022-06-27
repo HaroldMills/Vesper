@@ -28,9 +28,9 @@ c.sample_period         # `c.time_axis.sample_period`
 
 len(c)                  # sample array count, `c.time_axis.length`
 
-c.array_shape           # sample array shape
+c.sample_array_shape    # sample array shape
 
-c.shape                 # `(len(c),) + c.array_shape`
+c.shape                 # `(len(c),) + c.sample_array_shape`
 
 c.sample_type           # NumPy `dtype` of samples
 
@@ -106,13 +106,13 @@ class Channel(Named):
 
 
     @property
-    def array_shape(self):
-        return self.signal.array_shape
+    def sample_array_shape(self):
+        return self.signal.sample_array_shape
     
     
     @property
     def shape(self):
-        return (len(self),) + self.array_shape
+        return (len(self),) + self.sample_array_shape
     
     
     @property

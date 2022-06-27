@@ -38,20 +38,20 @@ class RamSignalTests(SignalTestCase):
             expected_name = 'Signal' if name is None else name
             time_axis = TimeAxis(shape[0], frame_rate)
             channel_count = shape[1]
-            array_shape = shape[2:]
+            sample_array_shape = shape[2:]
             samples_f = utils.create_samples(shape, sample_type=sample_type)
             samples_c = np.swapaxes(samples_f, 0, 1)
             
             # Frame rate and frame-first samples.
             s = RamSignal(frame_rate, samples_f, True, name)
             self.assert_signal(
-                s, expected_name, time_axis, channel_count, array_shape,
+                s, expected_name, time_axis, channel_count, sample_array_shape,
                 sample_type, samples_c)
     
             # Time axis and rame-first samples.
             s = RamSignal(time_axis, samples_f, True, name)
             self.assert_signal(
-                s, expected_name, time_axis, channel_count, array_shape,
+                s, expected_name, time_axis, channel_count, sample_array_shape,
                 sample_type, samples_c)
             
             

@@ -29,11 +29,11 @@ class AudioFileSignal(Signal):
             read_delegate, name=None, file_path=None, file_format=None):
         
         time_axis = TimeAxis(length, frame_rate)
-        array_shape = ()
+        sample_array_shape = ()
         
         super().__init__(
-            time_axis, channel_count, array_shape, sample_type, read_delegate,
-            name)
+            time_axis, channel_count, sample_array_shape, sample_type,
+            read_delegate, name)
         
         self._file_path = file_path
         self._file_format = file_format

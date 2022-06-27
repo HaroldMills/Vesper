@@ -20,7 +20,7 @@ class RamSignal(Signal):
     
     def __init__(self, time_axis, samples, frame_first, name=None):
         
-        frame_count, channel_count, array_shape = \
+        frame_count, channel_count, sample_array_shape = \
             _get_shape(samples, frame_first)
             
         # Create `TimeAxis` from frame rate if needed.
@@ -32,7 +32,7 @@ class RamSignal(Signal):
         read_delegate = _SampleReadDelegate(samples, frame_first)
         
         super().__init__(
-            time_axis, channel_count, array_shape, samples.dtype,
+            time_axis, channel_count, sample_array_shape, samples.dtype,
             read_delegate, name)
         
         
@@ -49,9 +49,9 @@ def _get_shape(samples, frame_first):
     else:
         channel_count, frame_count = shape[:2]
         
-    array_shape = shape[2:]
+    sample_array_shape = shape[2:]
     
-    return frame_count, channel_count, array_shape
+    return frame_count, channel_count, sample_array_shape
 
 
 def _check_frame_count(frame_count, time_axis):

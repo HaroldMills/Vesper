@@ -392,7 +392,7 @@ s.time_axis                  # `TimeAxis`
 s.frame_count                # number of signal sample frames
 len(s)                       # same as `frame_count`
 s.channel_count              # number of signal channels
-s.array_shape                # sample array shape
+s.sample_array_shape         # sample array shape
 s.dtype                      # NumPy sample `dtype`
 
 s[:]                         # all samples of all sample frames

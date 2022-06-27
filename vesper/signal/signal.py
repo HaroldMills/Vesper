@@ -25,7 +25,7 @@ len(s)                  # frame count, `s.time_axis.length`
 s.channels              # `NamedSequence` of `Channel` objects
 s.channel_count         # `len(s.channels)`
 
-s.array_shape           # sample array shape
+s.sample_array_shape    # sample array shape
 
 s.sample_type           # NumPy `dtype` of samples
 
@@ -98,7 +98,7 @@ class Signal(Named):
     
     
     def __init__(
-            self, time_axis, channel_count, array_shape, sample_type,
+            self, time_axis, channel_count, sample_array_shape, sample_type,
             read_delegate, name=None):
         
         if name is None:
@@ -108,7 +108,7 @@ class Signal(Named):
         
         self._time_axis = time_axis
         self._channels = self._create_channels(channel_count)
-        self._array_shape = tuple(array_shape)
+        self._sample_array_shape = tuple(sample_array_shape)
         self._sample_type = np.dtype(sample_type)
         self._read_delegate = read_delegate
         self._as_frames = SampleReader(self, True)
@@ -160,8 +160,8 @@ class Signal(Named):
     
     
     @property
-    def array_shape(self):
-        return self._array_shape
+    def sample_array_shape(self):
+        return self._sample_array_shape
     
     
     @property

@@ -110,12 +110,12 @@ class SampleReader:
         
         frame_count = self.signal.time_axis.length
         channel_count = len(self.signal.channels)
-        array_shape = self.signal.array_shape
+        sample_array_shape = self.signal.sample_array_shape
         
         if self.frame_first:
-            return (frame_count, channel_count) + array_shape
+            return (frame_count, channel_count) + sample_array_shape
         else:
-            return (channel_count, frame_count) + array_shape
+            return (channel_count, frame_count) + sample_array_shape
         
         
     @property

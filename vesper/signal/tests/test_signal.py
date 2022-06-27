@@ -19,10 +19,11 @@ class SignalTests(SignalTestCase):
         
         frame_rate = 24000
         
-        for name, length, channel_count, array_shape, sample_type in cases:
+        for name, length, channel_count, sample_array_shape, sample_type in \
+                cases:
             
             time_axis = TimeAxis(length, frame_rate)
-            shape = (channel_count, length) + array_shape
+            shape = (channel_count, length) + sample_array_shape
             samples = utils.create_samples(shape, sample_type=sample_type)
             read_delegate = _SampleReadDelegate(samples)
             
@@ -30,22 +31,22 @@ class SignalTests(SignalTestCase):
             # Test initializer with specified name.
             
             s = Signal(
-                time_axis, channel_count, array_shape, sample_type,
+                time_axis, channel_count, sample_array_shape, sample_type,
                 read_delegate, name)
             
             self.assert_signal(
-                s, name, time_axis, channel_count, array_shape, sample_type,
-                samples)
+                s, name, time_axis, channel_count, sample_array_shape,
+                sample_type, samples)
         
         
             # Test initializer with default name.
             
             s = Signal(
-                time_axis, channel_count, array_shape, sample_type,
+                time_axis, channel_count, sample_array_shape, sample_type,
                 read_delegate)
             
             self.assert_signal(
-                s, 'Signal', time_axis, channel_count, array_shape,
+                s, 'Signal', time_axis, channel_count, sample_array_shape,
                 sample_type, samples)
     
     
