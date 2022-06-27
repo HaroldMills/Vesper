@@ -7,32 +7,6 @@ import vesper.signal.tests.utils as utils
 class TimeAxisTests(TestCase):
 
 
-    @staticmethod
-    def assert_axis(a, length, frame_rate, start_time=0):
-        
-        frame_period = 1 / frame_rate
-        
-        assert a.length == length
-        assert a.frame_rate == frame_rate
-        assert a.frame_period == frame_period
-        assert a.sample_rate == frame_rate
-        assert a.sample_period == frame_period
-        
-        index_to_time = IncreasingLinearMap(frame_period, start_time)
-
-        start_time = index_to_time(0) if length != 0 else None
-        assert a.start_time == start_time
-        
-        end_time = index_to_time(a.length - 1) if length != 0 else None
-        assert a.end_time == end_time
-        
-        span = end_time - start_time if length != 0 else None
-        assert a.span == span
-        
-        duration = span + frame_period if length != 0 else 0
-        assert a.duration == duration
-                    
-
     def test_init(self):
                  
         cases = [
@@ -44,9 +18,34 @@ class TimeAxisTests(TestCase):
          
         for case in cases:
             a = TimeAxis(*case)
-            self.assert_axis(a, *case)
+            self._assert_axis(a, *case)
             
             
+    def _assert_axis(self, a, length, frame_rate, start_time=0):
+        
+        frame_period = 1 / frame_rate
+        
+        self.assertEqual(a.length, length)
+        self.assertEqual(a.frame_rate, frame_rate)
+        self.assertEqual(a.frame_period, frame_period)
+        self.assertEqual(a.sample_rate, frame_rate)
+        self.assertEqual(a.sample_period, frame_period)
+        
+        index_to_time = IncreasingLinearMap(frame_period, start_time)
+
+        start_time = index_to_time(0) if length != 0 else None
+        self.assertEqual(a.start_time, start_time)
+        
+        end_time = index_to_time(a.length - 1) if length != 0 else None
+        self.assertEqual(a.end_time, end_time)
+        
+        span = end_time - start_time if length != 0 else None
+        self.assertEqual(a.span, span)
+        
+        duration = span + frame_period if length != 0 else 0
+        self.assertEqual(a.duration, duration)
+                    
+
     def test_initializer_errors(self):
         
         cases = [
