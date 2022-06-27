@@ -12,19 +12,25 @@ from vesper.util.named import Named
 '''
 s.name
 
-s.time_axis            # `TimeAxis`
+s.time_axis             # `TimeAxis`
 
-len(s)                 # frame count, `s.time_axis.length`
+s.frame_rate            # `s.time_axis.frame_rate`
+s.frame_period          # `s.time_axis.frame_period`
 
-s.channels             # `NamedSequence` of `Channel` objects
-s.channel_count        # `len(s.channels)`
+s.sample_rate           # `s.time_axis.sample_rate`
+s.sample_period         # `s.time_axis.sample_period`
 
-s.array_shape          # sample array shape
+len(s)                  # frame count, `s.time_axis.length`
 
-s.sample_type          # NumPy `dtype` of samples
+s.channels              # `NamedSequence` of `Channel` objects
+s.channel_count         # `len(s.channels)`
 
-s.as_channels          # channel-first sample reader
-s.as_frames            # frame-first sample reader
+s.array_shape           # sample array shape
+
+s.sample_type           # NumPy `dtype` of samples
+
+s.as_channels           # channel-first sample reader
+s.as_frames             # frame-first sample reader
 '''
 
 
@@ -121,6 +127,26 @@ class Signal(Named):
     
     def __len__(self):
         return self.time_axis.length
+
+
+    @property
+    def frame_rate(self):
+        return self.time_axis.frame_rate
+
+
+    @property
+    def frame_period(self):
+        return self.time_axis.frame_period
+
+
+    @property
+    def sample_rate(self):
+        return self.time_axis.sample_rate
+
+
+    @property
+    def sample_period(self):
+        return self.time_axis.sample_period
 
 
     @property

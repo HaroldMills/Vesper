@@ -18,22 +18,28 @@ c.number           # channel number, in [0, `c.signal.channel_count`)
 
 c.name
 
-c.time_axis        # `c.signal.time_axis`
+c.time_axis             # `c.signal.time_axis`
 
-len(c)             # sample array count, `c.time_axis.length`
+c.frame_rate            # `c.time_axis.frame_rate`
+c.frame_period          # `c.time_axis.frame_period`
 
-c.array_shape      # sample array shape
+c.sample_rate           # `c.time_axis.sample_rate`
+c.sample_period         # `c.time_axis.sample_period`
 
-c.shape            # `(len(c),) + c.array_shape`
+len(c)                  # sample array count, `c.time_axis.length`
 
-c.sample_type      # NumPy `dtype` of samples
+c.array_shape           # sample array shape
 
-r[...]             # synchronous, reads one channel segment, raises exception
-                   # if not all of segment available
+c.shape                 # `(len(c),) + c.array_shape`
 
-r.read(...)        # asynchronous, can read multiple channel segments, yields
-                   # intersection of requested segments and available
-                   # segments
+c.sample_type           # NumPy `dtype` of samples
+
+r[...]                  # synchronous, reads one channel segment, raises
+                        # exception  if not all of segment available
+
+r.read(...)             # asynchronous, can read multiple channel segments,
+                        # yields intersection of requested segments and
+                        # available segments
 '''
 
 
@@ -73,12 +79,32 @@ class Channel(Named):
     @property
     def time_axis(self):
         return self.signal.time_axis
-    
-    
+
+
     def __len__(self):
-        return self.time_axis.length
+        return len(self.signal)
     
     
+    @property
+    def frame_rate(self):
+        return self.signal.frame_rate
+
+
+    @property
+    def frame_period(self):
+        return self.signal.frame_period
+
+
+    @property
+    def sample_rate(self):
+        return self.signal.sample_rate
+
+
+    @property
+    def sample_period(self):
+        return self.signal.sample_period
+
+
     @property
     def array_shape(self):
         return self.signal.array_shape

@@ -15,6 +15,8 @@ class TimeAxisTests(TestCase):
         assert a.length == length
         assert a.frame_rate == frame_rate
         assert a.frame_period == frame_period
+        assert a.sample_rate == frame_rate
+        assert a.sample_period == frame_period
         
         index_to_time = IncreasingLinearMap(frame_period, start_time)
 

@@ -10,6 +10,9 @@ a.length                   # signal length in sample frames
 a.frame_rate               # signal frame rate, in hertz
 a.frame_period             # signal frame period, in seconds
 
+a.sample_rate              # `a.frame_rate`
+a.sample_period            # `a.frame_period`
+
 a.index_to_time(i)         # `i` in [0, length], scalar or array, int or float
 a.time_to_index(t)         # `t` can be scalar or array. Result is float
                            # Maybe offer rounded int result as an option?
@@ -87,6 +90,16 @@ class TimeAxis:
         return 1 / self.frame_rate
     
     
+    @property
+    def sample_rate(self):
+        return self.frame_rate
+
+
+    @property
+    def sample_period(self):
+        return self.frame_period
+
+        
     def index_to_time(self, indices):
         return self._index_to_time_map(indices)
     

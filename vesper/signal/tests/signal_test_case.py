@@ -55,6 +55,10 @@ class SignalTestCase(TestCase):
         self.assertEqual(s.name, name)
         self.assertEqual(s.time_axis, time_axis)
         self.assertEqual(len(s), time_axis.length)
+        self.assertEqual(s.frame_rate, time_axis.frame_rate)
+        self.assertEqual(s.frame_period, time_axis.frame_period)
+        self.assertEqual(s.sample_rate, time_axis.sample_rate)
+        self.assertEqual(s.sample_period, time_axis.sample_period)
         self.assertEqual(s.array_shape, array_shape)
         self.assertEqual(s.sample_type, np.dtype(sample_type))
 
