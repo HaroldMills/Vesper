@@ -40,13 +40,43 @@ class WaveFileSignalTests(SignalTestCase):
                 signal, 'Signal', time_axis, channel_count, (), sample_type,
                 samples)
 
+            with WaveFileSignal(file_path) as signal:
+                self.assertTrue(signal.is_open)
+                self.assert_signal(
+                    signal, 'Signal', time_axis, channel_count, (),
+                    sample_type, samples)
 
-    def test_empty_file(self):
+            self.assertFalse(signal.is_open)
+
+
+    def test_nonexistent_file_error(self):
+        file_path = _DATA_DIR_PATH / 'Nonexistent'
+        self.assert_raises(SignalError, WaveFileSignal, file_path)
+
+
+    def test_nonfile_error(self):
+        file_path = _DATA_DIR_PATH / 'Directory'
+        self.assert_raises(SignalError, WaveFileSignal, file_path)
+
+
+    def test_non_wav_file_error(self):
+        file_path = _DATA_DIR_PATH / 'Empty'
+        self.assert_raises(SignalError, WaveFileSignal, file_path)
+        
+        
+    def test_empty_wav_file_error(self):
         file_path = _DATA_DIR_PATH / 'Empty.wav'
-        self.assert_raises(Exception, WaveFileSignal, file_path)
+        self.assert_raises(SignalError, WaveFileSignal, file_path)
+
+
+    def test_closed_wav_file_read_error(self):
+        file_path = _DATA_DIR_PATH / 'One Channel.wav'
+        signal = WaveFileSignal(file_path)
+        signal.close()
+        self.assert_raises(SignalError, signal.as_frames.__getitem__, 0)
+
         
-        
-    def test_truncated_file(self):
+    def test_truncated_file_read_error(self):
         file_path = _DATA_DIR_PATH / 'Truncated.wav'
         signal = WaveFileSignal(file_path)
         time_axis = TimeAxis(10, 22050)

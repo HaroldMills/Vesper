@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import wave
+import os
 
 import numpy as np
 
@@ -11,142 +12,189 @@ from vesper.signal.sample_read_delegate import SampleReadDelegate
 from vesper.signal.signal_error import SignalError
 
 
+_WAVE_FILE_EXTENSIONS = frozenset(['.wav', '.WAV'])
+    
+
 class WaveFileSignal(AudioFileSignal):
     
     
+    @staticmethod
+    def is_wave_file(path):
+
+        if isinstance(path, Path):
+            extension = path.suffix
+        else:
+            extension = os.path.splitext(path)[1]
+
+        return extension in _WAVE_FILE_EXTENSIONS
+
+
     def __init__(self, file, name=None):
         
-        # Get `file` as `Path` if possible.
-        file_path = _get_file_path(file)
+        file, path = _get_file_and_path(file)
+
+        if path is not None:
+            _check_wave_file_path(path)
+
+        self._file_text = _get_file_text(file)
+
+        try:
+            self._wave_reader = wave.open(file, 'rb')
+        except:
+            raise SignalError(f'Could not open {self._file_text}.')
+
+        try:
+            (channel_count, sample_width, frame_rate, frame_count,
+             compression_type, compression_name) = \
+                self._wave_reader.getparams()
+        except:
+            self._handle_error(
+                f'Could not read metadata from {self._file_text}.')
+        
+        if compression_type != 'NONE':
+            self._handle_error(
+                f'{self._file_text} contains compressed data (with '
+                f'compression name "{compression_name}"), which is not '
+                f'supported.')
             
-        # `file` can be a `Path`, a `str`, or a file-like object. If it
-        # is a `Path`, convert it to a `str` so we can call `wave.open`
-        # with it (as of Python 3.8, `wave.open` accepts either a `str`
-        # or a file-like argument, but not a `Path`).
-        if isinstance(file, Path):
-            file = str(file)
+        sample_size = 8 * sample_width
+        
+        # TODO: support additional sample sizes, especially 24 bits.
+        if sample_size != 8 and sample_size != 16:
+            self._handle_error(
+                f'{self._file_text}" contains {sample_size}-bit samples, '
+                f'which are not supported.')
+            
+        if sample_size == 8:
+            sample_type = np.uint8           # unsigned by WAVE file spec
         else:
-            file = file
-            
-        with wave.open(file, mode='rb') as reader:
-            
-            frame_count = reader.getnframes()
-            frame_rate = reader.getframerate()
-            channel_count = reader.getnchannels()
-            
-            sample_size = 8 * reader.getsampwidth()
-            if sample_size != 16:
-                _raise_signal_error(
-                    f'Unsupported sample size of {sample_size} bits',
-                    file_path)
-            else:
-                sample_type = np.dtype('<i2')
- 
-            if reader.getcomptype() != 'NONE':
-                _raise_signal_error((
-                    f'Unsupported compression type of '
-                    f'"{reader.getcompname()}"'), file_path)
-                
-        file_format = _get_file_format(channel_count, sample_size, frame_rate)
-        
-        read_delegate = _SampleReadDelegate(file, channel_count, sample_type)
-        
+            sample_type = np.dtype('<i2')    # little-endian by WAVE file spec
+
+        read_delegate = _SampleReadDelegate(self)
+
         super().__init__(
-            frame_count, frame_rate, channel_count, sample_type, read_delegate,
-            name, file_path, file_format)
+            frame_count, frame_rate, channel_count, sample_type,
+            read_delegate, name=name, file_path=path)
+
+
+    def _handle_error(self, message):
+        self.close()
+        raise SignalError(message)
+
+
+    @property
+    def is_open(self):
+        return self._wave_reader is not None
+
+
+    def close(self):
+        if self._wave_reader is not None:
+            self._wave_reader.close()
+            self._wave_reader = None
         
 
-def _get_file_path(file):
-    
+def _get_file_and_path(file):
+
     if isinstance(file, Path):
-        return file
+        return str(file), file
+
     elif isinstance(file, str):
-        return Path(file)
+        return file, Path(file)
+
     else:
-        return None
+        # `file` should be file-like object
+
+        return file, None
 
 
-def _raise_signal_error(prefix, file_path):
+def _check_wave_file_path(path):
+
+    if not path.exists():
+        raise SignalError(f'Purported WAVE file "{path}" does not exist.')
+
+    if not path.is_file():
+        raise SignalError(f'Purported WAVE file "{path}" is not a file.')
+
+    if not WaveFileSignal.is_wave_file(path):
+        raise SignalError(f'File "{path}" does not appear to be a WAVE file.')
     
-    if file_path is None:
-        path = ''
+        
+def _get_file_text(file):
+
+    if isinstance(file, str):
+        suffix = f' "{file}"'
     else:
-        path = f' "{file_path}"'
-        
-    message = f'{prefix} for WAVE audio file{path}.'
+        suffix = ''
+
+    return f'WAVE file{suffix}'
+
+
+# def _get_file_format(channel_count, sample_size, frame_rate):
     
-    raise SignalError(message)
-    
+#     if channel_count == 1:
+#         channel_string = 'Mono'
+#     elif channel_count == 2:
+#         channel_string = 'Stereo'
+#     else:
+#         channel_string = f'{channel_count}-channel'
         
-def _get_file_format(channel_count, sample_size, frame_rate):
-    
-    if channel_count == 1:
-        channel_string = 'Mono'
-    elif channel_count == 2:
-        channel_string = 'Stereo'
-    else:
-        channel_string = f'{channel_count}-channel'
-        
-    return f'{channel_string}, {sample_size}-bit, {frame_rate} Hz WAVE'
+#     return f'{channel_string}, {sample_size}-bit, {frame_rate} Hz WAVE'
        
        
 class _SampleReadDelegate(SampleReadDelegate):
     
     
-    def __init__(self, file, channel_count, sample_type):
-        
+    def __init__(self, parent):
         super().__init__(True)
-        
-        self._file = file
-        self._channel_count = channel_count
-        self._sample_type = sample_type
-        
-        self._file_path = _get_file_path(file)
-
-        with wave.open(self._file, mode='rb') as reader:
-            self._frame_count = reader.getnframes()
-            self._channel_count = reader.getnchannels()
+        self._parent = parent
         
         
     def read(self, frame_key, channel_key):
         
-        start_frame, end_frame = _get_bounds(frame_key)
-        frame_count = end_frame - start_frame
+        if not self._parent.is_open:
+            raise SignalError(
+                'Attempt to read samples from closed WAVE file signal.')
+
+        start_frame_num, end_frame_num = _get_bounds(frame_key)
+        frame_count = end_frame_num - start_frame_num
         
-        start_channel, end_channel = _get_bounds(channel_key)
-        channel_count = end_channel - start_channel
+        start_channel_num, end_channel_num = _get_bounds(channel_key)
+        channel_count = end_channel_num - start_channel_num
         
-        with wave.open(self._file, mode='rb') as reader:
-            
-            # Set read position.
-            try:
-                reader.setpos(start_frame)
-            except Exception:
-                _raise_signal_error(
-                    'Set of read position failed', self._file_path)
-    
-            # Read sample data.
-            try:
-                buffer = reader.readframes(frame_count)
-            except Exception:
-                _raise_signal_error('Samples read failed', self._file_path)
+        parent = self._parent
+
+        # Set read position.
+        try:
+            parent._wave_reader.setpos(start_frame_num)
+        except Exception:
+            parent._handle_error(
+                f'Could not set read position for {parent._file_text}.')
+
+        # Read sample data.
+        try:
+            buffer = parent._wave_reader.readframes(frame_count)
+        except Exception:
+            parent._handle_error(
+                f'Could not read sample data from {parent._file_text}.')
                 
         # Check actual read size.
-        byte_count = \
-            frame_count * self._channel_count * self._sample_type.itemsize
-        if len(buffer) != byte_count:
-            _raise_signal_error(
-                f'Read {len(buffer)} bytes rather than expected {byte_count}',
-                self._file_path)
+        expected_byte_count = \
+            frame_count * parent.channel_count * parent.sample_type.itemsize
+        if len(buffer) != expected_byte_count:
+            parent._handle_error(
+                f'Sample data read yielded {len(buffer)} bytes rather '
+                f'than expected {expected_byte_count} bytes for '
+                f'{parent._file_text}.')
             
-        # Convert sample data to one-dimensional NumPy array.
-        samples = np.frombuffer(buffer, dtype=self._sample_type)
+        # Convert sample data from Python `bytes` object to
+        # one-dimensional NumPy array.
+        samples = np.frombuffer(buffer, dtype=parent.sample_type)
         
-        # Reshape sample array to two dimensions.
-        samples.shape = (frame_count, self._channel_count)
+        # Reshape NumPy array to two dimensions.
+        samples.shape = (frame_count, parent.channel_count)
         
         # Select channels if needed.
-        if start_channel != 0 or end_channel != self._channel_count:
+        if start_channel_num != 0 or end_channel_num != parent.channel_count:
             samples = samples[:, channel_key]
             
         # Discard shape dimensions for integer keys.
@@ -155,10 +203,10 @@ class _SampleReadDelegate(SampleReadDelegate):
         samples.shape = frame_dim + channel_dim
                     
         return samples
-        
+
         
 def _get_bounds(key):
-    
+
     if isinstance(key, int):
         return key, key + 1
     else:
@@ -166,4 +214,8 @@ def _get_bounds(key):
     
     
 def _get_dim(key, count):
-    return (count,) if isinstance(key, slice) else ()
+
+    if isinstance(key, int):
+        return ()
+    else:
+        return (count,)

@@ -25,10 +25,10 @@ class AudioFileSignal(Signal):
     
     
     def __init__(
-            self, length, frame_rate, channel_count, sample_type,
-            read_delegate, name=None, file_path=None, file_format=None):
+            self, frame_count, frame_rate, channel_count, sample_type,
+            read_delegate, name=None, file_path=None):
         
-        time_axis = TimeAxis(length, frame_rate)
+        time_axis = TimeAxis(frame_count, frame_rate)
         sample_array_shape = ()
         
         super().__init__(
@@ -36,7 +36,14 @@ class AudioFileSignal(Signal):
             read_delegate, name)
         
         self._file_path = file_path
-        self._file_format = file_format
+        
+        
+    def __enter__(self):
+        return self
+    
+    
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.close()
         
         
     @property
@@ -45,5 +52,9 @@ class AudioFileSignal(Signal):
     
     
     @property
-    def file_format(self):
-        return self._file_format
+    def is_open(self):
+        raise NotImplementedError()
+
+
+    def close(self):
+        raise NotImplementedError()
