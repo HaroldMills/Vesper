@@ -1,3 +1,74 @@
+2022-06-29
+----------
+Thinking about reading signal samples.
+
+The current `Signal` class offers `__getitem__` for getting sample
+values. It is for accessing a signal much like a NumPy array. You
+request one signal segment and get exactly that, except if the
+requested segment extends past the end of the signal (it can't
+extend past the beginning of the signal since negative indices
+are interpreted as offsets from the end of a signal), in which
+case `__getitem__` quietly returns just the available samples.
+The method executes synchronously.
+
+Recently, however, I've realized that there are other kinds of
+sample access that I'd like to support. For example, I would like
+to support access to samples of signals not all of whose samples
+might be available. I would also like to support asynchronous
+reads. I like the idea of methods of the basic form:
+
+    read(start_index, length)
+
+rather than:
+
+    read(start_index, end_index)
+
+since I've found that a start index and length are more often
+convenient to work with than a start index and an end index.
+
+Perhaps the following would do:
+
+    # Read method that assumes that all of the samples of a signal
+    # should be available. Raises `SignalError` if any requested
+    # samples are not available, after truncating range of requested
+    # frame indices to that of signal.
+    read(start_index, length, channel_nums=None): ndarray
+
+    # Read method that does not assume that all of the samples of
+    # a signal should be available. Returns whatever samples are
+    # available.
+    read_available(start_index, length, channel_nums=None): [SignalSegment]
+
+Where `SignalSegment` is a simple, immutable class that includes the
+following properties:
+
+    start_index
+    end_index
+    length
+    samples
+
+The `__getitem__` method would delegate to the `read` method.
+
+We could include asynchronous versions of the two read methods
+described above, named `read_async` and `read_available_async`.
+The async methods would delegate to the synchronous ones.
+
+Note that the `read` methods will be methods of class `Signal`.
+Up until now I have relegated read methods to `SampleReader`
+classes that were available as `Signal.as_frames` and
+`Signal.as_channels`. This situation arose out of a desire
+to keep `Signal` as unopinionated as possible about whether
+frames or channels were more fundamental. I have since come
+to believe that a signal is more fundamentally a sequence of
+sample frames, and think I might not mind doing away with
+`SampleReader` and including the `read` methods in `Signal`.
+
+In the interest of making the `Signal` classes a little less
+Python-centric, I also like the idea of decentering the
+`__getitem__` method, instead centering `read` methods that
+will translate more directly to other languages.
+
+
 Signals to do:
 
 * Decide on "sample" vs. "value" vs. "amplitude". I'm leaning against
