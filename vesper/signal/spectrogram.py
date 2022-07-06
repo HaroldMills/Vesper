@@ -3,7 +3,6 @@
 
 import numpy as np
 
-from vesper.signal.sample_read_delegate import SampleReadDelegate
 from vesper.signal.signal import Signal
 from vesper.signal.time_axis import TimeAxis
 import vesper.util.time_frequency_analysis_utils as tfa_utils

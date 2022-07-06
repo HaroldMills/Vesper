@@ -8,7 +8,6 @@ import os
 import numpy as np
 
 from vesper.signal.audio_file_signal import AudioFileSignal
-from vesper.signal.sample_read_delegate import SampleReadDelegate
 from vesper.signal.signal_error import SignalError
 
 

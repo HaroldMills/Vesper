@@ -1,4 +1,3 @@
-from vesper.signal.sample_read_delegate import SampleReadDelegate
 from vesper.signal.signal import Signal
 from vesper.signal.time_axis import TimeAxis
 from vesper.signal.tests.signal_test_case import SignalTestCase
