@@ -5,7 +5,7 @@ import numpy as np
 
 from vesper.signal.channel import Channel
 from vesper.signal.named_sequence import NamedSequence
-from vesper.signal.sample_reader import SampleReader
+from vesper.signal.signal_indexer import SignalIndexer
 from vesper.util.named import Named
 
 
@@ -29,8 +29,12 @@ s.sample_array_shape    # sample array shape
 
 s.sample_type           # NumPy `dtype` of samples
 
-s.as_channels           # channel-first sample reader
-s.as_frames             # frame-first sample reader
+s.read(start_frame_index, length, channel_indices=None)   
+                        # synchronous sample read, raises exception if
+                        # any existent, requested samples are unavailable
+
+s.as_channels           # channel-first signal indexer
+s.as_frames             # frame-first signal indexer
 '''
 
 
@@ -99,7 +103,7 @@ class Signal(Named):
     
     def __init__(
             self, time_axis, channel_count, sample_array_shape, sample_type,
-            read_delegate, name=None):
+            name=None):
         
         if name is None:
             name = 'Signal'
@@ -110,9 +114,8 @@ class Signal(Named):
         self._channels = self._create_channels(channel_count)
         self._sample_array_shape = tuple(sample_array_shape)
         self._sample_type = np.dtype(sample_type)
-        self._read_delegate = read_delegate
-        self._as_frames = SampleReader(self, True)
-        self._as_channels = SampleReader(self, False)
+        self._as_frames = SignalIndexer(self, True)
+        self._as_channels = SignalIndexer(self, False)
         
         
     def _create_channels(self, channel_count):
@@ -177,3 +180,85 @@ class Signal(Named):
     @property
     def as_channels(self):
         return self._as_channels
+
+
+    def read(
+            self, start_frame_index=0, length=None, channel_indices=None,
+            frame_first=True):
+
+        if length is not None and length < 0:
+            raise ValueError(
+                f'Bad read length {length}. Length must be at least zero.')
+
+        # Get frame and channel slices for call to `_read`.
+        frame_slice = self._get_frame_slice(start_frame_index, length)
+        channel_slice, result_channel_indices = \
+            self._get_channel_slice(channel_indices)
+
+        # Read samples.
+        samples, samples_frame_first = self._read(frame_slice, channel_slice)
+
+        # Select result channels if needed.
+        if result_channel_indices is not None:
+            samples = self._select_channels(
+                samples, samples_frame_first, result_channel_indices)
+
+        # Swap frame and channel axes if needed.
+        if frame_first != samples_frame_first:
+            samples = samples.swapaxes(0, 1)
+
+        return samples
+        
+
+    def _get_frame_slice(self, start_index, length):
+
+        if length is None:
+            end_index = len(self)
+        else:
+            end_index = start_index + length
+
+        start_index = self._clip_frame_index(start_index)
+        end_index = self._clip_frame_index(end_index)
+
+        return slice(start_index, end_index)
+
+
+    def _clip_frame_index(self, index):
+
+        if index < 0:
+            return 0
+
+        elif index > len(self):
+            return len(self)
+
+        else:
+            return index
+
+
+    def _get_channel_slice(self, indices):
+
+        if indices is None:
+            return slice(None), None
+
+        elif isinstance(indices, int):
+            return indices, None
+
+        else:
+            # assume `indices` is sequence of integers
+
+            start_index = min(indices)
+            end_index = max(indices) + 1
+            slice = slice(start_index, end_index)
+            result_indices = [i - start_index for i in indices]
+            return slice, result_indices
+
+
+    def _read(self, frame_slice, channel_slice):
+        raise NotImplementedError()
+    
+
+    def _select_channels(self, samples, frame_first, indices):
+        if frame_first:
+            return samples[:, indices]
+        else:
+            return samples[indices, :]

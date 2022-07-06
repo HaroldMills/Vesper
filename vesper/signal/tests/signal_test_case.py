@@ -19,13 +19,13 @@ class SignalTestCase(TestCase):
         self._assert_metadata(
             s, name, time_axis, sample_array_shape, sample_type)
         
-        self._check_sample_reader(s.as_frames, s, True)
-        self._check_sample_reader(s.as_channels, s, False)
+        self._check_signal_indexer(s.as_frames, s, True)
+        self._check_signal_indexer(s.as_channels, s, False)
         
         if samples is not None:
             utils.test_indexing(s.as_channels, samples, NUM_INDEXING_TESTS)
             utils.test_indexing(
-                s.as_frames, np.swapaxes(samples, 0, 1), NUM_INDEXING_TESTS)
+                s.as_frames, samples.swapaxes(0, 1), NUM_INDEXING_TESTS)
         
         self.assertEqual(len(s.channels), channel_count)
         self.assertEqual(s.channel_count, channel_count)
@@ -66,7 +66,7 @@ class SignalTestCase(TestCase):
         self.assertEqual(s.sample_type, np.dtype(sample_type))
 
 
-    def _check_sample_reader(self, r, s, frame_first):
+    def _check_signal_indexer(self, r, s, frame_first):
         
         self.assertIs(r.signal, s)
         self.assertEqual(r.frame_first, frame_first)

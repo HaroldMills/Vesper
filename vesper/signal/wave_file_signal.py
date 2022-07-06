@@ -70,11 +70,9 @@ class WaveFileSignal(AudioFileSignal):
         else:
             sample_type = np.dtype('<i2')    # little-endian by WAVE file spec
 
-        read_delegate = _SampleReadDelegate(self)
-
         super().__init__(
-            frame_count, frame_rate, channel_count, sample_type,
-            read_delegate, name=name, file_path=path)
+            frame_count, frame_rate, channel_count, sample_type, name=name,
+            file_path=path)
 
 
     def _handle_error(self, message):
@@ -88,9 +86,55 @@ class WaveFileSignal(AudioFileSignal):
 
 
     def close(self):
-        if self._wave_reader is not None:
+        if self.is_open:
             self._wave_reader.close()
             self._wave_reader = None
+
+
+    def _read(self, frame_slice, channel_slice):
+        
+        if not self.is_open:
+            raise SignalError(
+                'Attempt to read samples from closed WAVE file signal.')
+
+        read_frame_count = frame_slice.stop - frame_slice.start
+        
+        # Set read position.
+        try:
+            self._wave_reader.setpos(frame_slice.start)
+        except Exception:
+            self._handle_error(
+                f'Could not set read position for {self._file_text}.')
+
+        # Read sample data.
+        try:
+            buffer = self._wave_reader.readframes(read_frame_count)
+        except Exception:
+            self._handle_error(
+                f'Could not read sample data from {self._file_text}.')
+                
+        # Check actual read size.
+        expected_byte_count = \
+            read_frame_count * self.channel_count * self.sample_type.itemsize
+        if len(buffer) != expected_byte_count:
+            self._handle_error(
+                f'Sample data read yielded {len(buffer)} bytes rather '
+                f'than expected {expected_byte_count} bytes for '
+                f'{self._file_text}.')
+            
+        # Convert sample data from Python `bytes` object to
+        # one-dimensional NumPy array.
+        samples = np.frombuffer(buffer, dtype=self.sample_type)
+        
+        # Reshape NumPy array to two dimensions.
+        samples.shape = (read_frame_count, self.channel_count)
+        
+        # Select channels if needed.
+        read_channel_count = channel_slice.stop - channel_slice.start
+        if read_channel_count != self.channel_count:
+            samples = samples[:, channel_slice]
+            
+        return samples, True
         
 
 def _get_file_and_path(file):
@@ -139,83 +183,3 @@ def _get_file_text(file):
 #         channel_string = f'{channel_count}-channel'
         
 #     return f'{channel_string}, {sample_size}-bit, {frame_rate} Hz WAVE'
-       
-       
-class _SampleReadDelegate(SampleReadDelegate):
-    
-    
-    def __init__(self, parent):
-        super().__init__(True)
-        self._parent = parent
-        
-        
-    def read(self, frame_key, channel_key):
-        
-        if not self._parent.is_open:
-            raise SignalError(
-                'Attempt to read samples from closed WAVE file signal.')
-
-        start_frame_num, end_frame_num = _get_bounds(frame_key)
-        frame_count = end_frame_num - start_frame_num
-        
-        start_channel_num, end_channel_num = _get_bounds(channel_key)
-        channel_count = end_channel_num - start_channel_num
-        
-        parent = self._parent
-
-        # Set read position.
-        try:
-            parent._wave_reader.setpos(start_frame_num)
-        except Exception:
-            parent._handle_error(
-                f'Could not set read position for {parent._file_text}.')
-
-        # Read sample data.
-        try:
-            buffer = parent._wave_reader.readframes(frame_count)
-        except Exception:
-            parent._handle_error(
-                f'Could not read sample data from {parent._file_text}.')
-                
-        # Check actual read size.
-        expected_byte_count = \
-            frame_count * parent.channel_count * parent.sample_type.itemsize
-        if len(buffer) != expected_byte_count:
-            parent._handle_error(
-                f'Sample data read yielded {len(buffer)} bytes rather '
-                f'than expected {expected_byte_count} bytes for '
-                f'{parent._file_text}.')
-            
-        # Convert sample data from Python `bytes` object to
-        # one-dimensional NumPy array.
-        samples = np.frombuffer(buffer, dtype=parent.sample_type)
-        
-        # Reshape NumPy array to two dimensions.
-        samples.shape = (frame_count, parent.channel_count)
-        
-        # Select channels if needed.
-        if start_channel_num != 0 or end_channel_num != parent.channel_count:
-            samples = samples[:, channel_key]
-            
-        # Discard shape dimensions for integer keys.
-        frame_dim = _get_dim(frame_key, frame_count)
-        channel_dim = _get_dim(channel_key, channel_count)
-        samples.shape = frame_dim + channel_dim
-                    
-        return samples
-
-        
-def _get_bounds(key):
-
-    if isinstance(key, int):
-        return key, key + 1
-    else:
-        return key.start, key.stop
-    
-    
-def _get_dim(key, count):
-
-    if isinstance(key, int):
-        return ()
-    else:
-        return (count,)

@@ -1,18 +1,19 @@
 from vesper.tests.test_case import TestCase
-import vesper.signal.sample_reader as sample_reader
+import vesper.signal.signal_indexer as signal_indexer
 
 
-# This module tests the auxiliary functions of the `sample_reader`
-# module, but not the `SampleReader` class. The `test_signal` module
-# tests the `SampleReader` class as part of testing the `Signal` class.
+# This module tests the auxiliary functions of the `signal_indexer`
+# module, but not the `SignalIndexer` class. The `test_signal` module
+# tests the `SignalIndexer` class as part of testing the `Signal` class.
 
 
-class SampleReaderTests(TestCase):
+NAME = 'time'
+
+
+class SignalIndexerTests(TestCase):
 
 
     def test_normalize_int_key(self):
-        
-        method = sample_reader._normalize_int_key
         
         n = 5
         
@@ -25,19 +26,13 @@ class SampleReaderTests(TestCase):
         
         for key, expected in cases:
             
-            # Test without axis name arg.
-            actual = method(key, n)
-            self.assertEqual(actual, expected)
-            
-            # Test with axis name arg.
-            actual = method(key, n, 'time')
+            actual = signal_indexer._normalize_int_key(key, n, NAME)
+            expected = slice(expected, expected + 1)
             self.assertEqual(actual, expected)
  
 
 
     def test_normalize_int_key_errors(self):
-        
-        method = sample_reader._normalize_int_key
         
         n = 5
         
@@ -47,13 +42,9 @@ class SampleReaderTests(TestCase):
         ]
         
         for case in cases:
-            
-            # Test without axis name arg.
-            self.assert_raises(IndexError, method, *case)
-            
-            # Test with axis name arg.
-            args = case + ('time',)
-            self.assert_raises(IndexError, method, *args)
+            args = case + (NAME,)
+            self.assert_raises(
+                IndexError, signal_indexer._normalize_int_key, *args)
 
 
     def test_normalize_slice_key(self):
@@ -106,22 +97,20 @@ class SampleReaderTests(TestCase):
         ]
         
         for args, expected in cases:
-            args = (slice(*args), n)
-            actual = sample_reader._normalize_slice_key(*args)
+            args = (slice(*args), n, NAME)
+            actual = signal_indexer._normalize_slice_key(*args)
             expected = slice(*expected)
             self.assertEqual(actual, expected)
             
             
     def test_normalize_slice_key_errors(self):
-        method = sample_reader._normalize_slice_key
+        method = signal_indexer._normalize_slice_key
         key = slice(0, 5, 2)
-        self.assert_raises(IndexError, method, key, 5)
+        self.assert_raises(IndexError, method, key, 5, NAME)
         
         
-    def test_normalize_int_or_slice_key(self):
+    def test_normalize_key(self):
         
-        method = sample_reader._normalize_int_or_slice_key
-            
         n = 5
         
         cases = [
@@ -141,23 +130,19 @@ class SampleReaderTests(TestCase):
         
         for key, expected in cases:
             
-            if isinstance(key, tuple):
+            if isinstance(key, int):
+                expected = slice(key, key + 1), True
+
+            else:
                 key = slice(*key)
-                expected = slice(*expected)
+                expected = slice(*expected), False
                             
-            # Test without axis name arg.
-            actual = method(key, n)
-            self.assertEqual(actual, expected)
-            
-            # Test with axis name arg.
-            actual = method(key, n, 'time')
+            actual = signal_indexer._normalize_key(key, n, NAME)
             self.assertEqual(actual, expected)
             
             
-    def test_normalize_int_or_slice_key_errors(self):
+    def test_normalize_key_errors(self):
          
-        method = sample_reader._normalize_int_or_slice_key
-        
         n = 5
          
         cases = [
@@ -174,13 +159,11 @@ class SampleReaderTests(TestCase):
         for case in cases:
             
             if isinstance(case, int):
-                args = (case, n)
+                args = (case,)
             else:
-                args = (slice(*case), n)
+                args = (slice(*case),)
                 
-            # Test without axis name arg.
-            self.assert_raises(IndexError, method, *args)
+            args += (n, NAME)
             
-            # Test with axis name arg.
-            args += ('time',)
-            self.assert_raises(IndexError, method, *args)
+            self.assert_raises(
+                IndexError, signal_indexer._normalize_key, *args)

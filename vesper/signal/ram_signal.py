@@ -3,7 +3,6 @@
 
 from numbers import Number
 
-from vesper.signal.sample_read_delegate import SampleReadDelegate
 from vesper.signal.signal import Signal
 from vesper.signal.time_axis import TimeAxis
 
@@ -20,22 +19,28 @@ class RamSignal(Signal):
     
     def __init__(self, time_axis, samples, frame_first, name=None):
         
-        frame_count, channel_count, sample_array_shape = \
+        length, channel_count, sample_array_shape = \
             _get_shape(samples, frame_first)
             
-        # Create `TimeAxis` from frame rate if needed.
-        if isinstance(time_axis, Number):
-            time_axis = TimeAxis(frame_count, time_axis)
-        else:
-            _check_frame_count(frame_count, time_axis)
+        time_axis = _get_time_axis(time_axis, length)
             
-        read_delegate = _SampleReadDelegate(samples, frame_first)
-        
         super().__init__(
-            time_axis, channel_count, sample_array_shape, samples.dtype,
-            read_delegate, name)
-        
-        
+            time_axis, channel_count, sample_array_shape, samples.dtype, name)
+
+        self._samples = samples
+        self._frame_first = frame_first
+
+
+    def _read(self, frame_slice, channel_slice):
+
+        if self._frame_first:
+            samples = self._samples[frame_slice, channel_slice]
+        else:
+            samples = self._samples[channel_slice, frame_slice]
+
+        return samples, self._frame_first
+
+
 def _get_shape(samples, frame_first):
     
     shape = samples.shape
@@ -54,19 +59,23 @@ def _get_shape(samples, frame_first):
     return frame_count, channel_count, sample_array_shape
 
 
-def _check_frame_count(frame_count, time_axis):
-    
-    if frame_count != time_axis.length:
-        raise ValueError(
-            f'Number of sample frames {frame_count} in NumPy sample '
-            f'array does not match time axis length {time_axis.length}.')
+def _get_time_axis(time_axis, length):
 
+    if isinstance(time_axis, Number):
+        # `time_axis` is frame rate
 
-class _SampleReadDelegate(SampleReadDelegate):
-    
-    def __init__(self, samples, frame_first):
-        super().__init__(frame_first)
-        self._samples = samples
+        return TimeAxis(length, time_axis)
+
+    elif isinstance(time_axis, TimeAxis):
         
-    def read(self, first_key, second_key):
-        return self._samples[first_key, second_key]
+        if length != time_axis.length:
+            raise ValueError(
+                f'Number of sample frames {length} in NumPy sample '
+                f'array does not match time axis length {time_axis.length}.')
+
+        return time_axis
+
+    else:
+        raise TypeError(
+            f'Expected either TimeAxis object or numeric frame rate, '
+            f'but got {time_axis.__class__.__name__}.')

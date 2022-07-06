@@ -34,12 +34,11 @@ c.shape                 # `(len(c),) + c.sample_array_shape`
 
 c.sample_type           # NumPy `dtype` of samples
 
-r[...]                  # synchronous, reads one channel segment, raises
-                        # exception  if not all of segment available
+c.read(start_index, length)
+                        # synchronous sample read, raises exception
+                        # if any requested samples are unavailable
 
-r.read(...)             # asynchronous, can read multiple channel segments,
-                        # yields intersection of requested segments and
-                        # available segments
+c[...]                  # synchronous, delegates to `c.read`
 '''
 
 

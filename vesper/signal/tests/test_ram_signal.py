@@ -40,7 +40,7 @@ class RamSignalTests(SignalTestCase):
             channel_count = shape[1]
             sample_array_shape = shape[2:]
             samples_f = utils.create_samples(shape, sample_type=sample_type)
-            samples_c = np.swapaxes(samples_f, 0, 1)
+            samples_c = samples_f.swapaxes(0, 1)
             
             # Frame rate and frame-first samples.
             s = RamSignal(frame_rate, samples_f, True, name)

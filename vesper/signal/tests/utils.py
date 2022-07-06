@@ -62,9 +62,9 @@ def _any_zero(x):
 
 def _get_test_index(n):
     
-    index_type = random.choice(('number', 'range', 'colon'))
+    index_type = random.choice(('int', 'range', 'colon'))
     
-    if index_type == 'number':
+    if index_type == 'int':
         return random.randrange(n)
     
     elif index_type == 'range':
@@ -73,7 +73,7 @@ def _get_test_index(n):
         return slice(start, stop)
     
     else:
-        return slice(None, None, None)
+        return slice(None)
     
     
 # def test_mapping(a, forward_name, inverse_name, cases):

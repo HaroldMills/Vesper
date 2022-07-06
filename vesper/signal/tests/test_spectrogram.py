@@ -14,24 +14,24 @@ class SpectrogramTests(SignalTestCase):
     def test_init(self):
         
         channel_count = 2
-        waveform_frame_count = 32
+        waveform_length = 32
         waveform_frame_rate = 16000
         window_size = 16
         hop_size = 8
         dft_size = 16
         
         samples = _get_waveform_samples(
-            channel_count, waveform_frame_count, window_size)
+            channel_count, waveform_length, window_size)
         waveform = RamSignal(waveform_frame_rate, samples, False)
         
         window = np.ones(window_size)
         settings = Bunch(window=window, hop_size=hop_size, dft_size=dft_size)        
         gram = Spectrogram(waveform, settings)
         
-        gram_frame_count = 1 + (waveform_frame_count - window_size) // hop_size
+        gram_length = 1 + (waveform_length - window_size) // hop_size
         gram_frame_rate = waveform_frame_rate / hop_size
         offset = (window_size - 1) / 2 / waveform_frame_rate
-        time_axis = TimeAxis(gram_frame_count, gram_frame_rate, offset)
+        time_axis = TimeAxis(gram_length, gram_frame_rate, offset)
         
         sample_array_shape = ((dft_size // 2) + 1,)
         
@@ -53,9 +53,9 @@ def _get_waveform_samples(channel_count, frame_count, window_size):
     return np.stack(channel_samples)
     
     
-def _get_waveform_channel_samples(channel_num, frame_count, window_size):
+def _get_waveform_channel_samples(channel_index, frame_count, window_size):
     phase_factor = 2 * np.pi / window_size
-    return np.cos(channel_num * np.arange(frame_count) * phase_factor)
+    return np.cos(channel_index * np.arange(frame_count) * phase_factor)
 
 
 def _get_gram_samples(waveform, window, hop_size, dft_size):
