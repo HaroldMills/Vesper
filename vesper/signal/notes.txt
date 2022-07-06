@@ -68,6 +68,20 @@ Python-centric, I also like the idea of decentering the
 `__getitem__` method, instead centering `read` methods that
 will translate more directly to other languages.
 
+It might be good to include something like the following in
+`Signal`, or perhaps in a utility module:
+
+    generate_segments(
+        segment_size, hop_size=None, start_frame_index=0,
+        include_final_partial_segment=True)
+
+where `segment_size` and `hop_size` have units of frames.
+
+This would facilitate the successive processing of signal segments, as in:
+
+    for samples in signal.generate_segments(segment_size):
+        process_samples(samples)
+
 
 Signals to do:
 
