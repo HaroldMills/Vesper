@@ -33,12 +33,12 @@ class SpectrogramTests(SignalTestCase):
         offset = (window_size - 1) / 2 / waveform_frame_rate
         time_axis = TimeAxis(gram_length, gram_frame_rate, offset)
         
-        sample_array_shape = ((dft_size // 2) + 1,)
+        item_shape = ((dft_size // 2) + 1,)
         
         samples = _get_gram_samples(waveform, window, hop_size, dft_size)
         
         self.assert_signal(
-            gram, 'Spectrogram', time_axis, channel_count, sample_array_shape,
+            gram, 'Spectrogram', time_axis, channel_count, item_shape,
             'float64', samples)
         
         # _show_samples(gram)

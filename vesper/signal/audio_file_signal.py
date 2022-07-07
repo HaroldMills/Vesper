@@ -29,10 +29,9 @@ class AudioFileSignal(Signal):
             file_path=None):
         
         time_axis = TimeAxis(length, frame_rate)
-        sample_array_shape = ()
+        item_shape = ()
         
-        super().__init__(
-            time_axis, channel_count, sample_array_shape, dtype, name)
+        super().__init__(time_axis, channel_count, item_shape, dtype, name)
         
         self._file_path = file_path
         

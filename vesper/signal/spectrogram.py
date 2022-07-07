@@ -21,11 +21,10 @@ class Spectrogram(Signal):
             
         time_axis = _create_time_axis(waveform.time_axis, settings)
         channel_count = len(waveform.channels)
-        sample_array_shape = _get_sample_array_shape(settings)
+        item_shape = _get_item_shape(settings)
         dtype = 'float64'
         
-        super().__init__(
-            time_axis, channel_count, sample_array_shape, dtype, name)
+        super().__init__(time_axis, channel_count, item_shape, dtype, name)
         
         
     def _read(self, frame_slice, channel_slice):
@@ -67,7 +66,7 @@ class Spectrogram(Signal):
             result = np.stack(grams)
             
         # Give result correct shape.
-        shape = (channel_count, frame_count) + self._sample_array_shape
+        shape = (channel_count, frame_count) + self._item_shape
         result = result.reshape(shape)
 
         return result, False
@@ -129,6 +128,6 @@ def _get_gram_length(waveform_length, window_size, hop_size):
         return 1 + (waveform_length - window_size) // hop_size
 
 
-def _get_sample_array_shape(settings):
+def _get_item_shape(settings):
     spectrum_size = settings.dft_size // 2 + 1
     return (spectrum_size,)

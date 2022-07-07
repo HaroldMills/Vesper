@@ -9,9 +9,9 @@ from vesper.util.named import Named
 '''
 A `Channel` is intended for use as a standalone object, and so has a
 full set of attributes. For example, signal metadata like the time axis,
-the sample array shape, and the sample type are available as channel
+the item shape and size, and the sample type are available as channel
 attributes, even though they are also available as attributes of the
-channels' signal.
+channel's signal.
 
 
 c.signal
@@ -28,11 +28,11 @@ c.frame_period          # `c.time_axis.frame_period`
 c.sample_rate           # `c.time_axis.sample_rate`
 c.sample_period         # `c.time_axis.sample_period`
 
-len(c)                  # sample array count, `c.time_axis.length`
+len(c)                  # item count, `c.time_axis.length`
 
-c.sample_array_shape    # sample array shape
+c.item_shape            # item shape
 
-c.shape                 # `(len(c),) + c.sample_array_shape`
+c.shape                 # `(len(c),) + c.item_shape`
 
 c.size                  # product of elements of `c.shape`
 
@@ -54,7 +54,7 @@ class Channel(Named):
     """
     One channel of a signal.
     
-    A channel is a sequence of sample arrays and associated metadata.
+    A channel is a sequence of items and associated metadata.
     """
     
 
@@ -109,13 +109,13 @@ class Channel(Named):
 
 
     @property
-    def sample_array_shape(self):
-        return self.signal.sample_array_shape
+    def item_shape(self):
+        return self.signal.item_shape
     
     
     @property
     def shape(self):
-        return (len(self),) + self.sample_array_shape
+        return (len(self),) + self.item_shape
 
 
     @property

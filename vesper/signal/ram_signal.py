@@ -19,13 +19,12 @@ class RamSignal(Signal):
     
     def __init__(self, time_axis, samples, frame_first, name=None):
         
-        length, channel_count, sample_array_shape = \
-            _get_shape(samples, frame_first)
+        length, channel_count, item_shape =  _get_shape(samples, frame_first)
             
         time_axis = _get_time_axis(time_axis, length)
             
         super().__init__(
-            time_axis, channel_count, sample_array_shape, samples.dtype, name)
+            time_axis, channel_count, item_shape, samples.dtype, name)
 
         self._samples = samples
         self._frame_first = frame_first
@@ -47,16 +46,16 @@ def _get_shape(samples, frame_first):
     
     if len(shape) < 2:
         raise ValueError(
-            'RamSignal NumPy sample array must have at least two dimensions.')
+            'RamSignal sample array must have at least two dimensions.')
 
     if frame_first:
         frame_count, channel_count = shape[:2]
     else:
         channel_count, frame_count = shape[:2]
         
-    sample_array_shape = shape[2:]
+    item_shape = shape[2:]
     
-    return frame_count, channel_count, sample_array_shape
+    return frame_count, channel_count, item_shape
 
 
 def _get_time_axis(time_axis, length):

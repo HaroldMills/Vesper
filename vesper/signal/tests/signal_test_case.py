@@ -11,13 +11,12 @@ class SignalTestCase(TestCase):
 
 
     def assert_signal(
-            self, s, name, time_axis, channel_count, sample_array_shape,
-            dtype, samples=None):
+            self, s, name, time_axis, channel_count, item_shape, dtype,
+            samples=None):
         
         # If provided, `samples` must be channel-first.
         
-        self._assert_metadata(
-            s, name, time_axis, sample_array_shape, dtype)
+        self._assert_metadata(s, name, time_axis, item_shape, dtype)
         
         self._check_signal_indexer(s.as_frames, s, True)
         self._check_signal_indexer(s.as_channels, s, False)
@@ -42,19 +41,15 @@ class SignalTestCase(TestCase):
             # Check channel access by number.
             c = s.channels[i]
             self.assert_channel(
-                c, s, name, i, time_axis, sample_array_shape, dtype,
-                channel_samples)
+                c, s, name, i, time_axis, item_shape, dtype, channel_samples)
             
             # Check channel access by name.
             c = s.channels[name]
             self.assert_channel(
-                c, s, name, i, time_axis, sample_array_shape, dtype,
-                channel_samples)
+                c, s, name, i, time_axis, item_shape, dtype, channel_samples)
              
             
-    def _assert_metadata(
-            self, s, name, time_axis, sample_array_shape, dtype):
-
+    def _assert_metadata(self, s, name, time_axis, item_shape, dtype):
         self.assertEqual(s.name, name)
         self.assertEqual(s.time_axis, time_axis)
         self.assertEqual(len(s), time_axis.length)
@@ -62,7 +57,7 @@ class SignalTestCase(TestCase):
         self.assertEqual(s.frame_period, time_axis.frame_period)
         self.assertEqual(s.sample_rate, time_axis.sample_rate)
         self.assertEqual(s.sample_period, time_axis.sample_period)
-        self.assertEqual(s.sample_array_shape, sample_array_shape)
+        self.assertEqual(s.item_shape, item_shape)
         self.assertEqual(s.dtype, np.dtype(dtype))
 
 
@@ -77,22 +72,22 @@ class SignalTestCase(TestCase):
         if frame_first:
             self.assertEqual(len(r), frame_count)
             self.assertEqual(
-                r.shape, (frame_count, channel_count) + s.sample_array_shape )
+                r.shape, (frame_count, channel_count) + s.item_shape)
         else:
             self.assertEqual(len(r), channel_count)
             self.assertEqual(
-                r.shape, (channel_count, frame_count) + s.sample_array_shape)
+                r.shape, (channel_count, frame_count) + s.item_shape)
             
         self.assertEqual(r.dtype, s.dtype)
     
 
     def assert_channel(
-            self, c, signal, name, number, time_axis, sample_array_shape,
-            dtype, samples=None):
+            self, c, signal, name, number, time_axis, item_shape, dtype,
+            samples=None):
         
         # If provided, `samples` must be channel-first.
         
-        self._assert_metadata(c, name, time_axis, sample_array_shape, dtype)
+        self._assert_metadata(c, name, time_axis, item_shape, dtype)
         
         self.assertEqual(c.signal, signal)
         self.assertEqual(c.number, number)

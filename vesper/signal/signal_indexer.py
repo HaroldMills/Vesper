@@ -91,12 +91,12 @@ class SignalIndexer:
         
         frame_count = len(self.signal)
         channel_count = self.signal.channel_count
-        sample_array_shape = self.signal.sample_array_shape
+        item_shape = self.signal.item_shape
         
         if self.frame_first:
-            return (frame_count, channel_count) + sample_array_shape
+            return (frame_count, channel_count) + item_shape
         else:
-            return (channel_count, frame_count) + sample_array_shape
+            return (channel_count, frame_count) + item_shape
         
     
     @property
@@ -115,9 +115,9 @@ class SignalIndexer:
         
         # Get indexing information in a standard form.
         (frame_slice, frame_key_was_int, channel_slice, channel_key_was_int,
-            samples_key) = self._parse_key(key)
+            item_key) = self._parse_key(key)
         
-        # Get requested sample arrays from signal.
+        # Get requested items from signal.
         samples, samples_frame_first = \
             self.signal._read(frame_slice, channel_slice)
 
@@ -126,9 +126,9 @@ class SignalIndexer:
             samples = samples.swapaxes(0, 1)
             samples_frame_first = True
 
-        # Index sample arrays if needed.
-        if samples_key is not None:
-            samples = _index_sample_arrays(samples, samples_key)
+        # Index items if needed.
+        if item_key is not None:
+            samples = _index_items(samples, item_key)
         
         # Make sure result has correct axis count and order.
         return self._modify_result_axes_if_needed(
@@ -300,7 +300,7 @@ def _normalize_slice_bound(bound, default, length):
     return bound
 
 
-def _index_sample_arrays(samples, samples_key):
+def _index_items(samples, samples_key):
 
     # Prepend two colon slices (i.e. what `__getitem__` receives when
     # you index with ":") to samples key to make `samples` key. The
