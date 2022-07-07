@@ -24,45 +24,44 @@ class SignalTests(SignalTestCase):
         
         frame_rate = 24000
         
-        for (name, frame_count, channel_count, sample_array_shape,
-                sample_type) in cases:
+        for name, frame_count, channel_count, sample_array_shape, dtype in \
+                cases:
             
             time_axis = TimeAxis(frame_count, frame_rate)
             shape = (channel_count, frame_count) + sample_array_shape
-            samples = utils.create_samples(shape, sample_type=sample_type)
+            samples = utils.create_samples(shape, dtype=dtype)
             
             
             # Test initializer with specified name.
             
             s = _TestSignal(
-                time_axis, channel_count, sample_array_shape, sample_type,
-                samples, name)
+                time_axis, channel_count, sample_array_shape, dtype, samples,
+                name)
             
             self.assert_signal(
-                s, name, time_axis, channel_count, sample_array_shape,
-                sample_type, samples)
+                s, name, time_axis, channel_count, sample_array_shape, dtype,
+                samples)
         
         
             # Test initializer with default name.
             
             s = _TestSignal(
-                time_axis, channel_count, sample_array_shape, sample_type,
-                samples)
+                time_axis, channel_count, sample_array_shape, dtype, samples)
             
             self.assert_signal(
                 s, 'Signal', time_axis, channel_count, sample_array_shape,
-                sample_type, samples)
+                dtype, samples)
     
     
 class _TestSignal(Signal):
    
 
     def __init__(
-            self, time_axis, channel_count, sample_array_shape, sample_type,
+            self, time_axis, channel_count, sample_array_shape, dtype,
             samples, name=None):
 
         super().__init__(
-            time_axis, channel_count, sample_array_shape, sample_type, name)
+            time_axis, channel_count, sample_array_shape, dtype, name)
 
         self._samples = samples
         

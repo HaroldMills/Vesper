@@ -36,7 +36,7 @@ c.shape                 # `(len(c),) + c.sample_array_shape`
 
 c.size                  # product of elements of `c.shape`
 
-c.sample_type           # NumPy `dtype` of samples
+c.dtype                 # NumPy `dtype` of samples
 
 c.read(start_index, length)
                         # synchronous sample read, raises exception
@@ -124,8 +124,8 @@ class Channel(Named):
     
     
     @property
-    def sample_type(self):
-        return self.signal.sample_type
+    def dtype(self):
+        return self.signal.dtype
     
     
     def __getitem__(self, key):

@@ -29,30 +29,30 @@ class RamSignalTests(SignalTestCase):
         
         # We don't test with an int16 sample type since the int16 value
         # range is not large enough to accomodate some test sample values.
-        sample_types = ['int32', np.dtype('float')]
+        dtypes = ['int32', np.dtype('float')]
         
-        cases = itertools.product(names, shapes, frame_rates, sample_types)
+        cases = itertools.product(names, shapes, frame_rates, dtypes)
         
-        for name, shape, frame_rate, sample_type in cases:
+        for name, shape, frame_rate, dtype in cases:
         
             expected_name = 'Signal' if name is None else name
             time_axis = TimeAxis(shape[0], frame_rate)
             channel_count = shape[1]
             sample_array_shape = shape[2:]
-            samples_f = utils.create_samples(shape, sample_type=sample_type)
+            samples_f = utils.create_samples(shape, dtype=dtype)
             samples_c = samples_f.swapaxes(0, 1)
             
             # Frame rate and frame-first samples.
             s = RamSignal(frame_rate, samples_f, True, name)
             self.assert_signal(
                 s, expected_name, time_axis, channel_count, sample_array_shape,
-                sample_type, samples_c)
+                dtype, samples_c)
     
             # Time axis and rame-first samples.
             s = RamSignal(time_axis, samples_f, True, name)
             self.assert_signal(
                 s, expected_name, time_axis, channel_count, sample_array_shape,
-                sample_type, samples_c)
+                dtype, samples_c)
             
             
     def test_init_errors(self):

@@ -27,7 +27,7 @@ s.channel_count         # `len(s.channels)`
 
 s.sample_array_shape    # sample array shape
 
-s.sample_type           # NumPy `dtype` of samples
+s.dtype                 # NumPy `dtype` of samples
 
 s.read(start_frame_index, length, channel_indices=None)   
                         # synchronous sample read, raises exception if
@@ -102,7 +102,7 @@ class Signal(Named):
     
     
     def __init__(
-            self, time_axis, channel_count, sample_array_shape, sample_type,
+            self, time_axis, channel_count, sample_array_shape, dtype,
             name=None):
         
         if name is None:
@@ -113,7 +113,7 @@ class Signal(Named):
         self._time_axis = time_axis
         self._channels = self._create_channels(channel_count)
         self._sample_array_shape = tuple(sample_array_shape)
-        self._sample_type = np.dtype(sample_type)
+        self._dtype = np.dtype(dtype)
         self._as_frames = SignalIndexer(self, True)
         self._as_channels = SignalIndexer(self, False)
         
@@ -168,8 +168,8 @@ class Signal(Named):
     
     
     @property
-    def sample_type(self):
-        return self._sample_type
+    def dtype(self):
+        return self._dtype
     
     
     @property

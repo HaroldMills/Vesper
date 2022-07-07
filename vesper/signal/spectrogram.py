@@ -22,10 +22,10 @@ class Spectrogram(Signal):
         time_axis = _create_time_axis(waveform.time_axis, settings)
         channel_count = len(waveform.channels)
         sample_array_shape = _get_sample_array_shape(settings)
-        sample_type = 'float64'
+        dtype = 'float64'
         
         super().__init__(
-            time_axis, channel_count, sample_array_shape, sample_type, name)
+            time_axis, channel_count, sample_array_shape, dtype, name)
         
         
     def _read(self, frame_slice, channel_slice):
@@ -46,7 +46,7 @@ class Spectrogram(Signal):
         if frame_count == 0 or channel_count == 0:
             # result will be empty
             
-            result = np.array([], dtype=self._sample_type)
+            result = np.array([], dtype=self._dtype)
             
         elif channel_count == 1:
             # result will have one channel

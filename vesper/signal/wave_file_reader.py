@@ -81,13 +81,12 @@ class WaveFileReader(AudioFileReader):
                 f'which are not supported.')
             
         if sample_size == 8:
-            sample_type = np.uint8            # unsigned as per WAVE file spec
+            dtype = np.uint8            # unsigned as per WAVE file spec
         else:
-            sample_type = np.dtype('<i2')
+            dtype = np.dtype('<i2')
             
         super().__init__(
-            file_path, channel_count, length, sample_rate, sample_type,
-            mono_1d)
+            file_path, channel_count, length, sample_rate, dtype, mono_1d)
         
         
     def read(self, start_index=0, length=None):
@@ -130,7 +129,7 @@ class WaveFileReader(AudioFileReader):
             self._reader.close()
             raise OSError(f'Sample read failed for {self._name}.')
             
-        samples = np.frombuffer(buffer, dtype=self.sample_type)
+        samples = np.frombuffer(buffer, dtype=self.dtype)
         
         if len(samples) != length * self.channel_count:
             raise OSError(

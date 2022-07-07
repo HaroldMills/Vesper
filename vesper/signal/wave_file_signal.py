@@ -65,12 +65,12 @@ class WaveFileSignal(AudioFileSignal):
                 f'which are not supported.')
             
         if sample_size == 8:
-            sample_type = np.uint8           # unsigned by WAVE file spec
+            dtype = np.uint8           # unsigned by WAVE file spec
         else:
-            sample_type = np.dtype('<i2')    # little-endian by WAVE file spec
+            dtype = np.dtype('<i2')    # little-endian by WAVE file spec
 
         super().__init__(
-            frame_count, frame_rate, channel_count, sample_type, name=name,
+            frame_count, frame_rate, channel_count, dtype, name=name,
             file_path=path)
 
 
@@ -114,7 +114,7 @@ class WaveFileSignal(AudioFileSignal):
                 
         # Check actual read size.
         expected_byte_count = \
-            read_frame_count * self.channel_count * self.sample_type.itemsize
+            read_frame_count * self.channel_count * self.dtype.itemsize
         if len(buffer) != expected_byte_count:
             self._handle_error(
                 f'Sample data read yielded {len(buffer)} bytes rather '
@@ -123,7 +123,7 @@ class WaveFileSignal(AudioFileSignal):
             
         # Convert sample data from Python `bytes` object to
         # one-dimensional NumPy array.
-        samples = np.frombuffer(buffer, dtype=self.sample_type)
+        samples = np.frombuffer(buffer, dtype=self.dtype)
         
         # Reshape NumPy array to two dimensions.
         samples.shape = (read_frame_count, self.channel_count)

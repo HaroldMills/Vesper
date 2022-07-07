@@ -23,7 +23,7 @@ r.shape            # first two elements ordered according to whether
 
 r.size             # product of elements of `r.shape`.
 
-r.sample_type      # NumPy `dtype` of samples
+r.dtype            # NumPy `dtype` of samples
 
 r[...]             # synchronous, reads one signal segment, raises exception
                    # if not all of segment available
@@ -105,8 +105,8 @@ class SignalIndexer:
 
 
     @property
-    def sample_type(self):
-        return self.signal.sample_type
+    def dtype(self):
+        return self.signal.dtype
     
     
     def __getitem__(self, key):
