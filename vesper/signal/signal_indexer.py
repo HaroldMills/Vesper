@@ -1,12 +1,13 @@
 """Module containing class `SignalIndexer`."""
 
 
-import numpy as np
+import math
 
 
 '''
-A `SignalIndexer` provides a `__getitem__` method that allows a signal
-to be indexed much like a NumPy array. Every signal provides two indexers,
+A `SignalIndexer` provides NumPy-array-like access to the samples
+of a signal. It includes `shape`, `size`, and `dtype` properties and
+`__len__` and `__getitem__` methods. Every signal provides two indexers,
 one for frame-first indexing and the other for channel-first indexing.
 
 
@@ -19,6 +20,8 @@ len(r)             # channel count if channel-first, frame count if
 
 r.shape            # first two elements ordered according to whether
                    # indexer is frame-first or channel-first
+
+r.size             # product of elements of `r.shape`.
 
 r.sample_type      # NumPy `dtype` of samples
 
@@ -95,7 +98,12 @@ class SignalIndexer:
         else:
             return (channel_count, frame_count) + sample_array_shape
         
-        
+    
+    @property
+    def size(self):
+        return math.prod(self.shape)
+
+
     @property
     def sample_type(self):
         return self.signal.sample_type

@@ -31,7 +31,12 @@ def test_eq(cls, args, changes):
 
 
 def test_indexing(x, expected, test_count):
-     
+    
+    assert len(x) == len(expected)
+    assert x.shape == expected.shape
+    assert x.size == expected.size
+    assert x.sample_type == expected.dtype
+
     # Before random indexing, try indexing with a single colon.
     # This will elicit many possible bugs.
     assert_arrays_equal(x[:], expected[:], strict=True)

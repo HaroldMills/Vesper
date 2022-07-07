@@ -9,11 +9,17 @@ class SignalTests(SignalTestCase):
 
     def test_init(self):
         
+        # Be careful about numbers of channels and dtypes in the test
+        # cases. In particular, don't use more than two channels for
+        # 16-bit integer dtypes, or `utils.create_samples` will return
+        # 32-bit integer samples because of some sort of NumPy type
+        # promotion that happens to accommodate sample values that are
+        # too large for 16 bits.
         cases = [
             ('A', 0, 0, (), 'int16'),
             ('B', 2, 0, (2,), 'float'),
-            ('Bobo', 0, 3, (3, 4), '<i2'),
-            ('Bibi', 1, 2, (5, 6, 7), '<i4'),
+            ('Bobo', 0, 2, (3, 4), '<i4'),
+            ('Bibi', 1, 3, (5, 6, 7), '<i4'),
         ]
         
         frame_rate = 24000

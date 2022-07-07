@@ -1,6 +1,8 @@
 """Module containing class `Channel`."""
 
 
+import math
+
 from vesper.util.named import Named
 
 
@@ -31,6 +33,8 @@ len(c)                  # sample array count, `c.time_axis.length`
 c.sample_array_shape    # sample array shape
 
 c.shape                 # `(len(c),) + c.sample_array_shape`
+
+c.size                  # product of elements of `c.shape`
 
 c.sample_type           # NumPy `dtype` of samples
 
@@ -112,6 +116,11 @@ class Channel(Named):
     @property
     def shape(self):
         return (len(self),) + self.sample_array_shape
+
+
+    @property
+    def size(self):
+        return math.prod(self.shape)
     
     
     @property
