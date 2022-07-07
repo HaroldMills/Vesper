@@ -38,7 +38,7 @@ class SignalTestCase(TestCase):
             else:
                 channel_samples = samples[i]
  
-            # Check channel access by number.
+            # Check channel access by index.
             c = s.channels[i]
             self.assert_channel(
                 c, s, name, i, time_axis, item_shape, dtype, channel_samples)
@@ -82,7 +82,7 @@ class SignalTestCase(TestCase):
     
 
     def assert_channel(
-            self, c, signal, name, number, time_axis, item_shape, dtype,
+            self, c, signal, name, index, time_axis, item_shape, dtype,
             samples=None):
         
         # If provided, `samples` must be channel-first.
@@ -90,7 +90,7 @@ class SignalTestCase(TestCase):
         self._assert_metadata(c, name, time_axis, item_shape, dtype)
         
         self.assertEqual(c.signal, signal)
-        self.assertEqual(c.number, number)
+        self.assertEqual(c.index, index)
              
         if samples is not None:
             utils.test_indexing(c, samples, NUM_INDEXING_TESTS)

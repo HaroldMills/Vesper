@@ -16,7 +16,7 @@ channel's signal.
 
 c.signal
 
-c.number           # channel number, in [0, `c.signal.channel_count`)
+c.index                 # channel index, in [0, `c.signal.channel_count`)
 
 c.name
 
@@ -58,15 +58,15 @@ class Channel(Named):
     """
     
 
-    def __init__(self, signal, number, name=None):
+    def __init__(self, signal, index, name=None):
         
         if name is None:
-            name = str(number)
+            name = str(index)
             
         super().__init__(name)
         
         self._signal = signal
-        self._number = number
+        self._index = index
 
         
     @property
@@ -75,8 +75,8 @@ class Channel(Named):
     
     
     @property
-    def number(self):
-        return self._number
+    def index(self):
+        return self._index
     
     
     @property
@@ -132,8 +132,8 @@ class Channel(Named):
         
         # Build `Signal.as_channels` key from `Channel` key.
         if isinstance(key, tuple):
-            key = (self.number,) + key
+            key = (self.index,) + key
         else:
-            key = (self.number, key)
+            key = (self.index, key)
             
         return self.signal.as_channels[key]
