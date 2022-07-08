@@ -28,7 +28,7 @@ import csv
 import math
 import time
 
-from scripts.detector_eval.auto.wave_file_reader import WaveFileReader
+from scripts.detector_eval.auto.wave_file_signal import WaveFileSignal
 import scripts.detector_eval.auto.utils as utils
 import vesper.old_bird.old_bird_detector_redux_1_1_mt as old_bird_redux
 import vesper.mpg_ranch.nfc_detector_0_0.detector as mpg_ranch
@@ -103,27 +103,28 @@ def run_detectors_on_one_recording(detector_names, unit_num):
     
     start_time = time.time()
     
-    reader = WaveFileReader(str(file_path))
-    num_chunks = int(math.ceil(reader.length / CHUNK_SIZE))
-    sample_rate = reader.sample_rate
-    
-    detectors, listeners = create_detectors(
-        detector_names, sample_rate, unit_num)
-        
-    for i, samples in enumerate(generate_sample_buffers(reader)):
-        if i != 0 and i % 1000 == 0:
-            print('    Unit {} chunk {} of {}...'.format(
-                unit_num, i, num_chunks))
-        for detector in detectors:
-            detector.detect(samples[0])
-                       
-    for detector in detectors:
-        detector.complete_detection()
+    with WaveFileSignal(file_path) as signal:
 
-    reader.close()
-    
+        channel = signal.channels[0]
+        length = len(channel)
+        num_chunks = int(math.ceil(length / CHUNK_SIZE))
+        sample_rate = channel.sample_rate
+        
+        detectors, listeners = create_detectors(
+            detector_names, sample_rate, unit_num)
+            
+        for i, samples in enumerate(generate_sample_buffers(channel)):
+            if i != 0 and i % 1000 == 0:
+                print('    Unit {} chunk {} of {}...'.format(
+                    unit_num, i, num_chunks))
+            for detector in detectors:
+                detector.detect(samples)
+                        
+        for detector in detectors:
+            detector.complete_detection()
+
     processing_time = time.time() - start_time
-    file_duration = reader.length / sample_rate
+    file_duration = length / sample_rate
     show_processing_time(processing_time, unit_num, file_duration)
     
     return unit_num, listeners
@@ -148,12 +149,13 @@ def create_detector(detector_name, sample_rate, unit_num):
     return detector, listener
 
 
-def generate_sample_buffers(file_reader):
+def generate_sample_buffers(channel):
+    length = len(channel)
     start_index = 0
-    while start_index < file_reader.length:
-        length = min(CHUNK_SIZE, file_reader.length - start_index)
-        yield file_reader.read(start_index, length)
-        start_index += CHUNK_SIZE
+    while start_index != length:
+        read_size = min(CHUNK_SIZE, length - start_index)
+        yield channel.read(start_index, read_size)
+        start_index += read_size
 
 
 def show_processing_time(processing_time, unit_num, file_duration):

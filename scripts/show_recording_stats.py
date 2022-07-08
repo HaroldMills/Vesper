@@ -29,7 +29,7 @@ from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 import numpy as np
 
-from vesper.signal.wave_file_reader import WaveFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 from vesper.util.bunch import Bunch
 
 
@@ -349,11 +349,11 @@ def get_recording_stats(file_paths, interval_duration):
 
 def get_file_interval_stats(file_path, interval_duration):
     
-    reader = WaveFileReader(str(file_path))
-    channel_count = reader.channel_count
-    interval_length = int(interval_duration * reader.sample_rate)
+    signal = WaveFileSignal(file_path)
+    channel_count = signal.channel_count
+    interval_length = int(interval_duration * signal.sample_rate)
     
-    interval_count = reader.length // interval_length
+    interval_count = len(signal) // interval_length
     if TEST_MODE_ENABLED:
         interval_count = min(interval_count, TEST_MODE_INTERVAL_COUNT_LIMIT)
     
@@ -369,7 +369,8 @@ def get_file_interval_stats(file_path, interval_duration):
             for _ in range(channel_count)]
     
         frame_num = interval_num * interval_length
-        samples = reader.read(frame_num, interval_length) / MAX_ABS_SAMPLE
+        samples = signal.read(frame_num, interval_length, frame_first=False)
+        samples /= MAX_ABS_SAMPLE
         
         for channel_num in range(channel_count):
             computer = stat_computers[channel_num]

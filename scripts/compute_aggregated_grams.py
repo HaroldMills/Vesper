@@ -123,7 +123,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import numpy as np
 
-from vesper.signal.wave_file_reader import WaveFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 from vesper.util.bunch import Bunch
 from vesper.util.data_windows import HannWindow
 import vesper.util.time_frequency_analysis_utils as tfa_utils
@@ -235,10 +235,9 @@ def compute_aggregate_gram(file_path):
 def get_tasks(file_path, task_size):
 
     # Get file frame count and sample rate.
-    reader = WaveFileReader(str(file_path))
-    frame_count = reader.length
-    sample_rate = reader.sample_rate
-    reader.close()
+    with WaveFileSignal(file_path) as signal:
+        frame_count = len(signal)
+        sample_rate = signal.sample_rate
 
     # Get size of record from which each aggregate spectrum will be
     # computed, in sample frames.
@@ -273,7 +272,6 @@ def compute_aggregate_spectra(
 
     # print(f'{file_path.name} {start_spectrum_num} {spectrum_count}')
 
-    reader = WaveFileReader(str(file_path))
     window = HannWindow(window_size).samples
 
     spectrum_size = int(dft_size / 2) + 1
@@ -283,17 +281,21 @@ def compute_aggregate_spectra(
 
     start_sample_num = start_spectrum_num * record_size
 
-    for i in range(spectrum_count):
+    with WaveFileSignal(file_path) as signal:
 
-        samples = reader.read(start_sample_num, record_size)[0, :]
+        channel = signal.channels[0]
+        length = len(channel)
 
-        gram = compute_spectrogram(samples, window, hop_size, dft_size)
+        for i in range(spectrum_count):
 
-        spectra[i, :] = aggregator.aggregate(gram)
+            read_size = min(record_size, length - start_sample_num)
+            samples = channel.read(start_sample_num, read_size)
 
-        start_sample_num += record_size
+            gram = compute_spectrogram(samples, window, hop_size, dft_size)
 
-    reader.close()
+            spectra[i, :] = aggregator.aggregate(gram)
+
+            start_sample_num += record_size
 
     tfa_utils.scale_spectrogram(spectra, out=spectra)
 

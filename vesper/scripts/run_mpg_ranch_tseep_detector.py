@@ -11,7 +11,7 @@ import sys
 import time
 
 from vesper.mpg_ranch.nfc_detector_0_1.detector import TseepDetector
-from vesper.signal.wave_file_reader import WaveFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 
 
 READ_SIZE = 60
@@ -24,33 +24,36 @@ def main():
     start_time = time.time()
     
     file_path = sys.argv[1]
-    reader = WaveFileReader(file_path)
-    
-    length = reader.length
-    
-    sample_rate = reader.sample_rate
-    show_message('Input sample rate is {} hertz.'.format(sample_rate))
 
-    duration = length / sample_rate
-    show_message('Input duration is {:.1f} seconds.'.format(duration))
-    
-    listener = Listener(sample_rate)
-    detector = TseepDetector(sample_rate, listener)
-    
-    max_read_size = int(round(READ_SIZE * sample_rate))
-    
-    start_index = 0
-    
-    while start_index != length:
+    with WaveFileSignal(file_path) as signal:
+
+        channel = signal.channels[0]
         
-        read_size = min(max_read_size, length - start_index)
-        samples = reader.read(start_index, read_size)[0]
+        length = len(channel)
         
-        # print(start_index, samples.shape)
+        sample_rate = channel.sample_rate
+        show_message('Input sample rate is {} hertz.'.format(sample_rate))
+
+        duration = length / sample_rate
+        show_message('Input duration is {:.1f} seconds.'.format(duration))
         
-        detector.detect(samples)
+        listener = Listener(sample_rate)
+        detector = TseepDetector(sample_rate, listener)
         
-        start_index += read_size
+        max_read_size = int(round(READ_SIZE * sample_rate))
+        
+        start_index = 0
+        
+        while start_index != length:
+            
+            read_size = min(max_read_size, length - start_index)
+            samples = channel.read(start_index, read_size)
+            
+            # print(start_index, samples.shape)
+            
+            detector.detect(samples)
+            
+            start_index += read_size
         
     detector.complete_detection()
     

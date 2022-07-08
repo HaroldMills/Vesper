@@ -8,7 +8,7 @@ import os.path
 import numpy as np
 
 from vesper.archive_paths import archive_paths
-from vesper.signal.wave_file_reader import WaveFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 from vesper.singleton.recording_manager import recording_manager
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
@@ -29,7 +29,7 @@ class ClipManager:
         self._rm = recording_manager
         self._recording_channel_info_cache = {}
         self._recording_info_cache = {}
-        self._recording_file_reader_cache = {}
+        self._recording_file_signal_cache = {}
         self._read_lock = Lock()
         
         
@@ -244,15 +244,15 @@ class ClipManager:
                 'Could not read clip samples from recording file. '
                 '{}').format(str(e)))
         
-        # Since the file reader cache may be shared among threads, we
-        # use a lock to make getting a file reader for a clip and reading
+        # Since the file signal cache may be shared among threads, we
+        # use a lock to make getting a file signal for a clip and reading
         # samples from it atomic.
         #
         # Without the lock, we have observed that reads can return the
         # wrong samples. For example, suppose that this method is called
         # on separate threads for two different clips, clips 1 and 2,
         # that are in the same file and hence will use the same file
-        # reader. We want the seek and read operations for the two clips
+        # signal. We want the seek and read operations for the two clips
         # to be ordered like this:
         #
         #     1. Seek clip 1.
@@ -271,53 +271,52 @@ class ClipManager:
         #
         # which reads the wrong samples for both clips.
         #
-        # If we don't make the combination of getting the file reader
-        # for a clip and reading from the reader atomic, the following
+        # If we don't make the combination of getting the file signal
+        # for a clip and reading from the signal atomic, the following
         # can happen when we try to read two clips whose samples are in
         # different files:
         #
-        #     1. Get reader for clip 1.
-        #     2. Get reader for clip 2, closing reader for clip 1.
-        #     3. Attempt to read samples from reader for clip 1.
+        #     1. Get signal for clip 1.
+        #     2. Get signal for clip 2, closing signal for clip 1.
+        #     3. Attempt to read samples from signal for clip 1.
         #
-        # Step 3 results in an exception since the reader for clip 1
+        # Step 3 results in an exception since the signal for clip 1
         # was closed in step 2.
         
         with self._read_lock:
-            reader = self._get_recording_file_reader(path)
-            samples = reader.read(start_index, length)
-        
-        return samples[channel_num]
+            signal = self._get_recording_file_signal(path)
+            channel = signal.channels[channel_num]
+            return channel.read(start_index, length)
     
     
-    def _get_recording_file_reader(self, path):
+    def _get_recording_file_signal(self, path):
         
         try:
-            reader = self._recording_file_reader_cache[path]
+            signal = self._recording_file_signal_cache[path]
         
         except KeyError:
             # cache miss
             
-            # Clear cache. We cache just one reader at a time, which
+            # Clear cache. We cache just one signal at a time, which
             # goes a long way since in typical use our accesses don't
             # switch files very often.
-            self._clear_recording_file_reader_cache()
+            self._clear_recording_file_signal_cache()
             
-            # Create new reader.
-            reader = WaveFileReader(str(path))
+            # Create new signal.
+            signal = WaveFileSignal(path)
             
-            # Cache new reader.
-            self._recording_file_reader_cache[path] = reader
+            # Cache new signal.
+            self._recording_file_signal_cache[path] = signal
             
-        return reader
+        return signal
     
     
-    def _clear_recording_file_reader_cache(self):
+    def _clear_recording_file_signal_cache(self):
         
-        for reader in self._recording_file_reader_cache.values():
-            reader.close()
+        for signal in self._recording_file_signal_cache.values():
+            signal.close()
             
-        self._recording_file_reader_cache = {}
+        self._recording_file_signal_cache = {}
     
     
     def get_audio_file_contents(self, clip, media_type):

@@ -242,19 +242,19 @@ class Signal(Named):
     def _get_channel_slice(self, indices):
 
         if indices is None:
-            return slice(None), None
+            return slice(0, self.channel_count), None
 
         elif isinstance(indices, int):
-            return indices, None
+            return slice(indices, indices + 1), None
 
         else:
             # assume `indices` is sequence of integers
 
             start_index = min(indices)
             end_index = max(indices) + 1
-            slice = slice(start_index, end_index)
+            result_slice = slice(start_index, end_index)
             result_indices = [i - start_index for i in indices]
-            return slice, result_indices
+            return result_slice, result_indices
 
 
     def _read(self, frame_slice, channel_slice):

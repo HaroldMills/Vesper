@@ -4,9 +4,7 @@
 from pathlib import Path
 import time
 
-import numpy as np
-
-from vesper.signal.wave_file_reader import WaveFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 from vesper.util.data_windows import HannWindow
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
@@ -25,32 +23,35 @@ def main():
     
     start_time = time.time()
     
-    reader = WaveFileReader(str(FILE_PATH), mono_1d=True)
-    sample_rate = reader.sample_rate
+    with WaveFileSignal(FILE_PATH) as waveform:
 
-    spectrograph = create_spectrograph(WINDOW_SIZE, HOP_SIZE, sample_rate)
+        channel = waveform.channels[0]
+        sample_rate = channel.sample_rate
 
-    print('window size', spectrograph.window_size)
-    print('hop size', spectrograph.hop_size)
-    print('DFT size', spectrograph.dft_size)
-    
-    usual_read_size = get_usual_read_size(APPROXIMATE_READ_SIZE, spectrograph)
-    length = reader.length
-    waveform_index = 0
-    while length - waveform_index >= spectrograph.window_size:
-        read_size = min(usual_read_size, length - waveform_index)
-        samples = reader.read(waveform_index, read_size)
-        gram = spectrograph.process(samples)
-        spectrum_count = len(gram)
-        waveform_index += spectrum_count * spectrograph.hop_size
+        spectrograph = create_spectrograph(WINDOW_SIZE, HOP_SIZE, sample_rate)
+
+        print('window size', spectrograph.window_size)
+        print('hop size', spectrograph.hop_size)
+        print('DFT size', spectrograph.dft_size)
         
-    end_time = time.time()
-    elapsed = end_time - start_time
-    duration = length / sample_rate
-    rate = duration / elapsed
-    print(
-        f'Processed {duration:.1f} seconds of audio in {elapsed:.1f} '
-        f'seconds, {rate:.1f} times faster than real time.')
+        usual_read_size = \
+            get_usual_read_size(APPROXIMATE_READ_SIZE, spectrograph)
+        length = len(channel)
+        item_index = 0
+        while length - item_index >= spectrograph.window_size:
+            read_size = min(usual_read_size, length - item_index)
+            samples = channel.read(item_index, read_size)
+            gram = spectrograph.process(samples)
+            spectrum_count = len(gram)
+            item_index += spectrum_count * spectrograph.hop_size
+            
+        end_time = time.time()
+        elapsed = end_time - start_time
+        duration = length / sample_rate
+        rate = duration / elapsed
+        print(
+            f'Processed {duration:.1f} seconds of audio in {elapsed:.1f} '
+            f'seconds, {rate:.1f} times faster than real time.')
 
 
 def create_spectrograph(window_size, hop_size, sample_rate):

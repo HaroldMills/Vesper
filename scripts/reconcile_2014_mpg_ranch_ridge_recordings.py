@@ -31,7 +31,7 @@ django_utils.set_up_django()
 
 from vesper.django.app.models import Recording, Station
 from vesper.mpg_ranch.recording_file_parser import RecordingFileParser
-from vesper.signal.wave_file_reader import WaveFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 import vesper.util.audio_file_utils as audio_file_utils
 
 
@@ -236,29 +236,29 @@ def split_files(groups):
                 f'Splitting file "{old_file_path}" into '
                 f'{new_file_count} parts...')
             
-            old_file_reader = WaveFileReader(str(old_file_path))
-            start_index = 0
-            
-            for i, recording in enumerate(recordings):
+            with WaveFileSignal(old_file_path) as old_file_signal:
+
+                channel = old_file_signal.channels[0]
+                start_index = 0
                 
-                length = recording.length - TWO_SECONDS
-                end_index = start_index + length
-                duration = length / 22050
-                
-                new_file_name = create_recording_file_name(recording)
-                new_file_path = old_file_path.parent / new_file_name
-                
-                print(
-                    f'    {i} {new_file_path} {start_index} {end_index} '
-                    f'{length} {duration}')
-                
-                samples = old_file_reader.read(start_index, length)[0]
-                audio_file_utils.write_wave_file(
-                    str(new_file_path), samples, SAMPLE_RATE)
-                
-                start_index = end_index
-            
-            old_file_reader.close()
+                for i, recording in enumerate(recordings):
+                    
+                    length = recording.length - TWO_SECONDS
+                    end_index = start_index + length
+                    duration = length / 22050
+                    
+                    new_file_name = create_recording_file_name(recording)
+                    new_file_path = old_file_path.parent / new_file_name
+                    
+                    print(
+                        f'    {i} {new_file_path} {start_index} {end_index} '
+                        f'{length} {duration}')
+                    
+                    samples = channel.read(start_index, length)
+                    audio_file_utils.write_wave_file(
+                        str(new_file_path), samples, SAMPLE_RATE)
+                    
+                    start_index = end_index
             
             print(f'    {old_file.length}')
 

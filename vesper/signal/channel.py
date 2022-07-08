@@ -128,6 +128,10 @@ class Channel(Named):
         return self.signal.dtype
     
     
+    def read(self, start_item_index=0, length=None):
+        return self.signal.read(start_item_index, length, self.index, False)[0]
+
+
     def __getitem__(self, key):
         
         # Build `Signal.as_channels` key from `Channel` key.

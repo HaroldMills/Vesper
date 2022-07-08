@@ -12,7 +12,7 @@ import time
 from django.db import transaction
 
 from vesper.django.app.models import Clip, Job, RecordingChannel
-from vesper.signal.wave_file_reader import WaveFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 from vesper.util.logging_utils import append_stack_trace
 import vesper.django.app.model_utils as model_utils
 import vesper.util.archive_lock as archive_lock
@@ -262,7 +262,9 @@ class _DetectorMonitor(Thread):
         
         file_path = model_utils.get_absolute_recording_file_path(
             recording_file)
-        self._recording_file_reader = WaveFileReader(str(file_path))
+        self._recording_file_signal = WaveFileSignal(file_path)
+        self._recording_file_channel = \
+            self._recording_file_signal.channels[self._channel_num]
         
         
     @property
@@ -453,16 +455,15 @@ class _DetectorMonitor(Thread):
             length += start_index
             start_index = 0
         
-        # Adjust length if seaarch interval would extend past end of file.
+        # Adjust length if search interval would extend past end of file.
+        channel = self._recording_file_channel
         end_index = start_index + length
-        if end_index > self._recording_file_reader.length:
-            length -= end_index - self._recording_file_reader.length
+        if end_index > len(channel):
+            length -= end_index - len(channel)
 
         # Read recording samples from file.
-        recording_samples = \
-            self._recording_file_reader.read(start_index, length)
-        recording_samples = recording_samples[self._channel_num]
-        
+        recording_samples = channel.read(start_index, length)
+       
         # Find clip in recording samples. Note that we cannot just search
         # for an exact copy of the clip samples in the recording samples,
         # since the clip samples may differ slightly (presumably because

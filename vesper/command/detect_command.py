@@ -16,7 +16,7 @@ from vesper.command.command import Command, CommandExecutionError
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Job, Recording, RecordingChannel, Station)
 from vesper.old_bird.old_bird_detector_runner import OldBirdDetectorRunner
-from vesper.signal.wave_file_reader import WaveFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 from vesper.singleton.archive import archive
 from vesper.singleton.extension_manager import extension_manager
 from vesper.singleton.preset_manager import preset_manager
@@ -417,26 +417,26 @@ class DetectCommand(Command):
             else:
                 # have absolute path of recording file
                 
-                reader = WaveFileReader(str(abs_path))
+                with WaveFileSignal(abs_path) as signal:
                 
-                intervals = _get_file_detection_intervals(
-                    file_, recording_intervals)
-                
-                if len(intervals) == 0:
-                    self._logger.info(
-                        f'        The detection schedule '
-                        f'"{self._schedule_name}" does not include any '
-                        f'portion of the time interval of the file '
-                        f'"{abs_path}", so no detectors will be run on it.')
+                    intervals = _get_file_detection_intervals(
+                        file_, recording_intervals)
                     
-                for interval in intervals:
-                    self._run_other_detectors_on_file_interval(
-                        detector_models, file_, abs_path, reader, interval)
+                    if len(intervals) == 0:
+                        self._logger.info(
+                            f'        The detection schedule '
+                            f'"{self._schedule_name}" does not include any '
+                            f'portion of the time interval of the file '
+                            f'"{abs_path}", so no detectors will be run on '
+                            f'it.')
+                        
+                    for interval in intervals:
+                        self._run_other_detectors_on_file_interval(
+                            detector_models, file_, abs_path, signal, interval)
                     
                     
     def _run_other_detectors_on_file_interval(
-            self, detector_models, file_, file_path, file_reader,
-            time_interval):
+            self, detector_models, file_, file_path, signal, time_interval):
         
         # Log detection start message.
         self._log_detection_start(
@@ -452,12 +452,11 @@ class DetectCommand(Command):
             
             # Create detectors.
             detectors = self._create_detectors(
-                detector_models, file_.recording, file_reader,
-                file_.start_index, index_interval.start)
+                detector_models, file_.recording, file_.start_index,
+                index_interval.start)
                   
             # Detect.
-            for samples in _generate_sample_buffers(
-                    file_reader, index_interval):
+            for samples in _generate_sample_buffers(signal, index_interval):
                 for detector in detectors:
                     channel_samples = samples[detector.channel_num]
                     detector.detect(channel_samples)
@@ -520,8 +519,8 @@ class DetectCommand(Command):
         
 
     def _create_detectors(
-            self, detector_models, recording, file_reader,
-            file_start_index, interval_start_index):
+            self, detector_models, recording, file_start_index,
+            interval_start_index):
         
         channel_count = recording.num_channels
         
@@ -539,7 +538,7 @@ class DetectCommand(Command):
                 listener = _DetectorListener(
                     detector_model, recording, recording_channel,
                     file_start_index, interval_start_index,
-                    self._defer_clip_creation, file_reader, job, self._logger)
+                    self._defer_clip_creation, job, self._logger)
                 
                 detector = _create_detector(
                     detector_model, recording, listener)
@@ -668,14 +667,14 @@ def _get_index_interval(time_interval, start_time, sample_rate):
     return Interval(start=start_index, end=start_index + length)
 
 
-def _generate_sample_buffers(file_reader, interval):
+def _generate_sample_buffers(signal, interval):
     
     index = interval.start
     end_index = interval.end
     
     while index != end_index:
         length = min(_DETECTION_CHUNK_SIZE, end_index - index)
-        yield file_reader.read(index, length)
+        yield signal.read(index, length, frame_first=False)
         index += length
         
         
@@ -721,7 +720,7 @@ class _DetectorListener:
     def __init__(
             self, detector_model, recording, recording_channel,
             file_start_index, interval_start_index, defer_clip_creation,
-            file_reader, job, logger):
+            job, logger):
         
         # Give this detector listener a unique serial number.
         self._serial_number = _DetectorListener.next_serial_number
@@ -733,7 +732,6 @@ class _DetectorListener:
         self._file_start_index = file_start_index          # index in recording
         self._interval_start_index = interval_start_index  # index in file
         self._defer_clip_creation = defer_clip_creation
-        self._file_reader = file_reader
         self._job = job
         self._logger = logger
         

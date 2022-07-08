@@ -16,7 +16,7 @@ import numpy as np
 
 from vesper.old_bird.old_bird_detector_redux_1_1_mt import (
     ThrushDetector, TseepDetector)
-from vesper.signal.wave_file_reader import WaveFileReader
+from vesper.signal.wave_file_signal import WaveFileSignal
 
 import scripts.old_bird_detector_eval.utils as utils
 
@@ -88,25 +88,24 @@ def run_detectors_on_file(file_path, listeners):
     
     start_time = time.time()
     
-    reader = WaveFileReader(str(file_path))
-            
-    sample_rate = reader.sample_rate
-    
-    detectors = [create_detector(sample_rate, l) for l in listeners]
+    with WaveFileSignal(file_path) as signal:
         
-    for i, samples in enumerate(generate_sample_buffers(reader)):
-        if i != 0 and i % 100 == 0:
-            print('    Chunk {}...'.format(i))
+        channel = signal.channels[0]
+        sample_rate = channel.sample_rate
+        
+        detectors = [create_detector(sample_rate, l) for l in listeners]
+            
+        for i, samples in enumerate(generate_sample_buffers(channel)):
+            if i != 0 and i % 100 == 0:
+                print('    Chunk {}...'.format(i))
+            for detector in detectors:
+                detector.detect(samples)
+                        
         for detector in detectors:
-            detector.detect(samples[0])
-                       
-    for detector in detectors:
-        detector.complete_detection()
+            detector.complete_detection()
 
-    reader.close()
-    
     processing_time = time.time() - start_time
-    file_duration = reader.length / sample_rate
+    file_duration = len(channel) / sample_rate
     show_processing_time(processing_time, file_duration)
         
 
@@ -134,16 +133,16 @@ def get_detection_thresholds(p):
     return t
 
 
-def generate_sample_buffers(file_reader):
+def generate_sample_buffers(channel):
     
-    chunk_size = 1000000
-    
+    length = len(channel)
     start_index = 0
-    
-    while start_index < file_reader.length:
-        length = min(chunk_size, file_reader.length - start_index)
-        yield file_reader.read(start_index, length)
-        start_index += chunk_size
+    chunk_size = 1000000
+     
+    while start_index != length:
+        read_size = min(chunk_size, length - start_index)
+        yield channel.read(start_index, read_size)
+        start_index += read_size
 
 
 def show_processing_time(processing_time, file_duration):
