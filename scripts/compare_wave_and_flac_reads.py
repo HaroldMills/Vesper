@@ -1,3 +1,13 @@
+"""
+Script that compares the speed of clip reads from WAVE and FLAC files.
+
+A run of this script on 2022-07-11 produced the following output:
+
+    Read 10000 clips in 13.2 seconds, a rate of 757.0 clips per second.
+    Read 10000 clips in 1.9 seconds, a rate of 5176.8 clips per second.
+"""
+
+
 from pathlib import Path
 import random
 import time
@@ -7,7 +17,7 @@ import soundfile as sf
 
 DIR_PATH = Path('/Users/harold/Desktop/NFC/FLAC Test')
 # DIR_PATH = Path('/Volumes/Recordings1/FLAC Test')
-FILE_NAME_STEM = 'FLOOD-21C_20180901_194500'
+FILE_NAME_STEM = 'Harold_2022-05-10_01.14.51_Z'
 
 CLIP_COUNT = 10000
 CLIP_DURATION = .6
