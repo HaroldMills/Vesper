@@ -41,6 +41,13 @@ services:
             - .:/Code
             - /Users/harold/Desktop/Test Archive:/Archive
 
+        # Allow access to GPU
+        #deploy:
+        #  resources:
+        #    reservations:
+        #      devices:
+        #        - capabilities: [gpu]
+
         environment:
 
             # Django secret key. DO NOT USE THE KEY BELOW FOR A PUBLIC
