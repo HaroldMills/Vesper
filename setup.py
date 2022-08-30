@@ -137,14 +137,17 @@ setup(
     ],
     
     install_requires=[
-        'django~=4.0.0',
+        'django~=4.1.0',
         'environs[django]',
-        'jsonschema~=4.5.0',
+        'gunicorn',
+        'jsonschema~=4.14.0',
         'pytz',
         'resampy',
         'ruamel_yaml',
+        'scipy',
         'skyfield~=1.42.0',
         'tensorflow~=2.9.0',
+        'whitenoise',
     ],
       
     entry_points={
