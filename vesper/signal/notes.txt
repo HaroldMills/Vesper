@@ -1,3 +1,26 @@
+2022-07-07
+----------
+* I think it might be a good idea to replace the term "sample array"
+  with something shorter. One possibility is just "item". Then a
+  *signal* is a sequence of *sample frames*, each of which is a
+  sequence of *items*, where each item is an n-dimensional array of
+  samples. This doesn't impact much in the current `Signal` interface,
+  just `sample_array_shape`. It might be nice to add an `item_size`
+  property as well.
+
+* I think it might be a good idea to have a mixin class
+  `HoppedAnalysis` for signals whose items are computed from hopped
+  (along the time axis) records of items of another signal. The mixin
+  class would include properties for the record size and hop size.
+  There might be versions of the properties for units of both seconds
+  and sample frames.
+
+* I also think it might be a good idea to have a class
+  `TimeFrequencyGram` for grams whose item axis is a frequency axis.
+  Some time-frequency gram frequency axes will be linear while others
+  will not.
+
+
 2022-06-29
 ----------
 Thinking about reading signal samples.
