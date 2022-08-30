@@ -9,6 +9,9 @@
 # Pull base image.
 FROM python:3.10.4-slim-bullseye
 
+# if GPU is needed
+#FROM tensorflow/tensorflow:2.9.1-gpu
+
 # Set environment variables.
 ENV PIP_DISABLE_PIP_VERSION_CHECK 1
 ENV PYTHONDONTWRITEBYTECODE 1
