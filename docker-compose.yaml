@@ -41,7 +41,7 @@ services:
             - .:/Code
             - /Users/harold/Desktop/Test Archive:/Archive
 
-        # Allow access to GPU
+        # Allow access to GPU.
         #deploy:
         #  resources:
         #    reservations:
@@ -55,15 +55,15 @@ services:
             # publicly available in this file in the Vesper GitHub
             # repository. It is intended only as an example of the sort
             # of key to use. If you use it for a public Vesper site, you
-            # will make it relatively easy for a malicious actor to
-            # attack your site.
+            # will make it easy for a malicious actor to attack your site.
             #
             # To use this file for a public Vesper site, replace the key
             # below with your own that you keep secret. The key should be
             # a long sequence of randomly-generated characters. One way to
             # generate such a key (assuming that Python is installed on your
             # computer) is to execute the following (which was used to
-            # generate the key below) at a command prompt or terminal:
+            # generate the key below, but will generate a different key
+            # every time you run it) at a command prompt or terminal:
             #
             #     python -c "import secrets; print(secrets.token_urlsafe(40))"
             VESPER_DJANGO_SECRET_KEY: "Af6PQCWfoAtxuqrVaMEgnYT5NfVWwd4oInvEXkzxfuQxhf05eEET5A"
