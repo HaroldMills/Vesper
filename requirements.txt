@@ -30,7 +30,7 @@ MarkupSafe==2.1.1
 marshmallow==3.17.1
 numba==0.56.0
 numpy==1.22.4
-oauthlib==3.2.0
+oauthlib==3.2.1
 opt-einsum==3.3.0
 packaging==21.3
 pip==22.1.2
