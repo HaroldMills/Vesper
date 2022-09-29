@@ -10,21 +10,42 @@ convenience `_assert...` methods.
 import vesper.util.numpy_utils as numpy_utils
 
 
+SHOW_EXCEPTION_MESSAGES = False
+
 class TestCaseMixin:
     
     
     def assert_raises(self, exception_class, function, *args, **kwargs):
         
-        self.assertRaises(exception_class, function, *args, **kwargs)
-        
         try:
             function(*args, **kwargs)
-            
+
         except exception_class as e:
-            pass
-            # print(str(e))
+            if SHOW_EXCEPTION_MESSAGES:
+                print(str(e))
+                
+        else:
+            raise AssertionError(
+                f'{exception_class.__name__} not raised by '
+                f'{function.__name__}')
+           
             
-            
+    async def assert_raises_async(
+            self, exception_class, function, *args, **kwargs):
+
+        try:
+            await function(*args, **kwargs)
+
+        except exception_class as e:
+            if SHOW_EXCEPTION_MESSAGES:
+                print(str(e))
+
+        else:
+            raise AssertionError(
+                f'{exception_class.__name__} not raised by '
+                f'{function.__name__}')
+
+
     def assert_arrays_equal(self, x, y):
         self.assertTrue(numpy_utils.arrays_equal(x, y))
         
