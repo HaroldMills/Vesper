@@ -43,7 +43,7 @@ To create a conda environment for Vesper development:
 To create a conda environment using the latest, local Vesper source code:
     conda create -n vesper-latest python=3.10
     conda activate vesper-latest
-    conda install pyaudio
+    conda install pyaudio (omit when creating environment for creating Vesper Docker images)
     pip install -e /Users/harold/Documents/Code/Python/Vesper
 
 Whenever you modify plugin entry points, you must run:
