@@ -182,7 +182,7 @@ class _VesperRecorderFileNameParser(_FileNameParser):
         r'(?P<year>\d\d\d\d)-(?P<month>\d\d)-(?P<day>\d\d)'
         r'_'
         r'(?P<hour>\d\d)\.(?P<minute>\d\d)\.(?P<second>\d\d)_Z'
-        r'\.wav'
+        r'\.(?:wav|WAV)'
         r'$')
     
     
@@ -210,7 +210,7 @@ class _SongMeterFileNameParser0(_FileNameParser):
         r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
         r'_'
         r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
-        r'\.wav'
+        r'\.(?:wav|WAV)'
         r'$')
     
     
@@ -236,7 +236,7 @@ class _SongMeterFileNameParser1(_FileNameParser):
         r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
         r'(_|\$)'
         r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
-        r'\.wav'
+        r'\.(?:wav|WAV)'
         r'$')
     
     
@@ -272,7 +272,7 @@ class _SongMeterFileNameParser2(_FileNameParser):
         r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
         r'_'
         r'(?P<fraction>\d\d\d)'
-        r'\.wav'
+        r'\.(?:wav|WAV)'
         r'$')
     
     
@@ -304,7 +304,7 @@ class _MpgRanchFileNameParser0(_FileNameParser):
         r'_'
         r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
         r'(_.+)'      # trailing comment
-        r'\.wav'
+        r'\.(?:wav|WAV)'
         r'$')
 
     
@@ -333,7 +333,7 @@ class _MpgRanchFileNameParser1(_FileNameParser):
         r'(?P<year>\d\d\d\d)(?P<month>\d\d)(?P<day>\d\d)'
         r'(_|\$)'
         r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
-        r'\.wav'
+        r'\.(?:wav|WAV)'
         r'$')
     
     
@@ -371,7 +371,7 @@ class _MpgRanchFileNameParser2(_FileNameParser):
         r'_'
         r'(\d{6})'    # hhmmss recording duration
         r'(_.+)?'     # optional trailing comment
-        r'\.wav'
+        r'\.(?:wav|WAV)'
         r'$')
 
     
@@ -396,7 +396,7 @@ class _MpgRanchFileNameParser3(_FileNameParser):
         r'_'
         r'(?P<hour>\d\d)(?P<minute>\d\d)(?P<second>\d\d)'
         r'_000'
-        r'(__22050)?\.wav'
+        r'(__22050)?\.(?:wav|WAV)'
         r'$')
 
     
@@ -418,7 +418,7 @@ class _EasyHiQRecorderFileNameParser(_FileNameParser):
         r'(?P<hour>\d\d?);(?P<minute>\d\d);(?P<second>\d\d)'
         r'_'
         r'(?P<period>AM|PM)'
-        r'\.wav'
+        r'\.(?:wav|WAV)'
         r'$')
     
     
