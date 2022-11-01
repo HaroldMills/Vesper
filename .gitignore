@@ -65,3 +65,6 @@ scratch.py
 
 # Production Docker Compose file
 docker-compose-prod.yaml
+
+# pip requirements.txt file
+requirements.txt
