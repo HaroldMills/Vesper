@@ -4,8 +4,7 @@
 class ByteSequence:
 
     """
-    A finite sequence of bytes that can be read either synchronously
-    or asynchronously.
+    A finite, immutable sequence of bytes that is accessed asynchronously.
     """
 
 
@@ -13,30 +12,32 @@ class ByteSequence:
         self._length = None
 
 
-    def __len__(self):
+    @property
+    def inside(self):
+        return False
+
+
+    async def get_length(self):
+        self._check_if_inside()
         if self._length is None:
-            self._length = self._get_length()
+            self._length = await self._get_length()
         return self._length
 
 
-    def _get_length(self):
+    def _check_if_inside(self):
+        if not self.inside:
+            raise ByteSequenceError(
+                'Attempt to use byte sequence without first entering it.')
+
+
+    async def _get_length(self):
         raise NotImplementedError()
 
 
-    async def get_length_async(self):
-        if self._length is None:
-            self._length = await self._get_length_async()
-        return self._length
-
-
-    async def _get_length_async(self):
-        return self._get_length()
-
-
-    def read(self, start_index, length):
-        seq_length = len(self)
+    async def read(self, start_index, length):
+        seq_length = await self.get_length()
         self._check_read_args(start_index, length, seq_length)
-        return self._read(start_index, length)
+        return await self._read(start_index, length)
 
 
     def _check_read_args(self, start_index, read_length, seq_length):
@@ -64,20 +65,10 @@ class ByteSequence:
                 f'{read_length}. Specified read segment [{start_index}, '
                 f'{end_index}) extends past end of sequence of length '
                 f'{seq_length}.')
+                
 
-
-    def _read(self, start_index, length):
+    async def _read(self, start_index, length):
         raise NotImplementedError()
-
-
-    async def read_async(self, start_index, length):
-        seq_length = await self.get_length_async()
-        self._check_read_args(start_index, length, seq_length)
-        return await self._read_async(start_index, length)
-
-
-    async def _read_async(self, start_index, length):
-        return self._read(start_index, length)
 
 
 class ByteSequenceError(Exception):
