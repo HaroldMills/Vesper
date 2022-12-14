@@ -3,10 +3,9 @@ from datetime import (
     datetime as DateTime,
     time as Time,
     timedelta as TimeDelta)
+from zoneinfo import ZoneInfo
 import itertools
 # import time
-
-import pytz
 
 from vesper.util.schedule import Interval, Schedule, Transition
 # from vesper.util.schedule import ScheduleRunner
@@ -16,8 +15,7 @@ import vesper.util.time_utils as time_utils
 
 
 def _dt(hour, minute=0, second=0):
-    dt = DateTime(2016, 12, 2, hour, minute, second)
-    return pytz.utc.localize(dt)
+    return DateTime(2016, 12, 2, hour, minute, second, tzinfo=ZoneInfo('UTC'))
 
 
 _INTERVALS = (
@@ -274,7 +272,7 @@ class ScheduleTests(TestCase):
         s = Schedule(())
         self.assertEqual(len(tuple(s.get_intervals())), 0)
         self.assertEqual(len(tuple(s.get_transitions())), 0)
-        now = DateTime.now(pytz.utc)
+        now = DateTime.now(ZoneInfo('UTC'))
         self.assertEqual(s.get_state(now), False)
         
         
@@ -324,7 +322,7 @@ def _dtize_interval(start, end):
 #         # and completion.
 #              
 #         print('\nrunning completed schedule...')
-#         end = pytz.utc.localize(DateTime(2000, 1, 1))
+#         end = DateTime(2000, 1, 1, tzinfo=ZoneInfo('UTC'))
 #         interval = Interval(Schedule.MIN_DATETIME, end)
 #         schedule = Schedule((interval,))
 #         runner = ScheduleRunner(schedule)
@@ -401,9 +399,10 @@ def _show_event(name, time, state):
 
 def _create_schedule(interval_offsets):
     
-    t = DateTime.now(pytz.utc)
-    t = DateTime(t.year, t.month, t.day, t.hour, t.minute, t.second)
-    t = pytz.utc.localize(t)
+    utc = ZoneInfo('UTC')
+    t = DateTime.now(utc)
+    t = DateTime(
+        t.year, t.month, t.day, t.hour, t.minute, t.second, tzinfo=utc)
     if t.microsecond != 0:
         t += TimeDelta(seconds=1) 
     
@@ -1101,8 +1100,8 @@ class ScheduleCompilationTests(TestCase):
    
     
 def _dt2(year, month, day, hour=0, minute=0, second=0):
-    dt = DateTime(year, month, day, hour, minute, second)
-    return pytz.utc.localize(dt)
+    return DateTime(
+        year, month, day, hour, minute, second, tzinfo=ZoneInfo('UTC'))
 
 
 def _round_interval(interval):

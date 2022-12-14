@@ -1,13 +1,13 @@
 """Module containing class `ExecuteDeferredActionsCommand`."""
 
 
+from zoneinfo import ZoneInfo
 import datetime
 import logging
 import pickle
 import time
 
 from django.db import transaction
-import pytz
 
 from vesper.archive_paths import archive_paths
 from vesper.command.command import Command, CommandExecutionError
@@ -268,4 +268,4 @@ class ExecuteDeferredActionsCommand(Command):
          
 def _parse_datetime(dt):
     dt = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-    return pytz.utc.localize(dt)
+    return dt.replace(tzinfo=ZoneInfo('UTC'))

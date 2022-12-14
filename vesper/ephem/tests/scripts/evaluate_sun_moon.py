@@ -131,8 +131,8 @@ def get_events(function, sun_moon, day, method):
 def get_events_by_year(sun_moon, day):
     time_zone = sun_moon.time_zone
     hour = 0 if day else 12
-    start_dt = time_zone.localize(datetime.datetime(YEAR, 1, 1, hour))
-    end_dt = time_zone.localize(datetime.datetime(YEAR + 1, 1, 1, hour))
+    start_dt = datetime.datetime(YEAR, 1, 1, hour, tzinfo=time_zone)
+    end_dt = datetime.datetime(YEAR + 1, 1, 1, hour, tzinfo=time_zone)
     return sun_moon.get_solar_events_in_interval(start_dt, end_dt)
 
 

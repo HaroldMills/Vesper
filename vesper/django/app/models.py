@@ -1,6 +1,7 @@
 """Vesper Django model classes."""
 
 
+from zoneinfo import ZoneInfo
 import datetime
 import json
 import os.path
@@ -10,7 +11,6 @@ from django.db.models import (
     BigIntegerField, CASCADE, CharField, DateField, DateTimeField,
     FloatField, ForeignKey, IntegerField, ManyToManyField, Model,
     SET_NULL, TextField)
-import pytz
 
 from vesper.archive_paths import archive_paths
 import vesper.util.os_utils as os_utils
@@ -267,13 +267,13 @@ class Station(Model):
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._tz = pytz.timezone(self.time_zone)
+        self._tz = ZoneInfo(self.time_zone)
         
     @property
     def tz(self):
         return self._tz
     
-    def local_to_utc(self, dt, is_dst=None):
+    def local_to_utc(self, dt):
         
         """
         Converts a station-local time to UTC.
@@ -284,7 +284,7 @@ class Station(Model):
         
         return time_utils.create_utc_datetime(
             dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second,
-            dt.microsecond, self.tz, is_dst)
+            dt.microsecond, self.tz, dt.fold)
         
     def utc_to_local(self, dt):
         
@@ -295,7 +295,7 @@ class Station(Model):
         """
         
         if dt.tzinfo is None:
-            dt = pytz.utc.localize(dt)
+            dt = dt.replace(tzinfo=ZoneInfo('UTC'))
             
         return dt.astimezone(self.tz)
     

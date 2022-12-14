@@ -6,10 +6,9 @@ from datetime import (
     datetime as DateTime,
     time as Time,
     timedelta as TimeDelta)
+from zoneinfo import ZoneInfo
 import calendar
 import math
-
-import pytz
 
 
 _MIN_YEAR = 1900
@@ -17,12 +16,12 @@ _MAX_YEAR = 2099
 
 
 def get_utc_now():
-    return DateTime.now(pytz.utc)
+    return DateTime.now(ZoneInfo('UTC'))
 
 
 def create_utc_datetime(
         year, month, day, hour=0, minute=0, second=0, microsecond=0,
-        time_zone=None, is_dst=None):
+        time_zone=None, fold=0):
     
     """
     Creates a UTC `datetime` object.
@@ -34,69 +33,42 @@ def create_utc_datetime(
     
     * `None`, implying that the time zone of the other arguments is UTC.
     
-    * a string acceptable as an argument to the `pytz.timezone` function,
-      for example 'US/Eastern' or 'America/Costa_Rica'.
+    * a string acceptable as an argument to the `zoneinfo.ZoneInfo`
+      initializer, for example 'US/Eastern' or 'America/Costa_Rica'.
     
-    * a `pytz` time zone object.
+    * a `datetime.tzinfo` object.
     
-    When the `time_zone` argument is a time zone that observes DST,
-    the `is_dst` argument can be used to disambiguate ambiguous local
+    When the `time_zone` argument is for a time zone that observes DST,
+    the `fold` argument can be used to disambiguate ambiguous local
     times, i.e. times in the interval [1:00:00, 2:00:00) on the day
-    that DST ends. The value of the `is_dst` argument should be either
-    `True`, `False`, or `None` (the default). The argument is ignored
-    for nonambiguous times.
+    that DST ends. The value of the `fold` argument should be either
+    `0` (the default) or `1`.
     
     :Raises ValueError:
-        if an unrecognized time zone is specified, if a nonexistent
-        local time is specified, or if an ambiguous time is specified
-        and the `is_dst` argument is neither `True` nor `False` to
-        resolve the ambiguity.
+        if an unrecognized time zone is specified.
     """
     
     
     if time_zone is None:
         
         return DateTime(
-            year, month, day, hour, minute, second, microsecond, pytz.utc)
+            year, month, day, hour, minute, second, microsecond,
+            ZoneInfo('UTC'))
     
     else:
         
         if isinstance(time_zone, str):
             try:
-                time_zone = pytz.timezone(time_zone)
-            except pytz.UnknownTimeZoneError:
-                raise ValueError(f'Unrecognized time zone "{time_zone}".')
+                time_zone = ZoneInfo(time_zone)
+            except:
+                raise ValueError(
+                    f'Could not get info for time zone "{time_zone}".')
         
-        # Note that contrary to what one might think we should not do the
-        # following:
-        #
-        #     dt = DateTime(
-        #         year, month day, hour, minute, second, microsecond,
-        #         tzinfo=time_zone)
-        #
-        # since (as of 2015-05-21, at least) pytz time zones that
-        # observer DST cannot be used as arguments to the standard
-        # datetime constructor. See the "Example & Usage" section of
-        # http://pytz.sourceforge.net for more information.
-        dt = DateTime(year, month, day, hour, minute, second, microsecond)
+        dt = DateTime(
+            year, month, day, hour, minute, second, microsecond,
+            time_zone, fold=fold)
         
-        # Note that if `is_dst` is `None`, the following will raise
-        # an exception if the time `dt` is nonexistent or ambiguous
-        # because of DST. See the "Problems with Localtime" section
-        # of http://pytz.sourceforge.net for more information.
-        try:
-            dt = time_zone.localize(dt, is_dst=is_dst)
-        except pytz.NonExistentTimeError:
-            _raise_dst_value_error('does not exist', dt, time_zone)
-        except pytz.AmbiguousTimeError:
-            _raise_dst_value_error('is ambiguous', dt, time_zone)
-        
-        return dt.astimezone(pytz.utc)
-
-
-def _raise_dst_value_error(fragment, dt, time_zone):
-    raise ValueError(
-        f'Local time {dt} {fragment} for time zone "{time_zone}" due to DST.')
+        return dt.astimezone(ZoneInfo('UTC'))
 
 
 # The parsing functions of this module (`parse_date_time`, `parse_date`,

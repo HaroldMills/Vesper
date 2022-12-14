@@ -1,8 +1,7 @@
 from pathlib import Path
+from zoneinfo import ZoneInfo
 import datetime
 import re
-
-import pytz
 
 
 DIR_PATH = Path(
@@ -49,7 +48,7 @@ def remove_uninteresting_processing_lines(lines):
         if is_interesting_line(line, next_line)]
     
     if not is_processing_line(lines[-1]):
-        result.append(line[-1])
+        result.append(lines[-1])
         
     return result
     
@@ -82,15 +81,14 @@ def add_end_time_lines(lines):
 def get_recording_end_time(line):
     start_time = get_recording_start_time(line)
     duration = get_recording_duration(line)
-    end_time = start_time + duration
-    return pytz.utc.localize(end_time)
+    return start_time + duration
     
     
 def get_recording_start_time(line):
     i = find_end_index('start ', line)
     s = line[i:i + 19]
     start_time = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
-    return start_time
+    return start_time.replace(tzinfo=ZoneInfo('UTC'))
 
 
 def find_end_index(s, line):

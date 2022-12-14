@@ -16,9 +16,8 @@ To use this script:
 """
 
 
+from zoneinfo import ZoneInfo
 import datetime
-
-import pytz
 
 from vesper.ephem.sun_moon import SunMoon
 import vesper.util.os_utils as os_utils
@@ -44,7 +43,7 @@ SUNSET_OFFSET = -30
 # sunrise offset in minutes
 SUNRISE_OFFSET = 30
 
-# Time zone name. Note that if you specify the name of a time zone in which
+# Time zone. Note that if you specify the name of a time zone in which
 # DST is observed, the times output by the script will reflect DST-related
 # time changes. If this isn't what you want, choose the name of a time
 # zone with the appropriate UTC offset in which DST is not observed. You
@@ -55,7 +54,7 @@ SUNRISE_OFFSET = 30
 #
 # For example, if you'd like a time zone that's six hours behind UTC
 # (like MDT) in which DST is not observed, you can choose 'Pacific/Galapagos'.
-TIME_ZONE = pytz.timezone('US/Mountain')
+TIME_ZONE = ZoneInfo('US/Mountain')
 
 OUTPUT_FILE_PATH = 'Schedule.csv'
 

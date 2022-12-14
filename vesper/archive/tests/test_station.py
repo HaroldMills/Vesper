@@ -1,7 +1,6 @@
+from zoneinfo import ZoneInfo
 import datetime
 import unittest
-
-import pytz
 
 from vesper.archive.station import Station
 
@@ -21,7 +20,6 @@ class StationTests(unittest.TestCase):
         s = self.station
         self.assertEqual(s.name, name)
         self.assertEqual(s.long_name, long_name)
-        self.assertEqual(s.time_zone.zone, time_zone_name)
         
         
     def test_get_night(self):
@@ -29,8 +27,8 @@ class StationTests(unittest.TestCase):
         dt = datetime.datetime
         d = datetime.date
         
-        eastern = pytz.timezone('US/Eastern')
-        utc = pytz.utc
+        eastern = ZoneInfo('US/Eastern')
+        utc = ZoneInfo('UTC')
         
         cases = [
                  

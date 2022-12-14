@@ -1,11 +1,10 @@
 from pathlib import Path
+from zoneinfo import ZoneInfo
 import datetime
 import sys
 
-import pytz
 
-
-TIME_ZONE = pytz.timezone('US/Eastern')
+TIME_ZONE = ZoneInfo('US/Eastern')
 
 
 def main():
@@ -42,7 +41,7 @@ def move_file(file_path, station_name):
     
 def parse_file_name(file_name):
     start_time = datetime.datetime.strptime(file_name, '%Y%m%d_%H%M%S.WAV')
-    return pytz.utc.localize(start_time)
+    return start_time.replace(tzinfo=ZoneInfo('UTC'))
 
 
 def get_night(dt):

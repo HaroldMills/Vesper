@@ -7,11 +7,11 @@ from datetime import (
     timedelta as TimeDelta,
     tzinfo as TzInfo)
 from pathlib import Path
+from zoneinfo import ZoneInfo
 import heapq
 
 from skyfield import almanac
 from skyfield.api import Topos, load, load_file
-import pytz
 
 from vesper.util.lru_cache import LruCache
 
@@ -233,8 +233,7 @@ class SunMoon:
     
     The `time_zone` initializer argument specifies the local time zone
     of a `SunMoon`. It can be either a string IANA time zone name (e.g.
-    "US/Eastern") or an instance of a `datetime.tzinfo` subclass,
-    including a `pytz` time zone.
+    "US/Eastern") or an instance of a `datetime.tzinfo` subclass.
     
     The `result_times_local` initializer argument determines whether
     times returned by the methods of a `SunMoon` are in the local time
@@ -737,8 +736,8 @@ class SunMoon:
         # international date line. That will work for most locations,
         # excepting those where the date differs from what it would be
         # if the 180th meridian were the international date line.
-        civil_midnight = _create_aware_datetime(
-            self.time_zone, date.year, date.month, date.day)
+        civil_midnight = DateTime(
+            date.year, date.month, date.day, tzinfo=self.time_zone)
         
         # Get search interval bounds as civil times.
         start_time = civil_midnight + start_offset
@@ -1020,7 +1019,7 @@ def _get_time_zone(time_zone):
         return None
     
     elif isinstance(time_zone, str):
-        return pytz.timezone(time_zone)
+        return ZoneInfo(time_zone)
     
     elif isinstance(time_zone, TzInfo):
         return time_zone
@@ -1047,35 +1046,6 @@ def _check_time_zone_awareness(time):
     tzinfo = time.tzinfo
     if tzinfo is None or tzinfo.utcoffset(time) is None:
         raise ValueError('Time does not include a time zone.')
-
-
-# TODO: Move this function to a utility module and use it more widely,
-# as part of an effort to eventually eliminate the use of `pytz` in
-# Vesper. `pytz` should not be needed for Python versions 3.9 and above,
-# which include the `zoneinfo` standard library package.
-def _create_aware_datetime(time_zone, *args):
-    
-    if hasattr(time_zone, 'localize'):
-        
-        # Here we assume that since `time_zone` has a `localize`
-        # attribute it is a `pytz` time zone, and it is not safe to
-        # use it as the `tzinfo` argument to the `datetime` initializer.
-        # Instead, to create a localized `datetime` we first construct
-        # a naive `datetime` and then localize that with the time zone's
-        # `localize` method. See the "Localized times and date arithmetic"
-        # section of the pytz documentation (pytz.sourceforge.net)
-        # for more information.
-        naive_dt = DateTime(*args)
-        return time_zone.localize(naive_dt)
-    
-    else:
-        # time zone has no `localize` attribute
-        
-        # Here we assume that since `self.time_zone` does not have a
-        # `localize` attribute it's safe to use it as the `tzinfo`
-        # argument to the `datetime` initializer. This is the case,
-        # for example, for `datetime.timezone` objects.
-        return DateTime(*args, tzinfo=time_zone)
 
 
 def _normalize_solar_event_name_filter(name_filter):

@@ -13,12 +13,12 @@ files are determined by a Vesper recording schedule.
 
 from collections import defaultdict
 from pathlib import Path
+from zoneinfo import ZoneInfo
 import datetime
 import os
 import time
 
 import numpy as np
-import pytz
 import soundfile
 
 from vesper.util.schedule import Interval, Schedule
@@ -53,7 +53,7 @@ daily:
 STATION_NAME = 'Kingfisher'
 LATITUDE = 42.480013
 LONGITUDE = -76.451577
-TIME_ZONE = pytz.timezone('US/Eastern')
+TIME_ZONE = ZoneInfo('US/Eastern')
 
 MAX_NIGHT_DURATION = 12
 OUTPUT_SAMPLE_RATE = 24000
@@ -181,7 +181,7 @@ def parse_audio_file_name(file_path):
         n = len(INPUT_FILE_NAME_EXTENSION)
         text = file_name[-(INPUT_FILE_NAME_START_TIME_LENGTH + n):-n]
         start_time = datetime.datetime.strptime(text, '%Y%m%d_%H%M%S')
-        start_time = pytz.utc.localize(start_time)
+        start_time = start_time.replace(tzinfo=ZoneInfo('UTC'))
         end_time = start_time + INPUT_FILE_DURATION_TIMEDELTA
         return Interval(start=start_time, end=end_time)
     

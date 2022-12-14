@@ -18,7 +18,7 @@ To create a conda environment in which to run the Vesper Recorder:
     conda create -n vesper_recorder python
     conda activate vesper_recorder
     conda install pyaudio
-    pip install jsonschema pyephem pytz ruamel.yaml
+    pip install jsonschema pyephem ruamel.yaml
     
 To run the Vesper Recorder, you must have the PYTHONPATH and
 VESPER_RECORDER_HOME environment variables set. On Unix, for example:

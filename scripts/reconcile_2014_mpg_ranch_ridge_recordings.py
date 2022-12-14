@@ -21,8 +21,7 @@ the same directory as the file from which it is extracted.
 
 from collections import defaultdict
 from pathlib import Path
-
-import pytz
+from zoneinfo import ZoneInfo
 
 # Set up Django. This must happen before any use of Django, including
 # ORM class imports.
@@ -59,7 +58,7 @@ detectors, and the fact that the detectors sometimes append zeros
 to clips extracted from the ends of recordings.
 """
 
-TIME_ZONE = pytz.timezone('US/Mountain')
+TIME_ZONE = ZoneInfo('US/Mountain')
 
 
 def main():

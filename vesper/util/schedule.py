@@ -8,11 +8,11 @@ from datetime import (
     time as Time,
     timedelta as TimeDelta)
 from threading import Event, Thread
+from zoneinfo import ZoneInfo
 import itertools
 import re
 
 import jsonschema
-import pytz
 
 from vesper.ephem.sun_moon import SunMoon
 from vesper.util.notifier import Notifier
@@ -51,8 +51,8 @@ class Schedule:
     """
     
     
-    MIN_DATETIME = pytz.utc.localize(DateTime.min)
-    MAX_DATETIME = pytz.utc.localize(DateTime.max)
+    MIN_DATETIME = DateTime.min.replace(tzinfo=ZoneInfo('UTC'))
+    MAX_DATETIME = DateTime.max.replace(tzinfo=ZoneInfo('UTC'))
     
     
     # The `latitude`, `longitude`, and `time_zone` arguments to
@@ -658,8 +658,8 @@ def _compile_date_time(dt, location, dt_name):
 def _naive_to_utc(dt, location, dt_name, dt_text=None):
     _check_location_attribute(
         location.time_zone, 'time zone', dt_name, dt_text)
-    localized_dt = location.time_zone.localize(dt)
-    return localized_dt.astimezone(pytz.utc)
+    local_dt = dt.replace(tzinfo=location.time_zone)
+    return local_dt.astimezone(ZoneInfo('UTC'))
     
 
 def _check_location_attribute(value, name, dt_name, dt_text=None):
@@ -930,14 +930,14 @@ def _compute_solar_event_times(date_intervals, time_intervals, location):
 
     for start_date, end_date in date_intervals:
 
-        start_time = _get_localized_midnight(start_date, location)
+        start_time = _get_local_midnight(start_date, location)
 
         # Compute solar event times for one day past specified end date.
         # These are needed since intervals can start on one day and end
         # on the next, for example ones from sunset to sunrise. See
         # `_get_daily_interval_end` function for handling of such
         # intervals.
-        end_time = _get_localized_midnight(end_date + _TWO_DAYS, location)
+        end_time = _get_local_midnight(end_date + _TWO_DAYS, location)
 
         events = sun_moon.get_solar_events_in_interval(
             start_time, end_time, event_names)
@@ -974,9 +974,8 @@ def _check_location(location):
                 f'Cannot compute solar event times: no {name} specified.')
 
 
-def _get_localized_midnight(date, location):
-    midnight = DateTime.combine(date, _MIDNIGHT)
-    return location.time_zone.localize(midnight)
+def _get_local_midnight(date, location):
+    return DateTime.combine(date, _MIDNIGHT, tzinfo=location.time_zone)
 
 
 def _get_interval_dates(date_intervals):
@@ -997,9 +996,8 @@ def _combine_date_and_time(date, time, time_zone, solar_event_times, name):
     
     if isinstance(time, Time):
         _check_location_attribute(time_zone, 'time zone', name)
-        naive_dt = DateTime.combine(date, time)
-        localized_dt = time_zone.localize(naive_dt)
-        return localized_dt.astimezone(pytz.utc)
+        local_dt = DateTime.combine(date, time, tzinfo=time_zone)
+        return local_dt.astimezone(ZoneInfo('UTC'))
         
     else:
         key = (date, time.event_name)
@@ -1058,7 +1056,7 @@ class _Location:
         self.longitude = longitude
         
         if isinstance(time_zone, str):
-            self.time_zone = pytz.timezone(time_zone)
+            self.time_zone = ZoneInfo(time_zone)
         else:
             self.time_zone = time_zone
             

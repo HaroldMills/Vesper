@@ -12,8 +12,7 @@ from datetime import (
     date as Date,
     datetime as DateTime,
     timedelta as TimeDelta)
-
-import pytz
+from zoneinfo import ZoneInfo
 
 from vesper.tests.test_case import TestCase
 from vesper.ephem.sun_moon import Event, Position, SunMoon, SunMoonCache
@@ -29,13 +28,14 @@ from vesper.ephem.sun_moon import Event, Position, SunMoon, SunMoonCache
 # Python wrapper for NOVAS available from PyPI.
 
 
-# Ithaca, NY location and time zone.
+# Test location and time zone are for Ithaca, NY.
 TEST_LAT = 42.431964
 TEST_LON = -76.501656
 TEST_ELEVATION = 0
 TEST_TIME_ZONE_NAME = 'US/Eastern'
-TEST_TIME_ZONE = pytz.timezone(TEST_TIME_ZONE_NAME)
+TEST_TIME_ZONE = ZoneInfo(TEST_TIME_ZONE_NAME)
 TEST_DATE = Date(2020, 10, 1)
+UTC_TIME_ZONE = ZoneInfo('UTC')
 
 
 def _events(*args):
@@ -43,14 +43,12 @@ def _events(*args):
 
 
 def _utc(*args):
-    local_time = _get_localized_time(*args)
-    utc_time = local_time.astimezone(pytz.utc)
-    return utc_time
+    local_time = _get_local_time(*args)
+    return local_time.astimezone(UTC_TIME_ZONE)
 
 
-def _get_localized_time(*args):
-    naive_time = DateTime(*args)
-    return TEST_TIME_ZONE.localize(naive_time)
+def _get_local_time(*args):
+    return DateTime(*args, tzinfo=TEST_TIME_ZONE)
 
 
 def _round_time_to_nearest_minute(t):
@@ -320,7 +318,7 @@ class SunMoonTests(TestCase):
     def test_get_solar_events_in_interval(self):
         
         d = TEST_DATE
-        start_time = _get_localized_time(d.year, d.month, d.day)
+        start_time = _get_local_time(d.year, d.month, d.day)
         end_time = start_time + SOLAR_EVENTS_IN_INTERVAL_DURATION
         get_events = self.sun_moon.get_solar_events_in_interval
         
@@ -369,7 +367,7 @@ class SunMoonTests(TestCase):
     
     def _assert_result_time_zone(self, time):
         if self.RESULT_TIMES_LOCAL:
-            self.assertEqual(time.tzinfo.zone, TEST_TIME_ZONE_NAME)
+            self.assertEqual(time.tzinfo, TEST_TIME_ZONE)
         else:
             self.assertEqual(time.tzname(), 'UTC')
     
@@ -597,12 +595,12 @@ class SunMoonTests(TestCase):
         
         # `get_solar_events_in_interval` with first `datetime` naive.
         time1 = DateTime(2020, 10, 1)
-        time2 = _get_localized_time(2020, 10, 2)
+        time2 = _get_local_time(2020, 10, 2)
         self.assert_raises(
             ValueError, sm.get_solar_events_in_interval, time1, time2)
         
         # `get_solar_events_in_interval` with second `datetime` naive.
-        time1 = _get_localized_time(2020, 10, 1)
+        time1 = _get_local_time(2020, 10, 1)
         time2 = DateTime(2020, 10, 2)
         self.assert_raises(
             ValueError, sm.get_solar_events_in_interval, time1, time2)
@@ -614,8 +612,8 @@ class SunMoonTests(TestCase):
         # `get_solar_events_in_interval` seems to hang. Why?
         
         polar_latitudes = [-90, 90]
-        time_1 = _get_localized_time(2020, 1, 1)
-        time_2 = _get_localized_time(2020, 1, 10)
+        time_1 = _get_local_time(2020, 1, 1)
+        time_2 = _get_local_time(2020, 1, 10)
         
         for latitude in polar_latitudes:
             
@@ -638,7 +636,7 @@ class SunMoonTests(TestCase):
         
         polar_latitudes = [-90, 90]
         date = Date(2020, 1, 1)
-        time = _get_localized_time(2020, 1, 1)
+        time = _get_local_time(2020, 1, 1)
         
         for latitude in polar_latitudes:
             
@@ -711,12 +709,12 @@ class SunMoonCacheTests(TestCase):
         lat_1 = 1
         lon_1 = 2
         tz_name_1 = 'US/Eastern'
-        tz_1 = pytz.timezone(tz_name_1)
+        tz_1 = ZoneInfo(tz_name_1)
         
         lat_2 = 3
         lon_2 = 4
         tz_name_2 = 'US/Mountain'
-        tz_2 = pytz.timezone(tz_name_2)
+        tz_2 = ZoneInfo(tz_name_2)
         
         for result_times_local in (False, True):
             

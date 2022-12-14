@@ -2,10 +2,10 @@
 
 
 from collections import namedtuple
+from zoneinfo import ZoneInfo
 import datetime
 import os.path
 
-import pytz
 import sqlite3 as sqlite
 
 from vesper.archive.clip_class import ClipClass
@@ -511,9 +511,6 @@ class Archive:
             start_time : `datetime`
                 the UTC start time of the recording.
                 
-                To help ensure archive data quality, the start time is
-                required to have the `pytz.utc` time zone.
-                
             length : `int`
                 the length of the recording in sample frames.
                
@@ -531,9 +528,6 @@ class Archive:
         
         
         station_id = self._check_station_name(station_name)
-        
-        if start_time.tzinfo is not pytz.utc:
-            raise ValueError('Recording time zone must be `pytz.utc`.')
         
         recording_tuple = _RecordingTuple(
             id=None,
@@ -827,9 +821,6 @@ class Archive:
         station_id = self._check_station_name(station_name)
         detector_id = self._check_detector_name(detector_name)
         
-        if start_time.tzinfo is not pytz.utc:
-            raise ValueError('Clip time zone must be `pytz.utc`.')
-        
         start_time = _format_time(start_time)
         clip_info = (station_id, detector_id, start_time)
         self._cursor.execute(_SELECT_CLIP_SQL, clip_info)
@@ -1002,8 +993,7 @@ def _int_to_date(night):
 
 def _parse_time(time):
     time = datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S.%f')
-    time = pytz.utc.localize(time)
-    return time
+    return time.replace(tzinfo=ZoneInfo('UTC'))
     
     
 def _format_time(time):

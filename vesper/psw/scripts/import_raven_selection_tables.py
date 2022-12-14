@@ -1,7 +1,6 @@
 from datetime import datetime as DateTime, timedelta as TimeDelta
 from pathlib import Path
-
-from pytz import timezone
+from zoneinfo import ZoneInfo
 
 # Set up Django. This must happen before any use of Django, including
 # ORM class imports.
@@ -23,7 +22,7 @@ RECORDING_DIR_PATH = Path(
 
 SELECTION_TABLE_FILE_NAME_SUFFIXES = ('_sel.NOGO.txt',)
 
-TIME_ZONE = timezone('US/Pacific')
+TIME_ZONE = ZoneInfo('US/Pacific')
 
 GROUND_TRUTH_DETECTOR_NAME = 'PSW Ground Truth NOGO Detector'
 
@@ -75,8 +74,9 @@ def parse_selection_table_file_name(name):
     hour = int(time[:2])
     minute = int(time[2:4])
     second = int(time[4:6])
-    local_start_time = DateTime(year, month, day, hour, minute, second)
-    utc_start_time = TIME_ZONE.localize(local_start_time)
+    local_start_time = \
+        DateTime(year, month, day, hour, minute, second, tzinfo=TIME_ZONE)
+    utc_start_time = local_start_time.astimezone(ZoneInfo('UTC'))
     return station_name, utc_start_time
     
     

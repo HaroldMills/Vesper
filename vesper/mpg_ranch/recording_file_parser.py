@@ -1,10 +1,9 @@
 """Module containing class `RecordingFileParser`."""
 
 
+from zoneinfo import ZoneInfo
 import os.path
 import re
-
-import pytz
 
 from vesper.util.bunch import Bunch
 import vesper.util.audio_file_utils as audio_file_utils
@@ -191,7 +190,7 @@ class _VesperRecorderFileNameParser(_FileNameParser):
 
             
     def _get_utc_start_time(self, naive_start_time, station):
-        return pytz.utc.localize(naive_start_time)
+        return naive_start_time.replace(tzinfo=ZoneInfo('UTC'))
 
     
 class _SongMeterFileNameParser0(_FileNameParser):

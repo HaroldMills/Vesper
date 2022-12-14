@@ -1,12 +1,11 @@
 """Utility functions for use in USNO table classes."""
 
 
+from zoneinfo import ZoneInfo
 import datetime
 import math
 import re
 import urllib
-
-import pytz
 
 
 _PRE_BEGIN = '<pre>'
@@ -131,5 +130,5 @@ def parse_time(hhmm, date, utc_offset):
 
 
 def naive_to_utc(time, utc_offset):
-    time -= utc_offset
-    return pytz.utc.localize(time)
+    naive_time = time - utc_offset
+    return naive_time.replace(tzinfo=ZoneInfo('UTC'))

@@ -1,9 +1,8 @@
 """Module containing class `Station`."""
 
 
+from zoneinfo import ZoneInfo
 import datetime
-
-import pytz
 
 from vesper.util.named import Named
 
@@ -19,7 +18,7 @@ class Station(Named):
         
         super().__init__(name)
         self._long_name = long_name
-        self._time_zone = pytz.timezone(time_zone_name)
+        self._time_zone = ZoneInfo(time_zone_name)
         self._latitude = latitude
         self._longitude = longitude
         self._elevation = elevation

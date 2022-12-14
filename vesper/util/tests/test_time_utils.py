@@ -3,8 +3,7 @@ from datetime import (
     datetime as DateTime,
     time as Time,
     timedelta as TimeDelta)
-
-import pytz
+from zoneinfo import ZoneInfo
 
 
 from vesper.tests.test_case import TestCase
@@ -24,7 +23,7 @@ def _get_four_digit_year(y):
     
     
 def _create_utc_datetime(y, M, d, h, m, s, u, delta):
-    dt = DateTime(y, M, d, h, m, s, u, pytz.utc)
+    dt = DateTime(y, M, d, h, m, s, u, ZoneInfo('UTC'))
     return dt + TimeDelta(hours=delta)
 
 
@@ -75,33 +74,40 @@ class TimeUtilsTests(TestCase):
     
     def test_create_utc_datetime(self):
         
-        eastern = pytz.timezone('US/Eastern')
+        eastern = ZoneInfo('US/Eastern')
         
         cases = [
-            (2015, 5, 24, 12, 0, 0, 0, None, None, 0),
-            (2015, 5, 24, 12, 0, 0, 0, 'US/Eastern', None, 4),
-            (2015, 5, 24, 22, 0, 0, 0, 'US/Eastern', None, 4),
-            (2014, 12, 31, 22, 0, 0, 0, 'US/Eastern', None, 5),
-            (2015, 3, 8, 1, 59, 59, 999999, 'US/Eastern', None, 5),
-            (2015, 3, 8, 3, 0, 0, 0, eastern, None, 4),
-            (2015, 11, 1, 1, 0, 0, 0, eastern, True, 4),
-            (2015, 11, 1, 1, 0, 0, 0, eastern, False, 5),
-            (2015, 11, 1, 2, 0, 0, 0, eastern, None, 5)
+            (2015, 5, 24, 12, 0, 0, 0, None, 0, 0),
+            (2015, 5, 24, 12, 0, 0, 0, 'US/Eastern', 0, 4),
+            (2015, 5, 24, 22, 0, 0, 0, 'US/Eastern', 0, 4),
+            (2014, 12, 31, 22, 0, 0, 0, 'US/Eastern', 0, 5),
+            (2015, 3, 8, 1, 59, 59, 999999, 'US/Eastern', 0, 5),
+            (2015, 3, 8, 3, 0, 0, 0, eastern, 0, 4),
+            (2015, 11, 1, 1, 0, 0, 0, eastern, 0, 4),
+            (2015, 11, 1, 1, 0, 0, 0, eastern, 1, 5),
+            (2015, 11, 1, 2, 0, 0, 0, eastern, 0, 5)
         ]
         
-        for y, M, d, h, m, s, u, z, is_dst, delta in cases:
+        for y, M, d, h, m, s, u, z, fold, delta in cases:
             expected = _create_utc_datetime(y, M, d, h, m, s, u, delta)
             result = time_utils.create_utc_datetime(
-                y, M, d, h, m, s, u, z, is_dst)
+                y, M, d, h, m, s, u, z, fold)
             self.assertEqual(result, expected)
             
         
     def test_create_utc_datetime_errors(self):
         
         cases = [
+
             (2015, 4, 24, 0, 'Bobo'),
-            (2015, 3, 8, 2, 'US/Eastern'),
-            (2015, 11, 1, 1, 'US/Eastern')
+
+            # The following two cases are for nonexistent and ambiguous
+            # times. They raised exceptions when we used `pytz` to work
+            # with time zones, but they don't now that we use the
+            # Python Standard Library `zoneinfo` module.
+            # (2015, 3, 8, 2, 'US/Eastern'),
+            # (2015, 11, 1, 1, 'US/Eastern')
+
         ]
         
         f = time_utils.create_utc_datetime

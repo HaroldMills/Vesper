@@ -1,10 +1,10 @@
+from zoneinfo import ZoneInfo
 import datetime
 import time
 import unittest
 
 from django.db.models import Q
 from django.test import TestCase
-import pytz
 
 from vesper.django.app.models import (
     AnnotationInfo, Clip, Device, DeviceModel, Recording, Station,
@@ -14,7 +14,7 @@ import vesper.util.yaml_utils as yaml_utils
 
 
 def _dt(*args):
-    return datetime.datetime(*args, tzinfo=pytz.utc)
+    return datetime.datetime(*args, tzinfo=ZoneInfo('UTC'))
 
 
 _DATABASE_YAML = '''

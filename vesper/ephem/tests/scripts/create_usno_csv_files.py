@@ -113,8 +113,9 @@ def _append_rows(rows, lat, lon, event, times):
         
 
 def _get_naive_local_time(time, lon):
+    naive_time = time.replace(tzinfo=None)
     utc_offset = datetime.timedelta(hours=lon * 24. / 360.)
-    return (time + utc_offset).replace(tzinfo=None)
+    return naive_time + utc_offset
 
 
 def _append_aa_table_data(table, writer):

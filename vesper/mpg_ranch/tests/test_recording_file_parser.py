@@ -1,7 +1,6 @@
+from zoneinfo import ZoneInfo
 import datetime
 import os.path
-
-import pytz
 
 from vesper.mpg_ranch.recording_file_parser import RecordingFileParser
 from vesper.tests.test_case import TestCase
@@ -200,7 +199,7 @@ def dt(*args):
     return to_utc(datetime.datetime(*args))
 
 
-TIME_ZONE = pytz.timezone('US/Mountain')
+TIME_ZONE = ZoneInfo('US/Mountain')
 
 
 def to_utc(dt):

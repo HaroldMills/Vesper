@@ -4,6 +4,7 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from logging import FileHandler, Formatter
 from threading import Thread
+from zoneinfo import ZoneInfo
 import datetime
 import logging
 import math
@@ -11,7 +12,6 @@ import os
 import wave
 
 import pyaudio
-import pytz
 
 from vesper.util.audio_recorder import AudioRecorder, AudioRecorderListener
 from vesper.util.bunch import Bunch
@@ -198,7 +198,7 @@ def _parse_config_file(file_path, home_dir_path):
     if lon is not None:
         lon = float(lon)
         
-    time_zone = pytz.timezone(config.get('time_zone', _DEFAULT_TIME_ZONE))
+    time_zone = ZoneInfo(config.get('time_zone', _DEFAULT_TIME_ZONE))
         
     input_device_index = _get_input_device_index(config.get('input_device'))
     num_channels = int(config.get('num_channels', _DEFAULT_NUM_CHANNELS))
@@ -604,7 +604,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         
         data = self.server._recording_data
         recorder = data.recorder
-        now = datetime.datetime.now(tz=pytz.utc)
+        now = datetime.datetime.now(tz=ZoneInfo('UTC'))
                 
         status_table = self._create_status_table(data, recorder, now)
         station_table = self._create_station_table(data)

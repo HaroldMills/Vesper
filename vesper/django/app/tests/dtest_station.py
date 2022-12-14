@@ -1,6 +1,5 @@
+from zoneinfo import ZoneInfo
 import datetime
-
-import pytz
 
 from vesper.django.app.models import Station
 from vesper.django.app.tests.dtest_case import TestCase
@@ -18,18 +17,24 @@ class StationTests(TestCase):
     def test_local_to_utc(self):
         
         cases = [
-            ((2016, 8, 23), None, (2016, 8, 23, 4)),
-            ((2016, 8, 23), self.tz, (2016, 8, 23, 4)),
-            ((2015, 12, 31, 22, 12, 34), None, (2016, 1, 1, 3, 12, 34)),
-            ((2015, 12, 31, 22, 12, 34), self.tz, (2016, 1, 1, 3, 12, 34))
+
+            ((2016, 8, 23), None, 0, (2016, 8, 23, 4)),
+            ((2016, 8, 23), self.tz, 0, (2016, 8, 23, 4)),
+            ((2015, 12, 31, 22, 12, 34), None, 0, (2016, 1, 1, 3, 12, 34)),
+            ((2015, 12, 31, 22, 12, 34), self.tz, 0, (2016, 1, 1, 3, 12, 34)),
+
+            # Time at end of DST that requires disambiguation.
+            ((2022, 11, 6, 1), None, 0, (2022, 11, 6, 5)),
+            ((2022, 11, 6, 1), self.tz, 0, (2022, 11, 6, 5)),
+            ((2022, 11, 6, 1), None, 1, (2022, 11, 6, 6)),
+            ((2022, 11, 6, 1), self.tz, 1, (2022, 11, 6, 6)),
+
         ]
         
-        for args, tz, expected in cases:
-            dt = datetime.datetime(*args)
-            if tz is not None:
-                dt = tz.localize(dt)
+        for args, tz, fold, expected in cases:
+            dt = datetime.datetime(*args, tzinfo=tz, fold=fold)
             result = self.station.local_to_utc(dt)
-            expected = datetime.datetime(*expected, tzinfo=pytz.utc)
+            expected = datetime.datetime(*expected, tzinfo=ZoneInfo('UTC'))
             self.assertEqual(result, expected)
 
 
@@ -41,10 +46,10 @@ class StationTests(TestCase):
         ]
           
         for args, set_tzinfo, expected in cases:
-            tz = pytz.utc if set_tzinfo else None
+            tz = ZoneInfo('UTC') if set_tzinfo else None
             dt = datetime.datetime(*args, tzinfo=tz)
             result = self.station.utc_to_local(dt)
-            expected = self.tz.localize(datetime.datetime(*expected))
+            expected = datetime.datetime(*expected, tzinfo=self.tz)
             self.assertEqual(result, expected)
             
             
@@ -61,7 +66,7 @@ class StationTests(TestCase):
         for args, expected in cases:
             date = datetime.date(*args)
             result = get_time_utc(date)
-            expected = datetime.datetime(*expected, tzinfo=pytz.utc)
+            expected = datetime.datetime(*expected, tzinfo=ZoneInfo('UTC'))
             self.assertEqual(result, expected)
             
             
@@ -78,7 +83,8 @@ class StationTests(TestCase):
         
         cases = [
             (((2016, 8, 23),), ((2016, 8, 23, 4), (2016, 8, 24, 4))),
-            (((2016, 8, 23), (2016, 9, 1)), ((2016, 8, 23, 4), (2016, 9, 2, 4)))
+            (((2016, 8, 23), (2016, 9, 1)),
+             ((2016, 8, 23, 4), (2016, 9, 2, 4)))
         ]
         
         self._test_get_interval_utc(cases, self.station.get_day_interval_utc)
@@ -89,7 +95,8 @@ class StationTests(TestCase):
             args = tuple(datetime.date(*a) for a in args)
             result = get_interval_utc(*args)
             expected = tuple(
-                datetime.datetime(*e, tzinfo=pytz.utc) for e in expected)
+                datetime.datetime(*e, tzinfo=ZoneInfo('UTC'))
+                for e in expected)
             self.assertEqual(result, expected)
         
  
