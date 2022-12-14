@@ -34,6 +34,7 @@ services:
         ports:
             - 8000:8000
 
+        # command: python /Code/vesper/django/manage.py test -p "dtest_*.py" vesper.django
         # command: python /Code/vesper/django/manage.py runserver 0.0.0.0:8000
         command: gunicorn vesper.django.project.wsgi -w 4 -b 0.0.0.0:8000
 
