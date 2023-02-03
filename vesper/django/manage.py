@@ -2,7 +2,7 @@
 
 # Vesper server administration script.
 # 
-# This script is a simple derivative of the standard Django manage.py script.
+# This script is derived from the standard Django manage.py script.
 
 
 import os
@@ -37,7 +37,15 @@ def main():
     os.environ.setdefault(
         'DJANGO_SETTINGS_MODULE', 'vesper.django.project.settings')
 
-    from django.core.management import execute_from_command_line
+    try:
+        from django.core.management import execute_from_command_line
+    except ImportError as exc:
+        raise ImportError(
+            "Couldn't import Django. Are you sure it's installed and "
+            "available on your PYTHONPATH environment variable? Did you "
+            "forget to activate a virtual environment?"
+        ) from exc
+    
     execute_from_command_line(args)
     
     
@@ -110,15 +118,26 @@ if __name__ == '__main__':
     main()
 
 
-# The following is the standard Django manage.py script:
+# The following is the standard Django manage.py script, as of Django 4.1.6:
 # #!/usr/bin/env python
+# """Django's command-line utility for administrative tasks."""
 # import os
 # import sys
 # 
-# if __name__ == "__main__":
-#     os.environ.setdefault(
-#         "DJANGO_SETTINGS_MODULE", "vesper.django.project.settings")
 # 
-#     from django.core.management import execute_from_command_line
-# 
+# def main():
+#     """Run administrative tasks."""
+#     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'booboo.settings')
+#     try:
+#         from django.core.management import execute_from_command_line
+#     except ImportError as exc:
+#         raise ImportError(
+#             "Couldn't import Django. Are you sure it's installed and "
+#             "available on your PYTHONPATH environment variable? Did you "
+#             "forget to activate a virtual environment?"
+#         ) from exc
 #     execute_from_command_line(sys.argv)
+# 
+# 
+# if __name__ == '__main__':
+#     main()
