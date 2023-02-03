@@ -29,7 +29,7 @@
 #        created in step 3.
 
 # Pull base image.
-FROM python:3.10.4-slim-bullseye
+FROM python:3.10.9-slim-bullseye
 
 # Try the following instead of the above if your computer has a GPU.
 #FROM tensorflow/tensorflow:2.9.1-gpu
