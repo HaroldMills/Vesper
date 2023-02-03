@@ -137,10 +137,10 @@ setup(
     ],
     
     install_requires=[
-        'daphne',
+        'daphne',                  # ASGI server for Django
         'django~=4.1.0',           # update to new versions after testing
         'environs[django]',
-        # 'gunicorn',
+        # 'gunicorn',              # WSGI server for Django
         'jsonschema',
         # 'jsonschema~=4.14.0',    # provisionally unpinned from this
         'resampy',
