@@ -137,15 +137,18 @@ setup(
     ],
     
     install_requires=[
-        'django~=4.1.0',
+        'daphne',
+        'django~=4.1.0',           # update to new versions after testing
         'environs[django]',
-        'gunicorn',
-        'jsonschema~=4.14.0',
+        # 'gunicorn',
+        'jsonschema',
+        # 'jsonschema~=4.14.0',    # provisionally unpinned from this
         'resampy',
         'ruamel_yaml',
         'scipy',
-        'skyfield~=1.42.0',
-        'tensorflow~=2.9.0',
+        'skyfield',
+        # 'skyfield~=1.42.0',      # provisionally unpinned from this
+        'tensorflow~=2.11.0',      # update to new versions after testing
         'whitenoise',
     ],
       
