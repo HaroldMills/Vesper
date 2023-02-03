@@ -2,11 +2,11 @@
 #
 # The commands below should be run from the directory containing this file.
 #
-# To start services in detached mode with existing `vesper-dev_vesper` image:
+# To start services in detached mode with existing `vesper-dev-vesper` image:
 #
 #     docker compose up -d
 #
-# To start services in detached mode after building new `vesper-dev_vesper`
+# To start services in detached mode after building new `vesper-dev-vesper`
 # image:
 #
 #     docker compose up -d --build
@@ -21,6 +21,7 @@
 #
 # To collect static files:
 #
+#    docker compose up -d
 #    docker compose exec vesper vesper_admin collectstatic
 
 name: vesper-dev
@@ -36,7 +37,8 @@ services:
 
         # command: python /Code/vesper/django/manage.py test -p "dtest_*.py" vesper.django
         # command: python /Code/vesper/django/manage.py runserver 0.0.0.0:8000
-        command: gunicorn vesper.django.project.wsgi -w 4 -b 0.0.0.0:8000
+        # command: gunicorn vesper.django.project.wsgi -w 4 -b 0.0.0.0:8000
+        command: daphne vesper.django.project.asgi:application -b 0.0.0.0 -p 8000
 
         volumes:
             - .:/Code
