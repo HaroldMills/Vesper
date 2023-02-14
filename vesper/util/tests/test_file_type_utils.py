@@ -9,14 +9,14 @@ DATA_DIR_PATH = test_utils.get_test_data_dir_path(__file__)
 
 WAVE_TEST_CASES = (
     ('test.wav', True),
-    ('test.WAV', True),
+    ('test_uppercase.WAV', True),
     ('test.txt', False),
     ('test', False),
 )
 
 YAML_TEST_CASES = (
     ('test.yaml', True),
-    ('test.YAML', True),
+    ('test_uppercase.YAML', True),
     ('test.txt', False),
     ('test', False),
 )
