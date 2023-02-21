@@ -1,16 +1,16 @@
 """
 Django views for comparing different ways of reading AWS S3 clip files.
 
-View                        Description
-----                        -----------
+View                            Description
+----                            -----------
 
-s3-test                     Sync view that reads files synchronously.
+s3-clip-test                    Sync view that reads files synchronously.
 
-async-s3-test               Async view that reads files asynchronously on
-                            Django event loop.
+async-s3-clip-test              Async view that reads files asynchronously
+                                on Django event loop.
 
-sync-to-async-s3-test       Sync view that reads files asynchronously on
-                            one-off event loop.
+sync-to-async-s3-clip-test      Sync view that reads files asynchronously
+                                on one-off event loop.
 
 Each view times how long it takes to read an S3 clip file `_CLIP_COUNT`
 (see below) times, and displays the time in its response.
@@ -39,7 +39,7 @@ _CLIP_COUNT = 20
 
 
 # Synchronous view that reads several S3 clips one at a time.
-class S3TestView(View):
+class S3ClipTestView(View):
 
 
     def get(self, request):
@@ -82,7 +82,7 @@ def _p(s):
 
 
 # Asynchronous view that reads several S3 clips all at once.
-class AsyncS3TestView(View):
+class AsyncS3ClipTestView(View):
 
     async def get(self, request):
 
@@ -124,7 +124,7 @@ async def _get_s3_object_data_async(s3, object_key):
 
 # Synchronous view that runs a one-off event loop to read several
 # S3 clips all at once.
-class SyncToAsyncS3TestView(View):
+class SyncToAsyncS3ClipTestView(View):
 
     def get(self, request):
 

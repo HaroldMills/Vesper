@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'vesper.django.app.apps.VesperConfig',
+    'vesper.django.s3_clip_tests.apps.S3ClipTestsConfig',
 ]
 
 MIDDLEWARE = [
