@@ -63,8 +63,8 @@ scratch.py
 .ipynb_checkpoints
 .vscode/launch.json
 
-# Production Docker Compose file
-docker-compose-prod.yaml
+# Private Docker Compose files
+docker-compose-*.yaml
 
 # pip requirements.txt file
 requirements.txt
