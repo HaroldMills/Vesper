@@ -137,6 +137,7 @@ setup(
     ],
     
     install_requires=[
+        'aioboto3',
         'daphne',                  # ASGI server for Django
         'django~=4.1.0',           # update to new versions after testing
         'environs[django]',

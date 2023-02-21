@@ -3,8 +3,11 @@
 
 from io import BytesIO
 from threading import Lock
+import asyncio
 import os.path
 
+from environs import Env
+import aioboto3
 import numpy as np
 
 from vesper.archive_paths import archive_paths
@@ -26,13 +29,22 @@ class ClipManager:
     
     
     def __init__(self):
+
         self._rm = recording_manager
         self._recording_channel_info_cache = {}
         self._recording_info_cache = {}
         self._recording_file_signal_cache = {}
         self._read_lock = Lock()
         
-        
+        # Get S3 clip info, if present.
+        env = Env()
+        self._aws_access_key_id = env('VESPER_AWS_ACCESS_KEY_ID', None)
+        self._aws_secret_access_key = env('VESPER_AWS_SECRET_ACCESS_KEY', None)
+        self._aws_region_name = env('VESPER_AWS_REGION_NAME', None)
+        self._aws_s3_clip_bucket_name = \
+            env('VESPER_AWS_S3_CLIP_BUCKET_NAME', None)
+
+
     def get_audio_file_path(self, clip):
         return _get_audio_file_path(clip.id)
     
@@ -319,17 +331,72 @@ class ClipManager:
         self._recording_file_signal_cache = {}
     
     
-    def get_audio_file_contents(self, clip, media_type):
+    def get_audio_file_contents(self, clips):
+
+        if self._aws_s3_clip_bucket_name is not None:
+
+            return self._get_s3_audio_file_contents(clips)
+
+        else:
+            # using file system clip storage
+
+            return self._get_audio_file_contents(clips)
         
-        if media_type != 'audio/wav':
-            raise ValueError(
-                'Unrecognized media type "{}".'.format(media_type))
+
+    def _get_s3_audio_file_contents(self, clips):
+
+        # Get clip IDs. We must do this before calling asynchronous code
+        # since Django will raise a `SynchronousOnlyOperation` exception
+        # if we try to perform database operations in an asynchronous
+        # function.
+        clip_ids = [clip.id for clip in clips]
+
+        return asyncio.run(self._get_s3_audio_file_contents_async(clip_ids))
+    
+
+    async def _get_s3_audio_file_contents_async(self, clip_ids):
+
+        object_keys = [_get_relative_audio_file_path(i) for i in clip_ids]
+
+        session = aioboto3.Session(
+            aws_access_key_id=self._aws_access_key_id,
+            aws_secret_access_key=self._aws_secret_access_key,
+            region_name=self._aws_region_name)
+        
+        async with session.resource('s3') as s3:
+            coroutines = [
+                self._get_s3_audio_file_contents_aux(s3, object_key)
+                for object_key in object_keys]
+            return await asyncio.gather(*coroutines)
+
+
+    async def _get_s3_audio_file_contents_aux(self, s3, object_key):
+        obj = await s3.Object(self._aws_s3_clip_bucket_name, object_key)
+        result = await obj.get()
+        body = result['Body']
+        data = await body.read()
+        return data
+
+
+    def _get_audio_file_contents(self, clips):
+        return [self._get_audio_file_contents_aux(clip) for clip in clips]
             
+
+    def _get_audio_file_contents_aux(self, clip):
+        
         try:
-            return self._get_audio_file_contents_from_audio_file(clip)
+
+            try:
+                return self._get_audio_file_contents_from_audio_file(clip)
+                
+            except FileNotFoundError:
+                return self._get_audio_file_contents_from_recording(clip)
             
-        except FileNotFoundError:
-            return self._get_audio_file_contents_from_recording(clip)
+        except Exception as e:
+            raise ClipManagerError(
+                f'Attempt to get audio file contents for clip '
+                f'"{str(clip)}" failed with {e.__class__.__name__} '
+                f'exception. Exception message was: {e}')
             
             
     def _get_audio_file_contents_from_audio_file(self, clip):
@@ -427,16 +494,22 @@ class ClipManager:
         self._create_audio_file(clip, samples, path)        
         
         
+def _get_audio_file_path(clip_id):
+    relative_path = _get_relative_audio_file_path(clip_id)
+    # print(f'clip_manager._get_audio_file_path "{relative_path}"')
+    return os.path.join(str(archive_paths.clip_dir_path), relative_path)
+
+
 _CLIPS_DIR_FORMAT = (3, 3, 3)
 
 
-def _get_audio_file_path(clip_id):
+def _get_relative_audio_file_path(clip_id):
     id_parts = _get_clip_id_parts(clip_id, _CLIPS_DIR_FORMAT)
     path_parts = id_parts[:-1]
     id_ = ' '.join(id_parts)
     file_name = 'Clip {}.wav'.format(id_)
     path_parts.append(file_name)
-    return os.path.join(str(archive_paths.clip_dir_path), *path_parts)
+    return os.path.join(*path_parts)
 
 
 def _get_clip_id_parts(num, format_):

@@ -2,6 +2,8 @@ from django.conf import settings
 from django.urls import path, register_converter
 
 import vesper.django.app.views as views
+from vesper.django.app.s3_test_views import (
+    AsyncS3TestView, S3TestView, SyncToAsyncS3TestView)
 from vesper.django.app.name_converter import NameConverter
 
 
@@ -25,7 +27,12 @@ urlpatterns = [
     # path('clips/<int:clip_id>/metadata/', views.clip_metadata,
     #      name='clip-metadata'),
     
-    path('about-vesper/', views.about_vesper, name='about-vesper')
+    path('about-vesper/', views.about_vesper, name='about-vesper'),
+
+    path('s3-test/', S3TestView.as_view(), name='s3-test'),
+    path('async-s3-test/', AsyncS3TestView.as_view(), name='async-s3-test'),
+    path('sync-to-async-s3-test/', SyncToAsyncS3TestView.as_view(),
+         name='sync-to-async-s3-test'),
     
 ]
 

@@ -1161,10 +1161,8 @@ def _create_transfer_clip_classifications_command_spec(form):
 #
 #     clip = get_object_or_404(Clip, pk=clip_id)
 #
-#     content_type = 'audio/wav'
-#
 #     try:
-#         content = clip_manager.get_audio_file_contents(clip, content_type)
+#         content = clip_manager.get_audio_file_contents([clip])[0]
 #
 #     except Exception as e:
 #         _logger.error(
@@ -1295,26 +1293,8 @@ def _get_clip_audios_aux(content):
     # TODO: Limit number of clip IDs per query?
     clips = Clip.objects.filter(id__in=clip_ids)
 
-    content_type = 'audio/wav'
-    
-    audios = []
-    
-    for clip in clips:
-        
-        try:
-            audio = clip_manager.get_audio_file_contents(
-                clip, content_type)
-            
-        except Exception as e:
-            _logger.error(
-                f'Attempt to get audio file contents for clip '
-                f'"{str(clip)}" failed with {e.__class__.__name__} '
-                f'exception. Exception message was: {str(e)}')
-            return HttpResponseServerError()
-        
-        audios.append(audio)
-        
-        
+    audios = clip_manager.get_audio_file_contents(clips)
+
     # Concatenate alternating binary audio sizes and audios to make
     # response content.
     audio_sizes = [_get_uint32_bytes(len(a)) for a in audios]
