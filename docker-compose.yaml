@@ -21,8 +21,8 @@
 #
 # To collect static files:
 #
-#    docker compose up -d
-#    docker compose exec vesper vesper_admin collectstatic
+#     docker compose up -d
+#     docker compose exec vesper vesper_admin collectstatic
 
 name: vesper-dev
 
