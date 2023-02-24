@@ -50,50 +50,33 @@ def _get_recording_dir_paths(archive_dir_path):
 
     The list is obtained according to the following rules:
 
-    1. If the file 'Archive Settings.yaml' exists in the archive
+    1. If the file "Archive Settings.yaml" exists in the archive
        directory and contains a `recording_directories` item, the
        item's value is the list.
 
-    2. Otherwise, if there is a '/Recordings' directory, the list
-       contains just that directory.
+    2. Otherwise, if there are one or more "/Recordings*" directories,
+       the list contains those directories.
 
-    3. Otherwise, if there is a 'Recordings' subdirectory of the
-       archive directory, the list contains just that directory.
+    3. Otherwise, if there are one or more "<archive_dir_path>/Recordings*"
+       directories, the list contains those directories.
 
     4. Otherwise, the list is the empty list. This is the norm for
        an archive that has clip audio files but not recording audio
        files.
     """
 
-    # TODO: Support /Recordings* and /Archive/Recordings* recording dirs.
-
-
     # Try to get paths from archive settings file.
     paths = _get_archive_settings_recording_dir_paths(archive_dir_path)
+    if paths is not None:
+        return paths
 
-    if paths is None:
-        # couldn't get paths from archive settings file.
-
-        # Get the three possible standard recording directory paths.
-        path_a = Path('/Recordings')
-        path_b = archive_dir_path / 'Recordings'
-
-        if path_a.is_dir():
-            # `path_a` exists and is a directory
-
-            paths = [path_a]
-
-        elif path_b.is_dir():
-            # `path_b` exists and is a directory
-
-            paths = [path_b]
-
-        else:
-            # neither `path_a` nor `path_b` exists and is a directory
-
-            paths = []
-
-    return paths
+    # Try to get paths of the form /Recordings*.
+    paths = _get_recording_subdir_paths(Path('/'))
+    if len(paths) != 0:
+        return paths
+    
+    # Try to get paths of the form <archive_dir_path>/Recordings*.
+    return _get_recording_subdir_paths(archive_dir_path)
 
 
 def _get_archive_settings_recording_dir_paths(archive_dir_path):
@@ -118,3 +101,17 @@ def _get_archive_settings_recording_dir_paths(archive_dir_path):
             return None
         
         return [Path(p) for p in paths]
+    
+
+def _get_recording_subdir_paths(parent_dir_path):
+
+    # Get paths of subdirectories whose names start with "Recordings".
+    paths = [
+        p for p in parent_dir_path.iterdir()
+        if p.is_dir() and p.name.startswith('Recordings')]
+    
+    # Sort paths by subdirectory name.
+    paths.sort(key=lambda p: p.name)
+    
+    return paths
+
