@@ -69,7 +69,7 @@ services:
             # every time you run it) at a command prompt or terminal:
             #
             #     python -c "import secrets; print(secrets.token_urlsafe(40))"
-            VESPER_DJANGO_SECRET_KEY: "Af6PQCWfoAtxuqrVaMEgnYT5NfVWwd4oInvEXkzxfuQxhf05eEET5A"
+            VESPER_DJANGO_SECRET_KEY: "YKs482x7HnCKx1a7PvSf5zkRbvvn6nKRp6QSgiXjDLQg8_XPDPaoiw"
 
             VESPER_DJANGO_DEBUG: true
 

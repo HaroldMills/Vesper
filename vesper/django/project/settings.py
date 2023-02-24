@@ -11,9 +11,18 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 
+# TODO: For Vesper 0.5.0, which will require that the Vesper server run
+# in a Docker container:
+# * Drop support for "Archive Settings.yaml" (changes will be to apps.py).
+# * Drop support for "Environment Variables.env".
+# * Set ARCHIVE_DIR_PATH to `'/Archive'`.
+# * Provide no default value for VESPER_DJANGO_SECRET_KEY.
+# * Change DEBUG default value to `False`.
+
+
 from pathlib import Path
 
-from environs import Env, EnvError
+from environs import Env
 
 import vesper.util.logging_utils as logging_utils
 
@@ -30,11 +39,13 @@ env.read_env('Environment Variables.env', recurse=False)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: Never put the actual secret key here.
-SECRET_KEY = env('VESPER_DJANGO_SECRET_KEY')
+# SECURITY WARNING: Never put an actual secret key here.
+SECRET_KEY = env(
+    'VESPER_DJANGO_SECRET_KEY',
+    'YKs482x7HnCKx1a7PvSf5zkRbvvn6nKRp6QSgiXjDLQg8_XPDPaoiw')
 
 # SECURITY WARNING: Don't run with debug turned on in production.
-DEBUG = env.bool('VESPER_DJANGO_DEBUG', False)
+DEBUG = env.bool('VESPER_DJANGO_DEBUG', True)
 
 ALLOWED_HOSTS = env.list(
     'VESPER_DJANGO_ALLOWED_HOSTS',
@@ -140,12 +151,15 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 
-# The path of the Vesper archive directory, by default the current
-# working directory.
-#
-# We define this attribute here instead of at the end of this file
-# so we can use it in the default database URL, below.
-VESPER_ARCHIVE_DIR_PATH = env.path('VESPER_ARCHIVE_DIR_PATH', '/Archive')
+# The path of the Vesper archive directory. We define this attribute
+# here instead of at the end of this file so we can use it in the
+# default database URL, below.
+container_archive_dir_path = Path('/Archive')
+if container_archive_dir_path.is_dir():
+    VESPER_ARCHIVE_DIR_PATH = container_archive_dir_path
+else:
+    VESPER_ARCHIVE_DIR_PATH = Path.cwd()
+
 
 # The URL of the Vesper archive database, by default the URL of the
 # SQLite database in the file "Archive Database.sqlite" of the Vesper
@@ -165,18 +179,4 @@ DATABASES = {
 }
 
 
-# The paths of the Vesper archive recording directories.
-#
-# The value of this settintg is used by the `VesperConfig` class
-# to initialize `archive_paths.recording_dir_paths`.
-try:
-    VESPER_RECORDING_DIR_PATHS = \
-        env.list('VESPER_RECORDING_DIR_PATHS', subcast=Path)
-
-except EnvError:
-    # environment variable not defined
-
-    VESPER_RECORDING_DIR_PATHS = None
-
-    
-VESPER_ARCHIVE_READ_ONLY = env.bool('VESPER_ARCHIVE_READ_ONLY', True)
+VESPER_ARCHIVE_READ_ONLY = env.bool('VESPER_ARCHIVE_READ_ONLY', False)

@@ -1,10 +1,12 @@
 from pathlib import Path
+import logging
 
 from django.apps import AppConfig
 from django.conf import settings
 
 from vesper.archive_paths import archive_paths
 import vesper.util.archive_lock as archive_lock
+import vesper.util.yaml_utils as yaml_utils
 
 
 class VesperConfig(AppConfig):
@@ -48,25 +50,29 @@ def _get_recording_dir_paths(archive_dir_path):
 
     The list is obtained according to the following rules:
 
-    1. If the VESPER_RECORDING_DIR_PATHS environment variable is set,
-        the list contains the comma-separated directories of its value.
+    1. If the file 'Archive Settings.yaml' exists in the archive
+       directory and contains a `recording_directories` item, the
+       item's value is the list.
 
     2. Otherwise, if there is a '/Recordings' directory, the list
-        contains just that directory.
+       contains just that directory.
 
     3. Otherwise, if there is a 'Recordings' subdirectory of the
-        archive directory, the list contains just that directory.
+       archive directory, the list contains just that directory.
 
     4. Otherwise, the list is the empty list. This is the norm for
-        an archive that has clip audio files but not recording audio
-        files.
+       an archive that has clip audio files but not recording audio
+       files.
     """
 
+    # TODO: Support /Recordings* and /Archive/Recordings* recording dirs.
 
-    paths = settings.VESPER_RECORDING_DIR_PATHS
+
+    # Try to get paths from archive settings file.
+    paths = _get_archive_settings_recording_dir_paths(archive_dir_path)
 
     if paths is None:
-        # VESPER_RECORDING_DIR_PATHS environment variable not set
+        # couldn't get paths from archive settings file.
 
         # Get the three possible standard recording directory paths.
         path_a = Path('/Recordings')
@@ -88,3 +94,27 @@ def _get_recording_dir_paths(archive_dir_path):
             paths = []
 
     return paths
+
+
+def _get_archive_settings_recording_dir_paths(archive_dir_path):
+
+    path = archive_dir_path / 'Archive Settings.yaml'
+    
+    if path.is_file():
+        # archive settings file present in archive directory
+
+        try:
+            settings = yaml_utils.load(path)
+
+        except Exception as e:
+            logging.warning(
+                f'Attempt to load YAML file "{path}" raised exception. '
+                f'File will be ignored. Exception message was: {e}')
+            return None
+
+        try:
+            paths = settings['recording_directories']
+        except KeyError:
+            return None
+        
+        return [Path(p) for p in paths]
