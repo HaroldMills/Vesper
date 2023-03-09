@@ -38,13 +38,8 @@ To create a conda environment for Vesper development:
     conda create -n vesper-dev python=3.10
     conda activate vesper-dev
     conda install pyaudio
-    pip install aioboto3 bokeh daphne django "environs[django]" jsonschema matplotlib resampy ruamel_yaml scipy skyfield sphinx sphinx_rtd_theme tensorflow whitenoise
-
-To create a conda environment using the latest, local Vesper source code:
-    conda create -n vesper-latest python=3.10
-    conda activate vesper-latest
-    conda install pyaudio (omit when creating environment for creating Vesper Docker images)
-    pip install -e /Users/harold/Documents/Code/Python/Vesper
+    pip install -e /Users/harold/Documents/Code/Python/vesper
+    pip install bokeh matplotlib sphinx sphinx_rtd_theme
 
 Whenever you modify plugin entry points, you must run:
 
@@ -57,20 +52,20 @@ entry points that no longer exist.
 To run Django unit tests:
 
     cd "Desktop/Test Archive"
-    conda activate vesper-latest
+    conda activate vesper-dev
     vesper_admin test -p "dtest_*.py" vesper.django
 
 To run non-Django unit tests:
 
-    cd /Users/harold/Documents/Code/Python/Vesper/vesper
-    conda activate vesper-latest
-    python -m unittest discover -s /Users/harold/Documents/Code/Python/Vesper/vesper
+    cd /Users/harold/Documents/Code/Python/vesper/vesper
+    conda activate vesper-dev
+    python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper
 
 To run non-Django unit tests for just one subpackage of the `vesper` package:
 
-    cd /Users/harold/Documents/Code/Python/Vesper/vesper
-    conda activate vesper-latest
-    python -m unittest discover -s /Users/harold/Documents/Code/Python/Vesper/vesper/<subpackage>
+    cd /Users/harold/Documents/Code/Python/vesper/vesper
+    conda activate vesper-dev
+    python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper/<subpackage>
 
 """
 
