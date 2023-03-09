@@ -1,6 +1,6 @@
 # Dockerfile for development Vesper Docker image.
 #
-# This Dockerfile builds a development `vesper` Docker image that
+# This Dockerfile builds a development `vesper-dev` Docker image that
 # includes an editable `vesper` package in the `/Code` directory.
 # When you run the image, you must mount the host file system
 # directory containing the package's source code as the `/Code`
@@ -12,11 +12,11 @@
 # `RUN pip install vesper` in place of the last several lines of
 # this file, beginning with `WORKDIR /Code`.
 #
-# To build a `vesper` Docker image with this file, first create an
+# To build a `vesper-dev` Docker image with this file, first create an
 # up-to-date pip requirements.txt file as described below, and then
 # issue the following command from the directory containing this file:
 #
-#     docker build -t vesper .
+#     docker build -t vesper-dev .
 #
 # See the accompanying file `docker-compose.yaml` for how to use Docker
 # Compose to serve a Vesper archive with the built image.
@@ -24,23 +24,35 @@
 # Building a Docker image with this file requires an up-to-date pip
 # `requirements.txt` file. To create that file:
 #
-#     1. Create an up-to-date `vesper-latest` environment as described
-#        in `setup.py`.
+#     1. If there is a `vesper-reqs` Conda environment, delete it with:
 #
-#     2. Activate the `vesper-latest` environment.
+#            conda remove -n vesper-reqs --all
 #
-#     3. From the directory containing this file, issue the command:
+#     2. `cd` to the directory containing this file.
+#
+#     3. Create a new `vesper-reqs` environment with:
+#
+#            conda create -n vesper-reqs python=3.10
+#            conda activate vesper-reqs
+#            pip install -e .
+#
+#     4. Create a pip `requirements.txt` file with:
 #
 #            pip list --format=freeze > requirements.txt
 #
-#        Note that the recommended command differs from the usual one
+#        Note that this command differs from the usual one
 #        (`pip freeze > requirements.txt`) for generating a
 #        `requirements.txt` file in order to avoid a problem described
 #        at https://stackoverflow.com/questions/62885911/
 #        pip-freeze-creates-some-weird-path-instead-of-the-package-version)
 #
-#     4. Delete the `vesper` package line from the `requirements.txt` file
-#        created in step 3.
+#     5. Delete the `vesper` package line from the `requirements.txt` file
+#        created in step 4.
+#
+#     6. Delete the `vesper-reqs` environment with:
+#
+#            conda deactivate
+#            conda remove -n vesper-reqs --all
 
 # Pull base image.
 FROM python:3.10.9-slim-bullseye
@@ -53,11 +65,12 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK 1
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Set working directory.
+# Set working directory, creating it if needed.
 WORKDIR /Code
 
-# Install Vesper dependencies.
-COPY ./requirements.txt .
+# Install Vesper dependencies, using exactly the versions listed
+# in `requirements.txt`.
+COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Copy Vesper project directory from host file system into image.

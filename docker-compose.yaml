@@ -2,14 +2,9 @@
 #
 # The commands below should be run from the directory containing this file.
 #
-# To start services in detached mode with existing `vesper-dev-vesper` image:
+# To start services in detached mode with existing `vesper-dev` image:
 #
 #     docker compose up -d
-#
-# To start services in detached mode after building new `vesper-dev-vesper`
-# image:
-#
-#     docker compose up -d --build
 #
 # To see logs when services are running in detached mode:
 #
@@ -30,7 +25,7 @@ services:
 
     vesper:
 
-        build: .
+        image: vesper-dev
 
         ports:
             - 8000:8000
