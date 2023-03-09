@@ -2,9 +2,12 @@
 
 
 import importlib
+import itertools
 
+from django.db.models import Q
 import tensorflow as tf
 
+from vesper.django.app.models import Processor
 import vesper.birdvox.detectors as birdvox_detectors
 import vesper.util.yaml_utils as yaml_utils
 
@@ -31,6 +34,10 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Use a hierarchical name space for plugins, extension points, and
 # extensions?
 
+
+def _chain(iterable):
+    return itertools.chain.from_iterable(iterable)
+        
 
 _TF_VERSION = int(tf.__version__.split('.')[0])
 
@@ -287,10 +294,64 @@ class ExtensionManager:
             # rather will discover them at load time just like all
             # other plugins.
             extensions += birdvox_detectors.get_detector_classes()
+
+            extensions += self._get_detector_provider_detector_classes()
             
         return extensions
     
     
+    def _get_detector_provider_detector_classes(self):
+
+        entry_points = importlib.metadata.entry_points(
+            group='vesper.detector_providers')
+        
+        return list(_chain(
+            self._get_detector_provider_detector_classes_aux(entry_point)
+            for entry_point in entry_points))
+    
+
+    def _get_detector_provider_detector_classes_aux(self, entry_point):
+
+        try:
+
+            provider = entry_point.load()
+
+            series_names = provider.get_supported_detector_series_names()
+
+            return _chain(
+                self._get_detector_series_classes(series_name, provider)
+                for series_name in series_names)
+        
+        except Exception:
+            return []
+    
+
+    def _get_detector_series_classes(self, series_name, provider):
+
+        detectors = Processor.objects.filter(
+            Q(type='Detector') & Q(name__startswith=series_name))
+        
+        return [
+            self._get_detector_class(detector, provider)
+            for detector in detectors]
+    
+
+    def _get_detector_class(self, detector, provider):
+         
+        extension_name = detector.name
+
+        parts = extension_name.split()
+        series_name = parts[0]
+        version_number = parts[1]
+        settings = parts[2:]
+
+        settings = provider.parse_detector_settings(
+            series_name, version_number, settings)
+        
+        return provider.get_detector_class(
+            extension_name, series_name, version_number, settings)
+    
+        
     def _show_loaded_extensions(self, extension_point_name):
         print(f'Loaded "{extension_point_name}" extensions:')
         extensions = self._extensions[extension_point_name]
