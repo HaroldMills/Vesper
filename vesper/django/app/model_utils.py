@@ -644,8 +644,8 @@ def annotate_clip(
         creating_job=None, creating_processor=None):
     
     annotate_clips(
-        [clip.id], annotation_info, value, creation_time=None,
-        creating_user=None, creating_job=None, creating_processor=None)
+        [clip.id], annotation_info, value, creation_time, creating_user,
+        creating_job, creating_processor)
     
     
 @archive_lock.atomic
@@ -694,8 +694,8 @@ def unannotate_clip(
         creating_job=None, creating_processor=None):
     
     unannotate_clips(
-        [clip.id], annotation_info, creation_time=None, creating_user=None,
-        creating_job=None, creating_processor=None)
+        [clip.id], annotation_info, creation_time, creating_user,
+        creating_job, creating_processor)
 
 
 def get_clip_tags(clip):
@@ -768,8 +768,8 @@ def tag_clip(
         creating_job=None, creating_processor=None):
     
     tag_clips(
-        [clip.id], tag_info, creation_time=None, creating_user=None,
-        creating_job=None, creating_processor=None)
+        [clip.id], tag_info, creation_time, creating_user, creating_job,
+        creating_processor)
     
     
 @archive_lock.atomic
@@ -817,8 +817,8 @@ def untag_clip(
         creating_job=None, creating_processor=None):
     
     untag_clips(
-        [clip.id], tag_info, creation_time=None, creating_user=None,
-        creating_job=None, creating_processor=None)
+        [clip.id], tag_info, creation_time, creating_user, creating_job,
+        creating_processor)
     
     
 def get_clip_detector_name(clip):
