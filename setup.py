@@ -1,53 +1,69 @@
 """
-Setup.py for Vesper pip package.
+setup.py for Vesper pip package.
 
-All of the commands below should be issued from the directory containing
-this file.
+
+Building and Uploading the Vesper Package
+-----------------------------------------
+
+To create a Conda environment from which to build a Vesper package
+and upload it to PyPI:
+
+    conda create -n build python=3.10
+    conda activate build
+    pip install build
+    pip install twine
+
+The package build and upload commands below should be issued from within
+the directory containing this file.
 
 To build the Vesper package:
 
-    python setup.py sdist bdist_wheel
+    conda activate build
+    python -m build
 
 To upload the Vesper package to the test Python package index:
 
+    conda activate build
     python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
 To upload the Vesper package to the real Python package index:
 
+    conda activate build
     python -m twine upload dist/*
 
-To create a conda environment using a local Vesper package:
+    
+Creating Vesper Conda Environments
+----------------------------------
+
+To create a Conda environment using a local Vesper package:
 
     conda create -n test python=3.10
     conda activate test
     pip install dist/vesper-<version>.tar.gz
-    
-To create a conda environment using a Vesper package from the test PyPI:
+
+To create a Conda environment using a Vesper package from the test PyPI:
 
     conda create -n test python=3.10
     conda activate test
     pip install --extra-index-url https://test.pypi.org/simple/ vesper
 
-To create a conda environment using a Vesper package from the real PyPI:
+To create a Conda environment using a Vesper package from the real PyPI:
 
     conda create -n test python=3.10
     conda activate test
     pip install vesper==<version>
 
-To create a conda environment for Vesper development:
+To create a Conda environment for Vesper development:
+
     conda create -n vesper-dev python=3.10
     conda activate vesper-dev
     conda install pyaudio
     pip install -e /Users/harold/Documents/Code/Python/vesper
     pip install bokeh matplotlib sphinx sphinx_rtd_theme
 
-Whenever you modify plugin entry points, you must run:
-
-    python setup.py develop
     
-for the plugin manager to be able to see the changes. If you don't do this,
-you will see ImportError exceptions when the plugin manager tries to load
-entry points that no longer exist.
+Running Vesper Unit Tests
+-------------------------
 
 To run Django unit tests:
 
@@ -66,7 +82,7 @@ To run non-Django unit tests for just one subpackage of the `vesper` package:
     cd /Users/harold/Documents/Code/Python/vesper/vesper
     conda activate vesper-dev
     python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper/<subpackage>
-
+    
 """
 
 
