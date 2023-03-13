@@ -91,16 +91,34 @@ def _get_archive_settings_recording_dir_paths(archive_dir_path):
 
         except Exception as e:
             logging.warning(
-                f'Attempt to load YAML file "{path}" raised exception. '
-                f'File will be ignored. Exception message was: {e}')
-            return None
-
-        try:
-            paths = settings['recording_directories']
-        except KeyError:
+                f'Attempt to load archive settings file "{path}" raised '
+                f'exception. File will be ignored. Exception message was: '
+                f'{e}')
             return None
         
-        return [Path(p) for p in paths]
+        if settings is None:
+            # settings file contains no settings
+
+            return None
+        
+        if isinstance(settings, dict):
+            # settings file contains associative array
+
+            try:
+                paths = settings['recording_directories']
+            except KeyError:
+                return None
+            
+            return [Path(p) for p in paths]
+        
+        else:
+            # settings file is not empty but does not contain an
+            # associative array
+
+            logging.warning(
+                f'Archive settings file "{path}" does not contain an '
+                f'associative array as expected. File will be ignored.')
+            return None
     
 
 def _get_recording_subdir_paths(parent_dir_path):
