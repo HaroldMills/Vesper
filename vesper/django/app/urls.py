@@ -25,6 +25,7 @@ urlpatterns = [
     # path('clips/<int:clip_id>/metadata/', views.clip_metadata,
     #      name='clip-metadata'),
     
+    path('health-check/', views.health_check, name='health-check'),
     path('about-vesper/', views.about_vesper, name='about-vesper'),
     
 ]

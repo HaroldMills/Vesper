@@ -2407,6 +2407,10 @@ def job(request, job_id):
     return render(request, 'vesper/job.html', context)
 
 
+def health_check(request):
+    return HttpResponse('Hello from Vesper!')
+
+
 def about_vesper(request):
 
     if request.method not in _GET_AND_HEAD:
