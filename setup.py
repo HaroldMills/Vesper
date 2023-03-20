@@ -154,6 +154,7 @@ setup(
         # 'gunicorn',              # WSGI server for Django
         'jsonschema',
         # 'jsonschema~=4.14.0',    # provisionally unpinned from this
+        'psycopg2-binary',
         'resampy',
         'ruamel_yaml',
         'scipy',
