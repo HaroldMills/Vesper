@@ -168,7 +168,7 @@ else:
 # See https://github.com/jazzband/dj-database-url for the form of
 # URLs for various kinds of databases.
 VESPER_ARCHIVE_DATABASE_URL = env.dj_db_url(
-    'DATABASE_URL',
+    'VESPER_ARCHIVE_DATABASE_URL',
     f'sqlite:///{VESPER_ARCHIVE_DIR_PATH}/Archive Database.sqlite')
 
 
