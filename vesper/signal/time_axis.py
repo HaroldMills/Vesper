@@ -32,6 +32,15 @@ a.end_datetime             # `datetime` at end index, `None` if unknown
 '''
 
 
+# A possible class hierarchy for axes:
+#
+# Axis
+#     IndexedAxis
+#         TimeAxis
+#         ArrayAxis
+#     AmplitudeAxis
+
+
 # TODO: Implement datetime-awareness. Include new `start_datetime`
 # initializer argument.
 
