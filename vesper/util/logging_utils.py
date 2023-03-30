@@ -21,10 +21,12 @@ import traceback
 
 _MESSAGE_FORMAT = '%(asctime)s,%(msecs)03d %(levelname)-8s %(message)s'
 _DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+_LEVEL = logging.INFO
 
 
 def configure_root_logger():
-    logging.basicConfig(format=_MESSAGE_FORMAT, datefmt=_DATE_FORMAT)
+    logging.basicConfig(
+        format=_MESSAGE_FORMAT, datefmt=_DATE_FORMAT, level=_LEVEL)
 
 
 def create_formatter():
