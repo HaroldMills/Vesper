@@ -5,10 +5,10 @@ import importlib
 import itertools
 
 from django.db.models import Q
-import tensorflow as tf
 
 from vesper.django.app.models import Processor
 import vesper.birdvox.detectors as birdvox_detectors
+import vesper.django.project.settings as settings
 import vesper.util.yaml_utils as yaml_utils
 
 
@@ -39,17 +39,19 @@ def _chain(iterable):
     return itertools.chain.from_iterable(iterable)
         
 
-_TF_VERSION = int(tf.__version__.split('.')[0])
+if settings.VESPER_INCLUDE_TENSORFLOW_PROCESSORS:
 
+    import tensorflow as tf
 
-_TF1_CLASSIFIERS = '''
+    _TF_VERSION = int(tf.__version__.split('.')[0])
+
+    _TF1_CLASSIFIERS = '''
     - vesper.mpg_ranch.nfc_coarse_classifier_2_1.classifier.Classifier
     - vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier.Classifier
     - vesper.mpg_ranch.nfc_coarse_classifier_4_0.classifier.Classifier
 '''
 
-
-_TF1_DETECTORS = '''
+    _TF1_DETECTORS = '''
 
     # MPG Ranch Thrush Detector 0.0
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector
@@ -59,7 +61,7 @@ _TF1_DETECTORS = '''
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector70
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector80
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector90
-     
+    
     # MPG Ranch Tseep Detector 0.0
     - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector
     - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector40
@@ -68,7 +70,7 @@ _TF1_DETECTORS = '''
     - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector70
     - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector80
     - vesper.mpg_ranch.nfc_detector_0_0.detector.TseepDetector90
-     
+    
     # MPG Ranch Thrush Detector 0.1
     - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector
     - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector40
@@ -77,7 +79,7 @@ _TF1_DETECTORS = '''
     - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector70
     - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector80
     - vesper.mpg_ranch.nfc_detector_0_1.detector.ThrushDetector90
-     
+    
     # MPG Ranch Tseep Detector 0.1
     - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector
     - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector40
@@ -86,7 +88,7 @@ _TF1_DETECTORS = '''
     - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector70
     - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector80
     - vesper.mpg_ranch.nfc_detector_0_1.detector.TseepDetector90
-     
+    
     # MPG Ranch Thrush Detector 1.0
     - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector
     - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector20
@@ -97,7 +99,7 @@ _TF1_DETECTORS = '''
     - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector70
     - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector80
     - vesper.mpg_ranch.nfc_detector_1_0.detector.ThrushDetector90
-     
+    
     # MPG Ranch Tseep Detector 1.0
     - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector
     - vesper.mpg_ranch.nfc_detector_1_0.detector.TseepDetector20
@@ -111,8 +113,7 @@ _TF1_DETECTORS = '''
 
 '''
 
-
-_TF2_CLASSIFIERS = '''
+    _TF2_CLASSIFIERS = '''
 
     # MPG Ranch
     - vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.annotator.Annotator
@@ -132,8 +133,7 @@ _TF2_CLASSIFIERS = '''
     
 '''
 
-
-_TF2_DETECTORS = '''
+    _TF2_DETECTORS = '''
 
     # MPG Ranch Thrush Detector 1.1
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector
@@ -147,7 +147,7 @@ _TF2_DETECTORS = '''
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector70_12
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector80
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector90
-     
+    
     # MPG Ranch Tseep Detector 1.1
     - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector
     - vesper.mpg_ranch.nfc_detector_1_1.detector.TseepDetector20
@@ -163,13 +163,18 @@ _TF2_DETECTORS = '''
 
 '''
 
+    if _TF_VERSION == 1:
+        _TF_CLASSIFIERS = _TF1_CLASSIFIERS
+        _TF_DETECTORS = _TF1_DETECTORS
+    else:
+        _TF_CLASSIFIERS = _TF2_CLASSIFIERS
+        _TF_DETECTORS = _TF2_DETECTORS
 
-if _TF_VERSION == 1:
-    _TF_CLASSIFIERS = _TF1_CLASSIFIERS
-    _TF_DETECTORS = _TF1_DETECTORS
 else:
-    _TF_CLASSIFIERS = _TF2_CLASSIFIERS
-    _TF_DETECTORS = _TF2_DETECTORS
+    # don't include TensorFlow processors.
+
+    _TF_CLASSIFIERS = ''
+    _TF_DETECTORS = ''
 
 
 _EXTENSION_SPEC = f'''

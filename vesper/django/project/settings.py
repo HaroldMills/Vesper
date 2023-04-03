@@ -186,3 +186,11 @@ DATABASES = {
 
 
 VESPER_ARCHIVE_READ_ONLY = env.bool('VESPER_ARCHIVE_READ_ONLY', False)
+
+# Set this `True` if and only if you want to include the TensorFlow-based
+# detector and classifier extensions in the Vesper core server. These are
+# mostly the MPG Ranch detectors and classifiers. They will move out of
+# the Vesper core server in the future. For now, including them in the
+# core server slows startup.
+VESPER_INCLUDE_TENSORFLOW_PROCESSORS = env.bool(
+    'VESPER_INCLUDE_TENSORFLOW_PROCESSORS', True)
