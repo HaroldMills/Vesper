@@ -22,7 +22,8 @@ from django.urls import include, path
 
 urlpatterns = [
     path('', include('vesper.django.app.urls')),
-    path('', include('vesper.django.s3_clip_tests.urls')),
+    path('', include('vesper.django.old_bird.urls')),
+    # path('', include('vesper.django.s3_clip_tests.urls')),
 ]
 
 

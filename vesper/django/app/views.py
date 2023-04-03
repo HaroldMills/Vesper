@@ -10,9 +10,8 @@ from django.db import connection, reset_queries, transaction
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import (
-    Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
-    HttpResponseNotAllowed, HttpResponseRedirect, HttpResponseServerError,
-    JsonResponse)
+    Http404, HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed,
+    HttpResponseRedirect, JsonResponse)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -49,6 +48,8 @@ from vesper.django.app.transfer_clip_classifications_form import \
     TransferClipClassificationsForm
 from vesper.django.app.untag_clips_form import UntagClipsForm
 from vesper.ephem.sun_moon import SunMoon
+from vesper.old_bird.add_old_bird_clip_start_indices_form import \
+    AddOldBirdClipStartIndicesForm
 from vesper.old_bird.export_clip_counts_csv_file_form import \
     ExportClipCountsCsvFileForm as OldBirdExportClipCountsCsvFileForm
 from vesper.old_bird.import_clips_form import ImportClipsForm
@@ -59,9 +60,8 @@ from vesper.singleton.preference_manager import preference_manager
 from vesper.singleton.preset_manager import preset_manager
 from vesper.util.bunch import Bunch
 import vesper.django.app.model_utils as model_utils
+import vesper.django.util.view_utils as view_utils
 import vesper.external_urls as external_urls
-from vesper.old_bird.add_old_bird_clip_start_indices_form import \
-    AddOldBirdClipStartIndicesForm
 import vesper.old_bird.export_clip_counts_csv_file_utils as \
     old_bird_export_clip_counts_csv_file_utils
 import vesper.util.archive_lock as archive_lock
@@ -105,17 +105,6 @@ import vesper.version as version
 # `get_clip_metadata`) that process POST requests that can never modify
 # server state, and we disable Django's CSRF protection for these views
 # with Django's `@csrf_exempt` decorator.
-
-
-class HttpError(Exception):
-
-    def __init__(self, status_code, reason=None):
-        self._status_code = status_code
-        self._reason = reason
-
-    @property
-    def http_response(self):
-        return HttpResponse(status=self._status_code, reason=self._reason)
 
 
 # A note about UTC vs. local times on client and server:
@@ -1206,23 +1195,6 @@ def _get_presets_json(preset_type_name):
     return json.dumps(presets)
 
 
-# TODO: Does Django already include functions for parsing HTTP headers?
-# If so, I couldn't find them.
-def _parse_content_type(content_type):
-
-    parts = [p.strip() for p in content_type.split(';')]
-
-    params = {}
-    for part in parts[1:]:
-        try:
-            name, value = part.split('=', 1)
-        except ValueError:
-            continue
-        params[name] = value
-
-    return Bunch(name=parts[0], params=params)
-
-
 # This view handles an HTTP POST request to read data from the server,
 # but does not modify the server state. It uses the POST method rather
 # than the GET method since the request includes information (namely
@@ -1235,48 +1207,9 @@ def _parse_content_type(content_type):
 @csrf_exempt
 def get_clip_audios(request):
     if request.method == 'POST':
-        return _handle_json_post(request, _get_clip_audios_aux)
+        return view_utils.handle_json_post(request, _get_clip_audios_aux)
     else:
         return HttpResponseNotAllowed(['POST'])
-    
-    
-def _handle_json_post(request, content_handler):
-        
-    try:
-        content = _get_json_request_body(request)
-    except HttpError as e:
-        return e.http_response
-
-    try:
-        content = json.loads(content)
-    except json.JSONDecodeError as e:
-        return HttpResponseBadRequest(
-            reason='Could not decode request JSON')
-
-    return content_handler(content)
-    
-        
-def _get_json_request_body(request):
-
-    # According to rfc4627, utf-8 is the default charset for the
-    # application/json media type.
-
-    return _get_request_body(request, 'application/json', 'utf-8')
-
-
-def _get_request_body(request, content_type_name, default_charset_name):
-
-    content_type = _parse_content_type(request.META['CONTENT_TYPE'])
-
-    # Make sure content type is text/plain.
-    if content_type.name != content_type_name:
-        raise HttpError(
-            status_code=415,
-            reason=f'Request content type must be {content_type_name}')
-
-    charset = content_type.params.get('charset', default_charset_name)
-
-    return request.body.decode(charset)
 
 
 # TODO: Handle errors better in this method. Currently, it responds
@@ -1331,7 +1264,7 @@ def _get_uint32_bytes(i):
 @csrf_exempt
 def get_clip_metadata(request):
     if request.method == 'POST':
-        return _handle_json_post(request, _get_clip_metadata_aux)
+        return view_utils.handle_json_post(request, _get_clip_metadata_aux)
     else:
         return HttpResponseNotAllowed(['POST'])        
         
@@ -1470,7 +1403,7 @@ def _edit_clip_metadata(request, edit_function, *args):
 
     if request.method == 'POST':
         if request.user.is_authenticated:
-            return _handle_json_post(request, handle_content)
+            return view_utils.handle_json_post(request, handle_content)
         else:
             return HttpResponseForbidden()
     else:
