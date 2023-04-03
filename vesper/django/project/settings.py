@@ -27,6 +27,10 @@ from environs import Env
 import vesper.util.logging_utils as logging_utils
 
 
+# TODO: Set server-wide logging level here. The logging level is currently
+# hard-coded to `logging.INFO` in various places in the server code.
+
+
 # Configure logging for Vesper server early, before anybody logs anything.
 logging_utils.configure_root_logger()
 
@@ -63,7 +67,8 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'vesper.django.app.apps.VesperConfig',
-    'vesper.django.s3_clip_tests.apps.S3ClipTestsConfig',
+    'vesper.django.old_bird.apps.OldBirdConfig'
+    # 'vesper.django.s3_clip_tests.apps.S3ClipTestsConfig',
 ]
 
 MIDDLEWARE = [
