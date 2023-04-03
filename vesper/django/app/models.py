@@ -537,6 +537,10 @@ class Recording(Model):
         related_name='recordings',
         related_query_name='recording')
     
+    # TODO: Consider how to represent remote creator, e.g. a remote
+    # recording script. One way to do this would be to add a
+    # `creating_user` field and setting it to the logged-in user.
+    
     def __str__(self):
         return '{} / {} / start {} / duration {:0.3f} h'.format(
             self.station.name, self.recorder.name, self.start_time,
