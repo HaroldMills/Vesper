@@ -6,7 +6,7 @@ Django-specific unit tests (i.e. those of subclasses of
 those of subclasses of `unittest.TestCase` but not `django.test.TestCase`)
 with one simple command, even though ideally I think
 
-    command activate vesper-latest
+    command activate vesper-dev
     vesper_admin test
 
 should do the trick (for some details about what goes wrong with that,
@@ -16,14 +16,13 @@ I have found, however, that after renaming Vesper's Django-specific unit
 test modules so the names start with `dtest_` instead of `test_`, I can run
 them alone with:
 
-    cd "Desktop/Test Archive"
-    conda activate vesper-latest
+    conda activate vesper-dev
     vesper_admin test -p "dtest_*.py" vesper.django
 
 and all of Vesper's other unit tests with:
 
     cd "/Users/harold/Documents/Code/Python/Vesper/vesper"
-    conda activate vesper-latest
+    conda activate vesper-dev
     python -m unittest discover -s /Users/harold/Documents/Code/Python/Vesper/vesper
 
 I hope to simplify this at some point, so I can run all of Vesper's unit
@@ -38,7 +37,7 @@ eventually restore the original names.
 Ideally, I would like to be able to run all Vesper unit tests with something
 like:
 
-    command activate vesper-latest
+    command activate vesper-dev
     vesper_admin test
 
 but that currently doesn't work:

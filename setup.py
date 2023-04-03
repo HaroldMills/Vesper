@@ -1,6 +1,10 @@
 """
 setup.py for Vesper pip package.
 
+Note that we specify Python 3.10 in the instructions below. As of
+2023-04-03, Python 3.11 is available but it is not yet supported by
+the `numba` package, which is used by `resampy`.
+
 
 Creating a Vesper Development Conda Environment
 -----------------------------------------------
@@ -19,7 +23,6 @@ Running Vesper Unit Tests
 
 To run Django unit tests:
 
-    cd "Desktop/Test Archive"
     conda activate vesper-dev
     vesper_admin test -p "dtest_*.py" vesper.django
 
@@ -149,18 +152,16 @@ setup(
     install_requires=[
         'aioboto3',
         'daphne',                  # ASGI server for Django
-        'django~=4.1.0',           # update to new versions after testing
+        'django~=4.2.0',           # update to new versions after testing
         'environs[django]',
         # 'gunicorn',              # WSGI server for Django
         'jsonschema',
-        # 'jsonschema~=4.14.0',    # provisionally unpinned from this
-        'psycopg2-binary',
+        'psycopg',
         'resampy',
         'ruamel_yaml',
         'scipy',
         'skyfield',
-        # 'skyfield~=1.42.0',      # provisionally unpinned from this
-        'tensorflow~=2.11.0',      # update to new versions after testing
+        'tensorflow~=2.12.0',      # update to new versions after testing
         'whitenoise',
     ],
       
