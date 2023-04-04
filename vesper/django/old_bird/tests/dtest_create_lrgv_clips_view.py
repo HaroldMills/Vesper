@@ -27,7 +27,7 @@ _POST_TEST_CASES = (
                 },
                 {
                     'station': 'Station 0',
-                    'start_time': '2050-03-27 20:01:00.000',
+                    'start_time': '2050-03-27 21:00:00.000',
                     'length': 22050,
                     'detector': 'Old Bird Tseep Detector Redux 1.1'
                 },
@@ -35,8 +35,8 @@ _POST_TEST_CASES = (
         },
         {
             'clips': [
-                {'clip_id': 1, 'recording_id': 1},
-                {'clip_id': 2, 'recording_id': None},
+                {'clip_id': 1, 'recording_id': 1, 'recording_created': True},
+                {'clip_id': 2, 'recording_id': 1, 'recording_created': False}
             ]
         }
     ),
@@ -57,7 +57,13 @@ _POST_TEST_CASES = (
                 },
                 {
                     'station': 'Station 1',
-                    'start_time': '2050-03-28 20:01:00.000',
+                    'start_time': '2050-03-28 21:00:00.000',
+                    'length': 22050,
+                    'detector': 'Old Bird Tseep Detector Redux 1.1'
+                },
+                {
+                    'station': 'Station 0',
+                    'start_time': '2050-03-27 22:00:00.000',
                     'length': 22050,
                     'detector': 'Old Bird Tseep Detector Redux 1.1'
                 },
@@ -65,8 +71,9 @@ _POST_TEST_CASES = (
         },
         {
             'clips': [
-                {'clip_id': 3, 'recording_id': 2},
-                {'clip_id': 4, 'recording_id': None},
+                {'clip_id': 3, 'recording_id': 2, 'recording_created': True},
+                {'clip_id': 4, 'recording_id': 2, 'recording_created': False},
+                {'clip_id': 5, 'recording_id': 1, 'recording_created': False}
             ]
         }
     ),

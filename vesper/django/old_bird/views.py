@@ -36,23 +36,30 @@ class CreateLrgvClipsView(LoginRequiredMixin, View):
     
 
     def post(self, request):
-       return view_utils.handle_json_post(request, self._post, request.user)
+       return view_utils.handle_json_post(request, self._post)
     
 
-    def _post(self, content, creating_user):
+    def _post(self, content):
 
         self._station_mic_output_pairs = _get_station_mic_output_pairs()
         self._detectors = _get_detectors()
         self._station_recorders = _get_station_recorders()
 
         try:
+
             with transaction.atomic():
+
                 clips = []
+
                 for clip_info in content['clips']:
-                    clip_id, recording_id = self._create_clip(clip_info)
+
+                    clip_id, recording_id, recording_created = \
+                        self._create_clip(clip_info)
+                    
                     clips.append({
                         'clip_id': clip_id,
-                        'recording_id': recording_id
+                        'recording_id': recording_id,
+                        'recording_created': recording_created
                     })
                     
         except Exception as e:
@@ -61,6 +68,7 @@ class CreateLrgvClipsView(LoginRequiredMixin, View):
                 content=error_message, content_type='text/plain')
         
         data = {'clips': clips}
+
         return JsonResponse(data)
         
 
@@ -78,7 +86,8 @@ class CreateLrgvClipsView(LoginRequiredMixin, View):
         creating_processor = self._get_detector(detector_name)
 
         recording_info = clip_info.get('recording')
-        recording_channel, sample_rate, end_time, new_recording_id = \
+        (recording_channel, sample_rate, end_time, recording_id,
+         recording_created) = \
             self._get_recording_channel(
                 station, mic_output, start_time, length, recording_info)
 
@@ -107,7 +116,7 @@ class CreateLrgvClipsView(LoginRequiredMixin, View):
             creating_processor=creating_processor
         )
 
-        return clip.id, new_recording_id
+        return clip.id, recording_id, recording_created
 
 
     def _get_station_mic_output_pair(self, station_name):
@@ -161,7 +170,7 @@ class CreateLrgvClipsView(LoginRequiredMixin, View):
             recording = \
                 self._create_recording(station, mic_output, recording_info)
             
-            new_recording_id = recording.id
+            recording_created = True
         
         else:
             # found at least one recording
@@ -176,7 +185,7 @@ class CreateLrgvClipsView(LoginRequiredMixin, View):
                 # found exactly one recording
             
                 recording = recordings[0]
-                new_recording_id = None
+                recording_created = False
 
                 if recording_info is not None:
                     _check_recording(recording, recording_info, station)
@@ -207,7 +216,9 @@ class CreateLrgvClipsView(LoginRequiredMixin, View):
                 f'Clip end time {localize(clip_end_time)} follows '
                 f'recording end time {localize(recording.end_time)}.')
                 
-        return channels.first(), sample_rate, clip_end_time, new_recording_id
+        return (
+            channels.first(), sample_rate, clip_end_time, recording.id,
+            recording_created)
 
 
     def _create_recording(self, station, mic_output, recording_info):
