@@ -323,6 +323,7 @@ columns:
 ''')
 """Table format used when presets are not available."""
 
+_DEFAULT_DELIMITER = ','
 
 _SUN_MOONS = SunMoonCache()
 
@@ -343,6 +344,7 @@ class ClipMetadataCsvFileExporter(ClipExporter):
         
         self._table_format = _get_table_format(self._table_format_name)
         self._columns = _create_table_columns(self._table_format)
+        self._delimiter = _get_delimiter(self._table_format)
         self._rows = []
     
     
@@ -364,7 +366,8 @@ class ClipMetadataCsvFileExporter(ClipExporter):
         
         # Create output CSV writer.
         try:
-            self._output_writer = csv.writer(self._output_file)
+            self._output_writer = \
+                csv.writer(self._output_file, delimiter=self._delimiter)
         except Exception as e:
             self._handle_output_error(
                 'Could not create output file CSV writer.', e)
@@ -597,6 +600,10 @@ def _get_formatter_name(formatter):
     except KeyError:
         raise CommandExecutionError(
             'Formatter specification is missing required "name" item.')
+
+
+def _get_delimiter(table_format):
+    return table_format.get('delimiter', _DEFAULT_DELIMITER)
 
 
 def _get_column_value(column, clip):
