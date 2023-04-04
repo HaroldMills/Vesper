@@ -9,6 +9,6 @@ if settings.VESPER_ARCHIVE_READ_ONLY:
 
 else:
     urlpatterns = [
-        path('create-clips/', CreateLrgvClipsView.as_view(),
-             name='create-clips'),
+        path('create-lrgv-clips/', CreateLrgvClipsView.as_view(),
+             name='create-lrgv-clips'),
     ]

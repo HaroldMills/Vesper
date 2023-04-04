@@ -3,7 +3,7 @@ import json
 from vesper.django.app.tests.dtest_case import TestCase
 
 
-_URL = '/create-clips/'
+_URL = '/create-lrgv-clips/'
 
 _SAMPLE_RATE = 22050
 _RECORDING_DURATION = 10
