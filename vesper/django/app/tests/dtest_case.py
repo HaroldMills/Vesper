@@ -1,6 +1,7 @@
 """Module containing Django unit test test case superclass."""
 
 
+from django.contrib.auth.models import User
 import django
 
 from vesper.tests.test_case_mixin import TestCaseMixin
@@ -21,6 +22,13 @@ stations:
 
     - name: Station 1
       description: Second test station.
+      time_zone: US/Eastern
+      latitude: 42.5
+      longitude: -76.51
+      elevation: 100
+
+    - name: Station 2
+      description: Third test station.
       time_zone: US/Pacific
       latitude: 38.2
       longitude: -122.9
@@ -33,6 +41,13 @@ device_models:
       manufacturer: Center for Conservation Biology, Cornell Lab of Ornithology
       model: Swift
       description: Swift autonomous audio recorder.
+      num_inputs: 1
+
+    - name: AudioMoth
+      type: Audio Recorder
+      manufacturer: Open Acoustic Devices
+      model: AudioMoth
+      description: AudioMoth autonomous audio recorder.
       num_inputs: 1
 
     - name: PC
@@ -56,15 +71,20 @@ devices:
       serial_number: "0"
       description: Recorder used at Station 0.
 
-    - name: 21c 0
-      model: 21c
+    - name: AudioMoth
+      model: AudioMoth
       serial_number: "0"
-      description: Microphone used at Station 0.
+      description: Recorder used at Station 1.
 
     - name: PC
       model: PC
       serial_number: "0"
-      description: Recorder used at Station 1.
+      description: Recorder used at Station 2.
+
+    - name: 21c 0
+      model: 21c
+      serial_number: "0"
+      description: Microphone used at Station 0.
 
     - name: 21c 1
       model: 21c
@@ -74,7 +94,12 @@ devices:
     - name: 21c 2
       model: 21c
       serial_number: "2"
-      description: Microphone used at Station 1.
+      description: Microphone used at Station 2.
+
+    - name: 21c 3
+      model: 21c
+      serial_number: "3"
+      description: Microphone used at Station 2.
 
 station_devices:
 
@@ -92,13 +117,23 @@ station_devices:
       start_time: 2050-01-01
       end_time: 2051-01-01
       devices:
-          - PC
+          - Swift
           - 21c 1
-          - 21c 2
       connections:
           - output: 21c 1 Output
-            input: PC Input 0
+            input: Swift Input
+
+    - station: Station 2
+      start_time: 2050-01-01
+      end_time: 2051-01-01
+      devices:
+          - PC
+          - 21c 2
+          - 21c 3
+      connections:
           - output: 21c 2 Output
+            input: PC Input 0
+          - output: 21c 3 Output
             input: PC Input 1
 
 detectors:
@@ -117,29 +152,6 @@ classifiers:
           a nocturnal flight call, or as a "Noise" otherwise. Does not
           classify a clip that has already been classified, whether
           manually or automatically.
-
-# processors:
-
-#     - name: Old Bird Thrush Detector Redux 1.1
-#       type: Detector
-#       description: Vesper reimplementation of Old Bird Thrush detector.
-
-#     - name: Old Bird Tseep Detector Redux 1.1
-#       type: Detector
-#       description: Vesper reimplementation of Old Bird Tseep detector.
-
-#     - name: Vesper Random Clip Creator 1.0
-#       type: Clip Creator
-#       description: Creates random clips in specified recording channels.
-
-#     - name: MPG Ranch NFC Coarse Classifier 3.0
-#       type: Classifier
-#       description: >
-#           Classifies an unclassified clip as a "Call" if it appears to be
-#           a nocturnal flight call, or as a "Noise" otherwise. Does not
-#           classify a clip that has already been classified, whether
-#           manually or automatically.
-
 
 annotation_constraints:
 
@@ -181,7 +193,22 @@ tags:
 """Model data shared by various Django unit test modules."""
 
 
+_TEST_USER_NAME = 'Test'
+_TEST_USER_PASSWORD = 'test'
+
+
 class TestCase(django.test.TestCase, TestCaseMixin):
+
+
+    def _create_test_user(self):
+        user = User.objects.create(username=_TEST_USER_NAME)
+        user.set_password(_TEST_USER_PASSWORD)
+        user.save()
+
+
+    def _log_in_as_test_user(self):
+        self.client.login(
+            username=_TEST_USER_NAME, password=_TEST_USER_PASSWORD)
 
 
     def _get_shared_test_model_data(self):
@@ -194,6 +221,8 @@ class TestCase(django.test.TestCase, TestCaseMixin):
 
 
     def _create_shared_test_models(self):
+        
+        # Create
         model_data = self._get_shared_test_model_data()
         metadata_import_utils.import_metadata(model_data)
 

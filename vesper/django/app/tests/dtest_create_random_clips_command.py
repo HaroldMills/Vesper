@@ -31,17 +31,17 @@ recordings:
       end_time: 2050-05-04 05:00:00
       sample_rate: 24000
 
-    - station: Station 1
+    - station: Station 2
       start_time: 2050-05-01 20:00:00
       end_time: 2050-05-02 05:00:00
       sample_rate: 24000
 
-    - station: Station 1
+    - station: Station 2
       start_time: 2050-05-02 20:00:00
       end_time: 2050-05-03 05:00:00
       sample_rate: 24000
 
-    - station: Station 1
+    - station: Station 2
       start_time: 2050-05-03 20:00:00
       end_time: 2050-05-04 05:00:00
       sample_rate: 24000
@@ -130,8 +130,8 @@ class CreateRandomClipsCommandTests(TestCase):
         cases = (
             (('Station 0 21c 0',), 1, 1),
             (('Station 0 21c 0',), 1, 3),
-            (('Station 1 21c 1', 'Station 1 21c 2'), 2, 2),
-            (('Station 0 21c 0', 'Station 1 21c 2'), 2, 3),
+            (('Station 2 21c 2', 'Station 2 21c 3'), 2, 2),
+            (('Station 0 21c 0', 'Station 2 21c 3'), 2, 3),
         )
 
         for sm_pairs, start_day, end_day in cases:
