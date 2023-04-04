@@ -23,6 +23,7 @@ Running Vesper Unit Tests
 
 To run Django unit tests:
 
+    cd "/Users/harold/Desktop/Test Archive"
     conda activate vesper-dev
     vesper_admin test -p "dtest_*.py" vesper.django
 

@@ -16,6 +16,7 @@ I have found, however, that after renaming Vesper's Django-specific unit
 test modules so the names start with `dtest_` instead of `test_`, I can run
 them alone with:
 
+    cd "/Users/harold/Desktop/Test Archive"
     conda activate vesper-dev
     vesper_admin test -p "dtest_*.py" vesper.django
 
