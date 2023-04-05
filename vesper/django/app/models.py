@@ -508,6 +508,43 @@ class Job(Model):
             return os_utils.read_file(self.log_file_path)            
         
 
+# TODO: Redefine the end times of recordings, recording files, and
+# clips to be the start time plus the duration rather than the start
+# time plus the span, i.e. to be the time of the last sample *plus one
+# sample period* rather than the time of the last sample.
+# 
+# The main problem with how things are defined now is that the duration
+# of a recording or a clip does not equal the difference between the
+# start time and the end time. This is counterintuitive and I believe
+# unnecessary. Redefining the end time as above will eliminate this
+# surprise and is more compatible with other systems like Raven
+# selections.
+# 
+# Another issue with the current end time definition is that the end
+# time of a recording file or clip is not the time of the sample at
+# the end index. This is counterintuitive, and does not parallel the
+# relationship between the start time and the time of the sample of the
+# start index, which are equal.
+# 
+# I wrote this note after using Vesper to export metadata for clips
+# created from Nighthawk NFC detections, and being surprised to find
+# that the exported clip end times did not quite match the end times
+# of the detections, even though the detection end times were precisely
+# at sample times. The difference turned out to be due to Vesper's
+# unusual definition of end time.
+#
+# I have gone ahead and updated the end time measurements of the
+# `vesper.command.clip_metadata_csv_file_exporter` module to use
+# the new end time definition, even though `Recording.end_time`,
+# `RecordingFile.end_time`, and `Clip.end_time` still use the old
+# definition. I think the measurements are currently more or less
+# the only way that users encounter the end times, and I would
+# prefer to update what users see sooner rather than later. The
+# code for the affected measurements includes to do items for
+# updating the code to use the `end_time` fields after their
+# code is updated.
+
+
 # We use separate `station` and `recorder` fields rather than one
 # `station_recorder` field (which would contain a `StationDevice`
 # foreign key) in order to simplify queries.

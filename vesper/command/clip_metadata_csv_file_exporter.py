@@ -811,9 +811,13 @@ class EndTimeMeasurement(Measurement):
     name = 'End Time'
     
     def measure(self, clip):
-        return clip.end_time
-    
-    
+        # TODO: Restore this to `clip.end_time` after it
+        # has been updated. See todo item just before
+        # `vesper.django.app.models.Recording` for more.
+        duration = TimeDelta(seconds=clip.duration)
+        return clip.start_time + duration
+
+
 class _RecordingFileMeasurement(Measurement):
     
     def measure(self, clip):
@@ -840,7 +844,11 @@ class _RecordingFileEndIndexMeasurement(_RecordingFileMeasurement):
 
 class _RecordingFileEndTimeMeasurement(_RecordingFileMeasurement):
     def _measure(self, recording_file):
-        return recording_file.end_time
+        # TODO: Restore this to `recording_file.end_time` after
+        # it has been updated. See todo item just before
+        # `vesper.django.app.models.Recording` for more.
+        duration = TimeDelta(seconds=recording_file.duration)
+        return recording_file.start_time + duration
 
 
 class _RecordingFileLengthMeasurement(_RecordingFileMeasurement):
@@ -1191,7 +1199,12 @@ class RecordingEndTimeMeasurement(Measurement):
     name = 'Recording End Time'
     
     def measure(self, clip):
-        return clip.recording.end_time
+        # TODO: Restore this to `recording.end_time` after
+        # it has been updated. See todo item just before
+        # `vesper.django.app.models.Recording` for more.
+        recording = clip.recording
+        duration = TimeDelta(seconds=recording.duration)
+        return recording.start_time + duration
     
     
 class RecordingLengthMeasurement(Measurement):
@@ -1280,7 +1293,11 @@ class RelativeEndTimeMeasurement(_RelativeTimeMeasurement):
     _recording_file_index = -1
     
     def _get_clip_time(self, clip):
-        return clip.end_time
+        # TODO: Restore this to `clip.end_time` after it
+        # has been updated. See todo item just before
+        # `vesper.django.app.models.Recording` for more.
+        duration = TimeDelta(seconds=clip.duration)
+        return clip.start_time + duration
     
     
 class RelativeStartTimeMeasurement(_RelativeTimeMeasurement):
