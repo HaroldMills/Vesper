@@ -527,11 +527,11 @@ class Job(Model):
 # start index, which are equal.
 # 
 # I wrote this note after using Vesper to export metadata for clips
-# created from Nighthawk NFC detections, and being surprised to find
-# that the exported clip end times did not quite match the end times
-# of the detections, even though the detection end times were precisely
-# at sample times. The difference turned out to be due to Vesper's
-# unusual definition of end time.
+# created from detections from an upcoming detector, and being surprised
+# to find that the exported clip end times did not quite match the end
+# times of the detections, even though the detection end times were
+# precisely at sample times. The difference turned out to be due to
+# Vesper's unusual definition of end time.
 #
 # I have gone ahead and updated the end time measurements of the
 # `vesper.command.clip_metadata_csv_file_exporter` module to use
