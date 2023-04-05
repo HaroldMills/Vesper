@@ -696,16 +696,6 @@ class RecordingFile(Model):
 # start index to be null. We require, however, that every clip have
 # a start time.
 #
-# We used to include a multi-column unique constraint to prevent duplicate
-# clips from being created by accidentally running a particular detector on
-# a particular recording more than once. I decided to eliminate this
-# constraint since such accidents can be recovered from by deleting the
-# redundant detector job (the job's clips will be deleted by the
-# database's cascade feature). I plan to provide some sort of system
-# for defining workflows and keeping track of which workflow tasks
-# have been performed on which recordings, and this should help prevent
-# redundant detector runs.
-#
 # Sometimes we know the processor that created a clip, but there is no
 # corresponding job, as when we import clips that were detected outside
 # of Vesper. In this case the processor of the clip is non-null, but the
@@ -783,6 +773,24 @@ class Clip(Model):
             self.station.name, self.mic_output.name, processor_name,
             self.start_time, self.duration)
         
+    # TODO: Remove uniqueness constraint from the following. I included
+    # it to prevent duplicate clips from being created by accidentally
+    # running a particular detector on a particular recording more than
+    # once. The problem with that is that there are legitimate reasons
+    # for creating more than one clip for a given processor, recording
+    # channel, and start time. As one example, an upcoming detector
+    # sometimes creates multiple clips with the same start time for
+    # overlapping detections at multiple taxonomic levels. So I think
+    # it would be best to remove the constraint and rely on another
+    # means of dealing with undesired duplicate clips. Right now it's
+    # possible to delete a job from the database, which also deletes
+    # the job's clips, but that is not a good solution since we'd like
+    # to maintain a complete record of the jobs that have been run. A
+    # better solution might be a command that deletes clips created by
+    # a particular job, perhaps only for certain sensors. It would also
+    # be desirable to add a command that can detect duplicate clips in a
+    # database, regardless of which job created them, and optionally
+    # delete them. This todo item corresponds to issue #213.
     class Meta:
         db_table = 'vesper_clip'
         index_together = (
