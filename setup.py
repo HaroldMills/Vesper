@@ -14,6 +14,7 @@ To create a Conda environment for Vesper development:
     conda create -n vesper-dev python=3.10
     conda activate vesper-dev
     conda install pyaudio
+    pip install -r /Users/harold/Documents/Code/Python/vesper/requirements.txt
     pip install -e /Users/harold/Documents/Code/Python/vesper
     pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
 
