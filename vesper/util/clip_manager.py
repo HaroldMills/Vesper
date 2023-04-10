@@ -43,6 +43,13 @@ class ClipManager:
         self._aws_region_name = env('VESPER_AWS_REGION_NAME', None)
         self._aws_s3_clip_bucket_name = \
             env('VESPER_AWS_S3_CLIP_BUCKET_NAME', None)
+        self._aws_s3_clip_folder_path = \
+            env('VESPER_AWS_S3_CLIP_FOLDER_PATH', None)
+        
+        # Make sure non-`None` clip folder path ends with "/".
+        if self._aws_s3_clip_folder_path is not None and \
+                not self._aws_s3_clip_folder_path.endswith('/'):
+            self._aws_s3_clip_folder_path += '/'
 
 
     def get_audio_file_path(self, clip):
@@ -356,7 +363,9 @@ class ClipManager:
 
     async def _get_s3_audio_file_contents_async(self, clip_ids):
 
-        object_keys = [_get_relative_audio_file_path(i) for i in clip_ids]
+        object_keys = [
+            self._get_s3_audio_file_object_key(i)
+            for i in clip_ids]
 
         session = aioboto3.Session(
             aws_access_key_id=self._aws_access_key_id,
@@ -368,6 +377,22 @@ class ClipManager:
                 self._get_s3_audio_file_contents_aux(s3, object_key)
                 for object_key in object_keys]
             return await asyncio.gather(*coroutines)
+
+
+    def _get_s3_audio_file_object_key(self, i):
+
+        parts = []
+
+        # Include clip folder path if and only if it isn't `None`
+        if self._aws_s3_clip_folder_path is not None:
+            parts.append(self._aws_s3_clip_folder_path[:-1])
+
+        parts += _get_relative_audio_file_path_parts(i)
+
+        # Since we're creating an S3 object key, we use "/" as the
+        # path component separator regardless of which platform we're
+        # running on.
+        return '/'.join(parts)
 
 
     async def _get_s3_audio_file_contents_aux(self, s3, object_key):
@@ -504,12 +529,17 @@ _CLIPS_DIR_FORMAT = (3, 3, 3)
 
 
 def _get_relative_audio_file_path(clip_id):
+    path_parts = _get_relative_audio_file_path_parts(clip_id)
+    return os.path.join(*path_parts)
+
+
+def _get_relative_audio_file_path_parts(clip_id):
     id_parts = _get_clip_id_parts(clip_id, _CLIPS_DIR_FORMAT)
     path_parts = id_parts[:-1]
     id_ = ' '.join(id_parts)
     file_name = 'Clip {}.wav'.format(id_)
     path_parts.append(file_name)
-    return os.path.join(*path_parts)
+    return path_parts
 
 
 def _get_clip_id_parts(num, format_):

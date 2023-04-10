@@ -32,8 +32,16 @@ _AWS_ACCESS_KEY_ID = _env('VESPER_AWS_ACCESS_KEY_ID', None)
 _AWS_SECRET_ACCESS_KEY = _env('VESPER_AWS_SECRET_ACCESS_KEY', None)
 _AWS_REGION_NAME = _env('VESPER_AWS_REGION_NAME', None)
 _AWS_S3_CLIP_BUCKET_NAME = _env('VESPER_AWS_S3_CLIP_BUCKET_NAME', None)
+_AWS_S3_CLIP_FOLDER_PATH = _env('VESPER_AWS_S3_CLIP_FOLDER_PATH', None)
 
-_FOLDER_NAME = '000/002'
+if _AWS_S3_CLIP_FOLDER_PATH is None:
+    _OBJECT_KEY_PREFIX = ''
+else:
+    _OBJECT_KEY_PREFIX = _AWS_S3_CLIP_FOLDER_PATH
+    if not _OBJECT_KEY_PREFIX.endswith('/'):
+        _OBJECT_KEY_PREFIX += '/'
+_OBJECT_KEY_PREFIX += '000/002'
+
 _FILE_NAMES = ('Clip 000 002 751.wav',)
 _CLIP_COUNT = 20
 
@@ -66,7 +74,7 @@ class S3ClipTestView(View):
 
 
 def _get_s3_object_key(file_name):
-    return f'{_FOLDER_NAME}/{file_name}'
+    return f'{_OBJECT_KEY_PREFIX}{file_name}'
 
 
 def _get_s3_object_data(s3, object_key):
