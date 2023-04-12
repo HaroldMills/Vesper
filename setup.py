@@ -6,17 +6,56 @@ Note that we specify Python 3.10 in the instructions below. As of
 the `numba` package, which is used by `resampy`.
 
 
+Creating an Up-to-Date `requirements.txt` File
+----------------------------------------------
+
+    1. If there is a `vesper-reqs` Conda environment, delete it with:
+
+           conda remove -n vesper-reqs --all
+
+    2. `cd` to the directory containing this file.
+
+    3. Create a new `vesper-reqs` environment with:
+
+           conda create -n vesper-reqs python=3.10
+           conda activate vesper-reqs
+           pip install -e .
+
+    4. Create a pip `requirements.txt` file with:
+
+           pip list --format=freeze > requirements.txt
+
+       Note that this command differs from the usual one
+       (`pip freeze > requirements.txt`) for generating a
+       `requirements.txt` file in order to avoid a problem described
+       at https://stackoverflow.com/questions/62885911/
+       pip-freeze-creates-some-weird-path-instead-of-the-package-version)
+
+    5. Delete the `vesper` package line from the `requirements.txt` file
+       created in step 4.
+
+    6. Delete the `vesper-reqs` environment with:
+
+           conda deactivate
+           conda remove -n vesper-reqs --all
+
+           
 Creating a Vesper Development Conda Environment
 -----------------------------------------------
 
 To create a Conda environment for Vesper development:
 
-    conda create -n vesper-dev python=3.10
-    conda activate vesper-dev
-    conda install pyaudio
-    pip install -r /Users/harold/Documents/Code/Python/vesper/requirements.txt
-    pip install -e /Users/harold/Documents/Code/Python/vesper
-    pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
+    1. If needed, follow the instructions above to create an up-to-date
+       `requirements.txt` file.
+
+    2. From the directory containing this file:
+
+        conda create -n vesper-dev python=3.10
+        conda activate vesper-dev
+        conda install pyaudio
+        pip install -r requirements.txt
+        pip install -e .
+        pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
 
     
 Running Vesper Unit Tests
@@ -158,7 +197,7 @@ setup(
         'environs[django]',
         # 'gunicorn',              # WSGI server for Django
         'jsonschema',
-        'psycopg',
+        'psycopg[binary]',
         'resampy',
         'ruamel_yaml',
         'scipy',
