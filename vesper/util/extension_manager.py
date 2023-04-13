@@ -1,7 +1,13 @@
 """Provides access to the extensions of a program."""
 
 
-import importlib
+# As of Python 3.10.10, if we just do `import importlib`, then
+# `importlib` is defined (as expected) but `importlib.metadata` is not
+# (which surprises me, and I believe it was defined in an earlier
+# Python 3.10.x). If we do `import importlib.metadata`, however, then
+# both `importlib` and `importlib.metadata` are defined.
+import importlib.metadata
+
 import itertools
 
 from django.db.models import Q
