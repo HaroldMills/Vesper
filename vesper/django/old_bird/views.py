@@ -1,7 +1,6 @@
 from datetime import datetime as DateTime, timedelta as TimeDelta
 import logging
 
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.views import View
@@ -20,8 +19,7 @@ import vesper.util.time_utils as time_utils
 _ONE_MICROSECOND = TimeDelta(microseconds=1)
 
 
-# Note that `LoginRequiredMixin` must be first in base class list.
-class CreateLrgvClipsView(LoginRequiredMixin, View):
+class CreateLrgvClipsView(View):
 
     # Assumptions made by this view:
     #     * There is one recorder per station.
@@ -30,13 +28,25 @@ class CreateLrgvClipsView(LoginRequiredMixin, View):
     #     * There is one recording per station per night.
     #     * Any clip to be created will be at least one microsecond long.
 
+    # This class is not a subclass of Django's `LoginRequiredMixin`
+    # since that would cause the `post` method to redirect to the
+    # login URL if the user is not logged in. We want to simply
+    # reject the request as unauthorized rather than redirecting.
 
-    def get(self, request):
-        return HttpResponse('Ok')
-    
 
     def post(self, request):
-       return view_utils.handle_json_post(request, self._post)
+       
+        if not request.user.is_authenticated:
+           # user not logged in
+
+           
+           return HttpResponse(
+               'Unauthenticated', status=401, reason='Unauthenticated')
+       
+        else:
+            # user logged in
+
+            return view_utils.handle_json_post(request, self._post)
     
 
     def _post(self, content):
