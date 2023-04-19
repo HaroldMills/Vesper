@@ -187,6 +187,8 @@ DATABASES = {
 
 VESPER_ARCHIVE_READ_ONLY = env.bool('VESPER_ARCHIVE_READ_ONLY', False)
 
+VESPER_ADMIN_URL_PATTERN = env('VESPER_ADMIN_URL_PATTERN', 'admin/')
+
 # Set this `True` if and only if you want to include the TensorFlow-based
 # detector and classifier extensions in the Vesper core server. These are
 # mostly the MPG Ranch detectors and classifiers. They will move out of

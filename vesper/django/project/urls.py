@@ -33,7 +33,7 @@ if not settings.VESPER_ARCHIVE_READ_ONLY:
     
     urlpatterns += [
         path('', include('django.contrib.auth.urls')),
-        path('admin/', admin.site.urls)
+        path(settings.VESPER_ADMIN_URL_PATTERN, admin.site.urls)
     ]
 
 
