@@ -59,6 +59,7 @@ ALLOWED_HOSTS = env.list(
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -101,7 +102,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'vesper.django.project.wsgi.application'
+ASGI_APPLICATION = 'vesper.django.project.asgi.application'
+# WSGI_APPLICATION = 'vesper.django.project.wsgi.application'
 
 
 # Password validation
@@ -140,7 +142,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    }
+}
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
