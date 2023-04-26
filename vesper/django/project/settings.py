@@ -194,6 +194,10 @@ DATABASES = {
 
 VESPER_ARCHIVE_READ_ONLY = env.bool('VESPER_ARCHIVE_READ_ONLY', False)
 
+VESPER_PRESETS_STATIC = env.bool('VESPER_PRESETS_STATIC', True)
+
+VESPER_PREFERENCES_STATIC = env.bool('VESPER_PREFERENCES_STATIC', True)
+
 VESPER_ADMIN_URL_PATTERN = env('VESPER_ADMIN_URL_PATTERN', 'admin/')
 
 # Set this `True` if and only if you want to include the TensorFlow-based

@@ -1187,12 +1187,15 @@ def _get_presets_json(preset_type_name):
     for the preset type.
     """
 
-    # Force reloading of presets to be sure we're working with the latest.
-    preset_manager.unload_presets(preset_type_name)
+    # If presets are not static, unload them to be sure we work with
+    # the latest.
+    if not settings.VESPER_PRESETS_STATIC:
+        preset_manager.unload_presets(preset_type_name)
 
     presets = preset_manager.get_presets(preset_type_name)
     presets = [(p.path[1:], p.camel_case_data) for p in presets]
-    return json.dumps(presets)
+    result = json.dumps(presets)
+    return result
 
 
 # This view handles an HTTP POST request to read data from the server,
@@ -1612,7 +1615,11 @@ def clip_calendar(request):
         
     params = request.GET
     
-    preference_manager.reload_preferences()
+    # If preferences are not static, reload them to make sure we work
+    # with the latest.
+    if not settings.VESPER_PREFERENCES_STATIC:
+        preference_manager.reload_preferences()
+
     preferences = preference_manager.preferences
 
     message = _check_for_stations_detectors_and_classification_annotation(
@@ -1809,10 +1816,16 @@ def night(request):
     # TODO: Check URL query items.
     params = request.GET
     
-    # Unload presets and reload preferences to make sure we work with
-    # the latest of each.
-    preset_manager.unload_presets()
-    preference_manager.reload_preferences()
+    # If presets are not static, unload them to make sure we work with
+    # the latest.
+    if not settings.VESPER_PRESETS_STATIC:
+        preset_manager.unload_presets()
+
+    # If preferences are not static, reload them to make sure we work
+    # with the latest.
+    if not settings.VESPER_PREFERENCES_STATIC:
+        preference_manager.reload_preferences()
+
     preferences = preference_manager.preferences
 
     sm_pair_ui_name = params['station_mic']
@@ -1987,10 +2000,16 @@ def clip_album(request):
     # TODO: Check URL query items.
     params = request.GET
     
-    # Unload presets and reload preferences to make sure we work with
-    # the latest of each.
-    preset_manager.unload_presets()
-    preference_manager.reload_preferences()
+    # If presets are not static, unload them to make sure we work with
+    # the latest.
+    if not settings.VESPER_PRESETS_STATIC:
+        preset_manager.unload_presets()
+
+    # If preferences are not static, reload them to make sure we work
+    # with the latest.
+    if not settings.VESPER_PREFERENCES_STATIC:
+        preference_manager.reload_preferences()
+        
     preferences = preference_manager.preferences
 
     message = _check_for_stations_detectors_and_classification_annotation(
