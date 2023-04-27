@@ -20,6 +20,8 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 RESULT_DIR_PATH = Path('/Users/harold/Desktop/Librosa Resampling Tests')
 CROSS_TYPE_QUALITY_PDF_FILE_PATH = \
     RESULT_DIR_PATH / 'Librosa Resampling Quality Across Types.pdf'
+WITHIN_TYPE_QUALITY_PDF_FILE_PATH = \
+    RESULT_DIR_PATH / 'Librosa Resampling Quality Within Types.pdf'
 WITHIN_TYPE_QUALITY_PDF_FILE_NAME_FORMAT = \
     'Librosa Resampling Quality - {}.pdf'
 SIGNAL_STATS_CSV_FILE_PATH = \
@@ -185,15 +187,21 @@ def compare_resampling_quality_within_types():
 
     inputs = create_quality_test_inputs()
 
-    for resampling_type in RESAMPLING_TYPES:
+    # for resampling_type in RESAMPLING_TYPES:
 
-        print(f'Testing {resampling_type} quality...')
+    #     print(f'Testing {resampling_type} quality...')
 
-        file_name = \
-            WITHIN_TYPE_QUALITY_PDF_FILE_NAME_FORMAT.format(resampling_type)
-        file_path = RESULT_DIR_PATH / file_name
+    #     file_name = \
+    #         WITHIN_TYPE_QUALITY_PDF_FILE_NAME_FORMAT.format(resampling_type)
+    #     file_path = RESULT_DIR_PATH / file_name
 
-        with PdfPages(file_path) as pdf_file:
+    #     with PdfPages(file_path) as pdf_file:
+
+    with PdfPages(WITHIN_TYPE_QUALITY_PDF_FILE_PATH) as pdf_file:
+
+        for resampling_type in RESAMPLING_TYPES:
+
+            print(f'Testing {resampling_type} quality...')
 
             for output_rate in OUTPUT_SAMPLE_RATES:
 
