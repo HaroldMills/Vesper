@@ -18,6 +18,14 @@
 #
 #     docker compose up -d
 #     docker compose exec vesper vesper_admin collectstatic
+#
+# To check if Vesper is safe to deploy:
+#
+#     docker compose up -d
+#     docker compose exec vesper vesper_admin check --deploy
+#
+# See the _Django for Professionals_ security chapter (chapter 17 of the
+# Django 4.0 version) for more.
 
 name: vesper-dev
 
@@ -70,7 +78,5 @@ services:
             VESPER_DJANGO_SECRET_KEY: "YKs482x7HnCKx1a7PvSf5zkRbvvn6nKRp6QSgiXjDLQg8_XPDPaoiw"
 
             VESPER_DJANGO_DEBUG: true
-
-            VESPER_ARCHIVE_DATABASE_URL: 'postgres://harold:vesper00@host.docker.internal:5432/vesper_2021_harold_archive'
 
             VESPER_ARCHIVE_READ_ONLY: false
