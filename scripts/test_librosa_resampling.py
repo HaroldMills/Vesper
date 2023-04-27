@@ -18,8 +18,10 @@ import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
 RESULT_DIR_PATH = Path('/Users/harold/Desktop/Librosa Resampling Tests')
-QUALITY_PDF_FILE_PATH_A = RESULT_DIR_PATH / 'Librosa Resampling Quality A.pdf'
-QUALITY_PDF_FILE_PATH_B = RESULT_DIR_PATH / 'Librosa Resampling Quality B.pdf'
+CROSS_TYPE_QUALITY_PDF_FILE_PATH = \
+    RESULT_DIR_PATH / 'Librosa Resampling Quality Across Types.pdf'
+WITHIN_TYPE_QUALITY_PDF_FILE_NAME_FORMAT = \
+    'Librosa Resampling Quality - {}.pdf'
 SIGNAL_STATS_CSV_FILE_PATH = \
     RESULT_DIR_PATH / 'Librosa Resampled Signal Stats.csv'
 SPEED_PDF_FILE_PATH = RESULT_DIR_PATH / 'Librosa Resampling Speed.pdf'
@@ -50,10 +52,10 @@ INPUT_SAMPLE_RATES = (
     192000,
 )
 
-# OUTPUT_SAMPLE_RATES = INPUT_SAMPLE_RATES
-OUTPUT_SAMPLE_RATES = (
-    32000,
-)
+OUTPUT_SAMPLE_RATES = INPUT_SAMPLE_RATES
+# OUTPUT_SAMPLE_RATES = (
+#     32000,
+# )
 
 RESAMPLING_TYPES = (
     'soxr_vhq',
@@ -66,8 +68,21 @@ RESAMPLING_TYPES = (
     'fft',
 )
 
-DURATION = 10
-NUM_TRIALS = 5
+SPEED_TEST_SIGNAL_DURATION = 10
+SPEED_TEST_TRIAL_COUNT = 5
+SPEED_PLOT_X_LIMIT = 10500
+
+
+# TODO: When I run this script as is on my laptop, from and to all 14
+# sample rates, it quits without an error message before it finishes
+# writing the output file "Librosa Resampling Quality - fft.pdf" in
+# the `compare_resampling_quality_within_types` function. I can run
+# that function alone just for the `'fft'` resampling type (i.e. it
+# successfully writes the abovementioned output file), and also
+# the `measure_resampling_speed` function alone, so I can generate
+# all of the output files of the script, but it would be nice to be
+# able to run the script all the way through. Perhaps some
+# strategically timed garbage collection could help?
 
 
 def main():
@@ -75,39 +90,42 @@ def main():
     # Create PDF file of spectrograms arranged to facilitate across-type
     # comparison of resampling quality. Also write resampled signal
     # statistics to a CSV file.
-    test_resampling_quality_a()
+    compare_resampling_quality_across_types()
 
-    # Create PDF file of spectrograms arranged to facilitate within-type
+    # Create PDF files of spectrograms arranged to facilitate within-type
     # evaluation of resampling quality.
-    test_resampling_quality_b()
+    compare_resampling_quality_within_types()
 
     # Create PDF file of bar charts comparing resampling speeds across
     # resampling type. Also write speeds to a CSV file.
-    test_resampling_speed()
+    measure_resampling_speed()
 
 
-def test_resampling_quality_a():
+def compare_resampling_quality_across_types():
 
     inputs = create_quality_test_inputs()
     signal_stats = []
 
-    with PdfPages(QUALITY_PDF_FILE_PATH_A) as pdf_file:
+    with PdfPages(CROSS_TYPE_QUALITY_PDF_FILE_PATH) as pdf_file:
+
         for output_rate in OUTPUT_SAMPLE_RATES:
+
             for input_rate in INPUT_SAMPLE_RATES:
+
                 if rate_pair_enabled(input_rate, output_rate):
 
                     print(
                         f'Testing {input_rate} Hz to {output_rate} Hz '
                         f'quality...')
                     
-                    test_resampling_quality_a_aux(
+                    compare_resampling_quality_across_types_aux(
                         inputs, input_rate, output_rate, pdf_file,
                         signal_stats)
                     
     write_signal_stats_csv_file(signal_stats)
 
 
-def test_resampling_quality_a_aux(
+def compare_resampling_quality_across_types_aux(
         inputs, input_rate, output_rate, pdf_file, signal_stats):
     
     input = inputs[input_rate]
@@ -163,20 +181,32 @@ def get_signal_stats(name, input_rate, output_rate, samples):
     return (name, input_rate, output_rate, max_sample, min_sample, rms_sample)
 
 
-def test_resampling_quality_b():
+def compare_resampling_quality_within_types():
+
     inputs = create_quality_test_inputs()
-    with PdfPages(QUALITY_PDF_FILE_PATH_B) as pdf_file:
-        for resampling_type in RESAMPLING_TYPES:
-            print(f'Testing {resampling_type} quality...')
+
+    for resampling_type in RESAMPLING_TYPES:
+
+        print(f'Testing {resampling_type} quality...')
+
+        file_name = \
+            WITHIN_TYPE_QUALITY_PDF_FILE_NAME_FORMAT.format(resampling_type)
+        file_path = RESULT_DIR_PATH / file_name
+
+        with PdfPages(file_path) as pdf_file:
+
             for output_rate in OUTPUT_SAMPLE_RATES:
+
                 for input_rate in INPUT_SAMPLE_RATES:
+
                     if rate_pair_enabled(input_rate, output_rate):
-                        test_resampling_quality_b_aux(
+
+                        compare_resampling_quality_within_types_aux(
                             inputs, input_rate, output_rate, resampling_type,
                             pdf_file)
     
     
-def test_resampling_quality_b_aux(
+def compare_resampling_quality_within_types_aux(
         inputs, input_rate, output_rate, resampling_type, pdf_file):
     
     input = inputs[input_rate]
@@ -377,26 +407,30 @@ def write_csv_file_line(file, items):
     file.write(line)
     
 
-def test_resampling_speed():
+def measure_resampling_speed():
 
     speed_stats = []
 
     with PdfPages(SPEED_PDF_FILE_PATH) as pdf_file:
+
         for output_rate in OUTPUT_SAMPLE_RATES:
+
             for input_rate in INPUT_SAMPLE_RATES:
+
                 if rate_pair_enabled(input_rate, output_rate):
 
                     print(
                         f'Testing {input_rate} Hz to {output_rate} Hz '
                         f'speed...')
                     
-                    test_resampling_speed_aux(
+                    measure_resampling_speed_aux(
                         input_rate, output_rate, pdf_file, speed_stats)
                     
     write_speed_stats_csv_file(speed_stats)
 
 
-def test_resampling_speed_aux(input_rate, output_rate, pdf_file, speed_stats):
+def measure_resampling_speed_aux(
+        input_rate, output_rate, pdf_file, speed_stats):
         
     samples = create_speed_test_signal(input_rate)
     speeds = np.zeros(len(RESAMPLING_TYPES))
@@ -411,15 +445,15 @@ def test_resampling_speed_aux(input_rate, output_rate, pdf_file, speed_stats):
 
 
 def create_speed_test_signal(sample_rate):
-    n = int(round(DURATION * sample_rate))
+    n = int(round(SPEED_TEST_SIGNAL_DURATION * sample_rate))
     return np.random.randn(n)
     
     
 def time_resampling(samples, input_rate, output_rate, resampling_type):
 
-    elapsed_times = np.zeros(NUM_TRIALS)
+    elapsed_times = np.zeros(SPEED_TEST_TRIAL_COUNT)
     
-    for i in range(NUM_TRIALS):
+    for i in range(SPEED_TEST_TRIAL_COUNT):
 
         start_time = time.time()
 
@@ -429,15 +463,15 @@ def time_resampling(samples, input_rate, output_rate, resampling_type):
         
         elapsed_times[i] = time.time() - start_time
         
-    # speeds = DURATION / elapsed_times
+    # speeds = SPEED_TEST_SIGNAL_DURATION / elapsed_times
     # print('Speeds for all trials:', speeds)
 
     min_elapsed_time = np.min(elapsed_times)
-    speed = int(round(DURATION / min_elapsed_time))
+    speed = int(round(SPEED_TEST_SIGNAL_DURATION / min_elapsed_time))
     # print(
-    #     f'Fastest trial resampled {DURATION} seconds of audio in '
-    #     f'{min_elapsed_time:.1f} seconds, {speed} times faster '
-    #     f'than real time.')
+    #     f'Fastest trial resampled {SPEED_TEST_SIGNAL_DURATION} seconds '
+    #     f'of audio in {min_elapsed_time:.1f} seconds, {speed} times '
+    #     f'faster than real time.')
     
     return resampling_type, input_rate, output_rate, speed
 
@@ -460,7 +494,7 @@ def plot_speeds(speeds, input_rate, output_rate, pdf_file):
 
     # x axis
     plt.xlabel('Speed (times faster than real time)')
-    plt.xlim(right=5500)
+    plt.xlim(right=SPEED_PLOT_X_LIMIT)
 
     plt.tight_layout()
 
