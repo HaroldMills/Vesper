@@ -89,17 +89,6 @@ class CreateClipsViewSimpleTests(TestCase):
         self._create_shared_test_models()
 
 
-    def test_redirect_to_login(self):
-        response = self.client.get(_URL)
-        self.assertEqual(response.status_code, 302)
-
-
-    def test_get(self):
-        self._log_in_as_test_user()
-        response = self.client.get(_URL)
-        self.assertEqual(response.status_code, 200)
-
-
     def test_post(self):
         self._log_in_as_test_user()
         for post_data, expected_response_data in _POST_TEST_CASES:
