@@ -1,5 +1,9 @@
 # Docker Compose file for use in Vesper development.
 #
+# Before running any of the commands below, change the Vesper archive
+# directory path "/Users/harold/Desktop/Test Archive" below to the
+# path of the Vesper archive you want to serve.
+#
 # The commands below should be run from the directory containing this file.
 #
 # To start services in detached mode with existing `vesper-dev` image:

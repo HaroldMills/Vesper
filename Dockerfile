@@ -13,46 +13,15 @@
 # this file, beginning with `WORKDIR /Code`.
 #
 # To build a `vesper-dev` Docker image with this file, first create an
-# up-to-date pip requirements.txt file as described below, and then
-# issue the following command from the directory containing this file:
+# up-to-date pip `requirements.txt` file as described in the "Creating
+# an Up-to-Date `requirements.txt` File" section of `setup.py` file in
+# the same directory as this file, and then issue the following command
+# from the directory containing this file:
 #
 #     docker build -t vesper-dev .
 #
 # See the accompanying file `docker-compose.yaml` for how to use Docker
 # Compose to serve a Vesper archive with the built image.
-#
-# Building a Docker image with this file requires an up-to-date pip
-# `requirements.txt` file. To create that file:
-#
-#     1. If there is a `vesper-reqs` Conda environment, delete it with:
-#
-#            conda remove -n vesper-reqs --all
-#
-#     2. `cd` to the directory containing this file.
-#
-#     3. Create a new `vesper-reqs` environment with:
-#
-#            conda create -n vesper-reqs python=3.10
-#            conda activate vesper-reqs
-#            pip install -e .
-#
-#     4. Create a pip `requirements.txt` file with:
-#
-#            pip list --format=freeze > requirements.txt
-#
-#        Note that this command differs from the usual one
-#        (`pip freeze > requirements.txt`) for generating a
-#        `requirements.txt` file in order to avoid a problem described
-#        at https://stackoverflow.com/questions/62885911/
-#        pip-freeze-creates-some-weird-path-instead-of-the-package-version)
-#
-#     5. Delete the `vesper` package line from the `requirements.txt` file
-#        created in step 4.
-#
-#     6. Delete the `vesper-reqs` environment with:
-#
-#            conda deactivate
-#            conda remove -n vesper-reqs --all
 
 # Pull base image.
 FROM python:3.10.9-slim-bullseye
