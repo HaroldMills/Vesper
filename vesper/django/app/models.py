@@ -266,11 +266,19 @@ class Station(Model):
         db_table = 'vesper_station'
         
     def __init__(self, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
-        self._tz = ZoneInfo(self.time_zone)
+
+        # We defer initialization of `self._tz` to the `tz` property
+        # method since `self.time_zone` is not necessarily available
+        # here, for example when this initializer is invoked by the
+        # Django admin page that creates a new station.
+        self._tz = None
         
     @property
     def tz(self):
+        if self._tz is None:
+            self._tz = ZoneInfo(self.time_zone)
         return self._tz
     
     def local_to_utc(self, dt):
