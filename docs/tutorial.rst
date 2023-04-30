@@ -90,7 +90,7 @@ Create a new Vesper archive
 ---------------------------
 
 #. Download the `Vesper archive template
-   <https://www.dropbox.com/s/ylscsoyttnu1qxk/Archive%20Template.zip?dl=1>`_
+   <https://www.dropbox.com/s/ttlregwt1vk03be/Archive%20Template.zip?dl=1>`_
    to your computer.
 
 #. Unzip the downloaded file. This should create an archive directory
@@ -147,24 +147,30 @@ Add a user to the archive
    your client/server network traffic to see your password.
    
 .. Note::
-   In some Vesper installations (such as ones including Python 3.9.12
-   and Django 3.2.13) the ``vesper_admin createsuperuser`` command will
+   In some Vesper installations (such as ones including Python 3.10.11
+   and Django 4.2) the ``vesper_admin createsuperuser`` command will
    create the desired superuser but not terminate. If the command seems
    to hang, producing no output for at least thirty seconds, type
-   ``Ctrl-C`` on your keyboard to terminate it.
+   ``Ctrl-C`` on your keyboard (you may have to do this several times
+   on Windows) to terminate it.
 
 Start the Vesper server
 -----------------------
 
-In a Windows Anaconda prompt or Unix terminal in which you've set
-the current working directory to the archive directory (for example,
-the Anaconda prompt or terminal of the last section) issue the
-command::
+If you're using Windows, issue the following command in an Anaconda
+Prompt in which you've set the current working directory to the
+archive directory (for example, the Anacona Prompt of the last section)::
+
+   python -m vesper.django.manage runserver
+
+Or, if you're using macOS or Linux, issue the following command in a
+terminal::
 
    vesper_admin runserver
-   
-Some output from the server should appear in the terminal, indicating
-that the server started.
+
+Some output from the server should appear, indicating that the server
+started.
+
 
 View the archive
 ----------------

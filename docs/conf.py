@@ -24,7 +24,7 @@ import sphinx_rtd_theme
 
 project = 'Vesper'
 author = 'Harold Mills'
-copyright = '2020, Harold Mills'
+copyright = '2020-2023, Harold Mills'
 
 # Load `vesper.version` module as `version_module`. This code is modeled
 # after the "Importing a source file directly" section of
