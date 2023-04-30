@@ -29,7 +29,7 @@ def main():
          sys.argv[1] == 'runserver':
         
         print(
-            f'WARNING: "vesper_admin runserver" is currently flaky on '
+            f'WARNING: "vesper_admin runserver" may not work on '
             f'Windows. If the server fails to start, try '
             f'"python -m vesper.django.manage runserver" instead.')
 
