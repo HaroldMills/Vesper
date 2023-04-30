@@ -1,21 +1,38 @@
 #!/usr/bin/env python
+
 """Django's command-line utility for administrative tasks."""
+
 import os
+import platform
 import sys
 
 
 def main():
+
     """Run administrative tasks."""
+
     os.environ.setdefault(
         'DJANGO_SETTINGS_MODULE', 'vesper.django.project.settings')
+    
     try:
         from django.core.management import execute_from_command_line
+
     except ImportError as exc:
         raise ImportError(
             "Couldn't import Django. Are you sure it's installed and "
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+    
+    if platform.system() == 'Windows' and \
+         sys.argv[0].endswith('vesper_admin') and \
+         sys.argv[1] == 'runserver':
+        
+        print(
+            f'WARNING: "vesper_admin runserver" is currently flaky on '
+            f'Windows. If the server fails to start, try '
+            f'"python -m vesper.django.manage runserver" instead.')
+
     execute_from_command_line(sys.argv)
 
 

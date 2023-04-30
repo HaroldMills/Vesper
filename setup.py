@@ -208,6 +208,7 @@ setup(
       
     entry_points={
         'console_scripts': [
+            'vesper_admin=vesper.django.manage:main',
             'vesper_recorder=vesper.scripts.vesper_recorder:_main',
             'vesper_play_recorder_test_signal=vesper.scripts.play_recorder_test_signal:_main',
             'vesper_show_audio_input_devices=vesper.scripts.show_audio_input_devices:_main',
