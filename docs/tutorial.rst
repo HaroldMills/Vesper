@@ -692,8 +692,10 @@ To import a recording into your archive:
       
           Ithaca_20191003_020000.wav
           
-      Since the time in this file name is not explicitly specified as
-      a UTC time, Vesper assumes that it is a local time. It uses the
+      Since this file name is not explicitly specified as a UTC time
+      (currently the only way to do that is with a name like the other
+      example above, with the dashes in the dates and the dots in the
+      times), Vesper assumes that it is a local time. It uses the
       time zone of the recording's station to convert that local time
       to the equivalent UTC time, since Vesper uses only UTC time
       internally. In this case, the Ithaca station is in the US/Eastern
