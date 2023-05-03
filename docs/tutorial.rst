@@ -90,7 +90,7 @@ Create a new Vesper archive
 ---------------------------
 
 #. Download the `Vesper archive template
-   <https://www.dropbox.com/s/ttlregwt1vk03be/Archive%20Template.zip?dl=1>`_
+   <https://www.dropbox.com/s/rm1429y72kcbtsx/Archive%20Template%20latest.zip?dl=1>`_
    to your computer.
 
 #. Unzip the downloaded file. This should create an archive directory
