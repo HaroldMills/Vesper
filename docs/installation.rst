@@ -65,12 +65,18 @@ To install the most recent version of Vesper in a new Conda environment:
 
 5. Install Vesper and various dependencies into the environment with::
 
-       pip install vesper
+        pip install vesper
       
    Here you must use pip rather than Conda since Vesper is distributed
    as a pip package. In addition to the Vesper package, pip will install
    several other packages on which Vesper depends, including, for example,
    ones for Django and NumPy.
+
+.. Note::
+   The last step of the above installation procedure currently fails for
+   Apple Silicon Macs. Please see
+   `issue #217 <https://github.com/HaroldMills/Vesper/issues/217>`_ of
+   the Vesper GitHub repository for more about this problem.
 
 Installing BirdVoxDetect (optional)
 ===================================
