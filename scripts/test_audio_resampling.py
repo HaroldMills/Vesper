@@ -1,5 +1,5 @@
 """
-Script that facilitates comparison of different librosa resampling types.
+Script that facilitates comparison of some audio resampling types.
 
 See comments in `main` function for more details.
 """
@@ -13,21 +13,21 @@ from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
 import librosa
+import soxr
 
 import vesper.util.time_frequency_analysis_utils as tfa_utils
 
 
-RESULT_DIR_PATH = Path('/Users/harold/Desktop/Librosa Resampling Tests')
+RESULT_DIR_PATH = Path('/Users/harold/Desktop/Resampling Tests')
 CROSS_TYPE_QUALITY_PDF_FILE_PATH = \
-    RESULT_DIR_PATH / 'Librosa Resampling Quality Across Types.pdf'
+    RESULT_DIR_PATH / 'Resampling Quality Across Types.pdf'
 WITHIN_TYPE_QUALITY_PDF_FILE_PATH = \
-    RESULT_DIR_PATH / 'Librosa Resampling Quality Within Types.pdf'
-WITHIN_TYPE_QUALITY_PDF_FILE_NAME_FORMAT = \
-    'Librosa Resampling Quality - {}.pdf'
+    RESULT_DIR_PATH / 'Resampling Quality Within Types.pdf'
+WITHIN_TYPE_QUALITY_PDF_FILE_NAME_FORMAT = 'Resampling Quality - {}.pdf'
 SIGNAL_STATS_CSV_FILE_PATH = \
-    RESULT_DIR_PATH / 'Librosa Resampled Signal Stats.csv'
-SPEED_PDF_FILE_PATH = RESULT_DIR_PATH / 'Librosa Resampling Speed.pdf'
-SPEED_STATS_CSV_FILE_PATH = RESULT_DIR_PATH / 'Librosa Resampling Speed.csv'
+    RESULT_DIR_PATH / 'Resampled Signal Stats.csv'
+SPEED_PDF_FILE_PATH = RESULT_DIR_PATH / 'Resampling Speed.pdf'
+SPEED_STATS_CSV_FILE_PATH = RESULT_DIR_PATH / 'Resampling Speed.csv'
 
 SIGNAL_STATS_CSV_FILE_COLUMN_NAMES = (
     'Name', 'Input Sample Rate (Hz)', 'Output Sample Rate (Hz)',
@@ -59,32 +59,128 @@ OUTPUT_SAMPLE_RATES = INPUT_SAMPLE_RATES
 #     32000,
 # )
 
-RESAMPLING_TYPES = (
-    'soxr_vhq',
-    'soxr_hq',
-    'sinc_best',
-    'sinc_medium',
-    'sinc_fastest',
-    'kaiser_best',
-    'kaiser_fast',
-    'fft',
+INCREMENTAL_CHUNK_COUNT = 10
+
+
+class LibrosaResampler:
+
+    def __init__(self, resampling_type):
+        self.resampling_type = resampling_type
+
+    @property
+    def name(self):
+        return f'Librosa {self.resampling_type}'
+
+    def resample(self, input, input_rate, output_rate):
+        return librosa.resample(
+            input,
+            orig_sr = input_rate,
+            target_sr = output_rate,
+            res_type = self.resampling_type)
+    
+
+class SoxrResampler:
+
+    def __init__(self, quality):
+        self.quality = quality
+
+    @property
+    def name(self):
+        return f'SoXR {self.quality}'
+    
+    def resample(self, input, input_rate, output_rate):
+        return soxr.resample(
+            input, input_rate, output_rate, self.quality)
+
+
+class SoxrIncrementalResampler:
+
+    def __init__(self, quality):
+        self.quality = quality
+
+    @property
+    def name(self):
+        return f'SoXR {self.quality} Inc'
+    
+    def resample(self, input, input_rate, output_rate):
+
+        r = soxr.ResampleStream(
+            input_rate, output_rate, 1, input.dtype, self.quality)
+        
+        length = len(input)
+        chunk_size = length // INCREMENTAL_CHUNK_COUNT
+
+        start_index = 0
+        outputs = []
+
+        while start_index != length:
+
+            end_index = start_index + chunk_size
+
+            if end_index >= length:
+                end_index = length
+                last = True
+            else:
+                last = False
+
+            chunk = input[start_index:end_index]
+            output = r.resample_chunk(chunk, last)
+            # output = soxr.resample(
+            #     chunk, input_rate, output_rate, self.quality)
+            outputs.append(output)
+
+            start_index = end_index
+
+        return np.concatenate(outputs)
+
+
+# RESAMPLERS = (
+#     LibrosaResampler('soxr_vhq'),
+#     LibrosaResampler('soxr_hq'),
+#     LibrosaResampler('sinc_best'),
+#     LibrosaResampler('sinc_medium'),
+#     LibrosaResampler('sinc_fastest'),
+#     LibrosaResampler('kaiser_best'),
+#     LibrosaResampler('kaiser_fast'),
+#     LibrosaResampler('fft'),
+# )
+
+# RESAMPLER_AXES_INDICES = (
+#     (0, 1),
+#     (0, 2),
+#     (1, 0),
+#     (1, 1),
+#     (1, 2),
+#     (2, 0),
+#     (2, 1),
+#     (2, 2),
+# )
+
+# HIDDEN_AXES_INDICES = ()
+
+RESAMPLERS = (
+    SoxrResampler('HQ'),
+    SoxrIncrementalResampler('HQ'),
+    LibrosaResampler('soxr_hq'),
+    SoxrResampler('VHQ'),
+    SoxrIncrementalResampler('VHQ'),
+    LibrosaResampler('soxr_vhq'),
 )
+
+RESAMPLER_AXES_INDICES = (
+    (1, 0),
+    (1, 1),
+    (1, 2),
+    (2, 0),
+    (2, 1),
+    (2, 2),
+)
+
+HIDDEN_AXES_INDICES = ((0, 1), (0, 2))
 
 SPEED_TEST_SIGNAL_DURATION = 10
 SPEED_TEST_TRIAL_COUNT = 5
-SPEED_PLOT_X_LIMIT = 10500
-
-
-# TODO: When I run this script as is on my laptop, from and to all 14
-# sample rates, it quits without an error message before it finishes
-# writing the output file "Librosa Resampling Quality - fft.pdf" in
-# the `compare_resampling_quality_within_types` function. I can run
-# that function alone just for the `'fft'` resampling type (i.e. it
-# successfully writes the abovementioned output file), and also
-# the `measure_resampling_speed` function alone, so I can generate
-# all of the output files of the script, but it would be nice to be
-# able to run the script all the way through. Perhaps some
-# strategically timed garbage collection could help?
+SPEED_PLOT_X_LIMIT = 20000
 
 
 def main():
@@ -133,6 +229,8 @@ def compare_resampling_quality_across_types_aux(
     input = inputs[input_rate]
 
     _, axes = plt.subplots(3, 3)
+    for i, j in HIDDEN_AXES_INDICES:
+        axes[i][j].set_visible(False)
 
     plt.suptitle(f'{input_rate} Hz to {output_rate} Hz')
 
@@ -142,26 +240,20 @@ def compare_resampling_quality_across_types_aux(
     plot_spectrogram(
         input, input_rate, output_rate, 'Input', False, axes[0, 0])
 
-    for index, resampling_type in enumerate(RESAMPLING_TYPES):
+    for index, resampler in enumerate(RESAMPLERS):
 
         # Resample.
-        output = librosa.resample(
-            input,
-            orig_sr = input_rate,
-            target_sr = output_rate,
-            res_type = resampling_type)
+        output = resampler.resample(input, input_rate, output_rate)
 
         stats = \
-            get_signal_stats(resampling_type, input_rate, output_rate, output)
+            get_signal_stats(resampler.name, input_rate, output_rate, output)
         signal_stats.append(stats)
 
         # Get subplot indices.
-        k = index + 1
-        i = k // 3
-        j = k % 3
+        i, j = RESAMPLER_AXES_INDICES[index]
 
         plot_spectrogram(
-            output, output_rate, output_rate, resampling_type, False,
+            output, output_rate, output_rate, resampler.name, False,
             axes[i][j])
 
     plt.tight_layout()
@@ -199,9 +291,9 @@ def compare_resampling_quality_within_types():
 
     with PdfPages(WITHIN_TYPE_QUALITY_PDF_FILE_PATH) as pdf_file:
 
-        for resampling_type in RESAMPLING_TYPES:
+        for resampler in RESAMPLERS:
 
-            print(f'Testing {resampling_type} quality...')
+            print(f'Testing {resampler.name} quality...')
 
             for output_rate in OUTPUT_SAMPLE_RATES:
 
@@ -210,25 +302,21 @@ def compare_resampling_quality_within_types():
                     if rate_pair_enabled(input_rate, output_rate):
 
                         compare_resampling_quality_within_types_aux(
-                            inputs, input_rate, output_rate, resampling_type,
+                            inputs, input_rate, output_rate, resampler,
                             pdf_file)
     
     
 def compare_resampling_quality_within_types_aux(
-        inputs, input_rate, output_rate, resampling_type, pdf_file):
+        inputs, input_rate, output_rate, resampler, pdf_file):
     
     input = inputs[input_rate]
 
     # Resample.
-    output = librosa.resample(
-        input,
-        orig_sr = input_rate,
-        target_sr = output_rate,
-        res_type = resampling_type)
+    output = resampler.resample(input, input_rate, output_rate)
     
     _, axes = plt.subplots(2, 1)
 
-    plt.suptitle(f'{resampling_type} - {input_rate} Hz to {output_rate} Hz')
+    plt.suptitle(f'{resampler.name} - {input_rate} Hz to {output_rate} Hz')
     plot_spectrogram(input, input_rate, output_rate, 'Input', True, axes[0])
     plot_spectrogram(output, output_rate, output_rate, 'Output', True, axes[1])
     plt.tight_layout()
@@ -441,11 +529,10 @@ def measure_resampling_speed_aux(
         input_rate, output_rate, pdf_file, speed_stats):
         
     samples = create_speed_test_signal(input_rate)
-    speeds = np.zeros(len(RESAMPLING_TYPES))
+    speeds = np.zeros(len(RESAMPLERS))
 
-    for i, resampling_type in enumerate(RESAMPLING_TYPES):
-        stats = time_resampling(
-            samples, input_rate, output_rate, resampling_type)
+    for i, resampler in enumerate(RESAMPLERS):
+        stats = time_resampling(samples, input_rate, output_rate, resampler)
         speed_stats.append(stats)
         speeds[i] = stats[-1]
 
@@ -457,18 +544,13 @@ def create_speed_test_signal(sample_rate):
     return np.random.randn(n)
     
     
-def time_resampling(samples, input_rate, output_rate, resampling_type):
+def time_resampling(samples, input_rate, output_rate, resampler):
 
     elapsed_times = np.zeros(SPEED_TEST_TRIAL_COUNT)
     
     for i in range(SPEED_TEST_TRIAL_COUNT):
-
         start_time = time.time()
-
-        librosa.resample(
-            samples, orig_sr=input_rate, target_sr=output_rate,
-            res_type=resampling_type)
-        
+        resampler.resample(samples, input_rate, output_rate)
         elapsed_times[i] = time.time() - start_time
         
     # speeds = SPEED_TEST_SIGNAL_DURATION / elapsed_times
@@ -481,7 +563,7 @@ def time_resampling(samples, input_rate, output_rate, resampling_type):
     #     f'of audio in {min_elapsed_time:.1f} seconds, {speed} times '
     #     f'faster than real time.')
     
-    return resampling_type, input_rate, output_rate, speed
+    return resampler.name, input_rate, output_rate, speed
 
     
 def plot_speeds(speeds, input_rate, output_rate, pdf_file):
@@ -497,7 +579,8 @@ def plot_speeds(speeds, input_rate, output_rate, pdf_file):
 
     # y axis
     plt.ylabel('Resampling Type')
-    plt.yticks(ys, RESAMPLING_TYPES)
+    names = [r.name for r in RESAMPLERS]
+    plt.yticks(ys, names)
     plt.gca().invert_yaxis()
 
     # x axis
