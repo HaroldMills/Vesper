@@ -190,10 +190,12 @@ setup(
         'Operating System :: OS Independent',
     ],
     
+    # In the following, pinned version numbers should be changed only
+    # after testing the new versions for compatibility.
     install_requires=[
         'aioboto3',
         'daphne',                  # ASGI server for Django
-        'django~=4.2.0',           # update to new versions after testing
+        'django~=4.2.0', 
         'environs[django]',
         # 'gunicorn',              # WSGI server for Django
         'jsonschema',
@@ -202,7 +204,9 @@ setup(
         'ruamel_yaml',
         'scipy',
         'skyfield',
-        'tensorflow~=2.12.0',      # update to new versions after testing
+        'tensorflow~=2.12.0;platform_system != "Darwin" or platform_machine != "arm64"',
+        'tensorflow-macos~=2.12.0;platform_system == "Darwin" and platform_machine == "arm64"',
+        'tensorflow-metal~=0.8.0;platform_system == "Darwin" and platform_machine == "arm64"',
         'whitenoise',
     ],
       
