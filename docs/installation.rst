@@ -54,14 +54,14 @@ To install the most recent version of Vesper in a new Conda environment:
 3. Create a new Conda environment for Vesper and install a Python
    interpreter in it by issuing the command::
 
-        conda create -n vesper-0.4.13 python=3.10
+        conda create -n vesper-0.4.14 python=3.10
 
    Conda will display a list of packages that it proposes to install,
    including Python and some others. Press the ``Return`` key to accept.
 
 4. Activate the environment you just created with::
 
-        conda activate vesper-0.4.13
+        conda activate vesper-0.4.14
 
 5. Install Vesper and various dependencies into the environment with::
 
@@ -71,12 +71,6 @@ To install the most recent version of Vesper in a new Conda environment:
    as a pip package. In addition to the Vesper package, pip will install
    several other packages on which Vesper depends, including, for example,
    ones for Django and NumPy.
-
-.. Note::
-   The last step of the above installation procedure currently fails for
-   Apple Silicon Macs. Please see
-   `issue #217 <https://github.com/HaroldMills/Vesper/issues/217>`_ of
-   the Vesper GitHub repository for more about this problem.
 
 Installing BirdVoxDetect (optional)
 ===================================
