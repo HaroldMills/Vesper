@@ -10,8 +10,11 @@ FAMILIES_FILE_PATH = DATA_DIR_PATH / 'families_select_v6.txt'
 GROUPS_FILE_PATH = DATA_DIR_PATH / 'groups_select_v6.txt'
 SPECIES_FILE_PATH = DATA_DIR_PATH / 'species_select_v6.txt'
 
-ANNOTATION_CONSTRAINT_HEADER = '''
+ANNOTATION_CONSTRAINTS_SECTION_HEADER = '''
 annotation_constraints:
+'''.lstrip()
+
+ANNOTATION_CONSTRAINT_HEADER = '''
     - name: Nighthawk {} Classification
       description: >
           All classifications, including call subclassifications, with
@@ -45,14 +48,13 @@ def main():
     # for code in ebird_species_codes:
     #     print(f'    {code} -> {ibp_species_codes[code]}')
 
-    # create_annotation_constraint_yaml(species_code_mapping)
-    create_clip_album_commands_yaml(descriptions, species_code_mapping)
-
+    create_annotation_constraint_yaml(species_code_mapping)
+    # create_clip_album_commands_yaml(descriptions, species_code_mapping)
 
 
 def create_annotation_constraint_yaml(species_code_mapping):
+    print(ANNOTATION_CONSTRAINTS_SECTION_HEADER)
     create_annotation_constraint_yaml_aux('IBP', species_code_mapping)
-    print()
     create_annotation_constraint_yaml_aux('eBird')
 
 
