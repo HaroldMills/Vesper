@@ -72,6 +72,53 @@ To install the most recent version of Vesper in a new Conda environment:
    several other packages on which Vesper depends, including, for example,
    ones for Django and NumPy.
 
+Installing Nighthawk (optional)
+===============================
+
+`Nighthawk <https://github.com/bmvandoren/Nighthawk>`_ is a nocturnal
+flight call detector developed by Benjamin Van Doren and collaborators.
+While Vesper and Nighthawk are separate software development efforts,
+you can use Nighthawk from within Vesper just like any other supported
+detector. For example, you can use Vesper to run Nighthawk on your
+recordings, view the resulting clips in clip albums, modify the
+classifications Nighthawk assigned to the clips, etc.
+
+If you would like to use Nighthawk with Vesper, first install
+Nighthawk in its own Conda environment as described in the
+Nighthawk
+`README <https://github.com/bmvandoren/Nighthawk/blob/main/README.md>`_.
+Note that in order for Vesper to recognize that the environment contains
+a version of Nighthawk, it must have a name of the form::
+
+        nighthawk-<version number>
+
+where ``<version number>`` is the installed Nighthawk version number.
+For example, if the version number is ``0.1.0``, the environment should
+have the name::
+
+        nighthawk-0.1.0
+
+You must also install the
+`vesper-nighthawk <https://github.com/HaroldMills/vesper-nighthawk>`_
+Python package in the Vesper environment from which you will use
+Nighthawk. For example, if your Vesper environment is named
+``vesper-0.4.14``, you can install the ``vesper-nighthawk`` package
+into it by issuing the following commands at a Windows Anaconda Prompt
+or Unix terminal::
+
+        conda activate vesper-0.4.14
+        pip install vesper-nighthawk
+
+Once you've completed the above, you'll need to create one or more Vesper
+detectors for Nighthawk in your archive database in order to be able to
+run it from within Vesper. To do this, use Vesper's
+``File->Import metadata`` command to import an appropriate metadata YAML
+file. Please see the ``Nighthawk Detectors.yaml`` file of the
+``Metadata YAML`` subdirectory of the `Vesper archive template
+<https://www.dropbox.com/s/cvp8mxl4jezooir/Archive%20Template%20latest.zip?dl=1>`_
+for an example. 
+
+
 Installing BirdVoxDetect (optional)
 ===================================
 
@@ -86,7 +133,7 @@ them with species classifications, etc.
 
 If you would like to use BirdVoxDetect with Vesper, install
 BirdVoxDetect separately in its own Conda environment. The
-environment must have a name of the form:
+environment must have a name of the form::
 
         birdvoxdetect-<version number>
 
@@ -122,6 +169,15 @@ and be sure to specify a Python version compatible with your
 BirdVoxDetect version in step 2. See the installation instructions
 for the specific BirdVoxDetect version you are installing for a list
 of compatible Python versions.
+
+Once you've completed the above, you'll need to create one or more Vesper
+detectors for BirdVoxDetect in your archive database in order to be able
+to run it from within Vesper. To do this, use Vesper's
+``File->Import metadata`` command to import an appropriate metadata YAML
+file. Please see the ``BirdVoxDetect Detectors.yaml`` file of the
+``Metadata YAML`` subdirectory of the `Vesper archive template
+<https://www.dropbox.com/s/cvp8mxl4jezooir/Archive%20Template%20latest.zip?dl=1>`_
+for an example. 
 
 Conda environments
 ==================
