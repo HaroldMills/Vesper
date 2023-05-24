@@ -1687,10 +1687,10 @@ class PrefixRemover(Formatter):
         self._prefix_length = len(self._prefix)
         
     def _format(self, value, clip):
-        if not value.startswith(self._prefix):
-            return None
-        else:
+        if value.startswith(self._prefix):
             return value[self._prefix_length:]
+        else:
+            return value
 
 
 class RelativeTimeFormatter(Formatter):
