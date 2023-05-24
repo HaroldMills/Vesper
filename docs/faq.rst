@@ -55,6 +55,97 @@ it won't terminate. If the command seems to hang, producing no output
 for at least thirty seconds, type ``Ctrl-C`` on your keyboard to
 terminate it.
 
+How do I use Nighthawk with Vesper?
+===================================
+
+`Nighthawk <https://github.com/bmvandoren/Nighthawk>`_ is a nocturnal
+flight call detector developed by Benjamin Van Doren and collaborators.
+While Vesper and Nighthawk are separate software development efforts,
+you can use Nighthawk from within Vesper just like any other supported
+detector. For example, you can use Vesper to run Nighthawk on your
+recordings, view the resulting clips in clip albums, annotate them
+with species classifications, etc.
+
+To get set up to use Nighthawk with Vesper:
+
+1. Install the ``nighthawk`` and ``vesper-nighthawk`` Python packages
+   according to Vesper's `Nighthawk installation instructions
+   <installation.html#installing-nighthawk-optional>`_.
+
+2. Add one or more Vesper detectors for Nighthawk to your archive
+   database. To do this, use Vesper's ``File->Import metadata`` command
+   to import an appropriate metadata YAML file. Please see the
+   ``Nighthawk Detectors.yaml`` file of the ``Metadata YAML`` subdirectory
+   of the `Vesper archive template
+   <https://www.dropbox.com/s/cvp8mxl4jezooir/Archive%20Template%20latest.zip?dl=1>`_
+   for an example. Most users can just import the example file as is
+   to get started. If you want to customize the example file, be sure to
+   read the comments at the top of the example to understand how to name
+   your detectors so that Vesper will be able to use them.
+
+3. Customize Vesper's classification menus for use with Nighthawk. In
+   this step you'll add an annotation constraint to your archive database
+   and modify the ``Classification`` annotation to use it. An *annotation
+   constraint* specifies the values that a Vesper annotation will have,
+   and Vesper uses it to build the annotation value menus that it presents
+   in its user interface.
+
+   a. To add one or more annotation constraints to your archive database
+      that describe Nighthawk classifications, use Vesper's
+      ``File->Import metadata`` command to import an appropriate
+      metadata YAML file. Please see the
+      ``Nighthawk Annotation Constraints.yaml`` file of the
+      ``Metadata YAML`` subdirectory of the `Vesper archive template
+      <https://www.dropbox.com/s/cvp8mxl4jezooir/Archive%20Template%20latest.zip?dl=1>`_
+      for an example. The example defines two annotation constraints,
+      one named ``Nighthawk eBird Classification`` that uses eBird
+      species codes and another named ``Nighthawk IBP Classification``
+      that uses four-letter Institute for Bird Populations (IBP) species
+      codes. Most users will just want to import the example file as is,
+      and then choose one or the other of the imported annotation
+      constraints to use in the next step.
+
+   b. To modify the ``Classification`` annotation of your archive
+      database to use one of the annotation constraints added in the
+      previous step:
+
+      * Go to the Django administration page of your Vesper server,
+        typically by visiting the URL ``localhose/admin`` in your
+        browser.
+
+      * Select ``Annotation infos`` along the left side of the display.
+
+      * Select ``Classification`` in the main part of the display.
+
+      * In the ``Constraint`` menu in the main part of the display,
+        select one of the annotation constraints that you added in step
+        ``a`` to use for the ``Classification`` annotation. If you
+        imported the example file as is, this will be either the
+        ``Nighthawk eBird Classification`` constraint or the
+        ``Nighthawk IBP Classification`` constraint.
+
+      .. Warning::
+         The procedure described in this section uses the Django
+         administration interface to modify your archive database. While
+         this interface is sometimes very helpful, it is also relatively
+         easy to accidentally corrupt your database or delete data you
+         didn't intend to with it. We recommend avoiding its use when
+         there are safer alternatives like the normal Vesper user
+         interface, and using it carefully when you must.
+
+Once you have completed the above steps, you can run Nighthawk on your
+recordings using the ``Process->Detect`` command and process the
+resulting clips according to your personal or project workflow. Note
+that if you'd like to export Nighthawk clips from Vesper to work with
+in Raven Pro, for example to provide Nighthawk `model feedback
+<https://github.com/bmvandoren/Nighthawk/blob/main/instructions/feedback/model_feedback.md>`_
+to help improve the detector, you can use Vesper's
+``File->Export clip metadata to CSV file`` command with the
+``Clip Table Format`` preset named ``Nighthawk Raven Output`` to export a
+Raven selection table that you can open in Raven Pro. We are also looking
+into the possibility of allowing Vesper users to submit Nighthawk model
+feedback directly from Vesper.
+
 How do I use BirdVoxDetect with Vesper?
 =======================================
 

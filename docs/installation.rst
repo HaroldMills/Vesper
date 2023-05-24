@@ -109,14 +109,9 @@ or Unix terminal::
         conda activate vesper-0.4.14
         pip install vesper-nighthawk
 
-Once you've completed the above, you'll need to create one or more Vesper
-detectors for Nighthawk in your archive database in order to be able to
-run it from within Vesper. To do this, use Vesper's
-``File->Import metadata`` command to import an appropriate metadata YAML
-file. Please see the ``Nighthawk Detectors.yaml`` file of the
-``Metadata YAML`` subdirectory of the `Vesper archive template
-<https://www.dropbox.com/s/cvp8mxl4jezooir/Archive%20Template%20latest.zip?dl=1>`_
-for an example. 
+Once you've completed the above, see
+`this FAQ <faq.html#how-do-i-use-nighthawk-with-vesper>`_ for more about
+getting set up to use Nighthawk.
 
 
 Installing BirdVoxDetect (optional)
