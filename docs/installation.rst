@@ -83,22 +83,21 @@ detector. For example, you can use Vesper to run Nighthawk on your
 recordings, view the resulting clips in clip albums, modify the
 classifications Nighthawk assigned to the clips, etc.
 
-If you would like to use Nighthawk with Vesper, first install
-Nighthawk in its own Conda environment as described in the
-Nighthawk
-`README <https://github.com/bmvandoren/Nighthawk/blob/main/README.md>`_.
-Note that in order for Vesper to recognize that the environment contains
-a version of Nighthawk, it must have a name of the form::
+If you would like to use Nighthawk with Vesper, first install Nighthawk
+in its own Conda environment. Note that you must give the environment
+a name of the form::
 
         nighthawk-<version number>
 
-where ``<version number>`` is the installed Nighthawk version number.
-For example, if the version number is ``0.1.0``, the environment should
-have the name::
+where ``<version number>`` is the number of the Nighthawk version
+installed in the environment, for example ``0.1.1``. If the name
+does not have this form (for example, if it is just ``nighthawk``
+with no version number) Vesper will not recognize the environment
+as one containing a version of Nighthawk. See the Nighthawk `README
+<https://github.com/bmvandoren/Nighthawk/blob/main/README.md>`_
+for a detailed list of Nighthawk installation commands.
 
-        nighthawk-0.1.0
-
-You must also install the
+To use Nighthawk with Vesper, you must also install the
 `vesper-nighthawk <https://github.com/HaroldMills/vesper-nighthawk>`_
 Python package in the Vesper environment from which you will use
 Nighthawk. For example, if your Vesper environment is named
