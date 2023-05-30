@@ -109,15 +109,15 @@ To get set up to use Nighthawk with Vesper:
       database to use one of the annotation constraints added in the
       previous step:
 
-      - Go to the Django administration page of your Vesper server,
+      * Go to the Django administration page of your Vesper server,
         typically by visiting the URL ``localhose/admin`` in your
         browser.
 
-      - Select ``Annotation infos`` along the left side of the display.
+      * Select ``Annotation infos`` along the left side of the display.
 
-      - Select ``Classification`` in the main part of the display.
+      * Select ``Classification`` in the main part of the display.
 
-      - In the ``Constraint`` menu in the main part of the display,
+      * In the ``Constraint`` menu in the main part of the display,
         select one of the annotation constraints that you added in step
         ``a`` to use for the ``Classification`` annotation. If you
         imported the example file as is, this will be either the
