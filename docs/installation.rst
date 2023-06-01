@@ -90,7 +90,7 @@ a name of the form::
         nighthawk-<version number>
 
 where ``<version number>`` is the number of the Nighthawk version
-installed in the environment, for example ``0.1.1``. If the name
+installed in the environment, for example ``0.2.0``. If the name
 does not have this form (for example, if it is just ``nighthawk``
 with no version number) Vesper will not recognize the environment
 as one containing a version of Nighthawk. See the Nighthawk `README
