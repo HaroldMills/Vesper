@@ -1,12 +1,14 @@
 from datetime import datetime as DateTime, timedelta as TimeDelta
 import logging
+from zoneinfo import ZoneInfo
 
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.views import View
 
 from vesper.django.app.models import (
-    Clip, Processor, Recording, RecordingChannel, StationDevice)
+    AnnotationInfo, Clip, Processor, Recording, RecordingChannel,
+    StationDevice)
 import vesper.django.app.model_utils as model_utils
 import vesper.django.util.view_utils as view_utils
 import vesper.util.signal_utils as signal_utils
@@ -54,17 +56,20 @@ class CreateLrgvClipsView(View):
         self._station_mic_output_pairs = _get_station_mic_output_pairs()
         self._detectors = _get_detectors()
         self._station_recorders = _get_station_recorders()
+        self._annotation_info_cache = {}
 
         try:
 
             with transaction.atomic():
+
+                recording_infos = content['recordings']
 
                 clips = []
 
                 for clip_info in content['clips']:
 
                     clip_id, recording_id, recording_created = \
-                        self._create_clip(clip_info)
+                        self._create_clip(clip_info, recording_infos)
                     
                     clips.append({
                         'clip_id': clip_id,
@@ -73,7 +78,7 @@ class CreateLrgvClipsView(View):
                     })
                     
         except Exception as e:
-            error_message = _get_error_message(e, clip_info)
+            error_message = self._get_error_message(e, clip_info)
             return HttpResponseBadRequest(
                 content=error_message, content_type='text/plain')
         
@@ -82,9 +87,12 @@ class CreateLrgvClipsView(View):
         return JsonResponse(data)
         
 
-    def _create_clip(self, clip_info):
+    def _create_clip(self, clip_info, recording_infos):
 
-        station_name = clip_info['station']
+        recording_name = clip_info['recording']
+        recording_info = recording_infos[recording_name]
+
+        station_name = self._get_station_name(clip_info)
         station, mic_output = self._get_station_mic_output_pair(station_name)
 
         start_time = clip_info['start_time']
@@ -93,18 +101,21 @@ class CreateLrgvClipsView(View):
         length = clip_info['length']
 
         detector_name = clip_info['detector']
-        creating_processor = self._get_detector(detector_name)
+        detector_model = self._get_detector(detector_name)
 
-        recording_info = clip_info.get('recording')
-        (recording_channel, sample_rate, end_time, recording_id,
-         recording_created) = \
+        (recording_channel, sample_rate, recording_start_time, end_time,
+         recording_id, recording_created) = \
             self._get_recording_channel(
                 station, mic_output, start_time, length, recording_info)
 
         # We set the start index to `None` since we do not know it
         # exactly. We will attempt to correct this later by locating
         # clips precisely in their recordings.
-        start_index = None
+        if detector_name.startswith('Old Bird'):
+            start_index = None
+        else:
+            td = start_time - recording_start_time
+            start_index = int(round(td.total_seconds() * sample_rate))
 
         date = station.get_night(start_time)
 
@@ -123,10 +134,38 @@ class CreateLrgvClipsView(View):
             creation_time=creation_time,
             creating_user=None,
             creating_job=None,
-            creating_processor=creating_processor
+            creating_processor=detector_model
         )
 
+        annotations = clip_info.get('annotations')
+
+        if annotations is not None:
+            
+            for name, value in annotations.items():
+                
+                annotation_info = \
+                    self._get_annotation_info(name, detector_model)
+                
+                model_utils.annotate_clip(
+                    clip, annotation_info, str(value),
+                    creation_time=creation_time,
+                    creating_user=None,
+                    creating_job=None,
+                    creating_processor=detector_model)
+                
         return clip.id, recording_id, recording_created
+
+
+    def _get_station_name(self, clip_info):
+
+        # For now, we extract the station name from the sensor name,
+        # assuming that the station name is the part of the sensor
+        # name from the beginning to the last space. This will change
+        # when we replace devices with sensors.
+        sensor_name = clip_info['sensor']
+        station_name = sensor_name.rsplit(sep=' ', maxsplit=1)[0]
+
+        return station_name
 
 
     def _get_station_mic_output_pair(self, station_name):
@@ -227,8 +266,8 @@ class CreateLrgvClipsView(View):
                 f'recording end time {localize(recording.end_time)}.')
                 
         return (
-            channels.first(), sample_rate, clip_end_time, recording.id,
-            recording_created)
+            channels.first(), sample_rate, recording.start_time,
+            clip_end_time, recording.id, recording_created)
 
 
     def _create_recording(self, station, mic_output, recording_info):
@@ -271,6 +310,58 @@ class CreateLrgvClipsView(View):
                 f'Could not get recorder for station "{station.name}".')
 
             
+    def _get_annotation_info(self, name, detector_model):
+        
+        try:
+            return self._annotation_info_cache[name]
+        
+        except KeyError:
+            # cache miss
+            
+            try:
+                info = AnnotationInfo.objects.get(name=name)
+            
+            except AnnotationInfo.DoesNotExist:
+                
+                detector_name = detector_model.name
+                
+                logging.info(
+                    f'        Adding annotation "{name}" to archive for '
+                    f'detector "{detector_name}"...')
+                
+                description = (
+                    f'Created automatically for detector "{detector_name}".')
+                
+                type_ = 'String'
+                creation_time = time_utils.get_utc_now()
+                creating_user = None
+                creating_job = None
+                
+                info = AnnotationInfo.objects.create(
+                    name=name,
+                    description=description,
+                    type=type_,
+                    creation_time=creation_time,
+                    creating_user=creating_user,
+                    creating_job=creating_job)
+            
+            self._annotation_info_cache[name] = info
+            return info
+        
+
+    def _get_error_message(self, exception, clip_info):
+
+        station_name = self._get_station_name(clip_info)
+        start_time = clip_info['start_time']
+        detector_name = clip_info['detector']
+
+        return (
+            f'Could not create clip for station "{station_name}", start '
+            f'time "{start_time}", and detector "{detector_name}". Error '
+            f'message was: {exception} No clips or recordings will be '
+            f'created for this request.')
+
+
 # TODO: Log a warning when there's more than one mic output for a station.
 def _get_station_mic_output_pairs():
     station_mics = model_utils.get_station_mic_output_pairs_list()
@@ -289,23 +380,12 @@ def _get_station_recorders():
     return {sr.station.name: sr.device for sr in station_recorders}
 
 
-def _get_error_message(exception, clip_info):
-
-    station_name = clip_info['station']
-    start_time = clip_info['start_time']
-    detector_name = clip_info['detector']
-
-    return (
-        f'Could not create clip for station "{station_name}", start '
-        f'time "{start_time}", and detector "{detector_name}". Error '
-        f'message was: {exception} No clips or recordings will be '
-        f'created for this request.')
-
-
 _DATE_TIME_FORMATS = (
-    '%Y-%m-%d %H:%M:%S.%f',    # with fractional seconds
-    '%Y-%m-%d %H:%M:%S'        # without fractional seconds
+    '%Y-%m-%d %H:%M:%S.%f Z',    # with fractional seconds
+    '%Y-%m-%d %H:%M:%S Z'        # without fractional seconds
 )
+
+_UTC = ZoneInfo('UTC')
 
 
 def _parse_datetime(text, station, name):
@@ -314,12 +394,13 @@ def _parse_datetime(text, station, name):
 
         # Try to parse `text` as local date and time.
         try:
-            local_dt = DateTime.strptime(text, format)
+            dt = DateTime.strptime(text, format)
         except Exception:
             continue
 
         # If we get here, the parse succeeded.
-        return station.local_to_utc(local_dt)
+
+        return dt.replace(tzinfo=_UTC)
     
     # If we get here, none of the parse attempts succeeded.
     raise ValueError(f'Could not parse {name} time "{text}".')
