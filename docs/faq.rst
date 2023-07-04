@@ -110,7 +110,7 @@ To get set up to use Nighthawk with Vesper:
       previous step:
 
       * Go to the Django administration page of your Vesper server,
-        typically by visiting the URL ``localhost/admin`` in your
+        typically by visiting the URL ``localhost:8000/admin`` in your
         browser.
 
       * Select ``Annotation infos`` along the left side of the display.
