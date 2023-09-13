@@ -68,3 +68,4 @@ docker-compose-*.yaml
 
 # pip requirements.txt file
 requirements.txt
+requirements.txt.old

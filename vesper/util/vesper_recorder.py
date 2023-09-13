@@ -11,8 +11,6 @@ import math
 import os
 import wave
 
-import pyaudio
-
 from vesper.util.audio_recorder import AudioRecorder, AudioRecorderListener
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
@@ -26,6 +24,13 @@ import vesper.util.yaml_utils as yaml_utils
 # independent, but perhaps it should not be)? How does it relate to other
 # processing, like detection and classification, that we would like to be
 # able to schedule?
+
+
+# TODO: Use f-strings instead of string `format` method.
+# TODO: Use `_count` instead of `num_`.
+# TODO: Consider using a `VesperRecorderError` exception.
+# TODO: Add support for 24-bit samples.
+# TODO: Add support for sample rate conversion.
 
 
 _HOME_DIR_VAR_NAME = 'VESPER_RECORDER_HOME'
@@ -200,7 +205,9 @@ def _parse_config_file(file_path, home_dir_path):
         
     time_zone = ZoneInfo(config.get('time_zone', _DEFAULT_TIME_ZONE))
         
-    input_device_index = _get_input_device_index(config.get('input_device'))
+    # TODO: Consider allowing specification of input device by name
+    # or name portion. Would have to handle non-uniqueness.
+    input_device_index = int(config.get('input_device'))
     num_channels = int(config.get('num_channels', _DEFAULT_NUM_CHANNELS))
     sample_rate = int(config.get('sample_rate', _DEFAULT_SAMPLE_RATE))
     buffer_size = float(config.get('buffer_size', _DEFAULT_BUFFER_SIZE))
@@ -237,73 +244,12 @@ def _parse_config_file(file_path, home_dir_path):
         port_num=port_num)
     
     
-def _get_input_device_index(device):
-    
-    if device is None:
-        return _get_default_input_device_index()
-
-    else:
-        
-        try:
-            return int(device)
-        
-        except ValueError:
-            return _get_input_device_index_from_device_name(device)
-    
-    
-def _get_default_input_device_index():
-    
-    pa = pyaudio.PyAudio()
-    
-    try:
-        info = pa.get_default_input_device_info()
-        
-    except IOError:
-        raise ValueError('Could not get default input device info.')
-    
-    finally:
-        pa.terminate()
-        
-    return info['index']
-    
-
-def _get_input_device_index_from_device_name(name):
-    
-    pa = pyaudio.PyAudio()
-    
-    # Get all device infos.
-    num_devices = pa.get_device_count()
-    infos = [pa.get_device_info_by_index(i) for i in range(num_devices)]
-    
-    pa.terminate()
-    
-    # Remove non-input device infos.
-    infos = [i for i in infos if i['maxInputChannels'] != 0]
-    
-    if len(infos) == 0:
-        raise ValueError('No input devices were found.')
-    
-    # Find infos for devices whose names include `name`.
-    infos = [i for i in infos if name in i['name']]
-    
-    if len(infos) == 0:
-        raise ValueError(
-            'No input device name includes "{}".'.format(name))
-        
-    elif len(infos) > 1:
-        raise ValueError(
-            'More than one input device name includes "{}".'.format(name))
-        
-    else:
-        return infos[0]['index']
-    
-    
 class _Logger(AudioRecorderListener):
     
     
     def __init__(self):
         super().__init__()
-        self._pyaudio_overflow_buffer_count = 0
+        self._portaudio_overflow_buffer_count = 0
         self._num_recorder_overflow_frames = 0
         
         
@@ -313,47 +259,47 @@ class _Logger(AudioRecorderListener):
         
         
     def input_arrived(
-            self, recorder, time, samples, num_frames, pyaudio_overflow):
+            self, recorder, time, samples, num_frames, portaudio_overflow):
         
-        self._log_pyaudio_overflow_if_needed(pyaudio_overflow)
+        self._log_portaudio_overflow_if_needed(portaudio_overflow)
         self._log_recorder_overflow_if_needed(False)
             
             
-    def _log_pyaudio_overflow_if_needed(self, overflow):
+    def _log_portaudio_overflow_if_needed(self, overflow):
         
         if overflow:
             
-            if self._pyaudio_overflow_buffer_count == 0:
+            if self._portaudio_overflow_buffer_count == 0:
                 # overflow has just started
                 
                 _logger.error(
-                    'PyAudio input overflow: PyAudio has reported that '
+                    'PortAudio input overflow: PortAudio has reported that '
                     'an unspecified number of input samples were dropped '
                     'before or during the current buffer. A second message '
                     'will be logged later indicating the number of '
                     'consecutive buffers for which this error occurred.')
                 
-            self._pyaudio_overflow_buffer_count += 1
+            self._portaudio_overflow_buffer_count += 1
             
         else:
             
-            if self._pyaudio_overflow_buffer_count > 0:
+            if self._portaudio_overflow_buffer_count > 0:
                 # overflow has just ended
                 
-                if self._pyaudio_overflow_buffer_count == 1:
+                if self._portaudio_overflow_buffer_count == 1:
                     
                     _logger.error(
-                        'PyAudio input overflow: Overflow was reported for '
+                        'PortAudio input overflow: Overflow was reported for '
                         'one buffer.')
                     
                 else:
                     
                     _logger.error((
-                        'PyAudio input overflow: Overflow was reported for '
+                        'PortAudio input overflow: Overflow was reported for '
                         '{} consecutive buffers.').format(
-                            self._pyaudio_overflow_buffer_count))
+                            self._portaudio_overflow_buffer_count))
             
-                self._pyaudio_overflow_buffer_count = 0
+                self._portaudio_overflow_buffer_count = 0
             
 
     def _log_recorder_overflow_if_needed(self, overflow, num_frames=0):
@@ -386,13 +332,13 @@ class _Logger(AudioRecorderListener):
                 self._num_recorder_overflow_frames = 0
                     
         
-    def input_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
-        self._log_pyaudio_overflow_if_needed(pyaudio_overflow)
+    def input_overflowed(self, recorder, time, num_frames, portaudio_overflow):
+        self._log_portaudio_overflow_if_needed(portaudio_overflow)
         self._log_recorder_overflow_if_needed(True, num_frames)
         
         
     def recording_stopped(self, recorder, time):
-        self._log_pyaudio_overflow_if_needed(False)
+        self._log_portaudio_overflow_if_needed(False)
         self._log_recorder_overflow_if_needed(False)
         _logger.info('Stopped recording.')
 
@@ -431,7 +377,7 @@ class _AudioFileWriter(AudioRecorderListener):
         
     
     def input_arrived(
-            self, recorder, time, samples, num_frames, pyaudio_overflow):
+            self, recorder, time, samples, num_frames, portaudio_overflow):
         self._write_samples(time, samples, num_frames)
         
         
@@ -466,7 +412,7 @@ class _AudioFileWriter(AudioRecorderListener):
                 self._file = None
     
     
-    def input_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
+    def input_overflowed(self, recorder, time, num_frames, portaudio_overflow):
         self._write_samples(time, self._zeros, num_frames)
     
         
@@ -693,13 +639,15 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
     
     def _create_input_table(self, devices, recorder):
         
+        device_dict = {d.index: d for d in devices}
         device_index = recorder.input_device_index
-        
-        if device_index < len(devices):
-            device_name = devices[device_index].name
+        device = device_dict.get(device_index)
+
+        if device is None:
+            device_name = \
+                f'There is no input device with index {device_index}.'
         else:
-            message = 'There is no input device with index {}.'
-            device_name = message.format(device_index)
+            device_name = device.name
             
         rows = (
             ('Device Index', device_index),

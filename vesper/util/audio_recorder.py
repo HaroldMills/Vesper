@@ -7,8 +7,7 @@ from datetime import datetime, timedelta, timezone
 import math
 import time
 
-import pyaudio
-from pyaudio import paInputOverflow
+import sounddevice as sd
 
 from vesper.util.bunch import Bunch
 from vesper.util.notifier import Notifier
@@ -18,9 +17,39 @@ from vesper.util.schedule import ScheduleRunner
 _SAMPLE_SIZE = 2               # bytes
 
 
+# TODO: Use f-strings instead of string `format` method.
+# TODO: Use `_count` instead of `num_`.
+
+# TODO: Handle unsupported input configurations gracefully and informatively.
+
+# TODO: Consider eliminating `get_input_devices` function in favor of
+# using `sounddevice` functions directly.
+
+# TODO: Consider making default input device the selected input device
+# if the specified input device index is not valid.
+
+# TODO: Allow input device specification by name or portion of name in
+# configuration. If specified device does not exist or is not unique,
+# fall back on default device.
+
+# TODO: Show configuration error messages in red text on web page.
+
+# TODO: Use `sounddevice` default input stream block size of zero. To enable
+# this, write incoming samples to a single large (e.g. one minute) circular
+# buffer instead of to a fixed-size buffer from a buffer pool. Send samples
+# to listeners as NumPy views into this circular buffer, or as a view of
+# a copied buffer in the rare case where the samples wrap around the end
+# of the circular buffer.
+
+# TODO: Consider moving schedule (and all recording control) out of this
+# module.
+
+# TODO: Support 24-bit samples.
+
+
 class AudioRecorder:
     
-    """Records audio asynchronously."""
+    """Records audio using the `sounddevice` Python package."""
     
     
     # Most of the work of an `AudioRecorder` is performed by a thread
@@ -33,14 +62,14 @@ class AudioRecorder:
     # but only the recorder thread reads the queue and executes the
     # commands.
     #
-    # To record audio, an `AudioRecorder` creates a PyAudio stream
+    # To record audio, an `AudioRecorder` creates a `sounddevice` stream
     # configured to invoke a callback function periodically with input
     # samples. The callback function is invoked on a thread created by
-    # PyAudio, which we refer to as the *callback thread*. The callback
-    # thread is distinct from the recorder thread. The callback function
-    # performs a minimal amount of work to construct a command for the
-    # recorder thread telling it to process the input samples, and then
-    # writes the command to the recorder thread's command queue.
+    # `sounddevice`, which we refer to as the *callback thread*. The
+    # callback thread is distinct from the recorder thread. The callback
+    # function performs a minimal amount of work to construct a command
+    # for the recorder thread telling it to process the input samples,
+    # and then writes the command to the recorder thread's command queue.
     #
     # TODO: Document recording control, both manual and scheduled.
     
@@ -209,30 +238,46 @@ class AudioRecorder:
         if not self._recording:
             
             # Comment out for production.
-            # self._overflow_test = _PyAudioOverflowTest(self, 2)
+            # self._overflow_test = _PortAudioOverflowTest(self, 2)
             # self._overflow_test = _RecorderOverflowTest(self, 40)
-            
-            self._pyaudio = pyaudio.PyAudio()
             
             self._notify_listeners('recording_starting', _get_utc_now())
             
             self._recording = True
             self._stop_pending = False
 
-            self._stream = self._pyaudio.open(
-                input=True,
-                input_device_index=self.input_device_index,
+            dtype = f'int{8 * self._sample_size}'
+
+            self._stream = sd.RawInputStream(
+                device=self.input_device_index,
                 channels=self.num_channels,
-                rate=self.sample_rate,
-                format=pyaudio.paInt16,
-                frames_per_buffer=self.frames_per_buffer,
-                stream_callback=self._pyaudio_callback)
+                samplerate=self.sample_rate,
+                dtype=dtype,
+                blocksize=self.frames_per_buffer,
+                callback=self._input_callback)
             
+            print('starting stream')
+
+            self._callback_count = 0
+            self._stream.start()
+
+            print('started stream')
+        
             self._notify_listeners('recording_started', _get_utc_now())
     
 
-    def _pyaudio_callback(self, samples, num_frames, time_info, status_flags):
+    def _input_callback(self, samples, num_frames, time_info, status_flags):
         
+        # TODO: Learn more about `time_info` and CFFI.
+
+        # TODO: Learn more about `status_flags` and handle errors better.
+        # `status_flags` is of type `sd.CallbackFlags`. See
+        # https://python-sounddevice.readthedocs.io/en/0.4.6/api/misc.html#sounddevice.CallbackFlags
+        # https://python-sounddevice.readthedocs.io/en/0.4.6/_modules/sounddevice.html#CallbackFlags.
+
+        # The following is from an older, PyAudio version of the Vesper 
+        # Recorder. I have retained it in case it might be useful.
+        #
         # Recording input latency and buffer ADC times as reported by PyAudio
         # do not appear to be useful, at least as of 2017-01-30 on a Windows
         # 10 VM running on Parallels 11 on Mac OS X El Capitan.
@@ -259,6 +304,9 @@ class AudioRecorder:
         # leave it to them to try to compute more accurate buffer start times
         # from those data if they wish.
 
+        print(f'input_callback {num_frames} {self._callback_count}')
+        self._callback_count += 1
+
         if self._recording:
             
             # Comment out for production.
@@ -269,7 +317,7 @@ class AudioRecorder:
                 timedelta(seconds=num_frames / self.sample_rate)
             start_time = _get_utc_now() - buffer_duration
                 
-            pyaudio_overflow = (status_flags & paInputOverflow) != 0
+            port_audio_overflow = status_flags.input_overflow
         
             try:
                 
@@ -284,7 +332,7 @@ class AudioRecorder:
                     name='input_overflowed',
                     num_frames=num_frames,
                     start_time=start_time,
-                    pyaudio_overflow=pyaudio_overflow)
+                    port_audio_overflow=port_audio_overflow)
                 
             else:
                 # got a buffer
@@ -299,15 +347,10 @@ class AudioRecorder:
                     samples=buffer,
                     num_frames=num_frames,
                     start_time=start_time,
-                    pyaudio_overflow=pyaudio_overflow)
+                    port_audio_overflow=port_audio_overflow)
                 
             # Send command to recorder thread.
             self._command_queue.put(command)
-                
-            return (None, pyaudio.paContinue)
-        
-        else:
-            return (None, pyaudio.paComplete)
 
 
     def _on_input_overflowed(self, command):
@@ -315,7 +358,7 @@ class AudioRecorder:
         c = command
         self._notify_listeners(
             'input_overflowed', c.start_time, c.num_frames,
-            c.pyaudio_overflow)
+            c.port_audio_overflow)
         
         self._stop_if_pending()
         
@@ -327,9 +370,8 @@ class AudioRecorder:
             self._recording = False
             self._stop_pending = False
             
-            self._stream.stop_stream()
+            self._stream.stop()
             self._stream.close()
-            self._pyaudio.terminate()
             
             self._notify_listeners('recording_stopped', _get_utc_now())
 
@@ -339,7 +381,7 @@ class AudioRecorder:
         c = command
         self._notify_listeners(
             'input_arrived', c.start_time, c.samples, c.num_frames,
-            c.pyaudio_overflow)
+            c.port_audio_overflow)
         
         # Free sample buffer for reuse.
         self._free_buffer_queue.put(c.samples)
@@ -365,42 +407,28 @@ class AudioRecorder:
 
 def _get_input_devices():
     
-    pa = pyaudio.PyAudio()
-    
-    # Get host APIs.
-    n = pa.get_host_api_count()
-    host_api_infos = [pa.get_host_api_info_by_index(i) for i in range(n)]
-    host_api_names = dict((i['index'], i['name']) for i in host_api_infos)
-        
-    # Get devices.
-    n = pa.get_device_count()
-    device_infos = [pa.get_device_info_by_index(i) for i in range(n)]
+    # Get input devices.
+    devices = sd.query_devices()
+    input_devices = [d for d in devices if d['max_input_channels'] > 0]
     
     # Get default input device index.
-    try:
-        default_device_info = pa.get_default_input_device_info()
-    except IOError:
-        default_index = -1
-    else:
-        default_index = default_device_info['index']
-
-    pa.terminate()
-
-    return tuple(
-        _get_input_device(i, default_index, host_api_names)
-        for i in device_infos if i['maxInputChannels'] != 0)
+    default_device_index = sd.default.device[0]
+    
+    return [
+        _get_input_device_info(device, default_device_index)
+        for device in input_devices]
     
     
-def _get_input_device(info, default_index, host_api_names):
+def _get_input_device_info(device, default_device_index):
     return Bunch(
-        host_api_name=host_api_names[info['hostApi']],
-        index=info['index'],
-        default=info['index'] == default_index,
-        name=info['name'],
-        num_input_channels=info['maxInputChannels'],
-        default_sample_rate=info['defaultSampleRate'],
-        default_low_input_latency=info['defaultLowInputLatency'],
-        default_high_input_latency=info['defaultHighInputLatency'])
+        host_api_index=device['hostapi'],
+        index=device['index'],
+        default=device['index'] == default_device_index,
+        name=device['name'],
+        num_input_channels=device['max_input_channels'],
+        default_sample_rate=device['default_samplerate'],
+        default_low_input_latency=device['default_low_input_latency'],
+        default_high_input_latency=device['default_high_input_latency'])
     
 
 def _get_utc_now():
@@ -452,11 +480,12 @@ class AudioRecorderListener:
     
     
     def input_arrived(
-            self, recorder, time, samples, num_frames, pyaudio_overflow):
+            self, recorder, time, samples, num_frames, port_audio_overflow):
         pass
     
     
-    def input_overflowed(self, recorder, time, num_frames, pyaudio_overflow):
+    def input_overflowed(
+            self, recorder, time, num_frames, port_audio_overflow):
         pass
     
         
@@ -464,7 +493,7 @@ class AudioRecorderListener:
         pass
 
 
-class _PyAudioOverflowTest:
+class _PortAudioOverflowTest:
     
     
     def __init__(self, recorder, duration):
@@ -487,7 +516,7 @@ class _RecorderOverflowTest:
         self._recorder = recorder
         self._duration = duration
         
-        # Hide recorder's input buffers from PyAudio callback.
+        # Hide recorder's input buffers from audio input callback.
         self._buffers = []
         while True:
             try:

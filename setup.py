@@ -1,10 +1,6 @@
 """
 setup.py for Vesper pip package.
 
-Note that we specify Python 3.10 in the instructions below. As of
-2023-04-03, Python 3.11 is available but it is not yet supported by
-the `numba` package, which is used by `resampy`.
-
 
 Creating an Up-to-Date `requirements.txt` File
 ----------------------------------------------
@@ -17,7 +13,7 @@ Creating an Up-to-Date `requirements.txt` File
 
     3. Create a new `vesper-reqs` environment with:
 
-           conda create -n vesper-reqs python=3.10
+           conda create -n vesper-reqs python=3.11
            conda activate vesper-reqs
            pip install -e .
 
@@ -50,9 +46,9 @@ To create a Conda environment for Vesper development:
 
     2. From the directory containing this file:
 
-        conda create -n vesper-dev python=3.10
+        conda create -n vesper-dev python=3.11
         conda activate vesper-dev
-        conda install pyaudio
+        conda install -c conda-forge python-sounddevice
         pip install -r requirements.txt
         pip install -e .
         pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
@@ -63,7 +59,7 @@ Running Vesper Unit Tests
 
 To run Django unit tests:
 
-    cd "/Users/harold/Desktop/Test Archive"
+    cd "/Users/harold/Desktop/NFC/Test Archive"
     conda activate vesper-dev
     vesper_admin test -p "dtest_*.py" vesper.django
 
@@ -110,19 +106,19 @@ Creating Vesper Conda Environments
 
 To create a Conda environment using a local Vesper package:
 
-    conda create -n test python=3.10
+    conda create -n test python=3.11
     conda activate test
     pip install dist/vesper-<version>.tar.gz
 
 To create a Conda environment using a Vesper package from the test PyPI:
 
-    conda create -n test python=3.10
+    conda create -n test python=3.11
     conda activate test
     pip install --extra-index-url https://test.pypi.org/simple/ vesper
 
 To create a Conda environment using a Vesper package from the real PyPI:
 
-    conda create -n test python=3.10
+    conda create -n test python=3.11
     conda activate test
     pip install vesper==<version>
 
