@@ -56,7 +56,8 @@ def _main():
         
         _wait_for_keyboard_interrupt() 
         
-        _logger.info('Stopping recorder and exiting due to keyboard interrupt.')
+        _logger.info(
+            'Stopping recorder and exiting due to keyboard interrupt.')
         recorder.stop()
         recorder.wait()
          
