@@ -17,7 +17,6 @@ from vesper.util.schedule import ScheduleRunner
 _SAMPLE_SIZE = 2               # bytes
 
 
-# TODO: Use f-strings instead of string `format` method.
 # TODO: Use `_count` instead of `num_`.
 
 # TODO: Handle unsupported input configurations gracefully and informatively.

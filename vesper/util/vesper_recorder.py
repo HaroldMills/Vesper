@@ -112,15 +112,13 @@ def _create_and_start_recorder(message):
     # Check that home directory path environment variable is set.
     if home_dir_path is None:
         _logger.error(
-            'Required {} environment variable is not set.'.format(
-                _HOME_DIR_VAR_NAME))
+            f'Required {_HOME_DIR_VAR_NAME} environment variable is not set.')
         return None
          
     # Check that home directory exists.
     if not os.path.exists(home_dir_path):
         _logger.error(
-            'Recorder home directory "{}" does not exist.'.format(
-                home_dir_path))
+            f'Recorder home directory "{home_dir_path}" does not exist.')
         return None
     
     # Now that we know that we have a home directory, and hence a place
@@ -130,15 +128,15 @@ def _create_and_start_recorder(message):
     _logger.info(message)
     
     _logger.info(
-        'Recorder version number is {}.'.format(VesperRecorder.VERSION_NUMBER))
+        f'Recorder version number is {VesperRecorder.VERSION_NUMBER}.')
     
     config_file_path = os.path.join(home_dir_path, _CONFIG_FILE_NAME)
         
     # Check that configuration file exists.
     if not os.path.exists(config_file_path):
         _logger.error(
-            'Recorder configuration file "{}" does not exist.'.format(
-                config_file_path))
+            f'Recorder configuration file "{config_file_path}" does '
+            f'not exist.')
         return None
         
     # Parse configuration file.
@@ -146,29 +144,26 @@ def _create_and_start_recorder(message):
         config = _parse_config_file(
             config_file_path, home_dir_path)
     except Exception as e:
-        _logger.error((
-            'Could not parse recorder configuration file "{}". Error '
-            'message was: {}').format(config_file_path, str(e)))
+        _logger.error(
+            f'Could not parse recorder configuration file '
+            f'"{config_file_path}". Error message was: {e}')
         return None
     
     _logger.info(
-        'Starting recorder with HTTP server at port {}.'.format(
-            config.port_num))
+        f'Starting recorder with HTTP server at port {config.port_num}.')
     
     # Create recorder.
     try:
         recorder = VesperRecorder(config)
     except Exception as e:
-        _logger.error(
-            'Could not create recorder. Error message was: {}'.format(str(e)))
+        _logger.error(f'Could not create recorder. Error message was: {e}')
         return None
            
     # Start recorder. 
     try:
         recorder.start()
     except Exception as e:
-        _logger.error(
-            'Could not start recorder. Error message was: {}'.format(str(e)))
+        _logger.error(f'Could not start recorder. Error message was: {e}')
         return None
     
     # Phew. We made it!
@@ -294,10 +289,10 @@ class _Logger(AudioRecorderListener):
                     
                 else:
                     
-                    _logger.error((
-                        'PortAudio input overflow: Overflow was reported for '
-                        '{} consecutive buffers.').format(
-                            self._portaudio_overflow_buffer_count))
+                    _logger.error(
+                        f'PortAudio input overflow: Overflow was reported '
+                        f'for {self._portaudio_overflow_buffer_count} '
+                        f'consecutive buffers.')
             
                 self._portaudio_overflow_buffer_count = 0
             
@@ -323,11 +318,11 @@ class _Logger(AudioRecorderListener):
             if self._num_recorder_overflow_frames > 0:
                 # overflow has just ended
                 
-                _logger.error((
-                    'Recorder input overflow: {:.3f} seconds of zero samples '
-                    'were substituted for lost input samples.').format(
-                        self._num_recorder_overflow_frames / self._sample_rate)
-                )
+                duration = \
+                    self._num_recorder_overflow_frames / self._sample_rate
+                _logger.error(
+                    f'Recorder input overflow: {duration:.3f} seconds of '
+                    f'zero samples were substituted for lost input samples.')
                     
                 self._num_recorder_overflow_frames = 0
                     
@@ -444,8 +439,7 @@ class _AudioFileNamer:
         
     def create_file_name(self, start_time):
         time = start_time.strftime('%Y-%m-%d_%H.%M.%S')
-        return '{}_{}_Z{}'.format(
-            self.station_name, time, self.file_name_extension)
+        return f'{self.station_name}_{time}_Z{self.file_name_extension}'
         
         
 class _HttpServer(HTTPServer):
@@ -710,4 +704,4 @@ def _create_table_row(items, tag_letter='d'):
     
     
 def _create_table_item(item, tag_letter):
-    return '    <t{}>{}</t{}>\n'.format(tag_letter, item, tag_letter)
+    return f'    <t{tag_letter}>{item}</t{tag_letter}>\n'
