@@ -17,8 +17,6 @@ from vesper.util.schedule import ScheduleRunner
 _SAMPLE_SIZE = 2               # bytes
 
 
-# TODO: Use `_count` instead of `num_`.
-
 # TODO: Handle unsupported input configurations gracefully and informatively.
 
 # TODO: Consider eliminating `get_input_devices` function in favor of
@@ -79,18 +77,18 @@ class AudioRecorder:
 
 
     def __init__(
-            self, input_device_index, num_channels, sample_rate, buffer_size,
+            self, input_device_index, channel_count, sample_rate, buffer_size,
             total_buffer_size, schedule=None):
         
         self._input_device_index = input_device_index
-        self._num_channels = num_channels
+        self._channel_count = channel_count
         self._sample_rate = sample_rate
         self._sample_size = _SAMPLE_SIZE
         self._buffer_size = buffer_size
         self._total_buffer_size = total_buffer_size
         self._schedule = schedule
         
-        self._bytes_per_frame = self.num_channels * self.sample_size
+        self._bytes_per_frame = self.channel_count * self.sample_size
         self._frames_per_buffer = \
             int(math.ceil(self.buffer_size * self.sample_rate))
             
@@ -120,12 +118,12 @@ class AudioRecorder:
         seconds of samples and puts them onto free buffer queue.
         """
         
-        num_buffers = int(round(self.total_buffer_size / self.buffer_size))
+        buffer_count = int(round(self.total_buffer_size / self.buffer_size))
         bytes_per_buffer = self.frames_per_buffer * self._bytes_per_frame
         
         queue = Queue()
         
-        for _ in range(num_buffers):
+        for _ in range(buffer_count):
             buffer = bytearray(bytes_per_buffer)
             queue.put(buffer)
             
@@ -138,8 +136,8 @@ class AudioRecorder:
     
     
     @property
-    def num_channels(self):
-        return self._num_channels
+    def channel_count(self):
+        return self._channel_count
     
     
     @property
@@ -249,7 +247,7 @@ class AudioRecorder:
 
             self._stream = sd.RawInputStream(
                 device=self.input_device_index,
-                channels=self.num_channels,
+                channels=self.channel_count,
                 samplerate=self.sample_rate,
                 dtype=dtype,
                 blocksize=self.frames_per_buffer,
@@ -265,7 +263,7 @@ class AudioRecorder:
             self._notify_listeners('recording_started', _get_utc_now())
     
 
-    def _input_callback(self, samples, num_frames, time_info, status_flags):
+    def _input_callback(self, samples, frame_count, time_info, status_flags):
         
         # TODO: Learn more about `time_info` and CFFI.
 
@@ -303,7 +301,7 @@ class AudioRecorder:
         # leave it to them to try to compute more accurate buffer start times
         # from those data if they wish.
 
-        print(f'input_callback {num_frames} {self._callback_count}')
+        print(f'input_callback {frame_count} {self._callback_count}')
         self._callback_count += 1
 
         if self._recording:
@@ -313,7 +311,7 @@ class AudioRecorder:
             
             # Get samples start time.
             buffer_duration = \
-                timedelta(seconds=num_frames / self.sample_rate)
+                timedelta(seconds=frame_count / self.sample_rate)
             start_time = _get_utc_now() - buffer_duration
                 
             port_audio_overflow = status_flags.input_overflow
@@ -329,7 +327,7 @@ class AudioRecorder:
                 # Prepare command for recorder thread.
                 command = Bunch(
                     name='input_overflowed',
-                    num_frames=num_frames,
+                    frame_count=frame_count,
                     start_time=start_time,
                     port_audio_overflow=port_audio_overflow)
                 
@@ -337,14 +335,14 @@ class AudioRecorder:
                 # got a buffer
                 
                 # Copy samples into buffer.
-                num_bytes = num_frames * self._bytes_per_frame
-                buffer[:num_bytes] = samples[:num_bytes]
+                byte_count = frame_count * self._bytes_per_frame
+                buffer[:byte_count] = samples[:byte_count]
                 
                 # Prepare command for recorder thread.
                 command = Bunch(
                     name='input_arrived',
                     samples=buffer,
-                    num_frames=num_frames,
+                    frame_count=frame_count,
                     start_time=start_time,
                     port_audio_overflow=port_audio_overflow)
                 
@@ -356,7 +354,7 @@ class AudioRecorder:
         
         c = command
         self._notify_listeners(
-            'input_overflowed', c.start_time, c.num_frames,
+            'input_overflowed', c.start_time, c.frame_count,
             c.port_audio_overflow)
         
         self._stop_if_pending()
@@ -379,7 +377,7 @@ class AudioRecorder:
         
         c = command
         self._notify_listeners(
-            'input_arrived', c.start_time, c.samples, c.num_frames,
+            'input_arrived', c.start_time, c.samples, c.frame_count,
             c.port_audio_overflow)
         
         # Free sample buffer for reuse.
@@ -424,7 +422,7 @@ def _get_input_device_info(device, default_device_index):
         index=device['index'],
         default=device['index'] == default_device_index,
         name=device['name'],
-        num_input_channels=device['max_input_channels'],
+        input_channel_count=device['max_input_channels'],
         default_sample_rate=device['default_samplerate'],
         default_low_input_latency=device['default_low_input_latency'],
         default_high_input_latency=device['default_high_input_latency'])
@@ -479,12 +477,12 @@ class AudioRecorderListener:
     
     
     def input_arrived(
-            self, recorder, time, samples, num_frames, port_audio_overflow):
+            self, recorder, time, samples, frame_count, port_audio_overflow):
         pass
     
     
     def input_overflowed(
-            self, recorder, time, num_frames, port_audio_overflow):
+            self, recorder, time, frame_count, port_audio_overflow):
         pass
     
         

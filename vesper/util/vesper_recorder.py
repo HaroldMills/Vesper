@@ -26,8 +26,6 @@ import vesper.util.yaml_utils as yaml_utils
 # able to schedule?
 
 
-# TODO: Use f-strings instead of string `format` method.
-# TODO: Use `_count` instead of `num_`.
 # TODO: Consider using a `VesperRecorderError` exception.
 # TODO: Add support for 24-bit samples.
 # TODO: Add support for sample rate conversion.
@@ -44,7 +42,7 @@ _DEFAULT_STATION_NAME = 'Vesper'
 _DEFAULT_LATITUDE = None
 _DEFAULT_LONGITUDE = None
 _DEFAULT_TIME_ZONE = 'UTC'
-_DEFAULT_NUM_CHANNELS = 1
+_DEFAULT_CHANNEL_COUNT = 1
 _DEFAULT_SAMPLE_RATE = 22050
 _DEFAULT_BUFFER_SIZE = .05
 _DEFAULT_TOTAL_BUFFER_SIZE = 60
@@ -83,8 +81,8 @@ class VesperRecorder:
         c = self._config
         
         self._recorder = AudioRecorder(
-            c.input_device_index, c.num_channels, c.sample_rate, c.buffer_size,
-            c.total_buffer_size, c.schedule)
+            c.input_device_index, c.channel_count, c.sample_rate,
+            c.buffer_size, c.total_buffer_size, c.schedule)
         self._recorder.add_listener(_Logger())
         self._recorder.add_listener(_AudioFileWriter(
             c.station_name, c.recordings_dir_path, c.max_audio_file_size))
@@ -203,7 +201,7 @@ def _parse_config_file(file_path, home_dir_path):
     # TODO: Consider allowing specification of input device by name
     # or name portion. Would have to handle non-uniqueness.
     input_device_index = int(config.get('input_device'))
-    num_channels = int(config.get('num_channels', _DEFAULT_NUM_CHANNELS))
+    channel_count = int(config.get('channel_count', _DEFAULT_CHANNEL_COUNT))
     sample_rate = int(config.get('sample_rate', _DEFAULT_SAMPLE_RATE))
     buffer_size = float(config.get('buffer_size', _DEFAULT_BUFFER_SIZE))
     total_buffer_size = \
@@ -229,7 +227,7 @@ def _parse_config_file(file_path, home_dir_path):
         lon=lon,
         time_zone=time_zone,
         input_device_index=input_device_index,
-        num_channels=num_channels,
+        channel_count=channel_count,
         sample_rate=sample_rate,
         buffer_size=buffer_size,
         total_buffer_size=total_buffer_size,
@@ -245,7 +243,7 @@ class _Logger(AudioRecorderListener):
     def __init__(self):
         super().__init__()
         self._portaudio_overflow_buffer_count = 0
-        self._num_recorder_overflow_frames = 0
+        self._recorder_overflow_frame_count = 0
         
         
     def recording_started(self, recorder, time):
@@ -254,7 +252,7 @@ class _Logger(AudioRecorderListener):
         
         
     def input_arrived(
-            self, recorder, time, samples, num_frames, portaudio_overflow):
+            self, recorder, time, samples, frame_count, portaudio_overflow):
         
         self._log_portaudio_overflow_if_needed(portaudio_overflow)
         self._log_recorder_overflow_if_needed(False)
@@ -297,11 +295,11 @@ class _Logger(AudioRecorderListener):
                 self._portaudio_overflow_buffer_count = 0
             
 
-    def _log_recorder_overflow_if_needed(self, overflow, num_frames=0):
+    def _log_recorder_overflow_if_needed(self, overflow, frame_count=0):
         
         if overflow:
             
-            if self._num_recorder_overflow_frames == 0:
+            if self._recorder_overflow_frame_count == 0:
                 # overflow has just started
                 
                 _logger.error(
@@ -311,25 +309,26 @@ class _Logger(AudioRecorderListener):
                     'log another message to report the duration of the lost '
                     'samples.')
                 
-            self._num_recorder_overflow_frames += num_frames
+            self._recorder_overflow_frame_count += frame_count
             
         else:
             
-            if self._num_recorder_overflow_frames > 0:
+            if self._recorder_overflow_frame_count > 0:
                 # overflow has just ended
                 
                 duration = \
-                    self._num_recorder_overflow_frames / self._sample_rate
+                    self._recorder_overflow_frame_count / self._sample_rate
                 _logger.error(
                     f'Recorder input overflow: {duration:.3f} seconds of '
                     f'zero samples were substituted for lost input samples.')
                     
-                self._num_recorder_overflow_frames = 0
+                self._recorder_overflow_frame_count = 0
                     
         
-    def input_overflowed(self, recorder, time, num_frames, portaudio_overflow):
+    def input_overflowed(
+            self, recorder, time, frame_count, portaudio_overflow):
         self._log_portaudio_overflow_if_needed(portaudio_overflow)
-        self._log_recorder_overflow_if_needed(True, num_frames)
+        self._log_recorder_overflow_if_needed(True, frame_count)
         
         
     def recording_stopped(self, recorder, time):
@@ -355,15 +354,15 @@ class _AudioFileWriter(AudioRecorderListener):
         
     def recording_starting(self, recorder, time):
         
-        self._num_channels = recorder.num_channels
+        self._channel_count = recorder.channel_count
         self._sample_rate = recorder.sample_rate
         self._sample_size = recorder.sample_size
-        self._frame_size = self._num_channels * self._sample_size
+        self._frame_size = self._channel_count * self._sample_size
         self._zeros = bytearray(recorder.frames_per_buffer * self._frame_size)
         
-        max_num_audio_bytes = self._max_file_size - _AUDIO_FILE_HEADER_SIZE
-        self._max_num_file_frames = \
-            int(math.floor(max_num_audio_bytes / self._frame_size))
+        max_audio_byte_count = self._max_file_size - _AUDIO_FILE_HEADER_SIZE
+        self._max_file_frame_count = \
+            int(math.floor(max_audio_byte_count / self._frame_size))
                     
         self._file_namer = _AudioFileNamer(
             self._station_name, _AUDIO_FILE_NAME_EXTENSION)
@@ -372,43 +371,44 @@ class _AudioFileWriter(AudioRecorderListener):
         
     
     def input_arrived(
-            self, recorder, time, samples, num_frames, portaudio_overflow):
-        self._write_samples(time, samples, num_frames)
+            self, recorder, time, samples, frame_count, portaudio_overflow):
+        self._write_samples(time, samples, frame_count)
         
         
-    def _write_samples(self, time, samples, num_frames):
+    def _write_samples(self, time, samples, frame_count):
         
-        num_frames_remaining = num_frames
+        remaining_frame_count = frame_count
         buffer_index = 0
         
-        while num_frames_remaining != 0:
+        while remaining_frame_count != 0:
             
             if self._file is None:
                 self._file = self._open_audio_file(time)
-                self._num_file_frames = 0
+                self._file_frame_count = 0
         
-            num_frames = min(
-                num_frames_remaining,
-                self._max_num_file_frames - self._num_file_frames)
+            frame_count = min(
+                remaining_frame_count,
+                self._max_file_frame_count - self._file_frame_count)
                 
-            num_bytes = num_frames * self._frame_size
+            byte_count = frame_count * self._frame_size
             
             # TODO: We assume here that the sample bytes are in
             # little-endian order, but perhaps we shouldn't.
             self._file.writeframes(
-                samples[buffer_index:buffer_index + num_bytes])
+                samples[buffer_index:buffer_index + byte_count])
             
-            num_frames_remaining -= num_frames
-            self._num_file_frames += num_frames
-            buffer_index += num_bytes
+            remaining_frame_count -= frame_count
+            self._file_frame_count += frame_count
+            buffer_index += byte_count
             
-            if self._num_file_frames == self._max_num_file_frames:
+            if self._file_frame_count == self._max_file_frame_count:
                 self._file.close()
                 self._file = None
     
     
-    def input_overflowed(self, recorder, time, num_frames, portaudio_overflow):
-        self._write_samples(time, self._zeros, num_frames)
+    def input_overflowed(
+            self, recorder, time, frame_count, portaudio_overflow):
+        self._write_samples(time, self._zeros, frame_count)
     
         
     def _open_audio_file(self, time):
@@ -417,7 +417,7 @@ class _AudioFileWriter(AudioRecorderListener):
         file_path = os.path.join(self._recordings_dir_path, file_name)
         
         file_ = wave.open(file_path, 'wb')
-        file_.setnchannels(self._num_channels)
+        file_.setnchannels(self._channel_count)
         file_.setframerate(self._sample_rate)
         file_.setsampwidth(self._sample_size)
         
@@ -618,7 +618,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             rows = [
                 self._create_devices_table_row(d, selected_device_index)
                 for d in devices]
-            header = ('Index', 'Name', 'Number of Channels')
+            header = ('Index', 'Name', 'Channel Count')
             table = _create_table(rows, header)
             if selected_device_index < len(devices):
                 table += '<p>* Selected input device.</p>'
@@ -628,7 +628,8 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
     def _create_devices_table_row(self, device, selected_device_index):
         prefix = '*' if device.index == selected_device_index else ''
         return (
-            prefix + str(device.index), device.name, device.num_input_channels)
+            prefix + str(device.index), device.name,
+            device.input_channel_count)
     
     
     def _create_input_table(self, devices, recorder):
@@ -646,7 +647,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         rows = (
             ('Device Index', device_index),
             ('Device Name', device_name),
-            ('Number of Channels', recorder.num_channels),
+            ('Channel Count', recorder.channel_count),
             ('Sample Rate (Hz)', recorder.sample_rate),
             ('Buffer Size (seconds)', recorder.buffer_size)
         )
