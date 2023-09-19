@@ -301,7 +301,7 @@ class AudioRecorder:
         # leave it to them to try to compute more accurate buffer start times
         # from those data if they wish.
 
-        print(f'input_callback {frame_count} {self._callback_count}')
+        # print(f'input_callback {frame_count} {self._callback_count}')
         self._callback_count += 1
 
         if self._recording:
