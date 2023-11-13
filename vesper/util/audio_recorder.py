@@ -254,13 +254,9 @@ class AudioRecorder:
                 blocksize=self.frames_per_buffer,
                 callback=self._input_callback)
             
-            print('starting stream')
-
             self._callback_count = 0
             self._stream.start()
 
-            print('started stream')
-        
             self._notify_listeners('recording_started', _get_utc_now())
     
 
