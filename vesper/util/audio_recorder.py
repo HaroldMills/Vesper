@@ -17,7 +17,8 @@ from vesper.util.schedule import ScheduleRunner
 _SAMPLE_SIZE = 2               # bytes
 
 
-# TODO: Handle unsupported input configurations gracefully and informatively.
+# TODO: Handle unsupported input configurations (e.g. unsupported
+# sample rates) gracefully and informatively.
 
 # TODO: Consider eliminating `get_input_devices` function in favor of
 # using `sounddevice` functions directly.
