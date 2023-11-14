@@ -11,6 +11,8 @@ import math
 import os
 import wave
 
+import numpy as np
+
 from vesper.util.audio_recorder import AudioRecorder, AudioRecorderListener
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
@@ -26,8 +28,15 @@ import vesper.util.yaml_utils as yaml_utils
 # able to schedule?
 
 
+# TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
+# TODO: Make level meter computations and UI optional.
+# TODO: Make saving audio files optional.
+# TODO: Use `settings` instead of `config`.
 # TODO: Consider using a `VesperRecorderError` exception.
+# TODO: Make sample size in bits a recorder setting, fixed at 16 for now.
 # TODO: Add support for 24-bit samples.
+# TODO: Consider adding support for 32-bit floating point samples.
+# TODO: Consider adding support for additional file formats, e.g. FLAC.
 # TODO: Add support for sample rate conversion.
 
 
@@ -49,6 +58,8 @@ _DEFAULT_TOTAL_BUFFER_SIZE = 60
 _DEFAULT_RECORDINGS_DIR_PATH = 'Recordings'
 _DEFAULT_MAX_AUDIO_FILE_SIZE = 2**31        # bytes
 _DEFAULT_PORT_NUM = 8001
+
+_DEFAULT_LEVEL_METER_PERIOD = 1
 
 
 _logger = logging.getLogger(__name__)
@@ -74,7 +85,7 @@ class VesperRecorder:
     
     def __init__(self, config):
         self._config = config
-                
+
         
     def start(self):
         
@@ -84,12 +95,17 @@ class VesperRecorder:
             c.input_device_index, c.channel_count, c.sample_rate,
             c.buffer_size, c.total_buffer_size, c.schedule)
         self._recorder.add_listener(_Logger())
+        # level_meter = None
+        level_meter = _AudioLevelMeter(_DEFAULT_LEVEL_METER_PERIOD)
+        if level_meter is not None:
+            self._recorder.add_listener(level_meter)
         self._recorder.add_listener(_AudioFileWriter(
             c.station_name, c.recordings_dir_path, c.max_audio_file_size))
          
         server = _HttpServer(
             c.port_num, c.station_name, c.lat, c.lon, c.time_zone,
-            self._recorder, c.recordings_dir_path, c.max_audio_file_size)
+            self._recorder, level_meter, c.recordings_dir_path,
+            c.max_audio_file_size)
         Thread(target=server.serve_forever, daemon=True).start()
 
         self._recorder.start()
@@ -337,6 +353,96 @@ class _Logger(AudioRecorderListener):
         _logger.info('Stopped recording.')
 
     
+class _AudioLevelMeter(AudioRecorderListener):
+
+
+    def __init__(self, update_period):
+        self._update_period = update_period
+        self._rms_values = None
+        self._peak_values = None
+
+
+    @property
+    def rms_values(self):
+        return self._rms_values
+    
+
+    @property
+    def peak_values(self):
+        return self._peak_values
+    
+
+    def recording_starting(self, recorder, time):
+
+        _logger.info(f'_AudioLevelMeter.recording_starting: {time}')
+
+        self._channel_count = recorder.channel_count
+        self._block_size = \
+            int(round(recorder.sample_rate * self._update_period))
+        self._sums = np.zeros(self._channel_count)
+        self._peaks = np.zeros(self._channel_count)
+        self._accumulated_frame_count = 0
+        self._full_scale_value = 2 ** (recorder.sample_size * 8 - 1)
+
+
+    def input_arrived(
+            self, recorder, time, samples, frame_count, portaudio_overflow):
+        
+        # TODO: This method allocates memory via NumPy every time it runs.
+        # Is that problematic?
+
+        samples = np.frombuffer(samples, dtype='<i2').astype(np.float64)
+
+        # Make sample array 2D.
+        samples = samples.reshape((frame_count, self._channel_count))
+
+        # _logger.info(f'_AudioLevelMeter.input_arrived: {time} {frame_count} {samples.shape}')
+      
+        start_index = 0
+
+        while start_index != frame_count:
+
+            remaining = self._block_size - self._accumulated_frame_count
+            n = min(frame_count, remaining)
+            
+            # Accumulate squared samples.
+            s = samples[start_index:start_index + n]
+            self._sums += np.sum(s * s, axis=0)
+
+            # Update maximum absolute sample values.
+            peaks = np.max(np.abs(samples), axis=0)
+            self._peaks = np.maximum(self._peaks, peaks)
+
+            self._accumulated_frame_count += n
+
+            if self._accumulated_frame_count == self._block_size:
+                # have accumulated an entire block
+
+                rms_values = np.sqrt(self._sums / self._block_size)
+                
+                self._rms_values = rms_sample_to_dbfs(
+                    rms_values, self._full_scale_value)
+                
+                self._peak_values = sample_to_dbfs(
+                    self._peaks, self._full_scale_value)
+                
+                _logger.info(
+                    f'_AudioLevelMeter: RMS {rms_values} '
+                    f'peak {self._peak_values}')
+                
+                self._sums = np.zeros(self._channel_count)
+                self._peaks = np.zeros(self._channel_count)
+                self._accumulated_frame_count = 0
+
+            start_index += n
+
+
+    def recording_stopped(self, recorder, time):
+       _logger.info(f'_AudioLevelMeter.recording_stopped: {time}')
+       self._rms_values = None
+       self._peak_values = None
+ 
+
 class _AudioFileWriter(AudioRecorderListener):
     
     
@@ -447,7 +553,7 @@ class _HttpServer(HTTPServer):
     
     def __init__(
             self, port_num, station_name, lat, lon, time_zone, recorder,
-            recordings_dir_path, max_audio_file_size):
+            level_meter, recordings_dir_path, max_audio_file_size):
         
         address = ('', port_num)
         super().__init__(address, _HttpRequestHandler)
@@ -458,6 +564,7 @@ class _HttpServer(HTTPServer):
             lon=lon,
             time_zone=time_zone,
             recorder=recorder,
+            level_meter=level_meter,
             recordings_dir_path=recordings_dir_path,
             max_audio_file_size=max_audio_file_size
         )
@@ -569,6 +676,12 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         time = _format_datetime(now, time_zone)
         recording = 'Yes' if recorder.recording else 'No'
         
+        value_suffix = '' if recorder.channel_count == 1 else 's'
+        level_meter = data.level_meter
+        if level_meter is not None:
+            rms_values = _format_levels(level_meter.rms_values)
+            peak_values = _format_levels(level_meter.peak_values)
+        
         interval = self._get_status_schedule_interval(recorder.schedule, now)
         
         if interval is None:
@@ -580,9 +693,18 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             end_time = _format_datetime(interval.end, time_zone)
             prefix = 'Current' if interval.start <= now else 'Next'
             
+        if level_meter is None:
+            level_meter_rows = ()
+        else:
+            level_meter_rows = (
+                (f'Recent RMS Sample Value{value_suffix} (dBFS)', rms_values),
+                (f'Recent Peak Sample Value{value_suffix} (dBFS)', peak_values)
+            )
+
         rows = (
             ('Time', time),
-            ('Recording', recording),
+            ('Recording', recording)
+        ) + level_meter_rows + (
             (prefix + ' Recording Start Time', start_time),
             (prefix + ' Recording End Time', end_time)
         )
@@ -689,6 +811,14 @@ def _format_datetime(dt, time_zone=None):
     return dt.strftime('%Y-%m-%d %H:%M:%S %Z')
 
 
+def _format_levels(levels):
+    if levels is None:
+        return '-'
+    else:
+        levels = [f'{l:.2f}' for l in levels]
+        return ', '.join(levels)
+
+
 def _create_table(rows, header=None):
     header = _create_table_header(header)
     rows = ''.join(_create_table_row(r) for r in rows)
@@ -706,3 +836,17 @@ def _create_table_row(items, tag_letter='d'):
     
 def _create_table_item(item, tag_letter):
     return f'    <t{tag_letter}>{item}</t{tag_letter}>\n'
+
+
+# TODO: Move dBFS functions to `signal_utils` package.
+
+
+_HALF_SQRT_2 = math.sqrt(2) / 2
+
+
+def sample_to_dbfs(sample, full_scale_value):
+    return 20 * np.log10(np.abs(sample) / full_scale_value)
+
+
+def rms_sample_to_dbfs(sample, full_scale_value):
+    return 20 * np.log10(sample / (_HALF_SQRT_2 * full_scale_value))
