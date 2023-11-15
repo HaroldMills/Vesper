@@ -21,19 +21,19 @@ import vesper.util.yaml_utils as yaml_utils
 
 # TODO: Review threads involved in recording (schedule, recorder, and server),
 # clarify their responsibilities, and improve error handling and shutdown.
-# Implement configuration updates and remote logging and control. How does
+# Implement setting updates and remote logging and control. How does
 # recording relate to Vesper job system (as of this writing it's completely
 # independent, but perhaps it should not be)? How does it relate to other
 # processing, like detection and classification, that we would like to be
 # able to schedule?
 
 
+# TODO: Consider using `pathlib` instead of `os.path`.
 # TODO: Consider using current directory as default recorder home directory.
 # TODO: Consider allowing level meter to be turned on and off during recording.
 # TODO: Specify file duration rather than size.
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
 # TODO: Make saving audio files optional.
-# TODO: Use `settings` instead of `config`.
 # TODO: Consider using a `VesperRecorderError` exception.
 # TODO: Make sample size in bits a recorder setting, fixed at 16 for now.
 # TODO: Add support for 24-bit samples.
@@ -44,7 +44,7 @@ import vesper.util.yaml_utils as yaml_utils
 
 _HOME_DIR_VAR_NAME = 'VESPER_RECORDER_HOME'
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
-_CONFIG_FILE_NAME = 'Vesper Recorder Config.yaml'
+_SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
 
 _AUDIO_FILE_NAME_EXTENSION = '.wav'
 _AUDIO_FILE_HEADER_SIZE = 44                # bytes, size of .wav file header
@@ -85,24 +85,24 @@ class VesperRecorder:
         return _create_and_start_recorder(message)
     
     
-    def __init__(self, config):
-        self._config = config
+    def __init__(self, settings):
+        self._settings = settings
 
         
     def start(self):
         
-        c = self._config
+        s = self._settings
         
         # Create audio recorder.
         self._recorder = AudioRecorder(
-            c.input_device_index, c.channel_count, c.sample_rate,
-            c.buffer_size, c.total_buffer_size, c.schedule)
+            s.input_device_index, s.channel_count, s.sample_rate,
+            s.buffer_size, s.total_buffer_size, s.schedule)
         
         # Create logger.
         self._recorder.add_listener(_Logger())
 
         # Create level meter if indicated.
-        if c.level_meter_enabled:
+        if s.level_meter_enabled:
             level_meter = _AudioLevelMeter(_DEFAULT_LEVEL_METER_PERIOD)
         else:
             level_meter = None
@@ -111,13 +111,13 @@ class VesperRecorder:
 
         # Create audio file writer.
         self._recorder.add_listener(_AudioFileWriter(
-            c.station_name, c.recording_dir_path, c.max_audio_file_size))
+            s.station_name, s.recording_dir_path, s.max_audio_file_size))
          
         # Create HTTP server.
         server = _HttpServer(
-            c.port_num, c.station_name, c.lat, c.lon, c.time_zone,
-            self._recorder, level_meter, c.recording_dir_path,
-            c.max_audio_file_size)
+            s.port_num, s.station_name, s.lat, s.lon, s.time_zone,
+            self._recorder, level_meter, s.recording_dir_path,
+            s.max_audio_file_size)
         Thread(target=server.serve_forever, daemon=True).start()
 
         # Start recording.
@@ -157,31 +157,30 @@ def _create_and_start_recorder(message):
     _logger.info(
         f'Recorder version number is {VesperRecorder.VERSION_NUMBER}.')
     
-    config_file_path = os.path.join(home_dir_path, _CONFIG_FILE_NAME)
+    settings_file_path = os.path.join(home_dir_path, _SETTINGS_FILE_NAME)
         
-    # Check that configuration file exists.
-    if not os.path.exists(config_file_path):
+    # Check that settings file exists.
+    if not os.path.exists(settings_file_path):
         _logger.error(
-            f'Recorder configuration file "{config_file_path}" does '
-            f'not exist.')
+            f'Recorder settings file "{settings_file_path}" does not exist.')
         return None
         
-    # Parse configuration file.
+    # Parse settings file.
     try:
-        config = _parse_config_file(
-            config_file_path, home_dir_path)
+        settings = _parse_settings_file(
+            settings_file_path, home_dir_path)
     except Exception as e:
         _logger.error(
-            f'Could not parse recorder configuration file '
-            f'"{config_file_path}". Error message was: {e}')
+            f'Could not parse recorder settings file '
+            f'"{settings_file_path}". Error message was: {e}')
         return None
     
     _logger.info(
-        f'Starting recorder with HTTP server at port {config.port_num}.')
+        f'Starting recorder with HTTP server at port {settings.port_num}.')
     
     # Create recorder.
     try:
-        recorder = VesperRecorder(config)
+        recorder = VesperRecorder(settings)
     except Exception as e:
         _logger.error(f'Could not create recorder. Error message was: {e}')
         return None
@@ -210,48 +209,48 @@ def _add_file_logging(home_dir_path):
     logger.addHandler(handler)
         
         
-def _parse_config_file(file_path, home_dir_path):
+def _parse_settings_file(file_path, home_dir_path):
     
     with open(file_path) as f:
-        config = yaml_utils.load(f)
+        settings = yaml_utils.load(f)
         
-    station_name = config.get('station', _DEFAULT_STATION_NAME)
+    station_name = settings.get('station', _DEFAULT_STATION_NAME)
     
-    lat = config.get('latitude', _DEFAULT_LATITUDE)
+    lat = settings.get('latitude', _DEFAULT_LATITUDE)
     if lat is not None:
         lat = float(lat)
         
-    lon = config.get('longitude', _DEFAULT_LONGITUDE)
+    lon = settings.get('longitude', _DEFAULT_LONGITUDE)
     if lon is not None:
         lon = float(lon)
         
-    time_zone = ZoneInfo(config.get('time_zone', _DEFAULT_TIME_ZONE))
+    time_zone = ZoneInfo(settings.get('time_zone', _DEFAULT_TIME_ZONE))
         
     # TODO: Consider allowing specification of input device by name
     # or name portion. Would have to handle non-uniqueness.
-    input_device_index = int(config.get('input_device'))
-    channel_count = int(config.get('channel_count', _DEFAULT_CHANNEL_COUNT))
-    sample_rate = int(config.get('sample_rate', _DEFAULT_SAMPLE_RATE))
-    buffer_size = float(config.get('buffer_size', _DEFAULT_BUFFER_SIZE))
+    input_device_index = int(settings.get('input_device'))
+    channel_count = int(settings.get('channel_count', _DEFAULT_CHANNEL_COUNT))
+    sample_rate = int(settings.get('sample_rate', _DEFAULT_SAMPLE_RATE))
+    buffer_size = float(settings.get('buffer_size', _DEFAULT_BUFFER_SIZE))
     total_buffer_size = \
-        float(config.get('total_buffer_size', _DEFAULT_TOTAL_BUFFER_SIZE))
+        float(settings.get('total_buffer_size', _DEFAULT_TOTAL_BUFFER_SIZE))
     
-    schedule_dict = config.get('schedule', {})
+    schedule_dict = settings.get('schedule', {})
     schedule = Schedule.compile_dict(
         schedule_dict, latitude=lat, longitude=lon, time_zone=time_zone)
     
-    level_meter_enabled = config.get(
+    level_meter_enabled = settings.get(
         'level_meter_enabled', _DEFAULT_LEVEL_METER_ENABLED)
     
-    recording_dir_path = config.get(
+    recording_dir_path = settings.get(
         'recording_dir_path', _DEFAULT_RECORDING_DIR_PATH)
     if not os.path.isabs(recording_dir_path):
         recording_dir_path = os.path.join(home_dir_path, recording_dir_path)
         
-    max_audio_file_size = config.get(
+    max_audio_file_size = settings.get(
         'max_audio_file_size', _DEFAULT_MAX_AUDIO_FILE_SIZE)
     
-    port_num = int(config.get('port_num', _DEFAULT_PORT_NUM))
+    port_num = int(settings.get('port_num', _DEFAULT_PORT_NUM))
     
     return Bunch(
         station_name=station_name,
