@@ -28,6 +28,10 @@ import vesper.util.yaml_utils as yaml_utils
 # able to schedule?
 
 
+# TODO: Consider allowing level meter to be turned on and off during
+# recording.
+# TODO: Specify file duration rather than size.
+# TODO: Change "recordings directory" to "recording directory".
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
 # TODO: Make level meter computations and UI optional.
 # TODO: Make saving audio files optional.
@@ -55,11 +59,11 @@ _DEFAULT_CHANNEL_COUNT = 1
 _DEFAULT_SAMPLE_RATE = 22050
 _DEFAULT_BUFFER_SIZE = .05
 _DEFAULT_TOTAL_BUFFER_SIZE = 60
+_DEFAULT_LEVEL_METER_ENABLED = True
+_DEFAULT_LEVEL_METER_PERIOD = 1             # seconds
 _DEFAULT_RECORDINGS_DIR_PATH = 'Recordings'
 _DEFAULT_MAX_AUDIO_FILE_SIZE = 2**31        # bytes
 _DEFAULT_PORT_NUM = 8001
-
-_DEFAULT_LEVEL_METER_PERIOD = 1
 
 
 _logger = logging.getLogger(__name__)
@@ -91,23 +95,34 @@ class VesperRecorder:
         
         c = self._config
         
+        # Create audio recorder.
         self._recorder = AudioRecorder(
             c.input_device_index, c.channel_count, c.sample_rate,
             c.buffer_size, c.total_buffer_size, c.schedule)
+        
+        # Create logger.
         self._recorder.add_listener(_Logger())
-        # level_meter = None
-        level_meter = _AudioLevelMeter(_DEFAULT_LEVEL_METER_PERIOD)
+
+        # Create level meter if indicated.
+        if c.level_meter_enabled:
+            level_meter = _AudioLevelMeter(_DEFAULT_LEVEL_METER_PERIOD)
+        else:
+            level_meter = None
         if level_meter is not None:
             self._recorder.add_listener(level_meter)
+
+        # Create audio file writer.
         self._recorder.add_listener(_AudioFileWriter(
             c.station_name, c.recordings_dir_path, c.max_audio_file_size))
          
+        # Create HTTP server.
         server = _HttpServer(
             c.port_num, c.station_name, c.lat, c.lon, c.time_zone,
             self._recorder, level_meter, c.recordings_dir_path,
             c.max_audio_file_size)
         Thread(target=server.serve_forever, daemon=True).start()
 
+        # Start recording.
         self._recorder.start()
          
 
@@ -227,6 +242,9 @@ def _parse_config_file(file_path, home_dir_path):
     schedule = Schedule.compile_dict(
         schedule_dict, latitude=lat, longitude=lon, time_zone=time_zone)
     
+    level_meter_enabled = config.get(
+        'level_meter_enabled', _DEFAULT_LEVEL_METER_ENABLED)
+    
     recordings_dir_path = config.get(
         'recordings_dir_path', _DEFAULT_RECORDINGS_DIR_PATH)
     if not os.path.isabs(recordings_dir_path):
@@ -248,6 +266,7 @@ def _parse_config_file(file_path, home_dir_path):
         buffer_size=buffer_size,
         total_buffer_size=total_buffer_size,
         schedule=schedule,
+        level_meter_enabled=level_meter_enabled,
         recordings_dir_path=recordings_dir_path,
         max_audio_file_size=max_audio_file_size,
         port_num=port_num)
