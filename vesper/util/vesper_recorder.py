@@ -28,12 +28,10 @@ import vesper.util.yaml_utils as yaml_utils
 # able to schedule?
 
 
-# TODO: Consider allowing level meter to be turned on and off during
-# recording.
+# TODO: Consider using current directory as default recorder home directory.
+# TODO: Consider allowing level meter to be turned on and off during recording.
 # TODO: Specify file duration rather than size.
-# TODO: Change "recordings directory" to "recording directory".
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
-# TODO: Make level meter computations and UI optional.
 # TODO: Make saving audio files optional.
 # TODO: Use `settings` instead of `config`.
 # TODO: Consider using a `VesperRecorderError` exception.
@@ -61,7 +59,7 @@ _DEFAULT_BUFFER_SIZE = .05
 _DEFAULT_TOTAL_BUFFER_SIZE = 60
 _DEFAULT_LEVEL_METER_ENABLED = True
 _DEFAULT_LEVEL_METER_PERIOD = 1             # seconds
-_DEFAULT_RECORDINGS_DIR_PATH = 'Recordings'
+_DEFAULT_RECORDING_DIR_PATH = 'Recordings'
 _DEFAULT_MAX_AUDIO_FILE_SIZE = 2**31        # bytes
 _DEFAULT_PORT_NUM = 8001
 
@@ -113,12 +111,12 @@ class VesperRecorder:
 
         # Create audio file writer.
         self._recorder.add_listener(_AudioFileWriter(
-            c.station_name, c.recordings_dir_path, c.max_audio_file_size))
+            c.station_name, c.recording_dir_path, c.max_audio_file_size))
          
         # Create HTTP server.
         server = _HttpServer(
             c.port_num, c.station_name, c.lat, c.lon, c.time_zone,
-            self._recorder, level_meter, c.recordings_dir_path,
+            self._recorder, level_meter, c.recording_dir_path,
             c.max_audio_file_size)
         Thread(target=server.serve_forever, daemon=True).start()
 
@@ -245,10 +243,10 @@ def _parse_config_file(file_path, home_dir_path):
     level_meter_enabled = config.get(
         'level_meter_enabled', _DEFAULT_LEVEL_METER_ENABLED)
     
-    recordings_dir_path = config.get(
-        'recordings_dir_path', _DEFAULT_RECORDINGS_DIR_PATH)
-    if not os.path.isabs(recordings_dir_path):
-        recordings_dir_path = os.path.join(home_dir_path, recordings_dir_path)
+    recording_dir_path = config.get(
+        'recording_dir_path', _DEFAULT_RECORDING_DIR_PATH)
+    if not os.path.isabs(recording_dir_path):
+        recording_dir_path = os.path.join(home_dir_path, recording_dir_path)
         
     max_audio_file_size = config.get(
         'max_audio_file_size', _DEFAULT_MAX_AUDIO_FILE_SIZE)
@@ -267,7 +265,7 @@ def _parse_config_file(file_path, home_dir_path):
         total_buffer_size=total_buffer_size,
         schedule=schedule,
         level_meter_enabled=level_meter_enabled,
-        recordings_dir_path=recordings_dir_path,
+        recording_dir_path=recording_dir_path,
         max_audio_file_size=max_audio_file_size,
         port_num=port_num)
     
@@ -465,16 +463,16 @@ class _AudioLevelMeter(AudioRecorderListener):
 class _AudioFileWriter(AudioRecorderListener):
     
     
-    def __init__(self, station_name, recordings_dir_path, max_file_size):
+    def __init__(self, station_name, recording_dir_path, max_file_size):
         
         super().__init__()
         
         self._station_name = station_name
-        self._recordings_dir_path = recordings_dir_path
+        self._recording_dir_path = recording_dir_path
         self._max_file_size = max_file_size
         
-        # Create recordings directory if needed.
-        os.makedirs(self._recordings_dir_path, exist_ok=True)
+        # Create recording directory if needed.
+        os.makedirs(self._recording_dir_path, exist_ok=True)
         
         
     def recording_starting(self, recorder, time):
@@ -539,7 +537,7 @@ class _AudioFileWriter(AudioRecorderListener):
     def _open_audio_file(self, time):
         
         file_name = self._file_namer.create_file_name(time)
-        file_path = os.path.join(self._recordings_dir_path, file_name)
+        file_path = os.path.join(self._recording_dir_path, file_name)
         
         file_ = wave.open(file_path, 'wb')
         file_.setnchannels(self._channel_count)
@@ -572,7 +570,7 @@ class _HttpServer(HTTPServer):
     
     def __init__(
             self, port_num, station_name, lat, lon, time_zone, recorder,
-            level_meter, recordings_dir_path, max_audio_file_size):
+            level_meter, recording_dir_path, max_audio_file_size):
         
         address = ('', port_num)
         super().__init__(address, _HttpRequestHandler)
@@ -584,7 +582,7 @@ class _HttpServer(HTTPServer):
             time_zone=time_zone,
             recorder=recorder,
             level_meter=level_meter,
-            recordings_dir_path=recordings_dir_path,
+            recording_dir_path=recording_dir_path,
             max_audio_file_size=max_audio_file_size
         )
         
@@ -678,12 +676,12 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         devices_table = self._create_devices_table(devices)
         input_table = self._create_input_table(devices, recorder)
         output_table = self._create_output_table(data)
-        recordings_table = self._create_recordings_table(
+        recording_table = self._create_recording_table(
             recorder.schedule, data.time_zone, now)
         
         body = _PAGE.format(
             _CSS, VesperRecorder.VERSION_NUMBER, status_table, station_table,
-            devices_table, input_table, output_table, recordings_table)
+            devices_table, input_table, output_table, recording_table)
         
         return body.encode()
     
@@ -796,23 +794,23 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
     
     
     def _create_output_table(self, data):
-        recordings_dir_path = os.path.abspath(data.recordings_dir_path)
+        recording_dir_path = os.path.abspath(data.recording_dir_path)
         rows = (
-            ('Recordings Directory', recordings_dir_path),
+            ('Recording Directory', recording_dir_path),
             ('Max Audio File Size (bytes)', data.max_audio_file_size)
         )
         return _create_table(rows)
 
 
-    def _create_recordings_table(self, schedule, time_zone, now):
+    def _create_recording_table(self, schedule, time_zone, now):
         rows = [
-            self._create_recordings_table_row(index, interval, time_zone, now)
+            self._create_recording_table_row(index, interval, time_zone, now)
             for index, interval in enumerate(schedule.get_intervals())]
         header = ('Index', 'Start Time', 'End Time', 'Status')
         return _create_table(rows, header)
     
     
-    def _create_recordings_table_row(self, index, interval, time_zone, now):
+    def _create_recording_table_row(self, index, interval, time_zone, now):
         start_time = _format_datetime(interval.start, time_zone)
         end_time = _format_datetime(interval.end, time_zone)
         if now > interval.end:
