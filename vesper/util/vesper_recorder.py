@@ -29,6 +29,7 @@ import vesper.util.yaml_utils as yaml_utils
 # able to schedule?
 
 
+# TODO: Reorganize setting hierarchy.
 # TODO: Consider allowing level meter to be turned on and off during recording.
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
 # TODO: Make saving audio files optional.
@@ -597,8 +598,8 @@ _PAGE = '''<!DOCTYPE html>
 <h1>Vesper Recorder {}</h1>
 
 <p>
-Welcome to the Vesper Recorder! This page displays information regarding
-your recorder. Refresh the page to update the information.
+Welcome to the Vesper Recorder! This page displays recorder status.
+Refresh the page to update the status.
 </p>
 
 <h2>Recording Status</h2>
