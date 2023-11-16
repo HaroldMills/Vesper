@@ -444,7 +444,7 @@ class _AudioLevelMeter(AudioRecorderListener):
                     self._peaks, self._full_scale_value)
                 
                 _logger.info(
-                    f'_AudioLevelMeter: RMS {rms_values} '
+                    f'_AudioLevelMeter: RMS {self._rms_values} '
                     f'peak {self._peak_values}')
                 
                 self._sums = np.zeros(self._channel_count)
