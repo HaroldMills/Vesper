@@ -3,6 +3,7 @@
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from logging import FileHandler, Formatter
+from pathlib import Path
 from threading import Thread
 from zoneinfo import ZoneInfo
 import datetime
@@ -28,7 +29,6 @@ import vesper.util.yaml_utils as yaml_utils
 # able to schedule?
 
 
-# TODO: Consider using `pathlib` instead of `os.path`.
 # TODO: Consider using current directory as default recorder home directory.
 # TODO: Consider allowing level meter to be turned on and off during recording.
 # TODO: Specify file duration rather than size.
@@ -142,8 +142,10 @@ def _create_and_start_recorder(message):
             f'Required {_HOME_DIR_VAR_NAME} environment variable is not set.')
         return None
          
+    home_dir_path = Path(home_dir_path)
+
     # Check that home directory exists.
-    if not os.path.exists(home_dir_path):
+    if not home_dir_path.exists():
         _logger.error(
             f'Recorder home directory "{home_dir_path}" does not exist.')
         return None
@@ -157,18 +159,17 @@ def _create_and_start_recorder(message):
     _logger.info(
         f'Recorder version number is {VesperRecorder.VERSION_NUMBER}.')
     
-    settings_file_path = os.path.join(home_dir_path, _SETTINGS_FILE_NAME)
+    settings_file_path = home_dir_path / _SETTINGS_FILE_NAME
         
     # Check that settings file exists.
-    if not os.path.exists(settings_file_path):
+    if not settings_file_path.exists():
         _logger.error(
             f'Recorder settings file "{settings_file_path}" does not exist.')
         return None
         
     # Parse settings file.
     try:
-        settings = _parse_settings_file(
-            settings_file_path, home_dir_path)
+        settings = _parse_settings_file(settings_file_path, home_dir_path)
     except Exception as e:
         _logger.error(
             f'Could not parse recorder settings file '
@@ -199,7 +200,7 @@ def _create_and_start_recorder(message):
 def _add_file_logging(home_dir_path):
     
     # Create handler that appends messages to log file.
-    log_file_path = os.path.join(home_dir_path, _LOG_FILE_NAME)
+    log_file_path = home_dir_path / _LOG_FILE_NAME
     handler = FileHandler(log_file_path)
     formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
     handler.setFormatter(formatter)
@@ -242,10 +243,10 @@ def _parse_settings_file(file_path, home_dir_path):
     level_meter_enabled = settings.get(
         'level_meter_enabled', _DEFAULT_LEVEL_METER_ENABLED)
     
-    recording_dir_path = settings.get(
-        'recording_dir_path', _DEFAULT_RECORDING_DIR_PATH)
-    if not os.path.isabs(recording_dir_path):
-        recording_dir_path = os.path.join(home_dir_path, recording_dir_path)
+    recording_dir_path = Path(
+        settings.get('recording_dir_path', _DEFAULT_RECORDING_DIR_PATH))
+    if not recording_dir_path.is_absolute():
+        recording_dir_path = home_dir_path / recording_dir_path
         
     max_audio_file_size = settings.get(
         'max_audio_file_size', _DEFAULT_MAX_AUDIO_FILE_SIZE)
@@ -471,7 +472,7 @@ class _AudioFileWriter(AudioRecorderListener):
         self._max_file_size = max_file_size
         
         # Create recording directory if needed.
-        os.makedirs(self._recording_dir_path, exist_ok=True)
+        self._recording_dir_path.mkdir(parents=True, exist_ok=True)
         
         
     def recording_starting(self, recorder, time):
@@ -536,9 +537,9 @@ class _AudioFileWriter(AudioRecorderListener):
     def _open_audio_file(self, time):
         
         file_name = self._file_namer.create_file_name(time)
-        file_path = os.path.join(self._recording_dir_path, file_name)
+        file_path = self._recording_dir_path / file_name
         
-        file_ = wave.open(file_path, 'wb')
+        file_ = wave.open(str(file_path), 'wb')
         file_.setnchannels(self._channel_count)
         file_.setframerate(self._sample_rate)
         file_.setsampwidth(self._sample_size)
@@ -793,7 +794,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
     
     
     def _create_output_table(self, data):
-        recording_dir_path = os.path.abspath(data.recording_dir_path)
+        recording_dir_path = data.recording_dir_path.absolute()
         rows = (
             ('Recording Directory', recording_dir_path),
             ('Max Audio File Size (bytes)', data.max_audio_file_size)
