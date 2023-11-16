@@ -29,7 +29,6 @@ import vesper.util.yaml_utils as yaml_utils
 # able to schedule?
 
 
-# TODO: Consider using current directory as default recorder home directory.
 # TODO: Consider allowing level meter to be turned on and off during recording.
 # TODO: Specify file duration rather than size.
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
@@ -136,11 +135,14 @@ def _create_and_start_recorder(message):
     
     home_dir_path = os.environ.get(_HOME_DIR_VAR_NAME)
      
-    # Check that home directory path environment variable is set.
+    # Use current working directory as home directory if home directory
+    # environment variable is not set.
     if home_dir_path is None:
-        _logger.error(
-            f'Required {_HOME_DIR_VAR_NAME} environment variable is not set.')
-        return None
+        home_dir_path = Path.cwd()
+        _logger.info(
+            f'{_HOME_DIR_VAR_NAME} environment variable is not set. '
+            f'Will use current working directory "{home_dir_path}" as '
+            f'home directory.')
          
     home_dir_path = Path(home_dir_path)
 
