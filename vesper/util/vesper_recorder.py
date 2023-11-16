@@ -604,16 +604,16 @@ your recorder. Refresh the page to update the information.
 <h2>Recording Status</h2>
 {}
 
-<h2>Station Configuration</h2>
+<h2>Station Settings</h2>
 {}
 
-<h2>Input Devices</h2>
+<h2>Available Input Devices</h2>
 {}
 
-<h2>Input Configuration</h2>
+<h2>Input Settings</h2>
 {}
 
-<h2>Output Configuration</h2>
+<h2>Local Audio File Settings</h2>
 {}
 
 <h2>Scheduled Recordings</h2>
@@ -718,7 +718,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             )
 
         rows = (
-            ('Time', time),
+            ('Current Time', time),
             ('Recording', recording)
         ) + level_meter_rows + (
             (prefix + ' Recording Start Time', start_time),
