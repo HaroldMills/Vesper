@@ -30,7 +30,6 @@ import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Consider allowing level meter to be turned on and off during recording.
-# TODO: Specify file duration rather than size.
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
 # TODO: Make saving audio files optional.
 # TODO: Consider using a `VesperRecorderError` exception.
@@ -46,7 +45,6 @@ _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
 _SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
 
 _AUDIO_FILE_NAME_EXTENSION = '.wav'
-_AUDIO_FILE_HEADER_SIZE = 44                # bytes, size of .wav file header
 
 _DEFAULT_STATION_NAME = 'Vesper'
 _DEFAULT_LATITUDE = None
@@ -59,7 +57,7 @@ _DEFAULT_TOTAL_BUFFER_SIZE = 60
 _DEFAULT_LEVEL_METER_ENABLED = True
 _DEFAULT_LEVEL_METER_PERIOD = 1             # seconds
 _DEFAULT_RECORDING_DIR_PATH = 'Recordings'
-_DEFAULT_MAX_AUDIO_FILE_SIZE = 2**31        # bytes
+_DEFAULT_MAX_AUDIO_FILE_DURATION = 3600     # seconds
 _DEFAULT_PORT_NUM = 8001
 
 
@@ -110,13 +108,13 @@ class VesperRecorder:
 
         # Create audio file writer.
         self._recorder.add_listener(_AudioFileWriter(
-            s.station_name, s.recording_dir_path, s.max_audio_file_size))
+            s.station_name, s.recording_dir_path, s.max_audio_file_duration))
          
         # Create HTTP server.
         server = _HttpServer(
             s.port_num, s.station_name, s.lat, s.lon, s.time_zone,
             self._recorder, level_meter, s.recording_dir_path,
-            s.max_audio_file_size)
+            s.max_audio_file_duration)
         Thread(target=server.serve_forever, daemon=True).start()
 
         # Start recording.
@@ -250,8 +248,8 @@ def _parse_settings_file(file_path, home_dir_path):
     if not recording_dir_path.is_absolute():
         recording_dir_path = home_dir_path / recording_dir_path
         
-    max_audio_file_size = settings.get(
-        'max_audio_file_size', _DEFAULT_MAX_AUDIO_FILE_SIZE)
+    max_audio_file_duration = settings.get(
+        'max_audio_file_duration', _DEFAULT_MAX_AUDIO_FILE_DURATION)
     
     port_num = int(settings.get('port_num', _DEFAULT_PORT_NUM))
     
@@ -268,7 +266,7 @@ def _parse_settings_file(file_path, home_dir_path):
         schedule=schedule,
         level_meter_enabled=level_meter_enabled,
         recording_dir_path=recording_dir_path,
-        max_audio_file_size=max_audio_file_size,
+        max_audio_file_duration=max_audio_file_duration,
         port_num=port_num)
     
     
@@ -465,13 +463,13 @@ class _AudioLevelMeter(AudioRecorderListener):
 class _AudioFileWriter(AudioRecorderListener):
     
     
-    def __init__(self, station_name, recording_dir_path, max_file_size):
+    def __init__(self, station_name, recording_dir_path, max_file_duration):
         
         super().__init__()
         
         self._station_name = station_name
         self._recording_dir_path = recording_dir_path
-        self._max_file_size = max_file_size
+        self._max_file_duration = max_file_duration
         
         # Create recording directory if needed.
         self._recording_dir_path.mkdir(parents=True, exist_ok=True)
@@ -485,9 +483,8 @@ class _AudioFileWriter(AudioRecorderListener):
         self._frame_size = self._channel_count * self._sample_size
         self._zeros = bytearray(recorder.frames_per_buffer * self._frame_size)
         
-        max_audio_byte_count = self._max_file_size - _AUDIO_FILE_HEADER_SIZE
         self._max_file_frame_count = \
-            int(math.floor(max_audio_byte_count / self._frame_size))
+            int(round(self._max_file_duration * self._sample_rate))
                     
         self._file_namer = _AudioFileNamer(
             self._station_name, _AUDIO_FILE_NAME_EXTENSION)
@@ -572,7 +569,7 @@ class _HttpServer(HTTPServer):
     
     def __init__(
             self, port_num, station_name, lat, lon, time_zone, recorder,
-            level_meter, recording_dir_path, max_audio_file_size):
+            level_meter, recording_dir_path, max_audio_file_duration):
         
         address = ('', port_num)
         super().__init__(address, _HttpRequestHandler)
@@ -585,7 +582,7 @@ class _HttpServer(HTTPServer):
             recorder=recorder,
             level_meter=level_meter,
             recording_dir_path=recording_dir_path,
-            max_audio_file_size=max_audio_file_size
+            max_audio_file_duration=max_audio_file_duration
         )
         
     
@@ -799,7 +796,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         recording_dir_path = data.recording_dir_path.absolute()
         rows = (
             ('Recording Directory', recording_dir_path),
-            ('Max Audio File Size (bytes)', data.max_audio_file_size)
+            ('Max Audio File Duration (seconds)', data.max_audio_file_duration)
         )
         return _create_table(rows)
 
