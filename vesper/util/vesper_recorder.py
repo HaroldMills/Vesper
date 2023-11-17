@@ -260,8 +260,7 @@ def _parse_station_settings(settings):
         name=name,
         lat=lat,
         lon=lon,
-        time_zone=time_zone
-    )
+        time_zone=time_zone)
         
 
 def _parse_input_settings(settings):
@@ -287,8 +286,7 @@ def _parse_input_settings(settings):
         channel_count=channel_count,
         sample_rate=sample_rate,
         buffer_size=buffer_size,
-        total_buffer_size=total_buffer_size
-    )
+        total_buffer_size=total_buffer_size)
 
 
 def _parse_schedule_settings(settings, station):
@@ -309,8 +307,7 @@ def _parse_level_meter_settings(settings):
     
     return Bunch(
         enabled=enabled,
-        update_period=update_period
-    )
+        update_period=update_period)
     
 
 def _parse_local_recording_settings(settings, home_dir_path):
