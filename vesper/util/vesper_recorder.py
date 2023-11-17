@@ -699,19 +699,19 @@ Refresh the page to update the status.
 <h2>Recording Status</h2>
 {}
 
-<h2>Station Settings</h2>
+<h2>Station</h2>
 {}
 
 <h2>Available Input Devices</h2>
 {}
 
-<h2>Input Settings</h2>
+<h2>Input</h2>
 {}
 
-<h2>Local Audio File Settings</h2>
+<h2>Local Recording</h2>
 {}
 
-<h2>Scheduled Recordings</h2>
+<h2>Recording Schedule</h2>
 {}
 
 </body>
@@ -771,13 +771,13 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         input_table = self._create_input_table(devices, recorder)
         local_recording_table = \
             self._create_local_recording_table(data.local_audio_file_writer)
-        recording_table = self._create_recording_table(
+        schedule_table = self._create_schedule_table(
             recorder.schedule, data.station.time_zone, now)
         
         body = _PAGE.format(
             _CSS, VesperRecorder.VERSION_NUMBER, status_table, station_table,
             devices_table, input_table, local_recording_table,
-            recording_table)
+            schedule_table)
         
         return body.encode()
     
@@ -904,15 +904,15 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         return _create_table(rows)
 
 
-    def _create_recording_table(self, schedule, time_zone, now):
+    def _create_schedule_table(self, schedule, time_zone, now):
         rows = [
-            self._create_recording_table_row(index, interval, time_zone, now)
+            self._create_schedule_table_row(index, interval, time_zone, now)
             for index, interval in enumerate(schedule.get_intervals())]
-        header = ('Index', 'Start Time', 'End Time', 'Status')
+        header = ('Recording', 'Start Time', 'End Time', 'Status')
         return _create_table(rows, header)
     
     
-    def _create_recording_table_row(self, index, interval, time_zone, now):
+    def _create_schedule_table_row(self, index, interval, time_zone, now):
         start_time = _format_datetime(interval.start, time_zone)
         end_time = _format_datetime(interval.end, time_zone)
         if now > interval.end:
