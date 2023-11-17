@@ -1,6 +1,7 @@
 """Module containing the `VesperRecorder` class."""
 
 
+from collections.abc import Mapping
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from logging import FileHandler, Formatter
 from pathlib import Path
@@ -29,12 +30,12 @@ import vesper.util.yaml_utils as yaml_utils
 # able to schedule?
 
 
-# TODO: Reorganize setting hierarchy.
 # TODO: Consider allowing level meter to be turned on and off during recording.
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
 # TODO: Make saving audio files optional.
 # TODO: Consider using a `VesperRecorderError` exception.
 # TODO: Make sample size in bits a recorder setting, fixed at 16 for now.
+# TODO: Consider using `soundfile` package for writing audio files.
 # TODO: Add support for 24-bit samples.
 # TODO: Consider adding support for 32-bit floating point samples.
 # TODO: Consider adding support for additional file formats, e.g. FLAC.
@@ -48,18 +49,19 @@ _SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
 _AUDIO_FILE_NAME_EXTENSION = '.wav'
 
 _DEFAULT_STATION_NAME = 'Vesper'
-_DEFAULT_LATITUDE = None
-_DEFAULT_LONGITUDE = None
-_DEFAULT_TIME_ZONE = 'UTC'
-_DEFAULT_CHANNEL_COUNT = 1
-_DEFAULT_SAMPLE_RATE = 22050
-_DEFAULT_BUFFER_SIZE = .05
-_DEFAULT_TOTAL_BUFFER_SIZE = 60
+_DEFAULT_STATION_LATITUDE = None
+_DEFAULT_STATION_LONGITUDE = None
+_DEFAULT_STATION_TIME_ZONE = 'UTC'
+_DEFAULT_INPUT_CHANNEL_COUNT = 1
+_DEFAULT_INPUT_SAMPLE_RATE = 22050
+_DEFAULT_INPUT_BUFFER_SIZE = .05
+_DEFAULT_INPUT_TOTAL_BUFFER_SIZE = 60
+_DEFAULT_SCHEDULE = {}
 _DEFAULT_LEVEL_METER_ENABLED = True
-_DEFAULT_LEVEL_METER_PERIOD = 1             # seconds
-_DEFAULT_RECORDING_DIR_PATH = 'Recordings'
-_DEFAULT_MAX_AUDIO_FILE_DURATION = 3600     # seconds
-_DEFAULT_PORT_NUM = 8001
+_DEFAULT_LEVEL_METER_UPDATE_PERIOD = 1      # seconds
+_DEFAULT_LOCAL_RECORDING_DIR_PATH = 'Recordings'
+_DEFAULT_LOCAL_RECORDING_MAX_AUDIO_FILE_DURATION = 3600     # seconds
+_DEFAULT_SERVER_PORT_NUM = 8001
 
 
 _logger = logging.getLogger(__name__)
@@ -93,15 +95,15 @@ class VesperRecorder:
         
         # Create audio recorder.
         self._recorder = AudioRecorder(
-            s.input_device_index, s.channel_count, s.sample_rate,
-            s.buffer_size, s.total_buffer_size, s.schedule)
+            s.input.device_index, s.input.channel_count, s.input.sample_rate,
+            s.input.buffer_size, s.input.total_buffer_size, s.schedule)
         
         # Create logger.
         self._recorder.add_listener(_Logger())
 
         # Create level meter if indicated.
-        if s.level_meter_enabled:
-            level_meter = _AudioLevelMeter(_DEFAULT_LEVEL_METER_PERIOD)
+        if s.level_meter.enabled:
+            level_meter = _AudioLevelMeter(s.level_meter.update_period)
         else:
             level_meter = None
         if level_meter is not None:
@@ -109,13 +111,15 @@ class VesperRecorder:
 
         # Create audio file writer.
         self._recorder.add_listener(_AudioFileWriter(
-            s.station_name, s.recording_dir_path, s.max_audio_file_duration))
+            s.station.name, s.local_recording.dir_path,
+            s.local_recording.max_audio_file_duration))
          
         # Create HTTP server.
         server = _HttpServer(
-            s.port_num, s.station_name, s.lat, s.lon, s.time_zone,
-            self._recorder, level_meter, s.recording_dir_path,
-            s.max_audio_file_duration)
+            s.server_port_num, s.station.name, s.station.lat, s.station.lon,
+            s.station.time_zone, self._recorder, level_meter,
+            s.local_recording.dir_path,
+            s.local_recording.max_audio_file_duration)
         Thread(target=server.serve_forever, daemon=True).start()
 
         # Start recording.
@@ -178,7 +182,8 @@ def _create_and_start_recorder(message):
         return None
     
     _logger.info(
-        f'Starting recorder with HTTP server at port {settings.port_num}.')
+        f'Starting recorder with HTTP server at port '
+        f'{settings.server_port_num}.')
     
     # Create recorder.
     try:
@@ -213,64 +218,140 @@ def _add_file_logging(home_dir_path):
         
 def _parse_settings_file(file_path, home_dir_path):
     
-    with open(file_path) as f:
-        settings = yaml_utils.load(f)
+    settings = _Settings(file_path)
+
+    station = _parse_station_settings(settings)
+    input = _parse_input_settings(settings)
+    schedule = _parse_schedule_settings(settings, station)
+    level_meter = _parse_level_meter_settings(settings)
+    local_recording = _parse_local_recording_settings(settings, home_dir_path)
         
-    station_name = settings.get('station', _DEFAULT_STATION_NAME)
+    server_port_num = int(settings.get(
+        'server_port_num', _DEFAULT_SERVER_PORT_NUM))
     
-    lat = settings.get('latitude', _DEFAULT_LATITUDE)
+    return Bunch(
+        station=station,
+        input=input,
+        schedule=schedule,
+        level_meter=level_meter,
+        local_recording=local_recording,
+        server_port_num=server_port_num)
+    
+    
+def _parse_station_settings(settings):
+
+    name = settings.get('station.name', _DEFAULT_STATION_NAME)
+    
+    lat = settings.get('station.latitude', _DEFAULT_STATION_LATITUDE)
     if lat is not None:
         lat = float(lat)
         
-    lon = settings.get('longitude', _DEFAULT_LONGITUDE)
+    lon = settings.get('station.longitude', _DEFAULT_STATION_LONGITUDE)
     if lon is not None:
         lon = float(lon)
         
-    time_zone = ZoneInfo(settings.get('time_zone', _DEFAULT_TIME_ZONE))
-        
-    # TODO: Consider allowing specification of input device by name
-    # or name portion. Would have to handle non-uniqueness.
-    input_device_index = int(settings.get('input_device'))
-    channel_count = int(settings.get('channel_count', _DEFAULT_CHANNEL_COUNT))
-    sample_rate = int(settings.get('sample_rate', _DEFAULT_SAMPLE_RATE))
-    buffer_size = float(settings.get('buffer_size', _DEFAULT_BUFFER_SIZE))
-    total_buffer_size = \
-        float(settings.get('total_buffer_size', _DEFAULT_TOTAL_BUFFER_SIZE))
-    
-    schedule_dict = settings.get('schedule', {})
-    schedule = Schedule.compile_dict(
-        schedule_dict, latitude=lat, longitude=lon, time_zone=time_zone)
-    
-    level_meter_enabled = settings.get(
-        'level_meter_enabled', _DEFAULT_LEVEL_METER_ENABLED)
-    
-    recording_dir_path = Path(
-        settings.get('recording_dir_path', _DEFAULT_RECORDING_DIR_PATH))
-    if not recording_dir_path.is_absolute():
-        recording_dir_path = home_dir_path / recording_dir_path
-        
-    max_audio_file_duration = settings.get(
-        'max_audio_file_duration', _DEFAULT_MAX_AUDIO_FILE_DURATION)
-    
-    port_num = int(settings.get('port_num', _DEFAULT_PORT_NUM))
+    time_zone = ZoneInfo(
+        settings.get('station.time_zone', _DEFAULT_STATION_TIME_ZONE))
     
     return Bunch(
-        station_name=station_name,
+        name=name,
         lat=lat,
         lon=lon,
-        time_zone=time_zone,
-        input_device_index=input_device_index,
+        time_zone=time_zone
+    )
+        
+
+def _parse_input_settings(settings):
+
+    # TODO: Consider allowing specification of input device by name
+    # or name portion. Would have to handle non-uniqueness.
+    device_index = int(settings.get('input.device_index'))
+
+    channel_count = int(settings.get(
+        'input.channel_count', _DEFAULT_INPUT_CHANNEL_COUNT))
+    
+    sample_rate = int(settings.get(
+        'input.sample_rate', _DEFAULT_INPUT_SAMPLE_RATE))
+
+    buffer_size = float(settings.get(
+        'input.buffer_size', _DEFAULT_INPUT_BUFFER_SIZE))
+    
+    total_buffer_size = float(settings.get(
+        'input.total_buffer_size', _DEFAULT_INPUT_TOTAL_BUFFER_SIZE))
+    
+    return Bunch(
+        device_index=device_index,
         channel_count=channel_count,
         sample_rate=sample_rate,
         buffer_size=buffer_size,
-        total_buffer_size=total_buffer_size,
-        schedule=schedule,
-        level_meter_enabled=level_meter_enabled,
-        recording_dir_path=recording_dir_path,
-        max_audio_file_duration=max_audio_file_duration,
-        port_num=port_num)
+        total_buffer_size=total_buffer_size
+    )
+
+
+def _parse_schedule_settings(settings, station):
+
+    schedule_dict = settings.get('schedule', _DEFAULT_SCHEDULE)
+
+    return Schedule.compile_dict(
+        schedule_dict, latitude=station.lat, longitude=station.lon,
+        time_zone=station.time_zone)
     
+
+def _parse_level_meter_settings(settings):
+
+    enabled = settings.get('level_meter.enabled', _DEFAULT_LEVEL_METER_ENABLED)
+
+    update_period = float(settings.get(
+        'level_meter.update_period', _DEFAULT_LEVEL_METER_UPDATE_PERIOD))
     
+    return Bunch(
+        enabled=enabled,
+        update_period=update_period
+    )
+    
+
+def _parse_local_recording_settings(settings, home_dir_path):
+
+    dir_path = Path(settings.get(
+        'local_recording.recording_dir_path',
+        _DEFAULT_LOCAL_RECORDING_DIR_PATH))
+    
+    if not dir_path.is_absolute():
+        dir_path = home_dir_path / dir_path
+        
+    max_audio_file_duration = settings.get(
+        'local_recording.max_audio_file_duration',
+        _DEFAULT_LOCAL_RECORDING_MAX_AUDIO_FILE_DURATION)
+    
+    return Bunch(
+        dir_path=dir_path,
+        max_audio_file_duration=max_audio_file_duration
+    )
+    
+
+class _Settings:
+
+
+    def __init__(self, file_path):
+        with open(file_path) as f:
+            self._settings = yaml_utils.load(f)
+
+
+    def get(self, path, default=None):
+        
+        s = self._settings
+
+        for name in path.split('.'):
+
+            if isinstance(s, Mapping) and name in s:
+                s = s[name]
+            else:
+                return default
+            
+        # If we get here, the setting is present with value `s`.
+        return s
+
+
 class _Logger(AudioRecorderListener):
     
     
