@@ -116,8 +116,7 @@ class VesperRecorder:
          
         # Create HTTP server.
         server = _HttpServer(
-            s.server_port_num, s.station.name, s.station.lat, s.station.lon,
-            s.station.time_zone, self._recorder, level_meter,
+            s.server_port_num, s.station, self._recorder, level_meter,
             s.local_recording.dir_path,
             s.local_recording.max_audio_file_duration)
         Thread(target=server.serve_forever, daemon=True).start()
@@ -650,17 +649,14 @@ class _HttpServer(HTTPServer):
     
     
     def __init__(
-            self, port_num, station_name, lat, lon, time_zone, recorder,
-            level_meter, recording_dir_path, max_audio_file_duration):
+            self, port_num, station, recorder, level_meter,
+            recording_dir_path, max_audio_file_duration):
         
         address = ('', port_num)
         super().__init__(address, _HttpRequestHandler)
         
         self._recording_data = Bunch(
-            station_name=station_name,
-            lat=lat,
-            lon=lon,
-            time_zone=time_zone,
+            station=station,
             recorder=recorder,
             level_meter=level_meter,
             recording_dir_path=recording_dir_path,
@@ -758,7 +754,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         input_table = self._create_input_table(devices, recorder)
         output_table = self._create_output_table(data)
         recording_table = self._create_recording_table(
-            recorder.schedule, data.time_zone, now)
+            recorder.schedule, data.station.time_zone, now)
         
         body = _PAGE.format(
             _CSS, VesperRecorder.VERSION_NUMBER, status_table, station_table,
@@ -769,7 +765,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
     
     def _create_status_table(self, data, recorder, now):
         
-        time_zone = data.time_zone
+        time_zone = data.station.time_zone
         
         time = _format_datetime(now, time_zone)
         recording = 'Yes' if recorder.recording else 'No'
@@ -819,11 +815,12 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         
         
     def _create_station_table(self, data):
+        station = data.station
         rows = (
-            ('Station Name', data.station_name),
-            ('Latitude (degrees north)', data.lat),
-            ('Longitude (degrees east)', data.lon),
-            ('Time Zone', str(data.time_zone)))
+            ('Station Name', station.name),
+            ('Latitude (degrees north)', station.lat),
+            ('Longitude (degrees east)', station.lon),
+            ('Time Zone', str(station.time_zone)))
         return _create_table(rows)
     
     
