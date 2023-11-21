@@ -14,9 +14,6 @@ from vesper.util.notifier import Notifier
 from vesper.util.schedule import ScheduleRunner
 
 
-_SAMPLE_SIZE = 2               # bytes
-
-
 # TODO: Handle unsupported input configurations (e.g. unsupported
 # sample rates) gracefully and informatively.
 
@@ -78,18 +75,23 @@ class AudioRecorder:
 
 
     def __init__(
-            self, input_device_index, channel_count, sample_rate, buffer_size,
-            total_buffer_size, schedule=None):
+            self, input_device_index, channel_count, sample_rate, sample_size,
+            buffer_size, total_buffer_size, schedule=None):
+        
+        if sample_size != 16:
+            raise ValueError(
+                f'Sample size of {sample_size} bits is not supported. '
+                f'Currently only 16-bit samples are supported.')
         
         self._input_device_index = input_device_index
         self._channel_count = channel_count
         self._sample_rate = sample_rate
-        self._sample_size = _SAMPLE_SIZE
+        self._sample_size = sample_size
         self._buffer_size = buffer_size
         self._total_buffer_size = total_buffer_size
         self._schedule = schedule
         
-        self._bytes_per_frame = self.channel_count * self.sample_size
+        self._bytes_per_frame = self.channel_count * self.sample_size // 8
         self._frames_per_buffer = \
             int(math.ceil(self.buffer_size * self.sample_rate))
             
@@ -244,7 +246,7 @@ class AudioRecorder:
             self._recording = True
             self._stop_pending = False
 
-            dtype = f'int{8 * self._sample_size}'
+            dtype = f'int{self._sample_size}'
 
             self._stream = sd.RawInputStream(
                 device=self.input_device_index,

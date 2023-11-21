@@ -33,7 +33,6 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Consider allowing level meter to be turned on and off during recording.
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
 # TODO: Consider using a `VesperRecorderError` exception.
-# TODO: Make sample size in bits a recorder setting, fixed at 16 for now.
 # TODO: Consider using `soundfile` package for writing audio files.
 # TODO: Add support for 24-bit samples.
 # TODO: Consider adding support for 32-bit floating point samples.
@@ -52,9 +51,10 @@ _DEFAULT_STATION_LATITUDE = None
 _DEFAULT_STATION_LONGITUDE = None
 _DEFAULT_STATION_TIME_ZONE = 'UTC'
 _DEFAULT_INPUT_CHANNEL_COUNT = 1
-_DEFAULT_INPUT_SAMPLE_RATE = 22050
-_DEFAULT_INPUT_BUFFER_SIZE = .05
-_DEFAULT_INPUT_TOTAL_BUFFER_SIZE = 60
+_DEFAULT_INPUT_SAMPLE_RATE = 22050          # hertz
+_DEFAULT_INPUT_SAMPLE_SIZE = 16             # bits
+_DEFAULT_INPUT_BUFFER_SIZE = .05            # seconds
+_DEFAULT_INPUT_TOTAL_BUFFER_SIZE = 60       # seconds
 _DEFAULT_SCHEDULE = {}
 _DEFAULT_LEVEL_METER_ENABLED = True
 _DEFAULT_LEVEL_METER_UPDATE_PERIOD = 1      # seconds
@@ -96,7 +96,8 @@ class VesperRecorder:
         # Create audio recorder.
         self._recorder = AudioRecorder(
             s.input.device_index, s.input.channel_count, s.input.sample_rate,
-            s.input.buffer_size, s.input.total_buffer_size, s.schedule)
+            _DEFAULT_INPUT_SAMPLE_SIZE, s.input.buffer_size,
+            s.input.total_buffer_size, s.schedule)
         
         # Create logger.
         self._recorder.add_listener(_Logger())
@@ -200,6 +201,7 @@ def _create_and_start_recorder(message):
         recorder.start()
     except Exception as e:
         _logger.error(f'Could not start recorder. Error message was: {e}')
+        raise
         return None
     
     # Phew. We made it!
@@ -484,7 +486,7 @@ class _AudioLevelMeter(AudioRecorderListener):
         self._sums = np.zeros(self._channel_count)
         self._peaks = np.zeros(self._channel_count)
         self._accumulated_frame_count = 0
-        self._full_scale_value = 2 ** (recorder.sample_size * 8 - 1)
+        self._full_scale_value = 2 ** (recorder.sample_size - 1)
 
 
     def input_arrived(
@@ -580,7 +582,7 @@ class _LocalAudioFileWriter(AudioRecorderListener):
         self._channel_count = recorder.channel_count
         self._sample_rate = recorder.sample_rate
         self._sample_size = recorder.sample_size
-        self._frame_size = self._channel_count * self._sample_size
+        self._frame_size = self._channel_count * self._sample_size // 8
         self._zeros = bytearray(recorder.frames_per_buffer * self._frame_size)
         
         self._max_file_frame_count = \
@@ -641,7 +643,7 @@ class _LocalAudioFileWriter(AudioRecorderListener):
         file_ = wave.open(str(file_path), 'wb')
         file_.setnchannels(self._channel_count)
         file_.setframerate(self._sample_rate)
-        file_.setsampwidth(self._sample_size)
+        file_.setsampwidth(self._sample_size // 8)
         
         return file_
     
