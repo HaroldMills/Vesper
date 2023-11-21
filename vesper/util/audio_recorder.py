@@ -4,6 +4,7 @@
 from queue import Empty, Queue
 from threading import Thread
 from datetime import datetime, timedelta, timezone
+import itertools
 import math
 import time
 
@@ -40,6 +41,9 @@ from vesper.util.schedule import ScheduleRunner
 # module.
 
 # TODO: Support 24-bit samples.
+
+
+_USE_RAW_STREAM = False
 
 
 class AudioRecorder:
@@ -112,6 +116,8 @@ class AudioRecorder:
             self._schedule_runner.add_listener(listener)
         else:
             self._schedule_runner = None
+
+        # _show_supported_input_settings(self._input_device_index)
             
     
     def _create_input_buffers(self):
@@ -248,7 +254,19 @@ class AudioRecorder:
 
             dtype = f'int{self._sample_size}'
 
-            self._stream = sd.RawInputStream(
+            if _USE_RAW_STREAM:
+                # use raw input stream, which delivers raw sample bytes
+                # to input callback.
+
+                stream_class = sd.RawInputStream
+
+            else:
+                # use regular input stream, which delivers samples in
+                # NumPy arrays to callback.
+
+                stream_class = sd.InputStream
+
+            self._stream = stream_class(
                 device=self.input_device_index,
                 channels=self.channel_count,
                 samplerate=self.sample_rate,
@@ -333,6 +351,12 @@ class AudioRecorder:
             else:
                 # got a buffer
                 
+                if not _USE_RAW_STREAM:
+                    # `samples` is a NumPy array.
+
+                    # Get raw sample bytes.
+                    samples = samples.tobytes()
+
                 # Copy samples into buffer.
                 byte_count = frame_count * self._bytes_per_frame
                 buffer[:byte_count] = samples[:byte_count]
@@ -399,6 +423,43 @@ class AudioRecorder:
     def wait(self, timeout=None):
         if self._schedule_runner is not None:
             self._schedule_runner.wait(timeout)
+
+
+_CHANNEL_COUNTS = (1, 2)
+_SAMPLE_RATES = (
+    16000, 20000, 22050, 24000, 32000, 44100, 48000, 88200, 96000, 176400, 192000)
+_SAMPLE_SIZES = (8, 16, 24, 32)
+
+
+def _show_supported_input_settings(device_index):
+
+    default = sd.default
+    print(
+        default.device, default.channels, default.dtype,
+        default.extra_settings, default.samplerate)
+    
+    print(f'Supported input settings for device {device_index}:')
+
+    for settings in \
+            itertools.product(_CHANNEL_COUNTS, _SAMPLE_RATES, _SAMPLE_SIZES):
+        
+        result = _are_input_settings_supported(device_index, *settings)
+        print(f'    {settings} {result}')
+
+
+def _are_input_settings_supported(
+        device_index, channel_count, sample_rate, sample_size):
+    
+    try:
+        dtype = f'int{sample_size}'
+        sd.check_input_settings(
+            device_index, channels=channel_count, dtype=dtype,
+            samplerate=sample_rate)
+        
+    except:
+        return False
+    
+    return True
 
 
 def _get_input_devices():
