@@ -52,7 +52,7 @@ _DEFAULT_STATION_LONGITUDE = None
 _DEFAULT_STATION_TIME_ZONE = 'UTC'
 _DEFAULT_INPUT_CHANNEL_COUNT = 1
 _DEFAULT_INPUT_SAMPLE_RATE = 22050          # hertz
-_DEFAULT_INPUT_SAMPLE_SIZE = 16             # bits
+_DEFAULT_INPUT_SAMPLE_TYPE = 'int16'
 _DEFAULT_INPUT_BUFFER_SIZE = .05            # seconds
 _DEFAULT_INPUT_TOTAL_BUFFER_SIZE = 60       # seconds
 _DEFAULT_SCHEDULE = {}
@@ -96,7 +96,7 @@ class VesperRecorder:
         # Create audio recorder.
         self._recorder = AudioRecorder(
             s.input.device_index, s.input.channel_count, s.input.sample_rate,
-            _DEFAULT_INPUT_SAMPLE_SIZE, s.input.buffer_size,
+            _DEFAULT_INPUT_SAMPLE_TYPE, s.input.buffer_size,
             s.input.total_buffer_size, s.schedule)
         
         # Create logger.

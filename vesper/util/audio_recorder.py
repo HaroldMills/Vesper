@@ -45,6 +45,10 @@ from vesper.util.schedule import ScheduleRunner
 
 _USE_RAW_STREAM = False
 
+_SAMPLE_SIZES = {
+    'int16': 16
+}
+
 
 class AudioRecorder:
     
@@ -79,23 +83,24 @@ class AudioRecorder:
 
 
     def __init__(
-            self, input_device_index, channel_count, sample_rate, sample_size,
+            self, input_device_index, channel_count, sample_rate, sample_type,
             buffer_size, total_buffer_size, schedule=None):
         
-        if sample_size != 16:
+        if sample_type != 'int16':
             raise ValueError(
-                f'Sample size of {sample_size} bits is not supported. '
-                f'Currently only 16-bit samples are supported.')
+                f'Unrecognized sample type "{sample_type}". '
+                f'Currently only "int16" samples are supported.')
         
         self._input_device_index = input_device_index
         self._channel_count = channel_count
         self._sample_rate = sample_rate
-        self._sample_size = sample_size
+        self._sample_type = sample_type
         self._buffer_size = buffer_size
         self._total_buffer_size = total_buffer_size
         self._schedule = schedule
         
-        self._bytes_per_frame = self.channel_count * self.sample_size // 8
+        sample_size = _SAMPLE_SIZES[self._sample_type]
+        self._bytes_per_frame = self.channel_count * sample_size // 8
         self._frames_per_buffer = \
             int(math.ceil(self.buffer_size * self.sample_rate))
             
@@ -116,8 +121,6 @@ class AudioRecorder:
             self._schedule_runner.add_listener(listener)
         else:
             self._schedule_runner = None
-
-        # _show_supported_input_settings(self._input_device_index)
             
     
     def _create_input_buffers(self):
@@ -155,8 +158,13 @@ class AudioRecorder:
     
     
     @property
+    def sample_type(self):
+        return self._sample_type
+    
+
+    @property
     def sample_size(self):
-        return self._sample_size
+        return _SAMPLE_SIZES[self._sample_type]
     
     
     @property
@@ -252,8 +260,6 @@ class AudioRecorder:
             self._recording = True
             self._stop_pending = False
 
-            dtype = f'int{self._sample_size}'
-
             if _USE_RAW_STREAM:
                 # use raw input stream, which delivers raw sample bytes
                 # to input callback.
@@ -270,7 +276,7 @@ class AudioRecorder:
                 device=self.input_device_index,
                 channels=self.channel_count,
                 samplerate=self.sample_rate,
-                dtype=dtype,
+                dtype=self.sample_type,
                 blocksize=self.frames_per_buffer,
                 callback=self._input_callback)
             
@@ -423,43 +429,6 @@ class AudioRecorder:
     def wait(self, timeout=None):
         if self._schedule_runner is not None:
             self._schedule_runner.wait(timeout)
-
-
-_CHANNEL_COUNTS = (1, 2)
-_SAMPLE_RATES = (
-    16000, 20000, 22050, 24000, 32000, 44100, 48000, 88200, 96000, 176400, 192000)
-_SAMPLE_SIZES = (8, 16, 24, 32)
-
-
-def _show_supported_input_settings(device_index):
-
-    default = sd.default
-    print(
-        default.device, default.channels, default.dtype,
-        default.extra_settings, default.samplerate)
-    
-    print(f'Supported input settings for device {device_index}:')
-
-    for settings in \
-            itertools.product(_CHANNEL_COUNTS, _SAMPLE_RATES, _SAMPLE_SIZES):
-        
-        result = _are_input_settings_supported(device_index, *settings)
-        print(f'    {settings} {result}')
-
-
-def _are_input_settings_supported(
-        device_index, channel_count, sample_rate, sample_size):
-    
-    try:
-        dtype = f'int{sample_size}'
-        sd.check_input_settings(
-            device_index, channels=channel_count, dtype=dtype,
-            samplerate=sample_rate)
-        
-    except:
-        return False
-    
-    return True
 
 
 def _get_input_devices():
