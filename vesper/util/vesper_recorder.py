@@ -96,7 +96,7 @@ class VesperRecorder:
         
         # Create audio recorder.
         self._recorder = AudioRecorder(
-            s.input.device_index, s.input.channel_count, s.input.sample_rate,
+            s.input.device_name, s.input.channel_count, s.input.sample_rate,
             _DEFAULT_INPUT_SAMPLE_TYPE, s.input.buffer_size,
             s.input.total_buffer_size, s.schedule)
         
@@ -268,9 +268,7 @@ def _parse_station_settings(settings):
 
 def _parse_input_settings(settings):
 
-    # TODO: Consider allowing specification of input device by name
-    # or name portion. Would have to handle non-uniqueness.
-    device_index = int(settings.get('input.device_index'))
+    device_name = settings.get('input.device_name')
 
     channel_count = int(settings.get(
         'input.channel_count', _DEFAULT_INPUT_CHANNEL_COUNT))
@@ -285,7 +283,7 @@ def _parse_input_settings(settings):
         'input.total_buffer_size', _DEFAULT_INPUT_TOTAL_BUFFER_SIZE))
     
     return Bunch(
-        device_index=device_index,
+        device_name=device_name,
         channel_count=channel_count,
         sample_rate=sample_rate,
         sample_type='int16',
@@ -854,38 +852,34 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         
         else:
             recorder = self.server._recording_data.recorder
-            selected_device_index = recorder.input_device_index
+            selected_device_name = recorder.input_device_name
             rows = [
-                self._create_devices_table_row(d, selected_device_index)
+                self._create_devices_table_row(d, selected_device_name)
                 for d in devices]
-            header = ('Index', 'Name', 'Channel Count')
+            header = ('Name', 'Channel Count')
             table = _create_table(rows, header)
-            if selected_device_index < len(devices):
-                table += '<p>* Selected input device.</p>'
+            table += '<p>* Selected input device.</p>'
             return table
 
     
-    def _create_devices_table_row(self, device, selected_device_index):
-        prefix = '*' if device.index == selected_device_index else ''
-        return (
-            prefix + str(device.index), device.name,
-            device.input_channel_count)
+    def _create_devices_table_row(self, device, selected_device_name):
+        prefix = '*' if device.name == selected_device_name else ''
+        return (prefix + device.name, device.input_channel_count)
     
     
     def _create_input_table(self, devices, recorder):
         
-        device_dict = {d.index: d for d in devices}
-        device_index = recorder.input_device_index
-        device = device_dict.get(device_index)
+        device_dict = {d.name: d for d in devices}
+        device_name = recorder.input_device_name
+        device = device_dict.get(device_name)
 
         if device is None:
             device_name = \
-                f'There is no input device with index {device_index}.'
+                f'There is no input device with name {device_name}.'
         else:
             device_name = device.name
             
         rows = (
-            ('Device Index', device_index),
             ('Device Name', device_name),
             ('Channel Count', recorder.channel_count),
             ('Sample Rate (Hz)', recorder.sample_rate),

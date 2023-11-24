@@ -4,7 +4,6 @@
 from queue import Empty, Queue
 from threading import Thread
 from datetime import datetime, timedelta, timezone
-import itertools
 import math
 import time
 
@@ -13,20 +12,14 @@ import sounddevice as sd
 from vesper.util.bunch import Bunch
 from vesper.util.notifier import Notifier
 from vesper.util.schedule import ScheduleRunner
+import vesper.util.text_utils as text_utils
 
 
-# TODO: Handle unsupported input configurations (e.g. unsupported
-# sample rates) gracefully and informatively.
-
-# TODO: Consider eliminating `get_input_devices` function in favor of
-# using `sounddevice` functions directly.
-
-# TODO: Consider making default input device the selected input device
-# if the specified input device index is not valid.
-
-# TODO: Allow input device specification by name or portion of name in
-# configuration. If specified device does not exist or is not unique,
-# fall back on default device.
+# TODO: Handle unsupported input sample rates better on macOS.
+# See `sounddevice` issue number 505
+# (https://github.com/spatialaudio/python-sounddevice/issues/505).
+# Note that the issue described there does not seem to be a problem
+# on Windows and Linux.
 
 # TODO: Show configuration error messages in red text on web page.
 
@@ -84,15 +77,18 @@ class AudioRecorder:
 
     @staticmethod
     def check_input_settings(settings):
+
+        _check_input_device_name(settings.device_name)
+
         sd.check_input_settings(
-            device=settings.device_index,
+            device=settings.device_name,
             channels=settings.channel_count,
             samplerate=settings.sample_rate,
             dtype=settings.sample_type)
 
 
     def __init__(
-            self, input_device_index, channel_count, sample_rate, sample_type,
+            self, input_device_name, channel_count, sample_rate, sample_type,
             buffer_size, total_buffer_size, schedule=None):
         
         if sample_type != 'int16':
@@ -100,7 +96,7 @@ class AudioRecorder:
                 f'Unrecognized sample type "{sample_type}". '
                 f'Currently only "int16" samples are supported.')
         
-        self._input_device_index = input_device_index
+        self._input_device_name = input_device_name
         self._channel_count = channel_count
         self._sample_rate = sample_rate
         self._sample_type = sample_type
@@ -152,8 +148,8 @@ class AudioRecorder:
             
 
     @property
-    def input_device_index(self):
-        return self._input_device_index
+    def input_device_name(self):
+        return self._input_device_name
     
     
     @property
@@ -282,7 +278,7 @@ class AudioRecorder:
                 stream_class = sd.InputStream
 
             self._stream = stream_class(
-                device=self.input_device_index,
+                device=self.input_device_name,
                 channels=self.channel_count,
                 samplerate=self.sample_rate,
                 dtype=self.sample_type,
@@ -448,7 +444,7 @@ def _get_input_devices():
     
     # Get default input device index.
     default_device_index = sd.default.device[0]
-    
+
     return [
         _get_input_device_info(device, default_device_index)
         for device in input_devices]
@@ -464,6 +460,19 @@ def _get_input_device_info(device, default_device_index):
         default_sample_rate=device['default_samplerate'],
         default_low_input_latency=device['default_low_input_latency'],
         default_high_input_latency=device['default_high_input_latency'])
+    
+
+def _check_input_device_name(name):
+
+    devices = _get_input_devices()
+    names = sorted(d.name for d in devices)
+
+    if not name in names:
+
+        names = text_utils.create_string_item_list(f'"{n}"' for n in names)
+        raise ValueError(
+            f'Unrecognized input device name "{name}". '
+            f'Valid names are {names}.')
     
 
 def _get_utc_now():
