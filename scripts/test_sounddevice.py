@@ -10,18 +10,20 @@ SAMPLE_RATES = (
 
 SAMPLE_DTYPES = ('int16', 'int24', 'int32', 'float32')
 
-TEST_RECORDING_DEVICE_INDEX = 1
-TEST_RECORDING_CHANNEL_COUNT = 1
-TEST_RECORDING_SAMPLE_RATE = 24000
-TEST_RECORDING_SAMPLE_DTYPE = 'int16'
-TEST_RECORDING_DURATION = .1
+TEST_RECORDING_SETTINGS = {
+    'device': 'MacBook Pro Microphone',
+    'channels': 1,
+    'samplerate': 44100,
+    'dtype': 'int16'
+}
 
 
 def main():
 
     show_host_apis()
     show_devices()
-    test_recording()
+    test_recording_1()
+    test_recording_2()
 
 
 def show_host_apis():
@@ -103,25 +105,32 @@ def are_input_settings_supported(
     return True
 
 
-def test_recording():
+def test_recording_1():
 
-    print('Testing recording...')
+    print('Testing recording 1...')
     
-    frame_count = \
-        int(round(TEST_RECORDING_DURATION * TEST_RECORDING_SAMPLE_RATE))
-
     try:
         sd.rec(
-            device=TEST_RECORDING_DEVICE_INDEX,
-            channels=TEST_RECORDING_CHANNEL_COUNT,
-            samplerate=TEST_RECORDING_SAMPLE_RATE,
-            dtype=TEST_RECORDING_SAMPLE_DTYPE,
-            frames=frame_count,
-            blocking=True)
+            frames=TEST_RECORDING_SETTINGS['samplerate'],
+            blocking=True,
+            **TEST_RECORDING_SETTINGS)
         
     except Exception as e:
-        print('Test recording failed with message: {e}')
+        print(f'Test recording failed with message: {e}')
    
+
+def test_recording_2():
+
+    print('Testing recording 2...')
+
+    sd.check_input_settings(**TEST_RECORDING_SETTINGS)
+
+    stream = sd.InputStream(**TEST_RECORDING_SETTINGS)
+    stream.start()
+    stream.read(TEST_RECORDING_SETTINGS['samplerate'])
+    stream.stop()
+    stream.close()
+
 
 if __name__ == '__main__':
     main()

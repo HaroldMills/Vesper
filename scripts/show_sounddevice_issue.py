@@ -18,6 +18,12 @@
 
 import sounddevice as sd
 
-settings = {'device': 1, 'channels': 1, 'samplerate': 48000, 'dtype': 'int16'}
+settings = {'device': 1, 'channels': 1, 'samplerate': 384001, 'dtype': 'int16'}
+
 sd.check_input_settings(**settings)
+
 sd.rec(frames=settings['samplerate'], blocking=True, **settings)
+
+# stream = sd.InputStream(**settings)
+# stream.start()
+# stream.read(settings['samplerate'])
