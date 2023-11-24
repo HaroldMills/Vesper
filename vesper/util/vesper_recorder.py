@@ -87,6 +87,7 @@ class VesperRecorder:
     
     def __init__(self, settings):
         self._settings = settings
+        AudioRecorder.check_input_settings(self._settings.input)
 
         
     def start(self):
@@ -287,6 +288,7 @@ def _parse_input_settings(settings):
         device_index=device_index,
         channel_count=channel_count,
         sample_rate=sample_rate,
+        sample_type='int16',
         buffer_size=buffer_size,
         total_buffer_size=total_buffer_size)
 

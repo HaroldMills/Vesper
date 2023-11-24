@@ -80,6 +80,15 @@ class AudioRecorder:
     @staticmethod
     def get_input_devices():
         return _get_input_devices()
+    
+
+    @staticmethod
+    def check_input_settings(settings):
+        sd.check_input_settings(
+            device=settings.device_index,
+            channels=settings.channel_count,
+            samplerate=settings.sample_rate,
+            dtype=settings.sample_type)
 
 
     def __init__(
