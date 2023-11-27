@@ -33,11 +33,10 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Consider allowing level meter to be turned on and off during recording.
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
 # TODO: Consider using a `VesperRecorderError` exception.
+# TODO: Add support for 24-bit input samples.
+# TODO: Add support for 32-bit floating point input samples.
 # TODO: Consider using `soundfile` package for writing audio files.
-# TODO: Add support for 24-bit samples.
-# TODO: Consider adding support for 32-bit floating point samples.
 # TODO: Consider adding support for additional file formats, e.g. FLAC.
-# TODO: Add support for sample rate conversion.
 
 
 _HOME_DIR_VAR_NAME = 'VESPER_RECORDER_HOME'

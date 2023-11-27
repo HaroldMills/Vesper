@@ -30,11 +30,6 @@ import vesper.util.text_utils as text_utils
 # a copied buffer in the rare case where the samples wrap around the end
 # of the circular buffer.
 
-# TODO: Consider moving schedule (and all recording control) out of this
-# module.
-
-# TODO: Support 24-bit samples.
-
 
 _USE_RAW_STREAM = False
 
