@@ -21,16 +21,15 @@ from vesper.util.schedule import Schedule
 import vesper.util.yaml_utils as yaml_utils
 
 
-# TODO: Review threads involved in recording (schedule, recorder, and server),
-# clarify their responsibilities, and improve error handling and shutdown.
-# Implement setting updates and remote logging and control. How does
-# recording relate to Vesper job system (as of this writing it's completely
-# independent, but perhaps it should not be)? How does it relate to other
-# processing, like detection and classification, that we would like to be
-# able to schedule?
+# TODO: Optionally upload recorded files to S3.
+# TODO: Optionally upload status updates regularly to S3.
+# TODO: Consider updating settings between recordings.
+# TODO: Consider supporting S3 setting files.
+# TODO: Write daily log files.
+# TODO: Optionally upload log files to S3.
+# TODO: Compute summary spectrograms and optionally upload them to S3.
 
-
-# TODO: Consider allowing level meter to be turned on and off during recording.
+# TODO: Review and improve threading/process structure of recorder.
 # TODO: Move scheduling from `AudioRecorder` to `VesperRecorder`.
 # TODO: Consider using a `VesperRecorderError` exception.
 # TODO: Add support for 24-bit input samples.
