@@ -49,7 +49,6 @@ import vesper.util.yaml_utils as yaml_utils
 # updated later if needed.
     
 
-_HOME_DIR_VAR_NAME = 'VESPER_RECORDER_HOME'
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
 _SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
 
@@ -150,27 +149,8 @@ class VesperRecorder:
         
 def _create_and_start_recorder(message):
     
-    home_dir_path = os.environ.get(_HOME_DIR_VAR_NAME)
+    home_dir_path = Path.cwd()
      
-    # Use current working directory as home directory if home directory
-    # environment variable is not set.
-    if home_dir_path is None:
-        home_dir_path = Path.cwd()
-        _logger.info(
-            f'{_HOME_DIR_VAR_NAME} environment variable is not set. '
-            f'Will use current working directory "{home_dir_path}" as '
-            f'home directory.')
-         
-    home_dir_path = Path(home_dir_path)
-
-    # Check that home directory exists.
-    if not home_dir_path.exists():
-        _logger.error(
-            f'Recorder home directory "{home_dir_path}" does not exist.')
-        return None
-    
-    # Now that we know that we have a home directory, and hence a place
-    # for a log file, add file logging.
     _add_file_logging(home_dir_path)
     
     _logger.info(message)
