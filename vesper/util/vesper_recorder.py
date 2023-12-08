@@ -21,6 +21,10 @@ from vesper.util.schedule import Schedule
 import vesper.util.yaml_utils as yaml_utils
 
 
+# TODO: Make audio file writers processors.
+# TODO: Support multiple audio file writers.
+# TODO: Support per-recording recording subdirectories.
+# TODO: Make level meters processors.
 # TODO: Optionally upload recorded files to S3.
 # TODO: Optionally upload status updates regularly to S3.
 # TODO: Consider updating settings between recordings.
@@ -37,6 +41,13 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Consider using `soundfile` package for writing audio files.
 # TODO: Consider adding support for additional file formats, e.g. FLAC.
 
+# TODO: If we detect in real time, how will archiving detections
+# work? We need a recording to refer to when we archive a clip,
+# but the recording will be in progress. Perhaps we create a
+# recording in a Vesper archive as soon as the recording
+# commences, including its planned length. The length could be
+# updated later if needed.
+    
 
 _HOME_DIR_VAR_NAME = 'VESPER_RECORDER_HOME'
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
@@ -545,7 +556,7 @@ class _AudioLevelMeter(AudioRecorderListener):
        self._peak_values = None
  
 
-class _LocalAudioFileWriter(AudioRecorderListener):
+class _AudioFileWriter(AudioRecorderListener):
     
     
     def __init__(self, station_name, recording_dir_path, max_file_duration):
