@@ -236,15 +236,8 @@ def _parse_settings_file(file_path, home_dir_path):
 def _parse_station_settings(settings):
 
     name = settings.get('station.name', _DEFAULT_STATION_NAME)
-    
     lat = settings.get('station.latitude', _DEFAULT_STATION_LATITUDE)
-    if lat is not None:
-        lat = float(lat)
-        
     lon = settings.get('station.longitude', _DEFAULT_STATION_LONGITUDE)
-    if lon is not None:
-        lon = float(lon)
-        
     time_zone = ZoneInfo(
         settings.get('station.time_zone', _DEFAULT_STATION_TIME_ZONE))
     
