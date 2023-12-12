@@ -38,7 +38,7 @@ from logging import Formatter, StreamHandler
 import logging
 import time
 
-from vesper.util.vesper_recorder import VesperRecorder
+from vesper.recorder.vesper_recorder import VesperRecorder
 
 
 _logger = logging.getLogger(__name__)

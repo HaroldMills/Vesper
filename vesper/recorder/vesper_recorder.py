@@ -15,7 +15,7 @@ import wave
 
 import numpy as np
 
-from vesper.util.audio_recorder import AudioRecorder, AudioRecorderListener
+from vesper.recorder.audio_recorder import AudioRecorder, AudioRecorderListener
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 import vesper.util.yaml_utils as yaml_utils

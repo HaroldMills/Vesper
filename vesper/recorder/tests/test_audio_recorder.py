@@ -1,4 +1,4 @@
-from vesper.util.audio_recorder import AudioRecorder
+from vesper.recorder.audio_recorder import AudioRecorder
 
 
 def main():
