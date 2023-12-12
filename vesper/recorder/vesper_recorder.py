@@ -10,7 +10,6 @@ from zoneinfo import ZoneInfo
 import datetime
 import logging
 import math
-import os
 import wave
 
 import numpy as np
