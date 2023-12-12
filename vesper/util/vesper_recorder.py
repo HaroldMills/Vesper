@@ -529,7 +529,7 @@ class _AudioLevelMeter(AudioRecorderListener):
        self._peak_values = None
  
 
-class _AudioFileWriter(AudioRecorderListener):
+class _LocalAudioFileWriter(AudioRecorderListener):
     
     
     def __init__(self, station_name, recording_dir_path, max_file_duration):
