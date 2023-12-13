@@ -1,0 +1,110 @@
+import math
+
+import numpy as np
+
+from vesper.recorder.audio_recorder import AudioRecorderListener
+
+
+class LevelMeter(AudioRecorderListener):
+
+    name = 'Level Meter'
+
+    def __init__(self, update_period):
+        self._update_period = update_period
+        self._rms_values = None
+        self._peak_values = None
+
+
+    @property
+    def rms_values(self):
+        return self._rms_values
+    
+
+    @property
+    def peak_values(self):
+        return self._peak_values
+    
+
+    def recording_starting(self, recorder, time):
+
+        # _logger.info(f'_LevelMeter.recording_starting: {time}')
+
+        self._channel_count = recorder.channel_count
+        self._block_size = \
+            int(round(recorder.sample_rate * self._update_period))
+        self._sums = np.zeros(self._channel_count)
+        self._peaks = np.zeros(self._channel_count)
+        self._accumulated_frame_count = 0
+        self._full_scale_value = 2 ** (recorder.sample_size - 1)
+
+
+    def input_arrived(
+            self, recorder, time, samples, frame_count, portaudio_overflow):
+        
+        # TODO: This method allocates memory via NumPy every time it runs.
+        # Is that problematic?
+
+        samples = np.frombuffer(samples, dtype='<i2').astype(np.float64)
+
+        # Make sample array 2D.
+        samples = samples.reshape((frame_count, self._channel_count))
+
+        # _logger.info(f'_LevelMeter.input_arrived: {time} {frame_count} {samples.shape}')
+      
+        start_index = 0
+
+        while start_index != frame_count:
+
+            remaining = self._block_size - self._accumulated_frame_count
+            n = min(frame_count, remaining)
+            
+            # Accumulate squared samples.
+            s = samples[start_index:start_index + n]
+            self._sums += np.sum(s * s, axis=0)
+
+            # Update maximum absolute sample values.
+            peaks = np.max(np.abs(samples), axis=0)
+            self._peaks = np.maximum(self._peaks, peaks)
+
+            self._accumulated_frame_count += n
+
+            if self._accumulated_frame_count == self._block_size:
+                # have accumulated an entire block
+
+                rms_values = np.sqrt(self._sums / self._block_size)
+                
+                self._rms_values = rms_sample_to_dbfs(
+                    rms_values, self._full_scale_value)
+                
+                self._peak_values = sample_to_dbfs(
+                    self._peaks, self._full_scale_value)
+                
+                # _logger.info(
+                #     f'_LevelMeter: RMS {self._rms_values} '
+                #     f'peak {self._peak_values}')
+                
+                self._sums = np.zeros(self._channel_count)
+                self._peaks = np.zeros(self._channel_count)
+                self._accumulated_frame_count = 0
+
+            start_index += n
+
+
+    def recording_stopped(self, recorder, time):
+    #    _logger.info(f'_LevelMeter.recording_stopped: {time}')
+       self._rms_values = None
+       self._peak_values = None
+
+
+# TODO: Move dBFS functions to `signal_utils` package.
+
+
+_HALF_SQRT_2 = math.sqrt(2) / 2
+
+
+def sample_to_dbfs(sample, full_scale_value):
+    return 20 * np.log10(np.abs(sample) / full_scale_value)
+
+
+def rms_sample_to_dbfs(sample, full_scale_value):
+    return 20 * np.log10(sample / (_HALF_SQRT_2 * full_scale_value))

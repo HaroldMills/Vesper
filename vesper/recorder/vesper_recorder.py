@@ -9,12 +9,10 @@ from threading import Thread
 from zoneinfo import ZoneInfo
 import datetime
 import logging
-import math
-import wave
 
-import numpy as np
-
+from vesper.recorder.audio_file_writer import AudioFileWriter
 from vesper.recorder.audio_recorder import AudioRecorder, AudioRecorderListener
+from vesper.recorder.level_meter import LevelMeter
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 import vesper.util.yaml_utils as yaml_utils
@@ -50,8 +48,6 @@ import vesper.util.yaml_utils as yaml_utils
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
 _SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
-
-_AUDIO_FILE_NAME_EXTENSION = '.wav'
 
 _DEFAULT_STATION_NAME = 'Vesper'
 _DEFAULT_STATION_LATITUDE = None
@@ -100,26 +96,19 @@ class VesperRecorder:
     def start(self):
         
         s = self._settings
-        
-        # Create audio recorder.
-        self._recorder = AudioRecorder(
-            s.input.device_name, s.input.channel_count, s.input.sample_rate,
-            _DEFAULT_INPUT_SAMPLE_TYPE, s.input.buffer_size,
-            s.input.total_buffer_size, s.schedule)
-        
-        # Create logger.
-        self._recorder.add_listener(_Logger())
+
+        self._recorder = _create_audio_recorder(s)
 
         # Create level meter if needed.
         if s.level_meter.enabled:
-            level_meter = _AudioLevelMeter(s.level_meter.update_period)
+            level_meter = LevelMeter(s.level_meter.update_period)
             self._recorder.add_listener(level_meter)
         else:
             level_meter = None
 
         # Create audio file writer if needed.
         if s.local_recording.enabled:
-            local_audio_file_writer = _LocalAudioFileWriter(
+            local_audio_file_writer = AudioFileWriter(
                 s.station.name, s.local_recording.dir_path,
                 s.local_recording.max_audio_file_duration)
             self._recorder.add_listener(local_audio_file_writer)
@@ -215,8 +204,8 @@ def _parse_settings_file(file_path, home_dir_path):
     settings = _Settings(file_path)
 
     station = _parse_station_settings(settings)
-    input = _parse_input_settings(settings)
     schedule = _parse_schedule_settings(settings, station)
+    input = _parse_input_settings(settings)
     level_meter = _parse_level_meter_settings(settings)
     local_recording = _parse_local_recording_settings(settings, home_dir_path)
         
@@ -225,8 +214,8 @@ def _parse_settings_file(file_path, home_dir_path):
     
     return Bunch(
         station=station,
-        input=input,
         schedule=schedule,
+        input=input,
         level_meter=level_meter,
         local_recording=local_recording,
         server_port_num=server_port_num)
@@ -246,6 +235,15 @@ def _parse_station_settings(settings):
         lon=lon,
         time_zone=time_zone)
         
+
+def _parse_schedule_settings(settings, station):
+
+    schedule_dict = settings.get('schedule', _DEFAULT_SCHEDULE)
+
+    return Schedule.compile_dict(
+        schedule_dict, latitude=station.lat, longitude=station.lon,
+        time_zone=station.time_zone)
+    
 
 def _parse_input_settings(settings):
 
@@ -271,15 +269,6 @@ def _parse_input_settings(settings):
         buffer_size=buffer_size,
         total_buffer_size=total_buffer_size)
 
-
-def _parse_schedule_settings(settings, station):
-
-    schedule_dict = settings.get('schedule', _DEFAULT_SCHEDULE)
-
-    return Schedule.compile_dict(
-        schedule_dict, latitude=station.lat, longitude=station.lon,
-        time_zone=station.time_zone)
-    
 
 def _parse_level_meter_settings(settings):
 
@@ -313,6 +302,21 @@ def _parse_local_recording_settings(settings, home_dir_path):
         enabled=enabled,
         dir_path=dir_path,
         max_audio_file_duration=max_audio_file_duration)
+    
+
+def _create_audio_recorder(settings):
+
+    # Create audio recorder.
+    i = settings.input
+    recorder = AudioRecorder(
+        i.device_name, i.channel_count, i.sample_rate,
+        _DEFAULT_INPUT_SAMPLE_TYPE, i.buffer_size, i.total_buffer_size,
+        settings.schedule)
+    
+    # Create logger.
+    recorder.add_listener(_Logger())
+
+    return recorder
     
 
 class _Settings:
@@ -438,215 +442,6 @@ class _Logger(AudioRecorderListener):
         _logger.info('Stopped recording.')
 
     
-class _AudioLevelMeter(AudioRecorderListener):
-
-
-    def __init__(self, update_period):
-        self._update_period = update_period
-        self._rms_values = None
-        self._peak_values = None
-
-
-    @property
-    def rms_values(self):
-        return self._rms_values
-    
-
-    @property
-    def peak_values(self):
-        return self._peak_values
-    
-
-    def recording_starting(self, recorder, time):
-
-        _logger.info(f'_AudioLevelMeter.recording_starting: {time}')
-
-        self._channel_count = recorder.channel_count
-        self._block_size = \
-            int(round(recorder.sample_rate * self._update_period))
-        self._sums = np.zeros(self._channel_count)
-        self._peaks = np.zeros(self._channel_count)
-        self._accumulated_frame_count = 0
-        self._full_scale_value = 2 ** (recorder.sample_size - 1)
-
-
-    def input_arrived(
-            self, recorder, time, samples, frame_count, portaudio_overflow):
-        
-        # TODO: This method allocates memory via NumPy every time it runs.
-        # Is that problematic?
-
-        samples = np.frombuffer(samples, dtype='<i2').astype(np.float64)
-
-        # Make sample array 2D.
-        samples = samples.reshape((frame_count, self._channel_count))
-
-        # _logger.info(f'_AudioLevelMeter.input_arrived: {time} {frame_count} {samples.shape}')
-      
-        start_index = 0
-
-        while start_index != frame_count:
-
-            remaining = self._block_size - self._accumulated_frame_count
-            n = min(frame_count, remaining)
-            
-            # Accumulate squared samples.
-            s = samples[start_index:start_index + n]
-            self._sums += np.sum(s * s, axis=0)
-
-            # Update maximum absolute sample values.
-            peaks = np.max(np.abs(samples), axis=0)
-            self._peaks = np.maximum(self._peaks, peaks)
-
-            self._accumulated_frame_count += n
-
-            if self._accumulated_frame_count == self._block_size:
-                # have accumulated an entire block
-
-                rms_values = np.sqrt(self._sums / self._block_size)
-                
-                self._rms_values = rms_sample_to_dbfs(
-                    rms_values, self._full_scale_value)
-                
-                self._peak_values = sample_to_dbfs(
-                    self._peaks, self._full_scale_value)
-                
-                _logger.info(
-                    f'_AudioLevelMeter: RMS {self._rms_values} '
-                    f'peak {self._peak_values}')
-                
-                self._sums = np.zeros(self._channel_count)
-                self._peaks = np.zeros(self._channel_count)
-                self._accumulated_frame_count = 0
-
-            start_index += n
-
-
-    def recording_stopped(self, recorder, time):
-       _logger.info(f'_AudioLevelMeter.recording_stopped: {time}')
-       self._rms_values = None
-       self._peak_values = None
- 
-
-class _LocalAudioFileWriter(AudioRecorderListener):
-    
-    
-    def __init__(self, station_name, recording_dir_path, max_file_duration):
-        
-        super().__init__()
-        
-        self._station_name = station_name
-        self._recording_dir_path = recording_dir_path
-        self._max_file_duration = max_file_duration
-        
-        # Create recording directory if needed.
-        self._recording_dir_path.mkdir(parents=True, exist_ok=True)
-        
-        
-    @property
-    def station_name(self):
-        return self._station_name
-    
-
-    @property
-    def recording_dir_path(self):
-        return self._recording_dir_path
-    
-
-    @property
-    def max_file_duration(self):
-        return self._max_file_duration
-    
-
-    def recording_starting(self, recorder, time):
-        
-        self._channel_count = recorder.channel_count
-        self._sample_rate = recorder.sample_rate
-        self._sample_size = recorder.sample_size
-        self._frame_size = self._channel_count * self._sample_size // 8
-        self._zeros = bytearray(recorder.frames_per_buffer * self._frame_size)
-        
-        self._max_file_frame_count = \
-            int(round(self._max_file_duration * self._sample_rate))
-                    
-        self._file_namer = _AudioFileNamer(
-            self._station_name, _AUDIO_FILE_NAME_EXTENSION)
-        
-        self._file = None
-        
-    
-    def input_arrived(
-            self, recorder, time, samples, frame_count, portaudio_overflow):
-        self._write_samples(time, samples, frame_count)
-        
-        
-    def _write_samples(self, time, samples, frame_count):
-        
-        remaining_frame_count = frame_count
-        buffer_index = 0
-        
-        while remaining_frame_count != 0:
-            
-            if self._file is None:
-                self._file = self._open_audio_file(time)
-                self._file_frame_count = 0
-        
-            frame_count = min(
-                remaining_frame_count,
-                self._max_file_frame_count - self._file_frame_count)
-                
-            byte_count = frame_count * self._frame_size
-            
-            # TODO: We assume here that the sample bytes are in
-            # little-endian order, but perhaps we shouldn't.
-            self._file.writeframes(
-                samples[buffer_index:buffer_index + byte_count])
-            
-            remaining_frame_count -= frame_count
-            self._file_frame_count += frame_count
-            buffer_index += byte_count
-            
-            if self._file_frame_count == self._max_file_frame_count:
-                self._file.close()
-                self._file = None
-    
-    
-    def input_overflowed(
-            self, recorder, time, frame_count, portaudio_overflow):
-        self._write_samples(time, self._zeros, frame_count)
-    
-        
-    def _open_audio_file(self, time):
-        
-        file_name = self._file_namer.create_file_name(time)
-        file_path = self._recording_dir_path / file_name
-        
-        file_ = wave.open(str(file_path), 'wb')
-        file_.setnchannels(self._channel_count)
-        file_.setframerate(self._sample_rate)
-        file_.setsampwidth(self._sample_size // 8)
-        
-        return file_
-    
-
-    def recording_stopped(self, recorder, time):
-        if self._file is not None:
-            self._file.close()
-        
-    
-class _AudioFileNamer:
-    
-    
-    def __init__(self, station_name, file_name_extension):
-        self.station_name = station_name
-        self.file_name_extension = file_name_extension
-        
-        
-    def create_file_name(self, start_time):
-        time = start_time.strftime('%Y-%m-%d_%H.%M.%S')
-        return f'{self.station_name}_{time}_Z{self.file_name_extension}'
-        
-        
 class _HttpServer(HTTPServer):
     
     
@@ -934,17 +729,3 @@ def _create_table_row(items, tag_letter='d'):
     
 def _create_table_item(item, tag_letter):
     return f'    <t{tag_letter}>{item}</t{tag_letter}>\n'
-
-
-# TODO: Move dBFS functions to `signal_utils` package.
-
-
-_HALF_SQRT_2 = math.sqrt(2) / 2
-
-
-def sample_to_dbfs(sample, full_scale_value):
-    return 20 * np.log10(np.abs(sample) / full_scale_value)
-
-
-def rms_sample_to_dbfs(sample, full_scale_value):
-    return 20 * np.log10(sample / (_HALF_SQRT_2 * full_scale_value))
