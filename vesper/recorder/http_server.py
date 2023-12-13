@@ -8,6 +8,9 @@ from zoneinfo import ZoneInfo
 from vesper.util.bunch import Bunch
 
 
+# TODO: Show configuration error messages in red text on web page.
+
+
 class HttpServer(HTTPServer):
     
     """Vesper Recorder HTTP server."""
