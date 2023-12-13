@@ -2,11 +2,12 @@
 
 
 from collections.abc import Mapping
-from logging import FileHandler, Formatter
+from logging import FileHandler, Formatter, StreamHandler
 from pathlib import Path
 from threading import Thread
 from zoneinfo import ZoneInfo
 import logging
+import time
 
 from vesper.recorder.audio_file_writer import AudioFileWriter
 from vesper.recorder.audio_recorder import AudioRecorder, AudioRecorderListener
@@ -17,6 +18,7 @@ from vesper.util.schedule import Schedule
 import vesper.util.yaml_utils as yaml_utils
 
 
+# TODO: Make main function `main` instead of `_main`.
 # TODO: Make audio file writers processors.
 # TODO: Support multiple audio file writers.
 # TODO: Support per-recording recording subdirectories.
@@ -69,6 +71,10 @@ _DEFAULT_SERVER_PORT_NUM = 8001
 _logger = logging.getLogger(__name__)
 
 
+class VesperRecorderError(Exception):
+    pass
+
+
 class VesperRecorder:
     
     """Records audio to .wav files according to a schedule."""
@@ -83,13 +89,12 @@ class VesperRecorder:
     
     
     @staticmethod
-    def create_and_start_recorder(message):
-        return _create_and_start_recorder(message)
+    def create_and_run_recorder(home_dir_path):
+        return _create_and_run_recorder(home_dir_path)
     
     
     def __init__(self, settings):
         self._settings = settings
-        AudioRecorder.check_input_settings(self._settings.input)
 
         
     def start(self):
@@ -134,44 +139,35 @@ class VesperRecorder:
         self._recorder.stop()
         
         
-def _create_and_start_recorder(message):
+def _create_and_run_recorder(home_dir_path):
     
-    home_dir_path = Path.cwd()
-     
-    _add_file_logging(home_dir_path)
+    _configure_logging(home_dir_path)
     
-    _logger.info(message)
+    _logger.info(f'Welcome to the Vesper Recorder!')
     
     _logger.info(
         f'Recorder version number is {VesperRecorder.VERSION_NUMBER}.')
     
+    # Get recorder settings.
     settings_file_path = home_dir_path / _SETTINGS_FILE_NAME
-        
-    # Check that settings file exists.
-    if not settings_file_path.exists():
-        _logger.error(
-            f'Recorder settings file "{settings_file_path}" does not exist.')
-        return None
-        
-    # Parse settings file.
+    _logger.info(
+        f'Reading recorder settings from file "{settings_file_path}"...')
     try:
-        settings = _parse_settings_file(settings_file_path, home_dir_path)
-    except Exception as e:
-        _logger.error(
-            f'Could not parse recorder settings file '
-            f'"{settings_file_path}". Error message was: {e}')
-        return None
+        settings = _read_settings_file(settings_file_path, home_dir_path)
+    except VesperRecorderError as e:
+        _logger.error(f'{e}')
+        return
     
     _logger.info(
-        f'Starting recorder with HTTP server at port '
-        f'{settings.server_port_num}.')
+        f'Starting recorder with home page '
+        f'http://localhost:{settings.server_port_num}...')
     
     # Create recorder.
     try:
         recorder = VesperRecorder(settings)
     except Exception as e:
         _logger.error(f'Could not create recorder. Error message was: {e}')
-        return None
+        return
            
     # Start recorder. 
     try:
@@ -179,28 +175,62 @@ def _create_and_start_recorder(message):
     except Exception as e:
         _logger.error(f'Could not start recorder. Error message was: {e}')
         raise
-        return None
+        return
     
-    # Phew. We made it!
-    return recorder
-        
+    # Wait for keyboard interrupt.
+    try:
+        while True:
+            time.sleep(5)
+    except KeyboardInterrupt:
+        pass
+    
+    _logger.info('Stopping recorder and exiting due to keyboard interrupt...')
+    recorder.stop()
+    recorder.wait()
+         
 
-def _add_file_logging(home_dir_path):
+def _configure_logging(home_dir_path):
+    
+    # Create handler that writes log messages to stderr.
+    stderr_handler = StreamHandler()
+    formatter = Formatter('%(asctime)s %(levelname)s %(message)s')
+    stderr_handler.setFormatter(formatter)
     
     # Create handler that appends messages to log file.
     log_file_path = home_dir_path / _LOG_FILE_NAME
-    handler = FileHandler(log_file_path)
+    file_handler = FileHandler(log_file_path)
     formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
-    handler.setFormatter(formatter)
-    
-    # Add handler to root logger.
+    file_handler.setFormatter(formatter)
+
+    # Add handlers to root logger.
     logger = logging.getLogger()
-    logger.addHandler(handler)
-        
-        
-def _parse_settings_file(file_path, home_dir_path):
+    logger.addHandler(stderr_handler)
+    logger.addHandler(file_handler)
     
-    settings = _Settings(file_path)
+    # Set root logger level.
+    logger.setLevel(logging.INFO)
+        
+        
+def _read_settings_file(settings_file_path, home_dir_path):
+
+    # Check that settings file exists.
+    if not settings_file_path.exists():
+        raise VesperRecorderError(
+            f'Recorder settings file "{settings_file_path}" does not exist.')
+        
+    # Parse settings file.
+    home_dir_path = settings_file_path.parent
+    try:
+        return _parse_settings_file(settings_file_path, home_dir_path)
+    except Exception as e:
+        raise VesperRecorderError(
+            f'Could not parse recorder settings file '
+            f'"{settings_file_path}". Error message was: {e}')
+    
+
+def _parse_settings_file(settings_file_path, home_dir_path):
+    
+    settings = _Settings(settings_file_path)
 
     station = _parse_station_settings(settings)
     schedule = _parse_schedule_settings(settings, station)
@@ -260,13 +290,17 @@ def _parse_input_settings(settings):
     total_buffer_size = float(settings.get(
         'input.total_buffer_size', _DEFAULT_INPUT_TOTAL_BUFFER_SIZE))
     
-    return Bunch(
+    settings = Bunch(
         device_name=device_name,
         channel_count=channel_count,
         sample_rate=sample_rate,
         sample_type='int16',
         buffer_size=buffer_size,
         total_buffer_size=total_buffer_size)
+
+    AudioRecorder.check_input_settings(settings)
+
+    return settings
 
 
 def _parse_level_meter_settings(settings):

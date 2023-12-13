@@ -34,57 +34,15 @@ script:
 """
 
 
-from logging import Formatter, StreamHandler
-import logging
-import time
+from pathlib import Path
 
 from vesper.recorder.vesper_recorder import VesperRecorder
 
 
-_logger = logging.getLogger(__name__)
-
-
 def _main():
-    
-    _initialize_logging()
-    
-    recorder = VesperRecorder.create_and_start_recorder(
-        'Welcome to the Vesper Recorder!')
-    
-    if recorder is not None:
-        # recorder creation and start succeeded
+    home_dir_path = Path.cwd()
+    VesperRecorder.create_and_run_recorder(home_dir_path)
         
-        _wait_for_keyboard_interrupt() 
-        
-        _logger.info(
-            'Stopping recorder and exiting due to keyboard interrupt.')
-        recorder.stop()
-        recorder.wait()
-         
-
-def _initialize_logging():
-    
-    formatter = Formatter('%(asctime)s %(levelname)s %(message)s')
-    
-    # Create handler that writes log messages to stderr.
-    stderr_handler = StreamHandler()
-    stderr_handler.setFormatter(formatter)
-    
-    # Add handlers to root logger.
-    logger = logging.getLogger()
-    logger.addHandler(stderr_handler)
-    
-    # Set root logger level.
-    logger.setLevel(logging.INFO)
-
-
-def _wait_for_keyboard_interrupt():
-    try:
-        while True:
-            time.sleep(5)
-    except KeyboardInterrupt:
-        pass
-
 
 if __name__ == '__main__':
     _main()
