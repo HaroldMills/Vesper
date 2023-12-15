@@ -123,13 +123,10 @@ class VesperRecorder:
         # each time recording starts.
 
         self._processors = []
-        channel_count = s.input.channel_count
-        input_sample_rate = s.input.sample_rate
 
         # Create level meter if needed.
         if s.level_meter.enabled:
-            level_meter = LevelMeter(
-                'Level Meter', channel_count, input_sample_rate, s.level_meter)
+            level_meter = LevelMeter('Level Meter', s.level_meter, self._input)
             self._processors.append(level_meter)
         else:
             level_meter = None
@@ -137,8 +134,8 @@ class VesperRecorder:
         # Create audio file writer if needed.
         if s.local_recording.enabled:
             local_audio_file_writer = AudioFileWriter(
-                'Audio File Writer', channel_count, input_sample_rate,
-                s.local_recording, s.station.name)
+                'Audio File Writer', s.local_recording, self._input,
+                s.station.name)
             self._processors.append(local_audio_file_writer)
         else:
             local_audio_file_writer = None

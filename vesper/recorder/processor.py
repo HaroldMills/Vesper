@@ -5,12 +5,11 @@ import vesper.util.time_utils as time_utils
 class Processor:
     
 
-    def __init__(self, name, channel_count, input_sample_rate, settings):
+    def __init__(self, name, settings, input):
 
         self._name = name
-        self._channel_count = channel_count
-        self._input_sample_rate = input_sample_rate
         self._settings = settings
+        self._input = input
 
         self._running = False
         self._start_time = None
@@ -22,20 +21,15 @@ class Processor:
     
 
     @property
-    def channel_count(self):
-        return self._channel_count
-    
-
-    @property
-    def input_sample_rate(self):
-        return self._input_sample_rate
-    
-
-    @property
     def settings(self):
         return self._settings
  
  
+    @property
+    def input(self):
+        return self._input
+    
+
     @property
     def running(self):
         return self._running
@@ -61,17 +55,17 @@ class Processor:
         raise NotImplementedError()
     
 
-    def process(self, input):
+    def process(self, item):
        
        if not self._running:
            raise ProcessorError(
                f'Attempt to process input with processor "{self.name}" '
                f'that is not running.')
        
-       self._process(input)
+       self._process(item)
     
 
-    def _process(input):
+    def _process(item):
         raise NotImplementedError()
     
 

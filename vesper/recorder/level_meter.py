@@ -15,9 +15,12 @@ class LevelMeter(Processor):
     name = 'Level Meter'
 
 
-    def __init__(self, name, channel_count, input_sample_rate, settings):
+    def __init__(self, name, settings, input):
 
-        super().__init__(name, channel_count, input_sample_rate, settings)
+        super().__init__(name, settings, input)
+
+        self._channel_count = input.channel_count
+        self._sample_rate = input.sample_rate
 
         # TODO: Make this a setting.
         self._update_period = 1
@@ -48,20 +51,19 @@ class LevelMeter(Processor):
         self._sums = np.zeros(self._channel_count)
         self._peaks = np.zeros(self._channel_count)
 
-        self._block_size = \
-            int(round(self._input_sample_rate * self._update_period))
+        self._block_size = int(round(self._sample_rate * self._update_period))
         self._accumulated_frame_count = 0
 
         self._full_scale_value = 2 ** (_SAMPLE_SIZE - 1)
 
 
-    def _process(self, input):
+    def _process(self, item):
         
         # TODO: This method allocates memory via NumPy every time it runs.
         # Is that problematic?
 
         # Get NumPy sample array.
-        samples = np.frombuffer(input.samples, dtype=_SAMPLE_DTYPE)
+        samples = np.frombuffer(item.samples, dtype=_SAMPLE_DTYPE)
         
         # Make sample array 2D. Compute frame count from sample array
         # length rather than using `input.frame_count`, since the latter
@@ -76,7 +78,7 @@ class LevelMeter(Processor):
         # _logger.info(f'_LevelMeter.input_arrived: {time} {frame_count} {samples.shape}')
       
         start_index = 0
-        frame_count = input.frame_count
+        frame_count = item.frame_count
 
         while start_index != frame_count:
 

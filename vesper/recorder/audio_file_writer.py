@@ -11,11 +11,12 @@ _AUDIO_FILE_NAME_EXTENSION = '.wav'
 class AudioFileWriter(Processor):
     
     
-    def __init__(
-            self, name, channel_count, input_sample_rate, settings,
-            station_name):
+    def __init__(self, name, settings, input, station_name):
         
-        super().__init__(name, channel_count, input_sample_rate, settings)
+        super().__init__(name, settings, input)
+
+        self._channel_count = input.channel_count
+        self._sample_rate = input.sample_rate
         
         self._station_name = station_name
         self._recording_dir_path = settings.recording_dir_path
@@ -45,7 +46,7 @@ class AudioFileWriter(Processor):
         self._frame_size = self._channel_count * _SAMPLE_SIZE // 8
         
         self._max_file_frame_count = \
-            int(round(self._max_audio_file_duration * self._input_sample_rate))
+            int(round(self._max_audio_file_duration * self._sample_rate))
                     
         self._file_namer = _AudioFileNamer(
             self._station_name, _AUDIO_FILE_NAME_EXTENSION)
@@ -55,11 +56,11 @@ class AudioFileWriter(Processor):
         self._total_frame_count = 0
         
     
-    def _process(self, input):
+    def _process(self, item):
         
-        remaining_frame_count = input.frame_count
+        samples = item.samples
+        remaining_frame_count = item.frame_count
         buffer_index = 0
-        samples = input.samples
         
         while remaining_frame_count != 0:
             
@@ -90,7 +91,7 @@ class AudioFileWriter(Processor):
     
     def _open_audio_file(self):
         
-        duration = self._total_frame_count / self._input_sample_rate
+        duration = self._total_frame_count / self._sample_rate
         time_delta = TimeDelta(seconds=duration)
         file_start_time = self._start_time + time_delta
 
@@ -99,7 +100,7 @@ class AudioFileWriter(Processor):
         
         file_ = wave.open(str(file_path), 'wb')
         file_.setnchannels(self._channel_count)
-        file_.setframerate(self._input_sample_rate)
+        file_.setframerate(self._sample_rate)
         file_.setsampwidth(_SAMPLE_SIZE // 8)
         
         return file_
