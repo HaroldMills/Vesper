@@ -2,18 +2,34 @@ import math
 
 import numpy as np
 
-from vesper.recorder.audio_recorder import AudioRecorderListener
+from vesper.recorder.processor import Processor
 
 
-class LevelMeter(AudioRecorderListener):
+_SAMPLE_SIZE = 16
+_SAMPLE_DTYPE = '<i2'
+
+
+class LevelMeter(Processor):
+
 
     name = 'Level Meter'
 
-    def __init__(self, update_period):
-        self._update_period = update_period
+
+    def __init__(self, name, channel_count, input_sample_rate, settings):
+
+        super().__init__(name, channel_count, input_sample_rate, settings)
+
+        # TODO: Make this a setting.
+        self._update_period = 1
+
         self._rms_values = None
         self._peak_values = None
 
+
+    @property
+    def update_period(self):
+        return self._update_period
+    
 
     @property
     def rms_values(self):
@@ -25,29 +41,32 @@ class LevelMeter(AudioRecorderListener):
         return self._peak_values
     
 
-    def recording_starting(self, recorder, time):
+    def _start(self):
 
         # _logger.info(f'_LevelMeter.recording_starting: {time}')
 
-        self._channel_count = recorder.channel_count
-        self._block_size = \
-            int(round(recorder.sample_rate * self._update_period))
         self._sums = np.zeros(self._channel_count)
         self._peaks = np.zeros(self._channel_count)
+
+        self._block_size = \
+            int(round(self._input_sample_rate * self._update_period))
         self._accumulated_frame_count = 0
-        self._full_scale_value = 2 ** (recorder.sample_size - 1)
+
+        self._full_scale_value = 2 ** (_SAMPLE_SIZE - 1)
 
 
-    def input_arrived(
-            self, recorder, time, samples, frame_count, portaudio_overflow):
+    def _process(self, samples, frame_count):
         
         # TODO: This method allocates memory via NumPy every time it runs.
         # Is that problematic?
 
-        samples = np.frombuffer(samples, dtype='<i2').astype(np.float64)
+        samples = \
+            np.frombuffer(samples, dtype=_SAMPLE_DTYPE).astype(np.float64)
 
-        # Make sample array 2D.
-        samples = samples.reshape((frame_count, self._channel_count))
+        # Make sample array 2D. Don't use `frame_count` for this since
+        # it may be less than the capacity of `samples`.
+        n = len(samples) // self._channel_count
+        samples = samples.reshape((n, self._channel_count))
 
         # _logger.info(f'_LevelMeter.input_arrived: {time} {frame_count} {samples.shape}')
       
@@ -90,7 +109,7 @@ class LevelMeter(AudioRecorderListener):
             start_index += n
 
 
-    def recording_stopped(self, recorder, time):
+    def _stop(self):
     #    _logger.info(f'_LevelMeter.recording_stopped: {time}')
        self._rms_values = None
        self._peak_values = None

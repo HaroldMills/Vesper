@@ -18,7 +18,7 @@ class HttpServer(HTTPServer):
     
     def __init__(
             self, port_num, recorder_version_num, station, recorder,
-            level_meter, local_audio_file_writer):
+            input, level_meter, local_audio_file_writer):
         
         address = ('', port_num)
         super().__init__(address, _HttpRequestHandler)
@@ -27,6 +27,7 @@ class HttpServer(HTTPServer):
             recorder_version_num=recorder_version_num,
             station=station,
             recorder=recorder,
+            input=input,
             level_meter=level_meter,
             local_audio_file_writer=local_audio_file_writer)
         
@@ -112,13 +113,14 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         
         data = self.server._recording_data
         recorder = data.recorder
+        input = data.input
         now = DateTime.now(tz=ZoneInfo('UTC'))
                 
-        status_table = self._create_status_table(data, recorder, now)
+        status_table = self._create_status_table(data, recorder, input, now)
         station_table = self._create_station_table(data)
         devices = recorder.get_input_devices()
-        devices_table = self._create_devices_table(devices)
-        input_table = self._create_input_table(devices, recorder)
+        devices_table = self._create_devices_table(devices, input)
+        input_table = self._create_input_table(devices, input)
         local_recording_table = \
             self._create_local_recording_table(data.local_audio_file_writer)
         schedule_table = self._create_schedule_table(
@@ -132,14 +134,14 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         return body.encode()
     
     
-    def _create_status_table(self, data, recorder, now):
+    def _create_status_table(self, data, recorder, input, now):
         
         time_zone = data.station.time_zone
         
         time = _format_datetime(now, time_zone)
         recording = 'Yes' if recorder.recording else 'No'
         
-        value_suffix = '' if recorder.channel_count == 1 else 's'
+        value_suffix = '' if input.channel_count == 1 else 's'
         level_meter = data.level_meter
         if level_meter is not None:
             rms_values = _format_levels(level_meter.rms_values)
@@ -193,14 +195,13 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         return _create_table(rows)
     
     
-    def _create_devices_table(self, devices):
+    def _create_devices_table(self, devices, input):
         
         if len(devices) == 0:
             return '<p>No input devices were found.</p>'
         
         else:
-            recorder = self.server._recording_data.recorder
-            selected_device_name = recorder.input_device_name
+            selected_device_name = input.input_device_name
             rows = [
                 self._create_devices_table_row(d, selected_device_name)
                 for d in devices]
@@ -215,10 +216,10 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         return (prefix + device.name, device.input_channel_count)
     
     
-    def _create_input_table(self, devices, recorder):
+    def _create_input_table(self, devices, input):
         
         device_dict = {d.name: d for d in devices}
-        device_name = recorder.input_device_name
+        device_name = input.input_device_name
         device = device_dict.get(device_name)
 
         if device is None:
@@ -229,9 +230,9 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             
         rows = (
             ('Device Name', device_name),
-            ('Channel Count', recorder.channel_count),
-            ('Sample Rate (Hz)', recorder.sample_rate),
-            ('Buffer Size (seconds)', recorder.buffer_size)
+            ('Channel Count', input.channel_count),
+            ('Sample Rate (Hz)', input.sample_rate),
+            ('Buffer Size (seconds)', input.buffer_size)
         )
         return _create_table(rows)
     
@@ -245,7 +246,8 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             rows = (
                 ('Enabled', 'Yes'),
                 ('Recording Directory', recording_dir_path),
-                ('Max Audio File Duration (seconds)', writer.max_file_duration)
+                ('Max Audio File Duration (seconds)',
+                     writer.max_audio_file_duration)
             )
         return _create_table(rows)
 

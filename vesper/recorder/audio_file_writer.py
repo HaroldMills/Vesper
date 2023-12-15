@@ -1,21 +1,25 @@
+from datetime import timedelta as TimeDelta
 import wave
 
-from vesper.recorder.audio_recorder import AudioRecorderListener
+from vesper.recorder.processor import Processor
 
 
+_SAMPLE_SIZE = 16
 _AUDIO_FILE_NAME_EXTENSION = '.wav'
 
 
-class AudioFileWriter(AudioRecorderListener):
+class AudioFileWriter(Processor):
     
     
-    def __init__(self, station_name, recording_dir_path, max_file_duration):
+    def __init__(
+            self, name, channel_count, input_sample_rate, settings,
+            station_name):
         
-        super().__init__()
+        super().__init__(name, channel_count, input_sample_rate, settings)
         
         self._station_name = station_name
-        self._recording_dir_path = recording_dir_path
-        self._max_file_duration = max_file_duration
+        self._recording_dir_path = settings.recording_dir_path
+        self._max_audio_file_duration = settings.max_audio_file_duration
         
         # Create recording directory if needed.
         self._recording_dir_path.mkdir(parents=True, exist_ok=True)
@@ -32,33 +36,26 @@ class AudioFileWriter(AudioRecorderListener):
     
 
     @property
-    def max_file_duration(self):
-        return self._max_file_duration
+    def max_audio_file_duration(self):
+        return self._max_audio_file_duration
     
 
-    def recording_starting(self, recorder, time):
+    def _start(self):
         
-        self._channel_count = recorder.channel_count
-        self._sample_rate = recorder.sample_rate
-        self._sample_size = recorder.sample_size
-        self._frame_size = self._channel_count * self._sample_size // 8
-        self._zeros = bytearray(recorder.frames_per_buffer * self._frame_size)
+        self._frame_size = self._channel_count * _SAMPLE_SIZE // 8
         
         self._max_file_frame_count = \
-            int(round(self._max_file_duration * self._sample_rate))
+            int(round(self._max_audio_file_duration * self._input_sample_rate))
                     
         self._file_namer = _AudioFileNamer(
             self._station_name, _AUDIO_FILE_NAME_EXTENSION)
         
         self._file = None
+
+        self._total_frame_count = 0
         
     
-    def input_arrived(
-            self, recorder, time, samples, frame_count, portaudio_overflow):
-        self._write_samples(time, samples, frame_count)
-        
-        
-    def _write_samples(self, time, samples, frame_count):
+    def _process(self, samples, frame_count):
         
         remaining_frame_count = frame_count
         buffer_index = 0
@@ -66,7 +63,7 @@ class AudioFileWriter(AudioRecorderListener):
         while remaining_frame_count != 0:
             
             if self._file is None:
-                self._file = self._open_audio_file(time)
+                self._file = self._open_audio_file()
                 self._file_frame_count = 0
         
             frame_count = min(
@@ -82,6 +79,7 @@ class AudioFileWriter(AudioRecorderListener):
             
             remaining_frame_count -= frame_count
             self._file_frame_count += frame_count
+            self._total_frame_count += frame_count
             buffer_index += byte_count
             
             if self._file_frame_count == self._max_file_frame_count:
@@ -89,25 +87,24 @@ class AudioFileWriter(AudioRecorderListener):
                 self._file = None
     
     
-    def input_overflowed(
-            self, recorder, time, frame_count, portaudio_overflow):
-        self._write_samples(time, self._zeros, frame_count)
-    
+    def _open_audio_file(self):
         
-    def _open_audio_file(self, time):
-        
-        file_name = self._file_namer.create_file_name(time)
+        duration = self._total_frame_count / self._input_sample_rate
+        time_delta = TimeDelta(seconds=duration)
+        file_start_time = self._start_time + time_delta
+
+        file_name = self._file_namer.create_file_name(file_start_time)
         file_path = self._recording_dir_path / file_name
         
         file_ = wave.open(str(file_path), 'wb')
         file_.setnchannels(self._channel_count)
-        file_.setframerate(self._sample_rate)
-        file_.setsampwidth(self._sample_size // 8)
+        file_.setframerate(self._input_sample_rate)
+        file_.setsampwidth(_SAMPLE_SIZE // 8)
         
         return file_
     
 
-    def recording_stopped(self, recorder, time):
+    def _stop(self):
         if self._file is not None:
             self._file.close()
         
