@@ -199,35 +199,6 @@ class AudioInput:
         # https://python-sounddevice.readthedocs.io/en/0.4.6/api/misc.html#sounddevice.CallbackFlags
         # https://python-sounddevice.readthedocs.io/en/0.4.6/_modules/sounddevice.html#CallbackFlags.
 
-        # The following is from an older, PyAudio version of the Vesper 
-        # Recorder. I have retained it in case it might be useful.
-        #
-        # Recording input latency and buffer ADC times as reported by PyAudio
-        # do not appear to be useful, at least as of 2017-01-30 on a Windows
-        # 10 VM running on Parallels 11 on Mac OS X El Capitan.
-        #
-        # Recording input latencies reported by the
-        # `pyaudio.Stream.get_input_latency` method were .5 seconds when
-        # the input buffer size was one second or more, and were the
-        # buffer size when it was one half second or less. These are
-        # unreasonably high, and are not consistent with an upper bound
-        # of tens of milliseconds measured as the time elapsed from just
-        # before an input stream was started to the time when its first
-        # buffer arrived, minus the buffer size of one second.
-        #
-        # Again from tests with various buffer sizes, it appears that the
-        # `'current_time'` value in the `time_info` argument to this method
-        # is always zero, and that the `'input_buffer_adc_time'` is always
-        # the latency reported by `pyaudio.Stream.get_input_latency` minus
-        # the buffer size.
-        #
-        # What we really want is the actual start time of each sample buffer.
-        # Without a simple way to get that time we report to listeners the
-        # times just before and after the input stream starts and the time
-        # at the beginning of each execution of the callback method, and
-        # leave it to them to try to compute more accurate buffer start times
-        # from those data if they wish.
-
         # print(f'input_callback {frame_count} {self._callback_count}')
         self._callback_count += 1
 
@@ -236,11 +207,6 @@ class AudioInput:
             # Comment out for production.
             # self._overflow_test.tick()
             
-            # Get `samples` start time.
-            buffer_duration = \
-                TimeDelta(seconds=frame_count / self.sample_rate)
-            start_time = time_utils.get_utc_now() - buffer_duration
-                
             port_audio_overflow = status_flags.input_overflow
         
             try:
@@ -252,7 +218,7 @@ class AudioInput:
                 # no buffers available
                 
                 self._recorder.handle_input_overflow(
-                    frame_count, start_time, port_audio_overflow)
+                    frame_count, port_audio_overflow)
                 
             else:
                 # got a buffer
@@ -268,7 +234,7 @@ class AudioInput:
                 buffer[:byte_count] = samples[:byte_count]
                 
                 self._recorder.process_input(
-                    buffer, frame_count, start_time, port_audio_overflow)
+                    buffer, frame_count, port_audio_overflow)
 
 
     def free_buffer(self, buffer):

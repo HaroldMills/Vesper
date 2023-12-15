@@ -30,6 +30,7 @@ import vesper.util.yaml_utils as yaml_utils
 # TODO: Consider making processor inputs and outputs objects.
 # TODO: Consider supporting processors with multiple inputs and/or outputs.
 # TODO: Consider making audio input a processor.
+# TODO: Make processor classes plugins.
 
 # TODO: Make main function `main` instead of `_main`.
 # TODO: Review input overflow handling and improve if needed.
@@ -217,8 +218,7 @@ class VesperRecorder:
             self._input.start()
 
 
-    def process_input(
-            self, samples, frame_count, start_time, port_audio_overflow):
+    def process_input(self, samples, frame_count, port_audio_overflow):
         
         """
         Queues a `process_input` command.
@@ -230,7 +230,6 @@ class VesperRecorder:
             name='process_input',
             samples=samples,
             frame_count=frame_count,
-            start_time=start_time,
             port_audio_overflow=port_audio_overflow)
         
         self._command_queue.put(command)
@@ -258,8 +257,7 @@ class VesperRecorder:
         self._stop_if_pending()
 
 
-    def handle_input_overflow(
-            self, frame_count, start_time, port_audio_overflow):
+    def handle_input_overflow(self, frame_count, port_audio_overflow):
 
         """
         Queues a `handle_input_overflow` command.
@@ -270,7 +268,6 @@ class VesperRecorder:
         command = Bunch(
             name='handle_input_overflow',
             frame_count=frame_count,
-            start_time=start_time,
             port_audio_overflow=port_audio_overflow)
         
         self._command_queue.put(command)
