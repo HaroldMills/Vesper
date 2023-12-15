@@ -11,6 +11,9 @@ _AUDIO_FILE_NAME_EXTENSION = '.wav'
 class AudioFileWriter(Processor):
     
     
+    name = 'Audio File Writer'
+
+    
     def __init__(self, name, settings, input, station_name):
         
         super().__init__(name, settings, input)
