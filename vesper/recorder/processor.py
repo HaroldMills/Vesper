@@ -61,17 +61,17 @@ class Processor:
         raise NotImplementedError()
     
 
-    def process(self, samples, frame_count):
+    def process(self, input):
        
        if not self._running:
            raise ProcessorError(
-               f'Attempt to process data with processor "{self.name}" '
+               f'Attempt to process input with processor "{self.name}" '
                f'that is not running.')
        
-       self._process(samples, frame_count)
+       self._process(input)
     
 
-    def _process():
+    def _process(input):
         raise NotImplementedError()
     
 

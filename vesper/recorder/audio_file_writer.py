@@ -55,10 +55,11 @@ class AudioFileWriter(Processor):
         self._total_frame_count = 0
         
     
-    def _process(self, samples, frame_count):
+    def _process(self, input):
         
-        remaining_frame_count = frame_count
+        remaining_frame_count = input.frame_count
         buffer_index = 0
+        samples = input.samples
         
         while remaining_frame_count != 0:
             

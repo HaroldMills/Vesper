@@ -243,13 +243,17 @@ class VesperRecorder:
         This method always runs on the main thread.
         """
         
-        # TODO: Log input overflows.
+        # TODO: Don't ignore input overflows.
 
         samples = command.samples
 
+        input = Bunch(
+            samples=samples,
+            frame_count=command.frame_count)
+
         # Process samples.
         for processor in self._processors:
-            processor.process(samples, command.frame_count)
+            processor.process(input)
 
         # Free sample buffer for reuse.
         self._input.free_buffer(samples)

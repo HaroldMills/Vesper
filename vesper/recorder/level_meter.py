@@ -55,22 +55,28 @@ class LevelMeter(Processor):
         self._full_scale_value = 2 ** (_SAMPLE_SIZE - 1)
 
 
-    def _process(self, samples, frame_count):
+    def _process(self, input):
         
         # TODO: This method allocates memory via NumPy every time it runs.
         # Is that problematic?
 
-        samples = \
-            np.frombuffer(samples, dtype=_SAMPLE_DTYPE).astype(np.float64)
+        # Get NumPy sample array.
+        samples = np.frombuffer(input.samples, dtype=_SAMPLE_DTYPE)
+        
+        # Make sample array 2D. Compute frame count from sample array
+        # length rather than using `input.frame_count`, since the latter
+        # may be less than the sample array capacity.
+        frame_count = len(samples) // self._channel_count
+        samples = samples.reshape((frame_count, self._channel_count))
 
-        # Make sample array 2D. Don't use `frame_count` for this since
-        # it may be less than the capacity of `samples`.
-        n = len(samples) // self._channel_count
-        samples = samples.reshape((n, self._channel_count))
+        # Make sample array `float64` to avoid arithmetic overflow in
+        # subsequent processing.
+        samples = samples.astype(np.float64)
 
         # _logger.info(f'_LevelMeter.input_arrived: {time} {frame_count} {samples.shape}')
       
         start_index = 0
+        frame_count = input.frame_count
 
         while start_index != frame_count:
 
