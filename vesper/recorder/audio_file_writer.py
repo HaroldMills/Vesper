@@ -24,21 +24,21 @@ class AudioFileWriter(Processor):
     @staticmethod
     def parse_settings(settings):
 
-        audio_file_name_prefix = settings.get(
-            'audio_file_name_prefix', _DEFAULT_AUDIO_FILE_NAME_PREFIX)
-
         recording_dir_path = Path(settings.get(
             'recording_dir_path', _DEFAULT_RECORDING_DIR_PATH))
         
         if not recording_dir_path.is_absolute():
             recording_dir_path = Path.cwd() / recording_dir_path
             
+        audio_file_name_prefix = settings.get(
+            'audio_file_name_prefix', _DEFAULT_AUDIO_FILE_NAME_PREFIX)
+
         max_audio_file_duration = settings.get(
             'max_audio_file_duration', _DEFAULT_MAX_AUDIO_FILE_DURATION)
         
         return Bunch(
-            audio_file_name_prefix=audio_file_name_prefix,
             recording_dir_path=recording_dir_path,
+            audio_file_name_prefix=audio_file_name_prefix,
             max_audio_file_duration=max_audio_file_duration)
     
 
@@ -52,8 +52,8 @@ class AudioFileWriter(Processor):
         self._channel_count = input_info.channel_count
         self._sample_rate = input_info.sample_rate
         
-        self._file_name_prefix = 'Vesper'
         self._recording_dir_path = settings.recording_dir_path
+        self._audio_file_name_prefix = settings.audio_file_name_prefix
         self._max_audio_file_duration = settings.max_audio_file_duration
         
         # Create recording directory if needed.
@@ -61,8 +61,8 @@ class AudioFileWriter(Processor):
         
         
     @property
-    def file_name_prefix(self):
-        return self._file_name_prefix
+    def audio_file_name_prefix(self):
+        return self._audio_file_name_prefix
     
 
     @property
@@ -85,7 +85,7 @@ class AudioFileWriter(Processor):
             int(round(self._max_audio_file_duration * self._sample_rate))
                     
         self._file_namer = _AudioFileNamer(
-            self._file_name_prefix, _AUDIO_FILE_NAME_EXTENSION)
+            self._audio_file_name_prefix, _AUDIO_FILE_NAME_EXTENSION)
         
         self._file = None
 
@@ -147,6 +147,21 @@ class AudioFileWriter(Processor):
             self._file.close()
         
     
+    def get_status_tables(self):
+
+        recording_dir_path = self.recording_dir_path.absolute()
+
+        rows = (
+            ('Recording Directory', recording_dir_path),
+            ('Audio File Name Prefix', self.audio_file_name_prefix),
+            ('Max Audio File Duration (seconds)', self.max_audio_file_duration)
+        )
+
+        table = Bunch(title=self.name, rows=rows)
+
+        return [table]
+
+
 class _AudioFileNamer:
     
     

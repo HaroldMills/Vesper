@@ -116,3 +116,7 @@ class Processor:
 
     def _stop(self):
         raise NotImplementedError()
+    
+
+    def get_status_tables(self):
+        raise NotImplementedError()

@@ -1,4 +1,5 @@
 from collections import defaultdict
+import itertools
 
 from vesper.recorder.processor import Processor
 
@@ -102,3 +103,9 @@ class ProcessorGraph(Processor):
     def _stop(self):
         for p in self._processors:
             p.stop()
+
+
+    def get_status_tables(self):
+        chain = itertools.chain.from_iterable
+        table_lists = [p.get_status_tables() for p in self._processors]
+        return list(chain(table_lists))

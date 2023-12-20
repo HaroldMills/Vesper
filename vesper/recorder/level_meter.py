@@ -127,8 +127,34 @@ class LevelMeter(Processor):
 
     def _stop(self):
     #    _logger.info(f'_LevelMeter.recording_stopped: {time}')
-       self._rms_values = None
-       self._peak_values = None
+        self._rms_values = None
+        self._peak_values = None
+
+
+    def get_status_tables(self):
+
+        value_suffix = '' if self._channel_count == 1 else 's'
+        rms_values = _format_levels(self.rms_values)
+        peak_values = _format_levels(self.peak_values)
+        
+        rows = (
+            (f'Update period', str(self.update_period)),
+            (f'Recent RMS Sample Value{value_suffix} (dBFS)', rms_values),
+            (f'Recent Peak Sample Value{value_suffix} (dBFS)', peak_values))
+
+        table = Bunch(title=self.name, rows=rows)
+        
+        return [table]
+
+
+def _format_levels(levels):
+
+    if levels is None:
+        return '-'
+    
+    else:
+        levels = [f'{l:.2f}' for l in levels]
+        return ', '.join(levels)
 
 
 # TODO: Move dBFS functions to `signal_utils` package.

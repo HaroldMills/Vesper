@@ -94,8 +94,23 @@ class VesperRecorder:
 
         
     @property
+    def station(self):
+        return self._station
+    
+
+    @property
     def schedule(self):
         return self._schedule
+    
+    
+    @property
+    def input(self):
+        return self._input
+    
+
+    @property
+    def processor_graph(self):
+        return self._processor_graph
     
     
     @property
@@ -111,6 +126,8 @@ class VesperRecorder:
 
         s = self._settings
 
+        self._station = s.station
+
         self._schedule = s.schedule
 
         # Create audio input.
@@ -122,8 +139,7 @@ class VesperRecorder:
 
         # Create HTTP server.
         server = HttpServer(
-            s.server_port_num, VesperRecorder.VERSION_NUMBER, s.station,
-            self, self._input)
+            s.server_port_num, VesperRecorder.VERSION_NUMBER, self)
         
         # Start HTTP server.
         Thread(target=server.serve_forever, daemon=True).start()

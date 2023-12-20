@@ -16,19 +16,15 @@ class HttpServer(HTTPServer):
     """Vesper Recorder HTTP server."""
     
     
-    def __init__(
-            self, port_num, recorder_version_num, station, recorder,
-            input):
+    def __init__(self, port_num, recorder_version_num, recorder):
         
         address = ('', port_num)
         super().__init__(address, _HttpRequestHandler)
         
         self._recording_data = Bunch(
             recorder_version_num=recorder_version_num,
-            station=station,
-            recorder=recorder,
-            input=input)
-        
+            recorder=recorder)
+       
     
 _PAGE = '''<!DOCTYPE html>
 <html>
@@ -45,19 +41,6 @@ Welcome to the Vesper Recorder! This page displays recorder status.
 Refresh the page to update the status.
 </p>
 
-<h2>Recording Status</h2>
-{}
-
-<h2>Station</h2>
-{}
-
-<h2>Available Input Devices</h2>
-{}
-
-<h2>Input</h2>
-{}
-
-<h2>Recording Schedule</h2>
 {}
 
 </body>
@@ -108,38 +91,34 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         
         data = self.server._recording_data
         recorder = data.recorder
-        input = data.input
         now = DateTime.now(tz=ZoneInfo('UTC'))
                 
-        status_table = self._create_status_table(data, recorder, input, now)
-        station_table = self._create_station_table(data)
+        status_table = self._create_status_table(recorder, now)
+        station_table = self._create_station_table(recorder.station)
         devices = recorder.get_input_devices()
-        devices_table = self._create_devices_table(devices, input)
-        input_table = self._create_input_table(devices, input)
-        # local_recording_table = \
-        #     self._create_local_recording_table(data.local_audio_file_writer)
+        devices_table = self._create_devices_table(devices, recorder.input)
+        input_table = self._create_input_table(devices, recorder.input)
+        processor_tables = \
+            self._create_processor_tables(recorder.processor_graph)
         schedule_table = self._create_schedule_table(
-            recorder.schedule, data.station.time_zone, now)
+            recorder.schedule, recorder.station.time_zone, now)
         
-        body = _PAGE.format(
-            _CSS, data.recorder_version_num, status_table, station_table,
-            devices_table, input_table, schedule_table)
+        tables = '\n'.join(
+            [status_table, station_table, devices_table, input_table] +
+            processor_tables +
+            [schedule_table])
+        
+        body = _PAGE.format(_CSS, data.recorder_version_num, tables)
         
         return body.encode()
     
     
-    def _create_status_table(self, data, recorder, input, now):
+    def _create_status_table(self, recorder, now):
         
-        time_zone = data.station.time_zone
+        time_zone = recorder.station.time_zone
         
         time = _format_datetime(now, time_zone)
         recording = 'Yes' if recorder.recording else 'No'
-        
-        # value_suffix = '' if input.channel_count == 1 else 's'
-        # level_meter = data.level_meter
-        # if level_meter is not None:
-        #     rms_values = _format_levels(level_meter.rms_values)
-        #     peak_values = _format_levels(level_meter.peak_values)
         
         interval = self._get_status_schedule_interval(recorder.schedule, now)
         
@@ -152,23 +131,14 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             end_time = _format_datetime(interval.end, time_zone)
             prefix = 'Current' if interval.start <= now else 'Next'
             
-        # if level_meter is None:
-        #     level_meter_rows = ()
-        # else:
-        #     level_meter_rows = (
-        #         (f'Recent RMS Sample Value{value_suffix} (dBFS)', rms_values),
-        #         (f'Recent Peak Sample Value{value_suffix} (dBFS)', peak_values)
-        #     )
-
         rows = (
             ('Current Time', time),
             ('Recording', recording),
-        # ) + level_meter_rows + (
             (prefix + ' Recording Start Time', start_time),
             (prefix + ' Recording End Time', end_time)
         )
         
-        return _create_table(rows)
+        return _create_table('Recording Status', rows)
         
         
     def _get_status_schedule_interval(self, schedule, time):
@@ -179,30 +149,31 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             return None
         
         
-    def _create_station_table(self, data):
-        station = data.station
+    def _create_station_table(self, station):
         rows = (
             ('Station Name', station.name),
             ('Latitude (degrees north)', station.lat),
             ('Longitude (degrees east)', station.lon),
             ('Time Zone', str(station.time_zone)))
-        return _create_table(rows)
+        return _create_table('Station', rows)
     
     
     def _create_devices_table(self, devices, input):
         
         if len(devices) == 0:
-            return '<p>No input devices were found.</p>'
+            header = None
+            rows = None
+            footer = '<p>No input devices were found.</p>'
         
         else:
+            header = ('Name', 'Channel Count')
             selected_device_name = input.input_device_name
             rows = [
                 self._create_devices_table_row(d, selected_device_name)
                 for d in devices]
-            header = ('Name', 'Channel Count')
-            table = _create_table(rows, header)
-            table += '<p>* Selected input device.</p>'
-            return table
+            footer = '* Selected input device.'
+        
+        return _create_table('Available Input Devices', rows, header, footer)
 
     
     def _create_devices_table_row(self, device, selected_device_name):
@@ -228,22 +199,14 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             ('Sample Rate (Hz)', input.sample_rate),
             ('Buffer Size (seconds)', input.buffer_size)
         )
-        return _create_table(rows)
+
+        return _create_table('Input', rows)
     
     
-    # def _create_local_recording_table(self, local_audio_file_writer):
-    #     writer = local_audio_file_writer
-    #     if writer is None:
-    #         rows = (('Enabled', 'No'),)
-    #     else:
-    #         recording_dir_path = writer.recording_dir_path.absolute()
-    #         rows = (
-    #             ('Enabled', 'Yes'),
-    #             ('Recording Directory', recording_dir_path),
-    #             ('Max Audio File Duration (seconds)',
-    #                  writer.max_audio_file_duration)
-    #         )
-    #     return _create_table(rows)
+    def _create_processor_tables(self, processor_graph):
+        return [
+            _create_table(t.title, t.rows)
+            for t in processor_graph.get_status_tables()]
 
 
     def _create_schedule_table(self, schedule, time_zone, now):
@@ -251,7 +214,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             self._create_schedule_table_row(index, interval, time_zone, now)
             for index, interval in enumerate(schedule.get_intervals())]
         header = ('Recording', 'Start Time', 'End Time', 'Status')
-        return _create_table(rows, header)
+        return _create_table('Recording Schedule', rows, header)
     
     
     def _create_schedule_table_row(self, index, interval, time_zone, now):
@@ -272,22 +235,33 @@ def _format_datetime(dt, time_zone=None):
     return dt.strftime('%Y-%m-%d %H:%M:%S %Z')
 
 
-# def _format_levels(levels):
-#     if levels is None:
-#         return '-'
-#     else:
-#         levels = [f'{l:.2f}' for l in levels]
-#         return ', '.join(levels)
+def _create_table(title, rows, header=None, footer=None):
+    title = _create_table_title(title)
+    body = _create_table_body(header, rows)
+    footer = _create_table_footer(footer)
+    return title + body + footer
 
 
-def _create_table(rows, header=None):
-    header = _create_table_header(header)
-    rows = ''.join(_create_table_row(r) for r in rows)
-    return '<table>\n' + header + rows + '</table>\n'
+def _create_table_title(text):
+    return f'<h2>{text}</h2>\n'
+
+
+def _create_table_body(header, rows):
+
+    if header is None and rows is None:
+        return ''
+    
+    else:
+        header = _create_table_header(header)
+        rows = ''.join(_create_table_row(r) for r in rows)
+        return '<table>\n' + header + rows + '</table>\n'
 
 
 def _create_table_header(items):
-    return _create_table_row(items, 'h') if items is not None else ''
+    if items is None:
+        return ''
+    else:
+        return _create_table_row(items, 'h')
 
 
 def _create_table_row(items, tag_letter='d'):
@@ -297,3 +271,10 @@ def _create_table_row(items, tag_letter='d'):
     
 def _create_table_item(item, tag_letter):
     return f'    <t{tag_letter}>{item}</t{tag_letter}>\n'
+
+
+def _create_table_footer(text):
+    if text is None:
+        return ''
+    else:
+        return f'<p>{text}</p>\n'
