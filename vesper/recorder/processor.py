@@ -1,8 +1,4 @@
 from vesper.recorder.processor_error import ProcessorError
-import vesper.util.time_utils as time_utils
-
-
-# TODO: Remove `start_time` attribute.
 
 
 class Processor:
@@ -14,14 +10,11 @@ class Processor:
     
 
     def __init__(self, name, settings, input_info, output_info=None):
-
         self._name = name
         self._settings = settings
         self._input_info = input_info
         self._output_info = output_info
-
         self._running = False
-        self._start_time = None
     
 
     @property
@@ -91,19 +84,9 @@ class Processor:
         return self._running
     
 
-    @property
-    def start_time(self):
-        return self._start_time
-    
-
     def start(self):
-
         if not self._running:
-
-            self._start_time = time_utils.get_utc_now()
-
             self._start()
-
             self._running = True
 
 
@@ -126,13 +109,9 @@ class Processor:
     
 
     def stop(self):
-
         if self._running:
-
             self._stop()
-
             self._running = False
-            self._start_time = None
 
 
     def _stop(self):

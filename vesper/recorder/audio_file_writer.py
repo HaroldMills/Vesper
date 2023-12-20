@@ -4,6 +4,7 @@ import wave
 
 from vesper.recorder.processor import Processor
 from vesper.util.bunch import Bunch
+import vesper.util.time_utils as time_utils
 
 
 _DEFAULT_AUDIO_FILE_NAME_PREFIX = 'Vesper'
@@ -76,6 +77,8 @@ class AudioFileWriter(Processor):
 
     def _start(self):
         
+        self._start_time = time_utils.get_utc_now()
+
         self._frame_size = self._channel_count * _SAMPLE_SIZE // 8
         
         self._max_file_frame_count = \
