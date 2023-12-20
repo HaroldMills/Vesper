@@ -3,7 +3,10 @@ import math
 import numpy as np
 
 from vesper.recorder.processor import Processor
+from vesper.util.bunch import Bunch
 
+
+_DEFAULT_UPDATE_PERIOD = 1      # seconds
 
 _SAMPLE_SIZE = 16
 _SAMPLE_DTYPE = '<i2'
@@ -15,15 +18,23 @@ class LevelMeter(Processor):
     name = 'Level Meter'
 
 
-    def __init__(self, name, settings, input):
+    @staticmethod
+    def parse_settings(settings):
 
-        super().__init__(name, settings, input)
+        update_period = float(settings.get(
+            'update_period', _DEFAULT_UPDATE_PERIOD))
+        
+        return Bunch(update_period=update_period)
+    
 
-        self._channel_count = input.channel_count
-        self._sample_rate = input.sample_rate
+    def __init__(self, name, settings, input_info):
 
-        # TODO: Make this a setting.
-        self._update_period = 1
+        super().__init__(name, settings, input_info)
+
+        self._update_period = settings.update_period
+
+        self._channel_count = input_info.channel_count
+        self._sample_rate = input_info.sample_rate
 
         self._rms_values = None
         self._peak_values = None
@@ -57,16 +68,13 @@ class LevelMeter(Processor):
         self._full_scale_value = 2 ** (_SAMPLE_SIZE - 1)
 
 
-    def _process(self, item):
+    def _process(self, input_item):
         
-        # TODO: This method allocates memory via NumPy every time it runs.
-        # Is that problematic?
-
         # Get NumPy sample array.
-        samples = np.frombuffer(item.samples, dtype=_SAMPLE_DTYPE)
+        samples = np.frombuffer(input_item.samples, dtype=_SAMPLE_DTYPE)
         
         # Make sample array 2D. Compute frame count from sample array
-        # length rather than using `input.frame_count`, since the latter
+        # length rather than using `input_item.frame_count`, since the latter
         # may be less than the sample array capacity.
         frame_count = len(samples) // self._channel_count
         samples = samples.reshape((frame_count, self._channel_count))
@@ -78,7 +86,7 @@ class LevelMeter(Processor):
         # _logger.info(f'_LevelMeter.input_arrived: {time} {frame_count} {samples.shape}')
       
         start_index = 0
-        frame_count = item.frame_count
+        frame_count = input_item.frame_count
 
         while start_index != frame_count:
 

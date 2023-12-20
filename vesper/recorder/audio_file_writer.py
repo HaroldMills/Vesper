@@ -1,8 +1,14 @@
 from datetime import timedelta as TimeDelta
+from pathlib import Path
 import wave
 
 from vesper.recorder.processor import Processor
+from vesper.util.bunch import Bunch
 
+
+_DEFAULT_AUDIO_FILE_NAME_PREFIX = 'Vesper'
+_DEFAULT_RECORDING_DIR_PATH = 'Recordings'
+_DEFAULT_MAX_AUDIO_FILE_DURATION = 3600     # seconds
 
 _SAMPLE_SIZE = 16
 _AUDIO_FILE_NAME_EXTENSION = '.wav'
@@ -13,15 +19,39 @@ class AudioFileWriter(Processor):
     
     name = 'Audio File Writer'
 
-    
-    def __init__(self, name, settings, input, station_name):
-        
-        super().__init__(name, settings, input)
 
-        self._channel_count = input.channel_count
-        self._sample_rate = input.sample_rate
+    @staticmethod
+    def parse_settings(settings):
+
+        audio_file_name_prefix = settings.get(
+            'audio_file_name_prefix', _DEFAULT_AUDIO_FILE_NAME_PREFIX)
+
+        recording_dir_path = Path(settings.get(
+            'recording_dir_path', _DEFAULT_RECORDING_DIR_PATH))
         
-        self._station_name = station_name
+        if not recording_dir_path.is_absolute():
+            recording_dir_path = Path.cwd() / recording_dir_path
+            
+        max_audio_file_duration = settings.get(
+            'max_audio_file_duration', _DEFAULT_MAX_AUDIO_FILE_DURATION)
+        
+        return Bunch(
+            audio_file_name_prefix=audio_file_name_prefix,
+            recording_dir_path=recording_dir_path,
+            max_audio_file_duration=max_audio_file_duration)
+    
+
+    # TODO: Figure out how to get access to station name in initializer.
+    # We don't want to have to specify the station name separately in
+    # the settings for each audio file writer.
+    def __init__(self, name, settings, input_info):
+        
+        super().__init__(name, settings, input_info)
+
+        self._channel_count = input_info.channel_count
+        self._sample_rate = input_info.sample_rate
+        
+        self._file_name_prefix = 'Vesper'
         self._recording_dir_path = settings.recording_dir_path
         self._max_audio_file_duration = settings.max_audio_file_duration
         
@@ -30,8 +60,8 @@ class AudioFileWriter(Processor):
         
         
     @property
-    def station_name(self):
-        return self._station_name
+    def file_name_prefix(self):
+        return self._file_name_prefix
     
 
     @property
@@ -52,17 +82,17 @@ class AudioFileWriter(Processor):
             int(round(self._max_audio_file_duration * self._sample_rate))
                     
         self._file_namer = _AudioFileNamer(
-            self._station_name, _AUDIO_FILE_NAME_EXTENSION)
+            self._file_name_prefix, _AUDIO_FILE_NAME_EXTENSION)
         
         self._file = None
 
         self._total_frame_count = 0
         
     
-    def _process(self, item):
+    def _process(self, input_item):
         
-        samples = item.samples
-        remaining_frame_count = item.frame_count
+        samples = input_item.samples
+        remaining_frame_count = input_item.frame_count
         buffer_index = 0
         
         while remaining_frame_count != 0:
@@ -117,11 +147,11 @@ class AudioFileWriter(Processor):
 class _AudioFileNamer:
     
     
-    def __init__(self, station_name, file_name_extension):
-        self.station_name = station_name
+    def __init__(self, file_name_prefix, file_name_extension):
+        self.file_name_prefix = file_name_prefix
         self.file_name_extension = file_name_extension
         
         
     def create_file_name(self, start_time):
         time = start_time.strftime('%Y-%m-%d_%H.%M.%S')
-        return f'{self.station_name}_{time}_Z{self.file_name_extension}'
+        return f'{self.file_name_prefix}_{time}_Z{self.file_name_extension}'

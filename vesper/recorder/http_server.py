@@ -18,7 +18,7 @@ class HttpServer(HTTPServer):
     
     def __init__(
             self, port_num, recorder_version_num, station, recorder,
-            input, level_meter, local_audio_file_writer):
+            input):
         
         address = ('', port_num)
         super().__init__(address, _HttpRequestHandler)
@@ -27,9 +27,7 @@ class HttpServer(HTTPServer):
             recorder_version_num=recorder_version_num,
             station=station,
             recorder=recorder,
-            input=input,
-            level_meter=level_meter,
-            local_audio_file_writer=local_audio_file_writer)
+            input=input)
         
     
 _PAGE = '''<!DOCTYPE html>
@@ -57,9 +55,6 @@ Refresh the page to update the status.
 {}
 
 <h2>Input</h2>
-{}
-
-<h2>Local Recording</h2>
 {}
 
 <h2>Recording Schedule</h2>
@@ -121,15 +116,14 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         devices = recorder.get_input_devices()
         devices_table = self._create_devices_table(devices, input)
         input_table = self._create_input_table(devices, input)
-        local_recording_table = \
-            self._create_local_recording_table(data.local_audio_file_writer)
+        # local_recording_table = \
+        #     self._create_local_recording_table(data.local_audio_file_writer)
         schedule_table = self._create_schedule_table(
             recorder.schedule, data.station.time_zone, now)
         
         body = _PAGE.format(
             _CSS, data.recorder_version_num, status_table, station_table,
-            devices_table, input_table, local_recording_table,
-            schedule_table)
+            devices_table, input_table, schedule_table)
         
         return body.encode()
     
@@ -141,11 +135,11 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         time = _format_datetime(now, time_zone)
         recording = 'Yes' if recorder.recording else 'No'
         
-        value_suffix = '' if input.channel_count == 1 else 's'
-        level_meter = data.level_meter
-        if level_meter is not None:
-            rms_values = _format_levels(level_meter.rms_values)
-            peak_values = _format_levels(level_meter.peak_values)
+        # value_suffix = '' if input.channel_count == 1 else 's'
+        # level_meter = data.level_meter
+        # if level_meter is not None:
+        #     rms_values = _format_levels(level_meter.rms_values)
+        #     peak_values = _format_levels(level_meter.peak_values)
         
         interval = self._get_status_schedule_interval(recorder.schedule, now)
         
@@ -158,18 +152,18 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             end_time = _format_datetime(interval.end, time_zone)
             prefix = 'Current' if interval.start <= now else 'Next'
             
-        if level_meter is None:
-            level_meter_rows = ()
-        else:
-            level_meter_rows = (
-                (f'Recent RMS Sample Value{value_suffix} (dBFS)', rms_values),
-                (f'Recent Peak Sample Value{value_suffix} (dBFS)', peak_values)
-            )
+        # if level_meter is None:
+        #     level_meter_rows = ()
+        # else:
+        #     level_meter_rows = (
+        #         (f'Recent RMS Sample Value{value_suffix} (dBFS)', rms_values),
+        #         (f'Recent Peak Sample Value{value_suffix} (dBFS)', peak_values)
+        #     )
 
         rows = (
             ('Current Time', time),
-            ('Recording', recording)
-        ) + level_meter_rows + (
+            ('Recording', recording),
+        # ) + level_meter_rows + (
             (prefix + ' Recording Start Time', start_time),
             (prefix + ' Recording End Time', end_time)
         )
@@ -237,19 +231,19 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         return _create_table(rows)
     
     
-    def _create_local_recording_table(self, local_audio_file_writer):
-        writer = local_audio_file_writer
-        if writer is None:
-            rows = (('Enabled', 'No'),)
-        else:
-            recording_dir_path = writer.recording_dir_path.absolute()
-            rows = (
-                ('Enabled', 'Yes'),
-                ('Recording Directory', recording_dir_path),
-                ('Max Audio File Duration (seconds)',
-                     writer.max_audio_file_duration)
-            )
-        return _create_table(rows)
+    # def _create_local_recording_table(self, local_audio_file_writer):
+    #     writer = local_audio_file_writer
+    #     if writer is None:
+    #         rows = (('Enabled', 'No'),)
+    #     else:
+    #         recording_dir_path = writer.recording_dir_path.absolute()
+    #         rows = (
+    #             ('Enabled', 'Yes'),
+    #             ('Recording Directory', recording_dir_path),
+    #             ('Max Audio File Duration (seconds)',
+    #                  writer.max_audio_file_duration)
+    #         )
+    #     return _create_table(rows)
 
 
     def _create_schedule_table(self, schedule, time_zone, now):
@@ -278,12 +272,12 @@ def _format_datetime(dt, time_zone=None):
     return dt.strftime('%Y-%m-%d %H:%M:%S %Z')
 
 
-def _format_levels(levels):
-    if levels is None:
-        return '-'
-    else:
-        levels = [f'{l:.2f}' for l in levels]
-        return ', '.join(levels)
+# def _format_levels(levels):
+#     if levels is None:
+#         return '-'
+#     else:
+#         levels = [f'{l:.2f}' for l in levels]
+#         return ', '.join(levels)
 
 
 def _create_table(rows, header=None):

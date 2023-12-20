@@ -1,9 +1,7 @@
 """Module containing the `VesperRecorder` class."""
 
 
-from collections.abc import Mapping
 from logging import FileHandler, Formatter, StreamHandler
-from pathlib import Path
 from queue import Queue
 from threading import Thread
 from zoneinfo import ZoneInfo
@@ -13,9 +11,10 @@ from vesper.recorder.audio_file_writer import AudioFileWriter
 from vesper.recorder.audio_input import AudioInput
 from vesper.recorder.http_server import HttpServer
 from vesper.recorder.level_meter import LevelMeter
+from vesper.recorder.processor_graph import ProcessorGraph
+from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
-import vesper.util.yaml_utils as yaml_utils
 
 
 # TODO: Make processors async.
@@ -55,17 +54,14 @@ _DEFAULT_STATION_NAME = 'Vesper'
 _DEFAULT_STATION_LATITUDE = None
 _DEFAULT_STATION_LONGITUDE = None
 _DEFAULT_STATION_TIME_ZONE = 'UTC'
+_DEFAULT_SCHEDULE = {}
 _DEFAULT_INPUT_CHANNEL_COUNT = 1
 _DEFAULT_INPUT_SAMPLE_RATE = 22050          # hertz
 _DEFAULT_INPUT_BUFFER_SIZE = .05            # seconds
 _DEFAULT_INPUT_TOTAL_BUFFER_SIZE = 60       # seconds
-_DEFAULT_SCHEDULE = {}
-_DEFAULT_LEVEL_METER_ENABLED = True
-_DEFAULT_LEVEL_METER_UPDATE_PERIOD = 1      # seconds
-_DEFAULT_LOCAL_RECORDING_ENABLED = True
-_DEFAULT_LOCAL_RECORDING_DIR_PATH = 'Recordings'
-_DEFAULT_LOCAL_RECORDING_MAX_AUDIO_FILE_DURATION = 3600     # seconds
 _DEFAULT_SERVER_PORT_NUM = 8001
+
+_PROCESSOR_CLASSES = (LevelMeter, AudioFileWriter)
 
 
 _logger = logging.getLogger(__name__)
@@ -117,33 +113,17 @@ class VesperRecorder:
 
         self._schedule = s.schedule
 
+        # Create audio input.
         self._input = self._create_audio_input(s.input)
 
-        # TODO: Consider whether or not processors should be recreated
-        # each time recording starts.
+        # Create processor graph.
+        self._processor_graph = ProcessorGraph(
+            'Processor Graph', s.processors, self._input, _PROCESSOR_CLASSES)
 
-        self._processors = []
-
-        # Create level meter if needed.
-        if s.level_meter.enabled:
-            level_meter = LevelMeter('Level Meter', s.level_meter, self._input)
-            self._processors.append(level_meter)
-        else:
-            level_meter = None
-
-        # Create audio file writer if needed.
-        if s.local_recording.enabled:
-            local_audio_file_writer = AudioFileWriter(
-                'Audio File Writer', s.local_recording, self._input,
-                s.station.name)
-            self._processors.append(local_audio_file_writer)
-        else:
-            local_audio_file_writer = None
-        
         # Create HTTP server.
         server = HttpServer(
             s.server_port_num, VesperRecorder.VERSION_NUMBER, s.station,
-            self, self._input, level_meter, local_audio_file_writer)
+            self, self._input)
         
         # Start HTTP server.
         Thread(target=server.serve_forever, daemon=True).start()
@@ -209,9 +189,7 @@ class VesperRecorder:
             self._recording = True
             self._stop_pending = False
 
-            for p in self._processors:
-                p.start()
-
+            self._processor_graph.start()
             self._input.start()
 
 
@@ -244,13 +222,11 @@ class VesperRecorder:
 
         samples = command.samples
 
-        input = Bunch(
+        input_item = Bunch(
             samples=samples,
             frame_count=command.frame_count)
 
-        # Process samples.
-        for processor in self._processors:
-            processor.process(input)
+        self._processor_graph.process(input_item)
 
         # Free sample buffer for reuse.
         self._input.free_buffer(samples)
@@ -284,7 +260,7 @@ class VesperRecorder:
         
         # TODO: Log input overflows.
 
-        # TODO: Consider processing a special buffer of zeros here,
+        # TODO: Consider processing a buffer of zeros here,
         # allocated before input starts. This would have some
         # advantages, for example by giving affected audio files the
         # correct lengths and making it more apparent in the files
@@ -337,8 +313,7 @@ class VesperRecorder:
 
             self._input.stop()
 
-            for p in self._processors:
-                p.stop()
+            self._processor_graph.stop()
 
             _logger.info('Stopped recording.')
         
@@ -357,7 +332,7 @@ def _create_and_run_recorder(home_dir_path):
     _logger.info(
         f'Reading recorder settings from file "{settings_file_path}"...')
     try:
-        settings = _read_settings_file(settings_file_path, home_dir_path)
+        settings = _parse_settings_file(settings_file_path, home_dir_path)
     except VesperRecorderError as e:
         _logger.error(f'{e}')
         return
@@ -379,7 +354,6 @@ def _create_and_run_recorder(home_dir_path):
     except Exception as e:
         _logger.error(f'Recorder raised exception. Error message was: {e}')
         raise
-        pass
     except KeyboardInterrupt:
         _logger.info(
             'Stopping recorder and exiting due to keyboard interrupt...')
@@ -409,7 +383,7 @@ def _configure_logging(home_dir_path):
     logger.setLevel(logging.INFO)
         
         
-def _read_settings_file(settings_file_path, home_dir_path):
+def _parse_settings_file(settings_file_path, home_dir_path):
 
     # Check that settings file exists.
     if not settings_file_path.exists():
@@ -417,24 +391,22 @@ def _read_settings_file(settings_file_path, home_dir_path):
             f'Recorder settings file "{settings_file_path}" does not exist.')
         
     # Parse settings file.
-    home_dir_path = settings_file_path.parent
     try:
-        return _parse_settings_file(settings_file_path, home_dir_path)
+        return _parse_settings_file_aux(settings_file_path, home_dir_path)
     except Exception as e:
         raise VesperRecorderError(
             f'Could not parse recorder settings file '
             f'"{settings_file_path}". Error message was: {e}')
     
 
-def _parse_settings_file(settings_file_path, home_dir_path):
+def _parse_settings_file_aux(settings_file_path, home_dir_path):
     
-    settings = _Settings(settings_file_path)
+    settings = Settings.create_from_yaml_file(settings_file_path)
 
     station = _parse_station_settings(settings)
     schedule = _parse_schedule_settings(settings, station)
     input = _parse_input_settings(settings)
-    level_meter = _parse_level_meter_settings(settings)
-    local_recording = _parse_local_recording_settings(settings, home_dir_path)
+    processors = _parse_processor_settings(settings)
         
     server_port_num = int(settings.get(
         'server_port_num', _DEFAULT_SERVER_PORT_NUM))
@@ -443,8 +415,7 @@ def _parse_settings_file(settings_file_path, home_dir_path):
         station=station,
         schedule=schedule,
         input=input,
-        level_meter=level_meter,
-        local_recording=local_recording,
+        processors=processors,
         server_port_num=server_port_num)
     
     
@@ -501,61 +472,38 @@ def _parse_input_settings(settings):
     return settings
 
 
-def _parse_level_meter_settings(settings):
+def _parse_processor_settings(settings):
 
-    enabled = settings.get('level_meter.enabled', _DEFAULT_LEVEL_METER_ENABLED)
+    processor_classes = {cls.name: cls for cls in _PROCESSOR_CLASSES}
 
-    update_period = float(settings.get(
-        'level_meter.update_period', _DEFAULT_LEVEL_METER_UPDATE_PERIOD))
+    settings = settings.get_required('processors')
+
+    return [
+        _parse_processor_settings_aux(s, processor_classes)
+        for s in settings]
+
+
+def _parse_processor_settings_aux(mapping, processor_classes):
+
+    settings = Settings(mapping)
+
+    name = settings.get_required('name')
+    type = settings.get_required('type')
+    input = settings.get_required('input')
+    mapping = settings.get('settings', {})
+
+    try:
+        cls = processor_classes[type]
+    except KeyError:
+        raise ValueError(f'Unrecognized processor type "{type}".')
     
+    settings = cls.parse_settings(mapping)
+
     return Bunch(
-        enabled=enabled,
-        update_period=update_period)
-    
-
-def _parse_local_recording_settings(settings, home_dir_path):
-
-    enabled = settings.get(
-        'local_recording.enabled', _DEFAULT_LOCAL_RECORDING_ENABLED)
-    
-    recording_dir_path = Path(settings.get(
-        'local_recording.recording_dir_path',
-        _DEFAULT_LOCAL_RECORDING_DIR_PATH))
-    
-    if not recording_dir_path.is_absolute():
-        recording_dir_path = home_dir_path / recording_dir_path
-        
-    max_audio_file_duration = settings.get(
-        'local_recording.max_audio_file_duration',
-        _DEFAULT_LOCAL_RECORDING_MAX_AUDIO_FILE_DURATION)
-    
-    return Bunch(
-        enabled=enabled,
-        recording_dir_path=recording_dir_path,
-        max_audio_file_duration=max_audio_file_duration)
-    
-
-class _Settings:
-
-
-    def __init__(self, file_path):
-        with open(file_path) as f:
-            self._settings = yaml_utils.load(f)
-
-
-    def get(self, path, default=None):
-        
-        s = self._settings
-
-        for name in path.split('.'):
-
-            if isinstance(s, Mapping) and name in s:
-                s = s[name]
-            else:
-                return default
-            
-        # If we get here, the setting is present with value `s`.
-        return s
+        name=name,
+        type=type,
+        input=input,
+        settings=settings)
 
 
 class _ScheduleListener:
