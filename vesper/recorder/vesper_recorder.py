@@ -513,7 +513,7 @@ def _parse_processor_settings_aux(mapping, processor_classes):
     except KeyError:
         raise ValueError(f'Unrecognized processor type "{type}".')
     
-    settings = cls.parse_settings(mapping)
+    settings = cls.parse_settings(Settings(mapping))
 
     return Bunch(
         name=name,
