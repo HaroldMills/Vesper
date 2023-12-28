@@ -2,6 +2,15 @@
 Script that facilitates comparison of some audio resampling types.
 
 See comments in `main` function for more details.
+
+To build a Conda environment in which to run this script, execute the
+following commands from the Vesper source code root directory (i.e.
+the one containing Vesper's setup.py file):
+
+    conda create -n test-audio-resampling python=3.11
+    pip install -e .
+    pip install librosa
+    pip install matplotlib
 """
 
 
@@ -36,6 +45,9 @@ SIGNAL_STATS_CSV_FILE_COLUMN_NAMES = (
 SPEED_STATS_CSV_FILE_COLUMN_NAMES = (
     'Resampling Type', 'Input Sample Rate (Hz)', 'Output Sample Rate (Hz)',
     'Speed (xRT)')
+
+SAMPLE_DTYPE = np.float32
+# SAMPLE_DTYPE = np.int16
 
 INPUT_SAMPLE_RATES = (
     8000,
@@ -72,11 +84,25 @@ class LibrosaResampler:
         return f'Librosa {self.resampling_type}'
 
     def resample(self, input, input_rate, output_rate):
-        return librosa.resample(
-            input,
+
+        # Convert input to float if needed since `librosa.resample`
+        # does not accept fixed point input.
+        if input.dtype == np.int16:
+            x = input.astype(np.float32)
+        else:
+            x = input
+
+        y = librosa.resample(
+            x,
             orig_sr = input_rate,
             target_sr = output_rate,
             res_type = self.resampling_type)
+        
+        # Convert output back to fixed point if needed.
+        if input.dtype == np.int16:
+            y = np.round(y).astype(np.int16)
+
+        return y
     
 
 class SoxrResampler:
@@ -268,7 +294,7 @@ def get_signal_stats(name, input_rate, output_rate, samples):
     max_sample = int(round(np.max(samples)))
     min_sample = int(round(np.min(samples)))
 
-    # Use double precision to compute RMS sample valuew to avoid overflow.
+    # Use double precision to compute RMS sample value to avoid overflow.
     x = samples.astype('float64')
     rms_sample = int(round(np.sqrt(np.sum(x * x) / len(samples))))
     
@@ -341,14 +367,13 @@ def create_quality_test_input(sample_rate):
     # Create sine.
     # freq = 8000
     # sine = create_sine(
-    #     sample_rate, np.float32, amplitude, freq, duration, taper_duration)
+    #     sample_rate, amplitude, freq, duration, taper_duration)
     
     # Create chirp.
     start_freq = 0
     end_freq = sample_rate / 2
     chirp = create_chirp(
-        sample_rate, np.float32, amplitude, start_freq, end_freq, duration,
-        taper_duration)
+        sample_rate, amplitude, start_freq, end_freq, duration, taper_duration)
     
     # Sum.
     # samples = sine + chirp
@@ -361,11 +386,10 @@ def create_quality_test_input(sample_rate):
     # Round samples to nearest integers.
     samples = np.round(samples)
     
-    return samples
+    return samples.astype(SAMPLE_DTYPE)
     
     
-def create_sine(
-        sample_rate, sample_dtype, amplitude, freq, duration, taper_duration):
+def create_sine(sample_rate, amplitude, freq, duration, taper_duration):
     
     length = round(duration * sample_rate)
     times = np.arange(length) / sample_rate
@@ -374,7 +398,7 @@ def create_sine(
     
     taper_ends(sine, sample_rate, taper_duration)
     
-    return sine.astype(sample_dtype)
+    return sine
     
     
 def taper_ends(samples, sample_rate, taper_duration):
@@ -389,7 +413,7 @@ def taper_ends(samples, sample_rate, taper_duration):
 
 
 def create_chirp(
-        sample_rate, sample_dtype, amplitude, start_freq, end_freq, duration,
+        sample_rate, amplitude, start_freq, end_freq, duration,
         taper_duration):
     
     # Compute chirp.
@@ -402,7 +426,7 @@ def create_chirp(
     
     taper_ends(chirp, sample_rate, taper_duration)
     
-    return chirp.astype(sample_dtype)
+    return chirp
 
 
 def rate_pair_enabled(input_rate, output_rate):
@@ -421,7 +445,7 @@ def plot_spectrogram(
     hop_size_percent = 20
     
     window_size = int(round(window_size_sec * sample_rate))
-    window = signal.hann(window_size, sym=False)
+    window = signal.windows.hann(window_size, sym=False)
     hop_size = \
         int(round(window_size_sec * hop_size_percent / 100 * sample_rate))
         
@@ -541,7 +565,8 @@ def measure_resampling_speed_aux(
 
 def create_speed_test_signal(sample_rate):
     n = int(round(SPEED_TEST_SIGNAL_DURATION * sample_rate))
-    return np.random.randn(n)
+    noise = 1000 * np.random.standard_normal(n)
+    return np.clip(noise, -30000, 30000)
     
     
 def time_resampling(samples, input_rate, output_rate, resampler):
