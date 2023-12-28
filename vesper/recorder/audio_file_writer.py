@@ -3,9 +3,11 @@ from pathlib import Path
 import logging
 import wave
 
-import vesper.recorder.async_task_thread as async_task_thread
 from vesper.recorder.processor import Processor
+from vesper.recorder.s3_audio_file_uploader import S3AudioFileUploader
+from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
+import vesper.recorder.async_task_thread as async_task_thread
 import vesper.util.time_utils as time_utils
 
 
@@ -16,6 +18,8 @@ _DEFAULT_MAX_AUDIO_FILE_DURATION = 3600     # seconds
 _SAMPLE_SIZE = 16
 _AUDIO_FILE_NAME_EXTENSION = '.wav'
 
+_AUDIO_FILE_PROCESSOR_CLASSES = (S3AudioFileUploader,)
+
 
 _logger = logging.getLogger(__name__)
 
@@ -23,18 +27,18 @@ _logger = logging.getLogger(__name__)
 '''
 Audio File Processors
 
-When an audio file writer finishes writing a file, it will execute zero
-or more *tasks* to process it. The tasks run on the recorder's
-*async thread*. The async thread runs an asyncio event loop. The main
-function of the event loop reads tasks from a `queue.Queue` and
-runs them. Each task has an async `run` method that takes no arguments
-and returns no value, and that's all that the async thread knows about
-it. Tasks can log messages using Python's `logging` module.
+When an audio file writer finishes writing a file, it optionally
+executes an *audio file processor* to process it. The processor runs
+as a task on the recorder's *async task thread*. The async task thread
+runs an asyncio event loop. The main function of the event loop reads
+tasks from a `queue.Queue` and runs them. Each task has an async `run`
+method that takes no arguments and returns no value, and that's all
+that the async thread knows about it. Tasks can log messages using
+Python's `logging` module.
 
-The `AudioFileWriter` class will support postprocessing of audio files
-that it writes via tasks called *audio file processors*. For example,
-one type of audio file processor will upload an audio file to S3 and
-then optionally delete it from the local file system.
+At this time the only implemented audio file processor is one that
+uploads an audio file to AWS S3, optionally deleting the file if the
+upload is successful.
 '''
 
 
@@ -46,11 +50,6 @@ then optionally delete it from the local file system.
 #   that for our purposes is a `VesperRecorder` object. This would
 #   give processors access to the properties of a recorder, including
 #   the async task thread, the station, etc.
-#
-# * Implement audio file writer `S3AudioFileUploader` async task and
-#   test it. For now, hard code the task settings.
-#
-# * Implement `S3AudioFileUploader` task settings parsing.
 
 
 class AudioFileWriter(Processor):
@@ -74,10 +73,13 @@ class AudioFileWriter(Processor):
         max_audio_file_duration = settings.get(
             'max_audio_file_duration', _DEFAULT_MAX_AUDIO_FILE_DURATION)
         
+        audio_file_processor = _parse_audio_file_processor_settings(settings)
+
         return Bunch(
             recording_dir_path=recording_dir_path,
             audio_file_name_prefix=audio_file_name_prefix,
-            max_audio_file_duration=max_audio_file_duration)
+            max_audio_file_duration=max_audio_file_duration,
+            audio_file_processor=audio_file_processor)
     
 
     # TODO: Figure out how to get access to station name in initializer.
@@ -93,7 +95,11 @@ class AudioFileWriter(Processor):
         self._recording_dir_path = settings.recording_dir_path
         self._audio_file_name_prefix = settings.audio_file_name_prefix
         self._max_audio_file_duration = settings.max_audio_file_duration
-        
+
+        # Get audio file processor class, if specified.
+        self._audio_file_processor_class = \
+            _get_audio_file_processor_class(settings.audio_file_processor)
+
         # Create recording directory if needed.
         self._recording_dir_path.mkdir(parents=True, exist_ok=True)
         
@@ -161,7 +167,7 @@ class AudioFileWriter(Processor):
             
             if self._file_frame_count == self._max_file_frame_count:
                 self._file.close()
-                self._process_audio_file()
+                self._process_audio_file_if_needed()
                 self._file = None
                 self._file_path = None
     
@@ -183,18 +189,25 @@ class AudioFileWriter(Processor):
         return file, file_path
     
 
-    def _process_audio_file(self):
-        _logger.info(
-            f'AudioFileWriter: Submitting processing task for audio file '
-            f'"{self._file_path}"...')
-        task = _AudioFileProcessor(self._file_path)
-        async_task_thread.instance.submit(task)
+    def _process_audio_file_if_needed(self):
+
+        settings = self._settings.audio_file_processor
+
+        if settings is not None:
+             
+            _logger.info(
+                f'Submitting task to process audio file '
+                f'"{self._file_path}"...')
+            
+            settings = settings.settings
+            task = self._audio_file_processor_class(settings, self._file_path)
+            async_task_thread.instance.submit(task)
     
 
     def _stop(self):
         if self._file is not None:
             self._file.close()
-            self._process_audio_file()
+            self._process_audio_file_if_needed()
         
     
     def get_status_tables(self):
@@ -212,6 +225,52 @@ class AudioFileWriter(Processor):
         return [table]
 
 
+def _parse_audio_file_processor_settings(settings):
+
+    mapping = settings.get('audio_file_processor')
+
+    if mapping is None:
+        return None
+    
+    else:
+
+        processor_classes = \
+            {cls.name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
+
+        settings = Settings(mapping)
+
+        name = settings.get_required('name')
+        type = settings.get_required('type')
+        mapping = settings.get('settings', {})                                                                        
+
+        try:
+            cls = processor_classes[type]
+        except KeyError:
+            raise ValueError(
+                f'Unrecognized audio file processor type "{type}".')
+        
+        settings = cls.parse_settings(Settings(mapping))
+
+        return Bunch(
+            name=name,
+            type=type,
+            settings=settings)
+    
+
+def _get_audio_file_processor_class(settings):
+
+    if settings is None:
+        return None
+    
+    else:
+        # have audio file processor settings
+
+        processor_classes = \
+            {cls.name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
+        
+        return processor_classes[settings.type]
+
+
 class _AudioFileNamer:
     
     
@@ -223,16 +282,3 @@ class _AudioFileNamer:
     def create_file_name(self, start_time):
         time = start_time.strftime('%Y-%m-%d_%H.%M.%S')
         return f'{self.file_name_prefix}_{time}_Z{self.file_name_extension}'
-    
-
-class _AudioFileProcessor:
-
-
-    def __init__(self, file_path):
-        self._file_path = file_path
-
-
-    async def run(self):
-        _logger.info(
-            f'_AudioFileProcessor: processing audio file '
-            f'"{self._file_path}"...')
