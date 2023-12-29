@@ -18,9 +18,11 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 
 
-# TODO: Make processors async.
 # TODO: Support per-recording recording subdirectories.
-# TODO: Optionally upload recorded files to S3.
+# TODO: Allow specification of just part of input device name.
+# TODO: Consider converting all samples to 32-bit floats on input and
+#       making all processor audio input and output 32-bit float.
+# TODO: Minimize memory churn in processors.
 # TODO: Optionally upload status updates regularly to S3.
 # TODO: Consider updating settings between recordings.
 # TODO: Consider supporting S3 setting files.
