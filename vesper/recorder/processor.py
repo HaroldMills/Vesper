@@ -101,7 +101,7 @@ class Processor:
                f'Attempt to process input with processor "{self.name}" '
                f'that is not running.')
        
-       self._process(input_item)
+       return self._process(input_item)
     
 
     def _process(input_item):
