@@ -1,9 +1,13 @@
+import logging
 import math
 
 import numpy as np
 
 from vesper.recorder.processor import Processor
 from vesper.util.bunch import Bunch
+
+
+_logger = logging.getLogger(__name__)
 
 
 _DEFAULT_UPDATE_PERIOD = 1      # seconds
@@ -79,19 +83,19 @@ class LevelMeter(Processor):
         frame_count = len(samples) // self._channel_count
         samples = samples.reshape((frame_count, self._channel_count))
 
+        # _logger.info(f'LevelMeter._process: {frame_count}')
+      
         # Make sample array `float64` to avoid arithmetic overflow in
         # subsequent processing.
         samples = samples.astype(np.float64)
 
-        # _logger.info(f'_LevelMeter.input_arrived: {time} {frame_count} {samples.shape}')
-      
         start_index = 0
         frame_count = input_item.frame_count
 
         while start_index != frame_count:
 
             remaining = self._block_size - self._accumulated_frame_count
-            n = min(frame_count, remaining)
+            n = min(frame_count - start_index, remaining)
             
             # Accumulate squared samples.
             s = samples[start_index:start_index + n]
@@ -108,10 +112,10 @@ class LevelMeter(Processor):
 
                 rms_values = np.sqrt(self._sums / self._block_size)
                 
-                self._rms_values = rms_sample_to_dbfs(
+                self._rms_values = rms_samples_to_dbfs(
                     rms_values, self._full_scale_value)
                 
-                self._peak_values = sample_to_dbfs(
+                self._peak_values = samples_to_dbfs(
                     self._peaks, self._full_scale_value)
                 
                 # _logger.info(
@@ -161,11 +165,17 @@ def _format_levels(levels):
 
 
 _HALF_SQRT_2 = math.sqrt(2) / 2
+_MINUS_INFINITY_DB = -1000
 
 
-def sample_to_dbfs(sample, full_scale_value):
-    return 20 * np.log10(np.abs(sample) / full_scale_value)
+def samples_to_dbfs(samples, full_scale_value):
+    return _to_db(np.abs(samples) / full_scale_value)
 
 
-def rms_sample_to_dbfs(sample, full_scale_value):
-    return 20 * np.log10(sample / (_HALF_SQRT_2 * full_scale_value))
+def rms_samples_to_dbfs(samples, full_scale_value):
+    return _to_db(samples / (_HALF_SQRT_2 * full_scale_value))
+
+
+def _to_db(x):
+    masked_array = 20 * np.ma.log10(x)
+    return masked_array.filled(_MINUS_INFINITY_DB)
