@@ -1,7 +1,11 @@
 from collections import defaultdict
 import itertools
+import logging
 
 from vesper.recorder.processor import Processor
+
+
+_logger = logging.getLogger(__name__)
 
 
 _AUDIO_INPUT = 'Audio Input'
@@ -83,7 +87,9 @@ class ProcessorGraph(Processor):
 
         """Process the specified input items from the specified source."""
 
-        # Get processors that will process input items.
+        # _logger.info(f'ProcessorGraph._process_aux {source_name}')
+
+        # Get processors that will process output items as input items.
         processors = self._downstream_processors[source_name]
 
         for processor in processors:
@@ -92,12 +98,8 @@ class ProcessorGraph(Processor):
 
                 output_items = processor.process(input_item)
 
-                if output_items is not None:
-
-                    processor_name = processor.name
-
-                    for output_item in output_items:
-                        self._process_aux(output_item, processor_name)
+                if output_items is not None and len(output_items) != 0:
+                    self._process_aux(output_items, processor.name)
 
 
     def _stop(self):
