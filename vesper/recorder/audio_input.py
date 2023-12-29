@@ -2,7 +2,6 @@
 
 
 from queue import Empty, Queue
-from datetime import timedelta as TimeDelta
 import math
 import time
 
@@ -10,7 +9,6 @@ import sounddevice as sd
 
 from vesper.util.bunch import Bunch
 import vesper.util.text_utils as text_utils
-import vesper.util.time_utils as time_utils
 
 
 # TODO: Handle unsupported input sample rates better on macOS.
