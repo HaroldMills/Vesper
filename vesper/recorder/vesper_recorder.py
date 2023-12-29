@@ -12,6 +12,7 @@ from vesper.recorder.audio_input import AudioInput
 from vesper.recorder.http_server import HttpServer
 from vesper.recorder.level_meter import LevelMeter
 from vesper.recorder.processor_graph import ProcessorGraph
+from vesper.recorder.resampler import Resampler
 from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
@@ -61,7 +62,7 @@ _DEFAULT_INPUT_BUFFER_SIZE = .05            # seconds
 _DEFAULT_INPUT_TOTAL_BUFFER_SIZE = 60       # seconds
 _DEFAULT_SERVER_PORT_NUM = 8001
 
-_PROCESSOR_CLASSES = (LevelMeter, AudioFileWriter)
+_PROCESSOR_CLASSES = (Resampler, LevelMeter, AudioFileWriter)
 
 
 _logger = logging.getLogger(__name__)
