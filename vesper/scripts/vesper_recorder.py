@@ -19,7 +19,6 @@ issue the following commands from your Vesper Git repo folder:
     conda create -n vesper-recorder-dev python=3.11
     conda activate vesper-recorder-dev
     conda install -c conda-forge python-sounddevice
-    pip install soxr
     pip install -e .
     
 To run the Vesper Recorder, run the following commands in an Anaconda

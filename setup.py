@@ -200,6 +200,7 @@ setup(
         'ruamel_yaml',
         'scipy',
         'skyfield',
+        'soxr',
         'tensorflow~=2.12.0;platform_system != "Darwin" or platform_machine != "arm64"',
         'tensorflow-macos~=2.12.0;platform_system == "Darwin" and platform_machine == "arm64"',
         'tensorflow-metal~=0.8.0;platform_system == "Darwin" and platform_machine == "arm64"',
