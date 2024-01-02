@@ -86,6 +86,6 @@ To run the Vesper Recorder:
 
   It is important to run the recorder using `nohup` to ensure that the recorder doesn't quit when you close your SSH connection.
 
-* Verify that the Vesper Recorder is running and properly configured by visiting its web page, for example by visiting a URL of the form `<hostname>:8000` (for example, `raspberrypi:8000` for the default hostname) in a web browser on another computer.
+* Verify that the Vesper Recorder is running and properly configured by visiting its web page at `<hostname>:8000` (for example, `raspberrypi:8000` for the default hostname) in a web browser on another computer.
 
 * Close your SSH connection to your Raspberry Pi by typing `Ctrl-D` at the SSH prompt.
