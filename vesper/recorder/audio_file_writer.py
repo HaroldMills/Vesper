@@ -13,6 +13,7 @@ import vesper.util.time_utils as time_utils
 
 _DEFAULT_AUDIO_FILE_NAME_PREFIX = 'Vesper'
 _DEFAULT_RECORDING_DIR_PATH = 'Recordings'
+_DEFAULT_CREATE_RECORDING_SUBDIRS = True
 _DEFAULT_MAX_AUDIO_FILE_DURATION = 3600     # seconds
 
 _SAMPLE_SIZE = 16
@@ -66,6 +67,9 @@ class AudioFileWriter(Processor):
         
         if not recording_dir_path.is_absolute():
             recording_dir_path = Path.cwd() / recording_dir_path
+
+        create_recording_subdirs = settings.get(
+            'create_recording_subdirs', _DEFAULT_CREATE_RECORDING_SUBDIRS)
             
         audio_file_name_prefix = settings.get(
             'audio_file_name_prefix', _DEFAULT_AUDIO_FILE_NAME_PREFIX)
@@ -77,6 +81,7 @@ class AudioFileWriter(Processor):
 
         return Bunch(
             recording_dir_path=recording_dir_path,
+            create_recording_subdirs=create_recording_subdirs,
             audio_file_name_prefix=audio_file_name_prefix,
             max_audio_file_duration=max_audio_file_duration,
             audio_file_processor=audio_file_processor)
@@ -93,6 +98,7 @@ class AudioFileWriter(Processor):
         self._sample_rate = input_info.sample_rate
         
         self._recording_dir_path = settings.recording_dir_path
+        self._create_recording_subdirs = settings.create_recording_subdirs
         self._audio_file_name_prefix = settings.audio_file_name_prefix
         self._max_audio_file_duration = settings.max_audio_file_duration
 
@@ -100,18 +106,36 @@ class AudioFileWriter(Processor):
         self._audio_file_processor_class = \
             _get_audio_file_processor_class(settings.audio_file_processor)
 
-        # Create recording directory if needed.
-        self._recording_dir_path.mkdir(parents=True, exist_ok=True)
+        # Create recording subdir namer.
+        if self._create_recording_subdirs:
+            self._recording_subdir_namer = _RecordingSubdirNamer(
+                self._audio_file_name_prefix)
+            
+        # Create audio file namer.
+        self._file_namer = _AudioFileNamer(
+            self._audio_file_name_prefix, _AUDIO_FILE_NAME_EXTENSION)
         
+        # Get audio file sample frame size in bytes.
+        self._frame_size = self._channel_count * _SAMPLE_SIZE // 8
         
-    @property
-    def audio_file_name_prefix(self):
-        return self._audio_file_name_prefix
-    
-
+        # Get max audio file size in sample frames.
+        self._max_file_frame_count = \
+            int(round(self._max_audio_file_duration * self._sample_rate))
+                    
+        
     @property
     def recording_dir_path(self):
         return self._recording_dir_path
+    
+
+    @property
+    def create_recording_subdirs(self):
+        return self._create_recording_subdirs
+    
+
+    @property
+    def audio_file_name_prefix(self):
+        return self._audio_file_name_prefix
     
 
     @property
@@ -123,14 +147,13 @@ class AudioFileWriter(Processor):
         
         self._start_time = time_utils.get_utc_now()
 
-        self._frame_size = self._channel_count * _SAMPLE_SIZE // 8
-        
-        self._max_file_frame_count = \
-            int(round(self._max_audio_file_duration * self._sample_rate))
-                    
-        self._file_namer = _AudioFileNamer(
-            self._audio_file_name_prefix, _AUDIO_FILE_NAME_EXTENSION)
-        
+        if self._create_recording_subdirs:
+
+            dir_name = self._recording_subdir_namer.create_subdir_name(
+                self._start_time)
+            
+            self._recording_subdir_path = self._recording_dir_path / dir_name
+
         self._file = None
         self._file_path = None
 
@@ -174,13 +197,25 @@ class AudioFileWriter(Processor):
     
     def _open_audio_file(self):
         
+        # Get audio file parent directory path.
+        if self._create_recording_subdirs:
+            dir_path = self._recording_subdir_path
+        else:
+            dir_path = self._recording_dir_path
+
+        # Get audio file name.
         duration = self._total_frame_count / self._sample_rate
         time_delta = TimeDelta(seconds=duration)
         file_start_time = self._start_time + time_delta
-
         file_name = self._file_namer.create_file_name(file_start_time)
-        file_path = self._recording_dir_path / file_name
+
+        # Get audio file path.
+        file_path = dir_path / file_name
         
+        # Create parent directory if needed.
+        dir_path.mkdir(parents=True, exist_ok=True)
+
+        # Create audio file.
         file = wave.open(str(file_path), 'wb')
         file.setnchannels(self._channel_count)
         file.setframerate(self._sample_rate)
@@ -200,7 +235,8 @@ class AudioFileWriter(Processor):
                 f'"{self._file_path}"...')
             
             settings = settings.settings
-            task = self._audio_file_processor_class(settings, self._file_path)
+            task = self._audio_file_processor_class(
+                settings, self._file_path, self._create_recording_subdirs)
             async_task_thread.instance.submit(task)
     
 
@@ -216,6 +252,7 @@ class AudioFileWriter(Processor):
 
         rows = (
             ('Recording Directory', recording_dir_path),
+            ('Create Recording Subdirectories', self.create_recording_subdirs),
             ('Audio File Name Prefix', self.audio_file_name_prefix),
             ('Max Audio File Duration (seconds)', self.max_audio_file_duration)
         )
@@ -269,6 +306,18 @@ def _get_audio_file_processor_class(settings):
             {cls.name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
         
         return processor_classes[settings.type]
+
+
+class _RecordingSubdirNamer:
+
+
+    def __init__(self, subdir_name_prefix):
+        self.subdir_name_prefix = subdir_name_prefix
+
+
+    def create_subdir_name(self, start_time):
+        time = start_time.strftime('%Y-%m-%d_%H.%M.%S')
+        return f'{self.subdir_name_prefix}_{time}_Z'
 
 
 class _AudioFileNamer:

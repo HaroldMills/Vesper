@@ -42,17 +42,33 @@ class S3AudioFileUploader:
                 delete_successfully_uploaded_files)
 
 
-    def __init__(self, settings, file_path):
+    # TODO: The inclusion of the `file_path_includes_recording_subdir`
+    # argument here feels a little kludgy. Is there a better way to
+    # provide that information to an audio file processor? For example,
+    # would it make more sense to provide the file path in two parts,
+    # a recording dir path and a path relative to that?
+    def __init__(
+            self, settings, file_path, file_path_includes_recording_subdir):
+        
         self._settings = settings
         self._file_path = file_path
+        self._file_path_includes_recording_subdir = \
+            file_path_includes_recording_subdir
 
 
     async def run(self):
                 
         s = self._settings
 
+        # Get S3 object key prefix for file.
+        object_key_prefix = s.s3_object_key_prefix
+        if self._file_path_includes_recording_subdir:
+            subdir_name = self._file_path.parent.name
+            object_key_prefix += f'/{subdir_name}'
+
+        # Get S3 object key for file.
         file_name = self._file_path.name
-        object_key = f'{s.s3_object_key_prefix}/{file_name}'
+        object_key = f'{object_key_prefix}/{file_name}'
   
         _logger.info(
             f'Uploading audio file "{self._file_path}" to S3 bucket '
@@ -98,3 +114,13 @@ class S3AudioFileUploader:
                     _logger.info(
                         f'Successfully deleted audio file '
                         f'"{self._file_path}" uploaded to S3.')
+                    
+                if self._file_path_includes_recording_subdir:
+
+                    # Remove recording subdirectory if it is now empty.
+                    # `rmdir` will raise an exception if the directory
+                    # is not empty, which we ignore.
+                    try:
+                        self._file_path.parent.rmdir()
+                    except:
+                        pass
