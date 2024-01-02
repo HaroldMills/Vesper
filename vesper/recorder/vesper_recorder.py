@@ -79,7 +79,7 @@ class VesperRecorder:
     """Records audio to .wav files according to a schedule."""
     
     
-    VERSION_NUMBER = '0.3.0a0'
+    VERSION_NUMBER = '0.3.0a1'
 
 
     @staticmethod
