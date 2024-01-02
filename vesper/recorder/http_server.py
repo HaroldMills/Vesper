@@ -177,7 +177,7 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
 
     
     def _create_devices_table_row(self, device, selected_device_name):
-        prefix = '*' if device.name == selected_device_name else ''
+        prefix = '*' if device.name.find(selected_device_name) != -1 else ''
         return (prefix + device.name, device.input_channel_count)
     
     

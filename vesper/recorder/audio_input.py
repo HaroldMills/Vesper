@@ -280,13 +280,23 @@ def _check_input_device_name(name):
     devices = _get_input_devices()
     names = sorted(d.name for d in devices)
 
-    if not name in names:
+    matching_names = [n for n in names if n.find(name) != -1]
+    match_count = len(matching_names)
+
+    if match_count != 1:
 
         names = text_utils.create_string_item_list(f'"{n}"' for n in names)
-        raise ValueError(
-            f'Unrecognized input device name "{name}". '
-            f'Valid names are {names}.')
+
+        if match_count == 0:
+            prefix = 'Unrecognized'
+        
+        elif match_count > 1:
+            prefix = 'Ambiguous'
     
+        raise ValueError(
+            f'{prefix} input device name "{name}". Please specify a '
+            f'name or name portion that matches exactly one device name. '
+            f'Valid names are {names}.')
 
 class _PortAudioOverflowTest:
     
