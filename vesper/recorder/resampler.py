@@ -16,7 +16,7 @@ _DEFAULT_QUALITY = 'HQ'
 class Resampler(Processor):
 
 
-    name = 'Resampler'
+    type_name = 'Resampler'
 
 
     @staticmethod

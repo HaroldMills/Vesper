@@ -18,6 +18,7 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 
 
+# TODO: Include audio file processor settings on web page.
 # TODO: Consider converting all samples to 32-bit floats on input and
 #       making all processor audio input and output 32-bit float.
 # TODO: Minimize memory churn in processors.
@@ -492,7 +493,7 @@ def _parse_input_settings(settings):
 
 def _parse_processor_settings(settings):
 
-    processor_classes = {cls.name: cls for cls in _PROCESSOR_CLASSES}
+    processor_classes = {cls.type_name: cls for cls in _PROCESSOR_CLASSES}
 
     settings = settings.get_required('processors')
 

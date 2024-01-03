@@ -23,7 +23,7 @@ class ProcessorGraph(Processor):
 
         super().__init__(name, settings, input_info)
         
-        processor_classes = {cls.name: cls for cls in processor_classes}
+        processor_classes = {cls.type_name: cls for cls in processor_classes}
 
         self._processors = []
         """

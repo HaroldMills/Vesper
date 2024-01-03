@@ -16,7 +16,7 @@ _DEFAULT_DELETE_SUCCESSFULLY_UPLOADED_FILES = False
 class S3AudioFileUploader:
 
 
-    name = 'S3 Audio File Uploader'
+    type_name = 'S3 Audio File Uploader'
 
 
     @staticmethod

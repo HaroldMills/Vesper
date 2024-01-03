@@ -56,7 +56,7 @@ upload is successful.
 class AudioFileWriter(Processor):
     
     
-    name = 'Audio File Writer'
+    type_name = 'Audio File Writer'
 
 
     @staticmethod
@@ -272,7 +272,7 @@ def _parse_audio_file_processor_settings(settings):
     else:
 
         processor_classes = \
-            {cls.name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
+            {cls.type_name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
 
         settings = Settings(mapping)
 
@@ -303,7 +303,7 @@ def _get_audio_file_processor_class(settings):
         # have audio file processor settings
 
         processor_classes = \
-            {cls.name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
+            {cls.type_name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
         
         return processor_classes[settings.type]
 

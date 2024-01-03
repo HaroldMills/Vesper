@@ -19,7 +19,7 @@ _SAMPLE_DTYPE = '<i2'
 class LevelMeter(Processor):
 
 
-    name = 'Level Meter'
+    type_name = 'Level Meter'
 
 
     @staticmethod
