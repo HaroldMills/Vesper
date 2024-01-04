@@ -1,5 +1,6 @@
 from datetime import timedelta as TimeDelta
 from pathlib import Path
+import asyncio
 import logging
 import wave
 
@@ -15,6 +16,7 @@ _DEFAULT_AUDIO_FILE_NAME_PREFIX = 'Vesper'
 _DEFAULT_RECORDING_DIR_PATH = 'Recordings'
 _DEFAULT_CREATE_RECORDING_SUBDIRS = True
 _DEFAULT_MAX_AUDIO_FILE_DURATION = 3600     # seconds
+_DEFAULT_DELETE_SUCCESSFULLY_PROCESSED_AUDIO_FILES = False
 
 _SAMPLE_SIZE = 16
 _AUDIO_FILE_NAME_EXTENSION = '.wav'
@@ -28,18 +30,37 @@ _logger = logging.getLogger(__name__)
 '''
 Audio File Processors
 
-When an audio file writer finishes writing a file, it optionally
-executes an *audio file processor* to process it. The processor runs
-as a task on the recorder's *async task thread*. The async task thread
-runs an asyncio event loop. The main function of the event loop reads
-tasks from a `queue.Queue` and runs them. Each task has an async `run`
-method that takes no arguments and returns no value, and that's all
-that the async thread knows about it. Tasks can log messages using
-Python's `logging` module.
+When an audio file writer finishes writing a file, it runs zero or
+more *audio file processors* to process it. The processors run
+concurrently with each other on the recorder's *async task thread*.
+
+The async task thread of a recorder runs an asyncio event loop.
+The main function of the event loop reads tasks from a `queue.Queue`
+and runs them. Each task has an async `run` method that takes no
+arguments and returns no value, and that's all that the async thread
+knows about it. Tasks can log messages using Python's `logging` module.
+They should log messages for any errors that occur during their
+execution.
+
+An audio file processor is an object with a `run` method that takes
+the recording directory path and the path relative to that of an
+audio file, processes the file in some way, and returns no value.
+If an error occurs in the `run` method, the method should log an
+error message and raise an exception.
+
+To process an audio file that it has written, the audio file writer
+creates a task for the async task thread that invokes the `run`
+methods of its audio file processors concurrently on the file.
+If all of the `run` methods complete normally, it optionally deletes
+the processed file, according to the audio file writer's
+`delete_successfully_processed_audio_files` setting. If any of the
+`run` methods raises an exception, it does not delete the processed
+file.
 
 At this time the only implemented audio file processor is one that
-uploads an audio file to AWS S3, optionally deleting the file if the
-upload is successful.
+uploads an audio file to AWS S3. In the future, additional processors
+might upload an audio file to other cloud storage services or trigger
+some sort of file processing external to the Vesper Recorder.
 '''
 
 
@@ -77,14 +98,20 @@ class AudioFileWriter(Processor):
         max_audio_file_duration = settings.get(
             'max_audio_file_duration', _DEFAULT_MAX_AUDIO_FILE_DURATION)
         
-        audio_file_processor = _parse_audio_file_processor_settings(settings)
+        audio_file_processors = _parse_audio_file_processor_settings(settings)
+
+        delete_successfully_processed_audio_files = settings.get(
+            'delete_successfully_processed_audio_files',
+            _DEFAULT_DELETE_SUCCESSFULLY_PROCESSED_AUDIO_FILES)
 
         return Bunch(
             recording_dir_path=recording_dir_path,
             create_recording_subdirs=create_recording_subdirs,
             audio_file_name_prefix=audio_file_name_prefix,
             max_audio_file_duration=max_audio_file_duration,
-            audio_file_processor=audio_file_processor)
+            audio_file_processors=audio_file_processors,
+            delete_successfully_processed_audio_files=
+                delete_successfully_processed_audio_files)
     
 
     # TODO: Figure out how to get access to station name in initializer.
@@ -102,9 +129,12 @@ class AudioFileWriter(Processor):
         self._audio_file_name_prefix = settings.audio_file_name_prefix
         self._max_audio_file_duration = settings.max_audio_file_duration
 
-        # Get audio file processor class, if specified.
-        self._audio_file_processor_class = \
-            _get_audio_file_processor_class(settings.audio_file_processor)
+        # Create audio file processors, if specified.
+        self._audio_file_processors = \
+            _create_audio_file_processors(settings.audio_file_processors)
+        
+        self._delete_successfully_processed_audio_files = \
+            settings.delete_successfully_processed_audio_files
 
         # Create recording subdir namer.
         if self._create_recording_subdirs:
@@ -112,7 +142,7 @@ class AudioFileWriter(Processor):
                 self._audio_file_name_prefix)
             
         # Create audio file namer.
-        self._file_namer = _AudioFileNamer(
+        self._audio_file_namer = _AudioFileNamer(
             self._audio_file_name_prefix, _AUDIO_FILE_NAME_EXTENSION)
         
         # Get audio file sample frame size in bytes.
@@ -143,19 +173,24 @@ class AudioFileWriter(Processor):
         return self._max_audio_file_duration
     
 
+    @property
+    def delete_successfully_processed_audio_files(self):
+        return self._delete_successfully_processed_audio_files
+    
+
     def _start(self):
         
         self._start_time = time_utils.get_utc_now()
 
         if self._create_recording_subdirs:
-
-            dir_name = self._recording_subdir_namer.create_subdir_name(
+            subdir_name = self._recording_subdir_namer.create_subdir_name(
                 self._start_time)
-            
-            self._recording_subdir_path = self._recording_dir_path / dir_name
+            self._recording_subdir_path = Path(subdir_name)
+        else:
+            self._recording_subdir_path = None
 
-        self._file = None
-        self._file_path = None
+        self._audio_file = None
+        self._audio_file_path = None
 
         self._total_frame_count = 0
         
@@ -168,8 +203,9 @@ class AudioFileWriter(Processor):
         
         while remaining_frame_count != 0:
             
-            if self._file is None:
-                self._file, self._file_path = self._open_audio_file()
+            if self._audio_file is None:
+                self._audio_file, self._audio_file_path = \
+                    self._open_audio_file()
                 self._file_frame_count = 0
         
             frame_count = min(
@@ -180,7 +216,7 @@ class AudioFileWriter(Processor):
             
             # TODO: We assume here that the sample bytes are in
             # little-endian order, but perhaps we shouldn't.
-            self._file.writeframes(
+            self._audio_file.writeframes(
                 samples[buffer_index:buffer_index + byte_count])
             
             remaining_frame_count -= frame_count
@@ -189,61 +225,63 @@ class AudioFileWriter(Processor):
             buffer_index += byte_count
             
             if self._file_frame_count == self._max_file_frame_count:
-                self._file.close()
-                self._process_audio_file_if_needed()
-                self._file = None
-                self._file_path = None
+                self._audio_file.close()
+                self._process_audio_file()
+                self._audio_file = None
+                self._audio_file_path = None
     
     
     def _open_audio_file(self):
         
-        # Get audio file parent directory path.
-        if self._create_recording_subdirs:
-            dir_path = self._recording_subdir_path
-        else:
-            dir_path = self._recording_dir_path
-
         # Get audio file name.
         duration = self._total_frame_count / self._sample_rate
         time_delta = TimeDelta(seconds=duration)
         file_start_time = self._start_time + time_delta
-        file_name = self._file_namer.create_file_name(file_start_time)
+        file_name = self._audio_file_namer.create_file_name(file_start_time)
 
-        # Get audio file path.
-        file_path = dir_path / file_name
+        # Get audio file path relative to recording directory.
+        if self._create_recording_subdirs:
+            rel_file_path = self._recording_subdir_path / file_name
+        else:
+            rel_file_path = Path(file_name)
         
-        # Create parent directory if needed.
+        # Get absolute audio file path.
+        abs_file_path = self._recording_dir_path / rel_file_path
+
+        # Create ancestor directories for audio file as needed.
+        dir_path = abs_file_path.parent
         dir_path.mkdir(parents=True, exist_ok=True)
 
         # Create audio file.
-        file = wave.open(str(file_path), 'wb')
+        file = wave.open(str(abs_file_path), 'wb')
         file.setnchannels(self._channel_count)
         file.setframerate(self._sample_rate)
         file.setsampwidth(_SAMPLE_SIZE // 8)
         
-        return file, file_path
+        return file, rel_file_path
     
 
-    def _process_audio_file_if_needed(self):
+    def _process_audio_file(self):
 
-        settings = self._settings.audio_file_processor
+        processors = self._audio_file_processors
 
-        if settings is not None:
-             
+        if len(processors) != 0:
+
+            task = _AudioFileProcessorTask(
+                processors, self._recording_dir_path, self._audio_file_path,
+                self._delete_successfully_processed_audio_files)
+           
             _logger.info(
-                f'Submitting task to process audio file '
-                f'"{self._file_path}"...')
+                f'Submitting task to process completed audio file '
+                f'"{self._audio_file_path}"...')
             
-            settings = settings.settings
-            task = self._audio_file_processor_class(
-                settings, self._file_path, self._create_recording_subdirs)
             async_task_thread.instance.submit(task)
     
 
     def _stop(self):
-        if self._file is not None:
-            self._file.close()
-            self._process_audio_file_if_needed()
+        if self._audio_file is not None:
+            self._audio_file.close()
+            self._process_audio_file()
         
     
     def get_status_tables(self):
@@ -264,17 +302,30 @@ class AudioFileWriter(Processor):
 
 def _parse_audio_file_processor_settings(settings):
 
-    mapping = settings.get('audio_file_processor')
+    settings = settings.get('audio_file_processors')
 
-    if mapping is None:
-        return None
+    if settings is None:
+        return []
     
+    elif not isinstance(settings, list):
+        raise ValueError(
+            f'Bad type "{settings.__class__.__name__}" for audio file '
+            f'writer "audio_file_processors" setting: type must be "list".')
+
     else:
+        # setting is present and is a `list``
 
         processor_classes = \
             {cls.type_name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
 
-        settings = Settings(mapping)
+        return [
+            _parse_audio_file_processor_settings_aux(s, processor_classes)
+            for s in settings]
+    
+
+def _parse_audio_file_processor_settings_aux(settings, processor_classes):
+        
+        settings = Settings(settings)
 
         name = settings.get_required('name')
         type = settings.get_required('type')
@@ -294,18 +345,18 @@ def _parse_audio_file_processor_settings(settings):
             settings=settings)
     
 
-def _get_audio_file_processor_class(settings):
+def _create_audio_file_processors(settings):
 
-    if settings is None:
-        return None
-    
-    else:
-        # have audio file processor settings
+    processor_classes = \
+        {cls.type_name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
 
-        processor_classes = \
-            {cls.type_name: cls for cls in _AUDIO_FILE_PROCESSOR_CLASSES}
-        
-        return processor_classes[settings.type]
+    return \
+        [_create_audio_file_processor(s, processor_classes) for s in settings]
+
+
+def _create_audio_file_processor(settings, processor_classes):
+    cls = processor_classes[settings.type]
+    return cls(settings.name, settings.settings)
 
 
 class _RecordingSubdirNamer:
@@ -331,3 +382,125 @@ class _AudioFileNamer:
     def create_file_name(self, start_time):
         time = start_time.strftime('%Y-%m-%d_%H.%M.%S')
         return f'{self.file_name_prefix}_{time}_Z{self.file_name_extension}'
+
+
+class _AudioFileProcessorTask:
+
+
+    def __init__(
+            self, processors, recording_dir_path, audio_file_path,
+            delete_successfully_processed_audio_file):
+        
+        self._processors = processors
+        self._recording_dir_path = recording_dir_path
+        self._audio_file_path = audio_file_path
+        self._delete_successfully_processed_audio_file = \
+            delete_successfully_processed_audio_file
+
+
+    async def run(self):
+
+        # TODO: Consider using an `asyncio.TaskGroup` in this method
+        # instead of `asyncio.gather`. I think that would require that
+        # all of the coroutines handle their own exceptions. To be sure,
+        # perhaps we could call each processor's `run` method from a
+        # coroutine that catches any exception that it raises.
+
+        try:
+
+            coroutines =  [
+                p.process_file(self._recording_dir_path, self._audio_file_path)
+                for p in self._processors]
+        
+            # Run coroutines concurrently.
+            await asyncio.gather(*coroutines)
+
+        except:
+            # something went wrong in one of the coroutines
+
+            # Here we just return, assuming that the coroutine logged
+            # an error message. Any other coroutines will keep running.
+            # If any of them raise exceptions we won't hear about it,
+            # but we assume that they will log error messages.
+            return
+
+        # If we get here, all of the coroutines completed normally.
+
+        if self._delete_successfully_processed_audio_file:
+            self._delete_audio_file()
+            self._delete_empty_audio_file_ancestor_dirs()
+                
+
+    def _delete_audio_file(self):
+
+        audio_file_path = self._recording_dir_path / self._audio_file_path
+
+        _logger.info(
+            f'Deleting successfully processed audio file '
+            f'"{audio_file_path}"...')
+        
+        try:
+            audio_file_path.unlink()
+
+        except Exception as e:
+            _logger.warning(
+                f'Could not delete audio file "{audio_file_path}". '
+                f'Exception message was: {e}')
+            
+
+    def _delete_empty_audio_file_ancestor_dirs(self):
+
+        """
+        Deletes the directories of `self._audio_file_path.parents[:-1]`
+        up until the first non-empty directory. Does not consider
+        `self._audio_file_path.parents[-1]` since it is always '.'.
+        """
+
+
+        if self._audio_file_path.is_absolute():
+
+            _logger.error(
+                'Internal Vesper Recorder error: encountered absolute '
+                'audio file path in `_AudioFileProcessorTask.'
+                '_delete_empty_audio_file_ancestor_dirs`. Expected '
+                'a relative path. No directories will be deleted.')
+            
+            return
+            
+        for rel_dir_path in self._audio_file_path.parents[:-1]:
+
+            # We could just invoke `dir_path.rmdir` instead of checking
+            # if the directory is empty first, and ignore any exception
+            # that it raises. That should work, deleting an empty
+            # directory and doing nothing for a non-empty one. Even so,
+            # I would feel uncomfortable invoking `dir_path.rmdir` on
+            # directories that I know I don't want to delete, counting
+            # on that method to protect me from disaster! It also
+            # wouldn't allow us to detect failed attempts to delete
+            # empty directories.
+
+            abs_dir_path = self._recording_dir_path / rel_dir_path
+
+            child_paths = tuple(abs_dir_path.iterdir())
+
+            if len(child_paths) == 0:
+                # directory empty
+
+                _logger.warning(
+                    f'Deleting empty recording subdirectory '
+                    f'"{abs_dir_path}"...')
+                    
+                try:
+                    abs_dir_path.rmdir()
+
+                except Exception as e:
+                    _logger.warning(
+                        f'Could not delete empty recording subdirectory '
+                        f'"{abs_dir_path}". Error message was: {e}')
+                    
+            else:
+                # directory not empty
+
+                # We can stop here, since any further directories will
+                # be ancestors of this one, and hence not empty, either.
+                break
