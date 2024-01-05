@@ -119,7 +119,8 @@ class Resampler(Processor):
     def get_status_tables(self):
 
         rows = (
-            ('Output Sample Rate', str(self.output_sample_rate)),
+            ('Input Sample Rate (Hz)', str(self._input_sample_rate)),
+            ('Output Sample Rate (Hz)', str(self.output_sample_rate)),
             ('Quality', self.quality))
 
         table = Bunch(title=self.name, rows=rows)
