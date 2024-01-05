@@ -66,3 +66,18 @@ class S3AudioFileUploader(AudioFileProcessor):
                 f'Could not upload audio file "{abs_file_path}" to S3 '
                 f'bucket "{s.s3_bucket_name}", object key "{object_key}". '
                 f'Exception message was: {e}')
+
+
+    def get_status_tables(self):
+
+        s = self._settings
+        
+        rows = (
+            ('AWS Profile Name', s.aws_profile_name),
+            ('S3 Bucket Name', s.s3_bucket_name),
+            ('S3 Object Key Prefix', s.s3_object_key_prefix)
+        )
+
+        table = Bunch(title=self.name, rows=rows)
+
+        return [table]

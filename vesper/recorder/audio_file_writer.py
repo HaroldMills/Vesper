@@ -1,6 +1,7 @@
 from datetime import timedelta as TimeDelta
 from pathlib import Path
 import asyncio
+import itertools
 import logging
 import wave
 
@@ -10,6 +11,9 @@ from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
 import vesper.recorder.async_task_thread as async_task_thread
 import vesper.util.time_utils as time_utils
+
+
+_chain = itertools.chain.from_iterable
 
 
 _DEFAULT_AUDIO_FILE_NAME_PREFIX = 'Vesper'
@@ -297,7 +301,10 @@ class AudioFileWriter(Processor):
 
         table = Bunch(title=self.name, rows=rows)
 
-        return [table]
+        processor_tables = list(_chain(
+            p.get_status_tables() for p in self._audio_file_processors))
+
+        return [table] + processor_tables
 
 
 def _parse_audio_file_processor_settings(settings):
