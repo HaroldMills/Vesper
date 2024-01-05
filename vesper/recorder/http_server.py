@@ -167,7 +167,8 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         
         else:
             header = ('Name', 'Channel Count')
-            selected_device_name = input.input_device_name
+            selected_device_name = \
+                _get_full_device_name(input.input_device_name, devices)
             rows = [
                 self._create_devices_table_row(d, selected_device_name)
                 for d in devices]
@@ -177,24 +178,22 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
 
     
     def _create_devices_table_row(self, device, selected_device_name):
-        prefix = '*' if device.name.find(selected_device_name) != -1 else ''
+        prefix = '*' if device.name == selected_device_name else ''
         return (prefix + device.name, device.input_channel_count)
     
     
     def _create_input_table(self, devices, input):
         
-        device_dict = {d.name: d for d in devices}
         device_name = input.input_device_name
-        device = device_dict.get(device_name)
+        full_device_name = _get_full_device_name(device_name, devices)
 
-        if device is None:
-            device_name = \
-                f'There is no input device with name {device_name}.'
+        if full_device_name is None:
+            text = f'There is no input device with name {device_name}.'
         else:
-            device_name = device.name
+            text = full_device_name
             
         rows = (
-            ('Device Name', device_name),
+            ('Device Name', text),
             ('Channel Count', input.channel_count),
             ('Sample Rate (Hz)', input.sample_rate),
             ('Buffer Size (seconds)', input.buffer_size)
@@ -278,3 +277,14 @@ def _create_table_footer(text):
         return ''
     else:
         return f'<p>{text}</p>\n'
+
+
+def _get_full_device_name(name, devices):
+
+    for device in devices:
+        if device.name.find(name) != -1:
+            return device.name
+        
+    # If we get here, no device name includes `name`.
+    
+    return None
