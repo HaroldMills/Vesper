@@ -295,7 +295,7 @@ def _check_input_device_name(name):
     
         raise ValueError(
             f'{prefix} input device name "{name}". Please specify a '
-            f'name or name portion that matches exactly one device name. '
+            f'name that matches part or all of exactly one device name. '
             f'Valid names are {names}.')
 
 class _PortAudioOverflowTest:
