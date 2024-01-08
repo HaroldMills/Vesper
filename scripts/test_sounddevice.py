@@ -22,8 +22,8 @@ def main():
 
     show_host_apis()
     show_devices()
-    test_recording_1()
-    test_recording_2()
+    # test_recording_1()
+    # test_recording_2()
 
 
 def show_host_apis():
