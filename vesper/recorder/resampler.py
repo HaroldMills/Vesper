@@ -4,6 +4,7 @@ import numpy as np
 import soxr
 
 from vesper.recorder.processor import Processor
+from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
 
 
@@ -123,6 +124,6 @@ class Resampler(Processor):
             ('Output Sample Rate (Hz)', str(self.output_sample_rate)),
             ('Quality', self.quality))
 
-        table = Bunch(title=self.name, rows=rows)
+        table = StatusTable(self.name, rows)
         
         return [table]

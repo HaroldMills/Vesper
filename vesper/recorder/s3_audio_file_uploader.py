@@ -3,6 +3,7 @@ import logging
 import aioboto3
 
 from vesper.recorder.audio_file_processor import AudioFileProcessor
+from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
 
 
@@ -78,6 +79,6 @@ class S3AudioFileUploader(AudioFileProcessor):
             ('S3 Object Key Prefix', s.s3_object_key_prefix)
         )
 
-        table = Bunch(title=self.name, rows=rows)
+        table = StatusTable(self.name, rows)
 
         return [table]

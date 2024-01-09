@@ -4,6 +4,7 @@ import math
 import numpy as np
 
 from vesper.recorder.processor import Processor
+from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
 
 
@@ -146,7 +147,7 @@ class LevelMeter(Processor):
             (f'Recent RMS Sample Value{value_suffix} (dBFS)', rms_values),
             (f'Recent Peak Sample Value{value_suffix} (dBFS)', peak_values))
 
-        table = Bunch(title=self.name, rows=rows)
+        table = StatusTable(self.name, rows)
         
         return [table]
 

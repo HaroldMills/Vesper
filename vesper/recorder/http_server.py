@@ -13,7 +13,11 @@ from vesper.util.bunch import Bunch
 
 class HttpServer(HTTPServer):
     
-    """Vesper Recorder HTTP server."""
+    """
+    Vesper Recorder HTTP server.
+
+    The server serves a single HTML recorder status page.
+    """
     
     
     def __init__(self, port_num, recorder_version_num, recorder):
@@ -93,27 +97,24 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         recorder = data.recorder
         now = DateTime.now(tz=ZoneInfo('UTC'))
                 
-        status_table = self._create_status_table(recorder, now)
+        status_table = self._create_recording_status_table(recorder, now)
         station_table = self._create_station_table(recorder.station)
-        devices = recorder.get_input_devices()
-        devices_table = self._create_devices_table(devices, recorder.input)
-        input_table = self._create_input_table(devices, recorder.input)
+        input_tables = self._create_input_tables(recorder.input)
         processor_tables = \
             self._create_processor_tables(recorder.processor_graph)
         schedule_table = self._create_schedule_table(
             recorder.schedule, recorder.station.time_zone, now)
         
         tables = '\n'.join(
-            [status_table, station_table, devices_table, input_table] +
-            processor_tables +
+            [status_table, station_table] + input_tables + processor_tables +
             [schedule_table])
-        
+
         body = _PAGE.format(_CSS, data.recorder_version_num, tables)
         
         return body.encode()
     
     
-    def _create_status_table(self, recorder, now):
+    def _create_recording_status_table(self, recorder, now):
         
         time_zone = recorder.station.time_zone
         
@@ -158,54 +159,12 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         return _create_table('Station', rows)
     
     
-    def _create_devices_table(self, devices, input):
-        
-        if len(devices) == 0:
-            header = None
-            rows = None
-            footer = '<p>No input devices were found.</p>'
-        
-        else:
-            header = ('Name', 'Channel Count')
-            selected_device_name = \
-                _get_full_device_name(input.input_device_name, devices)
-            rows = [
-                self._create_devices_table_row(d, selected_device_name)
-                for d in devices]
-            footer = '* Selected input device.'
-        
-        return _create_table('Available Input Devices', rows, header, footer)
+    def _create_input_tables(self, input):
+        return _create_tables(input.get_status_tables())
 
-    
-    def _create_devices_table_row(self, device, selected_device_name):
-        prefix = '*' if device.name == selected_device_name else ''
-        return (prefix + device.name, device.input_channel_count)
-    
-    
-    def _create_input_table(self, devices, input):
-        
-        device_name = input.input_device_name
-        full_device_name = _get_full_device_name(device_name, devices)
 
-        if full_device_name is None:
-            text = f'There is no input device with name {device_name}.'
-        else:
-            text = full_device_name
-            
-        rows = (
-            ('Device Name', text),
-            ('Channel Count', input.channel_count),
-            ('Sample Rate (Hz)', input.sample_rate),
-            ('Buffer Size (seconds)', input.buffer_size)
-        )
-
-        return _create_table('Input', rows)
-    
-    
     def _create_processor_tables(self, processor_graph):
-        return [
-            _create_table(t.title, t.rows)
-            for t in processor_graph.get_status_tables()]
+        return _create_tables(processor_graph.get_status_tables())
 
 
     def _create_schedule_table(self, schedule, time_zone, now):
@@ -232,6 +191,12 @@ def _format_datetime(dt, time_zone=None):
     if time_zone is not None:
         dt = dt.astimezone(time_zone)
     return dt.strftime('%Y-%m-%d %H:%M:%S %Z')
+
+
+def _create_tables(tables):
+    return [
+        _create_table(t.title, t.rows, t.header, t.footer)
+        for t in tables]
 
 
 def _create_table(title, rows, header=None, footer=None):
@@ -277,14 +242,3 @@ def _create_table_footer(text):
         return ''
     else:
         return f'<p>{text}</p>\n'
-
-
-def _get_full_device_name(name, devices):
-
-    for device in devices:
-        if device.name.find(name) != -1:
-            return device.name
-        
-    # If we get here, no device name includes `name`.
-    
-    return None

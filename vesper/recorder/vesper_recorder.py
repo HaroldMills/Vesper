@@ -18,7 +18,6 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 
 
-# TODO: Include audio file processor settings on web page.
 # TODO: Consider converting all samples to 32-bit floats on input and
 #       making all processor audio input and output 32-bit float.
 # TODO: Minimize memory churn in processors.
@@ -58,10 +57,6 @@ _DEFAULT_STATION_LATITUDE = None
 _DEFAULT_STATION_LONGITUDE = None
 _DEFAULT_STATION_TIME_ZONE = 'UTC'
 _DEFAULT_SCHEDULE = {}
-_DEFAULT_INPUT_CHANNEL_COUNT = 1
-_DEFAULT_INPUT_SAMPLE_RATE = 22050          # hertz
-_DEFAULT_INPUT_BUFFER_SIZE = .05            # seconds
-_DEFAULT_INPUT_TOTAL_BUFFER_SIZE = 60       # seconds
 _DEFAULT_SERVER_PORT_NUM = 8001
 
 _PROCESSOR_CLASSES = (Resampler, LevelMeter, AudioFileWriter)
@@ -82,11 +77,6 @@ class VesperRecorder:
     VERSION_NUMBER = '0.3.0a1'
 
 
-    @staticmethod
-    def get_input_devices():
-        return AudioInput.get_input_devices()
-    
-    
     @staticmethod
     def create_and_run_recorder(home_dir_path):
         return _create_and_run_recorder(home_dir_path)
@@ -156,8 +146,8 @@ class VesperRecorder:
     def _create_audio_input(self, settings):
         s = settings
         return AudioInput(
-            self, s.device_name, s.channel_count, s.sample_rate,
-            s.buffer_size, s.total_buffer_size)
+            self, s.device, s.channel_count, s.sample_rate, s.buffer_size,
+            s.total_buffer_size)
     
 
     def _start_schedule_thread(self):
@@ -440,6 +430,7 @@ def _parse_settings_file_aux(settings_file_path, home_dir_path):
     
 def _parse_station_settings(settings):
 
+    # TODO: Require station settings.
     name = settings.get('station.name', _DEFAULT_STATION_NAME)
     lat = settings.get('station.latitude', _DEFAULT_STATION_LATITUDE)
     lon = settings.get('station.longitude', _DEFAULT_STATION_LONGITUDE)
@@ -455,6 +446,7 @@ def _parse_station_settings(settings):
 
 def _parse_schedule_settings(settings, station):
 
+    # TODO: Require schedule.
     schedule_dict = settings.get('schedule', _DEFAULT_SCHEDULE)
 
     return Schedule.compile_dict(
@@ -463,32 +455,9 @@ def _parse_schedule_settings(settings, station):
     
 
 def _parse_input_settings(settings):
-
-    device_name = settings.get('input.device_name')
-
-    channel_count = int(settings.get(
-        'input.channel_count', _DEFAULT_INPUT_CHANNEL_COUNT))
-    
-    sample_rate = int(settings.get(
-        'input.sample_rate', _DEFAULT_INPUT_SAMPLE_RATE))
-
-    buffer_size = float(settings.get(
-        'input.buffer_size', _DEFAULT_INPUT_BUFFER_SIZE))
-    
-    total_buffer_size = float(settings.get(
-        'input.total_buffer_size', _DEFAULT_INPUT_TOTAL_BUFFER_SIZE))
-    
-    settings = Bunch(
-        device_name=device_name,
-        channel_count=channel_count,
-        sample_rate=sample_rate,
-        sample_type='int16',
-        buffer_size=buffer_size,
-        total_buffer_size=total_buffer_size)
-
-    AudioInput.check_input_settings(settings)
-
-    return settings
+    mapping = settings.get_required('input')
+    settings = Settings(mapping)
+    return AudioInput.parse_settings(settings)
 
 
 def _parse_processor_settings(settings):

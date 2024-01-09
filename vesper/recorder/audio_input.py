@@ -7,8 +7,8 @@ import time
 
 import sounddevice as sd
 
+from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
-import vesper.util.text_utils as text_utils
 
 
 # TODO: Handle unsupported input sample rates better on macOS.
@@ -24,6 +24,9 @@ import vesper.util.text_utils as text_utils
 # a copied buffer in the rare case where the samples wrap around the end
 # of the circular buffer.
 
+
+_DEFAULT_INPUT_BUFFER_SIZE = .05            # seconds
+_DEFAULT_INPUT_TOTAL_BUFFER_SIZE = 60       # seconds
 
 _USE_RAW_STREAM = False
 
@@ -59,33 +62,65 @@ class AudioInput:
     
 
     @staticmethod
-    def get_input_devices():
-        return _get_input_devices()
-    
+    def parse_settings(settings):
 
-    @staticmethod
-    def check_input_settings(settings):
+        device_name = settings.get_required('device_name')
 
-        _check_input_device_name(settings.device_name)
+        host_api_name = settings.get('host_api_name')
+
+        device = _find_input_device(device_name, host_api_name)
+
+        channel_count = int(settings.get_required('channel_count'))
+
+        if channel_count > device.max_channel_count:
+            raise ValueError(
+                f'Invalid input channel count {channel_count}. '
+                f'For the input device "{device.name}", the maximum '
+                f'channel count is {device.max_channel_count}.')
+        
+        sample_rate = float(settings.get_required('sample_rate'))
 
         sd.check_input_settings(
-            device=settings.device_name,
-            channels=settings.channel_count,
-            samplerate=settings.sample_rate,
+            device=device.index,
+            channels=channel_count,
+            samplerate=sample_rate,
             dtype=_SAMPLE_DTYPE)
+        
+        buffer_size = float(settings.get(
+            'buffer_size', _DEFAULT_INPUT_BUFFER_SIZE))
+        
+        total_buffer_size = float(settings.get(
+            'total_buffer_size', _DEFAULT_INPUT_TOTAL_BUFFER_SIZE))
+        
+        return Bunch(
+            device=device,
+            channel_count=channel_count,
+            sample_rate=sample_rate,
+            sample_type='int16',
+            buffer_size=buffer_size,
+            total_buffer_size=total_buffer_size)
 
 
     def __init__(
-            self, recorder, input_device_name, channel_count, sample_rate,
-            buffer_size, total_buffer_size):
+            self, recorder, device, channel_count, sample_rate, buffer_size,
+            total_buffer_size):
         
         self._recorder = recorder
-        self._input_device_name = input_device_name
+        self._device = device
         self._channel_count = channel_count
         self._sample_rate = sample_rate
         self._buffer_size = buffer_size
         self._total_buffer_size = total_buffer_size
+
+        # Get list of available input devices, sorted by device name
+        # and host API name.
+        self._devices = _get_input_devices()
         
+        # Get the total number of host APIs used by the available input
+        # devices.
+        self._host_api_count = \
+            len(set([d.host_api_index for d in self._devices]))
+
         self._bytes_per_frame = self.channel_count * _SAMPLE_SIZE // 8
         self._frames_per_buffer = \
             int(math.ceil(self.buffer_size * self.sample_rate))
@@ -120,8 +155,8 @@ class AudioInput:
     
 
     @property
-    def input_device_name(self):
-        return self._input_device_name
+    def device(self):
+        return self._device
     
     
     @property
@@ -178,7 +213,7 @@ class AudioInput:
                 stream_class = sd.InputStream
 
             self._stream = stream_class(
-                device=self.input_device_name,
+                device=self.device.index,
                 channels=self.channel_count,
                 samplerate=self.sample_rate,
                 dtype=_SAMPLE_DTYPE,
@@ -249,54 +284,173 @@ class AudioInput:
             self._stream.close()
 
 
+    def get_status_tables(self):
+        device_table = self._create_device_table()
+        input_table = self._create_input_table()
+        return [device_table, input_table]
+    
+
+    def _create_device_table(self):
+        
+        include_host_api_column = self._host_api_count > 1
+        selected_device = self.device
+
+        if len(self._devices) == 0:
+            header = None
+            rows = None
+            footer = '<p>No input devices found.</p>'
+        
+        else:
+
+            if include_host_api_column:
+                header = ('Device Name', 'Host API Name', 'Max Channel Count')
+            else:
+                header = ('Device Name', 'Max Channel Count')
+
+            rows = [
+                self._create_device_table_row(
+                    d, include_host_api_column, selected_device)
+                for d in self._devices]
+            
+            footer = '* Selected input device.'
+        
+        return StatusTable('Available Input Devices', rows, header, footer)
+
+    
+    def _create_device_table_row(
+            self, device, include_host_api_column, selected_device):
+        
+        prefix = '*' if device.index == selected_device.index else ''
+        device_name = prefix + device.name
+
+        if include_host_api_column:
+            return (
+                device_name, device.host_api_name, device.max_channel_count)
+        else:
+            return (device_name, device.max_channel_count)
+    
+    
+    def _create_input_table(self):
+        
+        device = self.device
+
+        device_rows = (('Device Name', device.name),)
+        if self._host_api_count > 1:
+            device_rows += (('Host API Name', device.host_api_name),)
+
+        rows = device_rows + (
+            ('Channel Count', self.channel_count),
+            ('Sample Rate (Hz)', self.sample_rate),
+            ('Buffer Size (seconds)', self.buffer_size))
+
+        return StatusTable('Input', rows)
+    
+
+def _find_input_device(device_name, host_api_name):
+
+    devices = _get_input_devices()
+
+    device_count = len(devices)
+
+    if device_count == 0:
+        raise ValueError('No audio input devices found.')
+    
+    matching_devices = \
+        [d for d in devices if _device_matches(d, device_name, host_api_name)]
+    
+    match_count = len(matching_devices)
+
+    if match_count != 1:
+
+        if match_count == 0:
+            prefix = f'Unrecognized'
+        else:
+            prefix = f'Ambiguous'
+
+        if host_api_name is None:
+            spec_type = f'input device name "{device_name}"'
+        else:
+            spec_type = (
+                f'input device name / host API name combination '
+                f'({device_name}, {host_api_name})')
+
+        problem = f'{prefix} {spec_type}.'
+
+        lines = [f'    ({d.name}, {d.host_api_name})\n' for d in devices]
+        device_table = ''.join(lines)
+
+        remedy = (
+            f'Please specify an input device name (and a host API name '
+            f'if the device can be accessed via more than one host API) '
+            f'that matches exactly one available input device / host API '
+            f'combination. The available input device name / host '
+            f'API name combinations are:\n\n'
+            f'{device_table}\n'
+            f'Please see the documentation for the input "device_name" '
+            f'and "host_api_name" settings in the example "Vesper '
+            f'Recorder Settings.yaml" file for more details.')
+
+        raise ValueError(f'{problem} {remedy}')
+    
+    else:
+        return matching_devices[0]
+
+
 def _get_input_devices():
     
-    # Get input devices.
+    # Get input device info.
     devices = sd.query_devices()
     input_devices = [d for d in devices if d['max_input_channels'] > 0]
     
     # Get default input device index.
     default_device_index = sd.default.device[0]
 
-    return [
-        _get_input_device_info(device, default_device_index)
+    # Get host APIs info.
+    host_apis = sd.query_hostapis()
+
+    # Get input device `Bunch` objects.
+    devices = [
+        _get_input_device(device, default_device_index, host_apis)
         for device in input_devices]
     
+    # Sort input devices by name and host API.
+    devices.sort(key=lambda d: (d.name, d.host_api_name))
+
+    return devices
     
-def _get_input_device_info(device, default_device_index):
+    
+def _get_input_device(device, default_device_index, host_apis):
+
+    host_api_index = device['hostapi']
+    host_api = host_apis[host_api_index]
+    host_api_name = host_api['name']
+
     return Bunch(
-        host_api_index=device['hostapi'],
         index=device['index'],
-        default=device['index'] == default_device_index,
         name=device['name'],
-        input_channel_count=device['max_input_channels'],
+        is_default=device['index'] == default_device_index,
+        host_api_index=host_api_index,
+        host_api_name=host_api_name,
+        max_channel_count=device['max_input_channels'],
         default_sample_rate=device['default_samplerate'],
         default_low_input_latency=device['default_low_input_latency'],
         default_high_input_latency=device['default_high_input_latency'])
     
 
-def _check_input_device_name(name):
+def _device_matches(device, device_name, host_api_name):
 
-    devices = _get_input_devices()
-    names = sorted(d.name for d in devices)
+    if device.name.find(device_name) == -1:
+        # `device_name` is not part or all of `device.name`
 
-    matching_names = [n for n in names if n.find(name) != -1]
-    match_count = len(matching_names)
-
-    if match_count != 1:
-
-        names = text_utils.create_string_item_list(f'"{n}"' for n in names)
-
-        if match_count == 0:
-            prefix = 'Unrecognized'
-        
-        elif match_count > 1:
-            prefix = 'Ambiguous'
+        return False
     
-        raise ValueError(
-            f'{prefix} input device name "{name}". Please specify a '
-            f'name that matches part or all of exactly one device name. '
-            f'Valid names are {names}.')
+    else:
+        # `device_name` is part or all of `device.name`
+        
+        # If `host_api_name` is specified, require that it be
+        # `device.host_api_name` to match.
+        return host_api_name is None or device.host_api_name == host_api_name
+
 
 class _PortAudioOverflowTest:
     

@@ -8,6 +8,7 @@ import wave
 from vesper.recorder.processor import Processor
 from vesper.recorder.s3_audio_file_uploader import S3AudioFileUploader
 from vesper.recorder.settings import Settings
+from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
 import vesper.recorder.async_task_thread as async_task_thread
 import vesper.util.time_utils as time_utils
@@ -299,7 +300,7 @@ class AudioFileWriter(Processor):
             ('Max Audio File Duration (seconds)', self.max_audio_file_duration)
         )
 
-        table = Bunch(title=self.name, rows=rows)
+        table = StatusTable(self.name, rows)
 
         processor_tables = list(_chain(
             p.get_status_tables() for p in self._audio_file_processors))
