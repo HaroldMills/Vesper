@@ -39,3 +39,12 @@ class AudioFileProcessor:
         """
 
         raise NotImplementedError()
+    
+
+    def get_status_tables(self):
+
+        """
+        Gets a list of `StatusTable` objects to display for this processor.
+        """
+
+        raise NotImplementedError()
