@@ -18,6 +18,15 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 
 
+# TODO: Review input overflow handling and improve if needed.
+# TODO: Consider implementing recorder `wait` method.
+# TODO: Test recorder with repeating chirp input.
+# TODO: Consider modifying schedule notifier to notify only when schedule
+#       intervals start, and to include in the notification the interval
+#       duration. The recorder could then compute and record the
+#       corresponding number of sample frames. Then we could always
+#       record the correct number of sample frames do away with the
+#       the kludgy `_stop_pending` attribute.
 # TODO: Consider converting all samples to 32-bit floats on input and
 #       making all processor audio input and output 32-bit float.
 # TODO: Minimize memory churn in processors.
@@ -34,8 +43,6 @@ from vesper.util.schedule import Schedule, ScheduleRunner
 # TODO: Make processor classes plugins.
 
 # TODO: Make main function `main` instead of `_main`.
-# TODO: Review input overflow handling and improve if needed.
-# TODO: Consider implementing recorder `wait` method.
 # TODO: Add support for 24-bit input samples.
 # TODO: Add support for 32-bit floating point input samples.
 # TODO: Consider using `soundfile` package for writing audio files.
@@ -229,18 +236,48 @@ class VesperRecorder:
         
         # TODO: Don't ignore input overflows.
 
-        samples = command.samples
+        # It is important to test `self._recording` here. Without the
+        # test, a race condition involving the input thread and the
+        # main thread can cause this method to invoke the processor
+        # graph's `process` method after the graph has been stopped,
+        # causing it to raise an exception. The race condition can
+        # play out as follows:
+        #
+        #     1. Schedule queues a `stop` command.
+        #
+        #     2. Main thread executes `stop` command, setting `_stop_pending`.
+        #
+        #     3. Input thread queues a `process_input` command.
+        #
+        #     4. Main thread begins executing `process_input` command of
+        #        step 3.
+        #
+        #     5. Before main thread calls `_stop_if_pending`, input
+        #        thread queues another `process_input` command.
+        #
+        #     6. Main thread finishes executing command of step 3,
+        #        including calling `_stop_if_pending`, which stops
+        #        the processor graph.
+        #
+        #     7. Main thread executes `process_input` command of step 5.
+        #        Without the `self._recording` test, it calls
+        #        `self._processor_graph.process`, which raises an
+        #        exception since the graph was stopped in step 6.
 
-        input_item = Bunch(
-            samples=samples,
-            frame_count=command.frame_count)
+        if self._recording:
 
-        self._processor_graph.process(input_item)
+            samples = command.samples
 
-        # Free sample buffer for reuse.
-        self._input.free_buffer(samples)
-        
-        self._stop_if_pending()
+            input_item = Bunch(
+                samples=samples,
+                frame_count=command.frame_count)
+
+            self._processor_graph.process(input_item)
+
+            # Free sample buffer for reuse.
+            self._input.free_buffer(samples)
+            
+            self._stop_if_pending()
 
 
     def handle_input_overflow(self, frame_count, port_audio_overflow):
@@ -275,7 +312,11 @@ class VesperRecorder:
         # correct lengths and making it more apparent in the files
         # where input was dropped.
 
-        self._stop_if_pending()
+        # It is important to test `self._recording` here, for reasons
+        # similar to those of the comments in the `_on_process_input`
+        # method.
+        if self._recording:
+            self._stop_if_pending()
 
 
     # TODO: Implement this.
