@@ -19,6 +19,22 @@ returns it to the player thread via a second queue called the
 *free buffer queue*. The number of buffers is fixed, and the player thread
 fills all of the buffers and writes them to the filled buffer queue before
 starting the PyAudio output stream.
+
+To create a Conda environment in which to run this script:
+
+    conda create -n play-recorder-test-signal python=3.9
+    conda activate play-recorder-test-signal
+    conda install pyaudio
+    pip install numpy ruamel_yaml
+
+As of 2024-01-11, the script raises a SystemError exception for Python
+3.10 and above, with the message:
+
+    SystemError: PY_SSIZE_T_CLEAN macro must be defined for '#' formats
+
+The problem appears to be with pyaudio: see
+https://stackoverflow.com/questions/70344884/
+pyaudio-write-systemerror-py-ssize-t-clean-macro-must-be-defined-for-format
 """
 
 
@@ -27,12 +43,17 @@ from threading import Thread
 import math
 import time
 
+from ruamel.yaml import YAML
 import numpy as np
 import pyaudio
-import ruamel.yaml as yaml
 
 
-_CONFIG = yaml.safe_load('''
+def _load_yaml(s):
+    yaml = YAML(pure=True)
+    return yaml.load(s)
+
+
+_CONFIG = _load_yaml('''
     
     channel_signals:
     
