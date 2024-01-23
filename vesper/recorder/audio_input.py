@@ -21,8 +21,6 @@ from vesper.util.bunch import Bunch
 _DEFAULT_INPUT_BUFFER_SIZE = 10             # seconds
 _DEFAULT_INPUT_CHUNK_SIZE = .5              # seconds
 
-_USE_RAW_STREAM = True
-
 _SAMPLE_SIZE = 16
 _SAMPLE_DTYPE = 'int16'
 
@@ -171,19 +169,7 @@ class AudioInput:
             self._running = True
             self._callback_count = 0
 
-            if _USE_RAW_STREAM:
-                # use raw input stream, which delivers raw sample bytes
-                # to input callback.
-
-                stream_class = sd.RawInputStream
-
-            else:
-                # use regular input stream, which delivers samples in
-                # NumPy arrays to callback.
-
-                stream_class = sd.InputStream
-
-            self._stream = stream_class(
+            self._stream = sd.RawInputStream(
                 device=self.device.index,
                 channels=self.channel_count,
                 samplerate=self.sample_rate,
@@ -413,49 +399,49 @@ def _device_matches(device, device_name, host_api_name):
         return host_api_name is None or device.host_api_name == host_api_name
 
 
-class _PortAudioOverflowTest:
+# class _PortAudioOverflowTest:
     
     
-    def __init__(self, recorder, duration):
-        self._recorder = recorder
-        self._duration = duration
-        self._slept = False
+#     def __init__(self, recorder, duration):
+#         self._recorder = recorder
+#         self._duration = duration
+#         self._slept = False
         
         
-    def tick(self):
-        if not self._slept:
-            time.sleep(self._duration)
-            self._slept = True
+#     def tick(self):
+#         if not self._slept:
+#             time.sleep(self._duration)
+#             self._slept = True
         
         
-class _RecorderOverflowTest:
+# class _RecorderOverflowTest:
     
     
-    def __init__(self, recorder, duration):
+#     def __init__(self, recorder, duration):
          
-        self._recorder = recorder
-        self._duration = duration
+#         self._recorder = recorder
+#         self._duration = duration
         
-        # Hide recorder's input buffers from audio input callback.
-        self._buffers = []
-        while True:
-            try:
-                buffer = self._recorder._free_buffer_queue.get(block=False)
-            except Empty:
-                break
-            else:
-                self._buffers.append(buffer)
+#         # Hide recorder's input buffers from audio input callback.
+#         self._buffers = []
+#         while True:
+#             try:
+#                 buffer = self._recorder._free_buffer_queue.get(block=False)
+#             except Empty:
+#                 break
+#             else:
+#                 self._buffers.append(buffer)
                  
-        self._buffer_count = 0
+#         self._buffer_count = 0
  
  
-    def tick(self):
+#     def tick(self):
          
-        if self._buffer_count < self._duration:
-            self._buffer_count += 1
+#         if self._buffer_count < self._duration:
+#             self._buffer_count += 1
              
-        else:
+#         else:
              
-            # Unhide free buffers.
-            for buffer in self._buffers:
-                self._recorder._free_buffer_queue.put(buffer)
+#             # Unhide free buffers.
+#             for buffer in self._buffers:
+#                 self._recorder._free_buffer_queue.put(buffer)
