@@ -18,9 +18,7 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 
 
-# TODO: Log input overflow.
 # TODO: Review audio input variable names.
-# TODO: Add settings for input buffer size and chunk size.
 # TODO: Consider allowing partial input chunk at end of recording.
 # TODO: Consider converting all samples to 32-bit floats on input and
 #       making all processor audio input and output 32-bit float.
@@ -204,6 +202,9 @@ class VesperRecorder:
 
             _logger.info('Starting recording...')
 
+            self._port_audio_input_overflows = 0
+            self._recorder_input_overflows = 0
+
             self._recording = True
             self._stop_pending = False
 
@@ -236,8 +237,6 @@ class VesperRecorder:
         This method always runs on the main thread.
         """
         
-        # TODO: Don't ignore input overflows.
-
         # It is important to test `self._recording` here. Without the
         # test, a race condition involving the input thread and the
         # main thread can cause this method to invoke the processor
@@ -268,6 +267,9 @@ class VesperRecorder:
 
         if self._recording:
 
+            if command.port_audio_overflow:
+                self._handle_port_audio_input_overflow()
+
             samples = command.samples
 
             input_item = Bunch(
@@ -280,6 +282,15 @@ class VesperRecorder:
             self._input.free_chunk(samples)
             
             self._stop_if_pending()
+
+
+    def _handle_port_audio_input_overflow(self):
+
+        self._port_audio_input_overflows += 1
+
+        _logger.warning(
+            f'Input overflow {self._port_audio_input_overflows} '
+            f'reported by PortAudio.')
 
 
     def handle_input_overflow(self, frame_count, port_audio_overflow):
@@ -306,13 +317,19 @@ class VesperRecorder:
         This method always runs on the main thread.
         """
         
-        # TODO: Log input overflows.
-
         # TODO: Consider processing a buffer of zeros here,
         # allocated before input starts. This would have some
         # advantages, for example by giving affected audio files the
         # correct lengths and making it more apparent in the files
         # where input was dropped.
+
+        self._recorder_input_overflows += 1
+        _logger.warning(
+            f'Input overflow {self._recorder_input_overflows} reported '
+            f'by recorder audio input.')
+        
+        if command.port_audio_overflow:
+            self._handle_port_audio_input_overflow()
 
         # It is important to test `self._recording` here, for reasons
         # similar to those of the comments in the `_on_process_input`
