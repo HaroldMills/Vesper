@@ -1,12 +1,12 @@
 """Module containing `AudioInput` class."""
 
 
-from queue import Empty, Queue
-import math
 import time
 
 import sounddevice as sd
 
+from vesper.recorder.audio_input_buffer import (
+    AudioInputBuffer, AudioInputBufferOverflow)
 from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
 
@@ -17,18 +17,11 @@ from vesper.util.bunch import Bunch
 # Note that the issue described there does not seem to be a problem
 # on Windows and Linux.
 
-# TODO: Use `sounddevice` default input stream block size of zero. To enable
-# this, write incoming samples to a single large (e.g. one minute) circular
-# buffer instead of to a fixed-size buffer from a buffer pool. Send samples
-# to listeners as NumPy views into this circular buffer, or as a view of
-# a copied buffer in the rare case where the samples wrap around the end
-# of the circular buffer.
 
+_DEFAULT_INPUT_BUFFER_SIZE = 10             # seconds
+_DEFAULT_INPUT_CHUNK_SIZE = .5              # seconds
 
-_DEFAULT_INPUT_BUFFER_SIZE = .05            # seconds
-_DEFAULT_INPUT_TOTAL_BUFFER_SIZE = 60       # seconds
-
-_USE_RAW_STREAM = False
+_USE_RAW_STREAM = True
 
 _SAMPLE_SIZE = 16
 _SAMPLE_DTYPE = 'int16'
@@ -89,8 +82,8 @@ class AudioInput:
         buffer_size = float(settings.get(
             'buffer_size', _DEFAULT_INPUT_BUFFER_SIZE))
         
-        total_buffer_size = float(settings.get(
-            'total_buffer_size', _DEFAULT_INPUT_TOTAL_BUFFER_SIZE))
+        chunk_size = float(settings.get(
+            'chunk_size', _DEFAULT_INPUT_CHUNK_SIZE))
         
         return Bunch(
             device=device,
@@ -98,19 +91,19 @@ class AudioInput:
             sample_rate=sample_rate,
             sample_type='int16',
             buffer_size=buffer_size,
-            total_buffer_size=total_buffer_size)
+            chunk_size=chunk_size)
 
 
     def __init__(
             self, recorder, device, channel_count, sample_rate, buffer_size,
-            total_buffer_size):
+            chunk_size):
         
         self._recorder = recorder
         self._device = device
         self._channel_count = channel_count
         self._sample_rate = sample_rate
         self._buffer_size = buffer_size
-        self._total_buffer_size = total_buffer_size
+        self._chunk_size = chunk_size
 
         # Get list of available input devices, sorted by device name
         # and host API name.
@@ -121,34 +114,17 @@ class AudioInput:
         self._host_api_count = \
             len(set([d.host_api_index for d in self._devices]))
 
-        self._bytes_per_frame = self.channel_count * _SAMPLE_SIZE // 8
-        self._frames_per_buffer = \
-            int(math.ceil(self.buffer_size * self.sample_rate))
+        chunk_count = int(round(self._buffer_size / self._chunk_size))
+        self._chunk_size_frames = \
+            int(round(self._chunk_size * self._sample_rate))
+        self._frame_size = self.channel_count * _SAMPLE_SIZE // 8
             
-        self._free_buffer_queue = self._create_input_buffers()
-            
+        self._input_buffer = AudioInputBuffer(
+            chunk_count, self._chunk_size_frames, self._frame_size)
+        
         self._running = False
             
     
-    def _create_input_buffers(self):
-        
-        """
-        Creates input buffers to hold up to `self.total_buffer_size`
-        seconds of samples and puts them onto free buffer queue.
-        """
-        
-        buffer_count = int(round(self.total_buffer_size / self.buffer_size))
-        bytes_per_buffer = self.frames_per_buffer * self._bytes_per_frame
-        
-        queue = Queue()
-        
-        for _ in range(buffer_count):
-            buffer = bytearray(bytes_per_buffer)
-            queue.put(buffer)
-            
-        return queue
-            
-
     @property
     def recorder(self):
         return self._recorder
@@ -173,15 +149,10 @@ class AudioInput:
     def buffer_size(self):
         return self._buffer_size
     
-    
-    @property
-    def frames_per_buffer(self):
-        return self._frames_per_buffer
-
 
     @property
-    def total_buffer_size(self):
-        return self._total_buffer_size
+    def chunk_size(self):
+        return self._chunk_size
     
     
     @property
@@ -217,7 +188,7 @@ class AudioInput:
                 channels=self.channel_count,
                 samplerate=self.sample_rate,
                 dtype=_SAMPLE_DTYPE,
-                blocksize=self.frames_per_buffer,
+                blocksize=0,
                 callback=self._input_callback)
             
             self._stream.start()
@@ -243,35 +214,25 @@ class AudioInput:
             port_audio_overflow = status_flags.input_overflow
         
             try:
-                
-                # Get buffer to copy new samples into.
-                buffer = self._free_buffer_queue.get(block=False)
-                
-            except Empty:
-                # no buffers available
-                
+                self._input_buffer.write(samples, frame_count)
+
+            except AudioInputBufferOverflow as e:
+
                 self._recorder.handle_input_overflow(
-                    frame_count, port_audio_overflow)
+                    e.overflow_size, port_audio_overflow)
                 
             else:
-                # got a buffer
+                # input buffer did not overflow
                 
-                if not _USE_RAW_STREAM:
-                    # `samples` is a NumPy array.
+                chunk = self._input_buffer.get_chunk()
 
-                    # Get raw sample bytes.
-                    samples = samples.tobytes()
-
-                # Copy samples into buffer.
-                byte_count = frame_count * self._bytes_per_frame
-                buffer[:byte_count] = samples[:byte_count]
-                
-                self._recorder.process_input(
-                    buffer, frame_count, port_audio_overflow)
+                if chunk is not None:
+                    self._recorder.process_input(
+                        chunk, self._chunk_size_frames, port_audio_overflow)
 
 
-    def free_buffer(self, buffer):
-        self._free_buffer_queue.put(buffer)
+    def free_chunk(self, chunk):
+        self._input_buffer.free_chunk(chunk)
 
 
     def stop(self):

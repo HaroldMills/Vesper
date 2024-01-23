@@ -18,19 +18,21 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 
 
-# TODO: Review input overflow handling and improve if needed.
+# TODO: Log input overflow.
+# TODO: Review audio input variable names.
+# TODO: Add settings for input buffer size and chunk size.
+# TODO: Consider allowing partial input chunk at end of recording.
+# TODO: Consider converting all samples to 32-bit floats on input and
+#       making all processor audio input and output 32-bit float.
+# TODO: Consider demultiplexing channels at input.
+# TODO: Minimize memory churn in processors.
 # TODO: Consider implementing recorder `wait` method.
-# TODO: Test recorder with repeating chirp input.
 # TODO: Consider modifying schedule notifier to notify only when schedule
 #       intervals start, and to include in the notification the interval
 #       duration. The recorder could then compute and record the
 #       corresponding number of sample frames. Then we could always
 #       record the correct number of sample frames do away with the
 #       the kludgy `_stop_pending` attribute.
-# TODO: Consider converting all samples to 32-bit floats on input and
-#       making all processor audio input and output 32-bit float.
-# TODO: Minimize memory churn in processors.
-# TODO: Consider decoupling processing buffer size from input buffer size.
 # TODO: Optionally upload status updates regularly to S3.
 # TODO: Consider updating settings between recordings.
 # TODO: Consider supporting S3 setting files.
@@ -137,12 +139,7 @@ class VesperRecorder:
         self._processor_graph = ProcessorGraph(
             'Processor Graph', s.processors, self._input, _PROCESSOR_CLASSES)
 
-        # Create HTTP server.
-        server = HttpServer(
-            s.server_port_num, VesperRecorder.VERSION_NUMBER, self)
-        
-        # Start HTTP server.
-        Thread(target=server.serve_forever, daemon=True).start()
+        self._start_http_server(s.server_port_num)
 
         self._start_schedule_thread()
 
@@ -154,8 +151,13 @@ class VesperRecorder:
         s = settings
         return AudioInput(
             self, s.device, s.channel_count, s.sample_rate, s.buffer_size,
-            s.total_buffer_size)
+            s.chunk_size)
     
+
+    def _start_http_server(self, port_num):
+        server = HttpServer(port_num, VesperRecorder.VERSION_NUMBER, self)
+        Thread(target=server.serve_forever, daemon=True).start()
+
 
     def _start_schedule_thread(self):
 
@@ -275,7 +277,7 @@ class VesperRecorder:
             self._processor_graph.process(input_item)
 
             # Free sample buffer for reuse.
-            self._input.free_buffer(samples)
+            self._input.free_chunk(samples)
             
             self._stop_if_pending()
 
