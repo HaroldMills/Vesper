@@ -19,8 +19,8 @@ from vesper.util.bunch import Bunch
 # on Windows and Linux.
 
 
-_DEFAULT_INPUT_BUFFER_SIZE = 10             # seconds
-_DEFAULT_INPUT_CHUNK_SIZE = .5              # seconds
+_DEFAULT_INPUT_BUFFER_SIZE = 60             # seconds
+_DEFAULT_INPUT_CHUNK_SIZE = 1               # seconds
 
 _SAMPLE_SIZE = 16
 _SAMPLE_DTYPE = 'int16'
