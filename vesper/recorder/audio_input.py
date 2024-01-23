@@ -1,7 +1,8 @@
 """Module containing `AudioInput` class."""
 
 
-import time
+import math
+# import time
 
 import sounddevice as sd
 
@@ -112,9 +113,18 @@ class AudioInput:
         self._host_api_count = \
             len(set([d.host_api_index for d in self._devices]))
 
-        chunk_count = int(round(self._buffer_size / self._chunk_size))
+        # Get the suggested buffer size in sample frames, rounding up.
+        buffer_size = \
+            int(math.ceil(self._buffer_size * self._sample_rate))
+        
+        # Get the chunk size in sample frames, rounding up.
         self._chunk_size_frames = \
-            int(round(self._chunk_size * self._sample_rate))
+            int(math.ceil(self._chunk_size * self._sample_rate))
+        
+        # Get the minimum number of chunks that will make the actual
+        # buffer size at least the suggested one.
+        chunk_count = int(math.ceil(buffer_size / self._chunk_size_frames))
+
         self._frame_size = self.channel_count * _SAMPLE_SIZE // 8
             
         self._input_buffer = AudioInputBuffer(
