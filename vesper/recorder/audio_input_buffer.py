@@ -76,14 +76,7 @@ class AudioInputBuffer:
         """Creates the chunks of this buffer and returns them in a list."""
 
         chunk_size = self._chunk_size * self._sample_frame_size
-        capacity = self._capacity * chunk_size
-
-        buffer = bytearray(capacity)
-        view = memoryview(buffer)
-
-        start_indices = [i * chunk_size for i in range(self._capacity)]
-
-        return [view[i:i + chunk_size] for i in start_indices]
+        return [bytearray(chunk_size) for _ in range(self._capacity)]
     
 
     @synchronized
