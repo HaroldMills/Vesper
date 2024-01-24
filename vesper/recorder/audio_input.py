@@ -20,7 +20,7 @@ from vesper.util.bunch import Bunch
 
 
 _DEFAULT_PORT_AUDIO_BLOCK_SIZE = 0          # seconds
-_DEFAULT_INPUT_BUFFER_SIZE = 30             # seconds
+_DEFAULT_INPUT_BUFFER_SIZE = 30             # chunks
 _DEFAULT_INPUT_CHUNK_SIZE = 1               # seconds
 
 _SAMPLE_SIZE = 16
