@@ -20,7 +20,7 @@ from vesper.util.bunch import Bunch
 
 
 _DEFAULT_PORT_AUDIO_BLOCK_SIZE = 0          # seconds
-_DEFAULT_INPUT_BUFFER_SIZE = 30             # chunks
+_DEFAULT_INPUT_BUFFER_CAPACITY = 30         # chunks
 _DEFAULT_INPUT_CHUNK_SIZE = 1               # seconds
 
 _SAMPLE_SIZE = 16
@@ -82,8 +82,8 @@ class AudioInput:
         port_audio_block_size = float(settings.get(
             'port_audio_block_size', _DEFAULT_PORT_AUDIO_BLOCK_SIZE))
 
-        buffer_size = int(settings.get(
-            'buffer_size', _DEFAULT_INPUT_BUFFER_SIZE))
+        buffer_capacity = int(settings.get(
+            'buffer_capacity', _DEFAULT_INPUT_BUFFER_CAPACITY))
         
         chunk_size = float(settings.get(
             'chunk_size', _DEFAULT_INPUT_CHUNK_SIZE))
@@ -94,20 +94,20 @@ class AudioInput:
             sample_rate=sample_rate,
             sample_type='int16',
             port_audio_block_size=port_audio_block_size,
-            buffer_size=buffer_size,
+            buffer_capacity=buffer_capacity,
             chunk_size=chunk_size)
 
 
     def __init__(
             self, recorder, device, channel_count, sample_rate,
-            port_audio_block_size, buffer_size, chunk_size):
+            port_audio_block_size, buffer_capacity, chunk_size):
         
         self._recorder = recorder
         self._device = device
         self._channel_count = channel_count
         self._sample_rate = sample_rate
         self._port_audio_block_size = port_audio_block_size
-        self._buffer_size = buffer_size
+        self._buffer_capacity = buffer_capacity
         self._chunk_size = chunk_size
 
         # Get list of available input devices, sorted by device name
@@ -130,7 +130,7 @@ class AudioInput:
         self._frame_size = self.channel_count * _SAMPLE_SIZE // 8
             
         self._input_buffer = AudioInputBuffer(
-            self._buffer_size, self._chunk_size_frames, self._frame_size)
+            self._buffer_capacity, self._chunk_size_frames, self._frame_size)
         
         self._running = False
             
@@ -161,8 +161,8 @@ class AudioInput:
     
 
     @property
-    def buffer_size(self):
-        return self._buffer_size
+    def buffer_capacity(self):
+        return self._buffer_capacity
     
 
     @property
@@ -314,7 +314,7 @@ class AudioInput:
             ('Channel Count', self.channel_count),
             ('Sample Rate (Hz)', self.sample_rate)) + \
             port_audio_rows + (
-            ('Buffer Size (chunks)', self.buffer_size),
+            ('Buffer Capacity (chunks)', self.buffer_capacity),
             ('Chunk Size (seconds)', self.chunk_size))
 
         return StatusTable('Input', rows)

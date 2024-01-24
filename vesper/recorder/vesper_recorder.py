@@ -18,8 +18,6 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 
 
-# TODO: Review audio input variable names.
-# TODO: Consider allowing partial input chunk at end of recording.
 # TODO: Consider converting all samples to 32-bit floats on input and
 #       making all processor audio input and output 32-bit float.
 # TODO: Consider demultiplexing channels at input.
@@ -31,6 +29,7 @@ from vesper.util.schedule import Schedule, ScheduleRunner
 #       corresponding number of sample frames. Then we could always
 #       record the correct number of sample frames do away with the
 #       the kludgy `_stop_pending` attribute.
+# TODO: Consider allowing partial input chunk at end of recording.
 # TODO: Optionally upload status updates regularly to S3.
 # TODO: Consider updating settings between recordings.
 # TODO: Consider supporting S3 setting files.
@@ -149,7 +148,7 @@ class VesperRecorder:
         s = settings
         return AudioInput(
             self, s.device, s.channel_count, s.sample_rate,
-            s.port_audio_block_size, s.buffer_size, s.chunk_size)
+            s.port_audio_block_size, s.buffer_capacity, s.chunk_size)
     
 
     def _start_http_server(self, port_num):
