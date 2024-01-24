@@ -19,7 +19,8 @@ from vesper.util.bunch import Bunch
 # on Windows and Linux.
 
 
-_DEFAULT_INPUT_BUFFER_SIZE = 60             # seconds
+_DEFAULT_PORT_AUDIO_BLOCK_SIZE = 0          # seconds
+_DEFAULT_INPUT_BUFFER_SIZE = 30             # seconds
 _DEFAULT_INPUT_CHUNK_SIZE = 1               # seconds
 
 _SAMPLE_SIZE = 16
@@ -78,7 +79,10 @@ class AudioInput:
             samplerate=sample_rate,
             dtype=_SAMPLE_DTYPE)
         
-        buffer_size = float(settings.get(
+        port_audio_block_size = float(settings.get(
+            'port_audio_block_size', _DEFAULT_PORT_AUDIO_BLOCK_SIZE))
+
+        buffer_size = int(settings.get(
             'buffer_size', _DEFAULT_INPUT_BUFFER_SIZE))
         
         chunk_size = float(settings.get(
@@ -89,18 +93,20 @@ class AudioInput:
             channel_count=channel_count,
             sample_rate=sample_rate,
             sample_type='int16',
+            port_audio_block_size=port_audio_block_size,
             buffer_size=buffer_size,
             chunk_size=chunk_size)
 
 
     def __init__(
-            self, recorder, device, channel_count, sample_rate, buffer_size,
-            chunk_size):
+            self, recorder, device, channel_count, sample_rate,
+            port_audio_block_size, buffer_size, chunk_size):
         
         self._recorder = recorder
         self._device = device
         self._channel_count = channel_count
         self._sample_rate = sample_rate
+        self._port_audio_block_size = port_audio_block_size
         self._buffer_size = buffer_size
         self._chunk_size = chunk_size
 
@@ -113,22 +119,18 @@ class AudioInput:
         self._host_api_count = \
             len(set([d.host_api_index for d in self._devices]))
 
-        # Get the suggested buffer size in sample frames, rounding up.
-        buffer_size = \
-            int(math.ceil(self._buffer_size * self._sample_rate))
+        # Get the PortAudio block size in sample frames, rounding up.
+        self._port_audio_block_size_frames = \
+            int(math.ceil(self._port_audio_block_size * self._sample_rate))
         
         # Get the chunk size in sample frames, rounding up.
         self._chunk_size_frames = \
             int(math.ceil(self._chunk_size * self._sample_rate))
         
-        # Get the minimum number of chunks that will make the actual
-        # buffer size at least the suggested one.
-        chunk_count = int(math.ceil(buffer_size / self._chunk_size_frames))
-
         self._frame_size = self.channel_count * _SAMPLE_SIZE // 8
             
         self._input_buffer = AudioInputBuffer(
-            chunk_count, self._chunk_size_frames, self._frame_size)
+            self._buffer_size, self._chunk_size_frames, self._frame_size)
         
         self._running = False
             
@@ -153,6 +155,11 @@ class AudioInput:
         return self._sample_rate
     
     
+    @property
+    def port_audio_block_size(self):
+        return self._port_audio_block_size
+    
+
     @property
     def buffer_size(self):
         return self._buffer_size
@@ -184,7 +191,7 @@ class AudioInput:
                 channels=self.channel_count,
                 samplerate=self.sample_rate,
                 dtype=_SAMPLE_DTYPE,
-                blocksize=0,
+                blocksize=self._port_audio_block_size_frames,
                 callback=self._input_callback)
             
             self._stream.start()
@@ -295,10 +302,20 @@ class AudioInput:
         if self._host_api_count > 1:
             device_rows += (('Host API Name', device.host_api_name),)
 
+        # Show PortAudio block size only if it isn't zero.
+        if self.port_audio_block_size == 0:
+            port_audio_rows = ()
+        else:
+            port_audio_rows = (
+                ('PortAudio Block Size (seconds)',
+                 self.port_audio_block_size),)
+
         rows = device_rows + (
             ('Channel Count', self.channel_count),
-            ('Sample Rate (Hz)', self.sample_rate),
-            ('Buffer Size (seconds)', self.buffer_size))
+            ('Sample Rate (Hz)', self.sample_rate)) + \
+            port_audio_rows + (
+            ('Buffer Size (chunks)', self.buffer_size),
+            ('Chunk Size (seconds)', self.chunk_size))
 
         return StatusTable('Input', rows)
     

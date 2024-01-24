@@ -148,8 +148,8 @@ class VesperRecorder:
     def _create_audio_input(self, settings):
         s = settings
         return AudioInput(
-            self, s.device, s.channel_count, s.sample_rate, s.buffer_size,
-            s.chunk_size)
+            self, s.device, s.channel_count, s.sample_rate,
+            s.port_audio_block_size, s.buffer_size, s.chunk_size)
     
 
     def _start_http_server(self, port_num):
