@@ -23,7 +23,7 @@ class AudioInputBuffer:
 
 
     """
-    Chunked circular data buffer.
+    Chunked audio input buffer.
 
     Writes to the buffer can be of various sizes, but reads are always
     of one size, the *chunk size*.
@@ -40,26 +40,26 @@ class AudioInputBuffer:
 
     @property
     def capacity(self):
-        """the capacity of this buffer in chunks."""
+        """the capacity of this buffer, in chunks."""
         return self._capacity
     
 
     @property
     def chunk_size(self):
-        """the chunk size of this buffer in sample frames."""
+        """the chunk size of this buffer, in sample frames."""
         return self._chunk_size
     
 
     @property
     def sample_frame_size(self):
-        """the sample frame size of this buffer in bytes."""
+        """the sample frame size of this buffer, in bytes."""
         return self._sample_frame_size
     
 
     @property
     @synchronized
     def size(self):
-        """the size of this buffer in chunks."""
+        """the current size of this buffer, in filled chunks."""
         return len(self._full_chunks)
     
 
