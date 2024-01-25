@@ -4,10 +4,6 @@ import threading
 from vesper.util.decorators import synchronized
 
 
-class AudioInputBufferEmpty(Exception):
-    pass
-
-
 class AudioInputBufferOverflow(Exception):
 
     def __init__(self, overflow_size):

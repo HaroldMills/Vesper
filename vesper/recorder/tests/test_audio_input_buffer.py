@@ -1,5 +1,5 @@
 from vesper.recorder.audio_input_buffer import (
-    AudioInputBuffer, AudioInputBufferEmpty, AudioInputBufferOverflow)
+    AudioInputBuffer, AudioInputBufferOverflow)
 from vesper.tests.test_case import TestCase
 
 
