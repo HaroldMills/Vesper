@@ -1,4 +1,4 @@
-import logging
+# import logging
 import math
 
 import numpy as np
@@ -8,13 +8,11 @@ from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
 
 
-_logger = logging.getLogger(__name__)
+# _logger = logging.getLogger(__name__)
 
 
 _DEFAULT_UPDATE_PERIOD = 1      # seconds
-
-_SAMPLE_SIZE = 16
-_SAMPLE_DTYPE = '<i2'
+_MAX_ABS_SAMPLE = 1
 
 
 class LevelMeter(Processor):
@@ -70,28 +68,15 @@ class LevelMeter(Processor):
         self._block_size = int(round(self._sample_rate * self._update_period))
         self._accumulated_frame_count = 0
 
-        self._full_scale_value = 2 ** (_SAMPLE_SIZE - 1)
-
 
     def _process(self, input_item):
         
-        # Get NumPy sample array.
-        samples = np.frombuffer(input_item.samples, dtype=_SAMPLE_DTYPE)
+        samples = input_item.samples
+        frame_count = input_item.frame_count
         
-        # Make sample array 2D. Compute frame count from sample array
-        # length rather than using `input_item.frame_count`, since the latter
-        # may be less than the sample array capacity.
-        frame_count = len(samples) // self._channel_count
-        samples = samples.reshape((frame_count, self._channel_count))
-
         # _logger.info(f'LevelMeter._process: {frame_count}')
       
-        # Make sample array `float64` to avoid arithmetic overflow in
-        # subsequent processing.
-        samples = samples.astype(np.float64)
-
         start_index = 0
-        frame_count = input_item.frame_count
 
         while start_index != frame_count:
 
@@ -99,11 +84,11 @@ class LevelMeter(Processor):
             n = min(frame_count - start_index, remaining)
             
             # Accumulate squared samples.
-            s = samples[start_index:start_index + n]
-            self._sums += np.sum(s * s, axis=0)
+            s = samples[:, start_index:start_index + n]
+            self._sums += np.sum(s * s, axis=1)
 
             # Update maximum absolute sample values.
-            peaks = np.max(np.abs(samples), axis=0)
+            peaks = np.max(np.abs(samples), axis=1)
             self._peaks = np.maximum(self._peaks, peaks)
 
             self._accumulated_frame_count += n
@@ -113,18 +98,18 @@ class LevelMeter(Processor):
 
                 rms_values = np.sqrt(self._sums / self._block_size)
                 
-                self._rms_values = rms_samples_to_dbfs(
-                    rms_values, self._full_scale_value)
+                self._rms_values = \
+                    rms_samples_to_dbfs(rms_values, _MAX_ABS_SAMPLE)
                 
-                self._peak_values = samples_to_dbfs(
-                    self._peaks, self._full_scale_value)
+                self._peak_values = \
+                    samples_to_dbfs(self._peaks, _MAX_ABS_SAMPLE)
                 
                 # _logger.info(
                 #     f'_LevelMeter: RMS {self._rms_values} '
                 #     f'peak {self._peak_values}')
                 
-                self._sums = np.zeros(self._channel_count)
-                self._peaks = np.zeros(self._channel_count)
+                self._sums[:] = 0
+                self._peaks[:] = 0
                 self._accumulated_frame_count = 0
 
             start_index += n

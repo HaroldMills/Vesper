@@ -5,6 +5,8 @@ import itertools
 import logging
 import wave
 
+import numpy as np
+
 from vesper.recorder.processor import Processor
 from vesper.recorder.s3_audio_file_uploader import S3AudioFileUploader
 from vesper.recorder.settings import Settings
@@ -202,7 +204,16 @@ class AudioFileWriter(Processor):
     
     def _process(self, input_item):
         
-        samples = input_item.samples
+        # TODO: Consider using (and reusing) more pre-allocated buffers
+        # in the following, to reduce memory churn.
+        # Transpose, scale, round, and clip samples, convert to int16,
+        # and get resulting bytes.
+        samples = input_item.samples[:, :input_item.frame_count].transpose()
+        samples = 32768 * samples
+        np.rint(samples, out=samples)
+        np.clip(samples, -32768, 32767, out=samples)
+        samples = np.array(samples, dtype='int16').tobytes()
+            
         remaining_frame_count = input_item.frame_count
         buffer_index = 0
         
@@ -219,8 +230,6 @@ class AudioFileWriter(Processor):
                 
             byte_count = frame_count * self._frame_size
             
-            # TODO: We assume here that the sample bytes are in
-            # little-endian order, but perhaps we shouldn't.
             self._audio_file.writeframes(
                 samples[buffer_index:buffer_index + byte_count])
             

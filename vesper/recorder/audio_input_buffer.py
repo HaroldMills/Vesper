@@ -26,13 +26,22 @@ class AudioInputBuffer:
     """
 
 
-    def __init__(self, capacity, chunk_size, sample_frame_size):
+    def __init__(self, channel_count, capacity, chunk_size, chunk_type):
+        self._channel_count = channel_count
         self._capacity = capacity
         self._chunk_size = chunk_size
-        self._sample_frame_size = sample_frame_size
+        self._chunk_type = chunk_type
+        sample_size = chunk_type.input_sample_format.sample_size
+        self._sample_frame_size = self._channel_count * sample_size
         self._lock = threading.Lock()
         self.clear()
 
+
+    @property
+    def channel_count(self):
+        """the channel count of this buffer."""
+        return self._channel_count
+    
 
     @property
     def capacity(self):
@@ -47,9 +56,9 @@ class AudioInputBuffer:
     
 
     @property
-    def sample_frame_size(self):
-        """the sample frame size of this buffer, in bytes."""
-        return self._sample_frame_size
+    def chunk_type(self):
+        """the chunk type of this buffer, an `AudioInputChunk` subclass."""
+        return self._chunk_type
     
 
     @property
@@ -63,7 +72,6 @@ class AudioInputBuffer:
     def clear(self):
         self._empty_chunks = self._create_chunks()
         self._write_chunk = None
-        self._write_start_index = None
         self._full_chunks = deque()
 
 
@@ -71,9 +79,10 @@ class AudioInputBuffer:
 
         """Creates the chunks of this buffer and returns them in a list."""
 
-        chunk_size = self._chunk_size * self._sample_frame_size
-        return [bytearray(chunk_size) for _ in range(self._capacity)]
-    
+        return [
+            self._chunk_type(self._channel_count, self._chunk_size)
+            for _ in range(self._capacity)]
+   
 
     @synchronized
     def write(self, data, size=None):
@@ -81,15 +90,13 @@ class AudioInputBuffer:
         if size == 0:
             return
         
-        chunk_size = self._chunk_size * self._sample_frame_size
+        start_frame_num = 0
 
         if size is None:
-            remaining = len(data)
+            remaining = len(data) // self._sample_frame_size
         else:
-            remaining = size * self._sample_frame_size
+            remaining = size
 
-        read_start_index = 0
-        
         while remaining != 0:
 
             # Get a new write chunk if needed. Note that we detect input
@@ -101,30 +108,20 @@ class AudioInputBuffer:
                 try:
                     self._write_chunk = self._empty_chunks.pop()
                 except IndexError:
-                    raise AudioInputBufferOverflow(
-                        remaining // self._sample_frame_size)
-                else:
-                    self._write_start_index = 0
+                    raise AudioInputBufferOverflow(remaining)
                 
-            chunk_remaining = chunk_size - self._write_start_index
-            write_size = min(remaining, chunk_remaining)
+            chunk = self._write_chunk
+                
+            written = chunk.write(data, start_frame_num, remaining)
 
-            read_end_index = read_start_index + write_size
-            write_end_index = self._write_start_index + write_size
-
-            self._write_chunk[self._write_start_index:write_end_index] = \
-                data[read_start_index:read_end_index]
-            
-            remaining -= write_size
-            read_start_index = read_end_index
-            self._write_start_index = write_end_index
-
-            if self._write_start_index == chunk_size:
+            if chunk.size == chunk.capacity:
                 # write chunk full
 
-                self._full_chunks.append(self._write_chunk)
+                self._full_chunks.append(chunk)
                 self._write_chunk = None
-                self._write_start_index = None
+
+            start_frame_num += written
+            remaining -= written
 
 
     @synchronized
@@ -137,4 +134,5 @@ class AudioInputBuffer:
 
     @synchronized
     def free_chunk(self, chunk):
+        chunk.clear()
         self._empty_chunks.append(chunk)

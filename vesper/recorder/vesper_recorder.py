@@ -18,9 +18,21 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 
 
-# TODO: Consider converting all samples to 32-bit floats on input and
-#       making all processor audio input and output 32-bit float.
-# TODO: Consider demultiplexing channels at input.
+# TODO: Consider making processor input and output items 2-D NumPy
+#       arrays of float32 samples, with the second element of the
+#       shape the frame count. I think this would simplify many
+#       processors.
+# TODO: Consider whether or not it would be possible to efficiently
+#       decouple processor output write sizes from input read sizes.
+#       It would make it much easier to implement many processors if
+#       they could receive input in chunks (perhaps even overlapping
+#       ones) of a size that was convenient for them, instead of
+#       for whoever happened to produce them. One option might be to
+#       implement an input buffer that a processor could optionally
+#       use to write its input to and receive back chunks of a
+#       specified size. It would probably make sense for the chunks
+#       to be delivered to the processor via a callback that
+#       processes them and returns output chunks.
 # TODO: Minimize memory churn in processors.
 # TODO: Consider implementing recorder `wait` method.
 # TODO: Consider modifying schedule notifier to notify only when schedule
@@ -147,7 +159,7 @@ class VesperRecorder:
     def _create_audio_input(self, settings):
         s = settings
         return AudioInput(
-            self, s.device, s.channel_count, s.sample_rate,
+            self, s.device, s.channel_count, s.sample_rate, s.sample_format,
             s.port_audio_block_size, s.buffer_capacity, s.chunk_size)
     
 
@@ -211,7 +223,7 @@ class VesperRecorder:
             self._input.start()
 
 
-    def process_input(self, samples, frame_count, port_audio_overflow):
+    def process_input(self, chunk, port_audio_overflow):
         
         """
         Queues a `process_input` command.
@@ -221,8 +233,7 @@ class VesperRecorder:
         
         command = Bunch(
             name='process_input',
-            samples=samples,
-            frame_count=frame_count,
+            chunk=chunk,
             port_audio_overflow=port_audio_overflow)
         
         self._command_queue.put(command)
@@ -269,16 +280,16 @@ class VesperRecorder:
             if command.port_audio_overflow:
                 self._handle_port_audio_input_overflow()
 
-            samples = command.samples
+            chunk = command.chunk
 
             input_item = Bunch(
-                samples=samples,
-                frame_count=command.frame_count)
+                samples=chunk.samples,
+                frame_count=chunk.size)
 
             self._processor_graph.process(input_item)
 
             # Free sample buffer for reuse.
-            self._input.free_chunk(samples)
+            self._input.free_chunk(chunk)
             
             self._stop_if_pending()
 

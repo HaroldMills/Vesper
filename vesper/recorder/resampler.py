@@ -70,18 +70,12 @@ class Resampler(Processor):
 
     def _process(self, input_item):
         
-        # Get NumPy sample array.
-        input = np.frombuffer(input_item.samples, dtype=np.int16)
-        
-        # Make sample array 2D. Compute frame count from sample array
-        # length rather than using `input_item.frame_count`, since the latter
-        # may be less than the sample array capacity.
-        input_frame_count = len(input) // self._channel_count
-        input = input.reshape((input_frame_count, self._channel_count))
+        samples = input_item.samples
+        frame_count = input_item.frame_count
 
-        # Make sample array `float32` to avoid arithmetic overflow in
-        # subsequent processing.
-        input = input.astype(np.float32)
+        # Truncate input buffer to only samples to be processed and
+        # transpose so frame index is first.
+        samples = samples[:, :frame_count].transpose()
 
         # TODO: We never pass `True` as the second argument to
         # `soxr.ResampleStream.resample_chunk`. Perhaps we could make
@@ -89,26 +83,25 @@ class Resampler(Processor):
         # signal to `Processor.process` that the samples it's receiving
         # are final, but there probably should be. Once there is, we
         # may be able to eliminate `Processor.stop`.
-        output = self._resampler.resample_chunk(input, False)
+        # Resample.
+        samples = self._resampler.resample_chunk(samples, False)
 
-        output_frame_count = output.shape[0]
+        frame_count = samples.shape[0]
 
         # _logger.info(
         #     f'Resampler._process: {input_frame_count} {output_frame_count}')
 
-        if output_frame_count == 0:
+        if frame_count == 0:
             return []
         
         else:
 
-            # Round and clip output to 16-bit sample range.
-            output = np.clip(np.round(output), -32768, 32767)
-
-            output = output.astype(np.int16).tobytes()
-
+            # Transpose samples so channel index is first.
+            samples = samples.transpose()
+            
             output_item = Bunch(
-                samples=output,
-                frame_count=output_frame_count)
+                samples=samples,
+                frame_count=frame_count)
 
             return [output_item]
 

@@ -8,6 +8,7 @@ import sounddevice as sd
 
 from vesper.recorder.audio_input_buffer import (
     AudioInputBuffer, AudioInputBufferOverflow)
+from vesper.recorder.audio_input_chunk import AUDIO_INPUT_CHUNK_TYPES
 from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
 
@@ -19,12 +20,10 @@ from vesper.util.bunch import Bunch
 # on Windows and Linux.
 
 
+_DEFAULT_SAMPLE_FORMAT = 'int16'
 _DEFAULT_PORT_AUDIO_BLOCK_SIZE = 0          # seconds
 _DEFAULT_INPUT_BUFFER_CAPACITY = 30         # chunks
 _DEFAULT_INPUT_CHUNK_SIZE = 1               # seconds
-
-_SAMPLE_SIZE = 16
-_SAMPLE_DTYPE = 'int16'
 
 
 class AudioInput:
@@ -73,11 +72,20 @@ class AudioInput:
         
         sample_rate = float(settings.get_required('sample_rate'))
 
+        sample_format = settings.get('sample_format', _DEFAULT_SAMPLE_FORMAT)
+
+        if not sample_format in AUDIO_INPUT_CHUNK_TYPES:
+            formats = sorted(AUDIO_INPUT_CHUNK_TYPES.keys())
+            text = '{' + ', '.join(f'"{f}"' for f in formats) + '}'
+            raise ValueError(
+                f'Unrecognized audio input sample format "{sample_format}". '
+                f'The recognized formats are {text}.')
+
         sd.check_input_settings(
             device=device.index,
             channels=channel_count,
             samplerate=sample_rate,
-            dtype=_SAMPLE_DTYPE)
+            dtype=sample_format)
         
         port_audio_block_size = float(settings.get(
             'port_audio_block_size', _DEFAULT_PORT_AUDIO_BLOCK_SIZE))
@@ -92,7 +100,7 @@ class AudioInput:
             device=device,
             channel_count=channel_count,
             sample_rate=sample_rate,
-            sample_type='int16',
+            sample_format=sample_format,
             port_audio_block_size=port_audio_block_size,
             buffer_capacity=buffer_capacity,
             chunk_size=chunk_size)
@@ -100,12 +108,14 @@ class AudioInput:
 
     def __init__(
             self, recorder, device, channel_count, sample_rate,
-            port_audio_block_size, buffer_capacity, chunk_size):
+            sample_format, port_audio_block_size, buffer_capacity,
+            chunk_size):
         
         self._recorder = recorder
         self._device = device
         self._channel_count = channel_count
         self._sample_rate = sample_rate
+        self._sample_format = sample_format
         self._port_audio_block_size = port_audio_block_size
         self._buffer_capacity = buffer_capacity
         self._chunk_size = chunk_size
@@ -118,19 +128,20 @@ class AudioInput:
         # devices.
         self._host_api_count = \
             len(set([d.host_api_index for d in self._devices]))
-
+        
         # Get the PortAudio block size in sample frames, rounding up.
         self._port_audio_block_size_frames = \
             int(math.ceil(self._port_audio_block_size * self._sample_rate))
         
+        self._chunk_type = AUDIO_INPUT_CHUNK_TYPES[self._sample_format]
+
         # Get the chunk size in sample frames, rounding up.
         self._chunk_size_frames = \
             int(math.ceil(self._chunk_size * self._sample_rate))
         
-        self._frame_size = self.channel_count * _SAMPLE_SIZE // 8
-            
         self._input_buffer = AudioInputBuffer(
-            self._buffer_capacity, self._chunk_size_frames, self._frame_size)
+            self.channel_count, self._buffer_capacity,
+            self._chunk_size_frames, self._chunk_type)
         
         self._running = False
             
@@ -155,6 +166,11 @@ class AudioInput:
         return self._sample_rate
     
     
+    @property
+    def sample_format(self):
+        return self._sample_format
+    
+
     @property
     def port_audio_block_size(self):
         return self._port_audio_block_size
@@ -190,7 +206,7 @@ class AudioInput:
                 device=self.device.index,
                 channels=self.channel_count,
                 samplerate=self.sample_rate,
-                dtype=_SAMPLE_DTYPE,
+                dtype=self.sample_format,
                 blocksize=self._port_audio_block_size_frames,
                 callback=self._input_callback)
             
@@ -230,8 +246,7 @@ class AudioInput:
                 chunk = self._input_buffer.get_chunk()
 
                 if chunk is not None:
-                    self._recorder.process_input(
-                        chunk, self._chunk_size_frames, port_audio_overflow)
+                    self._recorder.process_input(chunk, port_audio_overflow)
 
 
     def free_chunk(self, chunk):
