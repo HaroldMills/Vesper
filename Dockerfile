@@ -24,7 +24,7 @@
 # Compose to serve a Vesper archive with the built image.
 
 # Pull base image.
-FROM python:3.10.9-slim-bullseye
+FROM python:3.11.8-slim-bookworm
 
 # Try the following instead of the above if your computer has a GPU.
 #FROM tensorflow/tensorflow:2.11.0-gpu
