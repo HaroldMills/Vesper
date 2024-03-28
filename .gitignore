@@ -66,6 +66,9 @@ scratch.py
 # Private Docker Compose files
 docker-compose-*.yaml
 
+# AWS Copilot
+copilot
+
 # pip requirements.txt file
 requirements.txt
 requirements.txt.old
