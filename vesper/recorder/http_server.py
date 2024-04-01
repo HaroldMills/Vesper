@@ -119,24 +119,35 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         time_zone = recorder.station.time_zone
         
         time = _format_datetime(now, time_zone)
+        
+        recorder_start_time = _format_datetime(recorder.start_time, time_zone)
+
+        if recorder.quit_time is None:
+            recorder_quit_time = 'None'
+        else:
+            recorder_quit_time = \
+                _format_datetime(recorder.quit_time, time_zone)
+
         recording = 'Yes' if recorder.recording else 'No'
         
         interval = self._get_status_schedule_interval(recorder.schedule, now)
         
         if interval is None:
             prefix = 'Next'
-            start_time = 'None'
-            end_time = 'None'
+            recording_start_time = 'None'
+            recording_end_time = 'None'
         else:
-            start_time = _format_datetime(interval.start, time_zone)
-            end_time = _format_datetime(interval.end, time_zone)
             prefix = 'Current' if interval.start <= now else 'Next'
+            recording_start_time = _format_datetime(interval.start, time_zone)
+            recording_end_time = _format_datetime(interval.end, time_zone)
             
         rows = (
             ('Current Time', time),
+            ('Recorder Start Time', recorder_start_time),
+            ('Recorder Quit Time', recorder_quit_time),
             ('Recording', recording),
-            (prefix + ' Recording Start Time', start_time),
-            (prefix + ' Recording End Time', end_time)
+            (prefix + ' Scheduled Recording Start Time', recording_start_time),
+            (prefix + ' Scheduled Recording End Time', recording_end_time)
         )
         
         return _create_table('Recording Status', rows)

@@ -1,6 +1,7 @@
 """Module containing the `VesperRecorder` class."""
 
 
+from datetime import datetime as DateTime, timedelta as TimeDelta
 from logging import FileHandler, Formatter, StreamHandler
 from queue import Queue
 from threading import Thread
@@ -117,6 +118,25 @@ class VesperRecorder:
     
     
     @property
+    def start_time(self):
+        return self._start_time
+    
+
+    @property
+    def run_duration(self):
+        return self._run_duration
+    
+
+    @property
+    def quit_time(self):
+        if self.run_duration is None:
+            return None
+        else:
+            run_duration = TimeDelta(seconds=self.run_duration)
+            return self.start_time + run_duration
+    
+
+    @property
     def input(self):
         return self._input
     
@@ -142,6 +162,9 @@ class VesperRecorder:
         self._station = s.station
 
         self._schedule = s.schedule
+
+        self._start_time = DateTime.now(tz=ZoneInfo('UTC'))
+        self._run_duration = s.run_duration
 
         # Create audio input.
         self._input = self._create_audio_input(s.input)
