@@ -6,6 +6,8 @@ from queue import Queue
 from threading import Thread
 from zoneinfo import ZoneInfo
 import logging
+import sys
+import time
 
 from vesper.recorder.audio_file_writer import AudioFileWriter
 from vesper.recorder.audio_input import AudioInput
@@ -152,6 +154,8 @@ class VesperRecorder:
 
         self._start_schedule_thread()
 
+        self._start_quit_thread_if_needed()
+
         while True:
             self._execute_next_command()
 
@@ -176,6 +180,15 @@ class VesperRecorder:
         self._schedule_runner.add_listener(listener)
 
         self._schedule_runner.start()
+
+
+    def _start_quit_thread_if_needed(self):
+
+        run_duration = self._settings.run_duration
+
+        if run_duration is not None:
+            thread = _QuitThread(self, run_duration)
+            thread.start()
 
 
     def _execute_next_command(self):
@@ -386,16 +399,42 @@ class VesperRecorder:
     def _stop_if_pending(self):
         
         if self._stop_pending:
+            self._stop()
+
+
+    def _stop(self):
             
-            self._recording = False
-            self._stop_pending = False
+        self._recording = False
+        self._stop_pending = False
 
-            self._input.stop()
+        self._input.stop()
 
-            self._processor_graph.stop()
+        self._processor_graph.stop()
 
-            _logger.info('Stopped recording.')
+        _logger.info('Stopped recording.')
+
+
+    def quit(self):
+
+        """
+        Queues a `quit` command.
+
+        This method can be called from any thread.
+        """
         
+        command = Bunch(name='quit')
+        self._command_queue.put(command)
+
+
+    def _on_quit(self, command):
+
+        _logger.info('Quitting...')
+
+        if self._recording:
+            self._stop()
+
+        sys.exit()
+
         
 def _create_and_run_recorder(home_dir_path):
     
@@ -484,6 +523,7 @@ def _parse_settings_file_aux(settings_file_path, home_dir_path):
 
     station = _parse_station_settings(settings)
     schedule = _parse_schedule_settings(settings, station)
+    run_duration = _parse_run_duration_settings(settings)
     input = _parse_input_settings(settings)
     processors = _parse_processor_settings(settings)
         
@@ -493,6 +533,7 @@ def _parse_settings_file_aux(settings_file_path, home_dir_path):
     return Bunch(
         station=station,
         schedule=schedule,
+        run_duration=run_duration,
         input=input,
         processors=processors,
         server_port_num=server_port_num)
@@ -523,6 +564,61 @@ def _parse_schedule_settings(settings, station):
         schedule_dict, latitude=station.lat, longitude=station.lon,
         time_zone=station.time_zone)
     
+
+def _parse_run_duration_settings(settings):
+
+    value = settings.get('run_duration', None)
+
+    if value is None:
+        return value
+
+    def handle_bad_value():
+        raise ValueError(
+            f'Bad value "{value}" for "run_duration" setting. Value '
+            f'must be of the form "<number> <units>" where <number> '
+            f'is a nonnegative number and <units> is "days", "hours", '
+            f'"minutes", "seconds", or the singular of one of those.')
+
+    if not isinstance(value, str):
+        handle_bad_value()
+
+    parts = value.split()
+
+    if len(parts) != 2:
+        handle_bad_value()
+    
+    number, units = parts
+
+    try:
+        number = float(number)
+    except ValueError:
+        handle_bad_value()
+
+    if number < 0:
+        handle_bad_value()
+
+    match units:
+        case 'days':
+            unit_size = 24 * 3600
+        case 'day':
+            unit_size = 24 * 3600
+        case 'hours':
+            unit_size = 3600
+        case 'hour':
+            unit_size = 3600
+        case 'minutes':
+            unit_size = 60
+        case 'minute':
+            unit_size = 60
+        case 'seconds':
+            unit_size = 1
+        case 'second':
+            unit_size = 1
+        case _:
+            handle_bad_value()
+
+    return number * unit_size
+
 
 def _parse_input_settings(settings):
     mapping = settings.get_required('input')
@@ -589,6 +685,32 @@ class _ScheduleListener:
     
     def schedule_run_completed(self, schedule, time, state):
         self._recorder.stop()
+
+
+class _QuitThread(Thread):
+
+
+    def __init__(self, recorder, run_duration):
+        super().__init__(daemon=True)
+        self.recorder = recorder
+        self.run_duration = run_duration
+
+
+    def run(self):
+
+        start_time = time.time()
+
+        time.sleep(self.run_duration)
+
+        end_time = time.time()
+        duration = end_time - start_time
+
+        _logger.info(
+            f'Recorder quit thread awoke after sleeping for '
+            f'{duration:.1f} seconds. Will now send quit command '
+            f'to recorder.')
+       
+        self.recorder.quit()
 
 
 # class _Logger(AudioRecorderListener):
