@@ -104,7 +104,21 @@ class VesperRecorder:
     
     
     def __init__(self, settings):
+
         self._settings = settings
+
+        s = self._settings
+
+        self._station = s.station
+
+        self._schedule = s.schedule
+
+        self._start_time = DateTime.now(tz=ZoneInfo('UTC'))
+        self._run_duration = s.run_duration
+
+        self._recording = False
+        self._input = None
+        self._processor_graph = None
 
         
     @property
@@ -135,6 +149,11 @@ class VesperRecorder:
             run_duration = TimeDelta(seconds=self.run_duration)
             return self.start_time + run_duration
     
+    
+    @property
+    def recording(self):
+        return self._recording
+    
 
     @property
     def input(self):
@@ -145,26 +164,10 @@ class VesperRecorder:
     def processor_graph(self):
         return self._processor_graph
     
-    
-    @property
-    def recording(self):
-        return self._recording
-    
 
     def run(self):
         
-        self._recording = False
-        self._stop_pending = False
-        self._command_queue = Queue()
-
         s = self._settings
-
-        self._station = s.station
-
-        self._schedule = s.schedule
-
-        self._start_time = DateTime.now(tz=ZoneInfo('UTC'))
-        self._run_duration = s.run_duration
 
         # Create audio input.
         self._input = self._create_audio_input(s.input)
@@ -173,6 +176,9 @@ class VesperRecorder:
         self._processor_graph = ProcessorGraph(
             'Processor Graph', s.processors, self._input, _PROCESSOR_CLASSES)
 
+        self._stop_pending = False
+        self._command_queue = Queue()
+        
         self._start_http_server(s.server_port_num)
 
         self._start_schedule_thread()
