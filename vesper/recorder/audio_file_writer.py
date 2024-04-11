@@ -91,7 +91,7 @@ class AudioFileWriter(Processor):
     def parse_settings(settings):
 
         recording_dir_path = Path(settings.get(
-            'recording_dir_path', _DEFAULT_RECORDING_DIR_PATH))
+            'recording_dir_path', _DEFAULT_RECORDING_DIR_PATH)).expanduser()
         
         if not recording_dir_path.is_absolute():
             recording_dir_path = Path.cwd() / recording_dir_path
