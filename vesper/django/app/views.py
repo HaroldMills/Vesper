@@ -1225,9 +1225,13 @@ def _get_clip_audios_aux(content):
     # reset_queries()
 
     clip_ids = content['clip_ids']
-    
+
     # TODO: Limit number of clip IDs per query?
     clips = Clip.objects.filter(id__in=clip_ids)
+
+    # Ensure that clips are ordered as in `clip_ids`.
+    clips = {clip.id: clip for clip in clips}
+    clips = [clips[id] for id in clip_ids]
 
     audios = clip_manager.get_audio_file_contents(clips)
 
