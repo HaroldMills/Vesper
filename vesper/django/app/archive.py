@@ -322,17 +322,12 @@ class Archive:
         archive_values = \
             self._string_anno_archive_value_tuples[annotation_name]
         
-        if archive_values is None:
-            return None
-        
-        else:
+        visible_ui_values = sorted(
+            self._get_string_annotation_ui_value(annotation_name, v)
+            for v in archive_values
+            if v not in hidden_archive_values)
             
-            visible_ui_values = sorted(
-                self._get_string_annotation_ui_value(annotation_name, v)
-                for v in archive_values
-                if v not in hidden_archive_values)
-                
-            return tuple(visible_ui_values)
+        return tuple(visible_ui_values)
         
         
     def _get_visible_string_annotation_ui_value_specs(
@@ -347,20 +342,15 @@ class Archive:
         archive_values = \
             self._string_anno_archive_value_tuples[annotation_name]
             
-        if archive_values is None:
-            return None
+        archive_value_specs = \
+            _get_string_annotation_archive_value_specs(archive_values)
         
-        else:
-            
-            archive_value_specs = _get_string_annotation_archive_value_specs(
-                archive_values)
-            
-            visible_ui_value_specs = [
-                self._get_string_annotation_ui_value(annotation_name, s)
-                for s in archive_value_specs
-                if s not in hidden_archive_value_specs]
-            
-            return tuple(visible_ui_value_specs)
+        visible_ui_value_specs = [
+            self._get_string_annotation_ui_value(annotation_name, s)
+            for s in archive_value_specs
+            if s not in hidden_archive_value_specs]
+        
+        return tuple(visible_ui_value_specs)
         
         
     def get_string_annotation_archive_value(
@@ -502,12 +492,12 @@ def _get_string_annotation_archive_values(annotation_name):
     try:
         info = AnnotationInfo.objects.get(name=annotation_name)
     except AnnotationInfo.DoesNotExist:
-        return None
+        return ()
     
     constraint = info.constraint
     
     if constraint is None:
-        return None
+        return ()
     
     else:
         
