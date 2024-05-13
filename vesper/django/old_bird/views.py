@@ -20,6 +20,8 @@ import vesper.util.time_utils as time_utils
 
 _ONE_MICROSECOND = TimeDelta(microseconds=1)
 
+_START_TIME_UNIQUENESS_OFFSET_ANNOTATION_NAME = 'Start Time Uniqueness Offset'
+
 
 class CreateLrgvClipsView(View):
 
@@ -98,6 +100,23 @@ class CreateLrgvClipsView(View):
         start_time = clip_info['start_time']
         start_time = _parse_datetime(start_time, station, 'clip start')
 
+        try:
+            serial_num = clip_info['serial_num']
+        except KeyError:
+            serial_num = 0
+
+        # Offset start time if needed to ensure uniqueness. Vesper
+        # currently requires that each clip's recording channel,
+        # creating processor, and start time be unique. We use clip
+        # serial numbers in the LRGV project to distinguish between
+        # clips that have the same start time, and we convert those
+        # to start time offsets here. At some point I hope to remove
+        # Vesper's uniqueness requirement, at which point we can
+        # eliminate the serial numbers and offsets.
+        if serial_num != 0:
+            offset = TimeDelta(microseconds=serial_num)
+            start_time += offset
+
         length = clip_info['length']
 
         detector_name = clip_info['detector']
@@ -137,21 +156,27 @@ class CreateLrgvClipsView(View):
             creating_processor=detector_model
         )
 
-        annotations = clip_info.get('annotations')
+        annotations = clip_info.get('annotations', {})
 
-        if annotations is not None:
+        # If clip start time was offset, include an annotation indicating
+        # by how many seconds. This will make it possible to remove the
+        # offset later if needed.
+        if serial_num != 0:
+            offset = serial_num / 1000000
+            annotations[_START_TIME_UNIQUENESS_OFFSET_ANNOTATION_NAME] = \
+                f'{offset:f}'
+
+        for name, value in annotations.items():
             
-            for name, value in annotations.items():
-                
-                annotation_info = \
-                    self._get_annotation_info(name, detector_model)
-                
-                model_utils.annotate_clip(
-                    clip, annotation_info, str(value),
-                    creation_time=creation_time,
-                    creating_user=None,
-                    creating_job=None,
-                    creating_processor=detector_model)
+            annotation_info = \
+                self._get_annotation_info(name, detector_model)
+            
+            model_utils.annotate_clip(
+                clip, annotation_info, str(value),
+                creation_time=creation_time,
+                creating_user=None,
+                creating_job=None,
+                creating_processor=detector_model)
                 
         return clip.id, recording_id, recording_created
 
