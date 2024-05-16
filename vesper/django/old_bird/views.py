@@ -125,7 +125,8 @@ class CreateLrgvClipsView(View):
         (recording_channel, sample_rate, recording_start_time, end_time,
          recording_id, recording_created) = \
             self._get_recording_channel(
-                station, mic_output, start_time, length, recording_info)
+                station, mic_output, start_time, length, recording_info,
+                detector_name)
 
         # We set the start index to `None` since we do not know it
         # exactly. We will attempt to correct this later by locating
@@ -212,7 +213,7 @@ class CreateLrgvClipsView(View):
 
     def _get_recording_channel(
             self, station, mic_output, clip_start_time, clip_length,
-            recording_info):
+            recording_info, detector_name):
         
         def localize(dt):
             return _localize(dt, station)
@@ -262,7 +263,8 @@ class CreateLrgvClipsView(View):
                 recording_created = False
 
                 if recording_info is not None:
-                    _check_recording(recording, recording_info, station)
+                    _check_recording(
+                        recording, recording_info, station, detector_name)
 
         channels = recording.channels.all()
         channel_count = channels.count()
@@ -436,7 +438,7 @@ def _localize(dt, station):
     return dt.replace(tzinfo=None)
 
 
-def _check_recording(recording, recording_info, station):
+def _check_recording(recording, recording_info, station, detector_name):
 
     def localize(dt):
         return _localize(dt, station)
@@ -450,16 +452,35 @@ def _check_recording(recording, recording_info, station):
             f'does not match start time {localize(recording.start_time)} '
             f'of recording already in archive.')
     
-    length = recording_info['length']
-
-    if length != recording.length:
-        raise ValueError(
-            f'Specified recording length {length} does not match length '
-            f'{recording.length} of recording already in archive.')
-        
     sample_rate = recording_info['sample_rate']
 
     if sample_rate != recording.sample_rate:
         raise ValueError(
             f'Specified sample rate {sample_rate} does not match sample '
             f'rate {recording.sample_rate} of recording already in archive.')
+
+    length = recording_info['length']
+
+    if length != recording.length and detector_name.startswith('Nighthawk'):
+        # Recording length in archive differs from recording length
+        # indicated with Nighthawk clip. This can happen since the
+        # recording length indicated with Old Bird detector clips is
+        # just an estimate of the saved recording length (the Old Bird
+        # detector runs on a real-time audio stream rather than on a
+        # saved recording, but the exact length of a recording saved
+        # by the i-Sound audio recorder is not known until after the
+        # recording is complete), while the recording length indicated
+        # with a Nighthawk clip is precise.
+
+        # Update recording length and end time in archive with precise
+        # values.
+
+        logging.info(
+            f'Updating length of recording "{recording}" from '
+            f'{recording.length} to {length}...')
+
+        end_time = signal_utils.get_end_time(start_time, length, sample_rate)
+        
+        recording.length = length
+        recording.end_time = end_time
+        recording.save()
