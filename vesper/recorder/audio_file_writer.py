@@ -435,22 +435,35 @@ class _AudioFileProcessorTask:
         except:
             # something went wrong in one of the coroutines
 
-            # Here we just return, assuming that the coroutine logged
-            # an error message. Any other coroutines will keep running.
-            # If any of them raise exceptions we won't hear about it,
-            # but we assume that they will log error messages.
-            return
+            # The coroutines other than the one that raised the exception
+            # will keep running, and if any of them raise exceptions we
+            # won't hear about it. However, each coroutine is responsible
+            # for logging error messages concerning its operation.
 
-        # If we get here, all of the coroutines completed normally.
+            fileProcessingFailed = True
+
+        else:
+            # no coroutine raised an exception
+
+            fileProcessingFailed = False
 
         if self._delete_successfully_processed_audio_file:
-            self._delete_audio_file()
-            self._delete_empty_audio_file_ancestor_dirs()
+
+            audio_file_path = self._recording_dir_path / self._audio_file_path
+
+            if fileProcessingFailed:
+                _logger.warning(
+                    f'Processing failed for completed audio file '
+                    f'"{audio_file_path}". File will not be deleted.')
                 
+            else:
+                # file processing succeeded
 
-    def _delete_audio_file(self):
+                self._delete_audio_file(audio_file_path)
+                self._delete_empty_audio_file_ancestor_dirs()
+                    
 
-        audio_file_path = self._recording_dir_path / self._audio_file_path
+    def _delete_audio_file(self, audio_file_path):
 
         _logger.info(
             f'Deleting successfully processed audio file '

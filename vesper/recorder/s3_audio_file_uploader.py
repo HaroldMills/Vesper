@@ -62,11 +62,12 @@ class S3AudioFileUploader(AudioFileProcessor):
                     abs_file_path, s.s3_bucket_name, object_key)
 
         except Exception as e:
-            # TODO: Consider reattempting failed uploads some number of times.
+            # TODO: Consider retrying failed uploads some number of times.
             _logger.warning(
                 f'Could not upload audio file "{abs_file_path}" to S3 '
                 f'bucket "{s.s3_bucket_name}", object key "{object_key}". '
                 f'Exception message was: {e}')
+            raise
 
 
     def get_status_tables(self):
