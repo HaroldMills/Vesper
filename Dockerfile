@@ -27,7 +27,7 @@
 FROM python:3.11-slim-bookworm
 
 # Try the following instead of the above if your computer has a GPU.
-#FROM tensorflow/tensorflow:2.11.0-gpu
+# FROM tensorflow/tensorflow:2.11.0-gpu
 
 # Set environment variables.
 ENV PIP_DISABLE_PIP_VERSION_CHECK 1
@@ -40,6 +40,11 @@ WORKDIR /Code
 # Install Vesper dependencies, using exactly the versions listed
 # in `requirements.txt`.
 COPY requirements.txt .
+RUN apt update -y
+RUN apt-get install pkg-config -y
+RUN apt install libhdf5-dev -y 
+RUN apt-get install gcc -y
+
 RUN pip install -r requirements.txt
 
 # Copy Vesper project directory from host file system into image.

@@ -30,6 +30,10 @@
 #
 # See the _Django for Professionals_ security chapter (chapter 17 of the
 # Django 4.0 version) for more.
+#
+# Create a superuser by running
+#     
+#     docker exec -it <container name> vesper_admin createsuperuser 
 
 name: vesper-dev
 
@@ -52,7 +56,7 @@ services:
 
         volumes:
             - .:/Code
-            - /Users/harold/Desktop/Test Archive:/Archive
+            - /Users/bradburch/dev/Vesper Archive:/Archive
 
         # Allow access to GPU.
         #deploy:
