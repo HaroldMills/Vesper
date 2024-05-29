@@ -56,7 +56,7 @@ services:
 
         volumes:
             - .:/Code
-            - /Users/bradburch/dev/Vesper Archive:/Archive
+            - /Users/harold/Desktop/Test Archive:/Archive
 
         # Allow access to GPU.
         #deploy:

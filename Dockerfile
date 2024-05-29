@@ -27,7 +27,7 @@
 FROM python:3.11-slim-bookworm
 
 # Try the following instead of the above if your computer has a GPU.
-# FROM tensorflow/tensorflow:2.11.0-gpu
+#FROM tensorflow/tensorflow:2.11.0-gpu
 
 # Set environment variables.
 ENV PIP_DISABLE_PIP_VERSION_CHECK 1
