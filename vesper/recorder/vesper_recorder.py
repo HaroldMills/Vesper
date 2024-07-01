@@ -56,6 +56,8 @@ from vesper.util.schedule import Schedule, ScheduleRunner
 # TODO: Consider making audio input a processor.
 # TODO: Make processor classes plugins.
 
+# TODO: Include station name in UI title.
+# TODO: Include version number in UI.
 # TODO: Make main function `main` instead of `_main`.
 # TODO: Add support for 24-bit input samples.
 # TODO: Add support for 32-bit floating point input samples.
