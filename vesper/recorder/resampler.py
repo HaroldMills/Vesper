@@ -68,7 +68,7 @@ class Resampler(Processor):
             self._channel_count, 'float32', self._quality)
 
 
-    def _process(self, input_item):
+    def _process(self, input_item, finished):
         
         samples = input_item.samples
         frame_count = input_item.frame_count
@@ -77,14 +77,7 @@ class Resampler(Processor):
         # transpose so frame index is first.
         samples = samples[:, :frame_count].transpose()
 
-        # TODO: We never pass `True` as the second argument to
-        # `soxr.ResampleStream.resample_chunk`. Perhaps we could make
-        # that happen. More generally, there is currently no way to
-        # signal to `Processor.process` that the samples it's receiving
-        # are final, but there probably should be. Once there is, we
-        # may be able to eliminate `Processor.stop`.
-        # Resample.
-        samples = self._resampler.resample_chunk(samples, False)
+        samples = self._resampler.resample_chunk(samples, finished)
 
         frame_count = samples.shape[0]
 
@@ -104,10 +97,6 @@ class Resampler(Processor):
                 frame_count=frame_count)
 
             return [output_item]
-
-
-    def _stop(self):
-        pass
 
 
     def get_status_tables(self):

@@ -79,11 +79,11 @@ class ProcessorGraph(Processor):
             p.start()
 
 
-    def _process(self, input_item):
-        self._process_aux([input_item], _AUDIO_INPUT)
+    def _process(self, input_item, finished):
+        self._process_aux([input_item], _AUDIO_INPUT, finished)
 
 
-    def _process_aux(self, input_items, source_name):
+    def _process_aux(self, input_items, source_name, finished):
 
         """Process the specified input items from the specified source."""
 
@@ -94,17 +94,16 @@ class ProcessorGraph(Processor):
 
         for processor in processors:
 
-            for input_item in input_items:
+            item_count = len(input_items)
 
-                output_items = processor.process(input_item)
+            for i, input_item in enumerate(input_items):
+
+                finished_ =  finished and i == item_count - 1
+
+                output_items = processor.process(input_item, finished_)
 
                 if output_items is not None and len(output_items) != 0:
-                    self._process_aux(output_items, processor.name)
-
-
-    def _stop(self):
-        for p in self._processors:
-            p.stop()
+                    self._process_aux(output_items, processor.name, finished_)
 
 
     def get_status_tables(self):

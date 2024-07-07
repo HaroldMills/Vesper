@@ -16,11 +16,16 @@ from vesper.recorder.http_server import HttpServer
 from vesper.recorder.level_meter import LevelMeter
 from vesper.recorder.processor_graph import ProcessorGraph
 from vesper.recorder.resampler import Resampler
+from vesper.recorder.s3_file_uploader import S3FileUploader
 from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 
 
+# TODO: Consider giving `Processor` initializer a `context` argument
+#       that for our purposes is a `VesperRecorder` object. This would
+#       give processors access to the properties of a recorder, which
+#       could include the async task thread, the station, etc.
 # TODO: Consider making processor input and output items 2-D NumPy
 #       arrays of float32 samples, with the second element of the
 #       shape the frame count. I think this would simplify many
@@ -82,7 +87,7 @@ _DEFAULT_STATION_TIME_ZONE = 'UTC'
 _DEFAULT_SCHEDULE = {}
 _DEFAULT_SERVER_PORT_NUM = 8001
 
-_PROCESSOR_CLASSES = (Resampler, LevelMeter, AudioFileWriter)
+_PROCESSOR_CLASSES = (Resampler, LevelMeter, AudioFileWriter, S3FileUploader)
 
 
 _logger = logging.getLogger(__name__)
@@ -305,19 +310,20 @@ class VesperRecorder:
         #     3. Input thread queues a `process_input` command.
         #
         #     4. Main thread begins executing `process_input` command of
-        #        step 3.
+        #        step 3 by executing this method.
         #
-        #     5. Before main thread calls `_stop_if_pending`, input
-        #        thread queues another `process_input` command.
+        #     5. Before main thread calls `_processor_graph.process`,
+        #        input thread queues another `process_input` command.
         #
         #     6. Main thread finishes executing command of step 3,
-        #        including calling `_stop_if_pending`, which stops
-        #        the processor graph.
+        #        including calling `_processor_graph.process` with its
+        #        `finished` argument `True`. This causes the graph and
+        #        all of its processors to stop running.
         #
         #     7. Main thread executes `process_input` command of step 5.
         #        Without the `self._recording` test, it calls
-        #        `self._processor_graph.process`, which raises an
-        #        exception since the graph was stopped in step 6.
+        #        `_processor_graph.process`, which raises an exception
+        #        since the graph stopped running in step 6.
 
         if self._recording:
 
@@ -330,12 +336,13 @@ class VesperRecorder:
                 samples=chunk.samples,
                 frame_count=chunk.size)
 
-            self._processor_graph.process(input_item)
+            self._processor_graph.process(input_item, self._stop_pending)
 
             # Free sample buffer for reuse.
             self._input.free_chunk(chunk)
             
-            self._stop_if_pending()
+            if self._stop_pending:
+                self._stop()
 
 
     def _handle_port_audio_input_overflow(self):
@@ -345,6 +352,16 @@ class VesperRecorder:
         _logger.warning(
             f'Input overflow {self._port_audio_input_overflows} '
             f'reported by PortAudio.')
+
+
+    def _stop(self):
+            
+        self._recording = False
+        self._stop_pending = False
+
+        self._input.stop()
+
+        _logger.info('Stopped recording.')
 
 
     def handle_input_overflow(self, frame_count, port_audio_overflow):
@@ -385,11 +402,10 @@ class VesperRecorder:
         if command.port_audio_overflow:
             self._handle_port_audio_input_overflow()
 
-        # It is important to test `self._recording` here, for reasons
-        # similar to those of the comments in the `_on_process_input`
-        # method.
-        if self._recording:
-            self._stop_if_pending()
+        # Note that we never stop recording in this method, but only
+        # in the `_on_process_input` method. This ensures that when we
+        # stop each processor hears about it via the `finished` argument
+        # of its `process` method.
 
 
     # TODO: Implement this.
@@ -419,30 +435,11 @@ class VesperRecorder:
         
         # Instead of stopping input here, we set a flag to indicate
         # that a stop is pending, and then stop in the next call to
-        # the `_on_handle_input` or `_on_handle_input_overflow`
-        # method *after* processing the next buffer of input samples.
-        # If we stop here, for some reason we usually record one less
-        # buffer than one would expect from the recording schedule.
+        # the `_on_handle_input` method *after* processing the next
+        # buffer of input samples. This allows that method to notify
+        # all of the processors that recording is ending.
         if self._recording:
             self._stop_pending = True
-
-
-    def _stop_if_pending(self):
-        
-        if self._stop_pending:
-            self._stop()
-
-
-    def _stop(self):
-            
-        self._recording = False
-        self._stop_pending = False
-
-        self._input.stop()
-
-        self._processor_graph.stop()
-
-        _logger.info('Stopped recording.')
 
 
     def quit(self):
@@ -453,17 +450,15 @@ class VesperRecorder:
         This method can be called from any thread.
         """
         
+        command = Bunch(name='stop')
+        self._command_queue.put(command)
+
         command = Bunch(name='quit')
         self._command_queue.put(command)
 
 
     def _on_quit(self, command):
-
         _logger.info('Quitting...')
-
-        if self._recording:
-            self._stop()
-
         sys.exit()
 
         

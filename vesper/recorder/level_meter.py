@@ -1,4 +1,3 @@
-# import logging
 import math
 
 import numpy as np
@@ -6,9 +5,6 @@ import numpy as np
 from vesper.recorder.processor import Processor
 from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
-
-
-# _logger = logging.getLogger(__name__)
 
 
 _DEFAULT_UPDATE_PERIOD = 1      # seconds
@@ -60,8 +56,6 @@ class LevelMeter(Processor):
 
     def _start(self):
 
-        # _logger.info(f'_LevelMeter.recording_starting: {time}')
-
         self._sums = np.zeros(self._channel_count)
         self._peaks = np.zeros(self._channel_count)
 
@@ -69,13 +63,11 @@ class LevelMeter(Processor):
         self._accumulated_frame_count = 0
 
 
-    def _process(self, input_item):
+    def _process(self, input_item, finished):
         
         samples = input_item.samples
         frame_count = input_item.frame_count
         
-        # _logger.info(f'LevelMeter._process: {frame_count}')
-      
         start_index = 0
 
         while start_index != frame_count:
@@ -104,21 +96,15 @@ class LevelMeter(Processor):
                 self._peak_values = \
                     samples_to_dbfs(self._peaks, _MAX_ABS_SAMPLE)
                 
-                # _logger.info(
-                #     f'_LevelMeter: RMS {self._rms_values} '
-                #     f'peak {self._peak_values}')
-                
                 self._sums[:] = 0
                 self._peaks[:] = 0
                 self._accumulated_frame_count = 0
 
             start_index += n
 
-
-    def _stop(self):
-    #    _logger.info(f'_LevelMeter.recording_stopped: {time}')
-        self._rms_values = None
-        self._peak_values = None
+        if finished:
+            self._rms_values = None
+            self._peak_values = None
 
 
     def get_status_tables(self):

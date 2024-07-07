@@ -94,27 +94,22 @@ class Processor:
         raise NotImplementedError()
     
 
-    def process(self, input_item):
+    def process(self, input_item, finished):
        
-       if not self._running:
-           raise ProcessorError(
-               f'Attempt to process input with processor "{self.name}" '
-               f'that is not running.')
+        if not self._running:
+            raise ProcessorError(
+                f'Attempt to process input with processor "{self.name}" '
+                f'that is not running.')
        
-       return self._process(input_item)
-    
+        output_items = self._process(input_item, finished)
 
-    def _process(input_item):
-        raise NotImplementedError()
-    
-
-    def stop(self):
-        if self._running:
-            self._stop()
+        if finished:
             self._running = False
 
+        return output_items
+    
 
-    def _stop(self):
+    def _process(self, input_item, finished):
         raise NotImplementedError()
     
 
