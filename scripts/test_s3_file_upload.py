@@ -8,16 +8,20 @@ import aioboto3
 import boto3
 
 
+DATA_DIR_PATH = Path('/Users/harold/Desktop/NFC/Data/S3 Upload Test Files')
 FILE_NAME = '1.00.wav'
-AWS_PROFILE_NAME = 'default'
+AWS_PROFILE_NAME = 'harold-harold'
 BUCKET_NAME = 'vesper-test'
 OBJECT_KEY_PREFIX = 'uploads'
-READ_TIMEOUT = 300
+BOTO_CONFIG = Config(
+    retries={
+        'mode': 'standard',
+        'max_attempts': 5},
+    read_timeout=300)
 
 
 def main():
-    dir_path = Path.cwd()
-    file_path = dir_path / FILE_NAME
+    file_path = DATA_DIR_PATH / FILE_NAME
     object_key = f'{OBJECT_KEY_PREFIX}/{FILE_NAME}'
     # upload_file_to_s3(file_path, object_key)
     upload_file_to_s3_async(file_path, object_key)
@@ -52,8 +56,7 @@ async def upload_file_to_s3_async_aux(file_path, object_key):
     start_time = time.time()
     session = aioboto3.Session(profile_name=AWS_PROFILE_NAME)
     try:
-        config = Config(read_timeout=READ_TIMEOUT)
-        async with session.client('s3', config=config) as s3:
+        async with session.client('s3', config=BOTO_CONFIG) as s3:
             await s3.upload_file(file_path, BUCKET_NAME, object_key)
     except Exception as e:
         duration = get_duration(start_time)
