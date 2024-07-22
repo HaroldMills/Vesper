@@ -26,14 +26,10 @@ from vesper.util.bunch import Bunch
 
 _DEFAULT_AWS_PROFILE_NAME = 'default'
 _DEFAULT_S3_OBJECT_KEY_PREFIX = None
+_DEFAULT_BOTO_READ_TIMEOUT = 300             # seconds
+_DEFAULT_NORMAL_MODE_SLEEP_PERIOD = 1        # seconds
+_DEFAULT_RETRY_MODE_SLEEP_PERIOD = 60        # seconds
 _DEFAULT_DELETE_UPLOADED_FILES = False
-_BOTO_CONFIG = Config(
-    retries={
-        'mode': 'standard',
-        'max_attempts': 5
-    },
-    read_timeout=300
-)
 
 
 _logger = logging.getLogger(__name__)
@@ -56,6 +52,15 @@ class S3FileUploader(Processor):
         s3_object_key_prefix = settings.get(
             's3_object_key_prefix', _DEFAULT_S3_OBJECT_KEY_PREFIX)
         
+        boto_read_timeout = settings.get(
+            'boto_read_timeout', _DEFAULT_BOTO_READ_TIMEOUT)
+        
+        normal_mode_sleep_period = settings.get(
+            'normal_mode_sleep_period', _DEFAULT_NORMAL_MODE_SLEEP_PERIOD)
+        
+        retry_mode_sleep_period = settings.get(
+            'retry_mode_sleep_period', _DEFAULT_RETRY_MODE_SLEEP_PERIOD)
+        
         delete_uploaded_files = settings.get(
             'delete_uploaded_files', _DEFAULT_DELETE_UPLOADED_FILES)
 
@@ -63,26 +68,27 @@ class S3FileUploader(Processor):
             aws_profile_name=aws_profile_name,
             s3_bucket_name=s3_bucket_name,
             s3_object_key_prefix=s3_object_key_prefix,
+            boto_read_timeout=boto_read_timeout,
+            normal_mode_sleep_period=normal_mode_sleep_period,
+            retry_mode_sleep_period=retry_mode_sleep_period,
             delete_uploaded_files=delete_uploaded_files)
         
         
     def _start(self):
-        pass
+
+        s = self._settings
+
+        self._task_runner = _S3FileUploaderTaskRunner(
+            s.normal_mode_sleep_period, s.retry_mode_sleep_period)
+        
+        self._task_runner.start()
 
 
     def _process(self, input_item, finished):
-
         dir_path, file_path = input_item
-
-        s = self.settings
-
         _logger.info(f'Submitting task to upload file "{file_path}" to S3...')
-        
-        task = _UploadTask(
-            dir_path, file_path, s.aws_profile_name, s.s3_bucket_name,
-            s.s3_object_key_prefix, s.delete_uploaded_files)
-        
-        _task_runner.enqueue_task(task)
+        task = _UploadTask(dir_path, file_path, self.settings)
+        self._task_runner.enqueue_task(task)
 
 
     def get_status_tables(self):
@@ -93,6 +99,9 @@ class S3FileUploader(Processor):
             ('AWS Profile Name', s.aws_profile_name),
             ('S3 Bucket Name', s.s3_bucket_name),
             ('S3 Object Key Prefix', s.s3_object_key_prefix),
+            ('Boto Read Timeout (seconds)', s.boto_read_timeout),
+            ('Normal Mode Sleep Period (seconds)', s.normal_mode_sleep_period),
+            ('Retry Mode Sleep Period (seconds)', s.retry_mode_sleep_period),
             ('Delete Uploaded Files', s.delete_uploaded_files))
 
         table = StatusTable(self.name, rows)
@@ -103,25 +112,21 @@ class S3FileUploader(Processor):
 class _UploadTask:
 
 
-    def __init__(
-            self, dir_path, file_path, aws_profile_name, s3_bucket_name,
-            s3_object_key_prefix, delete_uploaded_file):
-        
+    def __init__(self, dir_path, file_path, settings):
         self._dir_path = dir_path
         self._file_path = file_path
-        self._aws_profile_name = aws_profile_name
-        self._s3_bucket_name = s3_bucket_name
-        self._s3_object_key_prefix = s3_object_key_prefix
-        self._delete_uploaded_file = delete_uploaded_file
+        self._settings = settings
         self._failure_count = 0
 
 
     async def run(self):
 
+        s = self._settings
+
         # Get S3 object key for audio file.
         object_key = '/'.join(self._file_path.parts)
-        if self._s3_object_key_prefix is not None:
-            object_key = f'{self._s3_object_key_prefix}/{object_key}'
+        if s.s3_object_key_prefix is not None:
+            object_key = f'{s.s3_object_key_prefix}/{object_key}'
   
         # Get absolute audio file path.
         abs_file_path = self._dir_path / self._file_path
@@ -133,23 +138,24 @@ class _UploadTask:
 
         _logger.info(
             f'Uploading audio file "{abs_file_path}" to S3 bucket '
-            f'"{self._s3_bucket_name}", object key "{object_key}"'
+            f'"{s.s3_bucket_name}", object key "{object_key}"'
             f'{attempt_text}...')
         
         try:
 
-            session = aioboto3.Session(profile_name=self._aws_profile_name)
+            session = aioboto3.Session(profile_name=s.aws_profile_name)
+            config = self._create_boto_config()
 
-            async with session.client('s3', config=_BOTO_CONFIG) as s3:
+            async with session.client('s3', config=config) as s3:
                 await s3.upload_file(
-                    abs_file_path, self._s3_bucket_name, object_key)
+                    abs_file_path, s.s3_bucket_name, object_key)
 
         except Exception as e:
             # upload failed
 
             _logger.warning(
                 f'Failed to upload file "{abs_file_path}" to S3 bucket '
-                f'"{self._s3_bucket_name}", object key "{object_key}"'
+                f'"{s.s3_bucket_name}", object key "{object_key}"'
                 f'{attempt_text}. Exception message was: {e}')
             
             self._failure_count += 1
@@ -159,11 +165,21 @@ class _UploadTask:
         else:
             # upload succeeded
 
-            if self._delete_uploaded_file:
+            if s.delete_uploaded_files:
                 self._delete_file(abs_file_path)
                 self._delete_empty_ancestor_dirs()
 
             return True
+
+
+    def _create_boto_config(self):
+        return Config(
+            retries={
+                'mode': 'standard',
+                'max_attempts': 5
+            },
+            read_timeout=self._settings.boto_read_timeout
+        )
 
 
     def _delete_file(self, file_path):
@@ -258,10 +274,10 @@ class _S3FileUploaderTaskRunner(Thread):
     # `S3FileUploader` class would respond by setting the event.
 
 
-    def __init__(self):
+    def __init__(self, normal_mode_sleep_period, retry_mode_sleep_period):
         super().__init__(daemon=True)
-        self._normal_mode_sleep_period = 1        # seconds
-        self._failure_mode_sleep_period = 60      # seconds
+        self._normal_mode_sleep_period = normal_mode_sleep_period
+        self._retry_mode_sleep_period = retry_mode_sleep_period
         self._tasks = Queue()
 
 
@@ -299,9 +315,4 @@ class _S3FileUploaderTaskRunner(Thread):
                     self.enqueue_task(task)
 
                     # Sleep before checking queue again.
-                    time.sleep(self._failure_mode_sleep_period)
-
-
-# The one and only `_S3FileUploaderTaskRunner` of the Vesper Recorder.
-_task_runner = _S3FileUploaderTaskRunner()
-_task_runner.start()
+                    time.sleep(self._retry_mode_sleep_period)
