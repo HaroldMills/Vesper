@@ -16,6 +16,7 @@ import asyncio
 import logging
 import time
 
+from botocore.client import Config
 import aioboto3
 
 from vesper.recorder.processor import Processor
@@ -26,6 +27,13 @@ from vesper.util.bunch import Bunch
 _DEFAULT_AWS_PROFILE_NAME = 'default'
 _DEFAULT_S3_OBJECT_KEY_PREFIX = None
 _DEFAULT_DELETE_UPLOADED_FILES = False
+_BOTO_CONFIG = Config(
+    retries={
+        'mode': 'standard',
+        'max_attempts': 5
+    },
+    read_timeout=300
+)
 
 
 _logger = logging.getLogger(__name__)
@@ -132,7 +140,7 @@ class _UploadTask:
 
             session = aioboto3.Session(profile_name=self._aws_profile_name)
 
-            async with session.client('s3') as s3:
+            async with session.client('s3', config=_BOTO_CONFIG) as s3:
                 await s3.upload_file(
                     abs_file_path, self._s3_bucket_name, object_key)
 
