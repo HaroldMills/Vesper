@@ -2,7 +2,7 @@
 
 
 from datetime import datetime as DateTime, timedelta as TimeDelta
-from logging import FileHandler, Formatter, StreamHandler
+from logging.handlers import QueueHandler
 from queue import Queue
 from threading import Thread
 from zoneinfo import ZoneInfo
@@ -14,6 +14,7 @@ from vesper.recorder.audio_file_writer import AudioFileWriter
 from vesper.recorder.audio_input import AudioInput
 from vesper.recorder.http_server import HttpServer
 from vesper.recorder.level_meter import LevelMeter
+from vesper.recorder.logging_process import LoggingProcess
 from vesper.recorder.processor_graph import ProcessorGraph
 from vesper.recorder.resampler import Resampler
 from vesper.recorder.s3_file_uploader import S3FileUploader
@@ -78,6 +79,7 @@ from vesper.util.schedule import Schedule, ScheduleRunner
     
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
+_LOGGING_LEVEL = logging.INFO
 _SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
 
 _DEFAULT_STATION_NAME = 'Vesper'
@@ -507,24 +509,22 @@ def _create_and_run_recorder(home_dir_path):
 
 def _configure_logging(home_dir_path):
     
-    # Create handler that writes log messages to stderr.
-    stderr_handler = StreamHandler()
-    formatter = Formatter('%(asctime)s %(levelname)s %(message)s')
-    stderr_handler.setFormatter(formatter)
-    
-    # Create handler that appends messages to log file.
+    # Create and start logging process. All logging for the various
+    # processes of the recorder is performed by the logging process.
     log_file_path = home_dir_path / _LOG_FILE_NAME
-    file_handler = FileHandler(log_file_path)
-    formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
-    file_handler.setFormatter(formatter)
+    logging_process = LoggingProcess(_LOGGING_LEVEL, log_file_path)
+    logging_process.start()
 
-    # Add handlers to root logger.
+    # Get the root logger for this process, i.e. the main process.
     logger = logging.getLogger()
-    logger.addHandler(stderr_handler)
-    logger.addHandler(file_handler)
-    
-    # Set root logger level.
-    logger.setLevel(logging.INFO)
+
+    # Add handler to root logger that forwards all log messages to
+    # the logging process.
+    handler = QueueHandler(logging_process.queue)
+    logger.addHandler(handler)
+
+    # Set logging level for this process.
+    logger.setLevel(_LOGGING_LEVEL)
         
         
 def _parse_settings_file(settings_file_path, home_dir_path):
