@@ -15,8 +15,7 @@ until an upload succeeds and then resuming normal operation.
 '''
 
 
-from queue import Queue
-from threading import Thread
+from multiprocessing import Process, Queue
 import logging
 import time
 
@@ -26,6 +25,7 @@ import boto3
 from vesper.recorder.processor import Processor
 from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
+import vesper.recorder.multiprocess_logging as multiprocess_logging
 
 
 _DEFAULT_AWS_PROFILE_NAME = 'default'
@@ -34,6 +34,7 @@ _DEFAULT_BOTO_READ_TIMEOUT = 300                # seconds
 _DEFAULT_RETRY_FAILED_UPLOADS = True
 _DEFAULT_UPLOAD_FAILURE_PAUSE_DURATION = 60     # seconds
 _DEFAULT_DELETE_UPLOADED_FILES = False
+_LOGGING_LEVEL = logging.INFO
 
 
 _logger = logging.getLogger(__name__)
@@ -84,16 +85,29 @@ class S3FileUploader(Processor):
         s = self._settings
 
         self._task_runner = _S3FileUploaderTaskRunner(
-            s.retry_failed_uploads, s.upload_failure_pause_duration)
+            s.retry_failed_uploads, s.upload_failure_pause_duration,
+            multiprocess_logging.logging_queue)
         
         self._task_runner.start()
 
 
     def _process(self, input_item, finished):
+
         dir_path, file_path = input_item
-        _logger.info(f'Submitting task to upload file "{file_path}" to S3...')
+
+        _logger.info(
+            f'Processor "{self.name}" submitting task to upload file '
+            f'"{file_path}" to S3...')
+
         task = _UploadTask(dir_path, file_path, self.settings)
         self._task_runner.enqueue_task(task)
+
+        if finished:
+
+            _logger.info(
+                f'Processor "{self.name}" signaling task runner to quit...')
+            
+            self._task_runner.enqueue_task(None)
 
 
     def get_status_tables(self):
@@ -258,32 +272,31 @@ class _UploadTask:
                 break
 
 
-class _S3FileUploaderTaskRunner(Thread):
+class _S3FileUploaderTaskRunner(Process):
 
 
     """
     S3 file uploader task runner.
 
-    This thread runs tasks that upload files to S3. It receives the tasks
-    via a thread-safe FIFO queue. Each task attempts to upload one file.
+    This process runs tasks that upload files to S3. It receives the tasks
+    via a multiprocessing FIFO queue. Each task attempts to upload one file.
     During normal operation, a task arrives in the queue periodically and
     the uploader runs it to upload the specified file. If an upload fails
-    and retries are enabled, the thread re-enqueues the task and sleeps
-    for awhile before resuming reading tasks from the queue and running
-    them. If an upload fails and retries are not enabled, the task
+    and retries are enabled, the task runner re-enqueues the task and
+    sleeps for awhile before resuming reading tasks from the queue and
+    running them. If an upload fails and retries are not enabled, the task
     runner discards the task.
     """
 
 
-    # TODO: Arrange for orderly shutdown of this thread. That probably
-    # means it shouldn't be a daemon thread. Perhaps a value of `None`
-    # in the task queue could signal that it's time to shut down.
-
-
-    def __init__(self, retry_failed_uploads, upload_failure_pause_duration):
+    def __init__(
+            self, retry_failed_uploads, upload_failure_pause_duration,
+            logging_queue):
+        
         super().__init__(daemon=True)
         self._retry_failed_uploads = retry_failed_uploads
         self._upload_failure_pause_duration = upload_failure_pause_duration
+        self._logging_queue = logging_queue
         self._tasks = Queue()
 
 
@@ -293,20 +306,50 @@ class _S3FileUploaderTaskRunner(Thread):
 
     def run(self):
 
+        self._configure_logging()
+
         while True:
 
             # Get next file upload task.
             task = self._tasks.get()
 
-            # Run task.
-            upload_succeeded = task.run()
+            if task is None:
+                # time to quit
 
-            if not upload_succeeded:
+                _logger.info(f'S3 file uploader task runner quitting...')
+                break
 
-                if self._retry_failed_uploads:
+            else:
+                # got task to run
 
-                    # Re-enqueue failed task to retry later.
-                    self.enqueue_task(task)
+                # Run task.
+                upload_succeeded = task.run()
 
-                # Pause before getting next task.
-                time.sleep(self._upload_failure_pause_duration)
+                if not upload_succeeded:
+
+                    if self._retry_failed_uploads:
+
+                        # Re-enqueue failed task to retry later.
+                        self.enqueue_task(task)
+
+                    # Pause before getting next task.
+                    time.sleep(self._upload_failure_pause_duration)
+
+
+    def _configure_logging(self):
+        
+        # Set the logging queue in the `multiprocess_logging` module
+        # of this process.
+        multiprocess_logging.logging_queue = self._logging_queue
+
+        # Get the root logger for this process.
+        logger = logging.getLogger()
+
+        # Add handler to root logger that forwards all log messages to
+        # the logging process.
+        logger.addHandler(multiprocess_logging.create_logging_handler())
+
+        # Set logging level for this process.
+        logger.setLevel(_LOGGING_LEVEL)
+
+

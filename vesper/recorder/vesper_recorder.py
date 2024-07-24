@@ -2,7 +2,6 @@
 
 
 from datetime import datetime as DateTime, timedelta as TimeDelta
-from logging.handlers import QueueHandler
 from queue import Queue
 from threading import Thread
 from zoneinfo import ZoneInfo
@@ -21,6 +20,7 @@ from vesper.recorder.s3_file_uploader import S3FileUploader
 from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
+import vesper.recorder.multiprocess_logging as multiprocess_logging
 
 
 # TODO: Consider giving `Processor` initializer a `context` argument
@@ -515,13 +515,16 @@ def _configure_logging(home_dir_path):
     logging_process = LoggingProcess(_LOGGING_LEVEL, log_file_path)
     logging_process.start()
 
-    # Get the root logger for this process, i.e. the main process.
+    # Set the logging queue in the `multiprocess_logging` module
+    # of this process, i.e. the main process.
+    multiprocess_logging.logging_queue = logging_process.logging_queue
+
+    # Get the root logger for this process.
     logger = logging.getLogger()
 
     # Add handler to root logger that forwards all log messages to
     # the logging process.
-    handler = QueueHandler(logging_process.queue)
-    logger.addHandler(handler)
+    logger.addHandler(multiprocess_logging.create_logging_handler())
 
     # Set logging level for this process.
     logger.setLevel(_LOGGING_LEVEL)

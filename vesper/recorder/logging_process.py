@@ -26,12 +26,12 @@ class LoggingProcess(Process):
         super().__init__(name='Logging Process')
         self._level = logging_level
         self._log_file_path = log_file_path
-        self._queue = Queue()
+        self._logging_queue = Queue()
 
 
     @property
-    def queue(self):
-        return self._queue
+    def logging_queue(self):
+        return self._logging_queue
     
 
     def run(self):
@@ -42,7 +42,7 @@ class LoggingProcess(Process):
 
             try:
 
-                record = self._queue.get()
+                record = self._logging_queue.get()
 
                 if record is None:
                     # we're being told to stop
@@ -62,7 +62,7 @@ class LoggingProcess(Process):
         
         # Create handler that writes log messages to stderr.
         stderr_handler = StreamHandler()
-        formatter = Formatter('%(asctime)s %(levelname)s %(message)s')
+        formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
         stderr_handler.setFormatter(formatter)
         
         # Create handler that appends messages to log file.
@@ -80,4 +80,4 @@ class LoggingProcess(Process):
     
 
     def stop(self):
-        self._queue.put_nowait(None)
+        self._logging_queue.put_nowait(None)
