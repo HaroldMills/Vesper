@@ -2,22 +2,26 @@
 An S3 file uploader takes a sequence of file paths as input and produces
 no output.
 
-For each input file, the uploader queues an *upload task* to run in an
-async event loop on a *task runner* thread. The task re-enqueues itself
-on failure. The task runner checks the queue once per second normally,
-but only once per minute when there are failed tasks on it. The main
-aim of the failure handling is to weather network outages gracefully.
+For each input file, the uploader queues an *upload task* to run on a
+*task runner* thread. There is one task runner thread per S3 file
+uploader. The task runner thread reads upload tasks from its queue and
+runs them. If a task fails and retries are enabled, the task runner
+re-enqueues it and pauses for the *retry pause duration* before getting
+and running the next task from its queue. If a task fails and retries
+are not enabled, the task runner discards it. The main aim of the task
+runner's failure handling is to weather network outages gracefully,
+retrying uploads at the rate determined by the retry pause duration
+until an upload succeeds and then resuming normal operation.
 '''
 
 
-from queue import Queue, Empty
+from queue import Queue
 from threading import Thread
-import asyncio
 import logging
 import time
 
 from botocore.client import Config
-import aioboto3
+import boto3
 
 from vesper.recorder.processor import Processor
 from vesper.recorder.status_table import StatusTable
@@ -26,9 +30,9 @@ from vesper.util.bunch import Bunch
 
 _DEFAULT_AWS_PROFILE_NAME = 'default'
 _DEFAULT_S3_OBJECT_KEY_PREFIX = None
-_DEFAULT_BOTO_READ_TIMEOUT = 300             # seconds
-_DEFAULT_NORMAL_MODE_SLEEP_PERIOD = 1        # seconds
-_DEFAULT_RETRY_MODE_SLEEP_PERIOD = 60        # seconds
+_DEFAULT_BOTO_READ_TIMEOUT = 300                # seconds
+_DEFAULT_RETRY_FAILED_UPLOADS = True
+_DEFAULT_UPLOAD_FAILURE_PAUSE_DURATION = 60     # seconds
 _DEFAULT_DELETE_UPLOADED_FILES = False
 
 
@@ -55,11 +59,12 @@ class S3FileUploader(Processor):
         boto_read_timeout = settings.get(
             'boto_read_timeout', _DEFAULT_BOTO_READ_TIMEOUT)
         
-        normal_mode_sleep_period = settings.get(
-            'normal_mode_sleep_period', _DEFAULT_NORMAL_MODE_SLEEP_PERIOD)
+        retry_failed_uploads = settings.get(
+            'retry_failed_uploads', _DEFAULT_RETRY_FAILED_UPLOADS)
         
-        retry_mode_sleep_period = settings.get(
-            'retry_mode_sleep_period', _DEFAULT_RETRY_MODE_SLEEP_PERIOD)
+        upload_failure_pause_duration = settings.get(
+            'upload_failure_pause_duration',
+            _DEFAULT_UPLOAD_FAILURE_PAUSE_DURATION)
         
         delete_uploaded_files = settings.get(
             'delete_uploaded_files', _DEFAULT_DELETE_UPLOADED_FILES)
@@ -69,8 +74,8 @@ class S3FileUploader(Processor):
             s3_bucket_name=s3_bucket_name,
             s3_object_key_prefix=s3_object_key_prefix,
             boto_read_timeout=boto_read_timeout,
-            normal_mode_sleep_period=normal_mode_sleep_period,
-            retry_mode_sleep_period=retry_mode_sleep_period,
+            retry_failed_uploads=retry_failed_uploads,
+            upload_failure_pause_duration=upload_failure_pause_duration,
             delete_uploaded_files=delete_uploaded_files)
         
         
@@ -79,7 +84,7 @@ class S3FileUploader(Processor):
         s = self._settings
 
         self._task_runner = _S3FileUploaderTaskRunner(
-            s.normal_mode_sleep_period, s.retry_mode_sleep_period)
+            s.retry_failed_uploads, s.upload_failure_pause_duration)
         
         self._task_runner.start()
 
@@ -100,8 +105,9 @@ class S3FileUploader(Processor):
             ('S3 Bucket Name', s.s3_bucket_name),
             ('S3 Object Key Prefix', s.s3_object_key_prefix),
             ('Boto Read Timeout (seconds)', s.boto_read_timeout),
-            ('Normal Mode Sleep Period (seconds)', s.normal_mode_sleep_period),
-            ('Retry Mode Sleep Period (seconds)', s.retry_mode_sleep_period),
+            ('Retry Failed Uploads', s.retry_failed_uploads),
+            ('Upload Failure Pause Duration (seconds)',
+             s.upload_failure_pause_duration),
             ('Delete Uploaded Files', s.delete_uploaded_files))
 
         table = StatusTable(self.name, rows)
@@ -113,13 +119,22 @@ class _UploadTask:
 
 
     def __init__(self, dir_path, file_path, settings):
+
         self._dir_path = dir_path
         self._file_path = file_path
         self._settings = settings
+
+        self._boto_config = Config(
+            retries={
+                'mode': 'standard',
+                'max_attempts': 5
+            },
+            read_timeout=self._settings.boto_read_timeout)
+
         self._failure_count = 0
 
 
-    async def run(self):
+    def run(self):
 
         s = self._settings
 
@@ -143,12 +158,13 @@ class _UploadTask:
         
         try:
 
-            session = aioboto3.Session(profile_name=s.aws_profile_name)
-            config = self._create_boto_config()
+            # Create new session for each upload to ensure that session
+            # timeouts will not be an issue.
+            session = boto3.Session(profile_name=s.aws_profile_name)
 
-            async with session.client('s3', config=config) as s3:
-                await s3.upload_file(
-                    abs_file_path, s.s3_bucket_name, object_key)
+            s3 = session.client('s3', config=self._boto_config)
+
+            s3.upload_file(abs_file_path, s.s3_bucket_name, object_key)
 
         except Exception as e:
             # upload failed
@@ -170,16 +186,6 @@ class _UploadTask:
                 self._delete_empty_ancestor_dirs()
 
             return True
-
-
-    def _create_boto_config(self):
-        return Config(
-            retries={
-                'mode': 'standard',
-                'max_attempts': 5
-            },
-            read_timeout=self._settings.boto_read_timeout
-        )
 
 
     def _delete_file(self, file_path):
@@ -258,26 +264,26 @@ class _S3FileUploaderTaskRunner(Thread):
     """
     S3 file uploader task runner.
 
-    This thread runs asynchronous tasks that upload files to S3. It
-    receives the tasks via a thread-safe FIFO queue. Each task attempts
-    to upload one file. If the upload fails, the thread re-enqueues the
-    task and sleeps for awhile. It also sleeps when the queue is empty.
+    This thread runs tasks that upload files to S3. It receives the tasks
+    via a thread-safe FIFO queue. Each task attempts to upload one file.
+    During normal operation, a task arrives in the queue periodically and
+    the uploader runs it to upload the specified file. If an upload fails
+    and retries are enabled, the thread re-enqueues the task and sleeps
+    for awhile before resuming reading tasks from the queue and running
+    them. If an upload fails and retries are not enabled, the task
+    runner discards the task.
     """
 
 
     # TODO: Arrange for orderly shutdown of this thread. That probably
-    # means it shouldn't be a daemon thread. Perhaps there could be an
-    # `Event` that it checks in its run loop to see if it should quit,
-    # and the `Event` gets set during shutdown. The recorder wouldn't
-    # know specifically about the `Event`, but it would notify each
-    # processor class (or processor?) of shutdown, and the
-    # `S3FileUploader` class would respond by setting the event.
+    # means it shouldn't be a daemon thread. Perhaps a value of `None`
+    # in the task queue could signal that it's time to shut down.
 
 
-    def __init__(self, normal_mode_sleep_period, retry_mode_sleep_period):
+    def __init__(self, retry_failed_uploads, upload_failure_pause_duration):
         super().__init__(daemon=True)
-        self._normal_mode_sleep_period = normal_mode_sleep_period
-        self._retry_mode_sleep_period = retry_mode_sleep_period
+        self._retry_failed_uploads = retry_failed_uploads
+        self._upload_failure_pause_duration = upload_failure_pause_duration
         self._tasks = Queue()
 
 
@@ -286,33 +292,21 @@ class _S3FileUploaderTaskRunner(Thread):
 
 
     def run(self):
-        asyncio.run(self._run())
-
-
-    async def _run(self):
 
         while True:
 
-            try:
-                task = self._tasks.get()
+            # Get next file upload task.
+            task = self._tasks.get()
 
-            except Empty:
-                # no tasks to run
+            # Run task.
+            upload_succeeded = task.run()
 
-                # Sleep before checking queue again.
-                time.sleep(self._normal_mode_sleep_period)
+            if not upload_succeeded:
 
-            else:
-                # got a task to run
-
-                # Run task.
-                upload_succeeded = await task.run()
-
-                if not upload_succeeded:
-                    # upload failed
+                if self._retry_failed_uploads:
 
                     # Re-enqueue failed task to retry later.
                     self.enqueue_task(task)
 
-                    # Sleep before checking queue again.
-                    time.sleep(self._retry_mode_sleep_period)
+                # Pause before getting next task.
+                time.sleep(self._upload_failure_pause_duration)
