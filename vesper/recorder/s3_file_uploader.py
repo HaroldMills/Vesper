@@ -25,6 +25,7 @@ import boto3
 from vesper.recorder.processor import Processor
 from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
+import vesper.recorder.error_utils as error_utils
 import vesper.recorder.multiprocess_logging as multiprocess_logging
 
 
@@ -306,34 +307,43 @@ class _S3FileUploaderTaskRunner(Process):
 
     def run(self):
 
-        self._configure_logging()
+        try:
 
-        while True:
+            self._configure_logging()
 
-            # Get next file upload task.
-            task = self._tasks.get()
+            while True:
 
-            if task is None:
-                # time to quit
+                # Get next file upload task.
+                task = self._tasks.get()
 
-                _logger.info(f'S3 file uploader task runner quitting...')
-                break
+                if task is None:
+                    # time to quit
 
-            else:
-                # got task to run
+                    _logger.info(f'S3 file uploader task runner quitting...')
+                    break
 
-                # Run task.
-                upload_succeeded = task.run()
+                else:
+                    # got task to run
 
-                if not upload_succeeded:
+                    # Run task.
+                    upload_succeeded = task.run()
 
-                    if self._retry_failed_uploads:
+                    if not upload_succeeded:
 
-                        # Re-enqueue failed task to retry later.
-                        self.enqueue_task(task)
+                        if self._retry_failed_uploads:
 
-                    # Pause before getting next task.
-                    time.sleep(self._upload_failure_pause_duration)
+                            # Re-enqueue failed task to retry later.
+                            self.enqueue_task(task)
+
+                        # Pause before getting next task.
+                        time.sleep(self._upload_failure_pause_duration)
+
+        except KeyboardInterrupt:
+            pass
+
+        except Exception:
+            error_utils.handle_top_level_exception(
+                'S3 file uploader task runner process')
 
 
     def _configure_logging(self):

@@ -2,6 +2,8 @@ from logging import Formatter, FileHandler, StreamHandler
 from multiprocessing import Process, Queue
 import logging
 
+import vesper.recorder.error_utils as error_utils
+
 
 class LoggingProcess(Process):
 
@@ -36,11 +38,11 @@ class LoggingProcess(Process):
 
     def run(self):
 
-        self._configure_logging(self._level)
+        try:
 
-        while True:
+            self._configure_logging(self._level)
 
-            try:
+            while True:
 
                 record = self._logging_queue.get()
 
@@ -52,10 +54,11 @@ class LoggingProcess(Process):
                 logger = logging.getLogger(record.name)
                 logger.handle(record)
 
-            except Exception:
-                import sys, traceback
-                print('Logger encountered an error:', file=sys.stderr)
-                traceback.print_exc(file=sys.stderr)
+        except KeyboardInterrupt:
+            pass
+
+        except Exception:
+            error_utils.handle_top_level_exception('Logging process')
 
 
     def _configure_logging(self, level):

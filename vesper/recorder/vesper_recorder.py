@@ -20,6 +20,7 @@ from vesper.recorder.s3_file_uploader import S3FileUploader
 from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
+import vesper.recorder.error_utils as error_utils
 import vesper.recorder.multiprocess_logging as multiprocess_logging
 
 
@@ -109,7 +110,15 @@ class VesperRecorder:
 
     @staticmethod
     def create_and_run_recorder(home_dir_path):
-        return _create_and_run_recorder(home_dir_path)
+        try:
+            return _create_and_run_recorder(home_dir_path)
+        except KeyboardInterrupt:
+            import sys
+            print(
+                'Recorder exiting immediately due to keyboard interrupt.',
+                file=sys.stderr)
+        except Exception:
+            error_utils.handle_top_level_exception('Main recorder process')
     
     
     def __init__(self, settings):
@@ -494,18 +503,8 @@ def _create_and_run_recorder(home_dir_path):
         _logger.error(f'Could not create recorder. Error message was: {e}')
         return
            
-    # Run recorder. 
-    try:
-        recorder.run()
-    except Exception as e:
-        _logger.error(f'Recorder raised exception. Error message was: {e}')
-        raise
-    except KeyboardInterrupt:
-        _logger.info(
-            'Stopping recorder and exiting due to keyboard interrupt...')
-        recorder.stop()
-        recorder.wait()
-         
+    recorder.run()
+        
 
 def _configure_logging(home_dir_path):
     
