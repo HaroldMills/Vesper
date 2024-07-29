@@ -77,6 +77,8 @@ class LoggingProcess(Process):
         logger = logging.getLogger()
         logger.addHandler(stderr_handler)
         logger.addHandler(file_handler)
+
+        print(f'LoggingProcess._configure_logging: {logger.handlers}')
         
         # Set root logger level.
         logger.setLevel(level)
