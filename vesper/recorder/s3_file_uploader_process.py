@@ -95,8 +95,6 @@ class S3FileUploaderProcess(Process):
         # the logging process.
         handler = QueueHandler(self._logging_queue)
         logger.addHandler(handler)
-        # if len(logger.handlers) == 0:
-        #     logger.addHandler(handler)
 
         print(f'S3FileUploaderProcess._configure_logging: {logger.handlers}')
 
