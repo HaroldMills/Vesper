@@ -96,7 +96,7 @@ class S3FileUploaderProcess(Process):
         handler = QueueHandler(self._logging_queue)
         logger.addHandler(handler)
 
-        print(f'S3FileUploaderProcess._configure_logging: {logger.handlers}')
+        # print(f'S3FileUploaderProcess._configure_logging: {logger.handlers}')
 
         # Set logging level for this process.
         logger.setLevel(_LOGGING_LEVEL)
