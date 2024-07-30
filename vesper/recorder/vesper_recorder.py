@@ -728,7 +728,13 @@ class _MultiprocessLoggingThread(Thread):
     Thread within the main Vesper Recorder process that receives log
     records from other recorder processes via a `multiprocessing.Queue`
     and logs them. This is needed since logging via the Python
-    Standard Library `logging` module is not multiprocess-safe.
+    Standard Library `logging` module is not multiprocess-safe (it is
+    only thread-safe).
+
+    This class is inspired by code that appears in the *Logging to a
+    single file from multiple processes* section of the Python Logging
+    Cookbook (https://docs.python.org/3/howto/logging-cookbook.html#
+    logging-to-a-single-file-from-multiple-processes).
     """
 
 
