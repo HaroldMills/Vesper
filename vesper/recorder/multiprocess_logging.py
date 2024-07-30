@@ -6,8 +6,8 @@ from logging.handlers import QueueHandler
 
 logging_queue = None
 """
-`multiprocess.Queue` created and read by the logging process and written
-to by other processes.
+`multiprocess.Queue` created and read by the main Vesper Recorder process
+and written to by other processes.
 """
 
 

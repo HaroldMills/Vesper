@@ -2,6 +2,7 @@
 
 
 from datetime import datetime as DateTime, timedelta as TimeDelta
+from logging import Formatter, FileHandler, StreamHandler
 from queue import Queue
 from threading import Thread
 from zoneinfo import ZoneInfo
@@ -14,7 +15,6 @@ from vesper.recorder.audio_file_writer import AudioFileWriter
 from vesper.recorder.audio_input import AudioInput
 from vesper.recorder.http_server import HttpServer
 from vesper.recorder.level_meter import LevelMeter
-from vesper.recorder.logging_process import LoggingProcess
 from vesper.recorder.processor_graph import ProcessorGraph
 from vesper.recorder.resampler import Resampler
 from vesper.recorder.s3_file_uploader import S3FileUploader
@@ -188,6 +188,8 @@ class VesperRecorder:
         
         s = self._settings
 
+        self._start_multiprocess_logging_thread()
+
         # Create audio input.
         self._input = self._create_audio_input(s.input)
 
@@ -206,6 +208,20 @@ class VesperRecorder:
 
         while True:
             self._execute_next_command()
+
+
+    def _start_multiprocess_logging_thread(self):
+
+        self._multiprocess_logging_thread = _MultiprocessLoggingThread()
+        self._multiprocess_logging_thread.start()
+
+        # TODO: Obviate the `multiprocess_logging` module by making the
+        # logging queue available as a recorder attribute and passing the
+        # recorder to processor initializers as a `context` argument. Use
+        # the same mechanism do make the station name and a list of
+        # processor classes available to processors.
+        multiprocess_logging.logging_queue = \
+            self._multiprocess_logging_thread.logging_queue
 
 
     def _create_audio_input(self, settings):
@@ -478,21 +494,23 @@ def _create_and_run_recorder(home_dir_path):
     
     # Use the `spawn` multiprocessing start method on all platforms.
     # As of Python 3.12, this is the default for Windows and macOS
-    # but not for POSIX. On POSIX it is `fork`, which is fast but
-    # copies more parent process state to the child process than we
-    # would like, which can be problematic. For example, it caused
-    # log messages from the child process to be duplicated on POSIX.
+    # but not for POSIX. On POSIX the default start method is `fork`,
+    # which is fast but copies more parent process state to the child
+    # process than we need or want. The extra state can cause problems.
+    # For example, in an earlier version of the recorder's multiprocess
+    # logging system it caused some log messages to be duplicated on
+    # POSIX.
     #
     # Note that according to the Python 3.12.4 documentation for the
     # `multiprocessing` module (see https://docs.python.org/3/library/
     # multiprocessing.html#contexts-and-start-methods), the default
     # start method for POSIX will change away from `fork` for Python
     # 3.14. If after that change it is `spawn` (or something else we
-    # can work with) for all platforms, we might want to remove the
-    # following.
+    # can work with) for all platforms, we might no longer need to
+    # set it explicitly.
     multiprocessing.set_start_method('spawn')
 
-    _configure_logging(home_dir_path)
+    _configure_logging(_LOGGING_LEVEL, home_dir_path)
     
     _logger.info(f'Welcome to the Vesper Recorder!')
     
@@ -523,31 +541,28 @@ def _create_and_run_recorder(home_dir_path):
     recorder.run()
         
 
-def _configure_logging(home_dir_path):
-    
-    # Create and start logging process. All logging for the various
-    # processes of the recorder is performed by the logging process.
-    log_file_path = home_dir_path / _LOG_FILE_NAME
-    logging_process = LoggingProcess(_LOGGING_LEVEL, log_file_path)
-    logging_process.start()
+def _configure_logging(logging_level, home_dir_path):
 
-    # Set the logging queue in the `multiprocess_logging` module
-    # of this process, i.e. the main process.
-    multiprocess_logging.logging_queue = logging_process.logging_queue
-
-    # Get the root logger for this process.
+    # Get the root logger for the main Vesper Recorder process.
     logger = logging.getLogger()
 
-    # Add handler to root logger that forwards all log messages to
-    # the logging process.
-    logger.addHandler(multiprocess_logging.create_logging_handler())
+    # Add handler that writes log messages to stderr.
+    stderr_handler = StreamHandler()
+    formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+    stderr_handler.setFormatter(formatter)
+    logger.addHandler(stderr_handler)
+    
+    # Add handler that appends messages to log file.
+    log_file_path = home_dir_path / _LOG_FILE_NAME
+    file_handler = FileHandler(log_file_path)
+    formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
-    print(f'__main__._configure_logging: {logger.handlers}')
+    # Set logging level.
+    logger.setLevel(logging_level)
 
-    # Set logging level for this process.
-    logger.setLevel(_LOGGING_LEVEL)
-        
-        
+
 def _parse_settings_file(settings_file_path, home_dir_path):
 
     # Check that settings file exists.
@@ -707,6 +722,42 @@ def _parse_processor_settings_aux(mapping, processor_classes):
         settings=settings)
 
 
+class _MultiprocessLoggingThread(Thread):
+
+    """
+    Thread within the main Vesper Recorder process that receives log
+    records from other recorder processes via a `multiprocessing.Queue`
+    and logs them. This is needed since logging via the Python
+    Standard Library `logging` module is not multiprocess-safe.
+    """
+
+
+    def __init__(self):
+        super().__init__(daemon=True)
+        self._logging_queue = multiprocessing.Queue()
+
+
+    @property
+    def logging_queue(self):
+        return self._logging_queue
+    
+
+    def run(self):
+
+        while True:
+
+            # Get next log record from queue.
+            record = self._logging_queue.get()
+
+            if record is None:
+                # we're being told to stop
+
+                break
+
+            logger = logging.getLogger(record.name)
+            logger.handle(record)
+
+
 class _ScheduleListener:
     
     
@@ -758,103 +809,3 @@ class _QuitThread(Thread):
             f'to recorder.')
        
         self.recorder.quit()
-
-
-# class _Logger(AudioRecorderListener):
-    
-    
-#     def __init__(self):
-#         super().__init__()
-#         self._portaudio_overflow_buffer_count = 0
-#         self._recorder_overflow_frame_count = 0
-        
-        
-#     def recording_started(self, recorder, time):
-#         self._sample_rate = recorder.sample_rate
-#         _logger.info('Started recording.')
-        
-        
-#     def input_arrived(
-#             self, recorder, time, samples, frame_count, portaudio_overflow):
-        
-#         self._log_portaudio_overflow_if_needed(portaudio_overflow)
-#         self._log_recorder_overflow_if_needed(False)
-            
-            
-#     def _log_portaudio_overflow_if_needed(self, overflow):
-        
-#         if overflow:
-            
-#             if self._portaudio_overflow_buffer_count == 0:
-#                 # overflow has just started
-                
-#                 _logger.error(
-#                     'PortAudio input overflow: PortAudio has reported that '
-#                     'an unspecified number of input samples were dropped '
-#                     'before or during the current buffer. A second message '
-#                     'will be logged later indicating the number of '
-#                     'consecutive buffers for which this error occurred.')
-                
-#             self._portaudio_overflow_buffer_count += 1
-            
-#         else:
-            
-#             if self._portaudio_overflow_buffer_count > 0:
-#                 # overflow has just ended
-                
-#                 if self._portaudio_overflow_buffer_count == 1:
-                    
-#                     _logger.error(
-#                         'PortAudio input overflow: Overflow was reported for '
-#                         'one buffer.')
-                    
-#                 else:
-                    
-#                     _logger.error(
-#                         f'PortAudio input overflow: Overflow was reported '
-#                         f'for {self._portaudio_overflow_buffer_count} '
-#                         f'consecutive buffers.')
-            
-#                 self._portaudio_overflow_buffer_count = 0
-            
-
-#     def _log_recorder_overflow_if_needed(self, overflow, frame_count=0):
-        
-#         if overflow:
-            
-#             if self._recorder_overflow_frame_count == 0:
-#                 # overflow has just started
-                
-#                 _logger.error(
-#                     'Recorder input overflow: The recorder has run out of '
-#                     'buffers for arriving input samples. It will substitute '
-#                     'zero samples until buffers become available, and then '
-#                     'log another message to report the duration of the lost '
-#                     'samples.')
-                
-#             self._recorder_overflow_frame_count += frame_count
-            
-#         else:
-            
-#             if self._recorder_overflow_frame_count > 0:
-#                 # overflow has just ended
-                
-#                 duration = \
-#                     self._recorder_overflow_frame_count / self._sample_rate
-#                 _logger.error(
-#                     f'Recorder input overflow: {duration:.3f} seconds of '
-#                     f'zero samples were substituted for lost input samples.')
-                    
-#                 self._recorder_overflow_frame_count = 0
-                    
-        
-#     def input_overflowed(
-#             self, recorder, time, frame_count, portaudio_overflow):
-#         self._log_portaudio_overflow_if_needed(portaudio_overflow)
-#         self._log_recorder_overflow_if_needed(True, frame_count)
-        
-        
-#     def recording_stopped(self, recorder, time):
-#         self._log_portaudio_overflow_if_needed(False)
-#         self._log_recorder_overflow_if_needed(False)
-#         _logger.info('Stopped recording.')
