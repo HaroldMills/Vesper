@@ -22,7 +22,6 @@ from vesper.recorder.s3_file_uploader_process import (
     S3FileUploaderProcess, S3FileUploaderTask)
 from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
-import vesper.recorder.multiprocess_logging as multiprocess_logging
 
 
 _DEFAULT_AWS_PROFILE_NAME = 'default'

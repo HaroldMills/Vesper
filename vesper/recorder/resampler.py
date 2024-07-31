@@ -1,14 +1,8 @@
-import logging
-
-import numpy as np
 import soxr
 
 from vesper.recorder.processor import Processor
 from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
-
-
-_logger = logging.getLogger(__name__)
 
 
 _DEFAULT_QUALITY = 'HQ'
@@ -80,9 +74,6 @@ class Resampler(Processor):
         samples = self._resampler.resample_chunk(samples, finished)
 
         frame_count = samples.shape[0]
-
-        # _logger.info(
-        #     f'Resampler._process: {input_frame_count} {output_frame_count}')
 
         if frame_count == 0:
             return []
