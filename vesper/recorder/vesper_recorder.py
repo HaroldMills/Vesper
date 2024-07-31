@@ -518,7 +518,7 @@ def _create_and_run_recorder(home_dir_path):
     _logger.info(
         f'Reading recorder settings from file "{settings_file_path}"...')
     try:
-        settings = _parse_settings_file(settings_file_path, home_dir_path)
+        settings = _parse_settings_file(settings_file_path)
     except VesperRecorderError as e:
         _logger.error(f'{e}')
         return
@@ -559,7 +559,7 @@ def _configure_logging(logging_level, home_dir_path):
     logger.setLevel(logging_level)
 
 
-def _parse_settings_file(settings_file_path, home_dir_path):
+def _parse_settings_file(settings_file_path):
 
     # Check that settings file exists.
     if not settings_file_path.exists():
@@ -568,14 +568,14 @@ def _parse_settings_file(settings_file_path, home_dir_path):
         
     # Parse settings file.
     try:
-        return _parse_settings_file_aux(settings_file_path, home_dir_path)
+        return _parse_settings_file_aux(settings_file_path)
     except Exception as e:
         raise VesperRecorderError(
             f'Could not parse recorder settings file '
             f'"{settings_file_path}". Error message was: {e}')
     
 
-def _parse_settings_file_aux(settings_file_path, home_dir_path):
+def _parse_settings_file_aux(settings_file_path):
     
     settings = Settings.create_from_yaml_file(settings_file_path)
 
