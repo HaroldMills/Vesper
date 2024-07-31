@@ -26,9 +26,9 @@ class LevelMeter(Processor):
         return Bunch(update_period=update_period)
     
 
-    def __init__(self, name, settings, input_info):
+    def __init__(self, name, settings, context, input_info):
 
-        super().__init__(name, settings, input_info)
+        super().__init__(name, settings, context, input_info)
 
         self._update_period = settings.update_period
 

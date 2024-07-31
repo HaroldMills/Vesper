@@ -37,7 +37,7 @@ class Resampler(Processor):
             quality=quality)
     
 
-    def __init__(self, name, settings, input_info):
+    def __init__(self, name, settings, context, input_info):
 
         self._output_sample_rate = settings.output_sample_rate
         self._quality = settings.quality
@@ -49,7 +49,7 @@ class Resampler(Processor):
             channel_count=self._channel_count,
             sample_rate=self._output_sample_rate)
 
-        super().__init__(name, settings, input_info, output_info)
+        super().__init__(name, settings, context, input_info, output_info)
 
 
     @property

@@ -54,12 +54,9 @@ class AudioFileWriter(Processor):
             max_audio_file_duration=max_audio_file_duration)
     
 
-    # TODO: Figure out how to get access to station name in initializer.
-    # We don't want to have to specify the station name separately in
-    # the settings for each audio file writer.
-    def __init__(self, name, settings, input_info):
+    def __init__(self, name, settings, context, input_info):
         
-        super().__init__(name, settings, input_info)
+        super().__init__(name, settings, context, input_info)
 
         self._channel_count = input_info.channel_count
         self._sample_rate = input_info.sample_rate

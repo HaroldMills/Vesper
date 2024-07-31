@@ -82,7 +82,7 @@ class S3FileUploader(Processor):
 
         self._uploader_process = S3FileUploaderProcess(
             s.retry_failed_uploads, s.upload_failure_pause_duration,
-            multiprocess_logging.logging_queue)
+            self.context.multiprocess_logging_queue)
         
         self._uploader_process.start()
 

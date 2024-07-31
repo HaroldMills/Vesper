@@ -9,9 +9,10 @@ class Processor:
         raise NotImplementedError()
     
 
-    def __init__(self, name, settings, input_info, output_info=None):
+    def __init__(self, name, settings, context, input_info, output_info=None):
         self._name = name
         self._settings = settings
+        self._context = context
         self._input_info = input_info
         self._output_info = output_info
         self._running = False
@@ -42,6 +43,23 @@ class Processor:
         return self._settings
  
  
+    @property
+    def context(self):
+
+        """
+        the context of this processor.
+
+        The context of a processor is an object whose attributes provide
+        information that can't be included in the processor's settings
+        because it only becomes available at runtime. For example, such
+        context information might include a set of plugin types or a
+        multiprocess logging queue. All the processors of a graph share
+        a context.
+        """
+
+        return self._context
+    
+
     @property
     def input_info(self):
 

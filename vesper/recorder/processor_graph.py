@@ -14,16 +14,12 @@ _AUDIO_INPUT = 'Audio Input'
 class ProcessorGraph(Processor):
 
 
-    # TODO: How to provide `processor_classes` in some generic way, so
-    # this initializer has the same signature as all other processor
-    # initializers? This is similar to the question of how to provide
-    # station name as default prefix for audio file writers, though
-    # the two questions may have different answers.
-    def __init__(self, name, settings, input_info, processor_classes):
+    def __init__(self, name, settings, context, input_info):
 
-        super().__init__(name, settings, input_info)
+        super().__init__(name, settings, context, input_info)
         
-        processor_classes = {cls.type_name: cls for cls in processor_classes}
+        processor_classes = \
+            {cls.type_name: cls for cls in context.processor_classes}
 
         self._processors = []
         """
@@ -66,7 +62,7 @@ class ProcessorGraph(Processor):
                 processor_input_info = input_processor.output_info
 
             # Create processor.
-            processor = cls(p.name, p.settings, processor_input_info)
+            processor = cls(p.name, p.settings, context, processor_input_info)
 
             # Add processor to data structures.
             self._processors.append(processor)

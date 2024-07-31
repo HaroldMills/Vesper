@@ -22,7 +22,6 @@ from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 import vesper.recorder.error_utils as error_utils
-import vesper.recorder.multiprocess_logging as multiprocess_logging
 
 
 # TODO: Consider giving `Processor` initializer a `context` argument
@@ -194,8 +193,7 @@ class VesperRecorder:
         self._input = self._create_audio_input(s.input)
 
         # Create processor graph.
-        self._processor_graph = ProcessorGraph(
-            'Processor Graph', s.processors, self._input, _PROCESSOR_CLASSES)
+        self._processor_graph = self._create_processor_graph(s.processors)
 
         self._stop_pending = False
         self._command_queue = Queue()
@@ -211,17 +209,8 @@ class VesperRecorder:
 
 
     def _start_multiprocess_logging_thread(self):
-
         self._multiprocess_logging_thread = _MultiprocessLoggingThread()
         self._multiprocess_logging_thread.start()
-
-        # TODO: Obviate the `multiprocess_logging` module by making the
-        # logging queue available as a recorder attribute and passing the
-        # recorder to processor initializers as a `context` argument. Use
-        # the same mechanism do make the station name and a list of
-        # processor classes available to processors.
-        multiprocess_logging.logging_queue = \
-            self._multiprocess_logging_thread.logging_queue
 
 
     def _create_audio_input(self, settings):
@@ -230,6 +219,17 @@ class VesperRecorder:
             self, s.device, s.channel_count, s.sample_rate, s.sample_format,
             s.port_audio_block_size, s.buffer_capacity, s.chunk_size)
     
+
+    def _create_processor_graph(self, settings):
+
+        context = Bunch(
+            multiprocess_logging_queue=\
+                self._multiprocess_logging_thread.logging_queue,
+            processor_classes=_PROCESSOR_CLASSES)
+
+        return ProcessorGraph(
+            'Processor Graph', settings, context, self._input)
+
 
     def _start_http_server(self, port_num):
         server = HttpServer(port_num, VesperRecorder.VERSION_NUMBER, self)
