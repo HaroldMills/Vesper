@@ -24,10 +24,6 @@ from vesper.util.schedule import Schedule, ScheduleRunner
 import vesper.recorder.error_utils as error_utils
 
 
-# TODO: Consider giving `Processor` initializer a `context` argument
-#       that for our purposes is a `VesperRecorder` object. This would
-#       give processors access to the properties of a recorder, which
-#       could include the async task thread, the station, etc.
 # TODO: Consider making processor input and output items 2-D NumPy
 #       arrays of float32 samples, with the second element of the
 #       shape the frame count. I think this would simplify many
