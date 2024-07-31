@@ -100,7 +100,8 @@ class S3FileUploader(Processor):
         if finished:
 
             _logger.info(
-                f'Processor "{self.name}" signaling task runner to quit...')
+                f'Processor "{self.name}" signaling uploader process '
+                f'to quit...')
             
             self._uploader_process.enqueue_task(None)
 

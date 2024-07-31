@@ -16,16 +16,16 @@ class S3FileUploaderProcess(Process):
 
 
     """
-    S3 file uploader task runner.
+    S3 file uploader process.
 
     This process runs tasks that upload files to S3. It receives the tasks
     via a multiprocessing FIFO queue. Each task attempts to upload one file.
     During normal operation, a task arrives in the queue periodically and
     the uploader runs it to upload the specified file. If an upload fails
-    and retries are enabled, the task runner re-enqueues the task and
-    sleeps for awhile before resuming reading tasks from the queue and
-    running them. If an upload fails and retries are not enabled, the task
-    runner discards the task.
+    and retries are enabled, the process re-enqueues the task and sleeps
+    for awhile before resuming reading tasks from the queue and running
+    them. If an upload fails and retries are not enabled, the process
+    discards the task.
     """
 
 
@@ -59,7 +59,7 @@ class S3FileUploaderProcess(Process):
                     # time to quit
 
                     self._logger.info(
-                        f'S3 file uploader task runner quitting...')
+                        f'S3 file uploader process quitting...')
                     break
 
                 else:
@@ -83,7 +83,7 @@ class S3FileUploaderProcess(Process):
 
         except Exception:
             error_utils.handle_top_level_exception(
-                'S3 file uploader task runner process')
+                'S3 file uploader process')
 
 
     def _configure_logging(self):
