@@ -2,9 +2,14 @@
 
 This document describes how to install the Vesper Recorder on a Raspberry Pi, configure the recorder, and run it. It assumes that you start with an empty micro SD card on which you want to install the Raspberry Pi OS and the Vesper Recorder. I have tested these instructions using macOS to prepare the micro SD card, but not Windows or Linux. You'll need to modify the instructions a little for those platforms.
 
+Note that if you're installing the Vesper Recorder to use on a more resource-constrained Raspberry Pi, some of the following may not work if you try to perform the installation on that machine. For example, I have had the first `conda` command of step 6 hang when I try to run it on a Raspberry Pi Zero 2 W, I suspect because that machine has only 512 MB of RAM. In this case I have found it effective to first install the micro SD card that I intend to use in the Raspberry Pi Zero 2 W in a different, less resource-constrained Raspberry Pi, for example a Raspberry Pi 400, and perform the software installation there. Once the software installation is complete, I then move the SD card to the Raspberry Pi Zero 2 W and use it there.
+
+
 ## 1. Install Raspberry Pi OS image onto micro SD card
 
 Run the [Raspberry Pi Imager](https://www.raspberrypi.com/software/) on a computer that includes a micro SD card reader and follow the instructions in the imager to install the Raspberry Pi OS onto a micro SD card. I have used 128 GB SanDisk Extreme cards, just because that's what I've had around. I have always accepted the defaults for this step: I have not customized the installation.
+
+Be sure to install a 64-bit version of the Rasberry Pi OS, since that is required by MiniForge. I do not recommend the Lite version, since in my experience it is missing an ALSA audio capture volume control, and it also does not mount USB thumb drives automatically when they are inserted. I also do not recommend the Full version, since it is bloated. The regular 64-bit Raspberry Pi OS, neither Full nor Lite, seems about right.
 
 
 ## 2. Boot Raspberry Pi from SD card
@@ -14,13 +19,13 @@ Install the micro SD card from the previous step in your Raspberry Pi, attach a 
 
 ## 3. Enable SSH access
 
-* Change your Raspberry Pi's hostname (if you wish) in `System -> Raspberry Pi Configuration -> System`. The default hostname is `raspberrypi`.
+* Change your Raspberry Pi's hostname (if you wish) in `Preferences -> Raspberry Pi Configuration -> System`. The default hostname is `raspberrypi`.
 
-* Enable SSH for your Raspberry Pi in `System -> Raspberry Pi Configuration -> Interfaces`.
+* Enable SSH for your Raspberry Pi in `Preferences -> Raspberry Pi Configuration -> Interfaces`.
 
 * Reboot your Raspberry Pi.
 
-* If you would like to allow ssh login without a password, put your RSA public key in `~/.ssh/authorized_keys`, for example by copying it from `~/.ssh/id_rsa.pub` on macOS. For details see [here](https://danidudas.medium.com/how-to-connect-to-raspberry-pi-via-ssh-without-password-using-ssh-keys-3abd782688a). Also consider doing a `chmod 700 .ssh` to allow only your user access to the .ssh directory.
+* If you would like to allow ssh login without a password, put your RSA public key in `~/.ssh/authorized_keys`, for example by copying it from `~/.ssh/id_rsa.pub` on macOS. For details see [here](https://danidudas.medium.com/how-to-connect-to-raspberry-pi-via-ssh-without-password-using-ssh-keys-3abd782688a).
 
 
 ## 4. Install MiniForge
@@ -49,7 +54,7 @@ Install the micro SD card from the previous step in your Raspberry Pi, attach a 
 
         conda create -n vesper-recorder python=3.11
         conda activate vesper-recorder
-        conda install python-sounddevice
+        conda install python-sounddevice h5py
         pip install -e .
 
 
@@ -89,3 +94,8 @@ To run the Vesper Recorder:
 * Verify that the Vesper Recorder is running and properly configured by visiting its web page at `<hostname>:8000` (for example, `raspberrypi:8000` for the default hostname) in a web browser on another computer.
 
 * Close your SSH connection to your Raspberry Pi by typing `Ctrl-D` at the SSH prompt.
+
+
+## 10. Run the Vesper Recorder automatically on startup (optional)
+
+If you would like to run the Vesper Recorder automatically on startup, put the accompanying `run_vesper_recorder.sh` shell script in your Vesper Recorder home directory and edit your `/etc/rc.local` file as outlined near the top of `run_vesper_recorder.sh`.
