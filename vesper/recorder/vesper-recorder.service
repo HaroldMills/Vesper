@@ -1,0 +1,18 @@
+# vesper-recorder.service
+#
+# Vesper Recorder `systemd` service.
+#
+# See instructions in Vesper Recorder `README` for how to install this
+# on a Raspberry Pi so that the recorder starts whenever the Raspberry
+# Pi does.
+
+[Unit]
+Description=Runs the Vesper Recorder
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/local/bin/run_vesper_recorder.sh
+User=harold
+
+[Install]
+WantedBy=multi-user.target

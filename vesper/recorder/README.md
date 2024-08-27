@@ -9,7 +9,7 @@ Note that if you're installing the Vesper Recorder to use on a more resource-con
 
 Run the [Raspberry Pi Imager](https://www.raspberrypi.com/software/) on a computer that includes a micro SD card reader and follow the instructions in the imager to install the Raspberry Pi OS onto a micro SD card. I have used 128 GB SanDisk Extreme cards, just because that's what I've had around. I have always accepted the defaults for this step: I have not customized the installation.
 
-Be sure to install a 64-bit version of the Rasberry Pi OS, since that is required by MiniForge. I do not recommend the Lite version, since in my experience it is missing an ALSA audio capture volume control, and it also does not mount USB thumb drives automatically when they are inserted. I also do not recommend the Full version, since it is bloated. The regular 64-bit Raspberry Pi OS, neither Full nor Lite, seems about right.
+Be sure to install a 64-bit version of the Rasberry Pi OS, since that is required by MiniForge. I do not recommend the Lite version, since in my experience it is missing some functionality that I like to have. For example, it seems to lack an ALSA audio capture volume control, and it also does not mount USB thumb drives automatically when they are inserted. I also do not recommend the Full version, since to me it seems bloated. The regular 64-bit Raspberry Pi OS, neither Full nor Lite, seems about right.
 
 
 ## 2. Boot Raspberry Pi from SD card
@@ -98,4 +98,31 @@ To run the Vesper Recorder:
 
 ## 10. Run the Vesper Recorder automatically on startup (optional)
 
-If you would like to run the Vesper Recorder automatically on startup, put the accompanying `run_vesper_recorder.sh` shell script in your Vesper Recorder home directory and edit your `/etc/rc.local` file as outlined near the top of `run_vesper_recorder.sh`.
+If you would like to run the Vesper Recorder automatically on startup, you can create a Linux `systemd` service for the recorder and enable it as follows:
+
+1. Edit the `vesper-recorder.service` and `run_vesper_recorder.sh` files that accompany this README and change all occurrences of `harold` to the name of the user you want to run the recorder as.
+
+2. Copy the modified `vesper-recorder.service` file into your Raspberry Pi's `/usr/lib/systemd/system` directory with:
+
+        sudo cp vesper-recorder.service /usr/lib/systemd/system
+
+3. Copy the modified `run_vesper_recorder.sh` into the `/usr/local/bin` directory with:
+
+        sudo cp run_vesper_recorder.sh /usr/local/bin
+
+4. Enable the new `vesper-recorder` service with:
+
+        sudo systemctl enable vesper-recorder
+
+The recorder should then start automatically when your Raspberry Pi does.
+
+After you've installed the service, you can check its status at any time with:
+
+        systemctl status vesper-recorder
+
+You can also use the `systemctl` command to start, stop, enable, and disable the service. The commands for these operations are:
+
+        sudo systemctl start vesper-recorder
+        sudo systemctl stop vesper-recorder
+        sudo systemctl enable vesper-recorder
+        sudo systemctl disable vesper-recorder
