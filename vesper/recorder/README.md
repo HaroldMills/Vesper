@@ -100,7 +100,7 @@ To run the Vesper Recorder:
 
 If you would like to run the Vesper Recorder automatically on startup, you can create a Linux `systemd` service for the recorder and enable it as follows:
 
-1. Edit the `vesper-recorder.service` and `run_vesper_recorder.sh` files that accompany this README and change all occurrences of `harold` to the name of the user you want to run the recorder as.
+1. Edit the `vesper-recorder.service` and `run_vesper_recorder.sh` files that accompany this README and change all occurrences of `harold` to the name of the user you want to run the recorder.
 
 2. Copy the modified `vesper-recorder.service` file into your Raspberry Pi's `/usr/lib/systemd/system` directory with:
 

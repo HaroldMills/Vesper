@@ -2,7 +2,7 @@
 
 # Linux shell script that starts the Vesper Recorder.
 #
-# See instructions in Vesper Recorder `README` for how to install this
+# See instructions in Vesper Recorder `README.md` for how to install this
 # on a Raspberry Pi so that the recorder starts whenever the Raspberry
 # Pi does.
 
