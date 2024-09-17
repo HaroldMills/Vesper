@@ -1,6 +1,5 @@
 from datetime import timedelta as TimeDelta
 from pathlib import Path
-import itertools
 import wave
 
 import numpy as np
@@ -11,16 +10,13 @@ from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
 
 
-_chain = itertools.chain.from_iterable
-
-
 _DEFAULT_AUDIO_FILE_NAME_PREFIX = 'Vesper'
 _DEFAULT_RECORDING_DIR_PATH = 'Recordings'
 _DEFAULT_CREATE_RECORDING_SUBDIRS = True
 _DEFAULT_MAX_AUDIO_FILE_DURATION = 3600     # seconds
 
 _SAMPLE_SIZE = 16
-_AUDIO_FILE_NAME_EXTENSION = '.wav'
+_AUDIO_FILE_NAME_EXTENSION = '.wav.in_progress'
 
 
 class AudioFileWriter(Processor):
@@ -159,17 +155,15 @@ class AudioFileWriter(Processor):
             buffer_index += byte_count
             
             if self._file_frame_count == self._max_file_frame_count:
-                output_items.append(
-                    (self._recording_dir_path, self._audio_file_path))
-                self._close_audio_file()
+                output_item = self._complete_audio_file()
+                output_items.append(output_item)
 
         if finished and self._audio_file is not None:
             # all input has arrived and there's an open audio file
             # that is not yet full
 
-            output_items.append(
-                (self._recording_dir_path, self._audio_file_path))
-            self._close_audio_file()
+            output_item = self._complete_audio_file()
+            output_items.append(output_item)
 
         return output_items
     
@@ -204,10 +198,23 @@ class AudioFileWriter(Processor):
         return file, rel_file_path
     
 
-    def _close_audio_file(self):
+    def _complete_audio_file(self):
+
         self._audio_file.close()
+
+        # Get relative path of completed audio file, dropping
+        # ".in_progress" extension from incomplete audio file path.
+        completed_audio_file_path = self._audio_file_path.stem
+
+        # Rename completed audio file.
+        from_path = self._recording_dir_path / self._audio_file_path
+        to_path = self._recording_dir_path / completed_audio_file_path
+        from_path.rename(to_path)
+
         self._audio_file = None
         self._audio_file_path = None
+
+        return (self._recording_dir_path, completed_audio_file_path)
 
 
     def get_status_tables(self):
