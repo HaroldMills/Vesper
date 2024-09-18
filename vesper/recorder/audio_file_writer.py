@@ -204,7 +204,8 @@ class AudioFileWriter(Processor):
 
         # Get relative path of completed audio file, dropping
         # ".in_progress" extension from incomplete audio file path.
-        completed_audio_file_path = self._audio_file_path.stem
+        completed_audio_file_path = \
+            self._audio_file_path.parent / self._audio_file_path.stem
 
         # Rename completed audio file.
         from_path = self._recording_dir_path / self._audio_file_path
