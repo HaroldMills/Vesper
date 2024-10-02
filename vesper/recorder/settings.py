@@ -32,7 +32,7 @@ class Settings:
         return s
     
 
-    def get_required(self, path):
+    def get_required(self, path, context=None):
 
         s = self._mapping
 
@@ -40,8 +40,17 @@ class Settings:
 
             if isinstance(s, Mapping) and name in s:
                 s = s[name]
+
             else:
-                raise KeyError(f'Required setting "{path}" is missing.')
+                # required setting not found
+
+                if context is None:
+                    message = f'Required setting "{path}" is missing.'
+                else:
+                    message = \
+                        f'Required {context} setting "{path}" is missing.'
+            
+                raise KeyError(message)
             
         # If we get here, the setting is present with value 's'.
         return s

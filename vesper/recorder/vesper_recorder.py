@@ -17,7 +17,7 @@ from vesper.recorder.http_server import HttpServer
 from vesper.recorder.level_meter import LevelMeter
 from vesper.recorder.processor_graph import ProcessorGraph
 from vesper.recorder.resampler import Resampler
-from vesper.recorder.s3_file_uploader import S3FileUploader
+from vesper.recorder.s3_file_uploader_sidecar import S3FileUploaderSidecar
 from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
@@ -57,7 +57,7 @@ import vesper.recorder.error_utils as error_utils
 # TODO: Consider making processor inputs and outputs objects.
 # TODO: Consider supporting processors with multiple inputs and/or outputs.
 # TODO: Consider making audio input a processor.
-# TODO: Make processor classes plugins.
+# TODO: Make processor and sidecar classes plugins.
 
 # TODO: Include station name in UI title.
 # TODO: Include version number in UI.
@@ -73,6 +73,10 @@ import vesper.recorder.error_utils as error_utils
 # recording in a Vesper archive as soon as the recording
 # commences, including its planned length. The length could be
 # updated later if needed.
+
+# TODO: Consider relationship between sidecars and processors.
+# Do they know about each other? Can they talk to each other?
+# In what order should they be created?
     
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
@@ -86,7 +90,8 @@ _DEFAULT_STATION_TIME_ZONE = 'UTC'
 _DEFAULT_SCHEDULE = {}
 _DEFAULT_SERVER_PORT_NUM = 8001
 
-_PROCESSOR_CLASSES = (Resampler, LevelMeter, AudioFileWriter, S3FileUploader)
+_PROCESSOR_CLASSES = (Resampler, LevelMeter, AudioFileWriter)
+_SIDECAR_CLASSES = (S3FileUploaderSidecar,)
 
 
 _logger = logging.getLogger(__name__)
@@ -200,6 +205,9 @@ class VesperRecorder:
 
         self._start_quit_thread_if_needed()
 
+        self._sidecars = self._create_sidecars(s.sidecars)
+        self._start_sidecars()
+
         while True:
             self._execute_next_command()
 
@@ -219,7 +227,7 @@ class VesperRecorder:
     def _create_processor_graph(self, settings):
 
         context = Bunch(
-            multiprocess_logging_queue=\
+            multiprocess_logging_queue=
                 self._multiprocess_logging_thread.logging_queue,
             processor_classes=_PROCESSOR_CLASSES)
 
@@ -249,6 +257,31 @@ class VesperRecorder:
         if run_duration is not None:
             thread = _QuitThread(self, run_duration)
             thread.start()
+
+
+    def _create_sidecars(self, settings):
+        
+        sidecar_classes = {c.type_name: c for c in _SIDECAR_CLASSES}
+
+        context = Bunch(
+            multiprocess_logging_queue=
+                self._multiprocess_logging_thread.logging_queue)
+        
+        def create_sidecar(s):
+
+            try:
+                cls = sidecar_classes[s.type]
+            except KeyError:
+                raise ValueError(f'Unrecognized sidecar type "{s.type}".')
+            
+            return cls(s.name, s.settings, context)
+
+        return [create_sidecar(s) for s in settings]
+
+
+    def _start_sidecars(self):
+        for sidecar in self._sidecars:
+            sidecar.start()
 
 
     def _execute_next_command(self):
@@ -584,6 +617,7 @@ def _parse_settings_file_aux(settings_file_path):
     run_duration = _parse_run_duration_settings(settings)
     input = _parse_input_settings(settings)
     processors = _parse_processor_settings(settings)
+    sidecars = _parse_sidecar_settings(settings)
         
     server_port_num = int(settings.get(
         'server_port_num', _DEFAULT_SERVER_PORT_NUM))
@@ -594,6 +628,7 @@ def _parse_settings_file_aux(settings_file_path):
         run_duration=run_duration,
         input=input,
         processors=processors,
+        sidecars=sidecars,
         server_port_num=server_port_num)
     
     
@@ -716,6 +751,39 @@ def _parse_processor_settings_aux(mapping, processor_classes):
         type=type,
         input=input,
         settings=settings)
+
+
+def _parse_sidecar_settings(settings):
+
+    sidecar_classes = {cls.type_name: cls for cls in _SIDECAR_CLASSES}
+
+    settings = settings.get('sidecars')
+
+    if settings is None:
+        return []
+    
+    else:
+        return [
+            _parse_sidecar_settings_aux(s, sidecar_classes)
+            for s in settings]
+
+
+def _parse_sidecar_settings_aux(mapping, sidecar_classes):
+
+    settings = Settings(mapping)
+
+    name = settings.get_required('name')
+    type = settings.get_required('type')
+    mapping = settings.get('settings', {})
+
+    try:
+        cls = sidecar_classes[type]
+    except KeyError:
+        raise ValueError(f'Unrecognized sidecar type "{type}".')
+    
+    settings = cls.parse_settings(Settings(mapping))
+
+    return Bunch(name=name, type=type, settings=settings)
 
 
 class _MultiprocessLoggingThread(Thread):
