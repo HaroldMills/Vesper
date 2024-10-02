@@ -170,14 +170,14 @@ class S3FileUploaderSidecar(Sidecar):
             name = f'{self.name} - Directory "{s.dir_path}"'
 
             rows = (
-                ('Dir Path', s.dir_path),
+                ('Directory Path', s.dir_path),
                 ('File Name Pattern', s.file_name_pattern),
                 ('Search Recursively', s.search_recursively),
                 ('AWS Profile Name', s.aws_profile_name),
                 ('S3 Bucket Name', s.s3_bucket_name),
                 ('S3 Object Key Prefix', s.s3_object_key_prefix),
                 ('Delete Uploaded Files', s.delete_uploaded_files),
-                ('Uploaded File Dir Path', s.uploaded_file_dir_path)
+                ('Uploaded File Directory Path', s.uploaded_file_dir_path)
             )
 
             return StatusTable(name, rows)
