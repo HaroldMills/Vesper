@@ -52,3 +52,12 @@ class Sidecar:
 
     def stop(self):
         pass
+
+
+    def get_status_tables(self):
+        
+        """
+        Gets a list of `StatusTable` objects to display for this sidecar.
+        """
+
+        raise NotImplementedError()

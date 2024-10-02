@@ -9,6 +9,7 @@ import boto3
 
 from vesper.recorder.settings import Settings
 from vesper.recorder.sidecar import Sidecar
+from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
 import vesper.recorder.error_utils as error_utils
 
@@ -139,6 +140,51 @@ class S3FileUploaderSidecar(Sidecar):
 
     def stop(self):
         self._process.stop()
+
+
+    def get_status_tables(self):
+        main_table = self._get_main_status_table()
+        dir_tables = self._get_upload_dir_status_tables()
+        return [main_table] + dir_tables
+    
+
+    def _get_main_status_table(self):
+
+        s = self.settings
+
+        rows = (
+            ('Sleep Period (seconds)', s.sleep_period),
+            ('Default AWS Profile Name', s.default_aws_profile_name),
+            ('Default S3 Bucket Name', s.default_s3_bucket_name),
+            ('Default S3 Object Key Prefix', s.default_s3_object_key_prefix),
+            ('Boto Read Timeout (seconds)', s.boto_read_timeout)
+        )
+
+        return StatusTable(self.name, rows)
+    
+
+    def _get_upload_dir_status_tables(self):
+
+        def get_upload_dir_status_table(s):
+
+            name = f'{self.name} - Directory "{s.dir_path}"'
+
+            rows = (
+                ('Dir Path', s.dir_path),
+                ('File Name Pattern', s.file_name_pattern),
+                ('Search Recursively', s.search_recursively),
+                ('AWS Profile Name', s.aws_profile_name),
+                ('S3 Bucket Name', s.s3_bucket_name),
+                ('S3 Object Key Prefix', s.s3_object_key_prefix),
+                ('Delete Uploaded Files', s.delete_uploaded_files),
+                ('Uploaded File Dir Path', s.uploaded_file_dir_path)
+            )
+
+            return StatusTable(name, rows)
+
+        return [
+            get_upload_dir_status_table(s)
+            for s in self.settings.upload_dirs]
 
 
 def handle_missing_setting(dir_path, name):

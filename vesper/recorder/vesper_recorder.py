@@ -184,6 +184,11 @@ class VesperRecorder:
         return self._processor_graph
     
 
+    @property
+    def sidecars(self):
+        return self._sidecars
+    
+
     def run(self):
         
         s = self._settings

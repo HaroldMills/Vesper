@@ -4,6 +4,7 @@
 from datetime import datetime as DateTime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from zoneinfo import ZoneInfo
+import itertools
 
 from vesper.util.bunch import Bunch
 
@@ -102,12 +103,13 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
         input_tables = self._create_input_tables(recorder.input)
         processor_tables = \
             self._create_processor_tables(recorder.processor_graph)
+        sidecar_tables = self._create_sidecar_tables(recorder.sidecars)
         schedule_table = self._create_schedule_table(
             recorder.schedule, recorder.station.time_zone, now)
         
         tables = '\n'.join(
             [status_table, station_table] + input_tables + processor_tables +
-            [schedule_table])
+            sidecar_tables + [schedule_table])
 
         body = _PAGE.format(_CSS, data.recorder_version_num, tables)
         
@@ -175,8 +177,16 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
 
 
     def _create_processor_tables(self, processor_graph):
-        return _create_tables(processor_graph.get_status_tables())
+        tables = processor_graph.get_status_tables()
+        return _create_tables(tables)
 
+
+    def _create_sidecar_tables(self, sidecars):
+        table_lists = [s.get_status_tables() for s in sidecars]
+        chain = itertools.chain.from_iterable
+        tables = list(chain(table_lists))
+        return _create_tables(tables)
+    
 
     def _create_schedule_table(self, schedule, time_zone, now):
         rows = [
@@ -205,9 +215,7 @@ def _format_datetime(dt, time_zone=None):
 
 
 def _create_tables(tables):
-    return [
-        _create_table(t.title, t.rows, t.header, t.footer)
-        for t in tables]
+    return [_create_table(t.title, t.rows, t.header, t.footer) for t in tables]
 
 
 def _create_table(title, rows, header=None, footer=None):

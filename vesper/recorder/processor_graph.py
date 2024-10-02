@@ -97,6 +97,6 @@ class ProcessorGraph(Processor):
 
 
     def get_status_tables(self):
-        chain = itertools.chain.from_iterable
         table_lists = [p.get_status_tables() for p in self._processors]
+        chain = itertools.chain.from_iterable
         return list(chain(table_lists))
