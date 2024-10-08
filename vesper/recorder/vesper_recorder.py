@@ -3,6 +3,7 @@
 
 from datetime import datetime as DateTime, timedelta as TimeDelta
 from logging import Formatter, FileHandler, StreamHandler
+from logging.handlers import QueueHandler, QueueListener
 from queue import Queue
 from threading import Thread
 from zoneinfo import ZoneInfo
@@ -80,7 +81,8 @@ import vesper.recorder.error_utils as error_utils
     
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
-_LOGGING_LEVEL = logging.INFO
+_DEFAULT_LOGGING_LEVEL = 'INFO'
+_LOGGING_LEVELS = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
 _SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
 
 _DEFAULT_STATION_NAME = 'Vesper'
@@ -122,9 +124,10 @@ class VesperRecorder:
             error_utils.handle_top_level_exception('Main recorder process')
     
     
-    def __init__(self, settings):
+    def __init__(self, settings, logging_queue):
 
         self._settings = settings
+        self._logging_queue = logging_queue
 
         s = self._settings
 
@@ -193,8 +196,6 @@ class VesperRecorder:
         
         s = self._settings
 
-        self._start_multiprocess_logging_thread()
-
         # Create audio input.
         self._input = self._create_audio_input(s.input)
 
@@ -217,11 +218,6 @@ class VesperRecorder:
             self._execute_next_command()
 
 
-    def _start_multiprocess_logging_thread(self):
-        self._multiprocess_logging_thread = _MultiprocessLoggingThread()
-        self._multiprocess_logging_thread.start()
-
-
     def _create_audio_input(self, settings):
         s = settings
         return AudioInput(
@@ -232,8 +228,8 @@ class VesperRecorder:
     def _create_processor_graph(self, settings):
 
         context = Bunch(
-            multiprocess_logging_queue=
-                self._multiprocess_logging_thread.logging_queue,
+            logging_queue=self._logging_queue,
+            logging_level=self._settings.logging_level,
             processor_classes=_PROCESSOR_CLASSES)
 
         return ProcessorGraph(
@@ -269,8 +265,8 @@ class VesperRecorder:
         sidecar_classes = {c.type_name: c for c in _SIDECAR_CLASSES}
 
         context = Bunch(
-            multiprocess_logging_queue=
-                self._multiprocess_logging_thread.logging_queue)
+            logging_queue=self._logging_queue,
+            logging_level=self._settings.logging_level)
         
         def create_sidecar(s):
 
@@ -544,7 +540,7 @@ def _create_and_run_recorder(home_dir_path):
     # set it explicitly.
     multiprocessing.set_start_method('spawn')
 
-    _configure_logging(_LOGGING_LEVEL, home_dir_path)
+    logging_queue = _configure_logging(home_dir_path)
     
     _logger.info(f'Welcome to the Vesper Recorder!')
     
@@ -562,12 +558,20 @@ def _create_and_run_recorder(home_dir_path):
         return
     
     _logger.info(
-        f'Starting recorder with home page '
-        f'http://localhost:{settings.server_port_num}...')
+        f'Recorder home page URL is '
+        f'"http://localhost:{settings.server_port_num}".')
     
+    # Update logging level if `logging_level` setting was specified
+    # in settings file and differs from default.
+    if settings.logging_level != _DEFAULT_LOGGING_LEVEL:
+        _logger.info(
+            f'Setting recorder logging level to "{settings.logging_level}" '
+            f'as indicated in settings file...')
+        logging.getLogger().setLevel(settings.logging_level)
+
     # Create recorder.
     try:
-        recorder = VesperRecorder(settings)
+        recorder = VesperRecorder(settings, logging_queue)
     except Exception as e:
         _logger.error(f'Could not create recorder. Error message was: {e}')
         return
@@ -575,26 +579,44 @@ def _create_and_run_recorder(home_dir_path):
     recorder.run()
         
 
-def _configure_logging(logging_level, home_dir_path):
+def _configure_logging(home_dir_path):
 
-    # Get the root logger for the main Vesper Recorder process.
-    logger = logging.getLogger()
+    # Create logging queue for all recorder processes to write messages
+    # to. The messages are handled by the queue listener created below.
+    logging_queue = multiprocessing.Queue()
 
-    # Add handler that writes log messages to stderr.
+    # Create handler that writes log messages to stderr.
     stderr_handler = StreamHandler()
     formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
     stderr_handler.setFormatter(formatter)
-    logger.addHandler(stderr_handler)
     
-    # Add handler that appends messages to log file.
+    # Create handler that appends messages to log file.
     log_file_path = home_dir_path / _LOG_FILE_NAME
     file_handler = FileHandler(log_file_path)
     formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
     file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
 
-    # Set logging level.
-    logger.setLevel(logging_level)
+    # Create logging queue listener that reads messages from the queue
+    # and logs them.
+    listener = QueueListener(logging_queue, stderr_handler, file_handler)
+    listener.start()
+
+    # TODO: Stop queue listener when recorder quits.
+
+    # Get the root logger for the main recorder process.
+    logger = logging.getLogger()
+
+    # Add handler to root logger that writes all log messages to the
+    # recorder's logging queue.
+    handler = QueueHandler(logging_queue)
+    logger.addHandler(handler)
+
+    # Set logging level to default for now. The level will be updated
+    # after the recorder settings file is parsed in case it is specified
+    # there.
+    logger.setLevel(_DEFAULT_LOGGING_LEVEL)
+
+    return logging_queue
 
 
 def _parse_settings_file(settings_file_path):
@@ -617,6 +639,7 @@ def _parse_settings_file_aux(settings_file_path):
     
     settings = Settings.create_from_yaml_file(settings_file_path)
 
+    logging_level = _parse_logging_level_setting(settings)
     station = _parse_station_settings(settings)
     schedule = _parse_schedule_settings(settings, station)
     run_duration = _parse_run_duration_settings(settings)
@@ -628,6 +651,7 @@ def _parse_settings_file_aux(settings_file_path):
         'server_port_num', _DEFAULT_SERVER_PORT_NUM))
     
     return Bunch(
+        logging_level=logging_level,
         station=station,
         schedule=schedule,
         run_duration=run_duration,
@@ -637,6 +661,20 @@ def _parse_settings_file_aux(settings_file_path):
         server_port_num=server_port_num)
     
     
+def _parse_logging_level_setting(settings):
+
+    value = settings.get('logging_level', _DEFAULT_LOGGING_LEVEL)
+
+    if value not in _LOGGING_LEVELS:
+        levels = [f'"{l}"' for l in _LOGGING_LEVELS]
+        levels_text = '{' + ', '.join(levels) + '}'
+        raise ValueError(
+            f'Unrecognized logging level "{value}". Must be one of '
+            f'{levels_text}.')
+    
+    return value
+    
+
 def _parse_station_settings(settings):
 
     # TODO: Require station settings.
@@ -789,48 +827,6 @@ def _parse_sidecar_settings_aux(mapping, sidecar_classes):
     settings = cls.parse_settings(Settings(mapping))
 
     return Bunch(name=name, type=type, settings=settings)
-
-
-class _MultiprocessLoggingThread(Thread):
-
-    """
-    Thread within the main Vesper Recorder process that receives log
-    records from other recorder processes via a `multiprocessing.Queue`
-    and logs them. This is needed since logging via the Python
-    Standard Library `logging` module is not multiprocess-safe (it is
-    only thread-safe).
-
-    This class is inspired by code that appears in the *Logging to a
-    single file from multiple processes* section of the Python Logging
-    Cookbook (https://docs.python.org/3/howto/logging-cookbook.html#
-    logging-to-a-single-file-from-multiple-processes).
-    """
-
-
-    def __init__(self):
-        super().__init__(daemon=True)
-        self._logging_queue = multiprocessing.Queue()
-
-
-    @property
-    def logging_queue(self):
-        return self._logging_queue
-    
-
-    def run(self):
-
-        while True:
-
-            # Get next log record from queue.
-            record = self._logging_queue.get()
-
-            if record is None:
-                # we're being told to stop
-
-                break
-
-            logger = logging.getLogger(record.name)
-            logger.handle(record)
 
 
 class _ScheduleListener:

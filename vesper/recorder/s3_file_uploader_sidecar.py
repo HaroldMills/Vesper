@@ -14,6 +14,9 @@ from vesper.util.bunch import Bunch
 import vesper.recorder.error_utils as error_utils
 
 
+_logger = logging.getLogger(__name__)
+
+
 # Get `multiprocessing` context object that uses the *spawn* start method.
 # We use this context object to create processes and queues consistently
 # on all platforms.
@@ -22,7 +25,6 @@ Process = _context.Process
 Event = _context.Event
 
 
-_LOGGING_LEVEL = logging.INFO
 _DEFAULT_SLEEP_PERIOD = 10                  # seconds
 _DEFAULT_FILE_NAME_PATTERN = '*'
 _DEFAULT_SEARCH_RECURSIVELY = False
@@ -205,7 +207,6 @@ class _S3FileUploaderProcess(Process):
         self._settings = settings
         self._context = context
 
-        self._logging_queue = self._context.multiprocess_logging_queue
         self._boto_config = _create_boto_config(self._settings)
         self._stop_event = Event()
 
@@ -241,16 +242,13 @@ class _S3FileUploaderProcess(Process):
         # Get the root logger for this process.
         logger = logging.getLogger()
 
-        # Add handler to root logger that forwards all log messages to
-        # the logging process.
-        handler = QueueHandler(self._logging_queue)
+        # Add handler to root logger that writes all log messages to
+        # the recorder's logging queue.
+        handler = QueueHandler(self._context.logging_queue)
         logger.addHandler(handler)
 
         # Set logging level for this process.
-        logger.setLevel(_LOGGING_LEVEL)
-
-        # Get the logger for this module.
-        self._logger = logging.getLogger(__name__)
+        logger.setLevel(self._context.logging_level)
 
 
     def _upload_files(self, dir_settings):
@@ -259,8 +257,7 @@ class _S3FileUploaderProcess(Process):
 
         dir_path = _get_absolute_path(s.dir_path)
 
-        self._logger.info(
-            f'Checking directory "{dir_path}" for files to upload...')
+        _logger.info(f'Checking directory "{dir_path}" for files to upload...')
 
         pattern = _get_glob_pattern(
             s.file_name_pattern, s.search_recursively)
@@ -284,7 +281,7 @@ class _S3FileUploaderProcess(Process):
         # Get absolute file path.
         abs_file_path = dir_path / rel_file_path
 
-        self._logger.info(
+        _logger.info(
             f'Uploading file "{abs_file_path}" to S3 bucket '
             f'"{s.s3_bucket_name}", object key "{object_key}"...')
         
@@ -301,7 +298,7 @@ class _S3FileUploaderProcess(Process):
         except Exception as e:
             # upload failed
 
-            self._logger.warning(
+            _logger.warning(
                 f'Failed to upload file "{abs_file_path}" to S3 bucket '
                 f'"{s.s3_bucket_name}", object key "{object_key}". '
                 f'Exception message was: {e}')
@@ -325,7 +322,7 @@ class _S3FileUploaderProcess(Process):
         abs_to_file_path = to_dir_path / rel_to_file_path
         to_parent_dir_path = abs_to_file_path.parent
 
-        self._logger.info(
+        _logger.info(
             f'Moving uploaded file "{abs_from_file_path}" to '
             f'"{abs_to_file_path}"...')
 
@@ -333,7 +330,7 @@ class _S3FileUploaderProcess(Process):
         try:
             to_parent_dir_path.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            self._logger.warning(
+            _logger.warning(
                 f'Could not create new parent directory '
                 f'"{to_parent_dir_path}" for uploaded file '
                 f'"{abs_to_file_path}". Exception message was: {e}')
@@ -343,7 +340,7 @@ class _S3FileUploaderProcess(Process):
         try:
             abs_from_file_path.rename(abs_to_file_path)
         except Exception as e:
-            self._logger.warning(
+            _logger.warning(
                 f'Could not move uploaded file "{abs_from_file_path}" '
                 f'to directory "{to_parent_dir_path}". Exception message '
                 f'was: {e}')
@@ -351,13 +348,13 @@ class _S3FileUploaderProcess(Process):
 
     def _delete_file(self, file_path):
 
-        self._logger.info(f'Deleting file "{file_path}" uploaded to S3...')
+        _logger.info(f'Deleting file "{file_path}" uploaded to S3...')
         
         try:
             file_path.unlink()
 
         except Exception as e:
-            self._logger.warning(
+            _logger.warning(
                 f'Could not delete file "{file_path}" uploaded to S3. '
                 f'Exception message was: {e}')
             
@@ -392,7 +389,7 @@ class _S3FileUploaderProcess(Process):
             if _is_dir_empty(abs_subdir_path):
                 # upload subdirectory empty
 
-                self._logger.info(
+                _logger.info(
                     f'Deleting empty upload subdirectory '
                     f'"{abs_subdir_path}"...')
                     
@@ -400,7 +397,7 @@ class _S3FileUploaderProcess(Process):
                     abs_subdir_path.rmdir()
 
                 except Exception as e:
-                    self._logger.warning(
+                    _logger.warning(
                         f'Could not delete empty upload subdirectory '
                         f'"{abs_subdir_path}". Error message was: {e}')
                     
