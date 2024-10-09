@@ -25,7 +25,7 @@ Process = _context.Process
 Event = _context.Event
 
 
-_DEFAULT_SLEEP_PERIOD = 10                  # seconds
+_DEFAULT_SLEEP_PERIOD = 60                  # seconds
 _DEFAULT_FILE_NAME_PATTERN = '*'
 _DEFAULT_SEARCH_RECURSIVELY = False
 _DEFAULT_BOTO_READ_TIMEOUT = 300            # seconds
