@@ -910,7 +910,7 @@ def _compile_daily_intervals_aux(date_intervals, time_intervals, location):
                 start = combine(
                     date, interval['start'], time_zone, event_times, 'start')
                 end = _get_daily_interval_end(
-                    start, interval['end'], time_zone, event_times)
+                    date, interval['end'], time_zone, event_times, start)
                 yield Interval(start, end)
             
 
@@ -1005,10 +1005,10 @@ def _combine_date_and_time(date, time, time_zone, solar_event_times, name):
         return event_time + time.offset
 
 
-def _get_daily_interval_end(start, end_time, time_zone, solar_event_times):
+def _get_daily_interval_end(
+        date, end_time, time_zone, solar_event_times, start):
     
     combine = _combine_date_and_time
-    date = start.date()
     
     end = combine(date, end_time, time_zone, solar_event_times, 'end')
     

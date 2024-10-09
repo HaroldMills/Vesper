@@ -824,7 +824,19 @@ class ScheduleCompilationTests(TestCase):
                  ((2016, 12, 21, 10), (2016, 12, 21, 11), True),
                  ((2016, 12, 21, 22), (2016, 12, 21, 23), True))
             ),
-                   
+
+            # regression test for 2024-10-09 bug fix
+            (
+                '''
+                    daily:
+                        start_date: 2024-10-09
+                        end_date: 2024-10-09
+                        start_time: 20:00:00
+                        end_time: 21:50:00
+                ''',
+                (((2024, 10, 10, 0, 0), (2024, 10, 10, 1, 50), True),)
+            ),
+ 
         )
           
         location = {
