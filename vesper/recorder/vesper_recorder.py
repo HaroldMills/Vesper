@@ -341,9 +341,6 @@ class VesperRecorder:
         This method can be called from any thread.
         """
         
-        if self._input_chunk_count % self._input_chunk_logging_period == 0:
-            _logger.info(f'process_input {self._input_chunk_count}...')
-            
         command = Bunch(
             name='process_input',
             chunk=chunk,
