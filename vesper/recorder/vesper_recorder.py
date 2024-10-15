@@ -214,8 +214,8 @@ class VesperRecorder:
         self._sidecars = self._create_sidecars(s.sidecars)
         self._start_sidecars()
 
-        self._input_chunk_count = 0
-        self._input_chunk_logging_period = 60
+        # self._input_chunk_count = 0
+        # self._input_chunk_logging_period = 60
 
         while True:
             self._execute_next_command()
@@ -386,13 +386,13 @@ class VesperRecorder:
         #        `_processor_graph.process`, which raises an exception
         #        since the graph stopped running in step 6.
 
-        if self._input_chunk_count % self._input_chunk_logging_period == 0:
-            text = '' if self._recording else 'not '
-            _logger.info(
-                f'_on_process_input {self._input_chunk_count} '
-                f'{text}recording...')
+        # if self._input_chunk_count % self._input_chunk_logging_period == 0:
+        #     text = '' if self._recording else 'not '
+        #     _logger.info(
+        #         f'_on_process_input {self._input_chunk_count} '
+        #         f'{text}recording...')
             
-        self._input_chunk_count += 1
+        # self._input_chunk_count += 1
 
         if self._recording:
 
