@@ -215,13 +215,6 @@ class AudioInput:
 
     def _input_callback(self, samples, frame_count, time_info, status_flags):
         
-        # TODO: Learn more about `time_info` and CFFI.
-
-        # TODO: Learn more about `status_flags` and handle errors better.
-        # `status_flags` is of type `sd.CallbackFlags`. See
-        # https://python-sounddevice.readthedocs.io/en/0.4.6/api/misc.html#sounddevice.CallbackFlags
-        # https://python-sounddevice.readthedocs.io/en/0.4.6/_modules/sounddevice.html#CallbackFlags.
-
         # print(f'input_callback {frame_count} {self._callback_count}')
         self._callback_count += 1
 
