@@ -1,28 +1,18 @@
-from logging.handlers import QueueHandler
 from pathlib import Path
 import logging
-import multiprocessing as mp
 import time
 
 from botocore.client import Config
 import boto3
 
+from vesper.recorder.multiprocessing import Event
 from vesper.recorder.settings import Settings
 from vesper.recorder.sidecar import Sidecar
 from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
-import vesper.recorder.error_utils as error_utils
 
 
 _logger = logging.getLogger(__name__)
-
-
-# Get `multiprocessing` context object that uses the *spawn* start method.
-# We use this context object to create processes and queues consistently
-# on all platforms.
-_context = mp.get_context('spawn')
-Process = _context.Process
-Event = _context.Event
 
 
 _DEFAULT_SLEEP_PERIOD = 60                  # seconds
@@ -89,13 +79,13 @@ class S3FileUploaderSidecar(Sidecar):
                 'aws_profile_name', default_aws_profile_name)
             
             if aws_profile_name is None:
-                handle_missing_setting(dir_path, 'aws_profile_name')
+                _handle_missing_setting(dir_path, 'aws_profile_name')
             
             s3_bucket_name = s.get(
                 's3_bucket_name', default_s3_bucket_name)
             
             if s3_bucket_name is None:
-                handle_missing_setting(dir_path, 's3_bucket_name')
+                _handle_missing_setting(dir_path, 's3_bucket_name')
 
             s3_object_key_prefix = s.get(
                 's3_object_key_prefix', default_s3_object_key_prefix)
@@ -133,122 +123,18 @@ class S3FileUploaderSidecar(Sidecar):
 
     def __init__(self, name, settings, context):
         super().__init__(name, settings, context)
-        self._process = _S3FileUploaderProcess(name, settings, context)
-
-
-    def start(self):
-        self._process.start()
-
-
-    def stop(self):
-        self._process.stop()
-
-
-    def get_status_tables(self):
-        main_table = self._get_main_status_table()
-        dir_tables = self._get_upload_dir_status_tables()
-        return [main_table] + dir_tables
-    
-
-    def _get_main_status_table(self):
-
-        s = self.settings
-
-        rows = (
-            ('Sleep Period (seconds)', s.sleep_period),
-            ('Default AWS Profile Name', s.default_aws_profile_name),
-            ('Default S3 Bucket Name', s.default_s3_bucket_name),
-            ('Default S3 Object Key Prefix', s.default_s3_object_key_prefix),
-            ('Boto Read Timeout (seconds)', s.boto_read_timeout)
-        )
-
-        return StatusTable(self.name, rows)
-    
-
-    def _get_upload_dir_status_tables(self):
-
-        def get_upload_dir_status_table(s):
-
-            name = f'{self.name} - Directory "{s.dir_path}"'
-
-            rows = (
-                ('Directory Path', s.dir_path),
-                ('File Name Pattern', s.file_name_pattern),
-                ('Search Recursively', s.search_recursively),
-                ('AWS Profile Name', s.aws_profile_name),
-                ('S3 Bucket Name', s.s3_bucket_name),
-                ('S3 Object Key Prefix', s.s3_object_key_prefix),
-                ('Delete Uploaded Files', s.delete_uploaded_files),
-                ('Uploaded File Directory Path', s.uploaded_file_dir_path)
-            )
-
-            return StatusTable(name, rows)
-
-        return [
-            get_upload_dir_status_table(s)
-            for s in self.settings.upload_dirs]
-
-
-def handle_missing_setting(dir_path, name):
-    raise ValueError(
-        f'For S3 file upload directory "{dir_path}", setting "{name}" '
-        f'and parent sidecar setting "default_{name}" are both absent. '
-        f'At least one of them must be specified.')
-
-
-class _S3FileUploaderProcess(Process):
-
-
-    def __init__(self, name, settings, context):
-
-        super().__init__()
-
-        self._name = name
-        self._settings = settings
-        self._context = context
-
         self._boto_config = _create_boto_config(self._settings)
         self._stop_event = Event()
 
 
-    @property
-    def name(self):
-        return self._name
-    
+    def _run(self):
+            
+        while not self._stop_event.is_set():
 
-    def run(self):
+            for dir_settings in self._settings.upload_dirs:
+                self._upload_files(dir_settings)
 
-        try:
-
-            self._configure_logging()
-
-            while not self._stop_event.is_set():
-
-                for dir_settings in self._settings.upload_dirs:
-                    self._upload_files(dir_settings)
-
-                time.sleep(self._settings.sleep_period)
-
-        except KeyboardInterrupt:
-            pass
-
-        except Exception:
-            error_utils.handle_top_level_exception(
-                'S3 file uploader process')
-
-
-    def _configure_logging(self):
-        
-        # Get the root logger for this process.
-        logger = logging.getLogger()
-
-        # Add handler to root logger that writes all log messages to
-        # the recorder's logging queue.
-        handler = QueueHandler(self._context.logging_queue)
-        logger.addHandler(handler)
-
-        # Set logging level for this process.
-        logger.setLevel(self._context.logging_level)
+            time.sleep(self._settings.sleep_period)
 
 
     def _upload_files(self, dir_settings):
@@ -411,7 +297,58 @@ class _S3FileUploaderProcess(Process):
             
     def stop(self):
         self._stop_event.set()
-        self.join()
+
+
+    def get_status_tables(self):
+        main_table = self._get_main_status_table()
+        dir_tables = self._get_upload_dir_status_tables()
+        return [main_table] + dir_tables
+    
+
+    def _get_main_status_table(self):
+
+        s = self.settings
+
+        rows = (
+            ('Sleep Period (seconds)', s.sleep_period),
+            ('Default AWS Profile Name', s.default_aws_profile_name),
+            ('Default S3 Bucket Name', s.default_s3_bucket_name),
+            ('Default S3 Object Key Prefix', s.default_s3_object_key_prefix),
+            ('Boto Read Timeout (seconds)', s.boto_read_timeout)
+        )
+
+        return StatusTable(self.name, rows)
+    
+
+    def _get_upload_dir_status_tables(self):
+
+        def get_upload_dir_status_table(s):
+
+            name = f'{self.name} - Directory "{s.dir_path}"'
+
+            rows = (
+                ('Directory Path', s.dir_path),
+                ('File Name Pattern', s.file_name_pattern),
+                ('Search Recursively', s.search_recursively),
+                ('AWS Profile Name', s.aws_profile_name),
+                ('S3 Bucket Name', s.s3_bucket_name),
+                ('S3 Object Key Prefix', s.s3_object_key_prefix),
+                ('Delete Uploaded Files', s.delete_uploaded_files),
+                ('Uploaded File Directory Path', s.uploaded_file_dir_path)
+            )
+
+            return StatusTable(name, rows)
+
+        return [
+            get_upload_dir_status_table(s)
+            for s in self.settings.upload_dirs]
+
+
+def _handle_missing_setting(dir_path, name):
+    raise ValueError(
+        f'For S3 file upload directory "{dir_path}", setting "{name}" '
+        f'and parent sidecar setting "default_{name}" are both absent. '
+        f'At least one of them must be specified.')
 
 
 def _create_boto_config(settings):
