@@ -1,7 +1,7 @@
 from logging.handlers import QueueHandler
+from multiprocessing import Process
 import logging
 
-from vesper.recorder.multiprocessing import Process
 from vesper.util.bunch import Bunch
 import vesper.recorder.error_utils as error_utils
 

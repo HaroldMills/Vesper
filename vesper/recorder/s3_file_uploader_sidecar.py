@@ -1,11 +1,11 @@
 from pathlib import Path
 import logging
+import multiprocessing
 import time
 
 from botocore.client import Config
 import boto3
 
-from vesper.recorder.multiprocessing import Event
 from vesper.recorder.settings import Settings
 from vesper.recorder.sidecar import Sidecar
 from vesper.recorder.status_table import StatusTable
@@ -124,7 +124,7 @@ class S3FileUploaderSidecar(Sidecar):
     def __init__(self, name, settings, context):
         super().__init__(name, settings, context)
         self._boto_config = _create_boto_config(self._settings)
-        self._stop_event = Event()
+        self._stop_event = multiprocessing.Event()
 
 
     def _run(self):

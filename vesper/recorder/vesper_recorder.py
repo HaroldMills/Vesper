@@ -25,8 +25,6 @@ from vesper.util.schedule import Schedule, ScheduleRunner
 import vesper.recorder.error_utils as error_utils
 
 
-# TODO: Use `vesper.recorder.multiprocessing` instead of `multiprocessing`.
-#
 # TODO: Consider making processor input and output items 2-D NumPy
 #       arrays of float32 samples, with the second element of the
 #       shape the frame count. I think this would simplify many
@@ -556,24 +554,6 @@ class VesperRecorder:
         
 def _create_and_run_recorder(home_dir_path):
     
-    # Use the `spawn` multiprocessing start method on all platforms.
-    # As of Python 3.12, this is the default for Windows and macOS
-    # but not for POSIX. On POSIX the default start method is `fork`,
-    # which is fast but copies more parent process state to the child
-    # process than we need or want. The extra state can cause problems.
-    # For example, in an earlier version of the recorder's multiprocess
-    # logging system it caused some log messages to be duplicated on
-    # POSIX.
-    #
-    # Note that according to the Python 3.12.4 documentation for the
-    # `multiprocessing` module (see https://docs.python.org/3/library/
-    # multiprocessing.html#contexts-and-start-methods), the default
-    # start method for POSIX will change away from `fork` for Python
-    # 3.14. If after that change it is `spawn` (or something else we
-    # can work with) for all platforms, we might no longer need to
-    # set it explicitly.
-    multiprocessing.set_start_method('spawn')
-
     logging_queue = _configure_logging(home_dir_path)
     
     _logger.info(f'Welcome to the Vesper Recorder!')
