@@ -25,10 +25,13 @@ from vesper.util.schedule import Schedule, ScheduleRunner
 import vesper.recorder.error_utils as error_utils
 
 
+# TODO: Use `vesper.recorder.multiprocessing` instead of `multiprocessing`.
+#
 # TODO: Consider making processor input and output items 2-D NumPy
 #       arrays of float32 samples, with the second element of the
 #       shape the frame count. I think this would simplify many
 #       processors.
+
 # TODO: Consider whether or not it would be possible to efficiently
 #       decouple processor output write sizes from input read sizes.
 #       It would make it much easier to implement many processors if
@@ -40,32 +43,52 @@ import vesper.recorder.error_utils as error_utils
 #       specified size. It would probably make sense for the chunks
 #       to be delivered to the processor via a callback that
 #       processes them and returns output chunks.
+
 # TODO: Minimize memory churn in processors.
+
 # TODO: Consider implementing recorder `wait` method.
+
 # TODO: Consider modifying schedule notifier to notify only when schedule
 #       intervals start, and to include in the notification the interval
 #       duration. The recorder could then compute and record the
 #       corresponding number of sample frames. Then we could always
 #       record the correct number of sample frames do away with the
 #       the kludgy `_stop_pending` attribute.
+
 # TODO: Consider allowing partial input chunk at end of recording.
+
 # TODO: Optionally upload status updates regularly to S3.
+
 # TODO: Consider updating settings between recordings.
+
 # TODO: Consider supporting S3 setting files.
+
 # TODO: Write daily log files.
+
 # TODO: Optionally upload log files to S3.
+
 # TODO: Compute summary spectrograms and optionally upload them to S3.
+
 # TODO: Consider making processor inputs and outputs objects.
+
 # TODO: Consider supporting processors with multiple inputs and/or outputs.
+
 # TODO: Consider making audio input a processor.
+
 # TODO: Make processor and sidecar classes plugins.
 
 # TODO: Include station name in UI title.
+
 # TODO: Include version number in UI.
+
 # TODO: Make main function `main` instead of `_main`.
+
 # TODO: Add support for 24-bit input samples.
+
 # TODO: Add support for 32-bit floating point input samples.
+
 # TODO: Consider using `soundfile` package for writing audio files.
+
 # TODO: Consider adding support for additional file formats, e.g. FLAC.
 
 # TODO: If we detect in real time, how will archiving detections
