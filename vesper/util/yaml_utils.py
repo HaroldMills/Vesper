@@ -14,10 +14,10 @@ def load(source):
 def _create_yaml():
 
     # We use the default 'rt' type, which is safe. We also use the
-    # pure-Python implementation, which is slower than the default
-    # C implementation but less quirky. See
+    # pure-Python implementation, which as of 2024-11 is slower than
+    # the default C implementation but less quirky. See
     # https://yaml.readthedocs.io/en/latest for details.
-     return YAML(pure=True)
+    return YAML(pure=True)
 
 
 def dump(obj, dest=None, default_flow_style=True):
@@ -26,7 +26,9 @@ def dump(obj, dest=None, default_flow_style=True):
 
     if not default_flow_style:
         yaml.default_flow_style=False
-     
+
+    yaml.indent(mapping=4, sequence=6, offset=4)
+
     if dest is None:
         s = StringIO()
         yaml.dump(obj, s)
