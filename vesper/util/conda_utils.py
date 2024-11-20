@@ -7,6 +7,24 @@ import subprocess
 import sys
 
 
+# TODO: Consider basing the `run_python_script` function on the `conda run`
+# command as in the following:
+#
+#     env_name = 'vesper-dev'
+#     cwd = Path('/Users/harold/Desktop/NFC/Vesper Recorder')
+#     command = f'conda run -n {env_name} vesper_recorder'
+#     result = subprocess.run(
+#         command, shell=True, cwd=cwd, capture_output=True, text=True)
+
+# TODO: Consider adding `cwd` parameter to `run_python_script` function.
+
+# TODO: Consider using `subprocess.run`'s `text` and `capture_output`
+# parameters in the `run_python_script` function instead of the
+# `universal_newlines`, `stdout` and `stderr` parameters, as described
+# below. At this point I think it's safe to assume a Python version of
+# at least 3.7.
+
+
 class CondaUtilsError(Exception):
     pass
 
