@@ -1,0 +1,75 @@
+# pyproject.toml for the `vesper` Python package
+
+[project]
+
+name = "vesper"
+dynamic = ["version"]
+
+description = "Software for acoustical monitoring of nocturnal bird migration."
+keywords = ["audio", "bioacoustics", "recording", "analysis"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: JavaScript",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Multimedia :: Sound/Audio :: Capture/Recording",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+
+authors = [
+    { name = "Harold Mills", email = "harold.mills@gmail.com" }
+]
+maintainers = [
+    { name = "Harold Mills", email = "harold.mills@gmail.com" }
+]
+
+requires-python = ">=3.11"
+dependencies = [
+    "aioboto3",
+    "daphne",  # ASGI server for Django
+    "django~=4.2.0",
+    "environs[django]",
+    "jsonschema",
+    "psycopg[binary]",
+    "resampy",
+    "ruamel_yaml",
+    "scipy",
+    "skyfield",
+    "soxr",
+    'tensorflow~=2.12.0; platform_system != "Darwin" or platform_machine != "arm64"',
+    'tensorflow-macos~=2.12.0; platform_system == "Darwin" and platform_machine == "arm64"',
+    'tensorflow-metal~=0.8.0; platform_system == "Darwin" and platform_machine == "arm64"',
+    "whitenoise"
+]
+
+[project.scripts]
+vesper_admin = "vesper.django.manage:main"
+vesper_recorder = "vesper.scripts.vesper_recorder:_main"
+vesper_play_recorder_test_signal = "vesper.scripts.play_recorder_test_signal:_main"
+vesper_show_audio_input_devices = "vesper.scripts.show_audio_input_devices:_main"
+
+[project.urls]
+Documentation = "https://vesper.readthedocs.io/en/latest/"
+Repository = "https://github.com/HaroldMills/vesper"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "vesper/version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["vesper"]
+exclude = ["tests", "demos"]
+
+[tool.hatch.build.targets.sdist]
+packages = ["vesper"]
+exclude = ["tests", "demos"]
