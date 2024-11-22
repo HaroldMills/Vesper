@@ -9,7 +9,7 @@ import os.path
 from django.contrib.auth.models import User
 from django.db.models import (
     BigIntegerField, CASCADE, CharField, DateField, DateTimeField,
-    FloatField, ForeignKey, IntegerField, ManyToManyField, Model,
+    FloatField, ForeignKey, Index, IntegerField, ManyToManyField, Model,
     SET_NULL, TextField)
 
 from vesper.archive_paths import archive_paths
@@ -801,8 +801,8 @@ class Clip(Model):
     # delete them. This todo item corresponds to issue #213.
     class Meta:
         db_table = 'vesper_clip'
-        index_together = (
-            'station', 'mic_output', 'date', 'creating_processor')
+        indexes = [Index(
+            fields=('station', 'mic_output', 'date', 'creating_processor'))]
         unique_together = (
             'recording_channel', 'start_time', 'creating_processor')
         

@@ -34,7 +34,7 @@ requires-python = ">=3.11"
 dependencies = [
     "aioboto3",
     "daphne",  # ASGI server for Django
-    "django~=4.2.0",
+    "django~=5.1.0",
     "environs[django]",
     "jsonschema",
     "psycopg[binary]",
