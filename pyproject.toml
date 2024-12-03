@@ -1,4 +1,126 @@
 # pyproject.toml for the `vesper` Python package
+#
+#
+# Creating an Up-to-Date `requirements.txt` File
+# ----------------------------------------------
+#
+#     1. If there is a `vesper-reqs` Conda environment, delete it with:
+#
+#            conda remove -n vesper-reqs --all
+#
+#     2. `cd` to the directory containing this file.
+#
+#     3. Create a new `vesper-reqs` environment with:
+#
+#            conda create -n vesper-reqs python=3.11
+#            conda activate vesper-reqs
+#            pip install -e .
+#
+#     4. Create a pip `requirements.txt` file with:
+#
+#            pip list --format=freeze > requirements.txt
+#
+#        Note that this command differs from the usual one
+#        (`pip freeze > requirements.txt`) for generating a
+#        `requirements.txt` file in order to avoid a problem described
+#        at https://stackoverflow.com/questions/62885911/
+#        pip-freeze-creates-some-weird-path-instead-of-the-package-version)
+#
+#     5. Delete the `vesper` package line from the `requirements.txt` file
+#        created in step 4.
+#
+#     6. Delete the `vesper-reqs` environment with:
+#
+#            conda deactivate
+#            conda remove -n vesper-reqs --all
+#
+#           
+# Creating a Vesper Development Conda Environment
+# -----------------------------------------------
+#
+# To create a Conda environment for Vesper development:
+#
+#     1. If needed, follow the instructions above to create an up-to-date
+#        `requirements.txt` file.
+#
+#     2. From the directory containing this file:
+#
+#         conda create -n vesper-dev python=3.11
+#         conda activate vesper-dev
+#         conda install -c conda-forge python-sounddevice
+#         pip install -r requirements.txt
+#         pip install -e .
+#         pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
+#
+#    
+# Running Vesper Unit Tests
+# -------------------------
+#
+# To run Django unit tests:
+#
+#     cd "/Users/harold/Desktop/NFC/Test Archive"
+#     conda activate vesper-dev
+#     vesper_admin test -p "dtest_*.py" vesper.django
+#
+# To run non-Django unit tests:
+#
+#     cd /Users/harold/Documents/Code/Python/vesper/vesper
+#     conda activate vesper-dev
+#     python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper
+#
+# To run non-Django unit tests for just one subpackage of the `vesper` package:
+#
+#     cd /Users/harold/Documents/Code/Python/vesper/vesper
+#     conda activate vesper-dev
+#     python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper/<subpackage>
+#    
+#
+# Building and Uploading the Vesper Package
+# -----------------------------------------
+#
+# The package build and upload commands below should be issued from within
+# the directory containing this file.
+#
+# To build the Vesper package:
+#
+#     conda activate vesper-dev
+#     python -m build
+#
+# The build process will write package `.tar.gz` and `.whl` files to the
+# `dist` subdirectory of the directory containing this file.
+#
+# To upload a built package to the test Python package index:
+#
+#     conda activate vesper-dev
+#     python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+#
+# To upload a built package to the real Python package index:
+#
+#     conda activate vesper-dev
+#     python -m twine upload dist/*
+#
+#    
+# Creating Vesper Conda Environments
+# ----------------------------------
+#
+# To create a Conda environment using a local Vesper package:
+#
+#     conda create -n test python=3.11
+#     conda activate test
+#     pip install dist/vesper-<version>.tar.gz
+#
+# To create a Conda environment using a Vesper package from the test PyPI:
+#
+#     conda create -n test python=3.11
+#     conda activate test
+#     pip install --extra-index-url https://test.pypi.org/simple/ vesper
+#
+# To create a Conda environment using a Vesper package from the real PyPI:
+#
+#     conda create -n test python=3.11
+#     conda activate test
+#     pip install vesper==<version>
+
 
 [project]
 
@@ -30,10 +152,14 @@ maintainers = [
     { name = "Harold Mills", email = "harold.mills@gmail.com" }
 ]
 
+# We're stuck at Python 3.11 for as long as we're stuck at TehsorFlow 2.12.
+# See `dependencies` section below for more about TensorFlow.
 requires-python = ">=3.11"
+
 dependencies = [
+
     "aioboto3",
-    "daphne",  # ASGI server for Django
+    "daphne",
     "django~=5.1.0",
     "environs[django]",
     "jsonschema",
@@ -43,10 +169,35 @@ dependencies = [
     "scipy",
     "skyfield",
     "soxr",
+
+    # TensorFlow 2.12. At the time of this writing, the only parts of
+    # the `vesper` package that use TensorFlow are the MPG Ranch NFC
+    # detectors and classifiers. I plan to update them to use the
+    # most recent version of TensorFlow when I move them out of the
+    # Vesper Server.
     'tensorflow~=2.12.0; platform_system != "Darwin" or platform_machine != "arm64"',
     'tensorflow-macos~=2.12.0; platform_system == "Darwin" and platform_machine == "arm64"',
     'tensorflow-metal~=0.8.0; platform_system == "Darwin" and platform_machine == "arm64"',
+    
+    # The following commented-out lines were part of an aborted effort
+    # to update to a more recent version of TensorFlow. That effort hit
+    # a snag that I decided to defer addressing until I move all detectors
+    # and classifiers out of the Vesper Server. I'm leaving the lines here
+    # to help with the effort when I resume it.
+
+    # TensorFlow 2.16 for Intel Macs. Google does not offer TensorFlow
+    # builds past 2.16 for Intel Macs (see
+    # https://github.com/tensorflow/tensorflow/releases/tag/v2.16.1).
+    #'tensorflow~=2.16.0; platform_system == "Darwin" and platform_machine != "arm64"',
+
+    # TensorFlow 2.18 for Apple Silicon Macs, Windows, and Linux.
+    #'tensorflow~=2.18.0; platform_system != "Darwin" or platform_machine == "arm64"',
+
+    # TensorFlow Metal for Apple Silicon Macs
+    #'tensorflow-metal~=1.1.0; platform_system == "Darwin" and platform_machine == "arm64"',
+
     "whitenoise"
+
 ]
 
 [project.scripts]
