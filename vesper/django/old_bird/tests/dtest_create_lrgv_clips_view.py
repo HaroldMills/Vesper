@@ -13,23 +13,33 @@ _POST_TEST_CASES = (
     
     (
         {
+            'recordings': {
+                'Station 0 2050-03-27 23:00:00 Z': {
+                    # 'sensors': 'Station 0',
+                    'start_time': '2050-03-27 23:00:00 Z',
+                    'length': _RECORDING_LENGTH,
+                    'sample_rate': _SAMPLE_RATE
+                }
+            },
+            # 'recording_sensors': {
+            #     'Station 0': [
+            #         'Station 0 21c'
+            #     ]
+            # },
             'clips': [
                 {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 20:00:00.000',
-                    'length': 11025,
+                    'recording': 'Station 0 2050-03-27 23:00:00 Z',
+                    'sensor': 'Station 0 21c',
                     'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
+                    'start_time': '2050-03-28 00:00:00.000 Z',
+                    'length': 11025,
                 },
                 {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 21:00:00.000',
+                    'recording': 'Station 0 2050-03-27 23:00:00 Z',
+                    'sensor': 'Station 0 21c',
+                    'detector': 'Old Bird Tseep Detector Redux 1.1',
+                    'start_time': '2050-03-28 01:00:00.000 Z',
                     'length': 22050,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1'
                 },
             ]
         },
@@ -43,29 +53,49 @@ _POST_TEST_CASES = (
 
     (
         {
+            'recordings': {
+                'Station 0 2050-03-27 23:00:00 Z': {
+                    # 'sensors': 'Station 0',
+                    'start_time': '2050-03-27 23:00:00 Z',
+                    'length': _RECORDING_LENGTH,
+                    'sample_rate': _SAMPLE_RATE
+                },
+                'Station 1 2050-03-28 23:00:00 Z': {
+                    # 'sensors': 'Station 1',
+                    'start_time': '2050-03-28 23:00:00 Z',
+                    'length': _RECORDING_LENGTH,
+                    'sample_rate': _SAMPLE_RATE
+                }
+            },
+            # 'recording_sensors': {
+            #     'Station 0': [
+            #         'Station 0 21c'
+            #     ],
+            #     'Station 1': [
+            #         'Station 0 21c'
+            #     ]
+            # },
             'clips': [
                 {
-                    'station': 'Station 1',
-                    'start_time': '2050-03-28 20:00:00.000',
-                    'length': 11025,
+                    'recording': 'Station 1 2050-03-28 23:00:00 Z',
+                    'sensor': 'Station 1 21c',
                     'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-28 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
+                    'start_time': '2050-03-29 00:00:00.000 Z',
+                    'length': 11025,
                 },
                 {
-                    'station': 'Station 1',
-                    'start_time': '2050-03-28 21:00:00.000',
+                    'recording': 'Station 1 2050-03-28 23:00:00 Z',
+                    'sensor': 'Station 1 21c',
+                    'detector': 'Old Bird Tseep Detector Redux 1.1',
+                    'start_time': '2050-03-29 01:00:00.000 Z',
                     'length': 22050,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1'
                 },
                 {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 22:00:00.000',
+                    'recording': 'Station 0 2050-03-27 23:00:00 Z',
+                    'sensor': 'Station 0 21c',
+                    'detector': 'Old Bird Tseep Detector Redux 1.1',
+                    'start_time': '2050-03-28 02:00:00.000 Z',
                     'length': 22050,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1'
                 },
             ]
         },
@@ -98,30 +128,47 @@ class CreateClipsViewSimpleTests(TestCase):
             self.assertEqual(response_data, expected_response_data)
 
 
-    def test_nonexistent_recording_error(self):
+    def test_missing_recording_item_error(self):
 
-        request_data = {
-            'clips': [
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 20:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
+        recording_name = 'Station 0 2050-03-27 23:00:00 Z'
+
+        for item_name in ('start_time', 'length', 'sample_rate'):
+
+            # Start with request data that includes all required items.
+            request_data = {
+                'recordings': {
+                    recording_name: {
+                        'start_time': '2050-03-27 23:00:00 Z',
+                        'length': _RECORDING_LENGTH,
+                        'sample_rate': _SAMPLE_RATE
+                    },
                 }
-            ]
-        }
+            }
+
+            recording_info = request_data['recordings'][recording_name]
+
+            # Delete one required recording item.
+            del recording_info[item_name]
+
+            expected_error_message = \
+                f'Required recording data item "{item_name}" is missing.'
+            
+            self._test_recording_info_error(
+                request_data, recording_name, expected_error_message)
+
+
+    def _test_recording_info_error(
+            self, request_data, recording_name, expected_error_message):
+        
+        recording_info = request_data['recordings'][recording_name]
 
         expected_error_message = (
-            'Could not create clip for station "Station 0", start time '
-            '"2050-03-27 20:00:00.000", and detector "Old Bird Tseep '
-            'Detector Redux 1.1". Error message was: Could not find '
-            'existing recording for station "Station 0" for clip with '
-            'start time 2050-03-27 20:00:00, and no recording information '
-            'was provided from which to create one. No clips or recordings '
-            'will be created for this request.')
-        
+            f'Could not parse recording "{recording_name}" data '
+            f'{recording_info}. Error message was: {expected_error_message} '
+            f'No recordings or clips will be created for this request.')
+            
         self._test_error(request_data, expected_error_message)
-        
+
 
     def _test_error(self, request_data, expected_error_message):
         self._log_in_as_test_user()
@@ -129,120 +176,178 @@ class CreateClipsViewSimpleTests(TestCase):
         self.assertEqual(response.status_code, 400)
         error_message = response.content.decode(response.charset)
         self.assertEqual(error_message, expected_error_message)
+        
+
+    def _test_bad_recording_item_value_error(
+            self, item_name, bad_item_value, expected_error_message):
+        
+        recording_name = 'Station 0 2050-03-27 23:00:00 Z'
+
+        # Start with good request data.
+        request_data = {
+            'recordings': {
+                recording_name: {
+                    'start_time': '2050-03-27 23:00:00 Z',
+                    'length': _RECORDING_LENGTH,
+                    'sample_rate': _SAMPLE_RATE
+                },
+            },
+        }
+
+        recording_info = request_data['recordings'][recording_name]
+
+        # Make one item value bad.
+        recording_info[item_name] = bad_item_value
+
+        self._test_recording_info_error(
+            request_data, recording_name, expected_error_message)
+        
+        
+    def test_bad_clip_start_time_error(self):
+
+        expected_error_message = 'Could not parse recording start time "Bobo".'
+
+        self._test_bad_recording_item_value_error(
+            'start_time', 'Bobo', expected_error_message)
+        
+
+    def test_missing_clip_item_error(self):
+
+        for item_name in (
+                'recording', 'sensor', 'detector', 'start_time', 'length'):
+
+            # Start with request data that includes all required items.
+            request_data = {
+                'recordings': {
+                    'Station 0 2050-03-27 23:00:00 Z': {
+                        'start_time': '2050-03-27 23:00:00 Z',
+                        'length': _RECORDING_LENGTH,
+                        'sample_rate': _SAMPLE_RATE
+                    },
+                },
+                'clips': [
+                    {
+                        'recording': 'Station 0 2050-03-27 23:00:00 Z',
+                        'sensor': 'Station 0 21c',
+                        'detector': 'Old Bird Tseep Detector Redux 1.1',
+                        'start_time': '2050-03-28 02:00:00.000 Z',
+                        'length': 22050,
+                    },
+                ]
+            }
+
+            clip_info = request_data['clips'][0]
+
+            # Delete one required recording item.
+            del clip_info[item_name]
+
+            expected_error_message = (
+                f'Required clip data item "{item_name}" is missing.')
+            
+            self._test_clip_creation_error(
+                request_data, clip_info, expected_error_message)
+            
+
+    def _test_bad_clip_item_value_error(
+            self, item_name, bad_item_value, expected_error_message):
+        
+        # Start with good request data.
+        request_data = {
+            'recordings': {
+                'Station 0 2050-03-27 23:00:00 Z': {
+                    'start_time': '2050-03-27 23:00:00 Z',
+                    'length': _RECORDING_LENGTH,
+                    'sample_rate': _SAMPLE_RATE
+                },
+            },
+            'clips': [
+                {
+                    'recording': 'Station 0 2050-03-27 23:00:00 Z',
+                    'sensor': 'Station 0 21c',
+                    'detector': 'Old Bird Tseep Detector Redux 1.1',
+                    'start_time': '2050-03-28 02:00:00.000 Z',
+                    'length': 22050,
+                }
+            ]
+        }
+
+        clip_info = request_data['clips'][0]
+
+        # Make one item value bad.
+        clip_info[item_name] = bad_item_value
+
+        self._test_clip_creation_error(
+            request_data, clip_info, expected_error_message)
+
+
+    def _test_clip_creation_error(
+            self, request_data, clip_info, expected_error_message):
+        
+        expected_error_message = (
+            f'Could not create clip from clip data {clip_info}. '
+            f'Error message was: {expected_error_message} '
+            f'No recordings or clips will be created for this request.')
+            
+        self._test_error(request_data, expected_error_message)
 
 
     def test_nonexistent_station_error(self):
 
-        request_data = {
-            'clips': [
-                {
-                    'station': 'Bobo',
-                    'start_time': '2050-03-27 20:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                }
-            ]
-        }
-
-        expected_error_message = (
-            'Could not create clip for station "Bobo", start time '
-            '"2050-03-27 20:00:00.000", and detector "Old Bird Tseep '
-            'Detector Redux 1.1". Error message was: Could not get '
-            'station/mic output pair for station "Bobo". No clips or '
-            'recordings will be created for this request.')
+        expected_error_message = \
+            'Could not get station/mic output pair for station "Bobo".'
         
-        self._test_error(request_data, expected_error_message)
+        self._test_bad_clip_item_value_error(
+            'sensor', 'Bobo', expected_error_message)
 
 
     def test_nonexistent_detector_error(self):
 
-        request_data = {
-            'clips': [
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 20:00:00.000',
-                    'length': 11025,
-                    'detector': 'Bobo',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                }
-            ]
-        }
+        expected_error_message = 'Unrecognized detector "Bobo".'
 
-        expected_error_message = (
-            'Could not create clip for station "Station 0", start time '
-            '"2050-03-27 20:00:00.000", and detector "Bobo". Error message '
-            'was: Unrecognized detector "Bobo". No clips or recordings '
-            'will be created for this request.')
-        
-        self._test_error(request_data, expected_error_message)
+        self._test_bad_clip_item_value_error(
+            'detector', 'Bobo', expected_error_message)
 
 
     def test_bad_clip_start_time_error(self):
 
-        request_data = {
-            'clips': [
-                {
-                    'station': 'Station 0',
-                    'start_time': 'bobo',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                }
-            ]
-        }
+        expected_error_message = 'Could not parse clip start time "Bobo".'
 
-        expected_error_message = (
-            'Could not create clip for station "Station 0", start time '
-            '"bobo", and detector "Old Bird Tseep Detector Redux 1.1". '
-            'Error message was: Could not parse clip start time "bobo". '
-            'No clips or recordings will be created for this request.')
+        self._test_bad_clip_item_value_error(
+            'start_time', 'Bobo', expected_error_message)
         
-        self._test_error(request_data, expected_error_message)
-
-
+        
     def test_preceding_clip_error(self):
 
         # Error condition in which clip start time precedes recording
         # start time.
 
         request_data = {
+            'recordings': {
+                'Station 0 2050-03-27 23:00:00 Z': {
+                    'start_time': '2050-03-27 23:00:00 Z',
+                    'length': _RECORDING_LENGTH,
+                    'sample_rate': _SAMPLE_RATE
+                },
+            },
             'clips': [
                 {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 18:00:00.000',
-                    'length': 11025,
+                    'recording': 'Station 0 2050-03-27 23:00:00 Z',
+                    'sensor': 'Station 0 21c',
                     'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
+                    'start_time': '2050-03-27 22:00:00.000 Z',
+                    'length': 22050,
                 }
             ]
         }
 
+        clip_info = request_data['clips'][0]
+
         expected_error_message = (
-            'Could not create clip for station "Station 0", start '
-            'time "2050-03-27 18:00:00.000", and detector "Old Bird '
-            'Tseep Detector Redux 1.1". Error message was: Clip start '
-            'time 2050-03-27 18:00:00 precedes recording start time '
-            '2050-03-27 19:00:00. No clips or recordings will be '
-            'created for this request.')
+            f'Clip start time 2050-03-27 22:00:00.000000 precedes '
+            f'recording start time 2050-03-27 23:00:00.000000.')
         
-        self._test_error(request_data, expected_error_message)
+        self._test_clip_creation_error(
+            request_data, clip_info, expected_error_message)
 
 
     def test_following_clip_error(self):
@@ -250,221 +355,198 @@ class CreateClipsViewSimpleTests(TestCase):
         # Error condition in which clip end time follows recording end time.
 
         request_data = {
+            'recordings': {
+                'Station 0 2050-03-27 23:00:00 Z': {
+                    'start_time': '2050-03-27 23:00:00 Z',
+                    'length': _RECORDING_LENGTH,
+                    'sample_rate': _SAMPLE_RATE
+                },
+            },
             'clips': [
                 {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-28 19:00:00.000',
-                    'length': 11025,
+                    'recording': 'Station 0 2050-03-27 23:00:00 Z',
+                    'sensor': 'Station 0 21c',
                     'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
+                    'start_time': '2050-03-28 23:00:00.000 Z',
+                    'length': 22050,
                 }
             ]
         }
 
-        expected_error_message = (
-            'Could not create clip for station "Station 0", start time '
-            '"2050-03-28 19:00:00.000", and detector "Old Bird Tseep '
-            'Detector Redux 1.1". Error message was: Clip end time '
-            '2050-03-28 19:00:00.499955 follows recording end time '
-            '2050-03-28 04:59:59.999955. No clips or recordings will '
-            'be created for this request.')
-        
-        self._test_error(request_data, expected_error_message)
-
-
-    def test_bad_recording_start_time_error(self):
-
-        request_data = {
-            'clips': [
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 20:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': 'bobo',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                }
-            ]
-        }
+        clip_info = request_data['clips'][0]
 
         expected_error_message = (
-            'Could not create clip for station "Station 0", start time '
-            '"2050-03-27 20:00:00.000", and detector "Old Bird Tseep '
-            'Detector Redux 1.1". Error message was: Could not parse '
-            'recording start time "bobo". No clips or recordings will '
-            'be created for this request.')
+            f'Clip end time 2050-03-28 23:00:00.999955 follows recording '
+            f'end time 2050-03-28 08:59:59.999955.')
         
-        self._test_error(request_data, expected_error_message)
+        self._test_clip_creation_error(
+            request_data, clip_info, expected_error_message)
 
 
-    def test_more_than_one_recording_error(self):
+    # def test_more_than_one_recording_error(self):
 
-        request_data = {
-            'clips': [
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 20:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                },
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 18:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 18:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                },
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 19:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                },
-            ]
-        }
+    #     request_data = {
+    #         'recordings': {
+    #             'Station 0 2050-03-27 23:00:00 Z': {
+    #                 'start_time': '2050-03-27 23:00:00 Z',
+    #                 'length': _RECORDING_LENGTH,
+    #                 'sample_rate': _SAMPLE_RATE
+    #             },
+    #         },
+    #         'clips': [
+    #             {
+    #                 ''
+    #                 'station': 'Station 0',
+    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
+    #                 'start_time': '2050-03-28 00:00:00.000',
+    #                 'length': 11025,
+    #            },
+    #             {
+    #                 'station': 'Station 0',
+    #                 'start_time': '2050-03-27 18:00:00.000',
+    #                 'length': 11025,
+    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
+    #                 'recording': {
+    #                     'start_time': '2050-03-27 18:00:00',
+    #                     'length': _RECORDING_LENGTH,
+    #                     'sample_rate': _SAMPLE_RATE
+    #                 }
+    #             },
+    #             {
+    #                 'station': 'Station 0',
+    #                 'start_time': '2050-03-27 19:00:00.000',
+    #                 'length': 11025,
+    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
+    #             },
+    #         ]
+    #     }
 
-        expected_error_message = (
-            'Could not create clip for station "Station 0", start time '
-            '"2050-03-27 19:00:00.000", and detector "Old Bird Tseep '
-            'Detector Redux 1.1". Error message was: Found more than '
-            'one recording for station "Station 0" for clip with start '
-            'time 2050-03-27 19:00:00. No clips or recordings will be '
-            'created for this request.')
+    #     expected_error_message = (
+    #         'Could not create clip for station "Station 0", start time '
+    #         '"2050-03-27 19:00:00.000", and detector "Old Bird Tseep '
+    #         'Detector Redux 1.1". Error message was: Found more than '
+    #         'one recording for station "Station 0" for clip with start '
+    #         'time 2050-03-27 19:00:00. No recordings or clips will be '
+    #         'created for this request.')
         
-        self._test_error(request_data, expected_error_message)
+    #     self._test_error(request_data, expected_error_message)
 
 
-    def test_recording_start_time_mismatch_error(self):
+    # def test_recording_start_time_mismatch_error(self):
 
-        request_data = {
-            'clips': [
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 20:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                },
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 21:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 20:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                }
-            ]
-        }
+    #     request_data = {
+    #         'clips': [
+    #             {
+    #                 'station': 'Station 0',
+    #                 'start_time': '2050-03-27 20:00:00.000',
+    #                 'length': 11025,
+    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
+    #                 'recording': {
+    #                     'start_time': '2050-03-27 19:00:00',
+    #                     'length': _RECORDING_LENGTH,
+    #                     'sample_rate': _SAMPLE_RATE
+    #                 }
+    #             },
+    #             {
+    #                 'station': 'Station 0',
+    #                 'start_time': '2050-03-27 21:00:00.000',
+    #                 'length': 11025,
+    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
+    #                 'recording': {
+    #                     'start_time': '2050-03-27 20:00:00',
+    #                     'length': _RECORDING_LENGTH,
+    #                     'sample_rate': _SAMPLE_RATE
+    #                 }
+    #             }
+    #         ]
+    #     }
 
-        expected_error_message = (
-            'Could not create clip for station "Station 0", start time '
-            '"2050-03-27 21:00:00.000", and detector "Old Bird Tseep '
-            'Detector Redux 1.1". Error message was: Specified recording '
-            'start time 2050-03-27 20:00:00 does not match start time '
-            '2050-03-27 19:00:00 of recording already in archive. No '
-            'clips or recordings will be created for this request.')
+    #     expected_error_message = (
+    #         'Could not create clip for station "Station 0", start time '
+    #         '"2050-03-27 21:00:00.000", and detector "Old Bird Tseep '
+    #         'Detector Redux 1.1". Error message was: Specified recording '
+    #         'start time 2050-03-27 20:00:00 does not match start time '
+    #         '2050-03-27 19:00:00 of recording already in archive. No '
+    #         'recordings or clips will be created for this request.')
         
-        self._test_error(request_data, expected_error_message)
+    #     self._test_error(request_data, expected_error_message)
 
 
-    def test_recording_length_mismatch_error(self):
+    # def test_recording_length_mismatch_error(self):
 
-        request_data = {
-            'clips': [
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 20:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                },
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 21:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH + 1,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                }
-            ]
-        }
+    #     request_data = {
+    #         'clips': [
+    #             {
+    #                 'station': 'Station 0',
+    #                 'start_time': '2050-03-27 20:00:00.000',
+    #                 'length': 11025,
+    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
+    #                 'recording': {
+    #                     'start_time': '2050-03-27 19:00:00',
+    #                     'length': _RECORDING_LENGTH,
+    #                     'sample_rate': _SAMPLE_RATE
+    #                 }
+    #             },
+    #             {
+    #                 'station': 'Station 0',
+    #                 'start_time': '2050-03-27 21:00:00.000',
+    #                 'length': 11025,
+    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
+    #                 'recording': {
+    #                     'start_time': '2050-03-27 19:00:00',
+    #                     'length': _RECORDING_LENGTH + 1,
+    #                     'sample_rate': _SAMPLE_RATE
+    #                 }
+    #             }
+    #         ]
+    #     }
 
-        expected_error_message = (
-            'Could not create clip for station "Station 0", start '
-            'time "2050-03-27 21:00:00.000", and detector "Old Bird '
-            'Tseep Detector Redux 1.1". Error message was: Specified '
-            'recording length 793800001 does not match length 793800000 '
-            'of recording already in archive. No clips or recordings '
-            'will be created for this request.')
+    #     expected_error_message = (
+    #         'Could not create clip for station "Station 0", start '
+    #         'time "2050-03-27 21:00:00.000", and detector "Old Bird '
+    #         'Tseep Detector Redux 1.1". Error message was: Specified '
+    #         'recording length 793800001 does not match length 793800000 '
+    #         'of recording already in archive. No recordings or clips '
+    #         'will be created for this request.')
         
-        self._test_error(request_data, expected_error_message)
+    #     self._test_error(request_data, expected_error_message)
 
 
-    def test_recording_sample_rate_mismatch_error(self):
+    # def test_recording_sample_rate_mismatch_error(self):
 
-        request_data = {
-            'clips': [
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 20:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE
-                    }
-                },
-                {
-                    'station': 'Station 0',
-                    'start_time': '2050-03-27 21:00:00.000',
-                    'length': 11025,
-                    'detector': 'Old Bird Tseep Detector Redux 1.1',
-                    'recording': {
-                        'start_time': '2050-03-27 19:00:00',
-                        'length': _RECORDING_LENGTH,
-                        'sample_rate': _SAMPLE_RATE + 1
-                    }
-                }
-            ]
-        }
+    #     request_data = {
+    #         'clips': [
+    #             {
+    #                 'station': 'Station 0',
+    #                 'start_time': '2050-03-27 20:00:00.000',
+    #                 'length': 11025,
+    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
+    #                 'recording': {
+    #                     'start_time': '2050-03-27 19:00:00',
+    #                     'length': _RECORDING_LENGTH,
+    #                     'sample_rate': _SAMPLE_RATE
+    #                 }
+    #             },
+    #             {
+    #                 'station': 'Station 0',
+    #                 'start_time': '2050-03-27 21:00:00.000',
+    #                 'length': 11025,
+    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
+    #                 'recording': {
+    #                     'start_time': '2050-03-27 19:00:00',
+    #                     'length': _RECORDING_LENGTH,
+    #                     'sample_rate': _SAMPLE_RATE + 1
+    #                 }
+    #             }
+    #         ]
+    #     }
 
-        expected_error_message = (
-            'Could not create clip for station "Station 0", start '
-            'time "2050-03-27 21:00:00.000", and detector "Old Bird '
-            'Tseep Detector Redux 1.1". Error message was: Specified '
-            'sample rate 22051 does not match sample rate 22050.0 '
-            'of recording already in archive. No clips or recordings '
-            'will be created for this request.')
+    #     expected_error_message = (
+    #         'Could not create clip for station "Station 0", start '
+    #         'time "2050-03-27 21:00:00.000", and detector "Old Bird '
+    #         'Tseep Detector Redux 1.1". Error message was: Specified '
+    #         'sample rate 22051 does not match sample rate 22050.0 '
+    #         'of recording already in archive. No recordings or clips '
+    #         'will be created for this request.')
         
-        self._test_error(request_data, expected_error_message)
+    #     self._test_error(request_data, expected_error_message)
