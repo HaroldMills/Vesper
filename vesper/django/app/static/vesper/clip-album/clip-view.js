@@ -190,7 +190,7 @@ export class ClipView {
 
         // We must explicitly test for `mouseleave` in the following
         // since the mouse position is (surprisingly) sometimes inside
-        // the view for such events. Even is the mouse event is not
+        // the view for such events. Even if the mouse event is not
         // `mouseleave` we still call `_mouseInside` since we have
         // found (again, surprisingly) that the mouse position is
         // sometimes outside the view for `mousemove` events.
