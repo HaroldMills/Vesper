@@ -40,6 +40,11 @@ WORKDIR /Code
 # Install Vesper dependencies, using exactly the versions listed
 # in `requirements.txt`.
 COPY requirements.txt .
+RUN apt update -y
+RUN apt-get install pkg-config -y
+RUN apt install libhdf5-dev -y 
+RUN apt-get install gcc -y
+
 RUN pip install -r requirements.txt
 
 # Copy Vesper project directory from host file system into image.
