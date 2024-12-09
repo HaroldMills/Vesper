@@ -2,6 +2,8 @@ import { CallsCleanupOverlay }
     from '/static/vesper/clip-album/calls-cleanup-overlay.js';
 import { ClipView }
     from '/static/vesper/clip-album/clip-view.js';
+import { TimeFrequencyBoxOverlay }
+    from '/static/vesper/clip-album/time-frequency-box-overlay.js';
 import { TimeFrequencyPointOverlay }
     from '/static/vesper/clip-album/time-frequency-point-overlay.js';
 import { TimeFrequencyUtils }
@@ -14,6 +16,7 @@ import { DataWindow } from '/static/vesper/signal/data-window.js';
 
 const _OVERLAY_CLASSES = {
     'Calls Cleanup Overlay': CallsCleanupOverlay,
+    'Time-Frequency Box Overlay': TimeFrequencyBoxOverlay,
     'Time-Frequency Point Overlay': TimeFrequencyPointOverlay,
     'Time Point Overlay': TimePointOverlay
 }
