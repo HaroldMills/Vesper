@@ -1,0 +1,32 @@
+# Dockerfile for Vesper Docker image with the `vesper` Python package
+# installed as a regular, non-editable package.
+#
+# The `vesper` package can be installed either from PyPI or from a
+# package file in the local file system. To install from PyPI,
+# uncomment the first `RUN` command below and comment out the second.
+# To install from a package file, do the opposite, and edit the package
+# file path in the second `RUN` command as needed.
+#
+# To build a Docker image named `vesper` with this file, issue the
+# following command from the Vesper Python package root directory,
+# i.e. the parent of the directory containing this file:
+#
+#     docker build -f docker/Dockerfile.non-editable-vesper -t vesper .
+
+# Pull base image.
+FROM python:3.11-slim-bookworm
+
+# Try something like the following instead of the above if your
+# computer has a GPU.
+#FROM tensorflow/tensorflow:2.12.0-gpu
+
+# Set environment variables.
+ENV PIP_DISABLE_PIP_VERSION_CHECK 1
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Install `vesper` Python package from PyPI.
+RUN pip install vesper
+
+# Install `vesper` Python package from package file.
+# RUN pip install dist/vesper-0.4.15a0.tar.gz

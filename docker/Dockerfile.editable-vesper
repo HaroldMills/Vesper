@@ -1,0 +1,49 @@
+# Dockerfile for Vesper Docker image with the `vesper` Python package
+# installed as an editable package in the `/Code` directory.
+#
+# To build a Docker image named `vesper-dev` with this file, first
+# consider updating the `requirements.txt` file in your Vesper package
+# root directory, i.e. the parent of the directory containing this
+# file. See the "Creating an Up-to-Date `requirements.txt` File"
+# section of the `pyproject.toml` file in that directory for detailed
+# instructions. Then issue the following command from the Vesper
+# package root directory:
+#
+#     docker build -f docker/Dockerfile.editable-vesper -t vesper-dev .
+#
+# Note that when you run the created image in a container, you must
+# mount the host file system directory containing the package's source
+# code as the `/Code` directory in the container's file system. The
+# accompanying `docker-compose.template.yaml` file includes an example
+# of how to do this.
+
+# Pull base image.
+FROM python:3.11-slim-bookworm
+
+# Try the following instead of the above if your computer has a GPU.
+#FROM tensorflow/tensorflow:2.11.0-gpu
+
+# Set environment variables.
+ENV PIP_DISABLE_PIP_VERSION_CHECK 1
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set working directory, creating it if needed.
+WORKDIR /Code
+
+# Install Vesper dependencies, using exactly the versions listed
+# in `requirements.txt`.
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy Vesper project directory from host file system into image.
+# The copy is used to install Vesper as an editable package in the
+# next step. Note that when we run the image during development,
+# we typically mount the project directory from the host file system
+# as the `/Code` directory in the container file system, hiding the
+# copy. Changes to the files of the mounted directory are thus
+# visible from within the container.
+COPY . .
+
+# Install editable `vesper` Python package from `/Code` directory.
+RUN pip install -e .

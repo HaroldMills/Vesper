@@ -1,12 +1,29 @@
-# Docker Compose file for use in Vesper development.
+# Template Docker Compose file for serving a Vesper archive using a
+# Vesper Docker image.
 #
-# Before running any of the commands below, change the Vesper archive
-# directory path "/Users/harold/Desktop/Test Archive" below to the
-# path of the Vesper archive you want to serve.
+# To use this file, copy it to the directory of the Vesper archive
+# that you want to serve and name it `docker-compose.yaml`. Edit
+# the file as described below for your situation. Then issue the
+# `docker compose` commands listed below (or others) from that
+# directory to start and stop the Vesper server, see its logs, etc.
 #
-# The commands below should be run from the directory containing this file.
+# As is, this file runs a Docker image named `vesper` in a container
+# to serve the Vesper archive of the current directory on port 8000.
+# Edit the image name, the port number, and other settings below for
+# your situation.
 #
-# To start services in detached mode with existing `vesper-dev` image:
+# This file also assumes that the `vesper` Python package is installed
+# in the Docker image as a regular, non-editable Python package. If it
+# is instead installed as an editable Python package, mount the package
+# source code from the host into the container at the appropriate mount
+# point in the `volumes` section below. See the commented-out example
+# in that section for details.
+#
+# Once you have edited this file, you can issue the `docker compose`
+# commands listed below (or others) from your archive directory to start
+# and stop the Vesper server, see its logs, etc.
+#
+# To start the Vesper server in detached mode:
 #
 #     docker compose up -d
 #
@@ -14,7 +31,7 @@
 #
 #     docker compose logs
 #
-# To stop services:
+# To stop the Vesper server:
 #
 #     docker compose down
 #
@@ -31,13 +48,13 @@
 # See the _Django for Professionals_ security chapter (chapter 17 of the
 # Django 4.0 version) for more.
 
-name: vesper-dev
+name: vesper
 
 services:
 
     vesper:
 
-        image: vesper-dev
+        image: vesper
 
         ports:
             - 8000:8000
@@ -51,8 +68,16 @@ services:
         command: daphne vesper.django.project.asgi:application -b 0.0.0.0 -p 8000
 
         volumes:
-            - .:/Code
-            - /Users/harold/Desktop/Test Archive:/Archive
+
+            # The archive directory, mounted at `/Archive` in the container.
+            - .:/Archive
+
+            # If your Docker image containts a Vesper Python package that
+            # is installed in editable mode, mount the package source code
+            # from the host file system into the container's file system at
+            # the appropriate mount point, as below. In the example, the
+            # source code appears at `/Code` in the container.
+            # - /Users/harold/Documents/Code/Python/vesper:/Code
 
         # Allow access to GPU.
         #deploy:
