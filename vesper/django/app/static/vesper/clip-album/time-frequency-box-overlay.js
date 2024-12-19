@@ -27,14 +27,11 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
             clipView, settings, 'Time-Frequency Box Overlay',
             _commandableDelegate)
             
-        this.upperLeftTimeAnnotationName =
-            settings.upperLeftTimeAnnotationName;
-        this.upperLeftFrequencyAnnotationName =
-            settings.upperLeftFrequencyAnnotationName;
-        this.lowerRightTimeAnnotationName =
-            settings.lowerRightTimeAnnotationName;
-        this.lowerRightFrequencyAnnotationName =
-            settings.lowerRightFrequencyAnnotationName;
+        this.startTimeAnnotationName = settings.startTimeAnnotationName;
+        this.endFrequencyAnnotationName = settings.endFrequencyAnnotationName;
+        this.endTimeAnnotationName = settings.endTimeAnnotationName;
+        this.startFrequencyAnnotationName =
+            settings.startFrequencyAnnotationName;
         this.markerType = settings.markerType;
         
         if (this.markerType === undefined)
@@ -45,8 +42,7 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
     _executeSetTimeFrequencyBoxUpperLeftCornerCommand(env) {
         this._annotateTimeAndFrequency(
-            this.upperLeftTimeAnnotationName,
-            this.upperLeftFrequencyAnnotationName);
+            this.startTimeAnnotationName, this.endFrequencyAnnotationName);
     }
 
 
@@ -59,8 +55,7 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
             // clip start index unknown
             
             window.alert(
-                `Cannot annotate clip because its start index is ` +
-                `unknown.`);
+                `Cannot annotate clip because its start index is unknown.`);
         
         } else {
             
@@ -81,8 +76,7 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
     _executeClearTimeFrequencyBoxUpperLeftCornerCommand(env) {
         this._unannotateTimeAndFrequency(
-            this.upperLeftTimeAnnotationName,
-            this.upperLeftFrequencyAnnotationName);
+            this.startTimeAnnotationName, this.endFrequencyAnnotationName);
     }
 
 
@@ -96,25 +90,23 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
     _executeSetTimeFrequencyBoxLowerRightCornerCommand(env) {
         this._annotateTimeAndFrequency(
-            this.lowerRightTimeAnnotationName,
-            this.lowerRightFrequencyAnnotationName);
+            this.endTimeAnnotationName, this.startFrequencyAnnotationName);
     }
 
 
     _executeClearTimeFrequencyBoxLowerRightCornerCommand(env) {
         this._unannotateTimeAndFrequency(
-            this.lowerRightTimeAnnotationName,
-            this.lowerRightFrequencyAnnotationName);
+            this.endTimeAnnotationName, this.startFrequencyAnnotationName);
     }
 
 
     _executeClearTimeFrequencyBoxCommand(env) {
         const clips = [this.clipView.clip];
         const annotationNames = new Set([
-            this.upperLeftTimeAnnotationName,
-            this.upperLeftFrequencyAnnotationName,
-            this.lowerRightTimeAnnotationName,
-            this.lowerRightFrequencyAnnotationName]);
+            this.startTimeAnnotationName,
+            this.endFrequencyAnnotationName,
+            this.endTimeAnnotationName,
+            this.startFrequencyAnnotationName]);
         this.clipAlbum._unannotateClips(clips, annotationNames);
     }
 
@@ -125,41 +117,41 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
         if (annotations !== null) {
             
-            if (annotations.has(this.upperLeftTimeAnnotationName) &&
-                    annotations.has(this.upperLeftFrequencyAnnotationName) &&
-                    annotations.has(this.lowerRightTimeAnnotationName) &&
-                    annotations.has(this.lowerRightFrequencyAnnotationName)) {
+            if (annotations.has(this.startTimeAnnotationName) &&
+                    annotations.has(this.endFrequencyAnnotationName) &&
+                    annotations.has(this.endTimeAnnotationName) &&
+                    annotations.has(this.startFrequencyAnnotationName)) {
                 
                 const upperLeftIndex = parseInt(annotations.get(
-                    this.upperLeftTimeAnnotationName));
+                    this.startTimeAnnotationName));
                 const upperLeftFreq = parseFloat(annotations.get(
-                    this.upperLeftFrequencyAnnotationName));
+                    this.endFrequencyAnnotationName));
                 const lowerRightIndex = parseInt(annotations.get(
-                    this.lowerRightTimeAnnotationName));
+                    this.endTimeAnnotationName));
                 const lowerRightFreq = parseFloat(annotations.get(
-                    this.lowerRightFrequencyAnnotationName));
+                    this.startFrequencyAnnotationName));
 
                 this._renderBox(
                     upperLeftIndex, upperLeftFreq, lowerRightIndex,
                     lowerRightFreq);
 
-            } else if (annotations.has(this.upperLeftTimeAnnotationName) &&
-                    annotations.has(this.upperLeftFrequencyAnnotationName)) {
+            } else if (annotations.has(this.startTimeAnnotationName) &&
+                    annotations.has(this.endFrequencyAnnotationName)) {
 
                 const index = parseInt(annotations.get(
-                    this.upperLeftTimeAnnotationName));
+                    this.startTimeAnnotationName));
                 const freq = parseFloat(annotations.get(
-                    this.upperLeftFrequencyAnnotationName));
+                    this.endFrequencyAnnotationName));
 
                 this._renderCorner(index, freq);
 
-            } else if (annotations.has(this.lowerRightTimeAnnotationName) &&
-                    annotations.has(this.lowerRightFrequencyAnnotationName)) {
+            } else if (annotations.has(this.endTimeAnnotationName) &&
+                    annotations.has(this.startFrequencyAnnotationName)) {
 
                 const index = parseInt(annotations.get(
-                    this.lowerRightTimeAnnotationName));
+                    this.endTimeAnnotationName));
                 const freq = parseFloat(annotations.get(
-                    this.lowerRightFrequencyAnnotationName));
+                    this.startFrequencyAnnotationName));
                 this._renderCorner(index, freq);
 
             }
