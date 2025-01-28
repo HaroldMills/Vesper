@@ -1,5 +1,12 @@
 {% if item.type == 'link' %}
     <li><a class="dropdown-item" href="{{item.url}}">{{item.name}}</a></li>
+{% elif item.type == 'form' %}
+    <li>
+        <form action="{{item.url}}" method="post">
+            {% csrf_token %}
+            <button class="dropdown-item" type="submit">{{item.name}}</button>
+        </form>
+    </li>
 {% elif item.type == 'separator' %}
     <li><hr class="dropdown-divider"></li>
 {% elif item.type == 'unrecognized' %}

@@ -356,10 +356,16 @@ def _create_navbar_right_items(request):
                 name=user.username,
                 type='dropdown',
                 items=[
+
+                    # As of Django 5, the built-in `LogoutView` requires
+                    # that logouts happen via POST requests rather than GET
+                    # requests, so we use a form instead of a link for the
+                    # logout item UI.
                     Bunch(
                         name='Log out',
-                        type='link',
+                        type='form',
                         url='/logout/' + query)
+                        
                 ])
     
         else:
