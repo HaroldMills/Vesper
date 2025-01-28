@@ -13,7 +13,6 @@ import itertools
 from django.db.models import Q
 
 from vesper.django.app.models import Processor
-import vesper.birdvox.detectors as birdvox_detectors
 import vesper.django.project.settings as settings
 import vesper.util.yaml_utils as yaml_utils
 
@@ -45,19 +44,34 @@ def _chain(iterable):
     return itertools.chain.from_iterable(iterable)
         
 
-if settings.VESPER_INCLUDE_TENSORFLOW_PROCESSORS:
+_NON_TF_CLASSIFIERS = '''
+    - vesper.mpg_ranch.nfc_detector_low_score_classifier_1_0.classifier.Classifier
+    - vesper.mpg_ranch.outside_classifier.OutsideClassifier
+    - vesper.old_bird.lighthouse_outside_classifier.LighthouseOutsideClassifier
+'''
 
-    import tensorflow as tf
+_NON_TF_DETECTORS = '''
 
-    _TF_VERSION = int(tf.__version__.split('.')[0])
+    # Old Bird redux detectors 1.0
+    - vesper.old_bird.old_bird_detector_redux_1_0.ThrushDetector
+    - vesper.old_bird.old_bird_detector_redux_1_0.TseepDetector
+    
+    # Old Bird redux detectors 1.1
+    - vesper.old_bird.old_bird_detector_redux_1_1.ThrushDetector
+    - vesper.old_bird.old_bird_detector_redux_1_1.TseepDetector
+    
+    # Pacific Southwest (PSW) Research Station detectors
+    - vesper.psw.nogo_detector_0_0.detector.Detector  
 
-    _TF1_CLASSIFIERS = '''
+'''
+
+_TF1_CLASSIFIERS = '''
     - vesper.mpg_ranch.nfc_coarse_classifier_2_1.classifier.Classifier
     - vesper.mpg_ranch.nfc_coarse_classifier_3_0.classifier.Classifier
     - vesper.mpg_ranch.nfc_coarse_classifier_4_0.classifier.Classifier
 '''
 
-    _TF1_DETECTORS = '''
+_TF1_DETECTORS = '''
 
     # MPG Ranch Thrush Detector 0.0
     - vesper.mpg_ranch.nfc_detector_0_0.detector.ThrushDetector
@@ -119,7 +133,7 @@ if settings.VESPER_INCLUDE_TENSORFLOW_PROCESSORS:
 
 '''
 
-    _TF2_CLASSIFIERS = '''
+_TF2_CLASSIFIERS = '''
 
     # MPG Ranch
     - vesper.mpg_ranch.nfc_bounding_interval_annotator_1_0.annotator.Annotator
@@ -139,7 +153,7 @@ if settings.VESPER_INCLUDE_TENSORFLOW_PROCESSORS:
     
 '''
 
-    _TF2_DETECTORS = '''
+_TF2_DETECTORS = '''
 
     # MPG Ranch Thrush Detector 1.1
     - vesper.mpg_ranch.nfc_detector_1_1.detector.ThrushDetector
@@ -169,6 +183,14 @@ if settings.VESPER_INCLUDE_TENSORFLOW_PROCESSORS:
 
 '''
 
+
+if settings.VESPER_INCLUDE_PROCESSORS:
+    # including processors
+
+    import tensorflow as tf
+
+    _TF_VERSION = int(tf.__version__.split('.')[0])
+
     if _TF_VERSION == 1:
         _TF_CLASSIFIERS = _TF1_CLASSIFIERS
         _TF_DETECTORS = _TF1_DETECTORS
@@ -176,22 +198,21 @@ if settings.VESPER_INCLUDE_TENSORFLOW_PROCESSORS:
         _TF_CLASSIFIERS = _TF2_CLASSIFIERS
         _TF_DETECTORS = _TF2_DETECTORS
 
-else:
-    # don't include TensorFlow processors.
+    _CLASSIFIERS = _NON_TF_CLASSIFIERS + _TF_CLASSIFIERS
+    _DETECTORS = _NON_TF_DETECTORS + _TF_DETECTORS
 
-    _TF_CLASSIFIERS = ''
-    _TF_DETECTORS = ''
+else:
+    # not including processors
+
+    _CLASSIFIERS = '    []'
+    _DETECTORS = '    []'
 
 
 _EXTENSION_SPEC = f'''
 
 Classifier:
 
-{_TF_CLASSIFIERS}
-
-    - vesper.mpg_ranch.nfc_detector_low_score_classifier_1_0.classifier.Classifier
-    - vesper.mpg_ranch.outside_classifier.OutsideClassifier
-    - vesper.old_bird.lighthouse_outside_classifier.LighthouseOutsideClassifier
+{_CLASSIFIERS}
     
 Command:
     - vesper.command.add_recording_audio_files_command.AddRecordingAudioFilesCommand
@@ -216,18 +237,7 @@ Command:
     
 Detector:
 
-{_TF_DETECTORS}
-
-    # Old Bird redux detectors 1.0
-    - vesper.old_bird.old_bird_detector_redux_1_0.ThrushDetector
-    - vesper.old_bird.old_bird_detector_redux_1_0.TseepDetector
-    
-    # Old Bird redux detectors 1.1
-    - vesper.old_bird.old_bird_detector_redux_1_1.ThrushDetector
-    - vesper.old_bird.old_bird_detector_redux_1_1.TseepDetector
-    
-    # Pacific Southwest (PSW) Research Station detectors
-    - vesper.psw.nogo_detector_0_0.detector.Detector
+{_DETECTORS}
     
 Exporter:
     - vesper.command.clip_audio_file_exporter.ClipAudioFileExporter
@@ -294,7 +304,10 @@ class ExtensionManager:
         module_class_names = self._extension_spec[extension_point_name]
         extensions = [_load_extension(name) for name in module_class_names]
         
-        if extension_point_name == 'Detector':
+        if extension_point_name == 'Detector' and \
+                settings.VESPER_INCLUDE_PROCESSORS:
+                
+            import vesper.birdvox.detectors as birdvox_detectors
             
             # Load BirdVoxDetect detector extensions. These classes
             # are created dynamically according to the detectors

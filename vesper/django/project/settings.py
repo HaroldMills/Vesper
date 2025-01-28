@@ -202,10 +202,18 @@ VESPER_PREFERENCES_STATIC = env.bool('VESPER_PREFERENCES_STATIC', True)
 
 VESPER_ADMIN_URL_PATTERN = env('VESPER_ADMIN_URL_PATTERN', 'admin/')
 
-# Set this `True` if and only if you want to include the TensorFlow-based
-# detector and classifier extensions in the Vesper core server. These are
-# mostly the MPG Ranch detectors and classifiers. They will move out of
-# the Vesper core server in the future. For now, including them in the
-# core server slows startup.
-VESPER_INCLUDE_TENSORFLOW_PROCESSORS = env.bool(
-    'VESPER_INCLUDE_TENSORFLOW_PROCESSORS', True)
+# The `VESPER_INCLUDE_PROCESSORS` setting controls whether or not the
+# Vesper server includes detector and classifier extensions. Set it to
+# `True` when building the full `vesper` Python package, and to `False`
+# when building the `vesper-slim` package. (Also be sure to comment out
+# or uncomment the relevant dependencies in the `pyproject.toml` file.)
+# Excluding detector and classifier extensions speeds server startup
+# considerably, mainly because the server no longer needs to import
+# TensorFlow. Excluding unneeded detector and classifier dependencies
+# (most importantly TensorFlow) from the `vesper-slim` package also
+# makes that package much smaller than the full `vesper` package.
+#
+# Detectors and classifiers will move from the Vesper core server
+# to auxiliary Vesper processing servers in the future, which may
+# obviate this setting.
+VESPER_INCLUDE_PROCESSORS = True
