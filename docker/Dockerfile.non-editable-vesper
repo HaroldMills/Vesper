@@ -21,12 +21,20 @@ FROM python:3.11-slim-bookworm
 #FROM tensorflow/tensorflow:2.12.0-gpu
 
 # Set environment variables.
-ENV PIP_DISABLE_PIP_VERSION_CHECK 1
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Install `vesper` Python package from PyPI.
-RUN pip install vesper
+# RUN pip install --no-cache-dir vesper && pip cache purge
 
-# Install `vesper` Python package from package file.
-# RUN pip install dist/vesper-0.4.15a0.tar.gz
+# Copy `vesper` Python package from local package file. The `full-vesper`
+# package includes processors while the `slim-vesper` package does not.
+# COPY dist/full-vesper-0.4.15a0.tar.gz ./vesper-0.4.15a0.tar.gz
+COPY dist/vesper_slim-0.4.15a0.tar.gz ./vesper-0.4.15a0.tar.gz
+
+# Install copied `vesper` Python package.
+RUN pip install --no-cache-dir vesper-0.4.15a0.tar.gz && rm vesper-0.4.15a0.tar.gz && pip cache purge
+
+# Run Daphne ASGI server for Vesper at port 8000.
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "vesper.django.project.asgi:application"]

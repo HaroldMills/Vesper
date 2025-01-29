@@ -2,9 +2,9 @@
 # Vesper Docker image.
 #
 # To use this file, copy it to the directory of the Vesper archive
-# that you want to serve and name it `docker-compose.yaml`. Edit
-# the file as described below for your situation. Then issue the
-# `docker compose` commands listed below (or others) from that
+# that you want to serve and name the copy `docker-compose.yaml`.
+# Edit the copy as described below for your situation. Then issue
+# the `docker compose` commands listed below (or others) from that
 # directory to start and stop the Vesper server, see its logs, etc.
 #
 # As is, this file runs a Docker image named `vesper` in a container
@@ -19,10 +19,6 @@
 # point in the `volumes` section below. See the commented-out example
 # in that section for details.
 #
-# Once you have edited this file, you can issue the `docker compose`
-# commands listed below (or others) from your archive directory to start
-# and stop the Vesper server, see its logs, etc.
-#
 # To start the Vesper server in detached mode:
 #
 #     docker compose up -d
@@ -34,6 +30,10 @@
 # To stop the Vesper server:
 #
 #     docker compose down
+#
+# To run an interactive shell in the Vesper server container:
+#
+#     docker compose run -it vesper /bin/bash
 #
 # To collect static files:
 #
@@ -62,10 +62,9 @@ services:
         extra_hosts:
             - host.docker.internal:host-gateway
             
-        # command: python /Code/vesper/django/manage.py test -p "dtest_*.py" vesper.django
         # command: python /Code/vesper/django/manage.py runserver 0.0.0.0:8000
-        # command: gunicorn vesper.django.project.wsgi -w 4 -b 0.0.0.0:8000
-        command: daphne vesper.django.project.asgi:application -b 0.0.0.0 -p 8000
+        # command: gunicorn -w 4 -b 0.0.0.0:8000 vesper.django.project.wsgi
+        command: daphne -b 0.0.0.0 -p 8000 vesper.django.project.asgi:application
 
         volumes:
 

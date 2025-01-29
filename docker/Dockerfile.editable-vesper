@@ -24,9 +24,9 @@ FROM python:3.11-slim-bookworm
 #FROM tensorflow/tensorflow:2.11.0-gpu
 
 # Set environment variables.
-ENV PIP_DISABLE_PIP_VERSION_CHECK 1
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Set working directory, creating it if needed.
 WORKDIR /Code
@@ -47,3 +47,6 @@ COPY . .
 
 # Install editable `vesper` Python package from `/Code` directory.
 RUN pip install -e .
+
+# Run Daphne ASGI server for Vesper at port 8000.
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "vesper.django.project.asgi:application"]
