@@ -75,8 +75,45 @@
 #     python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper/<subpackage>
 #    
 #
-# Building and Uploading the Vesper Package
-# -----------------------------------------
+# Building and Uploading the Vesper Packages
+# ------------------------------------------
+#
+# There are currently two versions of the Vesper package that I build: a
+# full version that includes processors and all dependencies and a slim
+# version that excludes processors and some dependencies. A Conda
+# environment with the full version of Vesper installed in it is about
+# six times the size of one with the slim version. If you run Vesper in
+# the slim environment, it starts faster and uses considerably less
+# memory. You must use the full version if you want to run processors,
+# though.
+#
+# To build the full version of the Vesper package:
+#
+#     1. Set the package name to `vesper` in the `[project]` section
+#        below.
+#
+#     2. Edit the `dependencies` list below as per the instructions
+#        there to include (i.e. uncomment) dependencies needed only
+#        by processors.
+#
+#     3. Set `VESPER_INCLUDE_PROCESSORS` to `False` in the
+#        `vesper.django.project.settings` module.
+#
+#     4. Follow the instructions below for building the Vesper package.
+#
+# To build the slim version of the Vesper package:
+#
+#     1. Set the package name to `vesper-slim` in the `[project]`
+#        section below.
+#
+#     2. Edit the `dependencies` list below as per the instructions
+#        there to exclude (i.e. comment out) dependencies needed only
+#        by processors.
+#
+#     3. Set `VESPER_INCLUDE_PROCESSORS` to `True` in the
+#        `vesper.django.project.settings` module.
+#
+#     4. Follow the instructions below for building the Vesper package.
 #
 # The package build and upload commands below should be issued from within
 # the directory containing this file.
@@ -152,10 +189,13 @@ maintainers = [
     { name = "Harold Mills", email = "harold.mills@gmail.com" }
 ]
 
-# We're stuck at Python 3.11 for as long as we're stuck at TehsorFlow 2.12.
+# We're stuck at Python 3.11 for as long as we're stuck at TensorFlow 2.12.
 # See `dependencies` section below for more about TensorFlow.
 requires-python = ">=3.11"
 
+# Vesper package dependencies. We build two versions of the Vesper package:
+# a full version that includes processors and all dependencies and a slim
+# version that excludes processors and some dependencies. 
 dependencies = [
 
     "aioboto3",
@@ -164,17 +204,23 @@ dependencies = [
     "environs[django]",
     "jsonschema",
     "psycopg[binary]",
-    "resampy",
     "ruamel_yaml",
-    "scipy",
     "skyfield",
+
+    # Dependencies to include (i.e. uncomment) when building the full
+    # Vesper package, but exclude (i.e. comment out) when building the
+    # slim package. Also be sure to include TensorFlow below when
+    # building the full package, but exclude it when building the slim
+    # package.
+    "resampy",
+    "scipy",
     "soxr",
 
     # TensorFlow 2.12. At the time of this writing, the only parts of
     # the `vesper` package that use TensorFlow are the MPG Ranch NFC
     # detectors and classifiers. I plan to update them to use the
     # most recent version of TensorFlow when I move them out of the
-    # Vesper Server.
+    # Vesper core server.
     'tensorflow~=2.12.0; platform_system != "Darwin" or platform_machine != "arm64"',
     'tensorflow-macos~=2.12.0; platform_system == "Darwin" and platform_machine == "arm64"',
     'tensorflow-metal~=0.8.0; platform_system == "Darwin" and platform_machine == "arm64"',
@@ -182,8 +228,8 @@ dependencies = [
     # The following commented-out lines were part of an aborted effort
     # to update to a more recent version of TensorFlow. That effort hit
     # a snag that I decided to defer addressing until I move all detectors
-    # and classifiers out of the Vesper Server. I'm leaving the lines here
-    # to help with the effort when I resume it.
+    # and classifiers out of the Vesper core server. I'm leaving the lines
+    # here to help with the effort when I resume it.
 
     # TensorFlow 2.16 for Intel Macs. Google does not offer TensorFlow
     # builds past 2.16 for Intel Macs (see
@@ -219,8 +265,10 @@ path = "vesper/version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["vesper"]
+artifacts = ["staticfiles"]
 exclude = ["tests", "demos"]
 
 [tool.hatch.build.targets.sdist]
 packages = ["vesper"]
+artifacts = ["staticfiles"]
 exclude = ["tests", "demos"]
