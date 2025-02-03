@@ -1,6 +1,6 @@
 import {
     NonuniformNonresizingLayout, NonuniformResizingLayout
-} from '/static/vesper/clip-album/layout.js';
+} from '../layout.js';
 
 
 const NONRESIZING_SETTINGS = {

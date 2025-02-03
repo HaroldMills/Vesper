@@ -1,5 +1,5 @@
 import { CommandableDelegate, Environment, KeyboardInputInterpreter }
-    from '/static/vesper/clip-album/keyboard-input-interpreter.js';
+    from '../keyboard-input-interpreter.js';
 
 
 function _input(command, interpreter, specialKey = null) {

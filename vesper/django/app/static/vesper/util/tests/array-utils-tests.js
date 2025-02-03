@@ -1,4 +1,4 @@
-import { ArrayUtils } from '/static/vesper/util/array-utils.js';
+import { ArrayUtils } from '../array-utils.js';
 
 
 describe('ArrayUtils', () => {

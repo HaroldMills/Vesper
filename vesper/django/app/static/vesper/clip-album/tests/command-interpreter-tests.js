@@ -1,7 +1,7 @@
 import {
 	BuiltInFunction, Environment, CommandInterpreter,
 	CompositeCommandInterpreter, RegularFunction
-} from '/static/vesper/clip-album/command-interpreter.js';
+} from '../command-interpreter.js';
 
 
 describe('Environment', () => {

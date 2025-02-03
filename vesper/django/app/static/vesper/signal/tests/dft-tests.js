@@ -1,5 +1,5 @@
-import { ArrayUtils } from '/static/vesper/util/array-utils.js';
-import { Dft } from '/static/vesper/signal/dft.js';
+import { ArrayUtils } from '../../util/array-utils.js';
+import { Dft } from '../dft.js';
 
 
 describe('Dft', () => {

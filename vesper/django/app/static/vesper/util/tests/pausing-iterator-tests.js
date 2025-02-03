@@ -1,6 +1,5 @@
-import { Pauser } from '/static/vesper/util/pauser.js';
-import { PausingIterator, PausingIteratorState }
-    from '/static/vesper/util/pausing-iterator.js';
+import { Pauser } from '../pauser.js';
+import { PausingIterator, PausingIteratorState } from '../pausing-iterator.js';
 
 
 describe('PausingIterator', () => {

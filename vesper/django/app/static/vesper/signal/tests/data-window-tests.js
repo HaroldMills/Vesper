@@ -1,4 +1,4 @@
-import { DataWindow } from '/static/vesper/signal/data-window.js';
+import { DataWindow } from '../data-window.js';
 
 
 const _TEST_CASES = new Map([

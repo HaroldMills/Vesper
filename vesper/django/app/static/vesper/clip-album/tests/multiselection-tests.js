@@ -1,4 +1,4 @@
-import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
+import { Multiselection } from '../multiselection.js';
 
 
 describe('Multiselection', () => {

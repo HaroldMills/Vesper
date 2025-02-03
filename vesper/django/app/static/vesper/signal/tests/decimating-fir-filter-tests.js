@@ -1,5 +1,4 @@
-import { DecimatingFirFilter }
-    from '/static/vesper/signal/decimating-fir-filter.js';
+import { DecimatingFirFilter } from '../decimating-fir-filter.js';
 
 
 function expectFilter(filter, coefficients, decimationFactor) {

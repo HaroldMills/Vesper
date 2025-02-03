@@ -1,7 +1,7 @@
 import { DateTime, IANAZone }
-    from '/static/third-party/luxon-2.2.0/luxon.min.js';
+    from '../../../third-party/luxon-2.2.0/luxon.min.js';
 
-import { ClipAlbumUtils } from '/static/vesper/clip-album/clip-album-utils.js';
+import { ClipAlbumUtils } from '../clip-album-utils.js';
 
 
 describe('ClipAlbumUtils', () => {

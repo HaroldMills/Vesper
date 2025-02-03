@@ -1,4 +1,4 @@
-import { Clip } from '/static/vesper/clip-album/clip.js';
+import { Clip } from '../clip.js';
 
 
 describe('Clip', () => {

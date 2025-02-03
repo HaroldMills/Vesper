@@ -1,6 +1,6 @@
-import { ArrayUtils } from '/static/vesper/util/array-utils.js';
-import { Spectrogram } from '/static/vesper/signal/spectrogram.js';
-import { DataWindow } from '/static/vesper/signal/data-window.js';
+import { ArrayUtils } from '../../util/array-utils.js';
+import { Spectrogram } from '../spectrogram.js';
+import { DataWindow } from '../data-window.js';
 
 
 /*

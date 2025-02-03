@@ -1,4 +1,4 @@
-import { Pauser } from '/static/vesper/util/pauser.js';
+import { Pauser } from '../pauser.js';
 
 
 describe('Pauser', () => {

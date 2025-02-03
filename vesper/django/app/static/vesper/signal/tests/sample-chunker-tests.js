@@ -1,4 +1,4 @@
-import { SampleChunker } from '/static/vesper/signal/sample-chunker.js';
+import { SampleChunker } from '../sample-chunker.js';
 
 
 describe('SampleChunker', () => {

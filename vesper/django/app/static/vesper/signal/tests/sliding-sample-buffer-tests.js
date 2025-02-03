@@ -1,5 +1,4 @@
-import { SlidingSampleBuffer }
-    from '/static/vesper/signal/sliding-sample-buffer.js';
+import { SlidingSampleBuffer } from '../sliding-sample-buffer.js';
 
 
 function expectBuffer(b, startIndex, contents) {
