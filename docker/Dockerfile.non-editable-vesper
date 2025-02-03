@@ -30,11 +30,11 @@ ENV PYTHONUNBUFFERED=1
 
 # Copy `vesper` Python package from local package file. The `full-vesper`
 # package includes processors while the `slim-vesper` package does not.
-COPY dist/vesper-0.4.15a0.tar.gz ./vesper-0.4.15a0.tar.gz
-# COPY dist/vesper_slim-0.4.15a0.tar.gz ./vesper-0.4.15a0.tar.gz
+# COPY dist/vesper-0.4.15a0.tar.gz ./vesper.tar.gz
+COPY dist/vesper_slim-0.4.15a0.tar.gz ./vesper.tar.gz
 
 # Install copied `vesper` Python package.
-RUN pip install --no-cache-dir vesper-0.4.15a0.tar.gz && rm vesper-0.4.15a0.tar.gz && pip cache purge
+RUN pip install --no-cache-dir vesper.tar.gz && rm vesper.tar.gz && pip cache purge
 
 # Run Daphne ASGI server for Vesper at port 8000.
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "vesper.django.project.asgi:application"]
