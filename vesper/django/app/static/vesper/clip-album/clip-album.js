@@ -1,22 +1,20 @@
 import { DateTime, IANAZone }
-    from '/static/third-party/luxon-2.2.0/luxon.min.js';
+    from '../../third-party/luxon-2.2.0/luxon.min.js';
 
-import { ArrayUtils } from '/static/vesper/util/array-utils.js';
-import { Clip, CLIP_LOAD_STATUS } from '/static/vesper/clip-album/clip.js';
-import { ClipAlbumUtils } from '/static/vesper/clip-album/clip-album-utils.js';
+import { ArrayUtils } from '../util/array-utils.js';
+import { Clip, CLIP_LOAD_STATUS } from './clip.js';
+import { ClipAlbumUtils } from './clip-album-utils.js';
 import { CommandableDelegate, KeyboardInputInterpreter }
-    from '/static/vesper/clip-album/keyboard-input-interpreter.js';
-import { Layout } from '/static/vesper/clip-album/layout.js';
-import { Multiselection } from '/static/vesper/clip-album/multiselection.js';
-import { NightRugPlot } from '/static/vesper/clip-album/night-rug-plot.js';
-import { NULL_CHOICE } from '/static/vesper/ui-constants.js';
+    from './keyboard-input-interpreter.js';
+import { Layout } from './layout.js';
+import { Multiselection } from './multiselection.js';
+import { NightRugPlot } from './night-rug-plot.js';
+import { NULL_CHOICE } from '../ui-constants.js';
 import { PausingIterator, PausingIteratorState }
-    from '/static/vesper/util/pausing-iterator.js';
-import { PreloadingClipManager }
-    from '/static/vesper/clip-album/clip-manager.js';
-import { SpectrogramClipView }
-    from '/static/vesper/clip-album/spectrogram-clip-view.js';
-import { ViewUtils } from '/static/vesper/view/view-utils.js';
+    from '../util/pausing-iterator.js';
+import { PreloadingClipManager } from './clip-manager.js';
+import { SpectrogramClipView } from './spectrogram-clip-view.js';
+import { ViewUtils } from '../view/view-utils.js';
 
 
 // This function is derived from code provided by the Django project at

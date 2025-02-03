@@ -25,10 +25,9 @@ frames. A stop command is not followed by any additional data.
 */
 
 
-import { DecimatingFirFilter }
-    from '/static/vesper/signal/decimating-fir-filter.js';
+import { DecimatingFirFilter } from '../signal/decimating-fir-filter.js';
 import { recorderFilterCoefficients } from './recorder-filter-coefficients.js';
-import { SampleChunker } from '/static/vesper/signal/sample-chunker.js';
+import { SampleChunker } from '../signal/sample-chunker.js';
 
 
 // Set up Axios for XSRF protection.

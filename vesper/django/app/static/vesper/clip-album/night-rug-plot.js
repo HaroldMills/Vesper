@@ -1,7 +1,7 @@
 import { DateTime, Duration } from
-    '/static/third-party/luxon-2.2.0/luxon.min.js';
+    '../../third-party/luxon-2.2.0/luxon.min.js';
 
-import { ArrayUtils } from '/static/vesper/util/array-utils.js';
+import { ArrayUtils } from '../util/array-utils.js';
 
 
 const _PLOT_LIMIT_PADDING = 1;       // hours

@@ -4,7 +4,7 @@
  */
 
 
-import { Pauser } from '/static/vesper/util/pauser.js';
+import { Pauser } from '../util/pauser.js';
 
 
  export class PausingIterator {

@@ -1,5 +1,5 @@
-import { NULL_CHOICE } from '/static/vesper/ui-constants.js';
-import { ViewUtils } from '/static/vesper/view/view-utils.js';
+import { NULL_CHOICE } from '../ui-constants.js';
+import { ViewUtils } from '../view/view-utils.js';
 
 
 const _NONZERO_COUNT_CIRCLE_COLOR = 'orange';
@@ -192,7 +192,7 @@ function addMonthDay(day, daysDiv) {
 	} else {
 
 	    
-        // Get circle URL.
+	    // Get circle URL.
         const url = new URL(window.location.href);
         url.pathname = '/night';
         const params = url.searchParams;

@@ -1,4 +1,4 @@
-import { ClipAlbum } from '/static/vesper/clip-album/clip-album.js';
+import { ClipAlbum } from '../clip-album/clip-album.js';
 
 
 // Module-level state, set via `init` function.

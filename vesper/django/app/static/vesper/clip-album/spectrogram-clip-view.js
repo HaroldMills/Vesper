@@ -1,17 +1,11 @@
-import { CallsCleanupOverlay }
-    from '/static/vesper/clip-album/calls-cleanup-overlay.js';
-import { ClipView }
-    from '/static/vesper/clip-album/clip-view.js';
-import { TimeFrequencyBoxOverlay }
-    from '/static/vesper/clip-album/time-frequency-box-overlay.js';
-import { TimeFrequencyPointOverlay }
-    from '/static/vesper/clip-album/time-frequency-point-overlay.js';
-import { TimeFrequencyUtils }
-    from '/static/vesper/clip-album/time-frequency-utils.js';
-import { TimePointOverlay }
-    from '/static/vesper/clip-album/time-point-overlay.js';
-import { Spectrogram } from '/static/vesper/signal/spectrogram.js';
-import { DataWindow } from '/static/vesper/signal/data-window.js';
+import { CallsCleanupOverlay } from './calls-cleanup-overlay.js';
+import { ClipView } from './clip-view.js';
+import { TimeFrequencyBoxOverlay } from './time-frequency-box-overlay.js';
+import { TimeFrequencyPointOverlay } from './time-frequency-point-overlay.js';
+import { TimeFrequencyUtils } from './time-frequency-utils.js';
+import { TimePointOverlay } from './time-point-overlay.js';
+import { Spectrogram } from '../signal/spectrogram.js';
+import { DataWindow } from '../signal/data-window.js';
 
 
 const _OVERLAY_CLASSES = {

@@ -1,9 +1,6 @@
-import { CommandableOverlay }
-    from '/static/vesper/clip-album/commandable-overlay.js';
-import { CommandableDelegate }
-    from '/static/vesper/clip-album/keyboard-input-interpreter.js';
-import { TimeFrequencyUtils }
-    from '/static/vesper/clip-album/time-frequency-utils.js';
+import { CommandableOverlay } from './commandable-overlay.js';
+import { CommandableDelegate } from './keyboard-input-interpreter.js';
+import { TimeFrequencyUtils } from './time-frequency-utils.js';
 
 
 const _COMMAND_SPECS = [

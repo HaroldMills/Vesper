@@ -1,5 +1,4 @@
-import { SlidingSampleBuffer }
-    from '/static/vesper/signal/sliding-sample-buffer.js';
+import { SlidingSampleBuffer } from '../signal/sliding-sample-buffer.js';
 
 
 const _minBufferCapacity = 8192;
