@@ -224,4 +224,4 @@ VESPER_ADMIN_URL_PATTERN = env('VESPER_ADMIN_URL_PATTERN', 'admin/')
 # Detectors and classifiers will move from the Vesper core server
 # to auxiliary Vesper processing servers in the future, which may
 # obviate this setting.
-VESPER_INCLUDE_PROCESSORS = False
+VESPER_INCLUDE_PROCESSORS = True
