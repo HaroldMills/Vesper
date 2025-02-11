@@ -137,7 +137,7 @@ FROM base AS package
 # Install full Vesper package dependencies. We separate this step from
 # the Vesper package installation so we don't have to re-install all of
 # the dependencies if only the Vesper package has changed.
-COPY requirements${SIZE}.txt ./requirements.txt
+COPY docker/requirements${SIZE}.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt && pip cache purge
 
 # Install full Vesper package.
@@ -155,7 +155,7 @@ WORKDIR /Code
 
 # Install Vesper dependencies, using exactly the versions listed
 # in `requirements.txt`.
-COPY requirements${SIZE}.txt ./requirements.txt
+COPY docker/requirements${SIZE}.txt ./requirements.txt
 RUN pip install -r requirements.txt
 
 # Copy Vesper project directory from host file system into image.
