@@ -56,6 +56,14 @@ ALLOWED_HOSTS = env.list(
     'VESPER_DJANGO_ALLOWED_HOSTS',
     ['.localhost', '127.0.0.1', '[::1]'], subcast=str)
 
+# For using Vesper with a URL base other than just "/", e.g. at
+# "/project-name/archive-name/" behind an NGINX reverse proxy.
+# Note that `VESPER_URL_BASE` should start and end with a slash.
+VESPER_URL_BASE = env('VESPER_URL_BASE', '/')
+FORCE_SCRIPT_NAME = VESPER_URL_BASE
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 # Application definition
 
@@ -141,8 +149,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = VESPER_URL_BASE + 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles/'
 STORAGES = {
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
@@ -161,9 +169,9 @@ STORAGES = {
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_URL = VESPER_URL_BASE + 'login/'
+LOGIN_REDIRECT_URL = VESPER_URL_BASE
+LOGOUT_REDIRECT_URL = VESPER_URL_BASE
 
 
 # The path of the Vesper archive directory. We define this attribute
@@ -216,4 +224,4 @@ VESPER_ADMIN_URL_PATTERN = env('VESPER_ADMIN_URL_PATTERN', 'admin/')
 # Detectors and classifiers will move from the Vesper core server
 # to auxiliary Vesper processing servers in the future, which may
 # obviate this setting.
-VESPER_INCLUDE_PROCESSORS = True
+VESPER_INCLUDE_PROCESSORS = False

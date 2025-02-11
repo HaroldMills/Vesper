@@ -712,7 +712,8 @@ export class ClipAlbum {
         const albumParams = albumUrl.searchParams;
         
         // Build URL of corresponding clip calendar.
-        const calendarUrl = new URL(albumUrl.origin + '/clip-calendar');
+        const calendarPathname = _addUrlBase('clip-calendar/');
+        const calendarUrl = new URL(albumUrl.origin + calendarPathname);
         const calendarParams = calendarUrl.searchParams;
         calendarParams.set('station_mic', albumParams.get('station_mic'));
         calendarParams.set('detector', albumParams.get('detector'));
@@ -1364,7 +1365,7 @@ export class ClipAlbum {
         }
         
         return this._editClipMetadata(
-            clips, '/annotate-clip-batch/', getRequestContent,
+            clips, 'annotate-clip-batch/', getRequestContent,
             updateClientAnnotations, 'annotation');
 
     }
@@ -1488,7 +1489,7 @@ export class ClipAlbum {
             'X-CSRFToken': _CSRF_TOKEN
         });
         
-        return fetch(url, {
+        return _fetch(url, {
             method: 'POST',
             body: body,
             headers: headers,
@@ -1557,7 +1558,7 @@ export class ClipAlbum {
         }
                         
         return this._editClipMetadata(
-            clips, '/unannotate-clip-batch/', getRequestContent,
+            clips, 'unannotate-clip-batch/', getRequestContent,
             updateClientAnnotations, 'unannotation');
 
     }
@@ -1623,7 +1624,7 @@ export class ClipAlbum {
         }
         
         return this._editClipMetadata(
-            clips, '/tag-clip-batch/', getRequestContent, updateClientTags,
+            clips, 'tag-clip-batch/', getRequestContent, updateClientTags,
             'tag');
             
     }
@@ -1676,7 +1677,7 @@ export class ClipAlbum {
         }
                         
         return this._editClipMetadata(
-            clips, '/untag-clip-batch/', getRequestContent, updateClientTags,
+            clips, 'untag-clip-batch/', getRequestContent, updateClientTags,
             'untag');
 
     }

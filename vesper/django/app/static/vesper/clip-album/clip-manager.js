@@ -651,7 +651,7 @@ class _ClipLoader {
 
         const clipIds = clips.map(clip => clip.id);
 
-        return fetch('/get-clip-audios/', {
+        return _fetch('get-clip-audios/', {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
@@ -903,7 +903,7 @@ class _ClipLoader {
 
         const clipIds = clips.map(clip => clip.id);
 
-        return fetch('/get-clip-metadata/', {
+        return _fetch('get-clip-metadata/', {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
@@ -978,7 +978,7 @@ class _ClipLoader {
 
         try {
 
-            const response = await fetch(clip.wavFileUrl);
+            const response = await _fetch(clip.audioUrl);
             const arrayBuffer = await response.arrayBuffer();
             return this._decodeClipAudio(clip, arrayBuffer);
 
@@ -1014,7 +1014,7 @@ class _ClipLoader {
 
         try {
 
-            const response = await fetch(clip.metadataUrl);
+            const response = await _fetch(clip.metadataUrl);
             const metadata = await response.json();
             this._setClipMetadata(clip, metadata);
 

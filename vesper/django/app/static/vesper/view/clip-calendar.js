@@ -193,8 +193,17 @@ function addMonthDay(day, daysDiv) {
 
 	    
 	    // Get circle URL.
+		//
+		// Note that it's important to include a slash at the end of the
+		// URL pathname. Without it, for some reason the URL base is
+		// removed somewhere between here and when the request goes
+		// out, resulting in a 404 error.
+		//
+		// TODO: Understand better why the final slash is necessary,
+		// i.e. why the URL base is removed, by whom, and why when
+		// the final slash is absent.
         const url = new URL(window.location.href);
-        url.pathname = '/night';
+        url.pathname = _addUrlBase('night/');
         const params = url.searchParams;
         params.set('station_mic', state.stationMicName);
         params.set('detector', state.detectorName);

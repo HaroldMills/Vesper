@@ -71,4 +71,4 @@ copilot
 
 # pip requirements.txt file
 requirements.txt
-requirements.txt.old
+requirements_slim.txt

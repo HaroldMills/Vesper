@@ -7,7 +7,6 @@ import logging
 
 from django import forms, urls
 from django.db import connection, reset_queries, transaction
-from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.http import (
     Http404, HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed,
@@ -318,6 +317,7 @@ def _handle_bad_navbar_item(message):
 def _create_navbar_link_item(data):
     name = data['name']
     url = _get_navbar_link_url(data)
+    # print(f'navbar link "{name}" "{url}"')
     return Bunch(type='link', name=name, url=url)
 
 
@@ -347,7 +347,11 @@ def _create_navbar_right_items(request):
         # URL of which the "next" parameter is a part. We must quote the
         # embedded URL to ensure that it does not interfere with parsing the
         # containing URL.
-        query = '?next=' + quote(request.get_full_path())
+        next = view_utils.add_url_base(request.get_full_path()[1:])
+        # print(f'_create_navbar_right_items: full path "{request.get_full_path()}"')
+        # print(f'_create_navbar_right_items: full path info "{request.get_full_path_info()}"')
+        # print(f'_create_navbar_right_items: next "{next}"')
+        query = '?next=' + quote(next)
     
         if user.is_authenticated:
             # user is logged in
@@ -364,7 +368,7 @@ def _create_navbar_right_items(request):
                     Bunch(
                         name='Log out',
                         type='form',
-                        url='/logout/' + query)
+                        url=reverse('logout') + query)
                         
                 ])
     
@@ -374,7 +378,7 @@ def _create_navbar_right_items(request):
             item = Bunch(
                 name='Log in',
                 type='link',
-                url='/login/' + query)
+                url=reverse('login') + query)
     
         return [item]
 
@@ -387,7 +391,7 @@ def index(request):
     return redirect(reverse('clip-calendar'))
 
 
-@login_required
+@view_utils.login_required
 def detect(request):
 
     if request.method in _GET_AND_HEAD:
@@ -462,7 +466,7 @@ def _create_template_context(request, active_navbar_item='', **kwargs):
     return kwargs
 
 
-@login_required
+@view_utils.login_required
 def create_random_clips(request):
 
     if request.method in _GET_AND_HEAD:
@@ -501,7 +505,7 @@ def _create_create_random_clips_command_spec(form):
     }
 
 
-@login_required
+@view_utils.login_required
 def classify(request):
 
     if request.method in _GET_AND_HEAD:
@@ -541,7 +545,7 @@ def _create_classify_command_spec(form):
     }
 
 
-@login_required
+@view_utils.login_required
 def execute_deferred_actions(request):
 
     if request.method in _GET_AND_HEAD:
@@ -571,7 +575,7 @@ def _create_execute_deferred_actions_command_spec(form):
     }
 
 
-@login_required
+@view_utils.login_required
 def old_bird_export_clip_counts_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
@@ -613,7 +617,7 @@ def old_bird_export_clip_counts_csv_file(request):
         request, 'vesper/old-bird-export-clip-counts-csv-file.html', context)
 
 
-@login_required
+@view_utils.login_required
 def export_clip_counts_by_classification_to_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
@@ -655,7 +659,7 @@ def _create_export_clip_counts_by_classification_to_csv_file_command_spec(
     return spec
 
 
-@login_required
+@view_utils.login_required
 def export_clip_counts_by_tag_to_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
@@ -694,7 +698,7 @@ def _create_export_clip_counts_by_tag_to_csv_file_command_spec(form):
     return spec
 
 
-@login_required
+@view_utils.login_required
 def export_clip_metadata_to_csv_file(request):
 
     if request.method in _GET_AND_HEAD:
@@ -758,7 +762,7 @@ def _add_clip_set_command_arguments(command_spec, form_data):
         args[name] = form_data[name]
        
 
-@login_required
+@view_utils.login_required
 def export_clips_to_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
@@ -809,7 +813,7 @@ def _create_export_clips_to_audio_files_command_spec(form):
 
 
 
-@login_required
+@view_utils.login_required
 def export_clips_to_hdf5_files(request):
 
     if request.method in _GET_AND_HEAD:
@@ -857,7 +861,7 @@ def _create_export_clips_to_hdf5_files_command_spec(form):
     return spec
 
 
-@login_required
+@view_utils.login_required
 def refresh_recording_audio_file_paths(request):
 
     if request.method in _GET_AND_HEAD:
@@ -889,7 +893,7 @@ def _create_refresh_recording_audio_file_paths_command_spec(form):
     }
 
 
-@login_required
+@view_utils.login_required
 def delete_recordings(request):
 
     if request.method in _GET_AND_HEAD:
@@ -925,7 +929,7 @@ def _create_delete_recordings_command_spec(form):
     }
 
 
-@login_required
+@view_utils.login_required
 def delete_clips(request):
 
     if request.method in _GET_AND_HEAD:
@@ -963,7 +967,7 @@ def _create_delete_clips_command_spec(form):
     return spec
 
 
-@login_required
+@view_utils.login_required
 def tag_clips(request):
 
     if request.method in _GET_AND_HEAD:
@@ -1001,7 +1005,7 @@ def _create_tag_clips_command_spec(form):
     return spec
 
 
-@login_required
+@view_utils.login_required
 def untag_clips(request):
 
     if request.method in _GET_AND_HEAD:
@@ -1039,7 +1043,7 @@ def _create_untag_clips_command_spec(form):
     return spec
 
 
-@login_required
+@view_utils.login_required
 def create_clip_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
@@ -1075,7 +1079,7 @@ def _create_create_clip_audio_files_command_spec(form):
     return spec
 
 
-@login_required
+@view_utils.login_required
 def delete_clip_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
@@ -1111,7 +1115,7 @@ def _create_delete_clip_audio_files_command_spec(form):
     return spec
 
 
-@login_required
+@view_utils.login_required
 def transfer_clip_classifications(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2131,7 +2135,7 @@ def _render_clip_album(request, context):
     return render(request, 'vesper/clip-album.html', context)
 
 
-@login_required
+@view_utils.login_required
 def test_command(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2155,7 +2159,7 @@ def test_command(request):
     return render(request, 'vesper/test-command.html', {'form': form})
 
 
-@login_required
+@view_utils.login_required
 def import_metadata(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2194,7 +2198,7 @@ def _create_import_metadata_command_spec(form):
     }
 
 
-@login_required
+@view_utils.login_required
 def import_old_bird_clips(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2235,7 +2239,7 @@ def _create_import_old_bird_clips_command_spec(form):
     }
 
 
-@login_required
+@view_utils.login_required
 def import_recordings(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2285,7 +2289,7 @@ def _create_import_recordings_command_spec(form):
     }
 
 
-@login_required
+@view_utils.login_required
 def add_recording_audio_files(request):
 
     if request.method in _GET_AND_HEAD:
@@ -2322,7 +2326,7 @@ def _create_add_recording_audio_files_command_spec(form):
     }
 
 
-@login_required
+@view_utils.login_required
 def add_old_bird_clip_start_indices(request):
 
     if request.method in _GET_AND_HEAD:

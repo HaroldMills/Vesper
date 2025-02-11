@@ -1,56 +1,17 @@
-# pyproject.toml for the `vesper` Python package
+# pyproject.toml for the Vesper Python package
 #
 #
-# Creating an Up-to-Date `requirements.txt` File
-# ----------------------------------------------
-#
-#     1. If there is a `vesper-reqs` Conda environment, delete it with:
-#
-#            conda remove -n vesper-reqs --all
-#
-#     2. `cd` to the directory containing this file.
-#
-#     3. Create a new `vesper-reqs` environment with:
-#
-#            conda create -n vesper-reqs python=3.11
-#            conda activate vesper-reqs
-#            pip install -e .
-#
-#     4. Create a pip `requirements.txt` file with:
-#
-#            pip list --format=freeze > requirements.txt
-#
-#        Note that this command differs from the usual one
-#        (`pip freeze > requirements.txt`) for generating a
-#        `requirements.txt` file in order to avoid a problem described
-#        at https://stackoverflow.com/questions/62885911/
-#        pip-freeze-creates-some-weird-path-instead-of-the-package-version)
-#
-#     5. Delete the `vesper` package line from the `requirements.txt` file
-#        created in step 4.
-#
-#     6. Delete the `vesper-reqs` environment with:
-#
-#            conda deactivate
-#            conda remove -n vesper-reqs --all
-#
-#           
 # Creating a Vesper Development Conda Environment
 # -----------------------------------------------
 #
-# To create a Conda environment for Vesper development:
+# To create a Conda environment for Vesper development, do the following
+# from the directory containing this file:
 #
-#     1. If needed, follow the instructions above to create an up-to-date
-#        `requirements.txt` file.
-#
-#     2. From the directory containing this file:
-#
-#         conda create -n vesper-dev python=3.11
-#         conda activate vesper-dev
-#         conda install -c conda-forge python-sounddevice
-#         pip install -r requirements.txt
-#         pip install -e .
-#         pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
+#     conda create -n vesper-dev python=3.11
+#     conda activate vesper-dev
+#     conda install -c conda-forge python-sounddevice
+#     pip install -e .
+#     pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
 #
 #    
 # Running Vesper Unit Tests
@@ -157,6 +118,13 @@
 #     conda create -n test python=3.11
 #     conda activate test
 #     pip install vesper==<version>
+#
+#
+# Building Vesper Docker Images
+# -----------------------------
+#
+# See the documentation in the Vesper `Dockerfile`, in the `docker` directory
+# of the Vesper repository.
 
 
 [project]
@@ -198,6 +166,8 @@ requires-python = ">=3.11"
 # version that excludes processors and some dependencies. 
 dependencies = [
 
+
+    # Dependencies to include for both the full and slim Vesper packages.
     "aioboto3",
     "daphne",
     "django~=5.1.0",
@@ -206,6 +176,13 @@ dependencies = [
     "psycopg[binary]",
     "ruamel_yaml",
     "skyfield",
+    "whitenoise",
+
+
+    # Dependencies to include (i.e. uncomment) when building the full
+    # Vesper package, but exclude (i.e. comment out) when building the
+    # slim package. The end of this secion is indicated in a comment
+    # below.
 
     # Dependencies to include (i.e. uncomment) when building the full
     # Vesper package, but exclude (i.e. comment out) when building the
@@ -224,12 +201,16 @@ dependencies = [
     'tensorflow~=2.12.0; platform_system != "Darwin" or platform_machine != "arm64"',
     'tensorflow-macos~=2.12.0; platform_system == "Darwin" and platform_machine == "arm64"',
     'tensorflow-metal~=0.8.0; platform_system == "Darwin" and platform_machine == "arm64"',
+
+    # This is the end of the dependencies to include when building the
+    # full Vesper package, but exclude when building the slim package.
     
-    # The following commented-out lines were part of an aborted effort
-    # to update to a more recent version of TensorFlow. That effort hit
-    # a snag that I decided to defer addressing until I move all detectors
-    # and classifiers out of the Vesper core server. I'm leaving the lines
-    # here to help with the effort when I resume it.
+
+    # Leave the following lines commented out, whether you are building
+    # the full or slim Vesper package. They are part of an interrupted
+    # effort to update to a more recent version of TensorFlow. I plan to
+    # resume the effort after I move all detectors and classifiers out of
+    # the Vesper core server.
 
     # TensorFlow 2.16 for Intel Macs. Google does not offer TensorFlow
     # builds past 2.16 for Intel Macs (see
@@ -242,7 +223,6 @@ dependencies = [
     # TensorFlow Metal for Apple Silicon Macs
     #'tensorflow-metal~=1.1.0; platform_system == "Darwin" and platform_machine == "arm64"',
 
-    "whitenoise"
 
 ]
 

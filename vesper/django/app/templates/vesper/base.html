@@ -21,12 +21,47 @@
         <!-- Load Vesper navigation bar CSS. -->
         <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/navbar.css' %}">
 
-        <!-- Load favicon -->
+        <!-- Load favicon. -->
         <link rel="icon" href="{% static 'favicon.svg' %}" sizes="any" type="image/svg+xml">
 
         {% block head %}
             <title>Vesper</title>
         {% endblock head %}
+
+        <script>
+
+            // JavaScript concerning URL pathname prefixes. We include
+            // this in the base template to make it globally available.
+            //
+            // It is sometimes desirable to deploy the Vesper Server
+            // under a URL pathname prefix (such as `/my-archive-name/`),
+            // for example when serving multiple Vesper archives from
+            // a single website. This JavaScript helps with that.
+            //
+            // The coding convention that I've adopted concerning such
+            // prefixes is to append them only at the boundary between
+            // Vesper and the outside world, for example when actually
+            // sending HTTP requests with the `fetch` function. Within
+            // Vesper, I use only unprefixed URL pathnames, e.g.
+            // `night/` instead of `/my-archive-name/night/`.
+            
+            // URL pathname base including a trailing slash, for
+            // example `/` or `/project-name/archive-name/`.
+            const _urlBase = '{{ request.META.SCRIPT_NAME }}'
+
+            // Prefixes `_urlBase` to a relative URL pathname.
+            function _addUrlBase(pathname) {
+                console.log('_addUrlBase: ' + _urlBase + ' ' + pathname);
+                return _urlBase + pathname;
+            }
+
+            // Fetches a URL pathname after prefixing `_urlBase` to it.
+            async function _fetch(pathname, ...other) {
+                console.log('_fetch');
+                return fetch(_addUrlBase(pathname), ...other);
+            }
+
+        </script>
 
     </head>
 

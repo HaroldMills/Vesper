@@ -134,7 +134,7 @@ export class Clip {
 
 
 	get url() {
-		return `/clips/${this.id}/`;
+		return `clips/${this.id}/`;
 	}
 
 
