@@ -72,3 +72,7 @@ copilot
 # pip requirements.txt file
 requirements.txt
 requirements_slim.txt
+
+# pyproject.toml versions
+pyproject_full.toml
+pyproject_slim.toml
