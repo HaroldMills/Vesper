@@ -25,6 +25,12 @@ from vesper.util.schedule import Schedule, ScheduleRunner
 import vesper.recorder.error_utils as error_utils
 
 
+# TODO: Do not allow the `Move File` post-upload action destination
+#       directory to be within the upload directory for an S3 file
+#       uploader that searches the upload directory recursively.
+
+# TODO: Require station settings.
+
 # TODO: Consider making processor input and output items 2-D NumPy
 #       arrays of float32 samples, with the second element of the
 #       shape the frame count. I think this would simplify many
@@ -104,6 +110,7 @@ import vesper.recorder.error_utils as error_utils
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
 _DEFAULT_LOGGING_LEVEL = 'INFO'
 _LOGGING_LEVELS = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
+
 _SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
 
 _DEFAULT_STATION_NAME = 'Vesper'
@@ -151,14 +158,11 @@ class VesperRecorder:
         self._logging_queue = logging_queue
 
         s = self._settings
-
         self._station = s.station
-
         self._schedule = s.schedule
-
-        self._start_time = DateTime.now(tz=ZoneInfo('UTC'))
         self._run_duration = s.run_duration
 
+        self._start_time = DateTime.now(tz=ZoneInfo('UTC'))
         self._recording = False
         self._input = None
         self._processor_graph = None
@@ -254,7 +258,8 @@ class VesperRecorder:
         context = Bunch(
             logging_queue=self._logging_queue,
             logging_level=self._settings.logging_level,
-            processor_classes=_PROCESSOR_CLASSES)
+            processor_classes=_PROCESSOR_CLASSES,
+            station=self.station)
 
         return ProcessorGraph(
             'Processor Graph', settings, context, self._input)
@@ -290,7 +295,8 @@ class VesperRecorder:
 
         context = Bunch(
             logging_queue=self._logging_queue,
-            logging_level=self._settings.logging_level)
+            logging_level=self._settings.logging_level,
+            station=self.station)
         
         def create_sidecar(s):
 
@@ -676,22 +682,13 @@ def _parse_settings_file_aux(settings_file_path):
     
     
 def _parse_logging_level_setting(settings):
-
     value = settings.get('logging_level', _DEFAULT_LOGGING_LEVEL)
-
-    if value not in _LOGGING_LEVELS:
-        levels = [f'"{l}"' for l in _LOGGING_LEVELS]
-        levels_text = '{' + ', '.join(levels) + '}'
-        raise ValueError(
-            f'Unrecognized logging level "{value}". Must be one of '
-            f'{levels_text}.')
-    
+    Settings.check_enum_value(value, _LOGGING_LEVELS, 'recorder logging level')
     return value
-    
+
 
 def _parse_station_settings(settings):
 
-    # TODO: Require station settings.
     name = settings.get('station.name', _DEFAULT_STATION_NAME)
     lat = settings.get('station.latitude', _DEFAULT_STATION_LATITUDE)
     lon = settings.get('station.longitude', _DEFAULT_STATION_LONGITUDE)

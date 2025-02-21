@@ -13,6 +13,16 @@ class Settings:
         return Settings(mapping)
 
 
+    @staticmethod
+    def check_enum_value(value, allowed_values, name):
+        if value not in allowed_values:
+            values = [f'"{v}"' for v in allowed_values]
+            values_text = '{' + ', '.join(values) + '}'
+            raise ValueError(
+                f'Unrecognized {name} "{value}". Must be one of '
+                f'{values_text}.')
+    
+
     def __init__(self, mapping):
         self._mapping = mapping
 

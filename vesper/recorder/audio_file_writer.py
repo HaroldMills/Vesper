@@ -1,18 +1,42 @@
 from datetime import timedelta as TimeDelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
+import collections
 import wave
 
 import numpy as np
 
 from vesper.recorder.processor import Processor
+from vesper.recorder.settings import Settings
 from vesper.recorder.status_table import StatusTable
 from vesper.util.bunch import Bunch
 import vesper.util.time_utils as time_utils
 
 
-_DEFAULT_AUDIO_FILE_NAME_PREFIX = 'Vesper'
 _DEFAULT_RECORDING_DIR_PATH = 'Recordings'
-_DEFAULT_CREATE_RECORDING_SUBDIRS = True
+
+_RECORDING_SUBDIRS = (
+    'Recording Name', 'Station Name', 'Year', 'Month', 'Day', 'Date',
+    'Year-Month', 'Month-Day')
+_DEFAULT_RECORDING_SUBDIRS = ('Recording Name',)
+
+_FILE_SORT_TIMES = ('Recording Start Time', 'File Start Time')
+_DEFAULT_FILE_SORT_TIME = 'Recording Start Time'
+
+_FILE_SORT_PERIODS = ('UTC Day', 'Local Day', 'Local Night')
+_DEFAULT_FILE_SORT_PERIOD = 'UTC Day'
+
+_12_HOURS = TimeDelta(hours=12)
+
+_FILE_SORT_DATE_FORMATS = {
+    'Year': '%Y',
+    'Month': '%m',
+    'Day': '%d',
+    'Date': '%Y-%m-%d',
+    'Year-Month': '%Y-%m',
+    'Month-Day': '%m-%d'
+}
+
 _DEFAULT_MAX_AUDIO_FILE_DURATION = 3600     # seconds
 
 _SAMPLE_SIZE = 16
@@ -27,27 +51,7 @@ class AudioFileWriter(Processor):
 
     @staticmethod
     def parse_settings(settings):
-
-        recording_dir_path = Path(settings.get(
-            'recording_dir_path', _DEFAULT_RECORDING_DIR_PATH)).expanduser()
-        
-        if not recording_dir_path.is_absolute():
-            recording_dir_path = Path.cwd() / recording_dir_path
-
-        create_recording_subdirs = settings.get(
-            'create_recording_subdirs', _DEFAULT_CREATE_RECORDING_SUBDIRS)
-            
-        audio_file_name_prefix = settings.get(
-            'audio_file_name_prefix', _DEFAULT_AUDIO_FILE_NAME_PREFIX)
-
-        max_audio_file_duration = settings.get(
-            'max_audio_file_duration', _DEFAULT_MAX_AUDIO_FILE_DURATION)
-        
-        return Bunch(
-            recording_dir_path=recording_dir_path,
-            create_recording_subdirs=create_recording_subdirs,
-            audio_file_name_prefix=audio_file_name_prefix,
-            max_audio_file_duration=max_audio_file_duration)
+        return _parse_settings(settings)
     
 
     def __init__(self, name, settings, context, input_info):
@@ -58,19 +62,14 @@ class AudioFileWriter(Processor):
         self._sample_rate = input_info.sample_rate
         
         self._recording_dir_path = settings.recording_dir_path
-        self._create_recording_subdirs = settings.create_recording_subdirs
-        self._audio_file_name_prefix = settings.audio_file_name_prefix
+        self._recording_subdirs = settings.recording_subdirs
+        self._file_sort_time = settings.file_sort_time
+        self._file_sort_period = settings.file_sort_period
         self._max_audio_file_duration = settings.max_audio_file_duration
 
-        # Create audio file processors, if specified.
-        # Create recording subdir namer.
-        if self._create_recording_subdirs:
-            self._recording_subdir_namer = _RecordingSubdirNamer(
-                self._audio_file_name_prefix)
-            
         # Create audio file namer.
         self._audio_file_namer = _AudioFileNamer(
-            self._audio_file_name_prefix, _AUDIO_FILE_NAME_EXTENSION)
+            context.station.name, _AUDIO_FILE_NAME_EXTENSION)
         
         # Get audio file sample frame size in bytes.
         self._frame_size = self._channel_count * _SAMPLE_SIZE // 8
@@ -86,13 +85,18 @@ class AudioFileWriter(Processor):
     
 
     @property
-    def create_recording_subdirs(self):
-        return self._create_recording_subdirs
+    def recording_subdirs(self):
+        return self._recording_subdirs
     
 
     @property
-    def audio_file_name_prefix(self):
-        return self._audio_file_name_prefix
+    def file_sort_time(self):
+        return self._file_sort_time
+    
+
+    @property
+    def file_sort_period(self):
+        return self._file_sort_period
     
 
     @property
@@ -102,15 +106,14 @@ class AudioFileWriter(Processor):
 
     def _start(self):
         
-        self._start_time = time_utils.get_utc_now()
+        self._recording_start_time = time_utils.get_utc_now()
 
-        if self._create_recording_subdirs:
-            subdir_name = self._recording_subdir_namer.create_subdir_name(
-                self._start_time)
-            self._recording_subdir_path = Path(subdir_name)
-        else:
-            self._recording_subdir_path = None
-
+        station = self.context.station
+        self._audio_file_sorter = _AudioFileSorter(
+            station.name, station.time_zone, self._recording_start_time,
+            self._recording_subdirs, self._file_sort_time,
+            self._file_sort_period)
+        
         self._audio_file = None
         self._audio_file_path = None
 
@@ -173,14 +176,12 @@ class AudioFileWriter(Processor):
         # Get audio file name.
         duration = self._total_frame_count / self._sample_rate
         time_delta = TimeDelta(seconds=duration)
-        file_start_time = self._start_time + time_delta
-        file_name = self._audio_file_namer.create_file_name(file_start_time)
+        file_start_time = self._recording_start_time + time_delta
+        file_name = self._audio_file_namer.get_file_name(file_start_time)
 
         # Get audio file path relative to recording directory.
-        if self._create_recording_subdirs:
-            rel_file_path = self._recording_subdir_path / file_name
-        else:
-            rel_file_path = Path(file_name)
+        dir_path = self._audio_file_sorter.get_dir_path(file_start_time)
+        rel_file_path = dir_path / file_name
         
         # Get absolute audio file path.
         abs_file_path = self._recording_dir_path / rel_file_path
@@ -224,36 +225,147 @@ class AudioFileWriter(Processor):
 
         rows = (
             ('Recording Directory', recording_dir_path),
-            ('Create Recording Subdirectories', self.create_recording_subdirs),
-            ('Audio File Name Prefix', self.audio_file_name_prefix),
+            ('Recording Subdirectories', self._recording_subdirs),
+            ('File Sort Time', self._file_sort_time),
+            ('File Sort Period', self._file_sort_period),
             ('Max Audio File Duration (seconds)', self.max_audio_file_duration)
         )
 
         table = StatusTable(self.name, rows)
 
         return [table]
+    
+
+def _parse_settings(settings):
+   return Bunch(
+        recording_dir_path=_parse_recording_dir_path(settings),
+        recording_subdirs=_parse_recording_subdirs(settings),
+        file_sort_time=_parse_file_sort_time(settings),
+        file_sort_period=_parse_file_sort_period(settings),
+        max_audio_file_duration=_parse_max_audio_file_duration(settings))
 
 
-class _RecordingSubdirNamer:
+def _parse_recording_dir_path(settings):
+    path = Path(settings.get(
+        'recording_dir_path', _DEFAULT_RECORDING_DIR_PATH)).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    return path
 
 
-    def __init__(self, subdir_name_prefix):
-        self.subdir_name_prefix = subdir_name_prefix
+def _parse_recording_subdirs(settings):
+
+    codes = settings.get('recording_subdirs', _DEFAULT_RECORDING_SUBDIRS)
+
+    if not isinstance(codes, collections.abc.Sequence):
+        values = [f'"{v}"' for v in _RECORDING_SUBDIRS]
+        values_text = '{' + ', '.join(values) + '}'
+        raise ValueError(
+            f'Audio file writer recording subdirectories setting must '
+            f'be a sequence of subdirectory codes, with each code in '
+            f'{values_text}.')
+    
+    for code in codes:
+        Settings.check_enum_value(
+            code, _RECORDING_SUBDIRS,
+            'audio file writer recording subdirectory')
+    
+    return tuple(codes)
 
 
-    def create_subdir_name(self, start_time):
-        time = start_time.strftime('%Y-%m-%d_%H.%M.%S')
-        return f'{self.subdir_name_prefix}_{time}_Z'
+def _parse_file_sort_time(settings):
+    time = settings.get('file_sort_time', _DEFAULT_FILE_SORT_TIME)
+    Settings.check_enum_value(
+        time, _FILE_SORT_TIMES, 'audio file writer file sort time')
+    return time
+
+
+def _parse_file_sort_period(settings):
+    period = settings.get('file_sort_period', _DEFAULT_FILE_SORT_PERIOD)
+    Settings.check_enum_value(
+        period, _FILE_SORT_PERIODS, 'audio file writer file sort period')
+    return period
+
+
+def _parse_max_audio_file_duration(settings):
+    return settings.get(
+        'max_audio_file_duration', _DEFAULT_MAX_AUDIO_FILE_DURATION)
+
+
+class _AudioFileSorter:
+
+
+    def __init__(
+            self, station_name, station_time_zone, recording_start_time,
+            recording_subdirs, file_sort_time, file_sort_period):
+
+        self._station_name = station_name
+        self._station_time_zone = station_time_zone
+        self._recording_start_time = recording_start_time
+        self._recording_subdirs = recording_subdirs
+        self._file_sort_time = file_sort_time
+        self._file_sort_period = file_sort_period
+
+        self._recording_name = self._get_recording_name()
+
+
+    def _get_recording_name(self):
+        time = self._recording_start_time.strftime('%Y-%m-%d_%H.%M.%S')
+        return f'{self._station_name}_{time}_Z'
+
+    
+    def get_dir_path(self, file_start_time):
+
+        sort_date = self._get_sort_date(file_start_time)
+
+        dir_names = [
+            self._get_dir_name(c, sort_date)
+            for c in self._recording_subdirs]
+        
+        return Path(*dir_names)
+
+
+    def _get_sort_date(self, file_start_time):
+        
+        # Get sort time.
+        if self._file_sort_time == 'Recording Start Time':
+            sort_time = self._recording_start_time
+        else:
+            sort_time = file_start_time
+
+        # Get sort date.
+        if self._file_sort_period == 'UTC Day':
+            return sort_time.date()
+        else:
+            local_time = sort_time.astimezone(self._station_time_zone)
+            if self._file_sort_period == 'Local Night':
+                local_time -= _12_HOURS
+            return local_time.date()
+        
+
+    def _get_dir_name(self, code, sort_date):
+
+        match code:
+
+            case 'Recording Name':
+                return self._recording_name
+
+            case 'Station Name':
+                return self._station_name
+            
+            case _:
+                format = _FILE_SORT_DATE_FORMATS[code]
+                return sort_date.strftime(format)
 
 
 class _AudioFileNamer:
     
     
-    def __init__(self, file_name_prefix, file_name_extension):
-        self.file_name_prefix = file_name_prefix
-        self.file_name_extension = file_name_extension
+    def __init__(self, station_name, file_name_extension):
+        self._station_name = station_name
+        self._file_name_extension = file_name_extension
         
         
-    def create_file_name(self, start_time):
-        time = start_time.strftime('%Y-%m-%d_%H.%M.%S')
-        return f'{self.file_name_prefix}_{time}_Z{self.file_name_extension}'
+    def get_file_name(self, file_start_time):
+        time = file_start_time.strftime('%Y-%m-%d_%H.%M.%S')
+        return f'{self._station_name}_{time}_Z{self._file_name_extension}'
