@@ -22,9 +22,9 @@ describe('Clip', () => {
 		expect(clip.sampleRate).toBe(sampleRate);
 		expect(clip.startTime).toBe(startTime);
 
-		expect(clip.url).toBe('/clips/24/');
-		expect(clip.audioUrl).toBe('/clips/24/audio/');
-		expect(clip.metadataUrl).toBe('/clips/24/metadata/');
+		expect(clip.url).toBe('clips/24/');
+		expect(clip.audioUrl).toBe('clips/24/audio/');
+		expect(clip.metadataUrl).toBe('clips/24/metadata/');
 
 		expect(clip.samples).toBe(null);
 		clip.samples = [];
