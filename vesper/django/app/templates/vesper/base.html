@@ -45,9 +45,12 @@
             // Vesper, I use only unprefixed URL pathnames, e.g.
             // `night/` instead of `/my-archive-name/night/`.
             
-            // URL pathname base including a trailing slash, for
-            // example `/` or `/project-name/archive-name/`.
-            const _urlBase = '{{ request.META.SCRIPT_NAME }}'
+            // Get URL pathname base including beginning and ending
+            // slashes, for example `/` or `/project-name/archive-name/`.
+            let _urlBase = '{{ request.META.SCRIPT_NAME }}';
+            if (_urlBase === '') {
+                _urlBase = '/';
+            }
 
             // Prefixes `_urlBase` to a relative URL pathname.
             function _addUrlBase(pathname) {

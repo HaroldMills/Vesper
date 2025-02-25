@@ -60,9 +60,10 @@ ALLOWED_HOSTS = env.list(
 # "/project-name/archive-name/" behind an NGINX reverse proxy.
 # Note that `VESPER_URL_BASE` should start and end with a slash.
 VESPER_URL_BASE = env('VESPER_URL_BASE', '/')
-FORCE_SCRIPT_NAME = VESPER_URL_BASE
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+if VESPER_URL_BASE != '/':
+    FORCE_SCRIPT_NAME = VESPER_URL_BASE
+    USE_X_FORWARDED_HOST = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
