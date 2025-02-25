@@ -51,13 +51,11 @@
 
             // Prefixes `_urlBase` to a relative URL pathname.
             function _addUrlBase(pathname) {
-                console.log('_addUrlBase: ' + _urlBase + ' ' + pathname);
                 return _urlBase + pathname;
             }
 
             // Fetches a URL pathname after prefixing `_urlBase` to it.
             async function _fetch(pathname, ...other) {
-                console.log('_fetch');
                 return fetch(_addUrlBase(pathname), ...other);
             }
 
