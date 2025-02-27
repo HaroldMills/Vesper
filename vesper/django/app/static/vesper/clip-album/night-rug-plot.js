@@ -249,7 +249,6 @@ export class NightRugPlot {
 		context.strokeStyle = color;
 		context.lineWidth = _RES_FACTOR;
 		context.lineCap = 'butt';
-		context.lineStyle = 'solid';
 
 		context.beginPath();
 
@@ -342,7 +341,6 @@ export class NightRugPlot {
 		// line properties
 		context.strokeStyle = 'black';
 		context.lineWidth = _RES_FACTOR;
-		context.lineStyle = 'solid';
 
 		// text properties
 		const fontSize = _TICK_FONT_SIZE * _RES_FACTOR;

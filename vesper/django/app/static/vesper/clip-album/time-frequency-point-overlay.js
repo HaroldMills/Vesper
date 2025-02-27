@@ -125,7 +125,6 @@ export class TimeFrequencyPointOverlay extends CommandableOverlay {
         context.strokeStyle = 'orange';
         context.lineWidth = 1;
         context.lineCap = 'butt';
-        context.lineStyle = 'solid';
 
         context.beginPath();
         

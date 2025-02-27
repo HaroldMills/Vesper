@@ -96,7 +96,6 @@ export class TimePointOverlay extends CommandableOverlay {
         context.strokeStyle = 'orange';
         context.lineWidth = 1;
         context.lineCap = 'butt';
-        context.lineStyle = 'solid';
 
         context.beginPath();
         context.moveTo(x, 0);
