@@ -14,6 +14,8 @@ export class CommandableOverlay {
             
         this._commandableDelegate = commandableDelegate;
         
+        this._canvas = clipView.overlayCanvas;
+
     }
 
 
@@ -32,6 +34,14 @@ export class CommandableOverlay {
 
     executeCommand(command, env) {
         this._commandableDelegate.executeCommand(command, this, env);
+    }
+
+
+    _mouseInside(e) {
+        const x = e.clientX;
+        const y = e.clientY;
+        const r = this._canvas.getBoundingClientRect();
+        return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
     }
 
 

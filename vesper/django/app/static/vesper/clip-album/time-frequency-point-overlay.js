@@ -103,19 +103,21 @@ export class TimeFrequencyPointOverlay extends CommandableOverlay {
 
             return;
         
-        const sampleRate = clip.sampleRate;
         const canvas = clipView.overlayCanvas;
 
-        const time = (index - clip.startIndex) / clip.sampleRate;
+        // Get point x.
+        const time = TimeFrequencyUtils.indexToTime(
+            index, clip.startIndex, clip.sampleRate);
         const startTime = 0;
         const endTime = clip.span;
-        const x = Math.round(TimeFrequencyUtils.timeToViewX(
-            time, startTime, endTime, canvas.width)) + .5;
+        const x = TimeFrequencyUtils.timeToViewX(
+            time, startTime, endTime, canvas.width);
 
-        const [startFreq, endFreq] = TimeFrequencyUtils.getFreqRange(
-            clipView.settings.spectrogram.display, sampleRate / 2.);
-        const y = Math.round(TimeFrequencyUtils.freqToViewY(
-            freq, startFreq, endFreq, canvas.height)) + .5;
+        // Get point y.
+        const [startFreq, endFreq] = TimeFrequencyUtils.getViewFreqRange(
+            clipView.settings.spectrogram.display, clip.sampleRate / 2.);
+        const y = TimeFrequencyUtils.freqToViewY(
+            freq, startFreq, endFreq, canvas.height);
 
         const markerWidth = 11;
         const delta = Math.floor(markerWidth / 2);

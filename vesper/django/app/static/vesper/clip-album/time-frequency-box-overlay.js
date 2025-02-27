@@ -56,14 +56,12 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
         // Install mouse event listeners on overlay canvas for drawing
         // crosshairs.
-        const canvas = this.clipView.overlayCanvas;
+        const canvas = this._canvas;
         canvas.addEventListener('mouseenter', e => this._onMouseEnter(e));
 	    canvas.addEventListener('mousemove', e => this._onMouseMove(e));
 	    canvas.addEventListener('mouseleave', e => this._onMouseLeave(e));
-        this._canvas = canvas;
 
-        this._mouseX = null;
-        this._mouseY = null;
+        this._updateMousePosition(null);
         
     }
 
@@ -75,39 +73,46 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
     _onMouseEnter(e) {
         // console.log(`mouse enter ${e.clientX} ${e.clientY}`);
-        this._stashCursor();
-        this._updateMousePosition(e);
-        this.clipView._renderOverlays();
+        this._switchCursor();
+        this._onMouseMove(e);
     }
 
 
-    _stashCursor() {
+    _switchCursor() {
         this._cursor = this.clipView.overlayCanvas.style.cursor;
         this.clipView.overlayCanvas.style.cursor = 'none';
     }
 
 
-    _updateMousePosition(e) {
-        const rect = this._canvas.getBoundingClientRect();
-        this._mouseX = e.clientX - rect.left;
-        this._mouseY = e.clientY - rect.top;
-        this.clipView.getMouseTimeAndFrequency(e);
+    _onMouseMove(e) {
+        // We sometimes receive mouse move events when the mouse is outside
+        // the canvas. For example, if the mouse moves from inside the
+        // canvas to outside of it, we may receive such an event before
+        // a subsequent mouse leave event. We detect such events here
+        // and clear this overlay's graphical output.
+        // console.log(`mouse move ${e.clientX} ${e.clientY}`);
+        const arg = this._mouseInside(e) ? e : null;
+        this._updateMousePosition(arg);
+        this.clipView._renderOverlays();
     }
 
 
-    _onMouseMove(e) {
-        // console.log(`mouse move ${e.clientX} ${e.clientY}`);
-        this._updateMousePosition(e);
-        this.clipView._renderOverlays();
-        this.clipView.getMouseTimeAndFrequency(e);
+    _updateMousePosition(e) {
+        if (e === null) {
+            this._mouseX = null;
+            this._mouseY = null;
+        } else {
+            const r = this._canvas.getBoundingClientRect();
+            this._mouseX = e.clientX - r.left;
+            this._mouseY = e.clientY - r.top;
+        }
     }
 
 
     _onMouseLeave(e) {
         // console.log(`mouse leave ${e.clientX} ${e.clientY}`);
         this._restoreCursor();
-        this._mouseX = null;
-        this._mouseY = null;
+        this._updateMousePosition(null);
         this.clipView._renderOverlays();
     }
 
@@ -140,6 +145,7 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
             const event = clipView.lastMouseEvent;
             const [time, freq] = clipView.getMouseTimeAndFrequency(event);
 
+            // TODO: Add function to TimeFrequencyUtils for this.
             const index = startIndex + Math.round(time * clip.sampleRate);
             
             const annotations = new Map([
@@ -280,16 +286,19 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
         const clip = clipView.clip;
         const canvas = clipView.overlayCanvas;
 
-        const time = (index - clip.startIndex) / clip.sampleRate;
+        // Get corner x.
+        const time = TimeFrequencyUtils.indexToTime(
+            index, clip.startIndex, clip.sampleRate);
         const startTime = 0;
         const endTime = clip.span;
-        const x = Math.round(TimeFrequencyUtils.timeToViewX(
-            time, startTime, endTime, canvas.width)) + .5;
+        const x = TimeFrequencyUtils.timeToViewX(
+            time, startTime, endTime, canvas.width);
 
-        const [startFreq, endFreq] = TimeFrequencyUtils.getFreqRange(
+        // Get corner y.
+        const [startFreq, endFreq] = TimeFrequencyUtils.getViewFreqRange(
             clipView.settings.spectrogram.display, clip.sampleRate / 2.);
-        const y = Math.round(TimeFrequencyUtils.freqToViewY(
-            freq, startFreq, endFreq, canvas.height)) + .5;
+        const y = TimeFrequencyUtils.freqToViewY(
+            freq, startFreq, endFreq, canvas.height);
 
         return [x, y];
 
@@ -331,6 +340,7 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
 
     _renderMouseCrosshairs() {
+        // console.log(`_renderMouseCrosshairs ${this._mouseX} ${this._mouseY}`);
         if (this._mouseX !== null) {
             this._renderCrosshairs(
                 this._mouseX, this._mouseY, this.mouseCrosshairColor,

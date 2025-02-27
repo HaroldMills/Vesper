@@ -204,18 +204,14 @@ export class SpectrogramClipView extends ClipView {
 
         let r = this.div.getBoundingClientRect();
 
-        // Get mouse x and y coordinates in client rectangle coordinates,
-        // clipping them to the rectangle if needed. (We sometimes
-        // receive mouse events for an HTML element with coordinates
-        // outside of the element's client rectangle.)
-        const x = _clipNumber(event.clientX - r.left, 0, r.width);
-        const y = _clipNumber(r.bottom - event.clientY, 0, r.height);
+        const x = event.clientX - r.left;
+        const y = r.bottom - event.clientY;
 
         const clip = this.clip;
 
         const time = x / r.width * clip.span;
 
-		const [lowFreq, highFreq] = TimeFrequencyUtils.getFreqRange(
+		const [lowFreq, highFreq] = TimeFrequencyUtils.getViewFreqRange(
             this.settings.spectrogram.display, clip.sampleRate / 2);
 		const deltaFreq = highFreq - lowFreq;
 		const freq = lowFreq + y / r.height * deltaFreq;
@@ -278,16 +274,6 @@ function _updateSettingsIfNeeded(settings, sampleRate) {
     
     return settings;
 
-}
-
-
-function _clipNumber(x, min, max) {
-    if (x < min)
-        return min;
-    else if (x > max)
-        return max;
-    else
-        return x;
 }
 
 
@@ -743,7 +729,7 @@ function _drawSpectrogramImage(clip, spectrogramCanvas, canvas, settings) {
 
     // Get view frequency range.
     const [startFreq, endFreq] =
-	    TimeFrequencyUtils.getFreqRange(settings.display, halfSampleRate);
+	    TimeFrequencyUtils.getViewFreqRange(settings.display, halfSampleRate);
 
     if (startFreq >= halfSampleRate)
         // view frequency range is above that of spectrogram, so no

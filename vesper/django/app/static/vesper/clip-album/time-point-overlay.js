@@ -82,14 +82,14 @@ export class TimePointOverlay extends CommandableOverlay {
 
             return;
         
-        const sampleRate = clip.sampleRate;
         const canvas = clipView.overlayCanvas;
 
+        // Get point x.
         const time = (index - clip.startIndex) / clip.sampleRate;
         const startTime = 0;
         const endTime = clip.span;
-        const x = Math.round(TimeFrequencyUtils.timeToViewX(
-            time, startTime, endTime, canvas.width)) + .5;
+        const x = TimeFrequencyUtils.timeToViewX(
+            time, startTime, endTime, canvas.width);
 
         const context = canvas.getContext('2d');
 
