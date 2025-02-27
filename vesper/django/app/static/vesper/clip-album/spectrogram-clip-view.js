@@ -202,37 +202,28 @@ export class SpectrogramClipView extends ClipView {
 
     getMouseTimeAndFrequency(event) {
 
-        const x = event.clientX;
-        const y = event.clientY;
-    
-        // The sides of the bounding client rectangle of an HTML element
-        // can have non-integer coordinates, but the mouse position has
-        // integer coordinates. We nudge the bounding rectangle coordinates
-        // to the nearest integers inside the rectangle for time-frequency
-        // computations so that the mouse position can attain the expected
-        // extremal times and frequencies. That is, we assign time zero
-        // to the leftmost mouse coordinate that is inside the rectangle,
-        // the clip duration to the righmost coordinate, the low view
-        // frequency to the bottommost coordinate, and the high view
-        // frequency to the topmost coordinate.
-        const r = this.div.getBoundingClientRect();
-        const left = Math.ceil(r.left);
-        const right = Math.floor(r.right);
-        const top = Math.ceil(r.top);
-        const bottom = Math.floor(r.bottom);
-    
-		const clip = this.clip;
+        let r = this.div.getBoundingClientRect();
 
-		const time = (x - left) / (right - left) * clip.span;
+        // Get mouse x and y coordinates in client rectangle coordinates,
+        // clipping them to the rectangle if needed. (We sometimes
+        // receive mouse events for an HTML element with coordinates
+        // outside of the element's client rectangle.)
+        const x = _clipNumber(event.clientX - r.left, 0, r.width);
+        const y = _clipNumber(r.bottom - event.clientY, 0, r.height);
+
+        const clip = this.clip;
+
+        const time = x / r.width * clip.span;
 
 		const [lowFreq, highFreq] = TimeFrequencyUtils.getFreqRange(
             this.settings.spectrogram.display, clip.sampleRate / 2);
 		const deltaFreq = highFreq - lowFreq;
-		const freq = highFreq - (y - top) / (bottom - top) * deltaFreq;
+		const freq = lowFreq + y / r.height * deltaFreq;
 
-		return [time, freq];
+        return [time, freq];
 
-	}
+
+    }
 
 
 }
@@ -287,6 +278,16 @@ function _updateSettingsIfNeeded(settings, sampleRate) {
     
     return settings;
 
+}
+
+
+function _clipNumber(x, min, max) {
+    if (x < min)
+        return min;
+    else if (x > max)
+        return max;
+    else
+        return x;
 }
 
 
