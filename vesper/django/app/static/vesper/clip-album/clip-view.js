@@ -1,3 +1,25 @@
+// TODO: When we revise the Vesper data model, reconsider audios and
+// audio views from the ground up. They are currently designed only
+// to support short audio clips, and some features are broken, such
+// as unsmoothed spectrograms. (For fixing that, note that the
+// `image-rendering` CSS property might be helpful.) Moving forward,
+// it would be good to create audio views that support arbitrarily long
+// audios efficiently. Consider developing new audio and audio view
+// classes in the context of some small proof-of-concept applications,
+// such as a browser for arbitrarily long audios and a clip album viewer.
+
+
+// TODO: Consider using Context 2D coordinate transformations to support
+// audio view rendering in terms of time and frequency instead of x and y.
+
+
+// TODO: Reconsider clip view canvas size. It currently tracks the
+// spectrogram canvas size (see SpectrogramClipView._drawSpectrogramImage).
+// It might make more sense for it to track the canvas's client rectangle
+// size (rounded to integers), and the Resize Observer Web API might be
+// helpful for that.
+
+
 export class ClipView {
 
 
