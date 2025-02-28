@@ -6,8 +6,8 @@ export class TimeFrequencyUtils {
     }
 
 
-    static timeToViewX(time, startTime, endTime, width) {
-        return width * (time - startTime) / (endTime - startTime);
+    static timeToViewX(time, startTime, endTime, viewWidth) {
+        return viewWidth * (time - startTime) / (endTime - startTime);
     }
 
 
@@ -19,13 +19,22 @@ export class TimeFrequencyUtils {
     }
 
 
-    static freqToGramY(freq, halfSampleRate, numBins) {
-        return numBins * (1. - freq / halfSampleRate);
+    static freqToGramY(freq, halfSampleRate, gramHeight) {
+
+        // Since bins 0 and `gramHeight - 1` of a spectrogram are centered
+        // at frequencies 0 and `halfSampleRate`, respectively, we map
+        // frequency zero to the middle of the bottom gram canvas row
+        // (taking into account that row indices increase from the top
+        // of the canvas to the bottom), and half the sample rate to the
+        // middle of the top gram row.
+        const binSize = halfSampleRate / (gramHeight - 1);
+        return gramHeight - (.5 + freq / binSize);
+
     }
 
 
-    static freqToViewY(freq, startFreq, endFreq, height) {
-        return height * (1. - (freq - startFreq) / (endFreq - startFreq));
+    static freqToViewY(freq, startFreq, endFreq, viewHeight) {
+        return viewHeight * (1. - (freq - startFreq) / (endFreq - startFreq));
     }
 
 
