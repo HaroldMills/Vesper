@@ -13,7 +13,6 @@ import itertools
 from django.db.models import Q
 
 from vesper.django.app.models import Processor
-import vesper.django.project.settings as settings
 import vesper.util.yaml_utils as yaml_utils
 
 
@@ -184,10 +183,18 @@ _TF2_DETECTORS = '''
 '''
 
 
-if settings.VESPER_INCLUDE_PROCESSORS:
-    # including processors
-
+# Include detectors and classifiers if and only if TensorFlow is
+# available. In the future, processors will move out of the core
+# Vesper server to auxiliary servers, obviating this.
+try:
     import tensorflow as tf
+except ImportError:
+    _include_processors = False
+else:
+    _include_processors = True
+
+
+if _include_processors:
 
     _TF_VERSION = int(tf.__version__.split('.')[0])
 
@@ -304,8 +311,7 @@ class ExtensionManager:
         module_class_names = self._extension_spec[extension_point_name]
         extensions = [_load_extension(name) for name in module_class_names]
         
-        if extension_point_name == 'Detector' and \
-                settings.VESPER_INCLUDE_PROCESSORS:
+        if extension_point_name == 'Detector' and _include_processors:
                 
             import vesper.birdvox.detectors as birdvox_detectors
             
