@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Size</title>
+</head>
+<body>
+    <canvas id="myCanvas" width="400" height="300" style="border:1px solid #000000;"></canvas>
+    <button id="printPixelsButton">Print Pixels</button>
+
+    <script>
+        // Get the canvas element
+        const canvas = document.getElementById('myCanvas');
+        const context = canvas.getContext('2d');
+
+        // Get the width and height of the canvas
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Print the width and height to the console
+        console.log('Canvas width:', width);
+        console.log('Canvas height:', height);
+
+        // Draw a one-pixel-wide black line.
+        context.beginPath();
+        context.moveTo(5.5, 2);
+        context.lineTo(5.5, 8);
+        context.moveTo(2, 5);
+        context.lineTo(8, 5);
+        context.strokeStyle = 'red';
+        context.lineWidth = 1;
+        context.stroke();
+
+        // Function to print the red components of the pixels
+        function printPixels() {
+            // Get the image data for the square array of pixels
+            const imageData = context.getImageData(0, 0, 10, 10);
+            const data = imageData.data;
+
+            // Print out the red components of the pixels
+            for (let y = 0; y < 10; y++) {
+                let row = '';
+                for (let x = 0; x < 10; x++) {
+                    const index = (y * 10 + x) * 4;
+                    const r = data[index].toString().padStart(3, ' ')
+                    const g = data[index + 1].toString().padStart(3, ' ')
+                    const b = data[index + 2].toString().padStart(3, ' ')
+                    const a = data[index + 3].toString().padStart(3, ' ')
+                    row += `${r} ${g} ${b} ${a}   `;
+                }
+                console.log(row);
+            }
+        }
+
+        // Add click event listener to the button
+        const button = document.getElementById('printPixelsButton');
+        button.addEventListener('click', printPixels);
+    </script>
+</body>
+</html>
