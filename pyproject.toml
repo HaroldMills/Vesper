@@ -170,7 +170,7 @@ dependencies = [
     # Dependencies to include for both the full and slim Vesper packages.
     "aioboto3",
     "daphne",
-    "django~=5.1.0",
+    "django~=5.2.0",
     "environs[django]",
     "jsonschema",
     "psycopg[binary]",
