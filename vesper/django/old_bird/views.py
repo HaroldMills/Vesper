@@ -2,24 +2,29 @@ from datetime import datetime as DateTime, timedelta as TimeDelta
 import logging
 from zoneinfo import ZoneInfo
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.views import View
 
 from vesper.django.app.models import (
-    AnnotationInfo, Clip, Processor, Recording, RecordingChannel,
-    StationDevice)
+    AnnotationInfo, Clip, Device, DeviceOutput, Processor, Recording,
+    RecordingChannel, Station)
 import vesper.django.app.model_utils as model_utils
 import vesper.django.util.view_utils as view_utils
 import vesper.util.signal_utils as signal_utils
 import vesper.util.time_utils as time_utils
 
 
-# TODO: Review code that adds recordings and clips to archive. Improve
-# if needed and make sure unit tests for it are up to date.
+# TODO: Consider the relationship between this view and the Vesper view
+#       that imports metadata. The Vesper view uses a form while this view
+#       uses JSON. The sets of object types supported by the two views are
+#       disjoint except for `AnnotationInfo` objects.
 
-# TODO: Consider adding recordings to archive if they are not already there,
-# without regard to whether they are associated with clips.
+# TODO: Reconsider supporting automatic `AnnotationInfo` creation. Perhaps
+#       it should either not be supported or not allowed by default?
+
+# TODO: Support creating clips with tags. As part of that, consider
+#       supporting `TagInfo` creation. 
 
 # TODO: Consider moving all Old Bird Django code to this app.
 
@@ -33,16 +38,16 @@ class _ViewError(Exception):
     pass
 
 
-class CreateLrgvClipsView(View):
+class ImportRecordingsAndClipsView(View):
 
-    # TODO: Make this view non-LRGV-specific.
 
     # Assumptions made by this view:
-    #     * There is one recorder per station.
-    #     * There is one microphone output per station.
-    #     * All recordings are single-channel.
-    #     * There is one recording per station per night.
-    #     * Any clip to be created will be at least one microsecond long.
+    #     * The mic outputs of a recording's channels are unique. That is,
+    #       no recording is ever made with one mic output connected to
+    #       more than one recorder input.
+    #     * The data of channel i of a recording are always from input i
+    #       of the recorder.
+    #     * Every clip to be created will be at least one microsecond long.
 
     # This class is not a subclass of Django's `LoginRequiredMixin`
     # since that would cause the `post` method to redirect to the
@@ -67,90 +72,155 @@ class CreateLrgvClipsView(View):
 
     def _post(self, content):
 
-        self._station_mic_output_pairs = _get_station_mic_output_pairs()
+        self._stations = _get_stations()
+        self._devices = _get_devices()
+        self._device_outputs = _get_device_outputs()
         self._detectors = _get_detectors()
-        self._station_recorders = _get_station_recorders()
         self._annotation_info_cache = {}
 
         try:
 
             with transaction.atomic():
-
-                recording_infos = content.get('recordings', {})
-
-                for recording_name, recording_info in recording_infos.items():
-                    self._check_recording_info(recording_name, recording_info)
-                    
-                clip_infos = content.get('clips', [])
-                
-                clips = []
-
-                for clip_info in clip_infos:
-
-                    clip_id, recording_id, recording_created = \
-                        self._create_clip(clip_info, recording_infos)
-                                        
-                    clips.append({
-                        'clip_id': clip_id,
-                        'recording_id': recording_id,
-                        'recording_created': recording_created
-                    })
-                    
+                recordings = self._create_recordings(content)
+                clips = self._create_clips(content)
+               
         except Exception as e:
             error_message = (
                 f'{e} No recordings or clips will be created for this '
                 f'request.')
-            print(f'CreateLrgvClipsView._post error "{error_message}"')
             return HttpResponseBadRequest(
                 content=error_message, content_type='text/plain')
         
-        data = {'clips': clips}
+        data = {
+            'recordings': recordings,
+            'clips': clips
+        }
 
         return JsonResponse(data)
         
 
-    def _check_recording_info(self, recording_name, recording_info):
+    def _create_recordings(self, content):
+        infos = content.get('recordings', [])
+        return [self._create_recording(i) for i in infos]                  
+
+
+    def _create_recording(self, info):
 
         try:
 
             _check_for_items(
-                recording_info,
-                ('start_time', 'length', 'sample_rate'),
+                info,
+                ('station', 'recorder', 'mic_outputs', 'start_time', 'length',
+                 'sample_rate'),
                 f'recording data')
-    
+
+            station_name = info['station']
+            station = self._get_station(station_name)
+
+            recorder_name = info['recorder']
+            recorder = self._get_device(recorder_name)
+
+            mic_output_names = info['mic_outputs']
+            mic_outputs = \
+                [self._get_device_output(n) for n in mic_output_names]
+            channel_count = len(mic_outputs)
+
+            start_time = _parse_datetime(info['start_time'], 'recording start')
+
+            length = info['length']
+
+            sample_rate = info['sample_rate']
+
+            end_time = \
+                signal_utils.get_end_time(start_time, length, sample_rate)
+            
+            creation_time = time_utils.get_utc_now()
+
+            try:
+
+                # It's important to create the recording within a nested
+                # transaction that can be rolled back if the recording
+                # already exists. Without the nested transaction and the
+                # rollback the `Recording.objects.get` call below would
+                # raise a `TransactionManagementError` exception.
+                with transaction.atomic():
+                    recording = Recording.objects.create(
+                        station=station,
+                        recorder=recorder,
+                        num_channels=channel_count,
+                        length=length,
+                        sample_rate=sample_rate,
+                        start_time=start_time,
+                        end_time=end_time,
+                        creation_time=creation_time,
+                        creating_job=None)
+                    
+            except IntegrityError:
+                # recording exists
+
+                created = False
+                
+                recording = Recording.objects.get(
+                    station=station,
+                    recorder=recorder,
+                    start_time=start_time)
+                
+            else:
+                # recording did not already exist
+
+                created = True
+
+                # Create recording channels.
+                for i, mic_output in enumerate(mic_outputs):
+                    RecordingChannel.objects.create(
+                        recording=recording,
+                        channel_num=i,
+                        recorder_channel_num=i,
+                        mic_output=mic_output)
+                    
         except Exception as e:
             raise _ViewError(
-                f'Could not parse recording "{recording_name}" data '
-                f'{recording_info}. Error message was: {e}')
-    
+                f'Could not create recording from recording data {info}. '
+                f'Error message was: {e}')
 
-    def _create_clip(self, clip_info, recording_infos):
+        return {
+            'id': recording.id,
+            'created': created
+        }
+
+
+    def _create_clips(self, content):
+        infos = content.get('clips', [])
+        return [self._create_clip(i) for i in infos]  
+
+
+    def _create_clip(self, info):
 
         try:
 
             _check_for_items(
-                clip_info,
-                ['recording', 'sensor', 'detector', 'start_time', 'length'],
+                info,
+                ('station', 'mic_output', 'detector', 'start_time', 'length'),
                 f'clip data')
 
-            recording_name = clip_info['recording']
-            recording_info = \
-                self._get_recording_info(recording_infos, recording_name)
+            station_name = info['station']
+            station = self._get_station(station_name)
 
-            sensor_name = clip_info['sensor']
-            station_name = self._get_station_name(sensor_name)
-            station, mic_output = \
-                self._get_station_mic_output_pair(station_name)
+            mic_output_name = info['mic_output']
+            mic_output = self._get_device_output(mic_output_name)
 
-            start_time = clip_info['start_time']
+            detector_name = info['detector']
+            detector_model = self._get_detector(detector_name)
+
+            start_time = info['start_time']
             start_time = _parse_datetime(start_time, 'clip start')
 
-            serial_num = clip_info.get('serial_num', 0)
+            serial_num = info.get('serial_num', 0)
 
             # Offset start time if needed to ensure uniqueness. Vesper
             # currently requires that each clip's recording channel,
             # creating processor, and start time be unique. We use clip
-            # serial numbers in the LRGV project to distinguish between
+            # serial numbers in some projects to distinguish between
             # clips that have the same start time, and we convert those
             # to start time offsets here. At some point I hope to remove
             # Vesper's uniqueness requirement, at which point we can
@@ -159,128 +229,116 @@ class CreateLrgvClipsView(View):
                 offset = TimeDelta(microseconds=serial_num)
                 start_time += offset
 
-            detector_name = clip_info['detector']
-            detector_model = self._get_detector(detector_name)
+            length = info['length']
 
-            length = clip_info['length']
-            (recording_channel, sample_rate, recording_start_time, end_time,
-            recording_id, recording_created) = \
-                self._get_recording_channel(
-                    station, mic_output, start_time, length, recording_info,
-                    detector_name)
+            recording = self._get_clip_recording(
+                station, mic_output, start_time)
+            
+            sample_rate = recording.sample_rate
+
+            end_time = signal_utils.get_end_time(
+                start_time, length, sample_rate)
+            
+            self._check_clip_extent(start_time, end_time, recording)
+                
+            recording_channel = self._get_clip_recording_channel(
+                    recording, station, mic_output, start_time)
 
             # We set the start indices of Old Bird detector clips to `None`
             # since we do not know them exactly (we know only the clips'
-            # start times to the nearest second). We will attempt to find
+            # start times to the nearest second). We can attempt to find
             # the start indices later by locating the clips' samples in
             # their recordings.
             if detector_name.startswith('Old Bird'):
                 start_index = None
             else:
-                td = start_time - recording_start_time
+                td = start_time - recording.start_time
                 start_index = int(round(td.total_seconds() * sample_rate))
 
             date = station.get_night(start_time)
 
             creation_time = time_utils.get_utc_now()
 
-            clip = Clip.objects.create(
-                station=station,
-                mic_output=mic_output,
-                recording_channel=recording_channel,
-                start_index=start_index,
-                length=length,
-                sample_rate=sample_rate,
-                start_time=start_time,
-                end_time=end_time,
-                date=date,
-                creation_time=creation_time,
-                creating_user=None,
-                creating_job=None,
-                creating_processor=detector_model
-            )
+            try:
 
-            annotations = clip_info.get('annotations', {})
+                # It's important to create the clip within a nested
+                # transaction that can be rolled back if the clip already
+                # exists. Without the nested transaction and the rollback,
+                # subsequent attempts to access the database within the
+                # outer transaction would raise a `TransactionManagementError`
+                # exception.
+                with transaction.atomic():
+                    clip = Clip.objects.create(
+                        station=station,
+                        mic_output=mic_output,
+                        recording_channel=recording_channel,
+                        start_index=start_index,
+                        length=length,
+                        sample_rate=sample_rate,
+                        start_time=start_time,
+                        end_time=end_time,
+                        date=date,
+                        creation_time=creation_time,
+                        creating_user=None,
+                        creating_job=None,
+                        creating_processor=detector_model)
 
-            # If clip start time was offset, include an annotation indicating
-            # by how many seconds. This will make it possible to remove the
-            # offset later if needed.
-            if serial_num != 0:
-                offset = serial_num / 1000000
-                annotations[_START_TIME_UNIQUENESS_OFFSET_ANNOTATION_NAME] = \
-                    f'{offset:f}'
+            except IntegrityError:
+                # clip exists
 
-            for name, value in annotations.items():
+                created = False
                 
-                annotation_info = \
-                    self._get_annotation_info(name, detector_model)
-                
-                model_utils.annotate_clip(
-                    clip, annotation_info, str(value),
-                    creation_time=creation_time,
-                    creating_user=None,
-                    creating_job=None,
+                clip = Clip.objects.get(
+                    recording_channel=recording_channel,
+                    start_time=start_time,
                     creating_processor=detector_model)
+                
+            else:
+                # clip did not already exist
+
+                created = True
+                
+                annotations = info.get('annotations', {})
+
+                # If clip start time was offset, include an annotation
+                # indicating by how many seconds. This will make it
+                # possible to remove the offset later if needed.
+                if serial_num != 0:
+                    name = _START_TIME_UNIQUENESS_OFFSET_ANNOTATION_NAME
+                    offset = serial_num / 1000000
+                    annotations[name] = f'{offset:f}'
+
+                for name, value in annotations.items():
+                    
+                    annotation_info = self._get_annotation_info(name)
+                    
+                    model_utils.annotate_clip(
+                        clip, annotation_info, str(value),
+                        creation_time=creation_time,
+                        creating_user=None,
+                        creating_job=None,
+                        creating_processor=detector_model)
                 
         except Exception as e:
             raise _ViewError(
-                f'Could not create clip from clip data {clip_info}. '
+                f'Could not create clip from clip data {info}. '
                 f'Error message was: {e}')
                 
-        return clip.id, recording_id, recording_created
+        return {
+            'id': clip.id,
+            'created': created
+        }
 
 
-    def _get_recording_info(self, recording_infos, recording_name):
-        try:
-            return recording_infos[recording_name]
-        except KeyError:
-            raise _ViewError(
-                f'Unrecognized recording "{recording_name}".')
-        
+    def _get_clip_recording(self, station, mic_output, clip_start_time):
 
-    def _get_station_name(self, sensor_name):
-
-        # TODO: Involve `recording_sensors` in getting station name.
-        # First get recording info from the clip info, then get a
-        # sensor list from the recording info, and then get the station
-        # from one of the sensors.
-
-        # For now, we extract the station name from the sensor name,
-        # assuming that the station name is the part of the sensor
-        # name from the beginning to the last space. This will change
-        # when we replace devices with sensors.
-        station_name = sensor_name.rsplit(sep=' ', maxsplit=1)[0]
-
-        return station_name
-
-
-    def _get_station_mic_output_pair(self, station_name):
-        try:
-            return self._station_mic_output_pairs[station_name]
-        except KeyError:
-            raise _ViewError(
-                f'Could not get station/mic output pair for station '
-                f'"{station_name}".')
-
-
-    def _get_detector(self, detector_name):
-        try:
-            return self._detectors[detector_name]
-        except KeyError:
-            raise _ViewError(f'Unrecognized detector "{detector_name}".')
-
-
-    def _get_recording_channel(
-            self, station, mic_output, clip_start_time, clip_length,
-            recording_info, detector_name):
-        
-        def format_dt(dt):
-            return dt.strftime('%Y-%m-%d %H:%M:%S.%f')
-        
         # We use a placeholder clip end time to try to locate the
         # clip's recording. We don't know the real clip end time yet
         # because while we have the clip's length we don't have its
         # sample rate.
+        # TODO: The use of a placeholder end time here is kludgy.
+        # Consider either including sample rate in clip data or
+        # including duration instead of length.
         placeholder_end_time = clip_start_time + _ONE_MICROSECOND
         clip_interval = (clip_start_time, placeholder_end_time)
 
@@ -292,112 +350,102 @@ class CreateLrgvClipsView(View):
         recording_count = len(recordings)
 
         if recording_count == 0:
-            # found no recordings
+            # found no recording for clip
 
-            if recording_info is None:
-                raise ValueError(
-                    f'Could not find existing recording for station '
-                    f'"{station.name}" for clip with start time '
-                    f'{clip_start_time}, and no recording data was'
-                    f'provided from which to create one.')
-
-            recording = \
-                self._create_recording(station, mic_output, recording_info)
-            
-            recording_created = True
-        
-        else:
-            # found at least one recording
-
-            if recording_count > 1:
-                raise ValueError(
-                    f'Found more than one recording for station '
-                    f'"{station.name}" for clip with start time '
-                    f'{clip_start_time}.')
-            
-            else:
-                # found exactly one recording
-            
-                recording = recordings[0]
-                recording_created = False
-
-                if recording_info is not None:
-                    _check_recording(
-                        recording, recording_info, station, detector_name)
-
-        channels = recording.channels.all()
-        channel_count = channels.count()
-
-        if channel_count > 1:
             raise ValueError(
-                f'Recording for station "{station.name}" that includes '
-                f'clip start time {clip_start_time} has '
-                f'{recording.num_channels} channels instead of just one.')
+                f'Could not find recording for station "{station.name}", '
+                f'mic output "{mic_output.name}", and clip start time '
+                f'{clip_start_time}.')
+
+        elif recording_count > 1:
+            # found more than one recording for clip
+
+            raise ValueError(
+                f'Found more than one recording for station "{station.name}", '
+                f'mic output "{mic_output.name}", and clip start time '
+                f'{clip_start_time}.')
+            
+        else:
+            # found exactly one recording for clip
+            
+            return recordings[0]
+
+
+    def _check_clip_extent(self, start_time, end_time, recording):
+        
+        def format_dt(dt):
+            return dt.strftime('%Y-%m-%d %H:%M:%S.%f')
         
         # Check that clip does not start before recording.
-        if clip_start_time < recording.start_time:
+        if start_time < recording.start_time:
             raise ValueError(
-                f'Clip start time {format_dt(clip_start_time)} '
-                f'precedes recording start time '
-                f'{format_dt(recording.start_time)}.')
+                f'Clip start time {format_dt(start_time)} precedes'
+                f'recording start time {format_dt(recording.start_time)}.')
         
-        # Get sample rate and real clip end time.
-        sample_rate = recording.sample_rate
-        clip_end_time = signal_utils.get_end_time(
-            clip_start_time, clip_length, sample_rate)
-
         # Check that clip does not end after recording.
-        if clip_end_time > recording.end_time:
+        if end_time > recording.end_time:
             raise ValueError(
-                f'Clip end time {format_dt(clip_end_time)} follows '
+                f'Clip end time {format_dt(end_time)} follows '
                 f'recording end time {format_dt(recording.end_time)}.')
-                
-        return (
-            channels.first(), sample_rate, recording.start_time,
-            clip_end_time, recording.id, recording_created)
-
-
-    def _create_recording(self, station, mic_output, recording_info):
-
-        start_time = _parse_datetime(
-            recording_info['start_time'], 'recording start')
-        length = recording_info['length']
-        sample_rate = recording_info['sample_rate']
-
-        end_time = signal_utils.get_end_time(start_time, length, sample_rate)
-        recorder = self._get_station_recorder(station)
-        num_channels = 1
-        creation_time = time_utils.get_utc_now()
- 
-        recording = Recording.objects.create(
-            station=station,
-            recorder=recorder,
-            num_channels=num_channels,
-            length=length,
-            sample_rate=sample_rate,
-            start_time=start_time,
-            end_time=end_time,
-            creation_time=creation_time,
-            creating_job=None)
-        
-        RecordingChannel.objects.create(
-            recording=recording,
-            channel_num=0,
-            recorder_channel_num=0,
-            mic_output=mic_output)
-        
-        return recording
-
-
-    def _get_station_recorder(self, station):
-        try:
-            return self._station_recorders[station.name]
-        except KeyError:
-            raise ValueError(
-                f'Could not get recorder for station "{station.name}".')
-
             
-    def _get_annotation_info(self, name, detector_model):
+
+    def _get_clip_recording_channel(
+            self, recording, station, mic_output, start_time):
+        
+        channels = recording.channels.filter(mic_output=mic_output)
+        channel_count = channels.count()
+
+        if channel_count == 0:
+            # found no recording channel for clip
+
+            raise ValueError(
+                f'Could not find recording channel for station '
+                f'"{station.name}", mic output "{mic_output.name}" '
+                f'and clip start time {start_time}.')
+
+        elif channel_count > 1:
+            # found more than one recording channel for clip
+
+            raise ValueError(
+                f'Found more than one recording channel for station '
+                f'"{station.name}", mic output "{mic_output.name}" '
+                f'and clip start time {start_time}.')
+        
+        else:
+            # found exactly one recording channel for clip
+
+            return channels.first()
+        
+
+    def _get_station(self, name):
+        try:
+            return self._stations[name]
+        except KeyError:
+            raise _ViewError(f'Unrecognized station "{name}".')
+        
+
+    def _get_device(self, name):
+        try:
+            return self._devices[name]
+        except KeyError:
+            raise _ViewError(f'Unrecognized device "{name}".')
+
+
+    def _get_device_output(self, output_name):
+        try:
+            return self._device_outputs[output_name]
+        except KeyError:
+            raise _ViewError(f'Unrecognized device output "{output_name}".')
+
+
+    def _get_detector(self, detector_name):
+        try:
+            return self._detectors[detector_name]
+        except KeyError:
+            raise _ViewError(f'Unrecognized detector "{detector_name}".')
+
+
+    def _get_annotation_info(self, name):
         
         try:
             return self._annotation_info_cache[name]
@@ -410,14 +458,11 @@ class CreateLrgvClipsView(View):
             
             except AnnotationInfo.DoesNotExist:
                 
-                detector_name = detector_model.name
-                
                 logging.info(
-                    f'        Adding annotation "{name}" to archive for '
-                    f'detector "{detector_name}"...')
+                    f'        Adding annotation "{name}" to archive...')
                 
                 description = (
-                    f'Created automatically for detector "{detector_name}".')
+                    f'Created automatically for a clip that referenced it.')
                 
                 type_ = 'String'
                 creation_time = time_utils.get_utc_now()
@@ -439,26 +484,28 @@ class CreateLrgvClipsView(View):
 def _check_for_items(data, keys, name):
     for key in keys:
         if key not in data:
-            raise _ViewError(
+            raise ValueError(
                 f'Required {name} item "{key}" is missing.')
 
 
-# TODO: Log a warning when there's more than one mic output for a station.
-def _get_station_mic_output_pairs():
-    station_mics = model_utils.get_station_mic_output_pairs_list()
-    return {s.name: (s, m) for s, m in station_mics}
+def _get_stations():
+    stations = Station.objects.all()
+    return {s.name: s for s in stations}
+
+
+def _get_devices():
+    devices = Device.objects.all()
+    return {d.name: d for d in devices}
+
+
+def _get_device_outputs():
+    outputs = DeviceOutput.objects.all()
+    return {o.name: o for o in outputs}
 
 
 def _get_detectors():
     detectors = Processor.objects.filter(type='Detector')
     return {d.name: d for d in detectors}
-
-
-# TODO: Log a warning if there's more than one recorder for a station.
-def _get_station_recorders():
-    station_recorders = \
-        StationDevice.objects.filter(device__model__type='Audio Recorder')
-    return {sr.station.name: sr.device for sr in station_recorders}
 
 
 _DATE_TIME_FORMATS = (
@@ -485,48 +532,3 @@ def _parse_datetime(text, name):
     
     # If we get here, none of the parse attempts succeeded.
     raise ValueError(f'Could not parse {name} time "{text}".')
-
-
-def _check_recording(recording, recording_info, station, detector_name):
-
-    start_time = _parse_datetime(
-        recording_info['start_time'], 'recording start')
-
-    if start_time != recording.start_time:
-        raise ValueError(
-            f'Specified recording start time {start_time} does not '
-            f'match start time {recording.start_time} of recording '
-            f'already in archive.')
-    
-    sample_rate = recording_info['sample_rate']
-
-    if sample_rate != recording.sample_rate:
-        raise ValueError(
-            f'Specified sample rate {sample_rate} does not match sample '
-            f'rate {recording.sample_rate} of recording already in archive.')
-
-    length = recording_info['length']
-
-    if length != recording.length and detector_name.startswith('Nighthawk'):
-        # Recording length in archive differs from recording length
-        # indicated with Nighthawk clip. This can happen since the
-        # recording length indicated with Old Bird detector clips is
-        # just an estimate of the saved recording length (the Old Bird
-        # detector runs on a real-time audio stream rather than on a
-        # saved recording, but the exact length of a recording saved
-        # by the i-Sound audio recorder is not known until after the
-        # recording is complete), while the recording length indicated
-        # with a Nighthawk clip is precise.
-
-        # Update recording length and end time in archive with precise
-        # values.
-
-        logging.info(
-            f'Updating length of recording "{recording}" from '
-            f'{recording.length} to {length}...')
-
-        end_time = signal_utils.get_end_time(start_time, length, sample_rate)
-        
-        recording.length = length
-        recording.end_time = end_time
-        recording.save()
