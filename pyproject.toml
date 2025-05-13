@@ -57,10 +57,7 @@
 #        there to include (i.e. uncomment) dependencies needed only
 #        by processors.
 #
-#     3. Set `VESPER_INCLUDE_PROCESSORS` to `True` in the
-#        `vesper.django.project.settings` module.
-#
-#     4. Follow the instructions below for building the Vesper package.
+#     3. Follow the instructions below for building the Vesper package.
 #
 # To build the slim version of the Vesper package:
 #
@@ -71,10 +68,7 @@
 #        there to exclude (i.e. comment out) dependencies needed only
 #        by processors.
 #
-#     3. Set `VESPER_INCLUDE_PROCESSORS` to `False` in the
-#        `vesper.django.project.settings` module.
-#
-#     4. Follow the instructions below for building the Vesper package.
+#     3. Follow the instructions below for building the Vesper package.
 #
 # The package build and upload commands below should be issued from within
 # the directory containing this file.
