@@ -3,7 +3,7 @@ from pathlib import Path
 from threading import Thread
 import logging
 import multiprocessing as mp
-import threading as th
+import threading
 
 from botocore.client import Config
 import boto3
@@ -239,7 +239,7 @@ class _UploadThread(Thread):
         self._glob_pattern = _create_glob_pattern(settings)
         self._boto_config = _create_boto_config(settings)
         self._post_upload_action = _create_post_upload_action(settings)
-        self._stop_event = th.Event()
+        self._stop_event = threading.Event()
 
 
     def run(self):
