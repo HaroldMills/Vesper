@@ -20,6 +20,8 @@ from vesper.recorder.processor_graph import ProcessorGraph
 from vesper.recorder.resampler import Resampler
 from vesper.recorder.s3_file_uploader_sidecar import S3FileUploaderSidecar
 from vesper.recorder.settings import Settings
+from vesper.recorder.wave_to_flac_converter_sidecar import (
+    WaveToFlacConverterSidecar)
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule, ScheduleRunner
 import vesper.recorder.error_utils as error_utils
@@ -121,7 +123,7 @@ _DEFAULT_SCHEDULE = {}
 _DEFAULT_SERVER_PORT_NUM = 8001
 
 _PROCESSOR_CLASSES = (Resampler, LevelMeter, AudioFileWriter)
-_SIDECAR_CLASSES = (S3FileUploaderSidecar,)
+_SIDECAR_CLASSES = (WaveToFlacConverterSidecar, S3FileUploaderSidecar,)
 
 
 _logger = logging.getLogger(__name__)
