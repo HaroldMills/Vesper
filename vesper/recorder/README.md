@@ -63,7 +63,14 @@ Install the micro SD card from the previous step in your Raspberry Pi, attach a 
 If you want the Vesper Recorder to interact with your AWS account, for example to upload recorded files to S3, install the necessary AWS `config` and `credentials` files in the `.aws` subdirectory of your home directory.
 
 
-## 8. Create and populate a Vesper Recorder home directory
+## 8. Install `flac` program
+
+If you want the Vesper Recorder to record to FLAC files, install the [`flac` program](https://xiph.org/flac/documentation_tools_flac.html) from xiph.org with the following command:
+
+        sudo apt install flac
+
+
+## 9. Create and populate a Vesper Recorder home directory
 
 * [Download](https://www.dropbox.com/scl/fi/qswv8hdolbis8x57l4inn/Vesper-Recorder-Home-Template.0.3.0a0.zip?rlkey=ycu1f6y84ytmlrss60proyml6&dl=1) the template Vesper Recorder home directory.
 
@@ -72,7 +79,7 @@ If you want the Vesper Recorder to interact with your AWS account, for example t
 * Edit `Vesper Recorder Settings.yaml` for your use, according to the instructions in it.
 
 
-## 9. Run the Vesper Recorder
+## 10. Run the Vesper Recorder
 
 To run the Vesper Recorder:
 
@@ -96,7 +103,7 @@ To run the Vesper Recorder:
 * Close your SSH connection to your Raspberry Pi by typing `Ctrl-D` at the SSH prompt.
 
 
-## 10. Run the Vesper Recorder automatically on startup (optional)
+## 11. Run the Vesper Recorder automatically on startup (optional)
 
 If you would like to run the Vesper Recorder automatically on startup, you can create a Linux `systemd` service for the recorder and enable it as follows:
 
