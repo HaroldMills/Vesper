@@ -1,3 +1,39 @@
+# Sidecar that converts WAVE files to FLAC files.
+#
+# This sidecar searches for WAVE files to convert to FLAC files in
+# specified recording directories. It utilizes a different thread for
+# each recording directory (see the `_ConvertThread` class below). A
+# directory's thread runs in a loop, checking the directory for WAVE
+# files, converting any found, and then sleeping for a while. The thread
+# converts a WAVE file by running the third-party `flac` program in a
+# subprocess. The created FLAC file includes a seek table that can be
+# used to accelerate audio sample read operations.
+#
+# `flac` is an open source program produced by xiph.org. Documentation
+# for the program is at https://xiph.org/flac/documentation_tools_flac.html.
+# Source code for the program is at https://github.com/xiph/flac.
+#
+# We use the `flac` program's `-S` option to include seek tables in the
+# FLAC files it writes. As of `flac` version 1.5.0, the `-S` option has a
+# couple of limitations that affect the operation of this sidecar, and that
+# we document here.
+#
+# First, if you specify a `flac` command line option of the form `-S #s`,
+# which this sidecar does and which specifies that seek points should be
+# spaced `#` seconds apart, the program quietly replaces a separation
+# smaller than .5 seconds with .5 seconds. This happens in the
+# `grabbag__seektable_convert_specification_to_template` function in file
+# `flac/src/share/grabbag/seektable.c` of the `flac` source code.
+#
+# Second, if you specify to the `flac` program that it should create a seek
+# table with more than 32768 points, whether directly with an option of the
+# form `-S #x` or indirectly with an option of the form `-S #s`, the program
+# quietly reduces the number of seek points to 32768. This happens in the
+# `FLAC__metadata_object_seektable_template_append_spaced_points_by_samples`
+# function in file `flac/src/libFLAC/metadata_object.c` of the `flac` source
+# code.
+
+
 from pathlib import Path
 from threading import Thread
 import logging
