@@ -522,6 +522,11 @@ class _UploaderState:
             for u in self._state['failed_uploads']:
                 u['file_path'] = str(u['file_path'])
 
+            # Create ancestor directories for uploader state file as needed.
+            dir_path = self._file_path.parent
+            dir_path.mkdir(parents=True, exist_ok=True)
+
+            # Update state file.
             with self._file_path.open('w') as file:
                 yaml_utils.dump(self._state, file)
 
