@@ -8,6 +8,7 @@ The classes of this module implement such actions.
 
 
 import logging
+import platform
 
 from vesper.recorder.settings import Settings
 from vesper.util.bunch import Bunch
@@ -95,8 +96,30 @@ class _PostUploadAction:
         
         
 def _is_dir_empty(dir_path):
+
     child_paths = tuple(dir_path.iterdir())
-    return len(child_paths) == 0
+
+    if len(child_paths) == 0:
+        return True
+    
+    if platform.system() == 'Darwin' and len(child_paths) == 1 and \
+            child_paths[0].name == '.DS_Store':
+        # on macOS and directory contains only a `.DS_Store` file
+        
+        # Delete `.DS_Store` file.
+        file_path = dir_path / '.DS_Store'
+        try:
+            file_path.unlink()
+        except Exception as e:
+            _logger.warning(
+                f'Could not delete lone ".DS_Store" file from directory '
+                f'"{dir_path}", so directory will not be deleted. '
+                f'Error message was: {e}')
+            return False
+        
+        return True
+    
+    return False
 
 
 class _DeleteFileAction(_PostUploadAction):
