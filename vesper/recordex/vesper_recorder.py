@@ -1,6 +1,9 @@
 """Runs the Vesper Recorder."""
 
 
+import signal
+import threading
+
 from vesper.recordex.main_process import MainProcess
 
 
@@ -24,7 +27,7 @@ Tasks:
 
 + Modify `AudioInputProcess` to inherit from `RecorderSubprocess`.
 
-* Add Ctrl-C interrupts. Test on macOS, Windows, and Raspberry Pi OS.
++ Add Ctrl-C interrupts. Test on macOS, Windows, and Raspberry Pi OS.
 
 * Add some very simple YAML settings. Parse them so that if parsing fails
   you see a nice error message indicating where the problem is. Test on
@@ -51,9 +54,45 @@ Tasks:
 
 
 def _main():
+
+    # Create event that we'll set if we receive a SIGINT (i.e. Ctrl-C) signal.
+    sigint_event = threading.Event()
+
+    # Register SIGINT handler.
+    def handle_sigint(signal_num, frame):
+        sigint_event.set()
+    signal.signal(signal.SIGINT, handle_sigint)
+
+    # Create and start main recorder process.
     main_process = MainProcess()
     main_process.start()
-    main_process.join()
+
+    try:
+        
+        while main_process.is_alive():
+            
+            # Check SIGINT event periodically.
+            if sigint_event.is_set():
+                break
+            
+            main_process.join(timeout=1)
+    
+    except KeyboardInterrupt:
+        # SIGINT delivered as `KeyboardInterrupt` exception instead of
+        # via call to `handle_sigint`
+
+        # We don't need to set `sigint_event` here since we're already
+        # out of the above loop.
+        pass
+    
+    finally:
+        
+        # Stop and join main process. Sometimes it will already have
+        # stopped, but that's okay.
+        try:
+            main_process.stop()
+        finally:
+            main_process.join()
 
 
 if __name__ == '__main__':

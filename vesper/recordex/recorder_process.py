@@ -7,6 +7,7 @@ subprocesses.
 import logging
 import multiprocessing as mp
 import queue
+import signal
 
 from vesper.util.bunch import Bunch
 
@@ -34,6 +35,11 @@ class RecorderProcess(mp.Process):
 
 
     def run(self):
+
+        # Ignore SIGINT (i.e. Ctrl-C) in all `RecorderProcess` instances,
+        # since it is handled in the bootstrap process.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
         self._set_up_logging()
         self._init()
         self._execute_run_loop()
