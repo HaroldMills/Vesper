@@ -1,7 +1,9 @@
-"""Base class for recorder processes."""
+"""
+Base class for all recorder processes, including both main process and
+subprocesses.
+"""
 
 
-from logging.handlers import QueueHandler
 import logging
 import multiprocessing as mp
 import queue
@@ -12,24 +14,42 @@ from vesper.util.bunch import Bunch
 _logger = logging.getLogger(__name__)
 
 
+# TODO: Consider supporting two kinds of stop, quick and leisurely.
+# A leisurely stop will execute all commands that were queued before the
+# stop was requested. A quick stop will finish executing the current
+# command (if there is one) and then ignore any others that are in the
+# queue. We have implemented only the quick stop below. The leisurely
+# stop could be implemented by stopping with a command instead of an
+# event. If you want to offer both options, though, use an event and
+# a flag indicating which type of stop is desired.
+
+
 class RecorderProcess(mp.Process):
 
 
-    def __init__(self, name, settings, context):
-
+    def __init__(self, name):
         super().__init__(name=name)
-
-        self._settings = settings
-        self._context = context
         self._command_queue = mp.Queue()
         self._stop_event = mp.Event()
 
 
     def run(self):
-
-        self._configure_logging()
-
+        self._set_up_logging()
         self._init()
+        self._execute_run_loop()
+        self._stop()
+        self._tear_down_logging()
+
+
+    def _set_up_logging(self):
+        raise NotImplementedError()
+    
+
+    def _init(self):
+        pass
+
+
+    def _execute_run_loop(self):
 
         while not self._stop_event.is_set():
 
@@ -52,33 +72,6 @@ class RecorderProcess(mp.Process):
                 _logger.warning(
                     f'Error executing command "{command.name}". '
                     f'Exception message was: {e}')
-
-        self._stop()
-        
-
-    def _configure_logging(self):
-        
-        """
-        Configures logging for this process.
-
-        This method configures logging according to the `logging_level`
-        and `logging_queue` attributes of the process's `context` property.
-        """
-
-        # Get the root logger for this process.
-        logger = logging.getLogger()
-
-        # Set logging level for this process.
-        logger.setLevel(self._context.logging_level)
-
-        # Add handler to root logger that writes all log messages to
-        # the recorder's logging queue.
-        handler = QueueHandler(self._context.logging_queue)
-        logger.addHandler(handler)
-
-
-    def _init(self):
-        pass
 
 
     def start_recording(self):
@@ -105,3 +98,7 @@ class RecorderProcess(mp.Process):
 
     def _stop(self):
         pass
+
+
+    def _tear_down_logging(self):
+        raise NotImplementedError()
