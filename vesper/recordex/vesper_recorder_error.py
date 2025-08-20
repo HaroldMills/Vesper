@@ -1,0 +1,2 @@
+class VesperRecorderError(Exception):
+    pass
