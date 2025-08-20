@@ -99,12 +99,12 @@ class WaveToFlacConverterSidecar(Sidecar):
                 Path(s.get_required('dir_path', 'recording directory')))
 
             search_recursively = s.get(
-                'search_recursively', _DEFAULT_SEARCH_RECURSIVELY)
+                'search_recursively', default_search_recursively)
             
             seek_point_spacing = float(s.get(
-                'seek_point_spacing', _DEFAULT_SEEK_POINT_SPACING))
+                'seek_point_spacing', default_seek_point_spacing))
             
-            sleep_period = float(s.get('sleep_period', _DEFAULT_SLEEP_PERIOD))
+            sleep_period = float(s.get('sleep_period', default_sleep_period))
             
             return Bunch(
                 dir_path=dir_path,
