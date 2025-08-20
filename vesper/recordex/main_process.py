@@ -3,13 +3,12 @@
 
 from logging import Formatter, FileHandler, StreamHandler
 from logging.handlers import QueueHandler, QueueListener
+from pathlib import Path
 from threading import Thread
 from zoneinfo import ZoneInfo
 import logging
 import multiprocessing as mp
 import time
-
-from pyparsing import Path
 
 from vesper.recorder.settings import Settings
 from vesper.recordex.audio_input_process import AudioInputProcess
