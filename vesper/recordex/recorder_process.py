@@ -25,6 +25,10 @@ _logger = logging.getLogger(__name__)
 # a flag indicating which type of stop is desired.
 
 
+class _MethodExecutionError(Exception):
+    pass
+
+
 class RecorderProcess(mp.Process):
 
 
@@ -41,10 +45,37 @@ class RecorderProcess(mp.Process):
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
         self._set_up_logging()
-        self._init()
-        self._execute_run_loop()
-        self._stop()
+
+        try:
+            self._execute_method('_init')
+            self._execute_method('_execute_run_loop')
+            self._execute_method('_stop')
+
+        except _MethodExecutionError:
+            # one of the above methods failed
+
+            pass
+
         self._tear_down_logging()
+
+
+    def _execute_method(self, method_name):
+
+        method = getattr(self, method_name)
+
+        try:
+            method()
+
+        except Exception as e:
+
+            _logger.error(
+                f'Recorder process "{self.name}" method "{method_name}" '
+                f'unexpectedly raised "{type(e).__name__}" exception so '
+                f'process will now exit. Error message was: {e}')
+            
+            # Raise `MethodExecutionError` to signal to caller that
+            # a method execution failed.
+            raise _MethodExecutionError()
 
 
     def _set_up_logging(self):
