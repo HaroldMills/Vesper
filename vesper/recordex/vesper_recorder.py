@@ -35,8 +35,6 @@ if mp.parent_process() is not None:
 
 import threading
 
-from vesper.recordex.main_process import MainProcess
-
 
 '''
 Tasks:
@@ -114,6 +112,13 @@ def _main():
     def handle_keyboard_interrupt(signal_num, frame):
         keyboard_interrupt_event.set()
     signal.signal(signal.SIGINT, handle_keyboard_interrupt)
+
+    # We do this after setting up keyboard interrupt handling instead
+    # of in the usual place near the top of this file so that the
+    # keyboard interrupt setup can happen as soon as possible. This
+    # reduces the initial period during which the recorder may respond
+    # ungracefully to keyboard interrupts.
+    from vesper.recordex.main_process import MainProcess
 
     # Create and start main recorder process.
     main_process = MainProcess()
