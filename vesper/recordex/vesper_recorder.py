@@ -1,7 +1,38 @@
 """Runs the Vesper Recorder."""
 
 
+import multiprocessing as mp
 import signal
+
+
+# The Vesper Recorder comprises several processes. We refer to the one
+# that executes the `_main` function of this module as the *bootstrap
+# process*. We want to handle keyboard interrupts (usually initiated
+# when the user types Ctrl-C on the keyboard) in the bootstrap process
+# and ignore them in all other processes. We put this code here to
+# start ignoring keyboard interrupts as soon as possible in those other
+# processes.
+# 
+# Note that the code here runs in all recorder processes since we
+# are using the `spawn` multiprocessing start method, and under that
+# method Python executes this module (the so-called *entry module*)
+# first in every program process.
+if mp.parent_process() is not None:
+    # this is not the recorder's bootstrap process
+
+    # Ignore keyboard interrupts since we want to handle them
+    # exclusively in the bootstrap process.
+    try:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    except Exception as e:
+        import sys
+        print(
+            f'Attempt to ignore keyboard interrupts in non-bootstrap '
+            f'recorder process raised an exception that will be ignored. '
+            f'As a result, keyboard interrupts may not work properly. '
+            f'Exception message was: {e}', file=sys.stderr)
+
+
 import threading
 
 from vesper.recordex.main_process import MainProcess
@@ -29,6 +60,17 @@ Tasks:
 
 + Add Ctrl-C interrupts. Test on macOS, Windows, and Raspberry Pi OS.
 
+* Decide on "Error message was:" vs. "Exception message was:".
+
+* Be thinking about InterruptException exception handling on Windows.
+  Would having a process state and handling such exceptions based on that
+  state help? I think that at some point you have to stop trying to
+  respond gracefully for every conceivable point of interruption. Maybe,
+  for example, we just don't worry about interruptions during startup,
+  when some stuff has been initialized and some not. Maybe we just keep
+  track of whether or not initialization is complete and respond to
+  interrupts accordingly.
+
 * Add some very simple YAML settings. Parse them so that if parsing fails
   you see a nice error message indicating where the problem is. Test on
   macOS, Windows, and Raspberry Pi OS.
@@ -55,13 +97,23 @@ Tasks:
 
 def _main():
 
-    # Create event that we'll set if we receive a SIGINT (i.e. Ctrl-C) signal.
-    sigint_event = threading.Event()
+    # Use the `spawn` multiprocessing start method on all platforms.
+    # As of Python 3.12, this is the default for Windows and macOS
+    # but not for POSIX. On POSIX the default start method is `fork`,
+    # which is fast but copies more parent process state to the child
+    # process than we need or want. The extra state can cause problems.
+    # For example, in an earlier version of the recorder's multiprocess
+    # logging system it caused some log messages to be duplicated on
+    # POSIX.
+    mp.set_start_method('spawn')
 
-    # Register SIGINT handler.
-    def handle_sigint(signal_num, frame):
-        sigint_event.set()
-    signal.signal(signal.SIGINT, handle_sigint)
+    # Create event that we'll set if we receive a keyboard interrupt.
+    keyboard_interrupt_event = threading.Event()
+
+    # Register keyboard interrupt handler.
+    def handle_keyboard_interrupt(signal_num, frame):
+        keyboard_interrupt_event.set()
+    signal.signal(signal.SIGINT, handle_keyboard_interrupt)
 
     # Create and start main recorder process.
     main_process = MainProcess()
@@ -71,18 +123,18 @@ def _main():
         
         while main_process.is_alive():
             
-            # Check SIGINT event periodically.
-            if sigint_event.is_set():
+            # Check for keyboard interrupt periodically.
+            if keyboard_interrupt_event.is_set():
                 break
             
             main_process.join(timeout=1)
     
     except KeyboardInterrupt:
-        # SIGINT delivered as `KeyboardInterrupt` exception instead of
-        # via call to `handle_sigint`
+        # keyboard interrupt delivered as `KeyboardInterrupt` exception
+        # instead of via call to `handle_keyboard_interrupt`
 
-        # We don't need to set `sigint_event` here since we're already
-        # out of the above loop.
+        # We don't need to set `keyboard_interrupt_event` here since we've
+        # already exited the above loop.
         pass
     
     finally:
