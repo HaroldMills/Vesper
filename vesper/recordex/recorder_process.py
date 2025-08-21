@@ -8,6 +8,7 @@ import logging
 import multiprocessing as mp
 import queue
 import signal
+import sys
 
 from vesper.util.bunch import Bunch
 
@@ -44,38 +45,63 @@ class RecorderProcess(mp.Process):
         # since it is handled in the bootstrap process.
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-        self._set_up_logging()
+        execute = self._execute_method
 
         try:
-            self._execute_method('_init')
-            self._execute_method('_execute_run_loop')
-            self._execute_method('_stop')
-
+            execute('_set_up_logging', [], logging_available=False)
+            execute('_init', ['_tear_down_logging'])
+            execute('_execute_run_loop', ['_stop', '_tear_down_logging'])
+            execute('_stop', ['_tear_down_logging'])
+            execute('_tear_down_logging', [], logging_available=False)
+        except KeyboardInterrupt:
+            print(
+                f'KeyboardInterrupt raised in process "{self.name}".',
+                file=sys.stderr)
         except _MethodExecutionError:
-            # one of the above methods failed
-
             pass
 
-        self._tear_down_logging()
+
+    def _execute_method(
+            self, method_name, cleanup_method_names, logging_available=True):
+        
+
+        def handle_exception(action, e):
+
+            # Create error message.
+            message = (
+                f'Attempt to {action} recorder process "{self.name}" '
+                f'method "{method_name}" unexpectedly raised '
+                f'"{type(e).__name__}" exception, so process will now '
+                f'exit. Error message was: {e}')
+            
+            # Log error message.
+            if logging_available:
+                _logger.error(message)
+            else:
+                print(message, file=sys.stderr)
+
+            # Execute any specified cleanup methods.
+            for method_name in cleanup_method_names:
+                try:
+                    method = getattr(self, method_name)
+                    method()
+                except Exception:
+                    break
+
+            raise _MethodExecutionError()
 
 
-    def _execute_method(self, method_name):
+        # Get method.
+        try:
+            method = getattr(self, method_name)
+        except Exception as e:
+            handle_exception('get', e)
 
-        method = getattr(self, method_name)
-
+        # Execute method.
         try:
             method()
-
         except Exception as e:
-
-            _logger.error(
-                f'Recorder process "{self.name}" method "{method_name}" '
-                f'unexpectedly raised "{type(e).__name__}" exception so '
-                f'process will now exit. Error message was: {e}')
-            
-            # Raise `MethodExecutionError` to signal to caller that
-            # a method execution failed.
-            raise _MethodExecutionError()
+            handle_exception('execute', e)
 
 
     def _set_up_logging(self):
