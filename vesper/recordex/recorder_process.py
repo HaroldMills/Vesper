@@ -81,9 +81,9 @@ class RecorderProcess(mp.Process):
                 print(message, file=sys.stderr)
 
             # Execute any specified cleanup methods.
-            for method_name in cleanup_method_names:
+            for cleanup_method_name in cleanup_method_names:
                 try:
-                    method = getattr(self, method_name)
+                    method = getattr(self, cleanup_method_name)
                     method()
                 except Exception:
                     break
