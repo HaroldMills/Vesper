@@ -38,63 +38,6 @@ import multiprocessing as mp
 import threading
 
 
-'''
-Tasks:
-
-+ Move process classes to their own modules.
-
-+ Make `_main` a minimal function that just creates, starts, and joins
-  the main process. Call the process that runs `_main` the *bootstrap
-  process*. Do not do any logging in the bootstrap process.
-
-+ Add `_set_up_logging` and `_tear_down_logging` methods to `RecorderProcess`.
-  Call the methods from the `run` method. The default implementations of
-  the methods raise `NotImplementedError`.
-
-+ Implement `_set_up_logging` and `_tear_down_logging` for `MainProcess`.
-
-+ Create a `RecorderSubprocess` class that inherits from `RecorderProcess`.
-  Implement `_set_up_logging` and `_tear_down_logging` for subprocesses in it.
-
-+ Modify `AudioInputProcess` to inherit from `RecorderSubprocess`.
-
-+ Add Ctrl-C interrupts. Test on macOS, Windows, and Raspberry Pi OS.
-
-* Decide on "Error message was:" vs. "Exception message was:".
-
-* Be thinking about InterruptException exception handling on Windows.
-  Would having a process state and handling such exceptions based on that
-  state help? I think that at some point you have to stop trying to
-  respond gracefully for every conceivable point of interruption. Maybe,
-  for example, we just don't worry about interruptions during startup,
-  when some stuff has been initialized and some not. Maybe we just keep
-  track of whether or not initialization is complete and respond to
-  interrupts accordingly.
-
-* Add some very simple YAML settings. Parse them so that if parsing fails
-  you see a nice error message indicating where the problem is. Test on
-  macOS, Windows, and Raspberry Pi OS.
-
-* Add settings parsing for real.
-
-* Add audio input.
-
-* Add audio processor process.
-
-* Add schedule thread.
-
-* Add S3 file uploader sidecar.
-
-* Add WAVE to FLAC converter sidecar.
-
-* Add UI thread.
-
-* Add start/stop button to UI.
-
-* Add dynamic level meter to UI.
-'''
-
-
 def _main():
 
     # Use the `spawn` multiprocessing start method on all platforms.
