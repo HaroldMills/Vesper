@@ -1,23 +1,28 @@
 """Runs the Vesper Recorder."""
 
 
-import multiprocessing as mp
 import signal
 
 
 # The Vesper Recorder comprises several processes. We refer to the one
 # that executes the `_main` function of this module as the *bootstrap
-# process*. We want to handle keyboard interrupts (initiated when the
-# user types Ctrl-C on the keyboard) in the bootstrap process and
-# ignore them in all other processes.
-# 
-# Note that the code here runs in all recorder processes since we
-# are using the `spawn` multiprocessing start method, under which
-# Python executes this module (the so-called *entry module*) first
-# in every program process. We locate this code here to start
-# ignoring keyboard interrupts as soon as possible. We turn of
-# keyboard interrupts here for all processes, but turn it back on
-# again in the `_main` function for the bootstrap process.
+# process*. The bootstrap process starts before all the other recorder
+# processes and is responsible for starting the *main process*, which
+# in turn starts the other recorder processes.
+#
+# We want to handle keyboard interrupts (initiated when the user types
+# Ctrl-C on the keyboard) in the bootstrap process and ignore them in
+# all other processes. The following code turns off keyboard interrupts
+# for all processes. It runs in every recorder processe, including the
+# bootstrap process, the main process, and every other process, to
+# disable keyboard interrupts as soon as possible as the process is
+# starting up. The `_main` function of this module then turns keyboard
+# interrupts back on for only the bootstrap process.
+#
+# The code here runs in every recorder process since we are using the
+# `spawn` multiprocessing start method, under which Python executes
+# this module (the so-called *entry module*) first in every program
+# process.
 try:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 except Exception as e:
@@ -29,6 +34,7 @@ except Exception as e:
         f'Exception message was: {e}', file=sys.stderr)
 
 
+import multiprocessing as mp
 import threading
 
 
@@ -112,8 +118,8 @@ def _main():
     # We do this after setting up keyboard interrupt handling instead
     # of in the usual place near the top of this file so that the
     # keyboard interrupt setup can happen as soon as possible. This
-    # reduces the initial period during which the recorder may respond
-    # ungracefully to keyboard interrupts.
+    # reduces the initial period during which the recorder is
+    # unresponsive to keyboard interrupts.
     from vesper.recordex.main_process import MainProcess
 
     # Create and start main recorder process.
