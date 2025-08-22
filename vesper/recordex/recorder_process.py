@@ -7,7 +7,6 @@ subprocesses.
 import logging
 import multiprocessing as mp
 import queue
-import signal
 import sys
 
 from vesper.util.bunch import Bunch
@@ -40,10 +39,6 @@ class RecorderProcess(mp.Process):
 
 
     def run(self):
-
-        # Ignore keyboard interrupts in all `RecorderProcess` instances,
-        # since it is handled in the bootstrap process.
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
         execute = self._execute_method
 
