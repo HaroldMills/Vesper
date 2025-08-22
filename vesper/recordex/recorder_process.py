@@ -41,7 +41,7 @@ class RecorderProcess(mp.Process):
 
     def run(self):
 
-        # Ignore SIGINT (i.e. Ctrl-C) in all `RecorderProcess` instances,
+        # Ignore keyboard interrupts in all `RecorderProcess` instances,
         # since it is handled in the bootstrap process.
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
