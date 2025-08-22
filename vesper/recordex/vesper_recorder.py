@@ -7,30 +7,26 @@ import signal
 
 # The Vesper Recorder comprises several processes. We refer to the one
 # that executes the `_main` function of this module as the *bootstrap
-# process*. We want to handle keyboard interrupts (usually initiated
-# when the user types Ctrl-C on the keyboard) in the bootstrap process
-# and ignore them in all other processes. We put this code here to
-# start ignoring keyboard interrupts as soon as possible in those other
-# processes.
+# process*. We want to handle keyboard interrupts (initiated when the
+# user types Ctrl-C on the keyboard) in the bootstrap process and
+# ignore them in all other processes.
 # 
 # Note that the code here runs in all recorder processes since we
-# are using the `spawn` multiprocessing start method, and under that
-# method Python executes this module (the so-called *entry module*)
-# first in every program process.
-if mp.parent_process() is not None:
-    # this is not the recorder's bootstrap process
-
-    # Ignore keyboard interrupts since we want to handle them
-    # exclusively in the bootstrap process.
-    try:
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-    except Exception as e:
-        import sys
-        print(
-            f'Attempt to ignore keyboard interrupts in non-bootstrap '
-            f'recorder process raised an exception that will be ignored. '
-            f'As a result, keyboard interrupts may not work properly. '
-            f'Exception message was: {e}', file=sys.stderr)
+# are using the `spawn` multiprocessing start method, under which
+# Python executes this module (the so-called *entry module*) first
+# in every program process. We locate this code here to start
+# ignoring keyboard interrupts as soon as possible. We turn of
+# keyboard interrupts here for all processes, but turn it back on
+# again in the `_main` function for the bootstrap process.
+try:
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+except Exception as e:
+    import sys
+    print(
+        f'Attempt to ignore keyboard interrupts at recorder process '
+        f'startup raised an exception that will be ignored. As a result, '
+        f'keyboard interrupts may not work properly. '
+        f'Exception message was: {e}', file=sys.stderr)
 
 
 import threading
