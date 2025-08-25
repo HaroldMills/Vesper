@@ -14,72 +14,101 @@ This script was written with assistance from ChatGPT 5.
 
 import psutil
 import sys
-from typing import Iterable
+
 
 KILL_NAME = 'kill_vesper_recorder'
 RECORDER_NAME = 'vesper_recorder'
 GRACE_SECONDS = 5.0
 
-def matches(p: psutil.Process) -> bool:
+
+def main():
+
+    root_processes = get_root_processes()
+
+    print(f'Found {len(root_processes)} Vesper Recorder root process(es).')
+
+    for p in root_processes:
+
+        try:
+            print(
+                f'Terminating recorder process tree rooted at PID {p.pid} '
+                f'({p.name()})')
+        except psutil.NoSuchProcess:
+            continue
+
+        terminate_process_tree(p)
+
+    return 0
+
+
+def get_root_processes():
+
+    # Get candidate root processes, i.e. those with "vesper_recorder" but
+    # not "kill_vesper_recorder" in their command lines.
+    candidate_processes = [
+        p for p in psutil.process_iter(['pid', 'cmdline'])
+        if matches(p)]
+    
+    candidate_pids = {p.pid for p in candidate_processes}
+
+    root_processes = []
+
+    for p in candidate_processes:
+
+        try:
+            ancestor_pids = {a.pid for a in p.parents()}
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+        if len(ancestor_pids & candidate_pids) == 0:
+            # no ancestor of process is a candidate process
+
+            root_processes.append(p)
+
+    return root_processes
+
+
+def matches(p):
+
     try:
         command = ' '.join(p.cmdline())
         return RECORDER_NAME in command and KILL_NAME not in command
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return False
 
-def iter_root_targets() -> Iterable[psutil.Process]:
-    procs = [
-        p for p in psutil.process_iter(['pid', 'name', 'cmdline'])
-        if matches(p)]
-    if not procs:
-        return []
-    target_pids = {p.pid for p in procs}
-    roots = []
-    for p in procs:
-        try:
-            ancestors = {a.pid for a in p.parents()}
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-        if not (ancestors & target_pids):
-            roots.append(p)
-    return roots
 
-def terminate_tree(root: psutil.Process):
+def terminate_process_tree(root):
+
     try:
         descendants = root.children(recursive=True)
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         return
-    procs = [root] + descendants
-    for p in procs:
+    
+    processes = [root] + descendants
+
+    for p in processes:
+
         try:
             p.terminate()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
-    gone, alive = psutil.wait_procs(procs, timeout=GRACE_SECONDS)
+
+    gone, alive = psutil.wait_procs(processes, timeout=GRACE_SECONDS)
+
     if alive:
+
         for p in alive:
+
             try:
                 p.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
+
         psutil.wait_procs(alive, timeout=2)
 
-def main():
-    roots = list(iter_root_targets())
-    if not roots:
-        print('No vesper_recorder process found.')
-        return 0
-    print(f'Found {len(roots)} vesper_recorder root process(es).')
-    for r in roots:
-        try:
-            print(f'Terminating tree rooted at PID {r.pid} ({r.name()})')
-        except psutil.NoSuchProcess:
-            continue
-        terminate_tree(r)
-    print('Done.')
-    return 0
 
 if __name__ == '__main__':
+
     try:
         sys.exit(main())
     except KeyboardInterrupt:
