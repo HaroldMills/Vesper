@@ -11,7 +11,7 @@ import sys
 from typing import Iterable
 
 TARGET = "vesper_recorder"
-EXCLUDE_SCRIPT = "kill_vesper_recorder.py"
+EXCLUDE_TEXT = "kill_vesper_recorder"
 GRACE_SECONDS = 5.0
 
 def matches(p: psutil.Process) -> bool:
@@ -20,7 +20,7 @@ def matches(p: psutil.Process) -> bool:
         cmdline_parts = p.cmdline()
         cmdline = " ".join(cmdline_parts)
         # Exclude this script (or any process running it)
-        if any(EXCLUDE_SCRIPT in part for part in cmdline_parts):
+        if any(EXCLUDE_TEXT in part for part in cmdline_parts):
             return False
         if TARGET.lower() in name.lower():
             return True
