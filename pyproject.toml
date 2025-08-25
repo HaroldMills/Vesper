@@ -11,11 +11,25 @@
 #     conda activate vesper-dev
 #     conda install -c conda-forge python-sounddevice
 #     pip install -e .
-#     pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
+#     pip install build sphinx sphinx_rtd_theme twine
 #
-#    
-# Running Vesper Unit Tests
-# -------------------------
+# Note: The last `pip` command above used to include `bokeh` and
+# `matplotlib`. As of 2025-08-25, however, including either of those
+# packages causes problems, at least on my 2019 MacBook Pro. In
+# particular, it causes the environment to wind up with a recent
+# version of `numpy` that is incompatible with TensorFlow 2.12. The
+# planned move of detectors and classifiers to their own server
+# processes separate from the Vesper core server process should fix
+# this issue.
+#
+#
+# Creating Vesper Conda Environments
+# ----------------------------------
+#
+# To create a Conda environment using a local Vesper package:
+#
+#     conda create -n test python=3.11
+#     conda activate test
 #
 # To run Django unit tests:
 #
@@ -167,6 +181,7 @@ dependencies = [
     "django~=5.2.0",
     "environs[django]",
     "jsonschema",
+    "psutil",
     "psycopg[binary]",
     "ruamel_yaml",
     "skyfield",
@@ -221,9 +236,10 @@ dependencies = [
 ]
 
 [project.scripts]
+kill_vesper_recorder = "vesper.scripts.kill_vesper_recorder:main"
 vesper_admin = "vesper.django.manage:main"
-vesper_recorder = "vesper.scripts.vesper_recorder:_main"
 vesper_play_recorder_test_signal = "vesper.scripts.play_recorder_test_signal:_main"
+vesper_recorder = "vesper.scripts.vesper_recorder:_main"
 vesper_show_audio_input_devices = "vesper.scripts.show_audio_input_devices:_main"
 
 [project.urls]
