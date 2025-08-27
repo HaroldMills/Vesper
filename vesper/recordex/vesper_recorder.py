@@ -50,7 +50,8 @@ def main():
     # POSIX.
     mp.set_start_method('spawn')
 
-    # Create event that we'll set if we receive a keyboard interrupt.
+    # Create event that is set if and only if we have received a keyboard
+    # interrupt.
     keyboard_interrupt_event = threading.Event()
 
     # Register keyboard interrupt handler.
@@ -83,9 +84,10 @@ def main():
         # keyboard interrupt delivered as `KeyboardInterrupt` exception
         # instead of via call to `handle_keyboard_interrupt`
 
-        # We don't need to set `keyboard_interrupt_event` here since we've
-        # already exited the above loop.
-        pass
+        # Set keyboard interrupt event, even if nobody will use it, to
+        # maintain the invariant that it is set if and only if we have
+        # received a keyboard interrupt.
+        keyboard_interrupt_event.set()
     
     finally:
         
