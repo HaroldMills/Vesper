@@ -52,11 +52,6 @@ class RecorderProcess(mp.Process):
             execute('_stop', ['_tear_down_logging'])
             execute('_tear_down_logging', [], logging_available=False)
 
-        except KeyboardInterrupt:
-            print(
-                f'KeyboardInterrupt raised in process "{self.name}".',
-                file=sys.stderr)
-            
         except _MethodExecutionError:
             pass
 
