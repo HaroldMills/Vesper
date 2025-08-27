@@ -38,7 +38,7 @@ import multiprocessing as mp
 import threading
 
 
-def _main():
+def main():
 
     # Use the `spawn` multiprocessing start method on all platforms.
     # As of Python 3.12, this is the default for Windows and macOS
@@ -98,4 +98,4 @@ def _main():
 
 
 if __name__ == '__main__':
-    _main()
+    main()
