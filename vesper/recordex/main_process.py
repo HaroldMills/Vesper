@@ -18,7 +18,26 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 
 
-# TODO: Require station settings.
+'''
+AudioInputProcess commands:
+- start_recording
+- stop_recording
+
+AudioProcessingProcess commands:
+- recording_will_start
+- process_audio
+- recording_did_stop
+'''
+
+# TODO: Consider giving the `AudioInputProcess` `start_recording`
+# command an optional `duration` attribute for fixed-duration recording.
+# But consider how to deal with dropped samples. How much duration was
+# dropped? If we know, perhaps we can insert zero samples? If we don't
+# know, should we stop a recording if it would otherwise continue past
+# a certain end time, even if we haven't reached the indicated sample
+# count?
+
+# TODO: Consider requiring station settings.
 
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'

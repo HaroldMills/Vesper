@@ -43,15 +43,20 @@ class RecorderProcess(mp.Process):
         execute = self._execute_method
 
         try:
+
+            # Execute private instance methods in the appropriate order,
+            # with appropriate cleanup methods at each step.
             execute('_set_up_logging', [], logging_available=False)
             execute('_init', ['_tear_down_logging'])
             execute('_execute_run_loop', ['_stop', '_tear_down_logging'])
             execute('_stop', ['_tear_down_logging'])
             execute('_tear_down_logging', [], logging_available=False)
+
         except KeyboardInterrupt:
             print(
                 f'KeyboardInterrupt raised in process "{self.name}".',
                 file=sys.stderr)
+            
         except _MethodExecutionError:
             pass
 
