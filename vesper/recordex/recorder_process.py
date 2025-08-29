@@ -9,8 +9,6 @@ import multiprocessing as mp
 import queue
 import sys
 
-from vesper.util.bunch import Bunch
-
 
 _logger = logging.getLogger(__name__)
 
@@ -36,6 +34,11 @@ class RecorderProcess(mp.Process):
         super().__init__(name=name)
         self._command_queue = mp.Queue()
         self._stop_event = mp.Event()
+
+
+    @property
+    def command_queue(self):
+        return self._command_queue
 
 
     def run(self):
@@ -132,26 +135,8 @@ class RecorderProcess(mp.Process):
                     f'Exception message was: {e}')
 
 
-    def start_recording(self):
-        command = Bunch(name='start_recording')
-        self._command_queue.put(command)
-
-
-    def stop_recording(self):
-        command = Bunch(name='stop_recording')
-        self._command_queue.put(command)
-
-
     def stop(self):
         self._stop_event.set()
-
-
-    def _do_start_recording(self, command):
-        pass
-
-
-    def _do_stop_recording(self, command):
-        pass
 
 
     def _stop(self):

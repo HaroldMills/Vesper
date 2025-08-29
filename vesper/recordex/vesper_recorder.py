@@ -5,7 +5,7 @@ import signal
 
 
 # The Vesper Recorder comprises several processes. We refer to the one
-# that executes the `_main` function of this module as the *bootstrap
+# that executes the `main` function of this module as the *bootstrap
 # process*. The bootstrap process starts before all the other recorder
 # processes and is responsible for starting the *main process*, which
 # in turn starts the other recorder processes.
@@ -16,7 +16,7 @@ import signal
 # for all processes. It runs in every recorder processe, including the
 # bootstrap process, the main process, and every other process, to
 # disable keyboard interrupts as soon as possible as the process is
-# starting up. The `_main` function of this module then turns keyboard
+# starting up. The `main` function of this module then turns keyboard
 # interrupts back on for only the bootstrap process.
 #
 # The code here runs in every recorder process since we are using the

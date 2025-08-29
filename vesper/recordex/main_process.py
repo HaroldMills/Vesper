@@ -12,30 +12,20 @@ import time
 
 from vesper.recorder.settings import Settings
 from vesper.recordex.audio_input_process import AudioInputProcess
-from vesper.recordex.vesper_recorder_error import VesperRecorderError
+from vesper.recordex.audio_processing_process import AudioProcessingProcess
 from vesper.recordex.recorder_process import RecorderProcess
 from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 
 
-'''
-AudioInputProcess commands:
-- start_recording
-- stop_recording
-
-AudioProcessingProcess commands:
-- recording_will_start
-- process_audio
-- recording_did_stop
-'''
-
-# TODO: Consider giving the `AudioInputProcess` `start_recording`
-# command an optional `duration` attribute for fixed-duration recording.
-# But consider how to deal with dropped samples. How much duration was
-# dropped? If we know, perhaps we can insert zero samples? If we don't
-# know, should we stop a recording if it would otherwise continue past
+# TODO: Consider supporting fixed-duration recording, for which a recording
+# will end after a specified number of sample frames, rather than when
+# the recorder receives a `stop_recording` command. But consider how to deal
+# with dropped samples. How much duration was dropped? If we know, perhaps
+# we can insert zero samples? If we don't know, when should we stop
+# recording? Perhaps we should stop if it would otherwise continue past
 # a certain end time, even if we haven't reached the indicated sample
-# count?
+# count.
 
 # TODO: Consider requiring station settings.
 
@@ -51,6 +41,7 @@ _DEFAULT_STATION_LONGITUDE = None
 _DEFAULT_STATION_TIME_ZONE = 'UTC'
 _DEFAULT_SCHEDULE = {}
 _DEFAULT_SERVER_PORT_NUM = 8001
+_DEFAULT_SHUTDOWN_TIMEOUT = 5
 
 _PROCESSOR_CLASSES = ()
 _SIDECAR_CLASSES = ()
@@ -310,6 +301,10 @@ perform the same cleanup steps for its QueueHandler as child processes.
 '''
 
 
+class VesperRecorderError(Exception):
+    pass
+
+
 class MainProcess(RecorderProcess):
 
 
@@ -383,7 +378,8 @@ class MainProcess(RecorderProcess):
             logging_queue=self._logging_queue,
             logging_level=logging_level)
 
-        self._subprocesses = self._create_and_start_subprocesses()
+        self._recording_processes = []
+        self._sidecar_processes = self._create_and_start_sidecar_processes()
         self._threads = self._create_and_start_threads()
 
 
@@ -403,12 +399,9 @@ class MainProcess(RecorderProcess):
                 'See previous log message for details.')
 
 
-    def _create_and_start_subprocesses(self):
-        audio_input_process = \
-            AudioInputProcess(self._settings, self._subprocess_context)
-        audio_input_process.start()
-        return [audio_input_process]
-
+    def _create_and_start_sidecar_processes(self):
+        return []
+    
 
     def _create_and_start_threads(self):
 
@@ -421,38 +414,109 @@ class MainProcess(RecorderProcess):
         return [schedule_thread, stop_thread]
 
 
+    def start_recording(self):
+        command = Bunch(name='start_recording')
+        self._command_queue.put(command)
+
+
+    def stop_recording(self):
+        command = Bunch(name='stop_recording')
+        self._command_queue.put(command)
+
+
     def _do_start_recording(self, command):
-        for process in reversed(self._subprocesses):
-            process.start_recording()
+
+        _logger.info('Starting recording.')
+
+        processing_process = \
+            AudioProcessingProcess(self._settings, self._subprocess_context)
+        
+        input_process = AudioInputProcess(
+            self._settings, self._subprocess_context,
+            processing_process.command_queue)
+        
+        self._recording_processes = [input_process, processing_process]
+
+        # Start recording processes in reverse order so actual audio
+        # input starts last.
+        for process in reversed(self._recording_processes):
+            process.start()
 
 
     def _do_stop_recording(self, command):
-        for process in self._subprocesses:
-            process.stop_recording()
+
+        _logger.info('Stopping recording.')
+
+        self._stop_and_join(
+            self._recording_processes, 'Recording process',
+            'recording processes')
+
+        self._recording_processes = []
 
 
+    def _stop_and_join(self, objects, singular_name, plural_name):
+
+        if len(objects) == 0:
+            _logger.info(f'There are no {plural_name} to stop.')
+            return True
+
+        else:
+
+            _logger.info(f'Stopping {plural_name}...')
+
+            for o in objects:
+                o.stop()
+
+            shutdown_timeout = self._settings.shutdown_timeout
+            joined_all_objects = True
+
+            for o in objects:
+
+                o.join(shutdown_timeout)
+
+                if o.is_alive():
+                    # join timed out
+
+                    joined_all_objects = False
+
+                    _logger.warning(
+                        f'{singular_name} "{o.name}" did not stop before '
+                        f'{shutdown_timeout}-second timeout.')
+                    
+            return joined_all_objects
+        
+                    
     def _stop(self):
 
-        _logger.info('MainProcess._stop')
+        _logger.info('Main process stopping...')
 
-        _logger.info('Stopping subprocesses...')
-        self._stop_and_join(self._subprocesses)
+        all_joins_succeeded = (
 
-        _logger.info('Stopping threads...')
-        self._stop_and_join(self._threads)
+            # Stop recording processes.
+            self._stop_and_join(
+                self._recording_processes, 'Recording process',
+                'recording processes') and
+        
+            # Stop sidecar processes.
+            self._stop_and_join(
+                self._sidecar_processes, 'Sidecar process',
+                'sidecar processes') and
+        
+            # Stop main process threads.
+            self._stop_and_join(
+                self._threads, 'Main process thread', 'main process threads')
 
-        _logger.info('All subprocesses and threads have stopped.')
+        )
+
+        if all_joins_succeeded:
+            _logger.info('All recorder subprocesses and threads have stopped.')
+        else:
+            _logger.warning(
+                f'Some recorder subprocesses and/or threads did not stop '
+                f'within the {self._shutdown_timeout}-second timeout period. '
+                f'See previous log messages for details.')
 
         _logger.info('The Vesper Recorder will now exit.')
-
-
-    def _stop_and_join(self, objects):
-
-        for o in objects:
-            o.stop()
-
-        for o in objects:
-            o.join()
 
 
     def _tear_down_logging(self):
@@ -513,10 +577,13 @@ def _parse_settings_file_aux(settings_file_path):
     input = _parse_input_settings(settings)
     processors = _parse_processor_settings(settings)
     sidecars = _parse_sidecar_settings(settings)
-        
+
     server_port_num = int(settings.get(
         'server_port_num', _DEFAULT_SERVER_PORT_NUM))
-    
+
+    shutdown_timeout = float(settings.get(
+        'shutdown_timeout', _DEFAULT_SHUTDOWN_TIMEOUT))
+
     return Bunch(
         logging_level=logging_level,
         station=station,
@@ -525,9 +592,10 @@ def _parse_settings_file_aux(settings_file_path):
         input=input,
         processors=processors,
         sidecars=sidecars,
-        server_port_num=server_port_num)
-    
-    
+        server_port_num=server_port_num,
+        shutdown_timeout=shutdown_timeout)
+
+
 def _parse_logging_level_setting(settings):
     value = settings.get('logging_level', _DEFAULT_LOGGING_LEVEL)
     Settings.check_enum_value(value, _LOGGING_LEVELS, 'recorder logging level')
@@ -697,17 +765,17 @@ class _ScheduleThread(Thread):
 
     def run(self):
         
-        _logger.info('ScheduleThread starting')
+        _logger.info('Schedule thread starting.')
 
         for _ in range(2):
 
-            time.sleep(1)
+            time.sleep(2)
             self._main_process.start_recording()
 
-            time.sleep(1)
+            time.sleep(2)
             self._main_process.stop_recording()
 
-        _logger.info('ScheduleThread exiting')
+        _logger.info('Schedule thread exiting.')
 
 
     def stop(self):
@@ -725,12 +793,13 @@ class _StopThread(Thread):
 
     def run(self):
 
-        _logger.info('StopThread starting')
+        _logger.info('Stop thread starting.')
 
-        time.sleep(6)
+        time.sleep(10)
+        _logger.info('Stop thread telling main process to stop.')
         self._main_process.stop()
 
-        _logger.info('StopThread exiting')
+        _logger.info('Stop thread exiting.')
 
 
     def stop(self):
