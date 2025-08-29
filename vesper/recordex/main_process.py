@@ -18,6 +18,8 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 
 
+# RESUME: Populate new recorder processes with code from old recorder.
+
 # TODO: Consider supporting fixed-duration recording, for which a recording
 # will end after a specified number of sample frames, rather than when
 # the recorder receives a `stop_recording` command. But consider how to deal
