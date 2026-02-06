@@ -378,8 +378,8 @@ class MainProcess(RecorderProcess):
             logging_level=logging_level)
 
         self._recording_processes = []
-        self._sidecar_processes = self._create_and_start_sidecar_processes()
-        self._threads = self._create_and_start_threads()
+        self._sidecar_processes = self._start_sidecar_processes()
+        self._threads = self._start_threads()
 
 
     def _parse_settings_file(self):
@@ -398,35 +398,35 @@ class MainProcess(RecorderProcess):
                 'See previous log message for details.')
 
 
-    def _create_and_start_sidecar_processes(self):
+    def _start_sidecar_processes(self):
         return []
     
 
-    def _create_and_start_threads(self):
+    def _start_threads(self):
         threads = (
-            self._create_and_start_schedule_thread(),
-            self._create_and_start_stop_thread()
+            self._start_schedule_thread(),
+            self._start_stop_thread()
         )
         return tuple(t for t in threads if t is not None)
     
 
-    def _create_and_start_schedule_thread(self):
-        return self._create_and_start_thread(_ScheduleThread)
+    def _start_schedule_thread(self):
+        return self._start_thread(_ScheduleThread)
 
 
-    def _create_and_start_thread(self, cls, *args):
+    def _start_thread(self, cls, *args):
         thread = cls(self, *args)
         _logger.info(f'Starting thread "{thread.name}"...')
         thread.start()
         return thread
     
 
-    def _create_and_start_stop_thread(self):
+    def _start_stop_thread(self):
         run_duration = self._settings.run_duration
         if run_duration is None:
             return None
         else:
-            return self._create_and_start_thread(_StopThread, run_duration)
+            return self._start_thread(_StopThread, run_duration)
 
 
     def start_recording(self):
