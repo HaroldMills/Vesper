@@ -13,14 +13,11 @@ class AudioProcessingProcess(RecorderSubprocess):
         super().__init__('Audio Processing', settings, context)
 
 
-    def _init(self):
-        _logger.info('Audio processing process initializing.')
-
-
     def _do_process_audio(self, command):
-        _logger.info(
-            'Audio processing process received "process_audio" command.')
+        # _logger.info(
+        #     'Audio processing process received "process_audio" command.')
+        pass
 
 
     def _stop(self):
-        _logger.info('Audio processing process stopping.')
+        _logger.info('Audio processing process stopping...')

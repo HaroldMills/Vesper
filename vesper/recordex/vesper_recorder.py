@@ -13,7 +13,7 @@ import signal
 # We want to handle keyboard interrupts (initiated when the user types
 # Ctrl-C on the keyboard) in the bootstrap process and ignore them in
 # all other processes. The following code turns off keyboard interrupts
-# for all processes. It runs in every recorder processe, including the
+# for all processes. It runs in every recorder process, including the
 # bootstrap process, the main process, and every other process, to
 # disable keyboard interrupts as soon as possible as the process is
 # starting up. The `main` function of this module then turns keyboard
@@ -59,11 +59,11 @@ def main():
         keyboard_interrupt_event.set()
     signal.signal(signal.SIGINT, handle_keyboard_interrupt)
 
-    # We do this after setting up keyboard interrupt handling instead
-    # of in the usual place near the top of this file so that the
-    # keyboard interrupt setup can happen as soon as possible. This
-    # reduces the initial period during which the recorder is
-    # unresponsive to keyboard interrupts.
+    # We perform this import after setting up keyboard interrupt
+    # handling instead of in the usual place near the top of this file
+    # so that the keyboard interrupt setup can happen as soon as
+    # possible. This reduces the initial period during which the
+    # recorder is unresponsive to keyboard interrupts.
     from vesper.recordex.main_process import MainProcess
 
     # Create and start main recorder process.

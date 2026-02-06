@@ -21,8 +21,6 @@ class AudioInputProcess(RecorderSubprocess):
 
     def _init(self):
 
-        _logger.info('Audio input process initializing.')
-
         # Create private command queue for audio input thread to send
         # commands to the main thread (i.e. this thread) via.
         self._private_command_queue = queue.Queue()
@@ -66,8 +64,8 @@ class AudioInputProcess(RecorderSubprocess):
 
 
     def _do_process_audio(self, command):
-        _logger.info(
-            'Audio input process received "process_audio" command.')
+        # _logger.info(
+        #     'Audio input process received "process_audio" command.')
         self._processing_command_queue.put(command)
 
 
@@ -75,7 +73,8 @@ class AudioInputProcess(RecorderSubprocess):
         _logger.info('Audio input process stopping input thread...')
         self._input_thread.stop()
         self._input_thread.join()
-        _logger.info('Audio input process input thread stopped.')
+        # TODO: Add timeout and warning if thread does not stop.
+        _logger.info('Audio input process input thread has stopped.')
 
 
 class _AudioInputThread(Thread):
