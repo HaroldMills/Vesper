@@ -19,7 +19,7 @@ class AudioInputProcess(RecorderSubprocess):
         self._processing_command_queue = processing_command_queue
 
 
-    def _init(self):
+    def _start(self):
 
         # Create private command queue for audio input thread to send
         # commands to the main thread (i.e. this thread) via.
@@ -30,14 +30,14 @@ class AudioInputProcess(RecorderSubprocess):
         self._input_thread.start()
 
 
-    def _execute_run_loop(self):
+    def _execute_commands(self):
 
         """
-        Execute process run loop. This is much like the superclass's
-        run loop, except that it uses a private, multithreading command
-        queue instead of a multiprocessing command queue. Using a
-        threading queue instead of a multiprocessing queue allows the
-        audio input callback to run more efficiently.
+        Execute commands. This is much like the superclass's
+        `_execute_commands` method, except that it uses a private
+        multithreading command queue instead of a multiprocessing command
+        queue. Using a threading queue instead of a multiprocessing queue
+        allows the audio input callback to run more efficiently.
         """
 
         while not self._stop_event.is_set():
@@ -64,17 +64,16 @@ class AudioInputProcess(RecorderSubprocess):
 
 
     def _do_process_audio(self, command):
-        # _logger.info(
-        #     'Audio input process received "process_audio" command.')
+        # _logger.info('Received "process_audio" command.')
         self._processing_command_queue.put(command)
 
 
     def _stop(self):
-        _logger.info('Audio input process stopping input thread...')
+        _logger.info('Stopping input thread...')
         self._input_thread.stop()
         self._input_thread.join()
         # TODO: Add timeout and warning if thread does not stop.
-        _logger.info('Audio input process input thread has stopped.')
+        _logger.info('Input thread has stopped.')
 
 
 class _AudioInputThread(Thread):

@@ -1,4 +1,4 @@
-"""Base class for recorder subprocesses."""
+"""Base class for subprocesses of recorder main process."""
 
 
 from logging.handlers import QueueHandler
@@ -16,12 +16,12 @@ class RecorderSubprocess(RecorderProcess):
         self._context = context
         
 
-    def _set_up_logging(self):
+    def _start_logging(self):
         
         """
-        Set up logging for this recorder subprocess.
+        Start logging for this recorder subprocess.
 
-        This method sets up logging according to the `logging_level`
+        This method starts logging according to the `logging_level`
         and `logging_queue` attributes of the subprocess's `context`
         property.
         """
@@ -38,10 +38,10 @@ class RecorderSubprocess(RecorderProcess):
         logger.addHandler(self._logging_queue_handler)
 
 
-    def _tear_down_logging(self):
+    def _stop_logging(self):
 
         """
-        Tear down logging for this recorder subprocess.
+        Stop logging for this recorder subprocess.
 
         The code in this function is modeled after code suggested by
         ChatGPT 5. See notes towards top of `main_process.py`.

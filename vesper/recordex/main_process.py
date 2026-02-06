@@ -26,9 +26,6 @@ from vesper.util.schedule import Schedule
 # a certain end time, even if we haven't reached the indicated sample
 # count.
 
-# TODO: Consider using "shut down" rather than "stop" for threads and
-# processes.
-
 # TODO: Consider requiring station settings.
 
 
@@ -43,7 +40,7 @@ _DEFAULT_STATION_LONGITUDE = None
 _DEFAULT_STATION_TIME_ZONE = 'UTC'
 _DEFAULT_SCHEDULE = {}
 _DEFAULT_SERVER_PORT_NUM = 8001
-_DEFAULT_SHUTDOWN_TIMEOUT = 5
+_DEFAULT_STOP_TIMEOUT = 5
 
 _PROCESSOR_CLASSES = ()
 _SIDECAR_CLASSES = ()
@@ -314,9 +311,9 @@ class MainProcess(RecorderProcess):
         super().__init__('Main')
 
 
-    def _set_up_logging(self):
+    def _start_logging(self):
 
-        """Set up logging for the main recorder process."""
+        """Start logging for the main recorder process."""
 
         self._home_dir_path = Path.cwd()
 
@@ -355,7 +352,7 @@ class MainProcess(RecorderProcess):
         logger.addHandler(self._logging_queue_handler)
 
 
-    def _init(self):
+    def _start(self):
 
         _logger.info(f'Welcome to the Vesper Recorder!')
 
@@ -485,12 +482,12 @@ class MainProcess(RecorderProcess):
                 _logger.info(f'Stopping {singular_name} "{o.name}"...')
                 o.stop()
 
-            shutdown_timeout = self._settings.shutdown_timeout
+            stop_timeout = self._settings.stop_timeout
             joined_all_objects = True
 
             for o in objects:
 
-                o.join(shutdown_timeout)
+                o.join(stop_timeout)
 
                 if o.is_alive():
                     # join timed out
@@ -499,7 +496,7 @@ class MainProcess(RecorderProcess):
 
                     _logger.warning(
                         f'{singular_name.capitalize()} "{o.name}" has '
-                        f'not stopped after {shutdown_timeout} seconds. '
+                        f'not stopped after {stop_timeout} seconds. '
                         f'Moving on anyway.')
                     
                 else:
@@ -527,8 +524,7 @@ class MainProcess(RecorderProcess):
                 'sidecar processes') and
         
             # Stop main process threads.
-            self._stop_and_join(
-                self._threads, 'main process thread', 'main process threads')
+            self._stop_and_join(self._threads, 'thread', 'threads')
 
         )
 
@@ -537,16 +533,16 @@ class MainProcess(RecorderProcess):
         else:
             _logger.warning(
                 f'Some recorder subprocesses and/or threads did not stop '
-                f'within the {self._shutdown_timeout}-second timeout period. '
+                f'within the {self._stop_timeout}-second timeout period. '
                 f'See previous log messages for details.')
 
         _logger.info('The Vesper Recorder will now exit.')
 
 
-    def _tear_down_logging(self):
+    def _stop_logging(self):
 
         """
-        Tear down logging for the main recorder process.
+        Stop logging for the main recorder process.
 
         The code in this function is modeled after code suggested by
         ChatGPT 5. See notes above.
@@ -605,8 +601,8 @@ def _parse_settings_file_aux(settings_file_path):
     server_port_num = int(settings.get(
         'server_port_num', _DEFAULT_SERVER_PORT_NUM))
 
-    shutdown_timeout = float(settings.get(
-        'shutdown_timeout', _DEFAULT_SHUTDOWN_TIMEOUT))
+    stop_timeout = float(settings.get(
+        'stop_timeout', _DEFAULT_STOP_TIMEOUT))
 
     return Bunch(
         logging_level=logging_level,
@@ -617,7 +613,7 @@ def _parse_settings_file_aux(settings_file_path):
         processors=processors,
         sidecars=sidecars,
         server_port_num=server_port_num,
-        shutdown_timeout=shutdown_timeout)
+        stop_timeout=stop_timeout)
 
 
 def _parse_logging_level_setting(settings):

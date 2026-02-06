@@ -1,6 +1,6 @@
 """
-Base class for all recorder processes, including both main process and
-subprocesses.
+Base class for all recorder processes, including both the main process and
+its subprocesses.
 """
 
 
@@ -12,6 +12,10 @@ import sys
 
 _logger = logging.getLogger(__name__)
 
+
+# TODO: Document recorder processes, including lifecycle phases (logging
+# start, start, command execution, stop, and logging stop)
+# command queue, and stop event.
 
 # TODO: Consider supporting two kinds of stop, quick and leisurely.
 # A leisurely stop will execute all commands that were queued before the
@@ -49,11 +53,11 @@ class RecorderProcess(mp.Process):
 
             # Execute private instance methods in the appropriate order,
             # with appropriate cleanup methods at each step.
-            execute('_set_up_logging', [], logging_available=False)
-            execute('_init', ['_tear_down_logging'])
-            execute('_execute_run_loop', ['_stop', '_tear_down_logging'])
-            execute('_stop', ['_tear_down_logging'])
-            execute('_tear_down_logging', [], logging_available=False)
+            execute('_start_logging', [], logging_available=False)
+            execute('_start', ['_stop_logging'])
+            execute('_execute_commands', ['_stop', '_stop_logging'])
+            execute('_stop', ['_stop_logging'])
+            execute('_stop_logging', [], logging_available=False)
 
         except _MethodExecutionError:
             pass
@@ -102,15 +106,15 @@ class RecorderProcess(mp.Process):
             handle_exception('execute', e)
 
 
-    def _set_up_logging(self):
+    def _start_logging(self):
         raise NotImplementedError()
     
 
-    def _init(self):
+    def _start(self):
         pass
 
 
-    def _execute_run_loop(self):
+    def _execute_commands(self):
 
         while not self._stop_event.is_set():
 
@@ -143,5 +147,5 @@ class RecorderProcess(mp.Process):
         pass
 
 
-    def _tear_down_logging(self):
+    def _stop_logging(self):
         raise NotImplementedError()
