@@ -806,7 +806,7 @@ class _ScheduleThread(Thread):
         if recording:
             self._main_process.stop_recording()
 
-        _logger.info('Schedule thread exiting...')
+        _logger.info('Recording schedule thread exiting...')
 
 
     def stop(self):
@@ -829,12 +829,12 @@ class _StopThread(Thread):
             # stop event not set (i.e. recorder run duration has elapsed)
 
             _logger.info(
-                f'Stop thread stopping main process after run duration '
-                f'of {self._run_duration} seconds...')
+                f'Recorder stop thread stopping main process after run '
+                f'duration of {self._run_duration} seconds...')
             
             self._main_process.stop()
 
-        _logger.info('Stop thread exiting...')
+        _logger.info('Recorder stop thread exiting...')
 
 
     def stop(self):
