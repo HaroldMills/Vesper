@@ -10,6 +10,7 @@ import logging
 import multiprocessing as mp
 
 from vesper.recorder.settings import Settings
+from vesper.recordex import recorder_utils
 from vesper.recordex.audio_input_process import AudioInputProcess
 from vesper.recordex.audio_processing_process import AudioProcessingProcess
 from vesper.recordex.recorder_process import RecorderProcess
@@ -483,28 +484,18 @@ class MainProcess(RecorderProcess):
                 o.stop()
 
             stop_timeout = self._settings.stop_timeout
-            joined_all_objects = True
+            joined_all = True
 
             for o in objects:
 
-                o.join(stop_timeout)
+                name = f'{singular_name.capitalize()} "{o.name}"'
 
-                if o.is_alive():
-                    # join timed out
-
-                    joined_all_objects = False
-
-                    _logger.warning(
-                        f'{singular_name.capitalize()} "{o.name}" has '
-                        f'not stopped after {stop_timeout} seconds. '
-                        f'Moving on anyway.')
+                joined = recorder_utils.join_with_timeout(
+                    o, stop_timeout, _logger, name)
                     
-                else:
-                    _logger.info(
-                        f'{singular_name.capitalize()} "{o.name}" has '
-                        f'stopped.')
-                    
-            return joined_all_objects
+                joined_all = joined_all and joined
+                   
+            return joined_all
         
                     
     def _stop(self):

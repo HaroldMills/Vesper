@@ -4,6 +4,7 @@ import queue
 import time
 
 
+from vesper.recordex import recorder_utils
 from vesper.recordex.recorder_subprocess import RecorderSubprocess
 from vesper.util.bunch import Bunch
 
@@ -21,8 +22,8 @@ class AudioInputProcess(RecorderSubprocess):
 
     def _start(self):
 
-        # Create private command queue for audio input thread to send
-        # commands to the main thread (i.e. this thread) via.
+        # Create private command queue via which audio input thread
+        # will send commands to this thread.
         self._private_command_queue = queue.Queue()
 
         # Create and start audio input thread.
@@ -69,11 +70,14 @@ class AudioInputProcess(RecorderSubprocess):
 
 
     def _stop(self):
-        _logger.info('Stopping input thread...')
+
+        _logger.info('Stopping audio input thread...')
+
         self._input_thread.stop()
-        self._input_thread.join()
-        # TODO: Add timeout and warning if thread does not stop.
-        _logger.info('Input thread has stopped.')
+
+        recorder_utils.join_with_timeout(
+            self._input_thread, self._settings.stop_timeout, _logger,
+            'Audio input thread')
 
 
 class _AudioInputThread(Thread):
