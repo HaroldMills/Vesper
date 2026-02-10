@@ -484,48 +484,31 @@ class MainProcess(RecorderProcess):
                 o.stop()
 
             stop_timeout = self._settings.stop_timeout
-            joined_all = True
 
             for o in objects:
 
                 name = f'{singular_name.capitalize()} "{o.name}"'
 
-                joined = recorder_utils.join_with_timeout(
+                recorder_utils.join_with_timeout(
                     o, stop_timeout, _logger, name)
-                    
-                joined_all = joined_all and joined
-                   
-            return joined_all
         
                     
     def _stop(self):
 
         _logger.info('Main process stopping...')
 
-        all_joins_succeeded = (
-
-            # Stop recording processes.
-            self._stop_and_join(
-                self._recording_processes, 'recording process',
-                'recording processes') and
-        
-            # Stop sidecar processes.
-            self._stop_and_join(
-                self._sidecar_processes, 'sidecar process',
-                'sidecar processes') and
-        
-            # Stop main process threads.
-            self._stop_and_join(self._threads, 'thread', 'threads')
-
-        )
-
-        if all_joins_succeeded:
-            _logger.info('All recorder subprocesses and threads have stopped.')
-        else:
-            _logger.warning(
-                f'Some recorder subprocesses and/or threads did not stop '
-                f'within the {self._stop_timeout}-second timeout period. '
-                f'See previous log messages for details.')
+        # Stop recording processes.
+        self._stop_and_join(
+            self._recording_processes, 'recording process',
+            'recording processes')
+    
+        # Stop sidecar processes.
+        self._stop_and_join(
+            self._sidecar_processes, 'sidecar process',
+            'sidecar processes')
+    
+        # Stop main process threads.
+        self._stop_and_join(self._threads, 'thread', 'threads')
 
         _logger.info('The Vesper Recorder will now exit.')
 
