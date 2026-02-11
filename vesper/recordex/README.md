@@ -11,7 +11,7 @@ Run the [Raspberry Pi Imager](https://www.raspberrypi.com/software/) on a comput
 
 Be sure to install a 64-bit version of the Rasberry Pi OS, since that is required by MiniForge. I do not recommend the Lite version, since in my experience it is missing some functionality that I like to have. For example, when I tried the Lite version of Raspberry Pi OS based on Debian Bookworm it seemed to lack an ALSA audio capture volume control, and it also did not mount USB thumb drives automatically when they were inserted. I also do not recommend the Full version, since it seems bloated. The regular 64-bit Raspberry Pi OS, neither Full nor Lite, seems just about right!
 
-The following instructions assume you're using Raspberry Pi OS based on Debian Trixie, which is the latest version of Raspberry Pi OS as of this writing. If you're using an older version, you may need to modify the instructions somewhat, for example if system menus differ.
+The following instructions assume you're using Raspberry Pi OS based on Debian Trixie, which is the latest version of Raspberry Pi OS as of this writing. If you're using an older or newer version, you may need to modify the instructions somewhat, for example if system menus differ.
 
 
 ## 2. Boot Raspberry Pi from SD card
