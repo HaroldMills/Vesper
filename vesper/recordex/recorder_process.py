@@ -148,4 +148,34 @@ class RecorderProcess(mp.Process):
 
 
     def _stop_logging(self):
-        raise NotImplementedError()
+
+        """
+        Stop logging for this process.
+
+        The default implementation of this method performs only the
+        logging shutdown needed by producers of log messages, which
+        write to the logging queue. It does not perform additional
+        logging shutdown needed by the main process, which also reads
+        from the logging queue.
+
+        The default implementation of this method assumes that this
+        process's logging queue handler is available as the
+        `_logging_queue_handler` attribute and that its handle to the
+        logging queue is available as the `_logging_queue` attribute.
+        Subclasses that use the default implementation should set these
+        attributes in their `_start_logging` method.
+        """
+
+        # Close logging queue handler.
+        logger = logging.getLogger()
+        handler = self._logging_queue_handler
+        logger.removeHandler(handler)
+        handler.close()
+
+        # Close this process's handle to logging queue and wait for
+        # queue feeder thread to exit.
+        queue = self._logging_queue
+        queue.close()
+        queue.join_thread()
+
+

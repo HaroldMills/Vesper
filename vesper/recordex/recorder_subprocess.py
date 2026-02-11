@@ -11,9 +11,16 @@ class RecorderSubprocess(RecorderProcess):
 
 
     def __init__(self, name, settings, context):
+
         super().__init__(name=name)
+
         self._settings = settings
         self._context = context
+
+        # The `self._logging_queue` attribute is required by the
+        # default implementation of the `RecorderProcess._stop_logging`
+        # method.
+        self._logging_queue = context.logging_queue
         
 
     def _start_logging(self):
@@ -34,34 +41,5 @@ class RecorderSubprocess(RecorderProcess):
 
         # Add handler to root logger that writes all log messages to
         # the recorder's logging queue.
-        self._logging_queue_handler = QueueHandler(self._context.logging_queue)
+        self._logging_queue_handler = QueueHandler(self._logging_queue)
         logger.addHandler(self._logging_queue_handler)
-
-
-    def _stop_logging(self):
-
-        """
-        Stop logging for this recorder subprocess.
-
-        The code in this function is modeled after code suggested by
-        ChatGPT 5. See notes towards top of `main_process.py`.
-        """
-
-        # Get root logger for this process.
-        logger = logging.getLogger()
-
-        try:
-
-            # Close logging queue handler.
-            handler = self._logging_queue_handler
-            logger.removeHandler(handler)
-            handler.close()
-
-        finally:
-
-            # Close this process's handle to logging queue so feeder
-            # thread exits.
-            queue = self._context.logging_queue
-            queue.close()
-            queue.join_thread()
-

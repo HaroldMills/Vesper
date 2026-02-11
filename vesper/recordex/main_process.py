@@ -267,29 +267,24 @@ class MainProcess(RecorderProcess):
         """
         Stop logging for the main recorder process.
 
-        The code in this function is modeled after code suggested by
-        ChatGPT 5. See notes above.
+        This stops logging for the main process both as a producer of
+        log messages and as the manager of the multiprocess logging queue.
         """
 
         # Drain logging queue and stop queue listener monitor thread.
-        # Do this first so monitor thread exits.
+        # We must do this before we close the logging queue. This is
+        # the first of two parts of stopping logging for the main
+        # process as the manager of the logging queue.
         self._logging_queue_listener.stop()
 
-        # Get root logger for this process.
-        logger = logging.getLogger()
+        # Close logging queue handler and logging queue. This
+        # stops logging for the main process as a producer of
+        # log messages.
+        super()._stop_logging()
 
-        # Close logging queue handler.
-        handler = self._logging_queue_handler
-        logger.removeHandler(handler)
-        handler.close()
-
-        # Close this process's handle to logging queue so feeder thread
-        # exits.
-        queue = self._logging_queue
-        queue.close()
-        queue.join_thread()
-
-        # Flush and close stream and file handlers.
+        # Flush and close stream and file handlers. This is the
+        # second of two parts of stopping logging for the main
+        # process as the manager of the logging queue.
         logging.shutdown()
 
 
