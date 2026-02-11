@@ -349,3 +349,64 @@ Its response:
 Further questions clarified that if the main process wants to log messages,
 it should also use a QueueHandler to send them to the logging queue, and
 perform the same cleanup steps for its QueueHandler as child processes.
+
+
+Here's the result I got from googling "python QueueFeederThread":
+
+The QueueFeederThread is an internal, non-daemonic thread used by the
+Python multiprocessing.Queue to transfer data from a buffer in the
+current process to the underlying inter-process pipe. It is not a
+class you explicitly create, but rather a background component managed
+automatically by the multiprocessing module.
+
+Purpose
+
+The main purpose of the QueueFeederThread is to prevent put()
+operations from blocking indefinitely if the underlying pipe's buffer
+is full. It runs in the background, continuously moving items from the
+process's internal buffer to the shared pipe, allowing the main process
+to continue adding items to the buffer without waiting for the consumer
+processes to retrieve them immediately. 
+
+Common Issues and Solutions
+
+The QueueFeederThread is a common source of deadlocks or hanging
+processes, especially during program shutdown, because the parent
+process waits for it to finish (join).
+
+* Hanging Processes at Shutdown: If the consumer process(es) do not
+empty the queue before the producer process tries to exit, the
+QueueFeederThread will wait indefinitely for the pipe to drain,
+causing the process to hang.
+
+* Exceptions during Interpreter Shutdown: Sometimes, a TypeError
+exception ('NoneType' object is not callable') related to this thread
+may appear during interpreter shutdown, often a symptom of underlying
+race conditions in older Python versions. 
+
+Best Practices for Graceful Shutdown
+
+To ensure a graceful shutdown and prevent hanging, the following
+methods are recommended:
+
+* Empty the Queue: Ensure all items are removed from the queue by
+consumer processes before the program terminates.
+
+* Use Sentinel Values: A common pattern is to put a special "sentinel"
+value (like None) into the queue when production is complete. Consumer
+processes, upon receiving this sentinel, know to finish their tasks and
+exit.
+
+* Call cancel_join_thread(): A process can call the cancel_join_thread()
+method on the queue object to avoid waiting for the feeder thread to join.
+Note, however, that any data still in the internal buffer might be lost.
+
+* Consider multiprocessing.SimpleQueue: If a background feeder thread is
+not desired (e.g., for write-only scenarios), the
+multiprocessing.SimpleQueue can be used, as it does not have a feeder
+thread and put operations block if the buffer is full.
+
+* Use a Manager-backed Queue: Using multiprocessing.Manager().Queue()
+runs the queue in a separate server process, which avoids some of the
+feeder thread issues within child processes, though it adds a slight
+overhead. 
