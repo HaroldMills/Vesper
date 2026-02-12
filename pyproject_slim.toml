@@ -27,8 +27,8 @@
 # To create a Conda environment for developing the slim version of Vesper,
 # issue the following commands from the directory containing this file:
 #
-#     conda create -n vesper-dev-slim -c conda-forge python=3.13
-#     conda activate vesper-dev-slim
+#     conda create -n vesper-slim-dev -c conda-forge python=3.13
+#     conda activate vesper-slim-dev
 #     conda install -c conda-forge python-sounddevice h5py
 #     cp pyproject_slim.toml pyproject.toml
 #     pip install -e .
@@ -41,19 +41,19 @@
 # To run Django unit tests:
 #
 #     cd "/Users/harold/Desktop/NFC/Test Archive"
-#     conda activate vesper-dev-slim
+#     conda activate vesper-slim-dev
 #     vesper_admin test -p "dtest_*.py" vesper.django
 #
 # To run non-Django unit tests:
 #
 #     cd /Users/harold/Documents/Code/Python/vesper/vesper
-#     conda activate vesper-dev-slim
+#     conda activate vesper-slim-dev
 #     python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper
 #
 # To run non-Django unit tests for just one subpackage of the `vesper` package:
 #
 #     cd /Users/harold/Documents/Code/Python/vesper/vesper
-#     conda activate vesper-dev-slim
+#     conda activate vesper-slim-dev
 #     python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper/<subpackage>
 #    
 #
@@ -65,7 +65,7 @@
 #
 # To build the slim version of the Vesper package:
 #
-#     conda activate vesper-dev-slim
+#     conda activate vesper-slim-dev
 #     python -m build
 #
 # The build process will write package `.tar.gz` and `.whl` files to the
@@ -73,12 +73,12 @@
 #
 # To upload a built package to the test Python package index:
 #
-#     conda activate vesper-dev-slim
+#     conda activate vesper-slim-dev
 #     python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 #
 # To upload a built package to the real Python package index:
 #
-#     conda activate vesper-dev-slim
+#     conda activate vesper-slim-dev
 #     python -m twine upload dist/*
 #
 #    

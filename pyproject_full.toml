@@ -1,4 +1,4 @@
-# pyproject.toml for the slim Vesper Python package
+# pyproject.toml for the full Vesper Python package
 #
 #
 # The Slim and Full Vesper Packages
@@ -21,16 +21,16 @@
 # and obviate the slim/full Vesper distinction.
 #
 #
-# Creating a Slim Vesper Development Conda Environment
+# Creating a Full Vesper Development Conda Environment
 # ----------------------------------------------------
 #
-# To create a Conda environment for developing the slim version of Vesper,
+# To create a Conda environment for developing the full version of Vesper,
 # issue the following commands from the directory containing this file:
 #
-#     conda create -n vesper-dev-slim -c conda-forge python=3.13
-#     conda activate vesper-dev-slim
+#     conda create -n vesper-dev-full -c conda-forge python=3.11
+#     conda activate vesper-dev-full
 #     conda install -c conda-forge python-sounddevice h5py
-#     cp pyproject_slim.toml pyproject.toml
+#     cp pyproject_full.toml pyproject.toml
 #     pip install -e .
 #     pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
 #
@@ -41,31 +41,31 @@
 # To run Django unit tests:
 #
 #     cd "/Users/harold/Desktop/NFC/Test Archive"
-#     conda activate vesper-dev-slim
+#     conda activate vesper-dev-full
 #     vesper_admin test -p "dtest_*.py" vesper.django
 #
 # To run non-Django unit tests:
 #
 #     cd /Users/harold/Documents/Code/Python/vesper/vesper
-#     conda activate vesper-dev-slim
+#     conda activate vesper-dev-full
 #     python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper
 #
 # To run non-Django unit tests for just one subpackage of the `vesper` package:
 #
 #     cd /Users/harold/Documents/Code/Python/vesper/vesper
-#     conda activate vesper-dev-slim
+#     conda activate vesper-dev-full
 #     python -m unittest discover -s /Users/harold/Documents/Code/Python/vesper/vesper/<subpackage>
 #    
 #
-# Building and Uploading the Slim Vesper Package
+# Building and Uploading the Full Vesper Package
 # ----------------------------------------------
 #
 # The package build and upload commands below should be issued from within
 # the directory containing this file.
 #
-# To build the slim version of the Vesper package:
+# To build the full version of the Vesper package:
 #
-#     conda activate vesper-dev-slim
+#     conda activate vesper-dev-full
 #     python -m build
 #
 # The build process will write package `.tar.gz` and `.whl` files to the
@@ -73,12 +73,12 @@
 #
 # To upload a built package to the test Python package index:
 #
-#     conda activate vesper-dev-slim
+#     conda activate vesper-dev-full
 #     python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 #
 # To upload a built package to the real Python package index:
 #
-#     conda activate vesper-dev-slim
+#     conda activate vesper-dev-full
 #     python -m twine upload dist/*
 #
 #    
@@ -87,21 +87,21 @@
 #
 # To create a Conda environment using a local Vesper package:
 #
-#     conda create -n test -c conda-forge python=3.13
+#     conda create -n test -c conda-forge python=3.11
 #     conda activate test
-#     pip install dist/vesper_slim-<version>.tar.gz
+#     pip install dist/vesper-<version>.tar.gz
 #
 # To create a Conda environment using a Vesper package from the test PyPI:
 #
-#     conda create -n test -c conda-forge python=3.13
+#     conda create -n test -c conda-forge python=3.11
 #     conda activate test
-#     pip install --extra-index-url https://test.pypi.org/simple/ vesper_slim
+#     pip install --extra-index-url https://test.pypi.org/simple/ vesper
 #
 # To create a Conda environment using a Vesper package from the real PyPI:
 #
-#     conda create -n test -c conda-forge python=3.13
+#     conda create -n test -c conda-forge python=3.11
 #     conda activate test
-#     pip install vesper_slim==<version>
+#     pip install vesper==<version>
 #
 #
 # Building Vesper Docker Images
@@ -113,7 +113,7 @@
 
 [project]
 
-name = "vesper-slim"
+name = "vesper"
 dynamic = ["version"]
 
 description = "Software for acoustical monitoring of nocturnal bird migration."
@@ -144,7 +144,7 @@ maintainers = [
 # Since we include TensorFlow in the full version of Vesper, we are
 # stuck at Python 3.11 for as long as we're stuck at TensorFlow 2.12.
 # See `dependencies` section below for more about TensorFlow.
-requires-python = ">=3.13, <3.14"
+requires-python = ">=3.11, <3.12"
 
 # Vesper package dependencies. We build two versions of the Vesper package:
 # a full version that includes processors and all dependencies and a slim
@@ -162,6 +162,36 @@ dependencies = [
     "skyfield",
     "soxr",
     "whitenoise",
+
+    # Dependencies for only the full Vesper package.
+    "resampy",
+    "scipy",
+
+    # TensorFlow 2.12. At the time of this writing, the only parts of
+    # the `vesper` package that use TensorFlow are the MPG Ranch NFC
+    # detectors and classifiers. I plan to update them to use the
+    # most recent version of TensorFlow when I move them out of the
+    # Vesper core server.
+    'tensorflow~=2.12.0; platform_system != "Darwin" or platform_machine != "arm64"',
+    'tensorflow-macos~=2.12.0; platform_system == "Darwin" and platform_machine == "arm64"',
+    'tensorflow-metal~=0.8.0; platform_system == "Darwin" and platform_machine == "arm64"',
+
+    # The following lines are part of an interrupted effort to update to a
+    # more recent version of TensorFlow. Leave them commented out. I plan
+    # to resume the effort after I move detectors and classifiers to
+    # separate packages.
+
+    # TensorFlow 2.16 for Intel Macs. Google does not offer TensorFlow
+    # builds past 2.16 for Intel Macs (see
+    # https://github.com/tensorflow/tensorflow/releases/tag/v2.16.1).
+    #'tensorflow~=2.16.0; platform_system == "Darwin" and platform_machine != "arm64"',
+
+    # TensorFlow 2.18 for Apple Silicon Macs, Windows, and Linux.
+    #'tensorflow~=2.18.0; platform_system != "Darwin" or platform_machine == "arm64"',
+
+    # TensorFlow Metal for Apple Silicon Macs
+    #'tensorflow-metal~=1.1.0; platform_system == "Darwin" and platform_machine == "arm64"',
+
 
 ]
 
