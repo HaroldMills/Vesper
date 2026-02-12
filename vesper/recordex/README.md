@@ -54,9 +54,10 @@ Install the micro SD card from the previous step in your Raspberry Pi, attach a 
 
 * Issue the following commands:
 
-        conda create -n vesper-recorder python=3.11
+        conda create -n vesper-recorder -c conda-forge python=3.13
         conda activate vesper-recorder
-        conda install python-sounddevice h5py
+        conda install -c conda-forge python-sounddevice h5py
+        cp pyproject_slim.toml pyproject.toml
         pip install -e .
 
 
