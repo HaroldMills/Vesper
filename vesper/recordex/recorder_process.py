@@ -9,6 +9,8 @@ import multiprocessing as mp
 import queue
 import sys
 
+from vesper.util.bunch import Bunch
+
 
 _logger = logging.getLogger(__name__)
 
@@ -25,6 +27,24 @@ _logger = logging.getLogger(__name__)
 # stop could be implemented by stopping with a command instead of an
 # event. If you want to offer both options, though, use an event and
 # a flag indicating which type of stop is desired.
+
+# TODO: Make the enqueueing of commands by one process for another more
+# explicit. In particular, do not hide the enqueueing of commands in
+# methods of the classes that receive them. Whenever one process will
+# send commands to another, pass the receiving process's command queue
+# to the sending process's initializer and have the sending process
+# enqueue commands directly to the queue. This will make it more clear
+# who sends commands to whom and what commands they send.
+
+# TODO: Make setting the stop event of one process by another more
+# explicit. Whenever one process will stop another, pass the relevant
+# stop event to the stopping process's initializer and have the stopping
+# process set the event directly. This will make it more clear who stops
+# whom and when.
+
+# TODO: Consider eliminating the recorder subprocess `context` initializer
+# argument. I believe it may currently only be used to pass logging
+# configuration, which might better be passed more explicitly.
 
 
 class _MethodExecutionError(Exception):
@@ -43,6 +63,11 @@ class RecorderProcess(mp.Process):
     @property
     def command_queue(self):
         return self._command_queue
+    
+
+    @property
+    def stop_event(self):
+        return self._stop_event
 
 
     def run(self):
@@ -123,6 +148,11 @@ class RecorderProcess(mp.Process):
             except queue.Empty:
                 continue
 
+            # For convenience, allow commands that have no arguments to
+            # be enqueued as strings.
+            if isinstance(command, str):
+                command = Bunch(name=command)
+
             method_name = f'_do_{command.name}'
 
             try:
@@ -137,10 +167,6 @@ class RecorderProcess(mp.Process):
                 _logger.warning(
                     f'Error executing command "{command.name}". '
                     f'Exception message was: {e}')
-
-
-    def stop(self):
-        self._stop_event.set()
 
 
     def _stop(self):
@@ -177,5 +203,3 @@ class RecorderProcess(mp.Process):
         queue = self._logging_queue
         queue.close()
         queue.join_thread()
-
-

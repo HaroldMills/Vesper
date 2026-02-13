@@ -91,12 +91,18 @@ def main():
     
     finally:
         
-        # Stop and join main process. Sometimes it will already have
-        # stopped, but that's okay.
-        try:
-            main_process.stop()
-        finally:
-            main_process.join()
+        if main_process.is_alive():
+            # main process is still running
+
+            try:
+
+                # Tell main process to stop.
+                main_process.stop_event.set()
+
+            finally:
+
+                # Wait for main process to stop.
+                main_process.join()
 
 
 if __name__ == '__main__':

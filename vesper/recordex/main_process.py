@@ -29,6 +29,14 @@ from vesper.util.schedule import Schedule
 
 # TODO: Consider requiring station settings.
 
+# TODO: Would it make sense to create the logging queue in the bootstrap
+# process, and then pass it to the main process and other processes'
+# initializers? Would that make starting and stopping logging in all of
+# the non-bootstrap processes identical?
+
+# TODO: When the recorder shuts down, do we ensure that all audio that
+# has arrived has been processed? If not, should we?
+
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
 _DEFAULT_LOGGING_LEVEL = 'INFO'
@@ -161,11 +169,11 @@ class MainProcess(RecorderProcess):
     
 
     def _start_schedule_thread(self):
-        return self._start_thread(_ScheduleThread)
+        return self._start_thread(_ScheduleThread, self._command_queue)
 
 
     def _start_thread(self, cls, *args):
-        thread = cls(self, *args)
+        thread = cls(*args)
         _logger.info(f'Starting thread "{thread.name}"...')
         thread.start()
         return thread
@@ -176,17 +184,8 @@ class MainProcess(RecorderProcess):
         if run_duration is None:
             return None
         else:
-            return self._start_thread(_StopThread, run_duration)
-
-
-    def start_recording(self):
-        command = Bunch(name='start_recording')
-        self._command_queue.put(command)
-
-
-    def stop_recording(self):
-        command = Bunch(name='stop_recording')
-        self._command_queue.put(command)
+            return self._start_thread(
+                _StopThread, run_duration, self._stop_event)
 
 
     def _do_start_recording(self, command):
@@ -229,8 +228,8 @@ class MainProcess(RecorderProcess):
         else:
 
             for o in objects:
-                _logger.info(f'Stopping {singular_name} "{o.name}"...')
-                o.stop()
+                _logger.info(f'Telling {singular_name} "{o.name}" to stop...')
+                o.stop_event.set()
 
             stop_timeout = self._settings.stop_timeout
 
@@ -496,24 +495,33 @@ def _parse_sidecar_settings_aux(mapping, sidecar_classes):
 class _ScheduleThread(Thread):
 
 
-    def __init__(self, main_process):
+    def __init__(self, main_process_command_queue):
         super().__init__(name='Schedule Thread')
-        self._main_process = main_process
+        self._main_process_command_queue = main_process_command_queue
         self._schedule = (1, 2)
         self._stop_event = Event()
 
 
+    @property
+    def stop_event(self):
+        return self._stop_event
+    
+
     def run(self):
+        
+        command_queue = self._main_process_command_queue
         
         recording = False
 
         for i, duration in enumerate(self._schedule):
 
             if i != 0:
+
                 if recording:
-                    self._main_process.stop_recording()
+                    command_queue.put('stop_recording')
                 else:
-                    self._main_process.start_recording()
+                    command_queue.put('start_recording')
+
                 recording = not recording
 
             if self._stop_event.wait(timeout=duration):
@@ -522,38 +530,37 @@ class _ScheduleThread(Thread):
                 break
 
         if recording:
-            self._main_process.stop_recording()
+            command_queue.put('stop_recording')
 
         _logger.info('Recording schedule thread exiting...')
-
-
-    def stop(self):
-        self._stop_event.set()
 
 
 class _StopThread(Thread):
 
 
-    def __init__(self, main_process, run_duration):
+    def __init__(self, run_duration, main_process_stop_event):
         super().__init__(name='Stop Thread')
-        self._main_process = main_process
         self._run_duration = run_duration
+        self._main_process_stop_event = main_process_stop_event
         self._stop_event = Event()
 
 
+    @property
+    def stop_event(self):
+        return self._stop_event
+    
+
     def run(self):
 
-        if not self._stop_event.wait(timeout=self._run_duration):
-            # stop event not set (i.e. recorder run duration has elapsed)
+        self._stop_event.wait(timeout=self._run_duration)
+
+        if not self._stop_event.is_set():
+            # wait timed out
 
             _logger.info(
-                f'Recorder stop thread stopping main process after run '
-                f'duration of {self._run_duration} seconds...')
+                f'Recorder stop thread telling main process to stop '
+                f'after run duration of {self._run_duration} seconds...')
             
-            self._main_process.stop()
+            self._main_process_stop_event.set()
 
         _logger.info('Recorder stop thread exiting...')
-
-
-    def stop(self):
-        self._stop_event.set()

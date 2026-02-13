@@ -3,7 +3,6 @@ import logging
 import queue
 import time
 
-
 from vesper.recordex import recorder_utils
 from vesper.recordex.recorder_subprocess import RecorderSubprocess
 from vesper.util.bunch import Bunch
@@ -73,8 +72,10 @@ class AudioInputProcess(RecorderSubprocess):
 
         _logger.info('Stopping audio input thread...')
 
-        self._input_thread.stop()
+        # Tell audio input thread to stop.
+        self._input_thread.stop_event.set()
 
+        # Wait for audio input thread to stop, with timeout.
         recorder_utils.join_with_timeout(
             self._input_thread, self._settings.stop_timeout, _logger,
             'Audio input thread')
@@ -89,12 +90,13 @@ class _AudioInputThread(Thread):
         self._stop_event = Event()
 
 
+    @property
+    def stop_event(self):
+        return self._stop_event
+    
+
     def run(self):
         while not self._stop_event.is_set():
            time.sleep(.1)
            command = Bunch(name='process_audio')
            self._command_queue.put(command)
-
-
-    def stop(self):
-        self._stop_event.set()
