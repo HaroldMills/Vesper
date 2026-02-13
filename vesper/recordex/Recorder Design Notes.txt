@@ -102,6 +102,94 @@ In the signal handler or finally block, they should terminate() their
 own children before exiting.
 
 
+Multiprocessing and threading queue shutdown
+--------------------------------------------
+
+I asked Gemini 3 Pro (via GitHub Copilot in VS Code) the following question:
+
+    What must one do to shut down a Python multiprocessing queue in an
+    orderly fashion? How about a Python threading queue?
+
+and it responded:
+
+To shut down Python queues in an orderly fashion, the steps differ
+significantly between multiprocessing.Queue and queue.Queue (threading)
+because of how they handle data buffering.
+
+1. multiprocessing.Queue
+
+For a multiprocessing.Queue, "shutting down" primarily concerns the process
+that put data into the queue. When you put data into a generic mp.Queue,
+a background thread (the "feeder thread") starts up to buffer that data to
+the underlying pipe.
+
+To shut it down cleanly without errors (like BrokenPipeError) or hanging
+processes:
+
+    1. Stop putting data: ensure no new data is being added.
+
+    2. Close the queue: Call q.close(). This indicates that no more data
+       will be put into this queue by the current process.
+
+    3. Join the feeder thread: Call q.join_thread(). This blocks until
+       the background feeder thread has flushed all buffered data to the
+       pipe.
+
+    # In the process that was WRITING to the queue:
+    q.close()
+    q.join_thread()
+
+Note: If a process is only reading from the queue, it generally does not
+need to call join_thread(), but calling close() is still good practice to
+release resources.
+
+2. queue.Queue (Threading)
+
+The standard queue.Queue runs entirely in memory within a single process
+and does not have a background feeder thread or a close() method.
+"Shutting down" usually means signaling consumer threads to stop.
+
+The standard pattern is:
+
+    1. Send Sentinels: Put a special object (often None) into the queue
+       to signal consumers to exit. You typically send one sentinel per
+       consumer thread.
+
+    2. Wait for completion (Optional): If you are using the
+       q.join() / q.task_done() pattern to track work, call q.join() to
+       wait until all items (excluding sentinels if handled correctly)
+       are processed.
+
+    # Signal shutdown
+    for _ in range(num_worker_threads):
+        q.put(None) # Sentinel
+
+    # Wait for workers to finish processing existing items
+    q.join() 
+
+Summary for your RecorderProcess
+
+I noticed in your recorder_process.py that you are already correctly
+handling the logging queue in _stop_logging:
+
+    queue = self._logging_queue
+    queue.close()
+    queue.join_thread()
+
+This is correct because RecorderProcess is a writer to the logging queue.
+
+For self.command_queue, assuming RecorderProcess only reads from it:
+
+    * You don't strictly need to call join_thread().
+
+    * You can just let it be garbage collected, or call close() if you
+      want to be explicit.
+
+    * The Main Process (which writes commands to this queue) is
+      responsible for calling join_thread() on it if it wants to ensure
+      commands are flushed before exiting.
+
+
 Logging Shutdown
 ----------------
 
