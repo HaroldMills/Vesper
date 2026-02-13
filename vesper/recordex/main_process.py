@@ -258,6 +258,11 @@ class MainProcess(RecorderProcess):
         # Stop main process threads.
         self._stop_and_join(self._threads, 'thread', 'threads')
 
+        # Close command queue and wait for its feeder thread to exit.
+        # We must do this since the schedule thread writes commands
+        # to the queue.
+        recorder_utils.close_mp_queue(self._command_queue)
+
         _logger.info('The Vesper Recorder will now exit.')
 
 

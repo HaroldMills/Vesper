@@ -79,6 +79,10 @@ class AudioInputProcess(RecorderSubprocess):
         recorder_utils.join_with_timeout(
             self._input_thread, self._settings.stop_timeout, _logger,
             'Audio input thread')
+        
+        # Close processing command queue and wait for its feeder thread to
+        # exit.
+        recorder_utils.close_mp_queue(self._processing_command_queue)
 
 
 class _AudioInputThread(Thread):

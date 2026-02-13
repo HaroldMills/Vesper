@@ -16,3 +16,18 @@ def join_with_timeout(object, timeout, logger, name):
     
     else:
         logger.info(f'{name} has stopped.')
+
+
+def close_mp_queue(queue):
+
+    """
+    Close a multiprocessing queue and wait for its feeder thread to exit.
+
+    Every process that writes to a multiprocessing queue should call this
+    function during shutdown to ensure that the queue's feeder thread exits.
+    The feeder thread is non-daemonic, so if it does not exit it will prevent
+    the process from exiting.
+    """
+
+    queue.close()
+    queue.join_thread()
