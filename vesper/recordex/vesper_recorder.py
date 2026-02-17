@@ -6,9 +6,9 @@ import signal
 
 # The Vesper Recorder comprises several processes. We refer to the one
 # that executes the `main` function of this module as the *bootstrap
-# process*. The bootstrap process starts before all the other recorder
-# processes and is responsible for starting the *main process*, which
-# in turn starts the other recorder processes.
+# process*. The bootstrap process starts first and is responsible for
+# starting the *main process*, which in turn starts the other recorder
+# processes.
 #
 # We want to handle keyboard interrupts (initiated when the user types
 # Ctrl-C on the keyboard) in the bootstrap process and ignore them in
