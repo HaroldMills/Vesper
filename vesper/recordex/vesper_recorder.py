@@ -1,43 +1,13 @@
 """Runs the Vesper Recorder."""
 
 
-import signal
-
-
-# The Vesper Recorder comprises several processes. We refer to the one
-# that executes the `main` function of this module as the *bootstrap
-# process*. The bootstrap process starts first and is responsible for
-# starting the *main process*, which in turn starts the other recorder
-# processes.
-#
-# We want to handle keyboard interrupts (initiated when the user types
-# Ctrl-C on the keyboard) in the bootstrap process and ignore them in
-# all other processes. The following code turns off keyboard interrupts
-# for all processes. It runs in every recorder process, including the
-# bootstrap process, the main process, and every other process, to
-# disable keyboard interrupts as soon as possible as the process is
-# starting up. The `main` function of this module then turns keyboard
-# interrupts back on for only the bootstrap process.
-#
-# The code here runs in every recorder process since we are using the
-# `spawn` multiprocessing start method, under which Python executes
-# this module (the so-called *entry module*) first in every program
-# process.
-try:
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-except Exception as e:
-    import sys
-    print(
-        f'Attempt to ignore keyboard interrupts at recorder process '
-        f'startup raised an exception that will be ignored. As a result, '
-        f'keyboard interrupts may not work properly. '
-        f'Exception message was: {e}', file=sys.stderr)
+# import multiprocessing as mp
+# print(f'Executing {__file__} in process "{mp.current_process().name}".')
 
 
 import multiprocessing as mp
+import signal
 import threading
-
-print(f'Executing {__file__} in process "{mp.current_process().name}".')
 
 
 def main():

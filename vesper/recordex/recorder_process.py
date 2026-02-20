@@ -1,4 +1,16 @@
-"""Main recorder process."""
+"""
+The recorder process.
+
+The recorder process is started by the main process and in turn starts all
+other recorder processes, referred to as the *recorder subprocesses*. The
+recorder process is also responsible for the orderly shutdown of the
+recorder subprocesses and itself, either in response to a keyboard
+interrupt or the stop thread setting the recorder process's stop event.
+"""
+
+
+# import multiprocessing as mp
+# print(f'Executing {__file__} in process "{mp.current_process().name}".')
 
 
 from logging import Formatter, FileHandler, StreamHandler
