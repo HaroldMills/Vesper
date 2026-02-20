@@ -29,13 +29,19 @@ from vesper.util.schedule import Schedule
 
 # TODO: Consider requiring station settings.
 
-# TODO: Would it make sense to create the logging queue in the bootstrap
-# process, and then pass it to the main process and other processes'
+# TODO: Would it make sense to create the logging queue in the main
+# process, and then pass it to the recording process and other processes'
 # initializers? Would that make starting and stopping logging in all of
-# the non-bootstrap processes identical?
+# the non-main processes identical?
 
 # TODO: When the recorder shuts down, do we ensure that all audio that
 # has arrived has been processed? If not, should we?
+
+# TODO: Consider using a multithreading queue instead of a multiprocessing
+# queue for the recorder process's command queue. All commands sent to
+# the main process currently come from its schedule thread. I intend for
+# the UI thread to send commands, too, but the UI thread will be a thread
+# in the main process.
 
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
