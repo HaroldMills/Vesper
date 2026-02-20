@@ -37,6 +37,8 @@ except Exception as e:
 import multiprocessing as mp
 import threading
 
+print(f'Executing {__file__} in process "{mp.current_process().name}".')
+
 
 def main():
 
@@ -64,10 +66,10 @@ def main():
     # so that the keyboard interrupt setup can happen as soon as
     # possible. This reduces the initial period during which the
     # recorder is unresponsive to keyboard interrupts.
-    from vesper.recordex.main_process import MainProcess
+    from vesper.recordex.recorder_process import RecorderProcess
 
     # Create and start main recorder process.
-    main_process = MainProcess()
+    main_process = RecorderProcess()
     main_process.start()
 
     try:

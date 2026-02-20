@@ -4,18 +4,23 @@ import queue
 import time
 
 from vesper.recordex import recorder_utils
-from vesper.recordex.recorder_subprocess import RecorderSubprocess
+from vesper.recordex.subprocess import Subprocess
 from vesper.util.bunch import Bunch
 
 
 _logger = logging.getLogger(__name__)
 
 
-class AudioInputProcess(RecorderSubprocess):
+class AudioInputProcess(Subprocess):
 
 
-    def __init__(self, settings, context, processing_command_queue):
-        super().__init__('Audio Input', settings, context)
+    def __init__(
+            self, settings, logging_level, logging_queue,
+            processing_command_queue):
+        
+        super().__init__(
+            'AudioInputProcess', settings, logging_level, logging_queue)
+        
         self._processing_command_queue = processing_command_queue
 
 

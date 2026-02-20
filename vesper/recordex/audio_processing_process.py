@@ -1,16 +1,17 @@
 import logging
 
-from vesper.recordex.recorder_subprocess import RecorderSubprocess
+from vesper.recordex.subprocess import Subprocess
 
 
 _logger = logging.getLogger(__name__)
 
 
-class AudioProcessingProcess(RecorderSubprocess):
+class AudioProcessingProcess(Subprocess):
 
 
-    def __init__(self, settings, context):
-        super().__init__('Audio Processing', settings, context)
+    def __init__(self, settings, logging_level, logging_queue):
+        super().__init__(
+            'AudioProcessingProcess', settings, logging_level, logging_queue)
 
 
     def _do_process_audio(self, command):
