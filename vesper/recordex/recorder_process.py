@@ -243,7 +243,7 @@ class RecorderProcess(Process):
                     
     def _stop(self):
 
-        _logger.info('Main process stopping...')
+        _logger.info('Recorder process stopping...')
 
         # Stop recording processes.
         self._stop_and_join(
