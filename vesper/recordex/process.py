@@ -1,13 +1,11 @@
 """
-Base class for all recorder processes, including both the main process and
-its subprocesses.
+Base class for all recorder processes other than the main process.
 """
 
 
 import logging
 import multiprocessing as mp
 import queue
-import signal
 import sys
 
 from vesper.util.bunch import Bunch
@@ -50,8 +48,6 @@ class Process(mp.Process):
 
     def run(self):
 
-        self._disable_keyboard_interrupts()
-
         execute = self._execute_method
 
         try:
@@ -66,23 +62,6 @@ class Process(mp.Process):
 
         except _MethodExecutionError:
             pass
-
-
-    def _disable_keyboard_interrupts(self):
-
-        print(f'Disabling keyboard interrupts for process "{self.name}".')
-
-        # Disable keyboard interrupts for this process. We want only the
-        # main process to receive keyboard interrupts so that it can
-        # direct the orderly shutdown of all the other processes.
-        try:
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-        except Exception as e:
-            print(
-                f'Attempt to ignore keyboard interrupts at recorder process '
-                f'startup raised an exception that will be ignored. As a result, '
-                f'keyboard interrupts may not work properly. '
-                f'Exception message was: {e}', file=sys.stderr)
 
 
     def _execute_method(

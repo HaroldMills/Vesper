@@ -1,3 +1,6 @@
+# This import should precede all others.
+import vesper.recordex.keyboard_interrupt_disabler
+
 import logging
 
 from vesper.recordex.subprocess import Subprocess

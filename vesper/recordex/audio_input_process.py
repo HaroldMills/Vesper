@@ -1,3 +1,6 @@
+# This import should precede all others.
+import vesper.recordex.keyboard_interrupt_disabler
+
 from threading import Event, Thread
 import logging
 import queue

@@ -1,13 +1,33 @@
-"""Runs the Vesper Recorder."""
+"""
+The main module of the Vesper Recorder.
+
+This module runs in the Vesper Recorder's main process, and starts the
+*recorder process*, which in turn starts all of the other recorder
+processes, including the audio input, audio processing, and sidecar
+processes. The main process is also responsible for handling keyboard
+interrupts and directing the orderly shutdown of all of the other
+recorder processes.
+"""
 
 
-# import multiprocessing as mp
-# print(f'Executing {__file__} in process "{mp.current_process().name}".')
-
+# Disable keyboard interrupts. The `main` function below will re-enable them
+# for the main process.
+#
+# Note that it is not sufficient to disable keyboard interrupts here and
+# not at the tops of the other recorder process modules. That would work
+# on macOS since there this module is imported first thing in all
+# recorder processes, but on Windows 10, at least, it is not.
+import vesper.recordex.keyboard_interrupt_disabler
 
 import multiprocessing as mp
 import signal
 import threading
+
+# Note that this import will also disable keyboard interrupts in the main
+# process, in addition to the above `keyboard_interrupt_disabler` import.
+# We choose not to rely on that, however, and to make the disablement
+# explicit.
+from vesper.recordex.recorder_process import RecorderProcess
 
 
 def main():
@@ -29,28 +49,24 @@ def main():
     # Register keyboard interrupt handler.
     def handle_keyboard_interrupt(signal_num, frame):
         keyboard_interrupt_event.set()
+    # print(
+    #     f'Registering keyboard interrupt handler in process '
+    #     f'"{mp.current_process().name}".')
     signal.signal(signal.SIGINT, handle_keyboard_interrupt)
 
-    # We perform this import after setting up keyboard interrupt
-    # handling instead of in the usual place near the top of this file
-    # so that the keyboard interrupt setup can happen as soon as
-    # possible. This reduces the initial period during which the
-    # recorder is unresponsive to keyboard interrupts.
-    from vesper.recordex.recorder_process import RecorderProcess
-
-    # Create and start main recorder process.
-    main_process = RecorderProcess()
-    main_process.start()
+    # Create and start recorder process.
+    recorder_process = RecorderProcess()
+    recorder_process.start()
 
     try:
         
-        while main_process.is_alive():
+        while recorder_process.is_alive():
             
             # Check for keyboard interrupt periodically.
             if keyboard_interrupt_event.is_set():
                 break
             
-            main_process.join(timeout=1)
+            recorder_process.join(timeout=1)
     
     except KeyboardInterrupt:
         # keyboard interrupt delivered as `KeyboardInterrupt` exception
@@ -63,18 +79,18 @@ def main():
     
     finally:
         
-        if main_process.is_alive():
-            # main process is still running
+        if recorder_process.is_alive():
+            # recorder process is still running
 
             try:
 
-                # Tell main process to stop.
-                main_process.stop_event.set()
+                # Tell recorder process to stop.
+                recorder_process.stop_event.set()
 
             finally:
 
-                # Wait for main process to stop.
-                main_process.join()
+                # Wait for recorder process to stop.
+                recorder_process.join()
 
 
 if __name__ == '__main__':

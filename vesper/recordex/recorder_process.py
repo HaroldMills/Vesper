@@ -9,9 +9,8 @@ interrupt or the stop thread setting the recorder process's stop event.
 """
 
 
-# import multiprocessing as mp
-# print(f'Executing {__file__} in process "{mp.current_process().name}".')
-
+# This import should precede all others.
+import vesper.recordex.keyboard_interrupt_disabler
 
 from logging import Formatter, FileHandler, StreamHandler
 from logging.handlers import QueueHandler, QueueListener
