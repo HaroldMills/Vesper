@@ -50,9 +50,9 @@ from vesper.util.schedule import Schedule
 
 # TODO: Consider using a multithreading queue instead of a multiprocessing
 # queue for the recorder process's command queue. All commands sent to
-# the main process currently come from its schedule thread. I intend for
-# the UI thread to send commands, too, but the UI thread will be a thread
-# in the main process.
+# the recorder process currently come from its schedule thread. The UI
+# thread will send commands, too, but the UI thread will also be a
+# recorder process thread.
 
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
@@ -89,7 +89,7 @@ class RecorderProcess(Process):
 
     def _start_logging(self):
 
-        """Start logging for the main recorder process."""
+        """Start logging for the recorder process."""
 
         # Create logging queue for all recorder processes to write messages
         # to. The messages are handled by the queue listener created below.
@@ -112,7 +112,7 @@ class RecorderProcess(Process):
             self._logging_queue, stderr_handler, file_handler)
         self._logging_queue_listener.start()
 
-        # Get the root logger for the main recorder process.
+        # Get root logger for recorder process.
         logger = logging.getLogger()
 
         # Set logging level to default for now. The level will be updated
@@ -266,7 +266,7 @@ class RecorderProcess(Process):
             self._sidecar_processes, 'sidecar process',
             'sidecar processes')
     
-        # Stop main process threads.
+        # Stop recorder process threads.
         self._stop_and_join(self._threads, 'thread', 'threads')
 
         # Close command queue and wait for its feeder thread to exit.
@@ -280,25 +280,24 @@ class RecorderProcess(Process):
     def _stop_logging(self):
 
         """
-        Stop logging for the main recorder process.
+        Stop logging for the recorder process.
 
-        This stops logging for the main process both as a producer of
+        This stops logging for the recorder process both as a producer of
         log messages and as the manager of the multiprocess logging queue.
         """
 
         # Drain logging queue and stop queue listener monitor thread.
         # We must do this before we close the logging queue. This is
-        # the first of two parts of stopping logging for the main
+        # the first of two parts of stopping logging for the recorder
         # process as the manager of the logging queue.
         self._logging_queue_listener.stop()
 
-        # Close logging queue handler and logging queue. This
-        # stops logging for the main process as a producer of
-        # log messages.
+        # Close logging queue handler and logging queue. This stops
+        # logging for the recorder process as a producer of log messages.
         super()._stop_logging()
 
         # Flush and close stream and file handlers. This is the
-        # second of two parts of stopping logging for the main
+        # second of two parts of stopping logging for the recorder
         # process as the manager of the logging queue.
         logging.shutdown()
 
@@ -511,9 +510,9 @@ def _parse_sidecar_settings_aux(mapping, sidecar_classes):
 class _ScheduleThread(Thread):
 
 
-    def __init__(self, main_process_command_queue):
+    def __init__(self, recorder_process_command_queue):
         super().__init__(name='ScheduleThread')
-        self._main_process_command_queue = main_process_command_queue
+        self._recorder_process_command_queue = recorder_process_command_queue
         self._schedule = (1, 5, 1, 5)
         self._stop_event = Event()
 
@@ -525,7 +524,7 @@ class _ScheduleThread(Thread):
 
     def run(self):
         
-        command_queue = self._main_process_command_queue
+        command_queue = self._recorder_process_command_queue
         
         recording = False
 
@@ -554,10 +553,10 @@ class _ScheduleThread(Thread):
 class _StopThread(Thread):
 
 
-    def __init__(self, run_duration, main_process_stop_event):
+    def __init__(self, run_duration, recorder_process_stop_event):
         super().__init__(name='StopThread')
         self._run_duration = run_duration
-        self._main_process_stop_event = main_process_stop_event
+        self._recorder_process_stop_event = recorder_process_stop_event
         self._stop_event = Event()
 
 
@@ -574,9 +573,9 @@ class _StopThread(Thread):
             # wait timed out
 
             _logger.info(
-                f'Recorder stop thread telling main process to stop '
+                f'Recorder stop thread telling recorder process to stop '
                 f'after run duration of {self._run_duration} seconds...')
             
-            self._main_process_stop_event.set()
+            self._recorder_process_stop_event.set()
 
         _logger.info('Recorder stop thread exiting...')
