@@ -69,8 +69,6 @@ not just the main process module.
 # start method and lifecycle, keyboard interrupt handling, logging, and
 # settings.
 
-# TODO: Log a message when we quit due to a keyboard interrupt.
-
 
 # Disable keyboard interrupts for this process. The `VesperRecorder`
 # object created by the `main` function will re-enable them later. See
@@ -132,6 +130,7 @@ class _VesperRecorder:
         
         executor = LifecycleExecutor(self, 'VesperRecorder', lifecycle)
         executor.execute_lifecycle()
+
 
 
     def _configure_multiprocessing(self):
@@ -224,6 +223,7 @@ class _VesperRecorder:
                 
                 # Check for keyboard interrupt periodically.
                 if self._keyboard_interrupt_event.is_set():
+                    self._log_keyboard_interrupt_received()
                     break
                 
                 recorder_process.join(timeout=1)
@@ -231,6 +231,8 @@ class _VesperRecorder:
         except KeyboardInterrupt:
             # keyboard interrupt delivered as `KeyboardInterrupt` exception
             # instead of via call to `handle_keyboard_interrupt`
+
+            self._log_keyboard_interrupt_received()
 
             # Set keyboard interrupt event, even if nobody will use it, to
             # maintain the invariant that it is set if and only if we have
@@ -251,6 +253,14 @@ class _VesperRecorder:
 
                     # Wait for recorder process to stop.
                     recorder_process.join()
+
+        _logger.info('The Vesper Recorder will now exit.')
+
+
+    def _log_keyboard_interrupt_received(self):
+        _logger.info(
+            'Received keyboard interrupt. The Vesper Recorder will now '
+            'shut down.')
 
 
     def _stop_logging(self):

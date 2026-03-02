@@ -250,8 +250,6 @@ class RecorderProcess(Process):
         # to the queue.
         recorder_utils.close_mp_queue(self._command_queue)
 
-        _logger.info('The Vesper Recorder will now exit.')
-
 
 def _parse_settings_file(settings_file_path):
 
