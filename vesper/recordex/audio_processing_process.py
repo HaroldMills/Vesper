@@ -3,13 +3,13 @@ import vesper.recordex.keyboard_interrupt_disabler
 
 import logging
 
-from vesper.recordex.subprocess import Subprocess
+from vesper.recordex.process import Process
 
 
 _logger = logging.getLogger(__name__)
 
 
-class AudioProcessingProcess(Subprocess):
+class AudioProcessingProcess(Process):
 
 
     def __init__(self, settings, logging_level, logging_queue):

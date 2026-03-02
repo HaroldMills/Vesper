@@ -7,14 +7,14 @@ import queue
 import time
 
 from vesper.recordex import recorder_utils
-from vesper.recordex.subprocess import Subprocess
+from vesper.recordex.process import Process
 from vesper.util.bunch import Bunch
 
 
 _logger = logging.getLogger(__name__)
 
 
-class AudioInputProcess(Subprocess):
+class AudioInputProcess(Process):
 
 
     def __init__(

@@ -9,7 +9,9 @@ interrupt or the stop thread setting the recorder process's stop event.
 """
 
 
-# This import should precede all others.
+# Disable keyboard interrupts for this process. See the
+# `vesper.recordex.keyboard_interrupt_disabler` module docstring for
+# a discussion of Vesper Recorder keyboard interrupt handling.
 import vesper.recordex.keyboard_interrupt_disabler
 
 from logging import Formatter, FileHandler, StreamHandler
@@ -29,6 +31,8 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 
 
+# TODO: Consider requiring station settings.
+
 # TODO: Consider supporting fixed-duration recording, for which a recording
 # will end after a specified number of sample frames, rather than when
 # the recorder receives a `stop_recording` command. But consider how to deal
@@ -37,13 +41,6 @@ from vesper.util.schedule import Schedule
 # recording? Perhaps we should stop if it would otherwise continue past
 # a certain end time, even if we haven't reached the indicated sample
 # count.
-
-# TODO: Consider requiring station settings.
-
-# TODO: Would it make sense to create the logging queue in the main
-# process, and then pass it to the recording process and other processes'
-# initializers? Would that make starting and stopping logging in all of
-# the non-main processes identical?
 
 # TODO: When the recorder shuts down, do we ensure that all audio that
 # has arrived has been processed? If not, should we?
@@ -82,48 +79,27 @@ class VesperRecorderError(Exception):
 class RecorderProcess(Process):
 
 
-    def __init__(self):
-        super().__init__('RecorderProcess')
+    def __init__(self, settings, logging_level, logging_queue):
+
+        super().__init__(
+            'RecorderProcess', settings, logging_level, logging_queue)
+        
         self._home_dir_path = Path.cwd()
 
 
-    def _start_logging(self):
+    @property
+    def settings(self):
+        return self._settings
+    
 
-        """Start logging for the recorder process."""
+    @property
+    def logging_level(self):
+        return self._logging_level
+    
 
-        # Create logging queue for all recorder processes to write messages
-        # to. The messages are handled by the queue listener created below.
-        self._logging_queue = mp.Queue()
-
-        # Create handler that writes log messages to stderr.
-        stderr_handler = StreamHandler()
-        formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
-        stderr_handler.setFormatter(formatter)
-        
-        # Create handler that appends messages to log file.
-        log_file_path = self._home_dir_path / _LOG_FILE_NAME
-        file_handler = FileHandler(log_file_path)
-        formatter = Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
-        file_handler.setFormatter(formatter)
-
-        # Create logging queue listener that reads messages from the queue
-        # and logs them.
-        self._logging_queue_listener = QueueListener(
-            self._logging_queue, stderr_handler, file_handler)
-        self._logging_queue_listener.start()
-
-        # Get root logger for recorder process.
-        logger = logging.getLogger()
-
-        # Set logging level to default for now. The level will be updated
-        # after the recorder settings file is parsed in case it is specified
-        # there.
-        logger.setLevel(_DEFAULT_LOGGING_LEVEL)
-
-        # Add handler to root logger that writes all log messages to the
-        # recorder's logging queue.
-        self._logging_queue_handler = QueueHandler(self._logging_queue)
-        logger.addHandler(self._logging_queue_handler)
+    @property
+    def logging_queue(self):
+        return self._logging_queue
 
 
     def _start(self):
@@ -204,10 +180,10 @@ class RecorderProcess(Process):
         _logger.info('Starting recording...')
 
         processing_process = AudioProcessingProcess(
-            self._settings, self._logging_level, self._logging_queue)
+            self.settings, self.logging_level, self.logging_queue)
         
         input_process = AudioInputProcess(
-            self._settings, self._logging_level, self._logging_queue,
+            self.settings, self.logging_level, self.logging_queue,
             processing_process.command_queue)
         
         self._recording_processes = [input_process, processing_process]
@@ -275,31 +251,6 @@ class RecorderProcess(Process):
         recorder_utils.close_mp_queue(self._command_queue)
 
         _logger.info('The Vesper Recorder will now exit.')
-
-
-    def _stop_logging(self):
-
-        """
-        Stop logging for the recorder process.
-
-        This stops logging for the recorder process both as a producer of
-        log messages and as the manager of the multiprocess logging queue.
-        """
-
-        # Drain logging queue and stop queue listener monitor thread.
-        # We must do this before we close the logging queue. This is
-        # the first of two parts of stopping logging for the recorder
-        # process as the manager of the logging queue.
-        self._logging_queue_listener.stop()
-
-        # Close logging queue handler and logging queue. This stops
-        # logging for the recorder process as a producer of log messages.
-        super()._stop_logging()
-
-        # Flush and close stream and file handlers. This is the
-        # second of two parts of stopping logging for the recorder
-        # process as the manager of the logging queue.
-        logging.shutdown()
 
 
 def _parse_settings_file(settings_file_path):
