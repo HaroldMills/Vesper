@@ -93,20 +93,23 @@ from vesper.recordex.lifecycle_executor import LifecycleExecutor
 # explicit.
 from vesper.recordex.recorder_process import RecorderProcess
 
+import vesper.recordex.setting_utils as setting_utils
+
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
 _DEFAULT_LOGGING_LEVEL = 'INFO'
+_SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
 
 
 _logger = logging.getLogger(__name__)
 
 
 def main():
-    recorder = _VesperRecorder()
+    recorder = VesperRecorder()
     recorder.run()
 
 
-class _VesperRecorder:
+class VesperRecorder:
 
 
     def __init__(self):
@@ -124,8 +127,7 @@ class _VesperRecorder:
             ('_configure_multiprocessing', None, None),
             ('_configure_keyboard_interrupts', None, None),
             ('_start_logging', None, None),
-            ('_parse_settings', _logger, '_stop_logging'),
-            ('_run_recorder_process', _logger, '_stop_logging'),
+            ('_run', _logger, '_stop_logging'),
             ('_stop_logging', None, None))
         
         executor = LifecycleExecutor(self, 'VesperRecorder', lifecycle)
@@ -206,9 +208,60 @@ class _VesperRecorder:
         self._logging_level = level
 
 
-    def _parse_settings(self):
-        self._settings = None
+    def _run(self):
+        self._log_welcome_message()
+        self._parse_settings_file()
+        self._log_home_page_message()
+        self._update_logging_level()
+        self._run_recorder_process()
+        self._log_exit_message()
 
+
+    def _log_welcome_message(self):
+        _logger.info(f'Welcome to the Vesper Recorder!')
+
+
+    def _parse_settings_file(self):
+
+        settings_file_path = self._home_dir_path / _SETTINGS_FILE_NAME
+
+        _logger.info(
+            f'Reading recorder settings from file "{settings_file_path}"...')
+        
+        try:
+            self._settings = \
+                setting_utils.parse_settings_file(settings_file_path)
+            
+        except Exception as e:
+            _logger.error(str(e))
+            raise Exception(
+                'Could not parse recorder settings file. '
+                'See previous log message for details.')
+
+
+    def _log_home_page_message(self):
+        _logger.info(
+            f'Recorder home page URL is '
+            f'"http://localhost:{self._settings.server_port_num}".')
+        
+
+    def _update_logging_level(self):
+
+        """
+        Update logging level if `logging_level` setting is present and
+        differs from current level.
+        """
+
+        logging_level = self._settings.logging_level
+
+        if logging_level is not None and logging_level != self._logging_level:
+
+            _logger.info(
+                f'Setting recorder logging level to settings file '
+                f'value "{logging_level}"...')
+            
+            self._set_logging_level(logging_level)
+            
 
     def _run_recorder_process(self):
 
@@ -223,7 +276,7 @@ class _VesperRecorder:
                 
                 # Check for keyboard interrupt periodically.
                 if self._keyboard_interrupt_event.is_set():
-                    self._log_keyboard_interrupt_received()
+                    self._log_keyboard_interrupt_message()
                     break
                 
                 recorder_process.join(timeout=1)
@@ -232,7 +285,7 @@ class _VesperRecorder:
             # keyboard interrupt delivered as `KeyboardInterrupt` exception
             # instead of via call to `handle_keyboard_interrupt`
 
-            self._log_keyboard_interrupt_received()
+            self._log_keyboard_interrupt_message()
 
             # Set keyboard interrupt event, even if nobody will use it, to
             # maintain the invariant that it is set if and only if we have
@@ -254,13 +307,15 @@ class _VesperRecorder:
                     # Wait for recorder process to stop.
                     recorder_process.join()
 
-        _logger.info('The Vesper Recorder will now exit.')
 
-
-    def _log_keyboard_interrupt_received(self):
+    def _log_keyboard_interrupt_message(self):
         _logger.info(
-            'Received keyboard interrupt. The Vesper Recorder will now '
-            'shut down.')
+            'Main process received keyboard interrupt. '
+            'The Vesper Recorder will now shut down.')
+
+
+    def _log_exit_message(self):
+        _logger.info('The Vesper Recorder will now exit.')
 
 
     def _stop_logging(self):
