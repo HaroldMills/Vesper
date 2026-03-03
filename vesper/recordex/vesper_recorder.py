@@ -188,7 +188,7 @@ class VesperRecorder:
         self._logging_queue_listener.start()
 
         # Set logging level to default for now. We will update the level
-        # after parsing the recording settings file if it specifies a
+        # after parsing the recording setting file if it specifies a
         # different level.
         self._set_logging_level(_DEFAULT_LOGGING_LEVEL)
 
@@ -210,7 +210,7 @@ class VesperRecorder:
 
     def _run(self):
         self._log_welcome_message()
-        self._parse_settings_file()
+        self._parse_setting_file()
         self._log_home_page_message()
         self._update_logging_level()
         self._run_recorder_process()
@@ -221,21 +221,21 @@ class VesperRecorder:
         _logger.info(f'Welcome to the Vesper Recorder!')
 
 
-    def _parse_settings_file(self):
+    def _parse_setting_file(self):
 
-        settings_file_path = self._home_dir_path / _SETTINGS_FILE_NAME
+        setting_file_path = self._home_dir_path / _SETTINGS_FILE_NAME
 
         _logger.info(
-            f'Reading recorder settings from file "{settings_file_path}"...')
+            f'Reading recorder settings from file "{setting_file_path}"...')
         
         try:
             self._settings = \
-                setting_utils.parse_settings_file(settings_file_path)
+                setting_utils.parse_setting_file(setting_file_path)
             
         except Exception as e:
             _logger.error(str(e))
             raise Exception(
-                'Could not parse recorder settings file. '
+                'Could not parse recorder setting file. '
                 'See previous log message for details.')
 
 
@@ -257,7 +257,7 @@ class VesperRecorder:
         if logging_level is not None and logging_level != self._logging_level:
 
             _logger.info(
-                f'Setting recorder logging level to settings file '
+                f'Setting recorder logging level to setting file '
                 f'value "{logging_level}"...')
             
             self._set_logging_level(logging_level)

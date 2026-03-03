@@ -5,6 +5,9 @@ from vesper.util.bunch import Bunch
 from vesper.util.schedule import Schedule
 
 
+# TODO: Consider requiring station settings.
+
+
 _DEFAULT_STATION_NAME = 'Vesper'
 _DEFAULT_STATION_LATITUDE = None
 _DEFAULT_STATION_LONGITUDE = None
@@ -19,25 +22,25 @@ _PROCESSOR_CLASSES = ()
 _SIDECAR_CLASSES = ()
 
 
-def parse_settings_file(settings_file_path):
+def parse_setting_file(setting_file_path):
 
-    # Check that settings file exists.
-    if not settings_file_path.exists():
+    # Check that setting file exists.
+    if not setting_file_path.exists():
         raise Exception(
-            f'Recorder settings file "{settings_file_path}" does not exist.')
+            f'Recorder setting file "{setting_file_path}" does not exist.')
         
-    # Parse settings file.
+    # Parse setting file.
     try:
-        return _parse_settings_file_aux(settings_file_path)
+        return _parse_setting_file_aux(setting_file_path)
     except Exception as e:
         raise Exception(
-            f'Could not parse recorder settings file '
-            f'"{settings_file_path}". Error message was: {e}')
+            f'Could not parse recorder setting file '
+            f'"{setting_file_path}". Error message was: {e}')
     
 
-def _parse_settings_file_aux(settings_file_path):
+def _parse_setting_file_aux(setting_file_path):
     
-    settings = Settings.create_from_yaml_file(settings_file_path)
+    settings = Settings.create_from_yaml_file(setting_file_path)
 
     logging_level = _parse_logging_level_setting(settings)
     station = _parse_station_settings(settings)

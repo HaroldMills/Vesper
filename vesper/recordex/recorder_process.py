@@ -24,8 +24,6 @@ from vesper.recordex.audio_processing_process import AudioProcessingProcess
 from vesper.recordex.process import Process
 
 
-# TODO: Consider requiring station settings.
-
 # TODO: Consider supporting fixed-duration recording, for which a recording
 # will end after a specified number of sample frames, rather than when
 # the recorder receives a `stop_recording` command. But consider how to deal
