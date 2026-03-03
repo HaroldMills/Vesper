@@ -327,35 +327,27 @@ class VesperRecorder:
         log messages and as the manager of the multiprocess logging queue.
         """
 
-        # Drain logging queue and stop queue listener monitor thread.
-        # We must do this before we close the logging queue. This is the
-        # first of two parts of stopping logging for the main process as
-        # the manager of the logging queue.
-        # TODO: Document why we must do this before closing the logging queue.
-        self._logging_queue_listener.stop()
-
-        # Close logging queue handler. This is the first of two parts
-        # of stopping logging for the main process as a producer of
-        # log messages.
-        # TODO: Move this to top of this method so logging queue handler,
-        # logging queue listener, and logging queue are stopped and closed
-        # in the reverse order of their creation.
+        # Note that this method operates on the logging queue handler,
+        # the logging queue listener, and the logging queue in the
+        # reverse order in which the `_start_logging` method operates
+        # on them.
+        
+        # Close logging queue handler.
         logger = logging.getLogger()
         handler = self._logging_queue_handler
         logger.removeHandler(handler)
         handler.close()
 
+        # Drain logging queue and stop queue listener monitor thread.
+        self._logging_queue_listener.stop()
+
         # Close this process's handle to logging queue and wait for
-        # queue feeder thread to exit. This is the second of two parts
-        # of stopping logging for the main process as a producer of
-        # log messages.
+        # queue feeder thread to exit.
         queue = self._logging_queue
         queue.close()
         queue.join_thread()
 
-        # Flush and close stream and file handlers. This is the
-        # second of two parts of stopping logging for the main
-        # process as the manager of the logging queue.
+        # Flush and close stream and file handlers.
         logging.shutdown()
 
 
