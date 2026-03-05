@@ -138,7 +138,7 @@ class RecorderProcess(Process):
     def _start_threads(self):
         threads = (
             self._start_schedule_thread(),
-            self._start_stop_thread()
+            self._start_quit_thread()
         )
         return tuple(t for t in threads if t is not None)
     
@@ -154,13 +154,13 @@ class RecorderProcess(Process):
         return thread
     
 
-    def _start_stop_thread(self):
+    def _start_quit_thread(self):
         run_duration = self._settings.run_duration
         if run_duration is None:
             return None
         else:
             return self._start_thread(
-                _StopThread, run_duration, self._stop_event)
+                _QuitThread, run_duration, self._stop_event)
 
 
     def _start_http_server(self):
@@ -296,11 +296,11 @@ class _ScheduleThread(Thread):
         _logger.info('Recording schedule thread exiting...')
 
 
-class _StopThread(Thread):
+class _QuitThread(Thread):
 
 
     def __init__(self, run_duration, recorder_process_stop_event):
-        super().__init__(name='StopThread')
+        super().__init__(name='QuitThread')
         self._run_duration = run_duration
         self._recorder_process_stop_event = recorder_process_stop_event
         self._stop_event = Event()
@@ -319,9 +319,9 @@ class _StopThread(Thread):
             # wait timed out
 
             _logger.info(
-                f'Recorder stop thread telling recorder process to stop '
+                f'Recorder quit thread telling recorder process to stop '
                 f'after run duration of {self._run_duration} seconds...')
             
             self._recorder_process_stop_event.set()
 
-        _logger.info('Recorder stop thread exiting...')
+        _logger.info('Recorder quit thread exiting...')
