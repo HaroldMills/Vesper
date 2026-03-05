@@ -85,6 +85,7 @@ import multiprocessing as mp
 import signal
 import threading
 
+from vesper.recordex import __version__
 from vesper.recordex.lifecycle_executor import LifecycleExecutor
 
 # Note that this import will also disable keyboard interrupts in the main
@@ -98,7 +99,7 @@ import vesper.recordex.setting_utils as setting_utils
 
 _LOG_FILE_NAME = 'Vesper Recorder Log.txt'
 _DEFAULT_LOGGING_LEVEL = 'INFO'
-_SETTINGS_FILE_NAME = 'Vesper Recorder Settings.yaml'
+_SETTING_FILE_NAME = 'Vesper Recorder Settings.yaml'
 
 
 _logger = logging.getLogger(__name__)
@@ -219,11 +220,12 @@ class VesperRecorder:
 
     def _log_welcome_message(self):
         _logger.info(f'Welcome to the Vesper Recorder!')
+        _logger.info(f'Recorder version number is {__version__}.')
 
 
     def _parse_setting_file(self):
 
-        setting_file_path = self._home_dir_path / _SETTINGS_FILE_NAME
+        setting_file_path = self._home_dir_path / _SETTING_FILE_NAME
 
         _logger.info(
             f'Reading recorder settings from file "{setting_file_path}"...')
