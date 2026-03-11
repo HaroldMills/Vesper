@@ -21,6 +21,8 @@ _logger = logging.getLogger(__name__)
 #   this class to parse audio input settings and format them for the web
 #   page. The audio input process will use this class to actually perform
 #   audio input.
+#
+# * Tend to TODOs in `recorder_process.py` and `http_server.py`.
 
 
 class AudioInputProcess(Process):

@@ -124,6 +124,22 @@ class RecorderProcess(Process):
         return self._recording
     
 
+    # TODO: Currently, if the `_start` method raises an exception after
+    # it starts other processes or threads, those processes and threads
+    # are not stopped. The recorder process's lifecycle executor skips
+    # ahead to the `_stop_logging` method, which stops logging but does
+    # not stop any processes or threads. Consider how to handle this.
+    # Perhaps this method should keep track of which processes and
+    # threads it has started and, if an exception occurs, log an
+    # appropriate message and set this process's stop event. The `_stop`
+    # method could then use the process and thread tracking information
+    # to stop any started processes and threads. This is a lifecycle
+    # matter, though, so perhaps the lifecycle executor should be
+    # involved. With appropriate process and thread tracking, would
+    # it suffice to just advance to the `_stop` method instead of the
+    # `_stop_logging` method when an exception occurs?
+
+
     def _start(self):
         self._recording_processes = []
         self._sidecar_processes = self._start_sidecar_processes()

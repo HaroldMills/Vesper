@@ -74,12 +74,15 @@ tr:nth-child(even) {
 </style>
 '''
         
-        
+
 class _HttpRequestHandler(BaseHTTPRequestHandler):
     
     
     def do_GET(self):
         
+        # TODO: Consider factoring out common response code from the
+        # following.
+
         if self.path == '/':
             body = self._create_status_page_body()
             self.send_response(200, 'OK')
@@ -103,7 +106,9 @@ class _HttpRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(result.encode())
-            
+        
+        # TODO: Consider making this work for any file in the `web`
+        # subdirectory.
         elif self.path == '/web/js/htmx.min.js':
             htmx_path = Path(__file__).parent / 'web' / 'js' / 'htmx.min.js'
             try:
