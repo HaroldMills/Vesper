@@ -1,10 +1,7 @@
 import json
 
+from vesper.django.app.models import AnnotationInfo, Clip, Recording
 from vesper.django.app.tests.dtest_case import TestCase
-
-
-# TODO: The tests in this file check responses to POST requests, but they
-# don't check the database state after the requests. Add such checks.
 
 
 _URL = '/import-recordings-and-clips/'
@@ -54,123 +51,9 @@ _CLIP_2 = {
     }
 }
 
+_RECORDING_START_TIME_FORMAT = '%Y-%m-%d %H:%M:%S Z'
+_CLIP_START_TIME_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
 
-# _POST_TEST_CASES = (
-    
-#     # One recording.
-#     (
-#         {
-#             'recordings': [
-#                 {
-#                     'station': 'Station 0',
-#                     'recorder': 'Swift',
-#                     'mic_outputs': ['21c 0 Output'],
-#                     'start_time': '2050-03-27 23:00:00 Z',
-#                     'length': _RECORDING_LENGTH,
-#                     'sample_rate': _SAMPLE_RATE
-#                 }
-#             ]
-#             # 'clips': [
-#             #     {
-#             #         'recording': 'Station 0 2050-03-27 23:00:00 Z',
-#             #         'sensor': 'Station 0 21c',
-#             #         'detector': 'Old Bird Tseep Detector Redux 1.1',
-#             #         'start_time': '2050-03-28 00:00:00.000 Z',
-#             #         'length': 11025,
-#             #     },
-#             #     {
-#             #         'recording': 'Station 0 2050-03-27 23:00:00 Z',
-#             #         'sensor': 'Station 0 21c',
-#             #         'detector': 'Old Bird Tseep Detector Redux 1.1',
-#             #         'start_time': '2050-03-28 01:00:00.000 Z',
-#             #         'length': 22050,
-#             #     },
-#             # ]
-#         },
-#         {
-#             'recordings': [{'id': 1, 'created': True}],
-#             'clips': []
-#         }
-#     ),
-
-#     # One recording and
-#     (
-#         {
-#             'recordings': [
-#                 {
-#                     'station': 'Station 0',
-#                     'recorder': 'Swift',
-#                     'mic_outputs': ['21c 0 Output'],
-#                     'start_time': '2050-03-27 23:00:00 Z',
-#                     'length': _RECORDING_LENGTH,
-#                     'sample_rate': _SAMPLE_RATE
-#                 },
-#             ]
-#         },
-#         {
-#             'recordings': [{'id': 1, 'created': False}],
-#             'clips': []
-#         }
-#     ),
-
-    # (
-    #     {
-    #         'recordings': {
-    #             'Station 0 2050-03-27 23:00:00 Z': {
-    #                 # 'sensors': 'Station 0',
-    #                 'start_time': '2050-03-27 23:00:00 Z',
-    #                 'length': _RECORDING_LENGTH,
-    #                 'sample_rate': _SAMPLE_RATE
-    #             },
-    #             'Station 1 2050-03-28 23:00:00 Z': {
-    #                 # 'sensors': 'Station 1',
-    #                 'start_time': '2050-03-28 23:00:00 Z',
-    #                 'length': _RECORDING_LENGTH,
-    #                 'sample_rate': _SAMPLE_RATE
-    #             }
-    #         },
-    #         # 'recording_sensors': {
-    #         #     'Station 0': [
-    #         #         'Station 0 21c'
-    #         #     ],
-    #         #     'Station 1': [
-    #         #         'Station 0 21c'
-    #         #     ]
-    #         # },
-    #         'clips': [
-    #             {
-    #                 'recording': 'Station 1 2050-03-28 23:00:00 Z',
-    #                 'sensor': 'Station 1 21c',
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'start_time': '2050-03-29 00:00:00.000 Z',
-    #                 'length': 11025,
-    #             },
-    #             {
-    #                 'recording': 'Station 1 2050-03-28 23:00:00 Z',
-    #                 'sensor': 'Station 1 21c',
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'start_time': '2050-03-29 01:00:00.000 Z',
-    #                 'length': 22050,
-    #             },
-    #             {
-    #                 'recording': 'Station 0 2050-03-27 23:00:00 Z',
-    #                 'sensor': 'Station 0 21c',
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'start_time': '2050-03-28 02:00:00.000 Z',
-    #                 'length': 22050,
-    #             },
-    #         ]
-    #     },
-    #     {
-    #         'clips': [
-    #             {'clip_id': 3, 'recording_id': 2, 'recording_created': True},
-    #             {'clip_id': 4, 'recording_id': 2, 'recording_created': False},
-    #             {'clip_id': 5, 'recording_id': 1, 'recording_created': False}
-    #         ]
-    #     }
-    # ),
-
-# )
 
 class ImportRecordingsAndClipsViewTests(TestCase):
 
@@ -183,554 +66,440 @@ class ImportRecordingsAndClipsViewTests(TestCase):
 
     def test_one_recording(self):
 
-        self._test_post([
-            ({
-                'recordings': [_RECORDING_1],
-                'clips': []
-            }, {
-                'recordings': [{'id': 1, 'created': True}],
+        self._test_post(
+            [
+                ({
+                    'recordings': [_RECORDING_1],
+                    'clips': []
+                }, {
+                    'recordings': [{'id': 1, 'created': True}],
+                    'clips': []
+                })
+            ], {
+                'recordings': [(1, _RECORDING_1)],
                 'clips': []
             })
-        ])
 
 
-    def _test_post(self, test_data):
+    def _test_post(self, requests, expected_db):
         self._log_in_as_test_user()
-        for request_data, expected_response_data in test_data:
+        self._do_post_requests(requests)
+        self._check_db_recordings(expected_db['recordings'])
+        self._check_db_clips(expected_db['clips'])
+
+
+    def _do_post_requests(self, requests):
+        for request_data, expected_response_data in requests:
             response = self.client.post(_URL, request_data, 'application/json')
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.content)
             self.assertEqual(response_data, expected_response_data)
 
 
+    def _check_db_recordings(self, expected_recordings):
+
+        # Check database recording count.
+        self.assertEqual(Recording.objects.count(), len(expected_recordings))
+
+        # Check database recording data.
+        for id, r in expected_recordings:
+
+            recording = Recording.objects.get(id=id)
+
+            # Check station and recorder names.
+            self.assertEqual(recording.station.name, r['station'])
+            self.assertEqual(recording.recorder.name, r['recorder'])
+
+            # Check channel mic output names.
+            channels = recording.channels.all().order_by('channel_num')
+            mic_outputs = [c.mic_output.name for c in channels]
+            self.assertEqual(mic_outputs, r['mic_outputs'])
+
+            # Check start time.
+            start_time = self._format_recording_start_time(recording)
+            self.assertEqual(start_time, r['start_time'])
+
+            # Check length and sample rate.
+            self.assertEqual(recording.length, r['length'])
+            self.assertEqual(recording.sample_rate, r['sample_rate'])
+
+
+    def _check_db_clips(self, expected_clips):
+
+        # Check database clip count.
+        self.assertEqual(Clip.objects.count(), len(expected_clips))
+
+        # Check database clip data.
+        for id, c in expected_clips:
+
+            clip = Clip.objects.get(id=id)
+
+            # Check station, mic output, and detector names.
+            self.assertEqual(clip.station.name, c['station'])
+            self.assertEqual(clip.mic_output.name, c['mic_output'])
+            self.assertEqual(clip.creating_processor.name, c['detector'])
+
+            # Check start time.
+            start_time = self._format_clip_start_time(clip)
+            self.assertEqual(start_time, c['start_time'])
+
+            # Check length.
+            self.assertEqual(clip.length, c['length'])
+
+            # Check annotations.
+            for name, value in c['annotations'].items():
+                info = AnnotationInfo.objects.get(name=name)
+                annotation = clip.string_annotations.get(info=info)
+                self.assertEqual(annotation.value, value)
+
+
+    def _format_recording_start_time(self, recording):
+         return recording.start_time.strftime(_RECORDING_START_TIME_FORMAT)
+    
+
+    def _format_clip_start_time(self, clip):
+        start_time = clip.start_time.strftime(_CLIP_START_TIME_FORMAT)
+        return start_time[:-3] + ' Z'
+
+
     def test_one_recording_with_duplicate(self):
 
-        self._test_post([
+        self._test_post(
+        
+            [
 
-            # recording
-            ({
-                'recordings': [_RECORDING_1],
-                'clips': []
-            }, {
-                'recordings': [{'id': 1, 'created': True}],
-                'clips': []
-            }),
+                # recording
+                ({
+                    'recordings': [_RECORDING_1],
+                    'clips': []
+                }, {
+                    'recordings': [{'id': 1, 'created': True}],
+                    'clips': []
+                }),
 
-            # duplicate recording
-            ({
-                'recordings': [_RECORDING_1],
-                'clips': []
-            }, {
-                'recordings': [{'id': 1, 'created': False}],
+                # duplicate recording
+                ({
+                    'recordings': [_RECORDING_1],
+                    'clips': []
+                }, {
+                    'recordings': [{'id': 1, 'created': False}],
+                    'clips': []
+                })
+
+            ], {
+                'recordings': [(1, _RECORDING_1)],
                 'clips': []
             })
-
-        ])
 
 
     def test_two_recordings_in_one_request(self):
 
-        self._test_post([
-            ({
-                'recordings': [_RECORDING_1, _RECORDING_2],
-                'clips': []
-            }, {
-                'recordings': [{'id': 1, 'created': True},
-                               {'id': 2, 'created': True}],
+        self._test_post(
+            [
+                ({
+                    'recordings': [_RECORDING_1, _RECORDING_2],
+                    'clips': []
+                }, {
+                    'recordings': [{'id': 1, 'created': True},
+                                {'id': 2, 'created': True}],
+                    'clips': []
+                })
+            ], {
+                'recordings': [(1, _RECORDING_1), (2, _RECORDING_2)],
                 'clips': []
             })
-        ])
 
 
     def test_two_recordings_in_two_requests(self):
 
-        self._test_post([
+        self._test_post(
+            
+            [
 
-            # recording 1
-            ({
-                'recordings': [_RECORDING_1],
-                'clips': []
-            }, {
-                'recordings': [{'id': 1, 'created': True}],
-                'clips': []
-            }),
+                # recording 1
+                ({
+                    'recordings': [_RECORDING_1],
+                    'clips': []
+                }, {
+                    'recordings': [{'id': 1, 'created': True}],
+                    'clips': []
+                }),
 
-            # recording 2
-            ({
-                'recordings': [_RECORDING_2],
-                'clips': []
-            }, {
-                'recordings': [{'id': 2, 'created': True}],
+                # recording 2
+                ({
+                    'recordings': [_RECORDING_2],
+                    'clips': []
+                }, {
+                    'recordings': [{'id': 2, 'created': True}],
+                    'clips': []
+                })
+                
+            ], {
+                'recordings': [(1, _RECORDING_1), (2, _RECORDING_2)],
                 'clips': []
             })
-            
-        ])
 
 
     def test_one_clip(self):
 
-        self._test_post([
-            ({
-                'recordings': [_RECORDING_1],
-                'clips': [_CLIP_1]
-            }, {
-                'recordings': [{'id': 1, 'created': True}],
-                'clips': [{'id': 1, 'created': True}]
+        self._test_post(
+            [
+                ({
+                    'recordings': [_RECORDING_1],
+                    'clips': [_CLIP_1]
+                }, {
+                    'recordings': [{'id': 1, 'created': True}],
+                    'clips': [{'id': 1, 'created': True}]
+                })
+            ], {
+                'recordings': [(1, _RECORDING_1)],
+                'clips': [(1, _CLIP_1)]
             })
-        ])
 
 
     def test_one_clip_with_duplicate(self):
 
-        self._test_post([
-            ({
-                'recordings': [_RECORDING_1],
-                'clips': [_CLIP_1, _CLIP_1]
-            }, {
-                'recordings': [{'id': 1, 'created': True}],
-                'clips': [
-                    {'id': 1, 'created': True},
-                    {'id': 1, 'created': False}
-                ]
+        self._test_post(
+            [
+                ({
+                    'recordings': [_RECORDING_1],
+                    'clips': [_CLIP_1, _CLIP_1]
+                }, {
+                    'recordings': [{'id': 1, 'created': True}],
+                    'clips': [
+                        {'id': 1, 'created': True},
+                        {'id': 1, 'created': False}
+                    ]
+                })
+            ], {
+                'recordings': [(1, _RECORDING_1)],
+                'clips': [(1, _CLIP_1)]
             })
-        ])
 
 
     def test_two_clips_in_one_request(self):
 
-        self._test_post([
-            ({
-                'recordings': [_RECORDING_1],
-                'clips': [_CLIP_1, _CLIP_2]
-            }, {
-                'recordings': [{'id': 1, 'created': True}],
-                'clips': [
-                    {'id': 1, 'created': True},
-                    {'id': 2, 'created': True}
-                ]
+        self._test_post(
+            [
+                ({
+                    'recordings': [_RECORDING_1],
+                    'clips': [_CLIP_1, _CLIP_2]
+                }, {
+                    'recordings': [{'id': 1, 'created': True}],
+                    'clips': [
+                        {'id': 1, 'created': True},
+                        {'id': 2, 'created': True}
+                    ]
+                })
+            ], {
+                'recordings': [(1, _RECORDING_1)],
+                'clips': [(1, _CLIP_1), (2, _CLIP_2)]
             })
-        ])
        
 
-    # def test_missing_recording_item_error(self):
+    def test_missing_recording_item_error(self):
 
-    #     recording_name = 'Station 0 2050-03-27 23:00:00 Z'
+        for item_name in (
+                'station', 'recorder', 'mic_outputs', 'start_time', 'length',
+                'sample_rate'):
 
-    #     for item_name in ('start_time', 'length', 'sample_rate'):
+            # Start with recording info that includes all required items.
+            recording_info = _RECORDING_1.copy()
 
-    #         # Start with request data that includes all required items.
-    #         request_data = {
-    #             'recordings': {
-    #                 recording_name: {
-    #                     'start_time': '2050-03-27 23:00:00 Z',
-    #                     'length': _RECORDING_LENGTH,
-    #                     'sample_rate': _SAMPLE_RATE
-    #                 },
-    #             }
-    #         }
-
-    #         recording_info = request_data['recordings'][recording_name]
-
-    #         # Delete one required recording item.
-    #         del recording_info[item_name]
-
-    #         expected_error_message = \
-    #             f'Required recording data item "{item_name}" is missing.'
+            # Delete one required recording item.
+            del recording_info[item_name]
             
-    #         self._test_recording_info_error(
-    #             request_data, recording_name, expected_error_message)
+            request_data = {'recordings': [recording_info]}
 
-
-    # def _test_recording_info_error(
-    #         self, request_data, recording_name, expected_error_message):
-        
-    #     recording_info = request_data['recordings'][recording_name]
-
-    #     expected_error_message = (
-    #         f'Could not parse recording "{recording_name}" data '
-    #         f'{recording_info}. Error message was: {expected_error_message} '
-    #         f'No recordings or clips will be created for this request.')
+            expected_error_message = \
+                f'Required recording data item "{item_name}" is missing.'
             
-    #     self._test_error(request_data, expected_error_message)
+            self._test_recording_info_error(
+                request_data, expected_error_message)
 
 
-    # def _test_error(self, request_data, expected_error_message):
-    #     self._log_in_as_test_user()
-    #     response = self.client.post(_URL, request_data, 'application/json')
-    #     self.assertEqual(response.status_code, 400)
-    #     error_message = response.content.decode(response.charset)
-    #     self.assertEqual(error_message, expected_error_message)
+    def _test_recording_info_error(
+            self, request_data, expected_error_message):
         
+        recording_info = request_data['recordings'][0]
 
-    # def _test_bad_recording_item_value_error(
-    #         self, item_name, bad_item_value, expected_error_message):
-        
-    #     recording_name = 'Station 0 2050-03-27 23:00:00 Z'
-
-    #     # Start with good request data.
-    #     request_data = {
-    #         'recordings': {
-    #             recording_name: {
-    #                 'start_time': '2050-03-27 23:00:00 Z',
-    #                 'length': _RECORDING_LENGTH,
-    #                 'sample_rate': _SAMPLE_RATE
-    #             },
-    #         },
-    #     }
-
-    #     recording_info = request_data['recordings'][recording_name]
-
-    #     # Make one item value bad.
-    #     recording_info[item_name] = bad_item_value
-
-    #     self._test_recording_info_error(
-    #         request_data, recording_name, expected_error_message)
-        
-        
-    # def test_bad_clip_start_time_error(self):
-
-    #     expected_error_message = 'Could not parse recording start time "Bobo".'
-
-    #     self._test_bad_recording_item_value_error(
-    #         'start_time', 'Bobo', expected_error_message)
-        
-
-    # def test_missing_clip_item_error(self):
-
-    #     for item_name in (
-    #             'recording', 'sensor', 'detector', 'start_time', 'length'):
-
-    #         # Start with request data that includes all required items.
-    #         request_data = {
-    #             'recordings': {
-    #                 'Station 0 2050-03-27 23:00:00 Z': {
-    #                     'start_time': '2050-03-27 23:00:00 Z',
-    #                     'length': _RECORDING_LENGTH,
-    #                     'sample_rate': _SAMPLE_RATE
-    #                 },
-    #             },
-    #             'clips': [
-    #                 {
-    #                     'recording': 'Station 0 2050-03-27 23:00:00 Z',
-    #                     'sensor': 'Station 0 21c',
-    #                     'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                     'start_time': '2050-03-28 02:00:00.000 Z',
-    #                     'length': 22050,
-    #                 },
-    #             ]
-    #         }
-
-    #         clip_info = request_data['clips'][0]
-
-    #         # Delete one required recording item.
-    #         del clip_info[item_name]
-
-    #         expected_error_message = (
-    #             f'Required clip data item "{item_name}" is missing.')
+        expected_error_message = (
+            f'Could not create recording from recording data '
+            f'{recording_info}. Error message was: {expected_error_message} '
+            f'No recordings or clips will be created for this request.')
             
-    #         self._test_clip_creation_error(
-    #             request_data, clip_info, expected_error_message)
+        self._test_error(request_data, expected_error_message)
+
+
+    def _test_error(self, request_data, expected_error_message):
+        self._log_in_as_test_user()
+        response = self.client.post(_URL, request_data, 'application/json')
+        self.assertEqual(response.status_code, 400)
+        error_message = response.content.decode(response.charset)
+        self.assertEqual(error_message, expected_error_message)
+        
+
+    def test_bad_clip_start_time_error(self):
+
+        expected_error_message = 'Could not parse recording start time "Bobo".'
+
+        self._test_bad_recording_item_value_error(
+            'start_time', 'Bobo', expected_error_message)
+        
+
+    def _test_bad_recording_item_value_error(
+            self, item_name, bad_item_value, expected_error_message):
+        
+        # Start with good recording info.
+        recording_info = _RECORDING_1.copy()
+
+        # Make one item value bad.
+        recording_info[item_name] = bad_item_value
+
+        request_data = {'recordings': [recording_info]}
+
+        self._test_recording_info_error(
+            request_data, expected_error_message)
+        
+        
+    def test_missing_clip_item_error(self):
+
+        for item_name in (
+                'station', 'mic_output', 'detector', 'start_time', 'length'):
+
+            # Start with clip info that includes all required items.
+            clip_info = _CLIP_1.copy()
+
+            # Delete one required clip item.
+            del clip_info[item_name]
+
+            request_data = {
+                'recordings': [_RECORDING_1],
+                'clips': [clip_info]
+            }
+
+            expected_error_message = (
+                f'Required clip data item "{item_name}" is missing.')
+            
+            self._test_clip_creation_error(
+                request_data, clip_info, expected_error_message)
             
 
-    # def _test_bad_clip_item_value_error(
-    #         self, item_name, bad_item_value, expected_error_message):
+    def _test_clip_creation_error(
+            self, request_data, clip_info, expected_error_message):
         
-    #     # Start with good request data.
-    #     request_data = {
-    #         'recordings': {
-    #             'Station 0 2050-03-27 23:00:00 Z': {
-    #                 'start_time': '2050-03-27 23:00:00 Z',
-    #                 'length': _RECORDING_LENGTH,
-    #                 'sample_rate': _SAMPLE_RATE
-    #             },
-    #         },
-    #         'clips': [
-    #             {
-    #                 'recording': 'Station 0 2050-03-27 23:00:00 Z',
-    #                 'sensor': 'Station 0 21c',
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'start_time': '2050-03-28 02:00:00.000 Z',
-    #                 'length': 22050,
-    #             }
-    #         ]
-    #     }
-
-    #     clip_info = request_data['clips'][0]
-
-    #     # Make one item value bad.
-    #     clip_info[item_name] = bad_item_value
-
-    #     self._test_clip_creation_error(
-    #         request_data, clip_info, expected_error_message)
-
-
-    # def _test_clip_creation_error(
-    #         self, request_data, clip_info, expected_error_message):
-        
-    #     expected_error_message = (
-    #         f'Could not create clip from clip data {clip_info}. '
-    #         f'Error message was: {expected_error_message} '
-    #         f'No recordings or clips will be created for this request.')
+        expected_error_message = (
+            f'Could not create clip from clip data {clip_info}. '
+            f'Error message was: {expected_error_message} '
+            f'No recordings or clips will be created for this request.')
             
-    #     self._test_error(request_data, expected_error_message)
+        self._test_error(request_data, expected_error_message)
 
 
-    # def test_nonexistent_station_error(self):
+    def test_unrecognized_station_error(self):
 
-    #     expected_error_message = \
-    #         'Could not get station/mic output pair for station "Bobo".'
+        expected_error_message = 'Unknown station "Bobo".'
         
-    #     self._test_bad_clip_item_value_error(
-    #         'sensor', 'Bobo', expected_error_message)
+        self._test_bad_clip_item_value_error(
+            'station', 'Bobo', expected_error_message)
 
 
-    # def test_nonexistent_detector_error(self):
+    def _test_bad_clip_item_value_error(
+            self, item_name, bad_item_value, expected_error_message):
+        
+        # Start with good clip info.
+        clip_info = _CLIP_1.copy()
 
-    #     expected_error_message = 'Unrecognized detector "Bobo".'
+        # Make one item value bad.
+        clip_info[item_name] = bad_item_value
 
-    #     self._test_bad_clip_item_value_error(
-    #         'detector', 'Bobo', expected_error_message)
+        request_data = {
+            'recordings': [_RECORDING_1],
+            'clips': [clip_info]
+        }
+
+        self._test_clip_creation_error(
+            request_data, clip_info, expected_error_message)
 
 
-    # def test_bad_clip_start_time_error(self):
+    def test_unrecognized_mic_output_error(self):
 
-    #     expected_error_message = 'Could not parse clip start time "Bobo".'
+        expected_error_message = 'Unknown device output "Bobo".'
+        
+        self._test_bad_clip_item_value_error(
+            'mic_output', 'Bobo', expected_error_message)
 
-    #     self._test_bad_clip_item_value_error(
-    #         'start_time', 'Bobo', expected_error_message)
+
+    def test_unrecognized_detector_error(self):
+
+        expected_error_message = 'Unknown detector "Bobo".'
+
+        self._test_bad_clip_item_value_error(
+            'detector', 'Bobo', expected_error_message)
+
+
+    def test_bad_clip_start_time_error(self):
+
+        expected_error_message = 'Could not parse clip start time "Bobo".'
+
+        self._test_bad_clip_item_value_error(
+            'start_time', 'Bobo', expected_error_message)
         
         
-    # def test_preceding_clip_error(self):
+    def test_no_recording_for_clip_error(self):
 
-    #     # Error condition in which clip start time precedes recording
-    #     # start time.
+        # Get clip info with start time that precedes recording start time.
+        clip_info = _CLIP_1.copy()
+        clip_info['start_time'] = '2050-05-01 22:00:00 Z'
 
-    #     request_data = {
-    #         'recordings': {
-    #             'Station 0 2050-03-27 23:00:00 Z': {
-    #                 'start_time': '2050-03-27 23:00:00 Z',
-    #                 'length': _RECORDING_LENGTH,
-    #                 'sample_rate': _SAMPLE_RATE
-    #             },
-    #         },
-    #         'clips': [
-    #             {
-    #                 'recording': 'Station 0 2050-03-27 23:00:00 Z',
-    #                 'sensor': 'Station 0 21c',
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'start_time': '2050-03-27 22:00:00.000 Z',
-    #                 'length': 22050,
-    #             }
-    #         ]
-    #     }
+        request_data = {
+            'recordings': [_RECORDING_1],
+            'clips': [clip_info]
+        }
 
-    #     clip_info = request_data['clips'][0]
-
-    #     expected_error_message = (
-    #         f'Clip start time 2050-03-27 22:00:00.000000 precedes '
-    #         f'recording start time 2050-03-27 23:00:00.000000.')
+        expected_error_message = (
+            f'Could not find recording for station "Station 1", '
+            f'mic output "21c 1 Output", and clip start time '
+            f'2050-05-01 22:00:00+00:00.')
         
-    #     self._test_clip_creation_error(
-    #         request_data, clip_info, expected_error_message)
+        self._test_clip_creation_error(
+            request_data, clip_info, expected_error_message)
 
 
-    # def test_following_clip_error(self):
+    def test_multiple_recordings_for_clip_error(self):
 
-    #     # Error condition in which clip end time follows recording end time.
+        # Get info for recording that overlaps recording 1.
+        recording_info = _RECORDING_1.copy()
+        recording_info['start_time'] = '2050-05-01 21:00:00 Z'
 
-    #     request_data = {
-    #         'recordings': {
-    #             'Station 0 2050-03-27 23:00:00 Z': {
-    #                 'start_time': '2050-03-27 23:00:00 Z',
-    #                 'length': _RECORDING_LENGTH,
-    #                 'sample_rate': _SAMPLE_RATE
-    #             },
-    #         },
-    #         'clips': [
-    #             {
-    #                 'recording': 'Station 0 2050-03-27 23:00:00 Z',
-    #                 'sensor': 'Station 0 21c',
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'start_time': '2050-03-28 23:00:00.000 Z',
-    #                 'length': 22050,
-    #             }
-    #         ]
-    #     }
+        request_data = {
+            'recordings': [recording_info, _RECORDING_1],
+            'clips': [_CLIP_1]
+        }
 
-    #     clip_info = request_data['clips'][0]
-
-    #     expected_error_message = (
-    #         f'Clip end time 2050-03-28 23:00:00.999955 follows recording '
-    #         f'end time 2050-03-28 08:59:59.999955.')
+        expected_error_message = (
+            'Found more than one recording for station "Station 1", mic '
+            'output "21c 1 Output", and clip start time '
+            '2050-05-01 23:00:02+00:00.')
         
-    #     self._test_clip_creation_error(
-    #         request_data, clip_info, expected_error_message)
+        self._test_clip_creation_error(
+            request_data, _CLIP_1, expected_error_message)
 
 
-    # def test_more_than_one_recording_error(self):
+    def test_clip_ends_after_recording_error(self):
 
-    #     request_data = {
-    #         'recordings': {
-    #             'Station 0 2050-03-27 23:00:00 Z': {
-    #                 'start_time': '2050-03-27 23:00:00 Z',
-    #                 'length': _RECORDING_LENGTH,
-    #                 'sample_rate': _SAMPLE_RATE
-    #             },
-    #         },
-    #         'clips': [
-    #             {
-    #                 ''
-    #                 'station': 'Station 0',
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'start_time': '2050-03-28 00:00:00.000',
-    #                 'length': 11025,
-    #            },
-    #             {
-    #                 'station': 'Station 0',
-    #                 'start_time': '2050-03-27 18:00:00.000',
-    #                 'length': 11025,
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'recording': {
-    #                     'start_time': '2050-03-27 18:00:00',
-    #                     'length': _RECORDING_LENGTH,
-    #                     'sample_rate': _SAMPLE_RATE
-    #                 }
-    #             },
-    #             {
-    #                 'station': 'Station 0',
-    #                 'start_time': '2050-03-27 19:00:00.000',
-    #                 'length': 11025,
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #             },
-    #         ]
-    #     }
+        # Get info for clip that ends after recording.
+        clip_info = _CLIP_1.copy()
+        clip_info['length'] = _RECORDING_LENGTH
 
-    #     expected_error_message = (
-    #         'Could not create clip for station "Station 0", start time '
-    #         '"2050-03-27 19:00:00.000", and detector "Old Bird Tseep '
-    #         'Detector Redux 1.1". Error message was: Found more than '
-    #         'one recording for station "Station 0" for clip with start '
-    #         'time 2050-03-27 19:00:00. No recordings or clips will be '
-    #         'created for this request.')
+        request_data = {
+            'recordings': [_RECORDING_1],
+            'clips': [clip_info]
+        }
+
+        expected_error_message = (
+            'Clip end time 2050-05-02 09:00:01.999955 follows recording '
+            'end time 2050-05-02 08:59:59.999955.')
         
-    #     self._test_error(request_data, expected_error_message)
-
-
-    # def test_recording_start_time_mismatch_error(self):
-
-    #     request_data = {
-    #         'clips': [
-    #             {
-    #                 'station': 'Station 0',
-    #                 'start_time': '2050-03-27 20:00:00.000',
-    #                 'length': 11025,
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'recording': {
-    #                     'start_time': '2050-03-27 19:00:00',
-    #                     'length': _RECORDING_LENGTH,
-    #                     'sample_rate': _SAMPLE_RATE
-    #                 }
-    #             },
-    #             {
-    #                 'station': 'Station 0',
-    #                 'start_time': '2050-03-27 21:00:00.000',
-    #                 'length': 11025,
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'recording': {
-    #                     'start_time': '2050-03-27 20:00:00',
-    #                     'length': _RECORDING_LENGTH,
-    #                     'sample_rate': _SAMPLE_RATE
-    #                 }
-    #             }
-    #         ]
-    #     }
-
-    #     expected_error_message = (
-    #         'Could not create clip for station "Station 0", start time '
-    #         '"2050-03-27 21:00:00.000", and detector "Old Bird Tseep '
-    #         'Detector Redux 1.1". Error message was: Specified recording '
-    #         'start time 2050-03-27 20:00:00 does not match start time '
-    #         '2050-03-27 19:00:00 of recording already in archive. No '
-    #         'recordings or clips will be created for this request.')
-        
-    #     self._test_error(request_data, expected_error_message)
-
-
-    # def test_recording_length_mismatch_error(self):
-
-    #     request_data = {
-    #         'clips': [
-    #             {
-    #                 'station': 'Station 0',
-    #                 'start_time': '2050-03-27 20:00:00.000',
-    #                 'length': 11025,
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'recording': {
-    #                     'start_time': '2050-03-27 19:00:00',
-    #                     'length': _RECORDING_LENGTH,
-    #                     'sample_rate': _SAMPLE_RATE
-    #                 }
-    #             },
-    #             {
-    #                 'station': 'Station 0',
-    #                 'start_time': '2050-03-27 21:00:00.000',
-    #                 'length': 11025,
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'recording': {
-    #                     'start_time': '2050-03-27 19:00:00',
-    #                     'length': _RECORDING_LENGTH + 1,
-    #                     'sample_rate': _SAMPLE_RATE
-    #                 }
-    #             }
-    #         ]
-    #     }
-
-    #     expected_error_message = (
-    #         'Could not create clip for station "Station 0", start '
-    #         'time "2050-03-27 21:00:00.000", and detector "Old Bird '
-    #         'Tseep Detector Redux 1.1". Error message was: Specified '
-    #         'recording length 793800001 does not match length 793800000 '
-    #         'of recording already in archive. No recordings or clips '
-    #         'will be created for this request.')
-        
-    #     self._test_error(request_data, expected_error_message)
-
-
-    # def test_recording_sample_rate_mismatch_error(self):
-
-    #     request_data = {
-    #         'clips': [
-    #             {
-    #                 'station': 'Station 0',
-    #                 'start_time': '2050-03-27 20:00:00.000',
-    #                 'length': 11025,
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'recording': {
-    #                     'start_time': '2050-03-27 19:00:00',
-    #                     'length': _RECORDING_LENGTH,
-    #                     'sample_rate': _SAMPLE_RATE
-    #                 }
-    #             },
-    #             {
-    #                 'station': 'Station 0',
-    #                 'start_time': '2050-03-27 21:00:00.000',
-    #                 'length': 11025,
-    #                 'detector': 'Old Bird Tseep Detector Redux 1.1',
-    #                 'recording': {
-    #                     'start_time': '2050-03-27 19:00:00',
-    #                     'length': _RECORDING_LENGTH,
-    #                     'sample_rate': _SAMPLE_RATE + 1
-    #                 }
-    #             }
-    #         ]
-    #     }
-
-    #     expected_error_message = (
-    #         'Could not create clip for station "Station 0", start '
-    #         'time "2050-03-27 21:00:00.000", and detector "Old Bird '
-    #         'Tseep Detector Redux 1.1". Error message was: Specified '
-    #         'sample rate 22051 does not match sample rate 22050.0 '
-    #         'of recording already in archive. No recordings or clips '
-    #         'will be created for this request.')
-        
-    #     self._test_error(request_data, expected_error_message)
+        self._test_clip_creation_error(
+            request_data, clip_info, expected_error_message)

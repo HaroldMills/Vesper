@@ -136,39 +136,21 @@ class ImportRecordingsAndClipsView(View):
             
             creation_time = time_utils.get_utc_now()
 
-            try:
-
-                # It's important to create the recording within a nested
-                # transaction that can be rolled back if the recording
-                # already exists. Without the nested transaction and the
-                # rollback the `Recording.objects.get` call below would
-                # raise a `TransactionManagementError` exception.
-                with transaction.atomic():
-                    recording = Recording.objects.create(
-                        station=station,
-                        recorder=recorder,
-                        num_channels=channel_count,
-                        length=length,
-                        sample_rate=sample_rate,
-                        start_time=start_time,
-                        end_time=end_time,
-                        creation_time=creation_time,
-                        creating_job=None)
-                    
-            except IntegrityError:
-                # recording exists
-
-                created = False
-                
-                recording = Recording.objects.get(
-                    station=station,
-                    recorder=recorder,
-                    start_time=start_time)
-                
-            else:
+            recording, created = Recording.objects.get_or_create(
+                station=station,
+                recorder=recorder,
+                start_time=start_time,
+                defaults={
+                    'num_channels': channel_count,
+                    'length': length,
+                    'sample_rate': sample_rate,
+                    'end_time': end_time,
+                    'creation_time': creation_time,
+                    'creating_job': None
+                })
+            
+            if created:
                 # recording did not already exist
-
-                created = True
 
                 # Create recording channels.
                 for i, mic_output in enumerate(mic_outputs):
@@ -242,7 +224,7 @@ class ImportRecordingsAndClipsView(View):
             self._check_clip_extent(start_time, end_time, recording)
                 
             recording_channel = self._get_clip_recording_channel(
-                    recording, station, mic_output, start_time)
+                recording, station, mic_output, start_time)
 
             # We set the start indices of Old Bird detector clips to `None`
             # since we do not know them exactly (we know only the clips'
@@ -259,45 +241,27 @@ class ImportRecordingsAndClipsView(View):
 
             creation_time = time_utils.get_utc_now()
 
-            try:
-
-                # It's important to create the clip within a nested
-                # transaction that can be rolled back if the clip already
-                # exists. Without the nested transaction and the rollback,
-                # subsequent attempts to access the database within the
-                # outer transaction would raise a `TransactionManagementError`
-                # exception.
-                with transaction.atomic():
-                    clip = Clip.objects.create(
-                        station=station,
-                        mic_output=mic_output,
-                        recording_channel=recording_channel,
-                        start_index=start_index,
-                        length=length,
-                        sample_rate=sample_rate,
-                        start_time=start_time,
-                        end_time=end_time,
-                        date=date,
-                        creation_time=creation_time,
-                        creating_user=None,
-                        creating_job=None,
-                        creating_processor=detector_model)
-
-            except IntegrityError:
-                # clip exists
-
-                created = False
-                
-                clip = Clip.objects.get(
-                    recording_channel=recording_channel,
-                    start_time=start_time,
-                    creating_processor=detector_model)
-                
-            else:
+            clip, created = Clip.objects.get_or_create(
+                recording_channel=recording_channel,
+                start_time=start_time,
+                creating_processor=detector_model,
+                defaults={
+                    'station': station,
+                    'mic_output': mic_output,
+                    'start_index': start_index,
+                    'length': length,
+                    'sample_rate': sample_rate,
+                    'end_time': end_time,
+                    'date': date,
+                    'creation_time': creation_time,
+                    'creating_user': None,
+                    'creating_job': None
+                })
+            
+            if created:
                 # clip did not already exist
 
-                created = True
-                
+                # Create clip annotations.
                 annotations = info.get('annotations', {})
 
                 # If clip start time was offset, include an annotation
@@ -421,28 +385,28 @@ class ImportRecordingsAndClipsView(View):
         try:
             return self._stations[name]
         except KeyError:
-            raise _ViewError(f'Unrecognized station "{name}".')
+            raise _ViewError(f'Unknown station "{name}".')
         
 
     def _get_device(self, name):
         try:
             return self._devices[name]
         except KeyError:
-            raise _ViewError(f'Unrecognized device "{name}".')
+            raise _ViewError(f'Unknown device "{name}".')
 
 
     def _get_device_output(self, output_name):
         try:
             return self._device_outputs[output_name]
         except KeyError:
-            raise _ViewError(f'Unrecognized device output "{output_name}".')
+            raise _ViewError(f'Unknown device output "{output_name}".')
 
 
     def _get_detector(self, detector_name):
         try:
             return self._detectors[detector_name]
         except KeyError:
-            raise _ViewError(f'Unrecognized detector "{detector_name}".')
+            raise _ViewError(f'Unknown detector "{detector_name}".')
 
 
     def _get_annotation_info(self, name):
@@ -453,31 +417,22 @@ class ImportRecordingsAndClipsView(View):
         except KeyError:
             # cache miss
             
-            try:
-                info = AnnotationInfo.objects.get(name=name)
+            info, created = AnnotationInfo.objects.get_or_create(
+                name=name,
+                defaults={
+                    'description': 
+                        'Created automatically for a clip that referenced it.',
+                    'type': 'String',
+                    'creation_time': time_utils.get_utc_now(),
+                    'creating_user': None,
+                    'creating_job': None
+                })
             
-            except AnnotationInfo.DoesNotExist:
-                
+            if created:
                 logging.info(
-                    f'        Adding annotation "{name}" to archive...')
-                
-                description = (
-                    f'Created automatically for a clip that referenced it.')
-                
-                type_ = 'String'
-                creation_time = time_utils.get_utc_now()
-                creating_user = None
-                creating_job = None
-                
-                info = AnnotationInfo.objects.create(
-                    name=name,
-                    description=description,
-                    type=type_,
-                    creation_time=creation_time,
-                    creating_user=creating_user,
-                    creating_job=creating_job)
-            
-            self._annotation_info_cache[name] = info
+                    f'        Added annotation "{name}" to archive.')
+                self._annotation_info_cache[name] = info
+
             return info
         
 
