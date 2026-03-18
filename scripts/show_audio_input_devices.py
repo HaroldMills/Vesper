@@ -17,8 +17,8 @@ def main():
     else:
         print('Audio input devices (device name, host API name):\n')
         lines = [
-            f'    ({device_name}, {host_api_name})\n'
-            for device_name, host_api_name in devices]
+            f'    ({device_name}, {host_api_name}, {max_input_channels})\n'
+            for device_name, host_api_name, max_input_channels in devices]
         device_table = ''.join(lines)
         print(device_table)
 
@@ -50,8 +50,9 @@ def get_input_device_info(device, host_apis):
     host_api = host_apis[host_api_index]
     host_api_name = host_api['name']
 
-    return device_name, host_api_name
+    max_input_channels = device['max_input_channels']
 
+    return device_name, host_api_name, max_input_channels
 
 if __name__ == '__main__':
     main()
