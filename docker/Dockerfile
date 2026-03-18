@@ -96,7 +96,7 @@
 
 ##### Base for other images #####
 
-FROM python:3.11-slim-bookworm AS base
+FROM python:3.13-slim-bookworm AS base
 
 # You might try something like this instead of the above if your
 # computer has a GPU.
