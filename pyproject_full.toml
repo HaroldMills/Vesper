@@ -17,7 +17,7 @@
 # I plan to split the Vesper package into several smaller packages in
 # the future. The new packages will include separate ones for the core
 # server, processors, and the Vesper Recorder, as well as others. This
-# will give users more control over which parts of Vesper they install,
+# will give users more control over which parts of Vesper they install
 # and obviate the slim/full Vesper distinction.
 #
 #
@@ -146,9 +146,7 @@ maintainers = [
 # See `dependencies` section below for more about TensorFlow.
 requires-python = ">=3.11, <3.12"
 
-# Vesper package dependencies. We build two versions of the Vesper package:
-# a full version that includes processors and all dependencies and a slim
-# version that excludes processors and some dependencies. 
+# Vesper package dependencies. 
 dependencies = [
 
     # Dependencies for both the full and slim Vesper packages.
@@ -198,6 +196,7 @@ dependencies = [
 [project.scripts]
 vesper_admin = "vesper.django.manage:main"
 vesper_recorder = "vesper.scripts.vesper_recorder:_main"
+kill_vesper_recorder = "vesper.scripts.kill_vesper_recorder:main"
 vesper_recordex = "vesper.recordex.vesper_recorder:main"
 vesper_play_recorder_test_signal = "vesper.scripts.play_recorder_test_signal:_main"
 vesper_show_audio_input_devices = "vesper.scripts.show_audio_input_devices:_main"

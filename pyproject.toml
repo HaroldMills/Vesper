@@ -17,7 +17,7 @@
 # I plan to split the Vesper package into several smaller packages in
 # the future. The new packages will include separate ones for the core
 # server, processors, and the Vesper Recorder, as well as others. This
-# will give users more control over which parts of Vesper they install,
+# will give users more control over which parts of Vesper they install
 # and obviate the slim/full Vesper distinction.
 #
 #
@@ -32,25 +32,11 @@
 #     conda install -c conda-forge python-sounddevice h5py
 #     cp pyproject_slim.toml pyproject.toml
 #     pip install -e .
-#     pip install build sphinx sphinx_rtd_theme twine
+#     pip install bokeh build matplotlib sphinx sphinx_rtd_theme twine
 #
-# Note: The last `pip` command above used to include `bokeh` and
-# `matplotlib`. As of 2025-08-25, however, including either of those
-# packages causes problems, at least on my 2019 MacBook Pro. In
-# particular, it causes the environment to wind up with a recent
-# version of `numpy` that is incompatible with TensorFlow 2.12. The
-# planned move of detectors and classifiers to their own server
-# processes separate from the Vesper core server process should fix
-# this issue.
-#
-#
-# Creating Vesper Conda Environments
-# ----------------------------------
-#
-# To create a Conda environment using a local Vesper package:
-#
-#     conda create -n test python=3.11
-#     conda activate test
+#    
+# Running Vesper Unit Tests
+# -------------------------
 #
 # To run Django unit tests:
 #
@@ -158,11 +144,12 @@ maintainers = [
 # Since we include TensorFlow in the full version of Vesper, we are
 # stuck at Python 3.11 for as long as we're stuck at TensorFlow 2.12.
 # See `dependencies` section below for more about TensorFlow.
+
+# The slim version of Vesper does not include TensorFlow, so it can use
+# a more recent version of Python than the full version.
 requires-python = ">=3.13, <3.14"
 
-# Vesper package dependencies. We build two versions of the Vesper package:
-# a full version that includes processors and all dependencies and a slim
-# version that excludes processors and some dependencies. 
+# Vesper package dependencies.
 dependencies = [
 
     # Dependencies for both the full and slim Vesper packages.
@@ -171,7 +158,6 @@ dependencies = [
     "django~=5.2.0",
     "environs[django]",
     "jsonschema",
-    "psutil",
     "psycopg[binary]",
     "ruamel_yaml",
     "skyfield",
@@ -181,9 +167,9 @@ dependencies = [
 ]
 
 [project.scripts]
-kill_vesper_recorder = "vesper.scripts.kill_vesper_recorder:main"
 vesper_admin = "vesper.django.manage:main"
 vesper_recorder = "vesper.scripts.vesper_recorder:_main"
+kill_vesper_recorder = "vesper.scripts.kill_vesper_recorder:main"
 vesper_recordex = "vesper.recordex.vesper_recorder:main"
 vesper_play_recorder_test_signal = "vesper.scripts.play_recorder_test_signal:_main"
 vesper_show_audio_input_devices = "vesper.scripts.show_audio_input_devices:_main"
