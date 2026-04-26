@@ -111,6 +111,79 @@ APPROXIMATE_CHUNK_SIZE = 20000      # sample frames
 
 WORKER_POOL_SIZE = 4                # processes
 TASK_SIZE = 50                      # spectra
+
+
+2026 Update
+-----------
+
+I got a 2026 MacBook Pro recently with an M5 Pro processor and 64 GB of RAM,
+so I wanted to test aggregated gram computations on it and compare the
+results to the ones above for my 2019 MacBook Pro. At this point both
+computers are running macOS Tahoe 26.4.1.
+
+When I ran the gram computations on the 2019 MacBook Pro with an approximate
+chunk size of 20000, a task size of 50, and 6 worker processes (these
+parameter values seem to make the gram computations fastest), I got the
+following results:
+
+File Location,File Name,File Duration,Computation Time,Computation Rate
+internal disk,Harold_2021-08-27_00.49.34_Z.wav,32760,4.2,7799
+internal disk,Harold_2021-08-28_00.47.55_Z.wav,32940,4.2,7806
+internal disk,Harold_2021-08-29_00.46.16_Z.wav,33060,4.2,7796
+internal disk,Harold_2021-08-30_00.44.36_Z.wav,33240,4.4,7569
+internal disk,Harold_2021-08-31_00.42.56_Z.wav,33420,4.3,7717
+internal disk,Harold_2021-09-01_00.41.15_Z.wav,33600,4.3,7814
+internal disk,Harold_2021-09-02_00.39.33_Z.wav,33720,4.2,7949
+external disk,Harold_2021-08-27_00.49.34_Z.wav,32760,20.6,1592
+external disk,Harold_2021-08-28_00.47.55_Z.wav,32940,23.3,1411
+external disk,Harold_2021-08-29_00.46.16_Z.wav,33060,21.5,1539
+external disk,Harold_2021-08-30_00.44.36_Z.wav,33240,21.6,1538
+external disk,Harold_2021-08-31_00.42.56_Z.wav,33420,20.3,1648
+external disk,Harold_2021-09-01_00.41.15_Z.wav,33600,21.1,1592
+external disk,Harold_2021-09-02_00.39.33_Z.wav,33720,21.6,1560
+
+When I ran the gram computations on the 2026 MacBook Pro with
+the same parameter values, I got:
+
+File Location,File Name,File Duration,Computation Time,Computation Rate
+internal disk,Harold_2021-08-27_00.49.34_Z.wav,32760,1.5,22055
+internal disk,Harold_2021-08-28_00.47.55_Z.wav,32940,1.5,22377
+internal disk,Harold_2021-08-29_00.46.16_Z.wav,33060,1.5,22480
+internal disk,Harold_2021-08-30_00.44.36_Z.wav,33240,1.5,22405
+internal disk,Harold_2021-08-31_00.42.56_Z.wav,33420,1.5,22625
+internal disk,Harold_2021-09-01_00.41.15_Z.wav,33600,1.5,22556
+internal disk,Harold_2021-09-02_00.39.33_Z.wav,33720,1.5,22776
+external disk,Harold_2021-08-27_00.49.34_Z.wav,32760,20.8,1572
+external disk,Harold_2021-08-28_00.47.55_Z.wav,32940,19.8,1660
+external disk,Harold_2021-08-29_00.46.16_Z.wav,33060,20.2,1635
+external disk,Harold_2021-08-30_00.44.36_Z.wav,33240,20.4,1629
+external disk,Harold_2021-08-31_00.42.56_Z.wav,33420,19.1,1752
+external disk,Harold_2021-09-01_00.41.15_Z.wav,33600,19.4,1730
+external disk,Harold_2021-09-02_00.39.33_Z.wav,33720,20.2,1672
+
+and when I increased the number of worker processes to 12
+(which seems to maximize performance: the 2026 MacBook Pro has 18
+CPU cores while the 2019 MacBook Pro has 8), I got:
+
+File Location,File Name,File Duration,Computation Time,Computation Rate
+internal disk,Harold_2021-08-27_00.49.34_Z.wav,32760,1.1,29201
+internal disk,Harold_2021-08-28_00.47.55_Z.wav,32940,1.1,29477
+internal disk,Harold_2021-08-29_00.46.16_Z.wav,33060,1.1,29605
+internal disk,Harold_2021-08-30_00.44.36_Z.wav,33240,1.1,29702
+internal disk,Harold_2021-08-31_00.42.56_Z.wav,33420,1.1,29528
+internal disk,Harold_2021-09-01_00.41.15_Z.wav,33600,1.1,30110
+internal disk,Harold_2021-09-02_00.39.33_Z.wav,33720,1.1,30151
+external disk,Harold_2021-08-27_00.49.34_Z.wav,32760,17.5,1873
+external disk,Harold_2021-08-28_00.47.55_Z.wav,32940,17.5,1881
+external disk,Harold_2021-08-29_00.46.16_Z.wav,33060,17.5,1893
+external disk,Harold_2021-08-30_00.44.36_Z.wav,33240,17.6,1886
+external disk,Harold_2021-08-31_00.42.56_Z.wav,33420,16.7,1997
+
+So the new laptop computes grams 3 times faster with the same number
+of cores for files on the internal SSD, and 4 times faster with 12
+cores instead of 6. The new laptop computes grams only a little
+faster for files on the external USB drive. For the external drive
+the speed seems more or less limited by the USB interface.
 """
 
 
