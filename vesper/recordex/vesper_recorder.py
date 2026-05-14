@@ -10,18 +10,22 @@ of all of the other recorder processes.
 
 Keyboard Interrupt Handling
 ---------------------------
+[Note that the following documentation used to be in the
+`keyboard_interrupt_disabler` module, and has yet to be updated for
+its new location in this module.]
+
 The Vesper Recorder uses this module as part of a strategy to ensure
 that only the main process receives keyboard interrupts. We want this
 so that the main process can direct the orderly shutdown of all the
 other processes.
 
-The strategy we have adopted is:
+The strategy is:
 
 1. Disable keyboard interrupts first thing in every recorder process by
-   importing this module first thing in the process's main module. This
-   disables keyboard interrupts as soon as possible during the import
-   phase of the module. The modules that import this module include the
-   main process module `vesper_recorder.py`,the recorder process module
+   importing this module in the process's main module. This disables
+   keyboard interrupts as soon as possible during the import phase of
+   the module. The modules that import this module include the main
+   process module `vesper_recorder.py`, the recorder process module
    `recorder_process.py`, the audio process modules
    `audio_input_process.py` and `audio_processing_process.py`, and all
    sidecar process modules.
@@ -63,6 +67,8 @@ import this module at the tops of all recorder process modules, and
 not just the main process module.
 """
 
+
+# TODO: Update the keyboard interrupt handling part of the above docstring.
 
 # TODO: Augment main process module docstring to describe Vesper
 # Recorder software in detail, including its process structure, process
