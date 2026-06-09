@@ -3,7 +3,7 @@ Unit test test case mixin class.
 
 This mixin class is intended for use with a subclass of either
 `unittest.TestCase` or `django.test.TestCase`. It includes several
-convenience `_assert...` methods.
+convenience `assert...` methods.
 """
 
 
