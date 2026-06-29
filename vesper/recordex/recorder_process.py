@@ -39,12 +39,6 @@ from vesper.recordex.process import Process
 # TODO: When the recorder shuts down, do we ensure that all audio that
 # has arrived has been processed? If not, should we?
 
-# TODO: Consider using a multithreading queue instead of a multiprocessing
-# queue for the recorder process's command queue. All commands sent to
-# the recorder process currently come from its schedule thread. The UI
-# thread will send commands, too, but the UI thread will also be a
-# recorder process thread.
-
 
 _DEFAULT_LOGGING_LEVEL = 'INFO'
 
@@ -275,7 +269,7 @@ class _ScheduleThread(Thread):
     def __init__(self, recorder_process_command_queue):
         super().__init__(name='ScheduleThread')
         self._recorder_process_command_queue = recorder_process_command_queue
-        self._schedule = (2, 5, 2, 5)
+        self._schedule = (10, 5, 10, 5)
         self._stop_event = Event()
 
 

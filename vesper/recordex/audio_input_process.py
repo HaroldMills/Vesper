@@ -16,11 +16,10 @@ _logger = logging.getLogger(__name__)
 
 # RESUME:
 # 
-# * Implement audio input process. Include an `AudioInput` class that can
-#   parse and format audio input settings. The recorder process will use
-#   this class to parse audio input settings and format them for the web
-#   page. The audio input process will use this class to actually perform
-#   audio input.
+# * Implement audio input process. Include `parse_settings` and `get_ui`
+#   static methods. Send commands to recorder process that update UI.
+#
+# * Implement audio input start and stop button.
 #
 # * Tend to TODOs in `recorder_process.py` and `http_server.py`.
 
