@@ -1,4 +1,5 @@
 from datetime import timedelta as TimeDelta
+import math
 
 import numpy as np
 
@@ -205,8 +206,50 @@ class SignalUtilsTests(TestCase):
         for index, expected in cases:
             actual = get_index_data(bounds, index)
             self.assertEqual(actual, expected)
+
     
+    def test_find_most_powerful_segment(self):
+
+        cases = (
+            ((1, 0, 0), 1, 0),
+            ((0, 1, 0), 1, 1),
+            ((0, 0, 1), 1, 2),
+            ((1, 2, 3), 2, 1),
+            ((3, 2, 1), 2, 0),
+            ((1, 2, 1), 2, 0),
+            ((1, 2, 3, 2, 1), 2, 1)
+        )
+
+        for samples, length, expected in cases:
+            samples = np.array(samples)
+            actual = signal_utils.find_most_powerful_segment(samples, length)
+            self.assertEqual(actual, expected)
+
     
+    def test_compute_sliding_normalized_cross_correlation(self):
+        
+        reps = 10
+        x = np.array([1, 2, 3])
+        y = np.array([0, 0, 0, 1, 2, 3, 0, 0, 0, -1, -2, -3] * reps + [0, 0, 0])
+        
+        r = math.sqrt
+        x_norm = r(14)
+        y_norms = np.array(
+            [0, 1, r(5), r(14), r(13), 3, 0, 1, r(5), r(14), r(13), 3] * reps + [0])
+        y_norms[np.where(y_norms == 0)] = 1  # avoid division by zero
+        dot_products = np.array([0, 3, 8, 14, 8, 3, 0, -3, -8, -14, -8, -3] * reps + [0])
+        expected = dot_products / (x_norm * y_norms)
+
+        actual = signal_utils.compute_sliding_normalized_cross_correlation(
+            x, y)
+        
+        # print(len(y))
+        # for a, e in zip(actual, expected):
+        #     print(f'{a:.10f} {e:.10f}')
+
+        self.assert_arrays_close(actual, expected)
+
+
     def test_find_samples(self):
         
         y = [2, 0, 1, 0, 1, 0, 2]

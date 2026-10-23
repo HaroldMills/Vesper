@@ -5,6 +5,7 @@ import bisect
 import datetime
 
 import numpy as np
+import scipy.signal as signal
 
 from vesper.util.bunch import Bunch
 
@@ -251,6 +252,163 @@ def get_concatenated_signal_index_data(segment_bounds, index):
         segment_num = bisect.bisect_right(segment_bounds, index) - 1
         segment_index = index - segment_bounds[segment_num]
         return segment_num, segment_index
+
+
+def find_most_powerful_segment(samples, length):
+    squares = samples * samples
+    cumsums = np.cumsum(squares)
+    cumsums = np.concatenate(([0], cumsums))
+    sums = cumsums[length:] - cumsums[:-length]
+    return np.argmax(sums)
+
+
+def compute_sliding_normalized_cross_correlation(x, y):
+
+    """
+    Computes the sliding normalized cross correlation of two 1-D NumPy
+    arrays, using a piecewise approach.
+    
+    This function is intended to be used when the second array is very
+    long and the first array is relatively short. It computes the
+    sliding normalized cross correlation of the two arrays in pieces.
+    The result is equivalent to that computed by
+    `compute_sliding_normalized_cross_correlation`, but it is computed
+    more efficiently when the second array is very long.
+    
+    Parameters
+    ----------
+    x : 1-D NumPy array
+        the first array.
+    y : 1-D NumPy array
+        the second array.
+
+    Returns
+    -------
+    result : 1-D NumPy array
+        the sliding normalized cross correlation of `x` and `y`.
+        If `x` and `y` have different lengths, assume that `x` is
+        shorter (they are swapped in the computation if `y` is shorter).
+        The result is is a length `len(y) - len(x) + 1` array whose ith
+        element is the dot product of two unit vectors, one in the direction
+        of `x` and the other in the direction of `y[i:i + len(x)]`.
+    """
+
+    # Note that we recompute the DFT of a padded version of `x` in each
+    # call to `signal.correlate` below. We could speed this function up,
+    # probably by somewhat less than a third, by replacing calls to
+    # `signal.correlate` with out own fast correlation code that reuses
+    # a DFT of `x` computed just once.
+    
+    m = len(x)
+    n = len(y)
+
+    # If needed, swap `x` and `y` so that `x` is shorter.
+    if m > n:
+        x, y = y, x
+        m, n = n, m
+
+    # Make `x` a unit vector.
+    x = x / np.linalg.norm(x)
+
+    # Get `y` piece length for computation. We choose a length that is
+    # several times the length of `x` and that helps make our use of
+    # FFT-based fast correlation as efficient as possible.
+    factor = 100
+    max_piece_length = get_next_power_of_two(factor * m) - (m - 1)
+
+    # Compute dot products of `x` with length-`m` segments of `y`.
+    # We work with pieces of `y` that are at most `p` samples long,
+    # overlapping the pieces by `m - 1` samples so that we can
+    # compute the dot products for all length-`m` segments of `y`.
+    xc_length = n - m + 1
+    xc = np.empty(xc_length)
+    i = 0
+    while i < xc_length:
+        piece_length = min(max_piece_length, n - i)
+        if piece_length < m:
+            # final piece is shorter than `x`, so increase overlap
+            i -= m - piece_length
+            piece_length = m
+        piece = y[i:i + piece_length]
+        result_length = piece_length - m + 1
+        xc[i:i + result_length] = \
+            signal.correlate(piece, x, mode='valid', method='fft')
+        i += result_length
+
+    # Get norms of length-`m` segments of `y`. Note that use of
+    # `sliding_window_view` creates a view of `y` rather than a copy
+    # for efficiency.
+    y_segments = np.lib.stride_tricks.sliding_window_view(y, m)
+    y_norms = np.linalg.norm(y_segments, axis=1)
+
+    # Where `y` segments are zero, replace norms with ones to avoid
+    # division by zero. This will not affect the result, since the
+    # corresponding dot products will be zero.
+    y_norms[np.where(y_norms == 0)] = 1
+
+    # Divide dot products by norms.
+    xc /= y_norms
+
+    # Replace any NaN values that resulted from dividing by zero with zeros.
+    xc = np.nan_to_num(xc, nan=0.0)
+
+    return xc
+
+
+def get_next_power_of_two(n):
+    """Returns the next power of two greater than or equal to `n`."""
+    return 1 << (n - 1).bit_length()
+
+
+def compute_sliding_normalized_cross_correlation_old(x, y):
+
+    """
+    Computes the sliding normalized cross correlation of two 1-D NumPy
+    arrays.
+
+    Parameters
+    ----------
+    x : 1-D NumPy array
+        the first array.
+    y : 1-D NumPy array
+        the second array.
+
+    Returns
+    -------
+    xc : 1-D NumPy array
+        the sliding normalized cross correlation of `x` and `y`.
+        If `x` and `y` have different lengths, assume that `x` is
+        shorter (they are swapped in the computation if `y` is shorter).
+        The result is is a length `len(y) - len(x) + 1` array whose ith
+        element is the dot product of two unit vectors, one in the direction
+        of `x` and the other in the direction of `y[i:i + len(x)]`.
+    """
+
+    m = len(x)
+    n = len(y)
+
+    # If needed, swap `x` and `y` so that `x` is shorter.
+    if m > n:
+        x, y = y, x
+        m, n = n, m
+
+    # Make `x` a unit vector.
+    x = x / np.linalg.norm(x)
+
+    # Compute dot products of `x` with length-`m` segments of `y`.
+    xc = signal.correlate(y, x, mode='valid')
+    
+    # Get norms of length-`m` segments of `y`.
+    y_segments = np.lib.stride_tricks.sliding_window_view(y, m)
+    y_norms = np.linalg.norm(y_segments, axis=1)
+
+    # Divide dot products by norms.
+    xc /= y_norms
+
+    # Replace any NaN values that resulted from dividing by zero with zeros.
+    xc = np.nan_to_num(xc, nan=0.0)
+
+    return xc
 
 
 def find_samples(x, y, tolerance=0):
