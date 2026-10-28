@@ -53,6 +53,8 @@ if not settings.VESPER_ARCHIVE_READ_ONLY:
              name='import-old-bird-clips'),
     
         path('detect/', views.detect, name='detect'),
+        path('create-dataset-call-clips/', views.create_dataset_call_clips,
+             name='create-dataset-call-clips'),
         path('create-random-clips/', views.create_random_clips,
              name='create-random-clips'),
         path('classify/', views.classify, name='classify'),

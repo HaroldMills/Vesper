@@ -1,0 +1,71 @@
+{% extends 'vesper/base.html' %}
+
+{% block head %}
+
+    <title>Create dataset call clips</title>
+
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/detect-form.css' %}">
+
+    {% load vesper_extras %}
+
+{% endblock head %}
+
+{% block main %}
+
+    <h2>Create dataset call clips</h2>
+
+    <p>
+        Creates dataset call clips from the specified clips.
+    </p>
+
+    {% include "vesper/clips-specification-message.html" %}
+
+    <p>
+        This command creates one dataset call clip for each of the
+        specified clips that has both <code>Call Start Time</code>
+        and <code>Call End Time</code> annotations. Calls are
+        centered within the new clips.
+    </p>
+
+    <p>
+        The command marks the clips it creates as having been created
+        by the processor <code>Dataset Call Clip Creator 1.0</code>.
+        It creates the processor in the archive database if needed.
+    </p>
+
+    <p>
+        The command also tags each clip it creates with 
+        <code>Dataset New</code>. It creates a <code>Dataset New</code>
+        tag info object in the archive database if needed.
+    </p>
+
+    <p>
+        The command adds an <code>Original Clip ID</code> annotation to
+        each new clip. The value of the annotation is the database ID of
+        the original clip from which the new clip was created. The command
+        creates an <code>Original Clip ID</code> annotation info object
+        in the archive database if needed.
+    </p>
+
+    <p>
+        Specify the dataset call clip duration in seconds in the
+        <code>Clip duration</code> field.
+    </p>
+
+    {% include "vesper/command-executes-as-job-message.html" %}
+
+    <form class="form" role="form" action="{% url 'create-dataset-call-clips' %}" method="post">
+
+        {% csrf_token %}
+        
+        {% include "vesper/clip-set-form-elements.html" %}
+
+        {{ form.clip_duration|form_element }}
+
+        <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Create clips</button>
+
+    </form>
+
+{% endblock main %}
