@@ -62,11 +62,15 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
 
         job_start_time = time.time()
 
-        # TODO: Handle failure more gracefully here.
-        self._call_start_time_info_id = \
-            AnnotationInfo.objects.get(name='Call Start Time').id
-        self._call_end_time_info_id = \
-            AnnotationInfo.objects.get(name='Call End Time').id
+        # Get call start time annotation info ID.
+        self._call_start_time_info_id = _get_anno_info_id('Call Start Time')
+        if self._call_start_time_info_id is None:
+            return False
+
+        # Get call end time annotation info ID.
+        self._call_end_time_info_id = _get_anno_info_id('Call End Time')
+        if self._call_end_time_info_id is None:
+            return False
         
         self._creation_time = time_utils.get_utc_now()
         self._creating_job = Job.objects.get(pk=self._job_info.job_id)
@@ -172,21 +176,19 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
         except ValueError:
             return None
 
-        print(f'call bounds: {call_start_index}, {call_end_index}')
-
-        # Choose the new clip start index to center the call within the
-        # clip.  In the even rarer case (which we may
-        # never encounter) where the recording length is shorter than
-        # the clip length, )
-        # In deciding the clip start index and length, we have to ensure
-        # that the clip fits within the recording, i.e. that it does not
-        # overhang either the start or the end of the recording. Where
-        # necessary, we adjust the clip start index to avoid an overhang.
-        # Such an adjustment decenters the call in the clip
-
         # Get clip length.
         sample_rate = old_clip.sample_rate
         clip_length = int(round(self._clip_duration * sample_rate))
+
+        # Get call length.
+        call_length = call_end_index - call_start_index + 1
+
+        if call_length > clip_length:
+            # call longer than a dataset clip
+
+            self._handle_clip_creation_error(
+                old_clip, 'Call duration exceeds dataset clip duration')
+            return None
 
         # Get recording length.
         channel = old_clip.recording_channel
@@ -196,6 +198,9 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
         if clip_length > recording_length:
             # recording is not long enough to hold a dataset clip
 
+            self._handle_clip_creation_error(
+                old_clip,
+                'Dataset clip duration exceeds duration of recording')
             return None
         
         # Get new clip start index that centers call within clip.
@@ -203,21 +208,27 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
         offset = (clip_length - call_length) // 2
         clip_start_index = call_start_index - offset
 
-
         # Make sure clip would not overhang start of recording.
         if clip_start_index < 0:
             # clip would overhang start of recording
 
+            self._handle_clip_creation_error(
+                old_clip,
+                'Dataset call clip would overhang start of recording')
             return None
-        
+
+        # Get new clip end index.
         clip_end_index = clip_start_index + clip_length - 1
 
         if clip_end_index >= recording_length:
             # clip would overhang end of recording
 
+            self._handle_clip_creation_error(
+                old_clip, 'Dataset call clip would overhang end of recording')
             return None
 
-        # If we get here, the clip fits within the recording.
+        # If we get here, the call fits within a dataset clip and a
+        # dataset clip fits within the recording.
 
         # Get clip start time.
         start_offset = TimeDelta(seconds=clip_start_index / sample_rate)
@@ -263,7 +274,13 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
 
         return int(anno.value)
 
-    
+
+    def _handle_clip_creation_error(self, clip, message):
+            _logger.warning(
+                f'{message} for clip {str(clip)}. '
+                f'No dataset call clip will be created for this clip.')
+
+            
     def _create_new_clip_annos(self, old_clip, new_clip):
 
         # Copy old clip annotations for new clip.
@@ -320,6 +337,16 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
             creating_processor=self._creating_processor)
 
 
+def _get_anno_info_id(name):
+    try:
+        return AnnotationInfo.objects.get(name=name).id
+    except AnnotationInfo.DoesNotExist:
+        _logger.error(
+            f'Required annotation info with name "{name}" is missing '
+            f'from the archive database.')
+        return None
+
+    
 def _get_creating_processor():
 
     try:
