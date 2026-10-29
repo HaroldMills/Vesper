@@ -29,12 +29,14 @@ creating processor of each clip that it creates.
 _logger = logging.getLogger()
 
 
-# TODO: Consider avoiding collisions across multiple runs of this command.
+# TODO: Rename this command to `Create Dataset Noise Clips`.
 
-# TODO: Consider optionally avoiding creating clips that intersect
-# specified existing ones, e.g. Call* clips. The command might do this
-# by excluding the intervals of the specified clips from consideration
-# for random clip creation.
+# TODO: Consider having this command annotate its clips as noises.
+
+# TODO: Modify this command to create disjoint clips.
+
+# TODO: Consider modifying this command to create clips that are disjoint
+# from existing dataset noise clips and call intervals.
 
 
 class CreateRandomClipsCommand(Command):
@@ -118,7 +120,7 @@ class CreateRandomClipsCommand(Command):
         # Create clips.
 
         creation_time = time_utils.get_utc_now()
-        creating_processor = self._get_creating_processor()
+        creating_processor = _get_creating_processor()
         creating_job = Job.objects.get(pk=self._job_info.job_id)
 
         _logger.info('Creating clips ...')
@@ -205,27 +207,6 @@ class CreateRandomClipsCommand(Command):
         # _show_queries('create_random_clips')
 
         return True
-
-
-    def _get_creating_processor(self):
-
-        try:
-            processor = Processor.objects.get(
-                name=_PROCESSOR_NAME, type=_PROCESSOR_TYPE)
-
-        except Processor.DoesNotExist:
-
-            _logger.info(f'Creating processor "{_PROCESSOR_NAME}"...')
-
-            processor = Processor.objects.create(
-                name=_PROCESSOR_NAME,
-                type=_PROCESSOR_TYPE,
-                description=_PROCESSOR_DESCRIPTION
-            )
-
-            archive.refresh_processor_cache()
-
-        return processor
 
 
 def _get_schedule_preset(schedule_name):
@@ -401,6 +382,27 @@ def _get_concatenated_time_bounds_aux(intervals, clip_duration):
     time_bounds.append(last_end_time)
 
     return usable_interval_indices, np.array(time_bounds)
+
+
+def _get_creating_processor():
+
+    try:
+        processor = Processor.objects.get(
+            name=_PROCESSOR_NAME, type=_PROCESSOR_TYPE)
+
+    except Processor.DoesNotExist:
+
+        _logger.info(f'Creating processor "{_PROCESSOR_NAME}"...')
+
+        processor = Processor.objects.create(
+            name=_PROCESSOR_NAME,
+            type=_PROCESSOR_TYPE,
+            description=_PROCESSOR_DESCRIPTION
+        )
+
+        archive.refresh_processor_cache()
+
+    return processor
 
 
 def _resolve_start_index_collision(
