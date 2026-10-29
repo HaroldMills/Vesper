@@ -1,11 +1,10 @@
 from django import forms
 
-from vesper.django.app.models import Station
 import vesper.django.app.form_utils as form_utils
 import vesper.django.app.model_utils as model_utils
 
 
-_FORM_TITLE = 'Create random clips'
+_FORM_TITLE = 'Create dataset noise clips'
 _SCHEDULE_FIELD_LABEL = 'Detection schedule preset'
 _CLIP_DURATION_FIELD_LABEL = 'Clip duration'
 _CLIP_COUNT_FIELD_LABEL = 'Clip count'
@@ -19,7 +18,7 @@ def _get_field_default(name, default):
     return form_utils.get_field_default(_FORM_TITLE, name, default)
     
     
-class CreateRandomClipsForm(forms.Form):
+class CreateDatasetNoiseClipsForm(forms.Form):
     
 
     station_mics = forms.MultipleChoiceField(label='Station/mics')

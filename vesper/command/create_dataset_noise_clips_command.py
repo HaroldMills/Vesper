@@ -1,4 +1,4 @@
-"""Module containing class `CreateRandomClipsCommand`."""
+"""Module containing class `CreateDatasetNoiseClipsCommand`."""
 
 
 from datetime import timedelta as TimeDelta
@@ -17,11 +17,11 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_utils as time_utils
 
 
-_PROCESSOR_NAME = 'Vesper Random Clip Creator 1.0'
+_PROCESSOR_NAME = 'Dataset Noise Clip Creator 1.0'
 _PROCESSOR_TYPE = 'Clip Creator'
 _PROCESSOR_DESCRIPTION = '''
-Virtual processor created by Vesper's Create Random Clips command.
-The Create Random Clips command assigns this processor as the
+Virtual processor created by Vesper's Create Dataset Noise Clips command.
+The Create Dataset Noise Clips command assigns this processor as the
 creating processor of each clip that it creates.
 '''.lstrip()
 
@@ -29,7 +29,10 @@ creating processor of each clip that it creates.
 _logger = logging.getLogger()
 
 
-# TODO: Rename this command to `Create Dataset Noise Clips`.
+# TODO: Log a message indicating how many clips were created in how
+# many seconds, e.g. "Created a total of 5 clips in 0.0 seconds."
+
+# TODO: Consider prepending "Vesper" to the processor name.
 
 # TODO: Consider having this command annotate its clips as noises.
 
@@ -39,10 +42,10 @@ _logger = logging.getLogger()
 # from existing dataset noise clips and call intervals.
 
 
-class CreateRandomClipsCommand(Command):
+class CreateDatasetNoiseClipsCommand(Command):
     
     
-    extension_name = 'create_random_clips'
+    extension_name = 'create_dataset_noise_clips'
     
     
     def __init__(self, args):
@@ -101,7 +104,7 @@ class CreateRandomClipsCommand(Command):
 
         _logger.info('Generating random clip start times...')
 
-        # Get start offsets of random clips in concatenation of usable
+        # Generate random clip start offsets in concatenation of usable
         # interval portions, in seconds.
         start_offsets = np.random.uniform(
             time_bounds[0], time_bounds[-1], self._clip_count)
@@ -165,10 +168,10 @@ class CreateRandomClipsCommand(Command):
                 if start_index is None:
 
                     _logger.warning(
-                        'Could not resolve clip start index collision '
-                        'while creating random clips in recording channel '
-                        f'{str(channel)}. Clip for which collision '
-                        'could not be resolved will not be created.')
+                        f'Could not resolve clip start index collision '
+                        f'while creating dataset noise clips in recording '
+                        f'channel {str(channel)}. Clip for which collision '
+                        f'could not be resolved will not be created.')
 
                     # Move on to next clip.
                     continue
@@ -204,7 +207,7 @@ class CreateRandomClipsCommand(Command):
         # Make sure to create all clips.
         self._clip_creator.flush()
 
-        # _show_queries('create_random_clips')
+        # _show_queries('create_dataset_noise_clips')
 
         return True
 

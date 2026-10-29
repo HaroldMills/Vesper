@@ -1,12 +1,12 @@
 from datetime import (
     date as Date, datetime as DateTime, time as Time, timedelta as TimeDelta)
-from vesper.command.create_random_clips_command import _ScheduleCache
+from vesper.command.create_dataset_noise_clips_command import _ScheduleCache
 from vesper.django.app.models import (
     DeviceOutput, Recording, RecordingChannel, Station, StationDevice)
 from vesper.django.app.tests.dtest_case import TestCase
 from vesper.util.date_range import DateRange
-import vesper.command.create_random_clips_command as \
-    create_random_clips_command
+import vesper.command.create_dataset_noise_clips_command as \
+    create_dataset_noise_clips_command
 import vesper.util.signal_utils as signal_utils
 import vesper.util.time_utils as time_utils
 import vesper.util.yaml_utils as yaml_utils
@@ -66,7 +66,7 @@ _ONE_DAY = TimeDelta(days=1)
 
 
 
-class CreateRandomClipsCommandTests(TestCase):
+class CreateDatasetNoiseClipsCommandTests(TestCase):
     
     
     def setUp(self):
@@ -146,7 +146,7 @@ class CreateRandomClipsCommandTests(TestCase):
                     sm_pairs, start_date, end_date, schedule_cache)
 
                 actual_intervals = \
-                    create_random_clips_command._get_processing_intervals(
+                    create_dataset_noise_clips_command._get_processing_intervals(
                         sm_pairs, start_date, end_date, schedule_cache)
 
                 actual_intervals = [
@@ -192,7 +192,7 @@ class CreateRandomClipsCommandTests(TestCase):
             intervals = [_parse_interval(i) for i in intervals]
 
             actual = \
-                create_random_clips_command._get_concatenated_time_bounds_aux(
+                create_dataset_noise_clips_command._get_concatenated_time_bounds_aux(
                     intervals, clip_duration)
             
             # Convert returned NumPy array of time bounds to list for
@@ -218,7 +218,7 @@ class CreateRandomClipsCommandTests(TestCase):
             ((2, 10, {0, 1, 2, 3, 4}, 14), None),
         ]
 
-        f = create_random_clips_command._resolve_start_index_collision
+        f = create_dataset_noise_clips_command._resolve_start_index_collision
         for args, expected in cases:
             actual = f(*args)
             self.assertEqual(actual, expected)

@@ -22,7 +22,8 @@ from vesper.django.app.classify_form import ClassifyForm
 from vesper.django.app.clip_set_form import ClipSetForm
 from vesper.django.app.create_dataset_call_clips_form import \
     CreateDatasetCallClipsForm
-from vesper.django.app.create_random_clips_form import CreateRandomClipsForm
+from vesper.django.app.create_dataset_noise_clips_form import \
+    CreateDatasetNoiseClipsForm
 from vesper.django.app.delete_clips_form import DeleteClipsForm
 from vesper.django.app.delete_recordings_form import DeleteRecordingsForm
 from vesper.django.app.detect_form import DetectForm
@@ -188,8 +189,8 @@ _DEFAULT_NAVBAR_DATA_READ_WRITE = yaml_utils.load(f'''
       - name: Create dataset call clips
         url_name: create-dataset-call-clips
         
-      - name: Create random clips
-        url_name: create-random-clips
+      - name: Create dataset noise clips
+        url_name: create-dataset-noise-clips
 
       - name: Classify
         url_name: classify
@@ -510,17 +511,18 @@ def _create_create_dataset_call_clips_command_spec(form):
 
 
 @view_utils.login_required
-def create_random_clips(request):
+def create_dataset_noise_clips(request):
 
     if request.method in _GET_AND_HEAD:
-        form = CreateRandomClipsForm()
+        form = CreateDatasetNoiseClipsForm()
 
     elif request.method == 'POST':
 
-        form = CreateRandomClipsForm(request.POST)
+        form = CreateDatasetNoiseClipsForm(request.POST)
 
         if form.is_valid():
-            command_spec = _create_create_random_clips_command_spec(form)
+            command_spec = \
+                _create_create_dataset_noise_clips_command_spec(form)
             return _start_job(command_spec, request.user)
 
     else:
@@ -528,15 +530,15 @@ def create_random_clips(request):
 
     context = _create_template_context(request, 'Process', form=form)
 
-    return render(request, 'vesper/create-random-clips.html', context)
+    return render(request, 'vesper/create-dataset-noise-clips.html', context)
 
 
-def _create_create_random_clips_command_spec(form):
+def _create_create_dataset_noise_clips_command_spec(form):
 
     data = form.cleaned_data
 
     return {
-        'name': 'create_random_clips',
+        'name': 'create_dataset_noise_clips',
         'arguments': {
             'station_mics': data['station_mics'],
             'start_date': data['start_date'],

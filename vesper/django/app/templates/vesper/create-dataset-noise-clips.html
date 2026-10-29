@@ -2,7 +2,7 @@
 
 {% block head %}
 
-    <title>Create random clips</title>
+    <title>Create dataset noise clips</title>
 
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'vesper/view/command-form.css' %}">
@@ -14,10 +14,11 @@
 
 {% block main %}
 
-    <h2>Create random clips</h2>
+    <h2>Create dataset noise clips</h2>
 
     <p>
-        Creates random clips in the specified recording channels.
+        Creates dataset noise clips at random start indices in the
+        specified recording channels.
     </p>
 
     <p>
@@ -27,7 +28,7 @@
 
     <p>
         This command marks the clips it creates as having been created
-        by the processor <code>Vesper Random Clip Creator 1.0</code>. It
+        by the processor <code>Dataset Noise Clip Creator 1.0</code>. It
         creates the processor in the archive database if needed.
     </p>
 
@@ -47,7 +48,7 @@
 
     {% include "vesper/command-executes-as-job-message.html" %}
 
-    <form class="form" role="form" action="{% url 'create-random-clips' %}" method="post">
+    <form class="form" role="form" action="{% url 'create-dataset-noise-clips' %}" method="post">
 
         {% csrf_token %}
         
