@@ -4,8 +4,11 @@ import logging
 import tempfile
 
 from vesper.command.command import CommandExecutionError, CommandSyntaxError
+from vesper.django.app.models import AnnotationInfo, Processor, TagInfo
+from vesper.singleton.archive import archive
 import vesper.django.app.model_utils as model_utils
 import vesper.util.os_utils as os_utils
+import vesper.util.time_utils as time_utils
 
 
 _logger = logging.getLogger()
@@ -129,3 +132,96 @@ def log_and_reraise_fatal_exception(exception, action_text, result_text=None):
         error(result_text)
         
     raise
+
+
+def get_or_create_processor(name, type, description):
+    
+    processor, created = Processor.objects.get_or_create(
+        name=name, type=type, defaults={'description': description})
+      
+    if created:
+        _logger.info(f'Created processor "{name}" of type "{type}".')
+        archive.refresh_processor_cache()
+    
+    return processor
+
+
+def get_required_annotation_info(name):
+
+    try:
+        return AnnotationInfo.objects.get(name=name)
+    
+    except AnnotationInfo.DoesNotExist:
+        _logger.error(
+            f'Required annotation info for annotation "{name}" is missing '
+            f'from archive database.')
+        return None
+
+    
+def get_or_create_annotation_info(
+        name,
+        type,
+        description,
+        constraint=None,
+        creation_time=None,
+        creating_user=None,
+        creating_job=None):
+
+    if creation_time is None:
+        creation_time = time_utils.get_utc_now()
+
+    info, created = AnnotationInfo.objects.get_or_create(
+        name=name,
+        defaults={
+            'type': type,
+            'description': description,
+            'constraint': constraint,
+            'creation_time': creation_time,
+            'creating_user': creating_user,
+            'creating_job': creating_job
+        }
+    )
+
+    if created:
+        _logger.info(
+            f'Created annotation info for annotation "{name}" of type '
+            f'"{type}".')
+
+    return info
+
+
+def get_required_tag_info(name):
+
+    try:
+        return TagInfo.objects.get(name=name)
+    except TagInfo.DoesNotExist:
+        _logger.error(
+            f'Required tag info for tag "{name}" is missing '
+            f'from archive database.')
+        return None
+
+    
+def get_or_create_tag_info(
+        name,
+        description,
+        creation_time=None,
+        creating_user=None,
+        creating_job=None):
+
+    if creation_time is None:
+        creation_time = time_utils.get_utc_now()
+
+    info, created = TagInfo.objects.get_or_create(
+        name=name,
+        defaults={
+            'description': description,
+            'creation_time': creation_time,
+            'creating_user': creating_user,
+            'creating_job': creating_job
+        }
+    )
+
+    if created:
+        _logger.info(f'Created tag info for tag "{name}".')
+
+    return info

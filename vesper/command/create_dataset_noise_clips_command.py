@@ -10,7 +10,7 @@ import numpy as np
 
 from vesper.command.command import Command
 from vesper.django.app.batch_clip_creator import BatchClipCreator
-from vesper.django.app.models import Clip, Job, Processor, RecordingChannel
+from vesper.django.app.models import Clip, Job, RecordingChannel
 from vesper.singleton.archive import archive
 from vesper.singleton.preset_manager import preset_manager
 from vesper.util.schedule import Interval, Schedule
@@ -20,24 +20,23 @@ import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
 
-_PROCESSOR_NAME = 'Vesper Dataset Noise Clip Creator 1.0'
-_PROCESSOR_TYPE = 'Clip Creator'
-_PROCESSOR_DESCRIPTION = '''
-Virtual processor created by Vesper's Create Dataset Noise Clips command.
-The Create Dataset Noise Clips command assigns this processor as the
-creating processor of each clip that it creates.
-'''.lstrip()
-
-
-_logger = logging.getLogger()
-
-
 # TODO: Consider having this command annotate its clips as noises.
 
 # TODO: Modify this command to create disjoint clips.
 
 # TODO: Consider modifying this command to create clips that are disjoint
 # from existing dataset noise clips and call intervals.
+
+
+_PROCESSOR_NAME = 'Vesper Dataset Noise Clip Creator 1.0'
+_PROCESSOR_TYPE = 'Clip Creator'
+_PROCESSOR_DESCRIPTION = (
+    'Virtual processor created by Vesper\'s Create Dataset Noise Clips '
+    'command. The Create Dataset Noise Clips command assigns this processor '
+    'as the creating processor of each clip that it creates.')
+
+
+_logger = logging.getLogger()
 
 
 class CreateDatasetNoiseClipsCommand(Command):
@@ -124,7 +123,8 @@ class CreateDatasetNoiseClipsCommand(Command):
         # Create clips.
 
         creation_time = time_utils.get_utc_now()
-        creating_processor = _get_creating_processor()
+        creating_processor = command_utils.get_or_create_processor(
+            _PROCESSOR_NAME, _PROCESSOR_TYPE, _PROCESSOR_DESCRIPTION)
         creating_job = Job.objects.get(pk=self._job_info.job_id)
 
         _logger.info('Creating clips...')
@@ -397,27 +397,6 @@ def _get_concatenated_time_bounds_aux(intervals, clip_duration):
     time_bounds.append(last_end_time)
 
     return usable_interval_indices, np.array(time_bounds)
-
-
-def _get_creating_processor():
-
-    try:
-        processor = Processor.objects.get(
-            name=_PROCESSOR_NAME, type=_PROCESSOR_TYPE)
-
-    except Processor.DoesNotExist:
-
-        _logger.info(f'Creating processor "{_PROCESSOR_NAME}"...')
-
-        processor = Processor.objects.create(
-            name=_PROCESSOR_NAME,
-            type=_PROCESSOR_TYPE,
-            description=_PROCESSOR_DESCRIPTION
-        )
-
-        archive.refresh_processor_cache()
-
-    return processor
 
 
 def _resolve_start_index_collision(

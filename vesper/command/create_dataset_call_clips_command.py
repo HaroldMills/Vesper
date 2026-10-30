@@ -8,32 +8,27 @@ import time
 from vesper.command.clip_set_command import ClipSetCommand
 from vesper.django.app.batch_clip_creator import BatchClipCreator
 from vesper.django.app.models import (
-    AnnotationInfo, Clip, Job, Processor, StringAnnotation, Tag, TagInfo)
-from vesper.singleton.archive import archive
+    AnnotationInfo, Clip, Job, StringAnnotation, Tag)
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
 import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
 
-# TODO: Consider creating `get_or_create_processor`,
-# `get_or_create_annotation_info`, and `get_or_create_tag_info` utility
-# functions for use by this and other modules. That functionality is
-# currently implemented redundantly in several modules.
+# TODO: Consider eliminating the `Dataset New` tag.
 
 
 _PROCESSOR_NAME = 'Vesper Dataset Call Clip Creator 1.0'
 _PROCESSOR_TYPE = 'Clip Creator'
-_PROCESSOR_DESCRIPTION = '''
-Processor created by Vesper's Create Dataset Call Clips command.
-The Create Dataset Call Clips command assigns this processor as the
-creating processor of each clip that it creates.
-'''.lstrip()
+_PROCESSOR_DESCRIPTION = (
+    'Processor created by Vesper\'s Create Dataset Call Clips command. '
+    'The Create Dataset Call Clips command assigns this processor as the '
+    'creating processor of each clip that it creates.')
 
 _OLD_CLIP_ID_ANNO_NAME = 'Original Clip ID'
-_OLD_CLIP_ID_ANNO_DESCRIPTION = '''
-The ID of the clip from which the dataset clip was created.
-'''.lstrip()
+_OLD_CLIP_ID_ANNO_TYPE = 'String'
+_OLD_CLIP_ID_ANNO_DESCRIPTION = \
+    'The ID of the clip from which the dataset clip was created.'
 
 _NEW_CLIP_TAG_NAME = 'Dataset New'
 _NEW_CLIP_TAG_DESCRIPTION = 'Tags a new dataset clip.'
@@ -63,21 +58,23 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
         job_start_time = time.time()
 
         # Get call start time annotation info ID.
-        self._call_start_time_info_id = _get_anno_info_id('Call Start Time')
+        self._call_start_time_info_id = \
+            self._get_anno_info_id('Call Start Time')
         if self._call_start_time_info_id is None:
             return False
 
         # Get call end time annotation info ID.
-        self._call_end_time_info_id = _get_anno_info_id('Call End Time')
+        self._call_end_time_info_id = self._get_anno_info_id('Call End Time')
         if self._call_end_time_info_id is None:
             return False
         
         self._creation_time = time_utils.get_utc_now()
         self._creating_job = Job.objects.get(pk=self._job_info.job_id)
-        self._creating_processor = _get_creating_processor()
 
+        self._creating_processor = self._get_creating_processor()
         self._old_clip_id_anno_info = self._get_old_clip_id_anno_info()
         self._new_clip_tag_info = self._get_new_clip_tag_info()
+
         self._clip_creator = BatchClipCreator()
 
         value_tuples = self._create_clip_query_values_iterator()
@@ -130,29 +127,54 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
         return True
 
 
-    def _get_old_clip_id_anno_info(self):
-
-        try:
-            return AnnotationInfo.objects.get(name=_OLD_CLIP_ID_ANNO_NAME)
-        except AnnotationInfo.DoesNotExist:
-            return AnnotationInfo.objects.create(
-                name=_OLD_CLIP_ID_ANNO_NAME,
-                description=_OLD_CLIP_ID_ANNO_DESCRIPTION,
-                type=AnnotationInfo.TYPE_STRING,
-                creation_time=self._creation_time,
-                creating_job=self._creating_job)
+    def _get_anno_info_id(self, name):
+        info = command_utils.get_required_annotation_info(name)
+        return None if info is None else info.id
 
     
-    def _get_new_clip_tag_info(self):
+    def _get_creating_processor(self):
+        return command_utils.get_or_create_processor(
+            _PROCESSOR_NAME, _PROCESSOR_TYPE, _PROCESSOR_DESCRIPTION)
 
-        try:
-            return TagInfo.objects.get(name=_NEW_CLIP_TAG_NAME)
-        except TagInfo.DoesNotExist:
-            return TagInfo.objects.create(
-                name=_NEW_CLIP_TAG_NAME,
-                description=_NEW_CLIP_TAG_DESCRIPTION,
-                creation_time=self._creation_time,
-                creating_job=self._creating_job)
+
+    def _get_old_clip_id_anno_info(self):
+        return command_utils.get_or_create_annotation_info(
+            _OLD_CLIP_ID_ANNO_NAME, _OLD_CLIP_ID_ANNO_TYPE,
+            _OLD_CLIP_ID_ANNO_DESCRIPTION,
+            creation_time=self._creation_time,
+            creating_job=self._creating_job)
+
+
+    def _get_new_clip_tag_info(self):
+        return command_utils.get_or_create_tag_info(
+            _NEW_CLIP_TAG_NAME, _NEW_CLIP_TAG_DESCRIPTION,
+            creation_time=self._creation_time,
+            creating_job=self._creating_job)
+
+
+    # def _get_old_clip_id_anno_info(self):
+
+    #     try:
+    #         return AnnotationInfo.objects.get(name=_OLD_CLIP_ID_ANNO_NAME)
+    #     except AnnotationInfo.DoesNotExist:
+    #         return AnnotationInfo.objects.create(
+    #             name=_OLD_CLIP_ID_ANNO_NAME,
+    #             description=_OLD_CLIP_ID_ANNO_DESCRIPTION,
+    #             type=AnnotationInfo.TYPE_STRING,
+    #             creation_time=self._creation_time,
+    #             creating_job=self._creating_job)
+
+    
+    # def _get_new_clip_tag_info(self):
+
+    #     try:
+    #         return TagInfo.objects.get(name=_NEW_CLIP_TAG_NAME)
+    #     except TagInfo.DoesNotExist:
+    #         return TagInfo.objects.create(
+    #             name=_NEW_CLIP_TAG_NAME,
+    #             description=_NEW_CLIP_TAG_DESCRIPTION,
+    #             creation_time=self._creation_time,
+    #             creating_job=self._creating_job)
 
 
     def _create_new_clip(self, old_clip):
@@ -276,9 +298,9 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
 
 
     def _handle_clip_creation_error(self, clip, message):
-            _logger.warning(
-                f'{message} for clip {str(clip)}. '
-                f'No dataset call clip will be created for this clip.')
+        _logger.warning(
+            f'{message} for clip {str(clip)}. '
+            f'No dataset call clip will be created for this clip.')
 
             
     def _create_new_clip_annos(self, old_clip, new_clip):
@@ -342,27 +364,6 @@ def _get_anno_info_id(name):
         return AnnotationInfo.objects.get(name=name).id
     except AnnotationInfo.DoesNotExist:
         _logger.error(
-            f'Required annotation info with name "{name}" is missing '
+            f'Required annotation info for annotation "{name}" is missing '
             f'from the archive database.')
         return None
-
-    
-def _get_creating_processor():
-
-    try:
-        processor = Processor.objects.get(
-            name=_PROCESSOR_NAME, type=_PROCESSOR_TYPE)
-
-    except Processor.DoesNotExist:
-
-        _logger.info(f'Creating processor "{_PROCESSOR_NAME}"...')
-
-        processor = Processor.objects.create(
-            name=_PROCESSOR_NAME,
-            type=_PROCESSOR_TYPE,
-            description=_PROCESSOR_DESCRIPTION
-        )
-
-        archive.refresh_processor_cache()
-
-    return processor
