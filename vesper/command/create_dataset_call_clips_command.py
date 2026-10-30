@@ -120,9 +120,9 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
         self._clip_creator.flush()
 
         # Log total clip creations and creation rate.
+        elapsed_time = time.time() - job_start_time
         count_text = \
             text_utils.create_count_text(total_new_clip_count, 'clip')
-        elapsed_time = time.time() - job_start_time
         timing_text = command_utils.get_timing_text(
             elapsed_time, total_new_clip_count, 'clips')
         _logger.info(f'Created a total of {count_text}{timing_text}.')

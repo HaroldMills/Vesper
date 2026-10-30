@@ -3,6 +3,7 @@
 
 from datetime import timedelta as TimeDelta
 import logging
+import time
 
 import django.db
 import numpy as np
@@ -15,6 +16,7 @@ from vesper.singleton.preset_manager import preset_manager
 from vesper.util.schedule import Interval, Schedule
 import vesper.command.command_utils as command_utils
 import vesper.util.signal_utils as signal_utils
+import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
 
@@ -29,9 +31,6 @@ creating processor of each clip that it creates.
 
 _logger = logging.getLogger()
 
-
-# TODO: Log a message indicating how many clips were created in how
-# many seconds, e.g. "Created a total of 5 clips in 0.0 seconds."
 
 # TODO: Consider having this command annotate its clips as noises.
 
@@ -65,6 +64,8 @@ class CreateDatasetNoiseClipsCommand(Command):
         # django.db.reset_queries()
 
         self._job_info = job_info
+
+        job_start_time = time.time()
 
         # Get schedule preset and create schedule cache.
         self._schedule_preset = _get_schedule_preset(self._schedule_name)
@@ -131,6 +132,8 @@ class CreateDatasetNoiseClipsCommand(Command):
         # Bookkeeping for start index collision detection and resolution.
         last_interval_num = -1
         used_start_indices = set()
+
+        clip_count = 0
 
         for i, start_offset in zip(interval_indices, start_offsets):
 
@@ -204,10 +207,19 @@ class CreateDatasetNoiseClipsCommand(Command):
 
             used_start_indices.add(start_index)
 
+            clip_count += 1
+
         # Make sure to create all clips.
         self._clip_creator.flush()
 
         # _show_queries('create_dataset_noise_clips')
+
+        # Log total clip creations and creation rate.
+        elapsed_time = time.time() - job_start_time
+        count_text = text_utils.create_count_text(clip_count, 'clip')
+        timing_text = command_utils.get_timing_text(
+            elapsed_time, clip_count, 'clips')
+        _logger.info(f'Created a total of {count_text}{timing_text}.')
 
         return True
 
