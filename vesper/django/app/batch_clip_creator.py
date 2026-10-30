@@ -13,7 +13,7 @@ class BatchClipCreator:
     Call the `add_clip` method with clips to be created. When the number
     of added clips reaches the batch size, they are created in the
     database. Call the `flush` method after your last call to `add_clip`
-    to create the clips of the current batch.
+    to ensure that all clips are created.
     """
 
 
