@@ -2,14 +2,13 @@
 
 
 from datetime import timedelta as TimeDelta
-import itertools
 import logging
 import time
 
 from vesper.command.clip_set_command import ClipSetCommand
+from vesper.django.app.batch_clip_creator import BatchClipCreator
 from vesper.django.app.models import (
-    AnnotationInfo, Clip, Job, Processor, StringAnnotation,
-    StringAnnotationEdit, Tag, TagEdit, TagInfo)
+    AnnotationInfo, Clip, Job, Processor, StringAnnotation, Tag, TagInfo)
 from vesper.singleton.archive import archive
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
@@ -17,9 +16,10 @@ import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
 
-# TODO: Consider moving the `_ClipCreator` class to its own module.
-# We use it in this class and in the noise clip creator. Also consider
-# renaming the class to `BatchClipCreator`.
+# TODO: Consider creating `get_or_create_processor`,
+# `get_or_create_annotation_info`, and `get_or_create_tag_info` utility
+# functions for use by this and other modules. That functionality is
+# currently implemented redundantly in several modules.
 
 
 _PROCESSOR_NAME = 'Vesper Dataset Call Clip Creator 1.0'
@@ -78,7 +78,7 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
 
         self._old_clip_id_anno_info = self._get_old_clip_id_anno_info()
         self._new_clip_tag_info = self._get_new_clip_tag_info()
-        self._clip_creator = _ClipCreator()
+        self._clip_creator = BatchClipCreator()
 
         value_tuples = self._create_clip_query_values_iterator()
 
@@ -366,84 +366,3 @@ def _get_creating_processor():
         archive.refresh_processor_cache()
 
     return processor
-
-
-class _ClipCreator:
-
-
-    def __init__(self, batch_size=50):
-        self._batch_size = batch_size
-        self._clips = []
-        self._annos = []
-        self._tags = []
-
-
-    def add_clip(self, clip, annotations=None, tags=None):
-
-        self._clips.append(clip)
-
-        if annotations is not None:
-            self._annos.append(annotations)
-
-        if tags is not None:
-            self._tags.append(tags)
-
-        if len(self._clips) == self._batch_size:
-            self.flush()
-
-
-    def flush(self):
-
-        if len(self._clips) != 0:
-            # there are clips to create
-
-            # Create clips.
-            Clip.objects.bulk_create(self._clips)
-
-            if len(self._annos) != 0:
-                # there are annotations to create
-
-                # Get list of annotations to create.
-                annos = list(itertools.chain.from_iterable(self._annos))
-
-                # Create annotations.
-                StringAnnotation.objects.bulk_create(annos)
-
-                # Create annotation edits.
-                edits = [
-                    StringAnnotationEdit(
-                        action=StringAnnotationEdit.ACTION_SET,
-                        clip=a.clip,
-                        info=a.info,
-                        value=a.value,
-                        creation_time=a.creation_time,
-                        creating_job=a.creating_job,
-                        creating_processor=a.creating_processor)
-                    for a in annos]
-                StringAnnotationEdit.objects.bulk_create(edits)
-
-            if len(self._tags) != 0:
-                # there are tags to create
-
-                # Get list of tags to create.
-                tags = list(itertools.chain.from_iterable(self._tags))
-
-                # Create tags.
-                Tag.objects.bulk_create(tags)
-
-                # Create tag edits.
-                edits = [
-                    TagEdit(
-                        action=TagEdit.ACTION_SET,
-                        clip=t.clip,
-                        info=t.info,
-                        creation_time=t.creation_time,
-                        creating_job=t.creating_job,
-                        creating_processor=t.creating_processor)
-                    for t in tags]
-                TagEdit.objects.bulk_create(edits)
-
-            # Clear clips and annotations for next batch.
-            self._clips.clear()
-            self._annos.clear()
-            self._tags.clear()

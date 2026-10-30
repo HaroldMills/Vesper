@@ -8,6 +8,7 @@ import django.db
 import numpy as np
 
 from vesper.command.command import Command
+from vesper.django.app.batch_clip_creator import BatchClipCreator
 from vesper.django.app.models import Clip, Job, Processor, RecordingChannel
 from vesper.singleton.archive import archive
 from vesper.singleton.preset_manager import preset_manager
@@ -58,20 +59,21 @@ class CreateDatasetNoiseClipsCommand(Command):
         self._clip_duration = get('clip_duration', args)
         self._clip_count = get('clip_count', args)
         
-        self._schedule_preset = _get_schedule_preset(self._schedule_name)
-        if self._schedule_preset is None:
-            self._schedule_cache = None
-        else:
-            self._schedule_cache = _ScheduleCache(self._schedule_preset)
-
-        self._clip_creator = _ClipCreator()
-        
         
     def execute(self, job_info):
         
         # django.db.reset_queries()
 
         self._job_info = job_info
+
+        # Get schedule preset and create schedule cache.
+        self._schedule_preset = _get_schedule_preset(self._schedule_name)
+        if self._schedule_preset is None:
+            self._schedule_cache = None
+        else:
+            self._schedule_cache = _ScheduleCache(self._schedule_preset)
+
+        self._clip_creator = BatchClipCreator()
 
         _logger.info(
             'Gathering information about recording channel intervals in '
@@ -124,7 +126,7 @@ class CreateDatasetNoiseClipsCommand(Command):
         creating_processor = _get_creating_processor()
         creating_job = Job.objects.get(pk=self._job_info.job_id)
 
-        _logger.info('Creating clips ...')
+        _logger.info('Creating clips...')
 
         # Bookkeeping for start index collision detection and resolution.
         last_interval_num = -1
@@ -479,23 +481,3 @@ class _ScheduleCache:
             self._schedules[station.name] = schedule
             
             return schedule
-
-
-class _ClipCreator:
-
-
-    def __init__(self, batch_size=50):
-        self._batch_size = batch_size
-        self._clips = []
-
-
-    def add_clip(self, clip):
-        self._clips.append(clip)
-        if len(self._clips) == self._batch_size:
-            self.flush()
-
-
-    def flush(self):
-        if len(self._clips) != 0:
-            Clip.objects.bulk_create(self._clips)
-            self._clips.clear()
