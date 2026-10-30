@@ -17,7 +17,7 @@ import vesper.util.signal_utils as signal_utils
 import vesper.util.time_utils as time_utils
 
 
-_PROCESSOR_NAME = 'Dataset Noise Clip Creator 1.0'
+_PROCESSOR_NAME = 'Vesper Dataset Noise Clip Creator 1.0'
 _PROCESSOR_TYPE = 'Clip Creator'
 _PROCESSOR_DESCRIPTION = '''
 Virtual processor created by Vesper's Create Dataset Noise Clips command.
@@ -31,8 +31,6 @@ _logger = logging.getLogger()
 
 # TODO: Log a message indicating how many clips were created in how
 # many seconds, e.g. "Created a total of 5 clips in 0.0 seconds."
-
-# TODO: Consider prepending "Vesper" to the processor name.
 
 # TODO: Consider having this command annotate its clips as noises.
 

@@ -22,7 +22,7 @@ import vesper.util.time_utils as time_utils
 # renaming the class to `BatchClipCreator`.
 
 
-_PROCESSOR_NAME = 'Dataset Call Clip Creator 1.0'
+_PROCESSOR_NAME = 'Vesper Dataset Call Clip Creator 1.0'
 _PROCESSOR_TYPE = 'Clip Creator'
 _PROCESSOR_DESCRIPTION = '''
 Processor created by Vesper's Create Dataset Call Clips command.
