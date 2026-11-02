@@ -10,7 +10,7 @@ import numpy as np
 
 from vesper.command.command import Command
 from vesper.django.app.batch_clip_creator import BatchClipCreator
-from vesper.django.app.models import Clip, Job, RecordingChannel
+from vesper.django.app.models import Clip, Job, RecordingChannel, Tag
 from vesper.singleton.archive import archive
 from vesper.singleton.preset_manager import preset_manager
 from vesper.util.schedule import Interval, Schedule
@@ -20,9 +20,8 @@ import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
 
-# TODO: Consider having this command annotate its clips as noises.
-
-# TODO: Modify this command to create disjoint clips.
+# TODO: Consider modifying this command to create clips that are disjoint
+# from each other.
 
 # TODO: Consider modifying this command to create clips that are disjoint
 # from existing dataset noise clips and call intervals.
@@ -34,6 +33,9 @@ _PROCESSOR_DESCRIPTION = (
     'Virtual processor created by Vesper\'s Create Dataset Noise Clips '
     'command. The Create Dataset Noise Clips command assigns this processor '
     'as the creating processor of each clip that it creates.')
+
+_UNREVIEWED_TAG_NAME = 'Unreviewed'
+_UNREVIEWED_TAG_DESCRIPTION = 'Tags an unreviewed dataset clip.'
 
 
 _logger = logging.getLogger()
@@ -72,8 +74,6 @@ class CreateDatasetNoiseClipsCommand(Command):
             self._schedule_cache = None
         else:
             self._schedule_cache = _ScheduleCache(self._schedule_preset)
-
-        self._clip_creator = BatchClipCreator()
 
         _logger.info(
             'Gathering information about recording channel intervals in '
@@ -122,12 +122,16 @@ class CreateDatasetNoiseClipsCommand(Command):
 
         # Create clips.
 
-        creation_time = time_utils.get_utc_now()
-        creating_processor = command_utils.get_or_create_processor(
-            _PROCESSOR_NAME, _PROCESSOR_TYPE, _PROCESSOR_DESCRIPTION)
-        creating_job = Job.objects.get(pk=self._job_info.job_id)
-
         _logger.info('Creating clips...')
+
+        self._creation_time = time_utils.get_utc_now()
+        self._creating_job = Job.objects.get(pk=self._job_info.job_id)
+
+        self._creating_processor = command_utils.get_or_create_processor(
+            _PROCESSOR_NAME, _PROCESSOR_TYPE, _PROCESSOR_DESCRIPTION)
+        self._unreviewed_tag_info = self._get_unreviewed_tag_info()
+
+        self._clip_creator = BatchClipCreator()
 
         # Bookkeeping for start index collision detection and resolution.
         last_interval_num = -1
@@ -199,11 +203,13 @@ class CreateDatasetNoiseClipsCommand(Command):
                 start_time=start_time,
                 end_time=end_time,
                 date=date,
-                creation_time=creation_time,
-                creating_processor=creating_processor,
-                creating_job=creating_job)
+                creation_time=self._creation_time,
+                creating_processor=self._creating_processor,
+                creating_job=self._creating_job)
 
-            self._clip_creator.add_clip(clip)
+            tags = self._create_new_clip_tags(clip)
+
+            self._clip_creator.add_clip(clip, None, tags)
 
             used_start_indices.add(start_index)
 
@@ -222,6 +228,27 @@ class CreateDatasetNoiseClipsCommand(Command):
         _logger.info(f'Created a total of {count_text}{timing_text}.')
 
         return True
+
+
+    def _get_unreviewed_tag_info(self):
+        return command_utils.get_or_create_tag_info(
+            _UNREVIEWED_TAG_NAME, _UNREVIEWED_TAG_DESCRIPTION,
+            creation_time=self._creation_time,
+            creating_job=self._creating_job)
+
+
+    def _create_new_clip_tags(self, clip):
+        unreviewed_tag = self._tag_clip(clip, self._unreviewed_tag_info)
+        return [unreviewed_tag]
+
+    
+    def _tag_clip(self, clip, tag_info):
+        return Tag(
+            clip=clip,
+            info=tag_info,
+            creation_time=self._creation_time,
+            creating_job=self._creating_job,
+            creating_processor=self._creating_processor)
 
 
 def _get_schedule_preset(schedule_name):
