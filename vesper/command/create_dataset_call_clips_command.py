@@ -15,9 +15,6 @@ import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
 
-# TODO: Consider eliminating the `Dataset New` tag.
-
-
 _PROCESSOR_NAME = 'Vesper Dataset Call Clip Creator 1.0'
 _PROCESSOR_TYPE = 'Clip Creator'
 _PROCESSOR_DESCRIPTION = (
@@ -30,8 +27,8 @@ _OLD_CLIP_ID_ANNO_TYPE = 'String'
 _OLD_CLIP_ID_ANNO_DESCRIPTION = \
     'The ID of the clip from which the dataset clip was created.'
 
-_NEW_CLIP_TAG_NAME = 'Dataset New'
-_NEW_CLIP_TAG_DESCRIPTION = 'Tags a new dataset clip.'
+_UNREVIEWED_TAG_NAME = 'Unreviewed'
+_UNREVIEWED_TAG_DESCRIPTION = 'Tags an unreviewed dataset clip.'
 
 
 _logger = logging.getLogger()
@@ -73,7 +70,7 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
 
         self._creating_processor = self._get_creating_processor()
         self._old_clip_id_anno_info = self._get_old_clip_id_anno_info()
-        self._new_clip_tag_info = self._get_new_clip_tag_info()
+        self._unreviewed_tag_info = self._get_unreviewed_tag_info()
 
         self._clip_creator = BatchClipCreator()
 
@@ -145,36 +142,11 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
             creating_job=self._creating_job)
 
 
-    def _get_new_clip_tag_info(self):
+    def _get_unreviewed_tag_info(self):
         return command_utils.get_or_create_tag_info(
-            _NEW_CLIP_TAG_NAME, _NEW_CLIP_TAG_DESCRIPTION,
+            _UNREVIEWED_TAG_NAME, _UNREVIEWED_TAG_DESCRIPTION,
             creation_time=self._creation_time,
             creating_job=self._creating_job)
-
-
-    # def _get_old_clip_id_anno_info(self):
-
-    #     try:
-    #         return AnnotationInfo.objects.get(name=_OLD_CLIP_ID_ANNO_NAME)
-    #     except AnnotationInfo.DoesNotExist:
-    #         return AnnotationInfo.objects.create(
-    #             name=_OLD_CLIP_ID_ANNO_NAME,
-    #             description=_OLD_CLIP_ID_ANNO_DESCRIPTION,
-    #             type=AnnotationInfo.TYPE_STRING,
-    #             creation_time=self._creation_time,
-    #             creating_job=self._creating_job)
-
-    
-    # def _get_new_clip_tag_info(self):
-
-    #     try:
-    #         return TagInfo.objects.get(name=_NEW_CLIP_TAG_NAME)
-    #     except TagInfo.DoesNotExist:
-    #         return TagInfo.objects.create(
-    #             name=_NEW_CLIP_TAG_NAME,
-    #             description=_NEW_CLIP_TAG_DESCRIPTION,
-    #             creation_time=self._creation_time,
-    #             creating_job=self._creating_job)
 
 
     def _create_new_clip(self, old_clip):
@@ -312,7 +284,7 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
         new_anno = self._annotate_clip(
             new_clip, self._old_clip_id_anno_info, str(old_clip.id))
 
-        # Get all annotations for new clip.
+        # Return all annotations for new clip.
         return anno_copies + [new_anno]
 
 
@@ -337,11 +309,11 @@ class CreateDatasetCallClipsCommand(ClipSetCommand):
         # Copy old clip tags for new clip.
         tag_copies = self._copy_tags(old_clip, new_clip)
 
-        # Get new dataset clip tag for new clip.
-        new_tag = self._tag_clip(new_clip, self._new_clip_tag_info)
+        # Get unreviewed tag for new clip.
+        unreviewed_tag = self._tag_clip(new_clip, self._unreviewed_tag_info)
         
-        # Get all tags for new clip.
-        return tag_copies + [new_tag]
+        # Return all tags for new clip.
+        return tag_copies + [unreviewed_tag]
 
 
     def _copy_tags(self, old_clip, new_clip):
