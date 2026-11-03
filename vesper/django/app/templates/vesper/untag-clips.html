@@ -16,26 +16,27 @@
     <h2>Untag clips</h2>
 
     <p>
-        Removes the specified tag from the specified clips.
+        Untags the specified clips, removing the specified tag from those
+        clips that have it.
     </p>
 
+    {% include "vesper/clips-specification-message.html" %}
+
     <p>
-        The clips are specified as a set of station/mic pairs, a range of
-        dates, a set of detectors, an optional classification, and a tag.
+        Specify the tag to remove in the <code>Remove tag</code> field.
     </p>
 
     <p>
         You can optionally specify a number of clips for which to retain
-        the tag in the <code>Retain count</code> field. The clips for which
-        to retain tags are selected at random from those specified, with
-        all clips equally likely to be selected.
+        the tag in the <code>Retain count</code> field. The clips are
+        selected at random from those specified that have the tag.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
 
     <p class="warning">
-        You can untag a lot of clips with this command, and your changes
-        cannot be undone, so proceed with caution!
+        You can untag a lot of clips with this command, and in some cases
+        your changes cannot be undone, so proceed with caution!
     </p>
 
     <form class="form" role="form" action="{% url 'untag-clips' %}" method="post">
@@ -44,6 +45,7 @@
         
         {% include "vesper/clip-set-form-elements.html" %}
         
+        {{ form.remove_tag|form_element }}
         {{ form.retain_count|form_element }}
 
         <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Untag</button>

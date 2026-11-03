@@ -28,16 +28,7 @@ class ClipSetForm(forms.Form):
     
     def __init__(self, *args, **kwargs):
         
-        # Copy `kwargs` so we can delete our keyword arguments from the
-        # copy before passing it to the `forms.Form` initializer. That
-        # initializer will raise an exception if it receives any of our
-        # keyword arguments, since it does not recognize them.
-        kwargs_copy = dict(kwargs)
-        
-        tag_required = self._get_optional_kwarg(
-            kwargs_copy, 'clip_set_tag_required', False)
-        
-        super().__init__(*args, **kwargs_copy)
+        super().__init__(*args, **kwargs)
         
         # Populate station/mics field.
         names = model_utils.get_station_mic_output_pair_ui_names()
@@ -53,9 +44,7 @@ class ClipSetForm(forms.Form):
             form_utils.get_string_annotation_value_choices('Classification')
             
         # Populate tag field.
-        include_not_applicable = not tag_required
-        self.fields['tag'].choices = \
-            form_utils.get_tag_choices(include_not_applicable)
+        self.fields['tag'].choices = form_utils.get_tag_choices()
 
 
     def _get_optional_kwarg(self, kwargs, name, default_value):

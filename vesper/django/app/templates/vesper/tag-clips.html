@@ -16,24 +16,28 @@
     <h2>Tag clips</h2>
 
     <p>
-        Adds the specified tag to the specified clips.
+        Tags the specified clips, adding the specified tag to those clips
+        that do not already have it.
     </p>
 
+    {% include "vesper/clips-specification-message.html" %}
+
     <p>
-        The clips are specified as a set of station/mic pairs, a range
-        of dates, a set of detectors, an optional classification, and
-        a tag. Only clips that do not already have the specified tag
-        are considered for tagging.
+        Specify the tag to add in the <code>Add tag</code> field.
     </p>
 
     <p>
         You can optionally specify the number of clips to tag in the
-        <code>Clip count</code> field. The clips to tag are selected at
-        random from those specified, with all clips equally likely to be
-        selected.
+        <code>Clip count</code> field. The clips are selected at random
+        from those specified that do not already have the tag.
     </p>
 
     {% include "vesper/command-executes-as-job-message.html" %}
+
+    <p class="warning">
+        You can tag a lot of clips with this command, and in some cases
+        your changes cannot be undone, so proceed with caution!
+    </p>
 
     <form class="form" role="form" action="{% url 'tag-clips' %}" method="post">
 
@@ -41,6 +45,7 @@
         
         {% include "vesper/clip-set-form-elements.html" %}
         
+        {{ form.add_tag|form_element }}
         {{ form.clip_count|form_element }}
 
         <button type="submit" class="btn btn-primary form-spacing command-form-spacing">Tag</button>

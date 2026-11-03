@@ -8,6 +8,7 @@ import time
 from django.db import transaction
 
 from vesper.command.clip_set_command import ClipSetCommand
+from vesper.command.command import CommandExecutionError
 from vesper.django.app.models import Job, Tag, TagEdit, TagInfo
 import vesper.command.command_utils as command_utils
 import vesper.django.app.model_utils as model_utils
@@ -29,14 +30,26 @@ class TagClipsCommand(ClipSetCommand):
         
         super().__init__(args, True)
         
+        get = command_utils.get_required_arg
+        tag = get('add_tag', args)
+        self._add_tag_name = model_utils.get_clip_query_tag_name(tag)
+
         get_opt = command_utils.get_optional_arg
         self._clip_count = get_opt('clip_count', args)
         
         
     def execute(self, job_info):
-        self._job_info = job_info
-        clip_indices = self._get_tag_clip_indices()
-        self._tag_clips(clip_indices)
+
+        if self._add_tag_name is None:
+            _logger.error(
+                'No tag was specified in the "add_tag" command argument, '
+                'so no clips will be tagged.')
+
+        else:
+            self._job_info = job_info
+            clip_indices = self._get_tag_clip_indices()
+            self._tag_clips(clip_indices)
+
         return True
     
     
@@ -70,22 +83,32 @@ class TagClipsCommand(ClipSetCommand):
         count = 0
         
         for station, mic_output, date, detector in value_tuples:
-            
-            clips = model_utils.get_clips(
-                station=station,
-                mic_output=mic_output,
-                date=date,
-                detector=detector,
-                annotation_name=self._annotation_name,
-                annotation_value=self._annotation_value,
-                tag_name=self._tag_name,
-                tag_excluded=True,
-                order=False)
-            
+
+            clips = self._get_untagged_clips(
+                station, mic_output, date, detector)
+                        
             count += clips.count()
             
         return count
             
+
+    def _get_untagged_clips(self, station, mic_output, date, detector):
+
+        clips = model_utils.get_clips(
+            station=station,
+            mic_output=mic_output,
+            date=date,
+            detector=detector,
+            annotation_name=self._annotation_name,
+            annotation_value=self._annotation_value,
+            tag_name=self._tag_name,
+            order=False)
+
+        clips = model_utils.filter_clips_by_tag(
+            clips, self._add_tag_name, tag_excluded=True)
+
+        return clips
+    
 
     def _tag_clips(self, clip_indices):
         
@@ -99,18 +122,11 @@ class TagClipsCommand(ClipSetCommand):
         
         for station, mic_output, date, detector in value_tuples:
             
-            # Get clip for this station, mic_output, date, and detector.
-            clips = model_utils.get_clips(
-                station=station,
-                mic_output=mic_output,
-                date=date,
-                detector=detector,
-                annotation_name=self._annotation_name,
-                annotation_value=self._annotation_value,
-                tag_name=self._tag_name,
-                tag_excluded=True,
-                order=False)
-
+            # Get untagged clips for this station, mic_output, date,
+            # and detector.
+            clips = self._get_untagged_clips(
+                station, mic_output, date, detector)
+            
             # Get list of clip IDs.
             clip_ids = clips.values_list('pk', flat=True)
             
@@ -195,7 +211,7 @@ class TagClipsCommand(ClipSetCommand):
                 # similar reason.
                 max_chunk_size = 900
                 
-                tag_info = TagInfo.objects.get(name=self._tag_name)
+                tag_info = TagInfo.objects.get(name=self._add_tag_name)
                 action = TagEdit.ACTION_SET
                 creation_time = time_utils.get_utc_now()
                 creating_job = Job.objects.get(id=self._job_info.job_id)

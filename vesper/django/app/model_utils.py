@@ -509,20 +509,20 @@ def _filter_clips_by_annotation_if_needed(
                 
 
 def _filter_clips_by_tag_if_needed(clips, tag_name, tag_excluded):
-    
     if tag_name is None:
         return clips
-
     else:
-
-        info = TagInfo.objects.get(name=tag_name)
-
-        if tag_excluded:
-            return clips.exclude(tag__info=info)
-        else:
-            return clips.filter(tag__info=info)
+        return filter_clips_by_tag(clips, tag_name, tag_excluded)
 
 
+def filter_clips_by_tag(clips, tag_name, tag_excluded=False):
+    info = TagInfo.objects.get(name=tag_name)
+    if tag_excluded:
+        return clips.exclude(tag__info=info)
+    else:
+        return clips.filter(tag__info=info)
+
+    
 def create_clip_query_values_iterator(
         sm_pair_ui_names, start_date, end_date, detector_names):
     

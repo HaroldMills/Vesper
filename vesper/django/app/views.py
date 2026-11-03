@@ -1041,6 +1041,7 @@ def _create_tag_clips_command_spec(form):
     spec = {
         'name': 'tag_clips',
         'arguments': {
+            'add_tag': data['add_tag'],
             'clip_count': data['clip_count']
         }
     }
@@ -1079,6 +1080,7 @@ def _create_untag_clips_command_spec(form):
     spec = {
         'name': 'untag_clips',
         'arguments': {
+            'remove_tag': data['remove_tag'],
             'retain_count': data['retain_count']
         }
     }
