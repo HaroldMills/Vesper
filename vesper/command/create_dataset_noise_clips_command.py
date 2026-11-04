@@ -30,9 +30,9 @@ import vesper.util.time_utils as time_utils
 _PROCESSOR_NAME = 'Vesper Dataset Noise Clip Creator 1.0'
 _PROCESSOR_TYPE = 'Clip Creator'
 _PROCESSOR_DESCRIPTION = (
-    'Virtual processor created by Vesper\'s Create Dataset Noise Clips '
-    'command. The Create Dataset Noise Clips command assigns this processor '
-    'as the creating processor of each clip that it creates.')
+    'Processor created by Vesper\'s Create Dataset Noise Clips command. '
+    'The Create Dataset Noise Clips command assigns this processor as the '
+    'creating processor of each clip that it creates.')
 
 _UNREVIEWED_TAG_NAME = 'Unreviewed'
 _UNREVIEWED_TAG_DESCRIPTION = 'Tags an unreviewed dataset clip.'
