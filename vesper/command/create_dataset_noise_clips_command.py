@@ -20,11 +20,22 @@ import vesper.util.text_utils as text_utils
 import vesper.util.time_utils as time_utils
 
 
-# TODO: Consider modifying this command to create clips that are disjoint
-# from each other.
-
-# TODO: Consider modifying this command to create clips that are disjoint
-# from existing dataset noise clips and call intervals.
+# This command currently generates clip start times at random within a
+# continuous time interval that represents the concatenation of portions
+# of recording channels. This has the nice property that the union of sets
+# of clip start times generated separately might as well have been generated
+# as a single set. It does not guarantee that the generated clips will be
+# disjoint, however, or even that no two generated clips will not have the
+# same start index. As long as the total duration of generated clips is
+# small relative to the total duration of the recording channel intervals,
+# however, the amount of overlap and the probability of start index
+# collisions are low.
+#
+# To generate disjoint clips, we could partition recording channel intervals
+# into non-overlapping *slots* of the clip duration and then select slots at
+# random to be our clips. If we wanted to be able to generate multiple sets
+# of clips separately, however, we would need to avoid choosing slots that
+# had already been used in previous sets.
 
 
 _PROCESSOR_NAME = 'Vesper Dataset Noise Clip Creator 1.0'
