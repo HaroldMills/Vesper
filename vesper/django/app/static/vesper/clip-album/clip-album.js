@@ -683,7 +683,10 @@ export class ClipAlbum {
         
         // Update date in URL.
         params.set('date', newDateString);
-        
+
+        // Delete page number from URL, if present.
+        params.delete('page');
+
         // Go to new URL.
         window.location.href = url.href;
         
