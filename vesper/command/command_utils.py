@@ -31,22 +31,16 @@ def get_optional_arg(name, args, default=None):
 
 def get_station_mic_output_pairs(ui_names):
 
-    pairs_dict = model_utils.get_station_mic_output_pairs_dict()
+    pairs = model_utils.get_station_mic_output_pairs_dict()
 
-    pairs = set()
-
-    for name in ui_names:
-
-        pair = pairs_dict.get(name)
-
+    def get_pair(name):
+        pair = pairs.get(name)
         if pair is None:
             raise CommandExecutionError(
                 f'Unrecognized station / mic output UI name "{name}".')
-
-        else:
-            pairs.add(pair)
-
-    return sorted(pairs)
+        return pair
+    
+    return [get_pair(name) for name in sorted(ui_names)]
 
 
 def get_timing_text(elapsed_time, item_count, items_name):
