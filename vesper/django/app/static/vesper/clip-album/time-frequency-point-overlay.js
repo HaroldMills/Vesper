@@ -21,7 +21,7 @@ export class TimeFrequencyPointOverlay extends CommandableOverlay {
             clipView, settings, 'Time-Frequency Point Overlay',
             _commandableDelegate)
             
-        this.timeAnnotationName = settings.timeAnnotationName;
+        this.indexAnnotationName = settings.indexAnnotationName;
         this.frequencyAnnotationName = settings.frequencyAnnotationName;
         this.markerType = settings.markerType;
         
@@ -51,7 +51,7 @@ export class TimeFrequencyPointOverlay extends CommandableOverlay {
             const index = startIndex + Math.round(time * clip.sampleRate);
             
             const annotations = new Map([
-                [this.timeAnnotationName, index],
+                [this.indexAnnotationName, index],
                 [this.frequencyAnnotationName, freq]
             ]);
             
@@ -65,7 +65,7 @@ export class TimeFrequencyPointOverlay extends CommandableOverlay {
     _executeClearTimeFrequencyPointCommand(env) {
         const clips = [this.clipView.clip];
         const annotationNames = new Set(
-            [this.timeAnnotationName, this.frequencyAnnotationName]);
+            [this.indexAnnotationName, this.frequencyAnnotationName]);
         this.clipAlbum._unannotateClips(clips, annotationNames);
     }
 
@@ -76,13 +76,13 @@ export class TimeFrequencyPointOverlay extends CommandableOverlay {
 
         // console.log(
         //     `TimeFrequencyPointOverlay.render ${annotations} ` +
-        //     `${this.timeAnnotationName} ${this.frequencyAnnotationName}`);
+        //     `${this.indexAnnotationName} ${this.frequencyAnnotationName}`);
 
         if (annotations !== null &&
-                annotations.has(this.timeAnnotationName) &&
+                annotations.has(this.indexAnnotationName) &&
                 annotations.has(this.frequencyAnnotationName)) {
 
-            const index = parseInt(annotations.get(this.timeAnnotationName));
+            const index = parseInt(annotations.get(this.indexAnnotationName));
             const freq = 
                 parseFloat(annotations.get(this.frequencyAnnotationName));
 

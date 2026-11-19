@@ -31,9 +31,9 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
             clipView, settings, 'Time-Frequency Box Overlay',
             _commandableDelegate)
             
-        this.startTimeAnnotationName = settings.startTimeAnnotationName;
+        this.startIndexAnnotationName = settings.startIndexAnnotationName;
         this.endFrequencyAnnotationName = settings.endFrequencyAnnotationName;
-        this.endTimeAnnotationName = settings.endTimeAnnotationName;
+        this.endIndexAnnotationName = settings.endIndexAnnotationName;
         this.startFrequencyAnnotationName =
             settings.startFrequencyAnnotationName;
 
@@ -123,12 +123,12 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
 
     _executeSetTimeFrequencyBoxUpperLeftCornerCommand(env) {
-        this._annotateTimeAndFrequency(
-            this.startTimeAnnotationName, this.endFrequencyAnnotationName);
+        this._annotateIndexAndFrequency(
+            this.startIndexAnnotationName, this.endFrequencyAnnotationName);
     }
 
 
-    _annotateTimeAndFrequency(timeAnnotationName, frequencyAnnotationName) {
+    _annotateIndexAndFrequency(indexAnnotationName, frequencyAnnotationName) {
 
         const clipView = this.clipView
         const clip = clipView.clip;
@@ -149,7 +149,8 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
             const index = startIndex + Math.round(time * clip.sampleRate);
             
             const annotations = new Map([
-                [timeAnnotationName, index], [frequencyAnnotationName, freq]]);
+                [indexAnnotationName, index],
+                [frequencyAnnotationName, freq]]);
             
             this.clipAlbum._annotateClips([clip], annotations);
             
@@ -159,37 +160,40 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
 
     _executeClearTimeFrequencyBoxUpperLeftCornerCommand(env) {
-        this._unannotateTimeAndFrequency(
-            this.startTimeAnnotationName, this.endFrequencyAnnotationName);
+        this._unannotateIndexAndFrequency(
+            this.startIndexAnnotationName, this.endFrequencyAnnotationName);
     }
 
 
-    _unannotateTimeAndFrequency(timeAnnotationName, frequencyAnnotationName) {
+    _unannotateIndexAndFrequency(
+            indexAnnotationName, frequencyAnnotationName) {
+
         const clips = [this.clipView.clip];
         const annotationNames = new Set([
-            timeAnnotationName, frequencyAnnotationName]);
+            indexAnnotationName, frequencyAnnotationName]);
         this.clipAlbum._unannotateClips(clips, annotationNames);
+        
     }
 
 
     _executeSetTimeFrequencyBoxLowerRightCornerCommand(env) {
-        this._annotateTimeAndFrequency(
-            this.endTimeAnnotationName, this.startFrequencyAnnotationName);
+        this._annotateIndexAndFrequency(
+            this.endIndexAnnotationName, this.startFrequencyAnnotationName);
     }
 
 
     _executeClearTimeFrequencyBoxLowerRightCornerCommand(env) {
-        this._unannotateTimeAndFrequency(
-            this.endTimeAnnotationName, this.startFrequencyAnnotationName);
+        this._unannotateIndexAndFrequency(
+            this.endIndexAnnotationName, this.startFrequencyAnnotationName);
     }
 
 
     _executeClearTimeFrequencyBoxCommand(env) {
         const clips = [this.clipView.clip];
         const annotationNames = new Set([
-            this.startTimeAnnotationName,
+            this.startIndexAnnotationName,
             this.endFrequencyAnnotationName,
-            this.endTimeAnnotationName,
+            this.endIndexAnnotationName,
             this.startFrequencyAnnotationName]);
         this.clipAlbum._unannotateClips(clips, annotationNames);
     }
@@ -201,17 +205,17 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
 
         if (annotations !== null) {
             
-            if (annotations.has(this.startTimeAnnotationName) &&
+            if (annotations.has(this.startIndexAnnotationName) &&
                     annotations.has(this.endFrequencyAnnotationName) &&
-                    annotations.has(this.endTimeAnnotationName) &&
+                    annotations.has(this.endIndexAnnotationName) &&
                     annotations.has(this.startFrequencyAnnotationName)) {
                 
                 const upperLeftIndex = parseInt(annotations.get(
-                    this.startTimeAnnotationName));
+                    this.startIndexAnnotationName));
                 const upperLeftFreq = parseFloat(annotations.get(
                     this.endFrequencyAnnotationName));
                 const lowerRightIndex = parseInt(annotations.get(
-                    this.endTimeAnnotationName));
+                    this.endIndexAnnotationName));
                 const lowerRightFreq = parseFloat(annotations.get(
                     this.startFrequencyAnnotationName));
 
@@ -219,21 +223,21 @@ export class TimeFrequencyBoxOverlay extends CommandableOverlay {
                     upperLeftIndex, upperLeftFreq, lowerRightIndex,
                     lowerRightFreq);
 
-            } else if (annotations.has(this.startTimeAnnotationName) &&
+            } else if (annotations.has(this.startIndexAnnotationName) &&
                     annotations.has(this.endFrequencyAnnotationName)) {
 
                 const index = parseInt(annotations.get(
-                    this.startTimeAnnotationName));
+                    this.startIndexAnnotationName));
                 const freq = parseFloat(annotations.get(
                     this.endFrequencyAnnotationName));
 
                 this._renderCorner(index, freq);
 
-            } else if (annotations.has(this.endTimeAnnotationName) &&
+            } else if (annotations.has(this.endIndexAnnotationName) &&
                     annotations.has(this.startFrequencyAnnotationName)) {
 
                 const index = parseInt(annotations.get(
-                    this.endTimeAnnotationName));
+                    this.endIndexAnnotationName));
                 const freq = parseFloat(annotations.get(
                     this.startFrequencyAnnotationName));
                 this._renderCorner(index, freq);
