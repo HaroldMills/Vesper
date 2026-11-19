@@ -5,9 +5,11 @@ import bisect
 import datetime
 
 import numpy as np
-import scipy.signal as signal
 
-from vesper.util.bunch import Bunch
+# Commented the following SciPy import out 2026-11-19. It is used only by
+# the cross-correlation functions below, which we do not currently use in
+# the slim version of Vesper.
+# import scipy.signal as signal
 
 
 # TODO: Review this module and revise. Bring terms up to date.
